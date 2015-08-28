@@ -16,7 +16,7 @@ import scala.tools.nsc.interpreter.ILoop
  */
 class CLI extends ILoop {
 
-  override def commands: List[LoopCommand] = super.commands ++= List(
+  override def commands: List[LoopCommand] = super.commands ++ List(
     new VarArgsCmd("create", "tablename", "creates table", createOp),
     new VarArgsCmd("import", "tablename csvPath", "imports data into table", importOp),
     new NullaryCmd("list", "lists tables", listOp),
