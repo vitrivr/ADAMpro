@@ -1,8 +1,13 @@
 package ch.unibas.dmi.dbis.adam.index
 
 import ch.unibas.dmi.dbis.adam.data.IndexMeta
+import ch.unibas.dmi.dbis.adam.data.Tuple._
+import ch.unibas.dmi.dbis.adam.data.types.Feature._
 import ch.unibas.dmi.dbis.adam.exception.IndexNotExistingException
-import ch.unibas.dmi.dbis.adam.index.Index.IndexName
+import ch.unibas.dmi.dbis.adam.index.Index._
+import ch.unibas.dmi.dbis.adam.index.structures.lsh.LSHIndex
+import ch.unibas.dmi.dbis.adam.index.structures.spectrallsh.SpectralLSHIndex
+import ch.unibas.dmi.dbis.adam.index.structures.vectorapproximation.VectorApproximationIndex
 import ch.unibas.dmi.dbis.adam.main.SparkStartup
 import ch.unibas.dmi.dbis.adam.storage.catalog.CatalogOperator
 import ch.unibas.dmi.dbis.adam.table.Table
@@ -17,7 +22,15 @@ import scala.util.Random
  * Ivan Giangreco
  * August 2015
  */
-case class Index(indexname : IndexName, tablename : TableName, index: DataFrame, indexMeta: IndexMeta)
+trait Index{
+  val indexname : IndexName
+  val tablename : TableName
+  val indexdata : DataFrame
+
+  def getMeta : IndexMeta
+
+  def query(q: WorkingVector, options: Map[String, String]): Seq[TupleID]
+}
 
 object Index {
   type IndexName = String
@@ -32,10 +45,10 @@ object Index {
    * @return
    */
   def createIndex(table : Table, indexgenerator : IndexGenerator) : Index = {
-    val indexname = createIndexName(table.tablename, indexgenerator.indexname)
+    val indexname = createIndexName(table.tablename, indexgenerator.indextypename)
     val index = indexgenerator.index(indexname, table.tablename, table.data)
-    CatalogOperator.createIndex(indexname, table.tablename, index.indexMeta)
-    storage.writeIndex(indexname, index.index)
+    CatalogOperator.createIndex(indexname, table.tablename, indexgenerator.indextypename, index.getMeta)
+    storage.writeIndex(indexname, index.indexdata)
     index
   }
 
@@ -71,9 +84,16 @@ object Index {
     }
 
     val df = storage.readIndex(indexname)
+    val tablename = CatalogOperator.getIndexTableName(indexname)
     val meta = CatalogOperator.getIndexMeta(indexname)
 
-    Index(indexname, CatalogOperator.getIndexTableName(indexname), df, meta)
+    val indextypename = CatalogOperator.getIndexTypeName(indexname)
+
+    indextypename match {
+      case "va" => VectorApproximationIndex(indexname, tablename, df, meta)
+      case "lsh" => LSHIndex(indexname, tablename, df, meta)
+      case "slsh" => SpectralLSHIndex(indexname, tablename, df, meta)
+    }
   }
 
 

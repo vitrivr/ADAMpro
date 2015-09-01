@@ -1,8 +1,8 @@
 package ch.unibas.dmi.dbis.adam.storage.catalog
 
 import ch.unibas.dmi.dbis.adam.data.IndexMeta
-import ch.unibas.dmi.dbis.adam.exception.{IndexExistingException, TableExistingException, TableNotExistingException}
-import ch.unibas.dmi.dbis.adam.index.Index.IndexName
+import ch.unibas.dmi.dbis.adam.exception.{IndexNotExistingException, IndexExistingException, TableExistingException, TableNotExistingException}
+import ch.unibas.dmi.dbis.adam.index.Index.{IndexTypeName, IndexName}
 import ch.unibas.dmi.dbis.adam.main.Startup
 import ch.unibas.dmi.dbis.adam.table.Table.TableName
 import org.json4s._
@@ -93,7 +93,7 @@ object CatalogOperator {
    * @param tablename
    * @param indexmeta
    */
-  def createIndex(indexname : IndexName, tablename : TableName, indexmeta : IndexMeta): Unit ={
+  def createIndex(indexname : IndexName, tablename : TableName, indextypename : IndexTypeName, indexmeta : IndexMeta): Unit ={
     if(!existsTable(tablename)){
       throw new TableNotExistingException()
     }
@@ -105,7 +105,7 @@ object CatalogOperator {
     val json =  write(indexmeta.map)
 
     val setup = DBIO.seq(
-      indexes.+=((indexname, tablename, json))
+      indexes.+=((indexname, tablename, indextypename, json))
     )
     db.run(setup)
   }
@@ -129,6 +129,16 @@ object CatalogOperator {
 
     val json = Await.result(db.run(query), 5.seconds)
     new IndexMeta(read[Map[String, String]](json))
+  }
+
+  /**
+   *
+   * @param indexname
+   * @return
+   */
+  def getIndexTypeName(indexname : IndexName)  : IndexTypeName = {
+    val query = indexes.filter(_.indexname === indexname).map(_.indextypename).result.head
+    Await.result(db.run(query), 5.seconds)
   }
 
   /**

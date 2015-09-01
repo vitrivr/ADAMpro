@@ -15,7 +15,7 @@ import org.apache.spark.sql.DataFrame
  * August 2015
  */
 trait IndexGenerator {
-  def indexname: IndexTypeName
+  def indextypename: IndexTypeName
 
   /**
    *

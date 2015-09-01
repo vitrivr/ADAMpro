@@ -5,7 +5,7 @@ import ch.unibas.dmi.dbis.adam.data.Tuple.TupleID
 import ch.unibas.dmi.dbis.adam.data.types.Feature.{VectorBase, _}
 import ch.unibas.dmi.dbis.adam.data.{IndexMetaBuilder, IndexTuple}
 import ch.unibas.dmi.dbis.adam.index.Index._
-import ch.unibas.dmi.dbis.adam.index.{Index, IndexGenerator, IndexScanner}
+import ch.unibas.dmi.dbis.adam.index.{Index, IndexGenerator}
 import ch.unibas.dmi.dbis.adam.main.SparkStartup
 import ch.unibas.dmi.dbis.adam.table.Table._
 import org.apache.spark.rdd.RDD
@@ -20,8 +20,8 @@ import java.util.BitSet
  * Ivan Giangreco
  * August 2015
  */
-class SpectralLSHIndexer(nfeatures : Int, nbits : Int, trainingSize : Int) extends IndexGenerator with IndexScanner with Serializable {
-  override val indexname : String = "slsh"
+class SpectralLSHIndexer(nfeatures : Int, nbits : Int, trainingSize : Int) extends IndexGenerator with Serializable {
+  override val indextypename : String = "slsh"
 
 
   /**
@@ -38,18 +38,9 @@ class SpectralLSHIndexer(nfeatures : Int, nbits : Int, trainingSize : Int) exten
         IndexTuple(datum.tid, hash)
       })
 
-    val indexMetaBuilder = new IndexMetaBuilder()
-    indexMetaBuilder.put("pca", trainResult.pca.toDenseMatrix.toArray)
-    indexMetaBuilder.put("pca_cols", trainResult.pca.cols)
-    indexMetaBuilder.put("pca_rows", trainResult.pca.rows)
-    indexMetaBuilder.put("min", trainResult.min.toArray)
-    indexMetaBuilder.put("max", trainResult.max.toArray)
-    indexMetaBuilder.put("modes", trainResult.modes.toDenseMatrix.toArray)
-    indexMetaBuilder.put("modes_cols", trainResult.modes.cols)
-    indexMetaBuilder.put("modes_rows", trainResult.modes.rows)
 
     import SparkStartup.sqlContext.implicits._
-    Index(indexname, tablename, indexdata.toDF, indexMetaBuilder.build())
+    new SpectralLSHIndex(indexname, tablename, indexdata.toDF, trainResult)
   }
 
   /**
@@ -140,44 +131,7 @@ class SpectralLSHIndexer(nfeatures : Int, nbits : Int, trainingSize : Int) exten
   }
 
 
-  /**
-   *
-   * @param q
-   * @param index
-   * @param options
-   * @return
-   */
-  override def query(q : WorkingVector, index : Index, options : Map[String, Any]) : Seq[TupleID] = {
-    val data = index.index
-    val indexMeta = index.indexMeta
 
-    val pca_rows = indexMeta.get("pca_rows")
-    val pca_cols = indexMeta.get("pca_cols")
-    val pca_array = indexMeta.get("pca").asInstanceOf[Array[VectorBase]]
-    val pca = new DenseMatrix(pca_rows, pca_cols, pca_array)
-
-    val min = new DenseVector(indexMeta.get("min").asInstanceOf[Array[VectorBase]])
-    val max = new DenseVector(indexMeta.get("max").asInstanceOf[Array[VectorBase]])
-
-    val modes_rows = indexMeta.get("modes_rows")
-    val modes_cols = indexMeta.get("modes_cols")
-    val modes_array = indexMeta.get("modes").asInstanceOf[Array[VectorBase]]
-    val modes = new DenseMatrix(modes_rows, modes_cols, modes_array)
-
-    val trainResult = TrainResult(pca, min, max, modes)
-
-    val k = options("k").asInstanceOf[Integer]
-
-    val queryHash = BitSet.valueOf(hashFeature(q, trainResult))
-
-    val results = data
-      .map{ tuple => IndexTuple(tuple.getLong(0), BitSet.valueOf(tuple.getAs[Array[Byte]](1))) }
-      .map(indexTuple => {
-       indexTuple.value.or(queryHash)
-      (indexTuple.tid, indexTuple.value.cardinality())
-    }).sortBy{case(tid, score) => score}
-    results.take(k * 2).map(_._1)
-  }
 
   /**
    *
@@ -203,24 +157,6 @@ class SpectralLSHIndexer(nfeatures : Int, nbits : Int, trainingSize : Int) exten
 
     BitSet.valueOf(res.map(_.toLong)).toByteArray
   }
-
-  /**
-   *
-   * @param pca
-   * @param min
-   * @param max
-   * @param modes
-   */
-  private case class TrainResult(pca : Matrix[VectorBase], min : Vector[VectorBase], max : Vector[VectorBase], modes : Matrix[VectorBase]) {
-    lazy val omegas = {
-      val range = max - min
-      val omega0 = range.mapValues(r => (math.Pi / r).toFloat)
-      val modesMat = modes.toDenseMatrix
-      val omegas : DenseMatrix[VectorBase] = (modesMat(*, ::).:*(omega0)).toDenseMatrix
-
-      omegas
-    }
-  }
 }
 
 object SpectralLSHIndexer {
@@ -235,5 +171,23 @@ object SpectralLSHIndexer {
     val trainingSize = properties.getOrElse("trainingSize", "2000").toInt
 
     new SpectralLSHIndexer(nfeatures, nbits,trainingSize)
+  }
+}
+
+/**
+ *
+ * @param pca
+ * @param min
+ * @param max
+ * @param modes
+ */
+case class TrainResult(pca : Matrix[VectorBase], min : Vector[VectorBase], max : Vector[VectorBase], modes : Matrix[VectorBase]) {
+  lazy val omegas = {
+    val range = max - min
+    val omega0 = range.mapValues(r => (math.Pi / r).toFloat)
+    val modesMat = modes.toDenseMatrix
+    val omegas : DenseMatrix[VectorBase] = (modesMat(*, ::).:*(omega0)).toDenseMatrix
+
+    omegas
   }
 }

@@ -15,12 +15,13 @@ class TablesCatalog(tag: Tag) extends Table[(String)](tag, "__ADAMTWO_TABLES") {
   def * = (tablename)
 }
 
-class IndexesCatalog(tag: Tag) extends Table[(String, String, String)](tag, "__ADAMTWO_INDEXES") {
+class IndexesCatalog(tag: Tag) extends Table[(String, String, String, String)](tag, "__ADAMTWO_INDEXES") {
   def indexname = column[String]("INDEXNAME", O.PrimaryKey)
   def tablename = column[String]("TABLENAME")
+  def indextypename = column[String]("INDEXTYPENAME")
   def indexmeta = column[String]("INDEXMETA")
 
-  def * = (indexname, tablename, indexmeta)
+  def * = (indexname, tablename, indextypename, indexmeta)
 
   def supplier: ForeignKeyQuery[TablesCatalog, (String)] =
     foreignKey("TABLENAME", tablename, TableQuery[TablesCatalog])(_.tablename)
