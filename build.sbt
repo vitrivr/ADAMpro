@@ -21,6 +21,7 @@ libraryDependencies ++= Seq(
   "io.spray"               %%  "spray-routing" 		      % "1.3.3",
   "com.typesafe.slick"     %%  "slick"                  % "3.0.2",
   "com.h2database"         %   "h2"                     % "1.4.188",
+  "org.postgresql"         %   "postgresql"             % "9.4-1201-jdbc41",
   "com.typesafe.akka"      %%  "akka-actor"    		      % "2.3.9",
   "org.scalatest"          %   "scalatest_2.11"         % "3.0.0-M7",
   "org.scalacheck"         %   "scalacheck_2.11"        % "1.12.4",
