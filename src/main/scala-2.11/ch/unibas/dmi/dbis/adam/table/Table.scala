@@ -71,6 +71,18 @@ object Table {
    * @param tablename
    * @return
    */
+  def dropTable(tablename : TableName) : Unit = {
+    val indexes = CatalogOperator.getIndexes(tablename)
+    CatalogOperator.dropTable(tablename)
+
+    storage.dropTable(tablename)
+  }
+
+  /**
+   *
+   * @param tablename
+   * @return
+   */
   def insertData(tablename : TableName, insertion: DataFrame): Table ={
     if(!existsTable(tablename)){
       throw new TableNotExistingException()

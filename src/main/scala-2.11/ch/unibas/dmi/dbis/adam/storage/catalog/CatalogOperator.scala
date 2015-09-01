@@ -53,6 +53,19 @@ object CatalogOperator {
     db.run(setup)
   }
 
+  /**
+   *
+   * @param tablename
+   * @return
+   */
+  def dropTable(tablename : TableName) = {
+    if(!existsTable(tablename)){
+      throw new TableNotExistingException()
+    }
+
+    val query = tables.filter(_.tablename === tablename).delete
+    val count = Await.result(db.run(query), 5.seconds)
+  }
 
   /**
    *
@@ -108,6 +121,38 @@ object CatalogOperator {
       indexes.+=((indexname, tablename, indextypename, json))
     )
     db.run(setup)
+  }
+
+  /**
+   *
+   * @param indexname
+   * @return
+   */
+  def dropIndex(indexname : IndexName) : Unit = {
+    if(!existsIndex(indexname)){
+      throw new IndexNotExistingException()
+    }
+
+    val query = indexes.filter(_.indexname === indexname).delete
+    Await.result(db.run(query), 5.seconds)
+  }
+
+  /**
+   *
+   * @param tablename
+   * @return
+   */
+  def dropIndexesForTable(tablename: TableName) = {
+    if(!existsTable(tablename)){
+      throw new TableNotExistingException()
+    }
+
+    val existingIndexes = getIndexes(tablename)
+
+    val query = indexes.filter(_.tablename === tablename).delete
+    Await.result(db.run(query), 5.seconds)
+
+    existingIndexes
   }
 
   /**

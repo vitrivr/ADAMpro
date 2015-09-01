@@ -64,6 +64,30 @@ object Index {
     indexname
   }
 
+
+  /**
+   *
+   * @param indexname
+   * @return
+   */
+  def dropIndex(indexname : IndexName) : Unit = {
+    CatalogOperator.dropIndex(indexname)
+    storage.dropIndex(indexname)
+  }
+
+  /**
+   *
+   * @param tablename
+   * @return
+   */
+  def dropIndexesForTable(tablename: TableName) : Unit = {
+    val indexes = CatalogOperator.dropIndexesForTable(tablename)
+
+    indexes.foreach {
+      index => storage.dropIndex(index)
+    }
+  }
+
   /**
    *
    * @param indexname

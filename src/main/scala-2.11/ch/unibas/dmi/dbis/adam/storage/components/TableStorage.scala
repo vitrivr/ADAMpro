@@ -13,5 +13,6 @@ import org.apache.spark.sql.{DataFrame, SaveMode}
 trait TableStorage {
   def readTable(tablename: TableName): Table
   def writeTable(tablename : TableName, df: DataFrame, mode : SaveMode = SaveMode.Append): Unit
+  def dropTable(tablename :TableName) : Unit
 }
 

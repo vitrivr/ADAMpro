@@ -12,4 +12,5 @@ import org.apache.spark.sql.DataFrame
 trait IndexStorage {
   def readIndex(indexName : IndexName) : DataFrame
   def writeIndex(indexName: IndexName, index: DataFrame): Unit
+  def dropIndex(indexName : IndexName) : Unit
 }
