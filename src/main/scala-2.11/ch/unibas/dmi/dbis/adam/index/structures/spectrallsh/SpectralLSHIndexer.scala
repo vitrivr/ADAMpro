@@ -1,16 +1,16 @@
 package ch.unibas.dmi.dbis.adam.index.structures.spectrallsh
 
+import java.util.BitSet
+
 import breeze.linalg.{Matrix, Vector, _}
-import ch.unibas.dmi.dbis.adam.data.Tuple.TupleID
+import ch.unibas.dmi.dbis.adam.data.IndexTuple
 import ch.unibas.dmi.dbis.adam.data.types.Feature.{VectorBase, _}
-import ch.unibas.dmi.dbis.adam.data.{IndexMetaBuilder, IndexTuple}
 import ch.unibas.dmi.dbis.adam.index.Index._
+import ch.unibas.dmi.dbis.adam.index.structures.vectorapproximation.VectorApproximationIndexer.Signature
 import ch.unibas.dmi.dbis.adam.index.{Index, IndexGenerator}
 import ch.unibas.dmi.dbis.adam.main.SparkStartup
 import ch.unibas.dmi.dbis.adam.table.Table._
 import org.apache.spark.rdd.RDD
-
-import java.util.BitSet
 
 
 
@@ -56,10 +56,17 @@ class SpectralLSHIndexer(nfeatures : Int, nbits : Int, trainingSize : Int) exten
     val numComponents = math.min(nfeatures, nbits)
 
     // pca
-    val eig = eigSym(cov(dataMatrix, true))
-    val eigv = eig.eigenvectors(::, (0 until numComponents))
-    val feigv = new DenseMatrix[Float](eigv.rows, eigv.cols, eigv.toArray.map(x => x.toFloat))
-    val projected = (dataMatrix.*(eigv)).asInstanceOf[DenseMatrix[Double]]
+    val covs = cov(dataMatrix, true)
+    val eig = eigSym(covs)
+    val cols = ((eig.eigenvalues.length - numComponents) until (eig.eigenvalues.length))
+    val eigv = eig.eigenvectors(::, cols)
+    val reorderPerm = DenseMatrix.tabulate(numComponents, numComponents){case (i, j) => {
+      if(i == numComponents - 1 - j) { 1.toDouble }
+      else { 0.toDouble }
+    }}
+    val reorderEigv = eigv * reorderPerm
+    val feigv = new DenseMatrix[Float](reorderEigv.rows, reorderEigv.cols, reorderEigv.toArray.map(x => x.toFloat))
+    val projected = (dataMatrix.*(reorderEigv)).asInstanceOf[DenseMatrix[Double]]
 
     // fit uniform distribution
     val min = breeze.linalg.min(projected(::, *)).toDenseVector
@@ -93,13 +100,13 @@ class SpectralLSHIndexer(nfeatures : Int, nbits : Int, trainingSize : Int) exten
    * @return
    */
   private def getAllModes(maxMode : Array[Int], numComponents : Int) : DenseMatrix[VectorBase] = {
-    val modesNum = sum(maxMode)
+    val modesNum = sum(maxMode) + 1
     val modes : DenseMatrix[VectorBase] = DenseMatrix.zeros[VectorBase](modesNum, numComponents)
 
     var pos = 0
     (0 until numComponents).foreach { nc =>
-      (0 until maxMode(nc)).foreach { m =>
-        modes(pos + m, nc) = m + 1
+      (1 to maxMode(nc)).foreach { m =>
+        modes(pos + m, nc) = m
       }
       pos += maxMode(nc)
     }
@@ -118,12 +125,14 @@ class SpectralLSHIndexer(nfeatures : Int, nbits : Int, trainingSize : Int) exten
   private def getSortedModes(modes : DenseMatrix[VectorBase], min : Vector[VectorBase], max : Vector[VectorBase], nbits : Int) : Matrix[VectorBase] = {
     val range = max - min
     val omega0 = range.mapValues(r => toVectorBase(math.Pi / math.abs(r))) //abs() added
-    val eigVal = sum(modes(*, ::).:*=(omega0)) //.map(x => -x)
+    val omegas = modes(*, ::).:*(omega0)
+    val omegas2 = omegas :* omegas
+    val eigVal = sum(omegas2(*, ::))
 
     val sortOrder = eigVal.toArray.zipWithIndex.sortBy(x => x._1).map(x => x._2) //removed reverse
 
     val selectedModes : DenseMatrix[VectorBase] = DenseMatrix.zeros[VectorBase](nbits, modes.cols)
-    sortOrder.take(nbits).zipWithIndex.foreach {
+    sortOrder.drop(1).take(nbits).zipWithIndex.foreach {
       case (so, idx) =>
         selectedModes(idx, ::).:=(modes(so, ::))
     }
@@ -139,7 +148,7 @@ class SpectralLSHIndexer(nfeatures : Int, nbits : Int, trainingSize : Int) exten
    * @param trainResult
    * @return
    */
-  @inline private def hashFeature(f : WorkingVector, trainResult : TrainResult) : Array[Byte] = {
+  @inline private def hashFeature(f : WorkingVector, trainResult : TrainResult) : Signature = {
     val fMat = f.toDenseMatrix
     val pca = trainResult.pca.toDenseMatrix
 
@@ -155,7 +164,11 @@ class SpectralLSHIndexer(nfeatures : Int, nbits : Int, trainingSize : Int) exten
       res.toArray
     }
 
-    BitSet.valueOf(res.map(_.toLong)).toByteArray
+    val bitset = new BitSet()
+    res.foreach{i =>
+      bitset.set(i)
+    }
+    bitset.toByteArray
   }
 }
 
@@ -166,9 +179,9 @@ object SpectralLSHIndexer {
    * @param properties
    */
   def apply(properties : Map[String, String] = Map[String, String](), data: RDD[IndexTuple[WorkingVector]]) : IndexGenerator = {
-    val nfeatures = properties.getOrElse("nfeatures", "64").toInt
-    val nbits = properties.getOrElse("nbits", "8").toInt
-    val trainingSize = properties.getOrElse("trainingSize", "2000").toInt
+    val nfeatures = properties.getOrElse("nfeatures", "100").toInt //TODO get from data
+    val nbits = properties.getOrElse("nbits", "100").toInt
+    val trainingSize = properties.getOrElse("trainingSize", "200000").toInt
 
     new SpectralLSHIndexer(nfeatures, nbits,trainingSize)
   }
@@ -182,7 +195,7 @@ object SpectralLSHIndexer {
  * @param modes
  */
 case class TrainResult(pca : Matrix[VectorBase], min : Vector[VectorBase], max : Vector[VectorBase], modes : Matrix[VectorBase]) {
-  lazy val omegas = {
+  lazy val omegas: DenseMatrix[VectorBase] = {
     val range = max - min
     val omega0 = range.mapValues(r => (math.Pi / r).toFloat)
     val modesMat = modes.toDenseMatrix

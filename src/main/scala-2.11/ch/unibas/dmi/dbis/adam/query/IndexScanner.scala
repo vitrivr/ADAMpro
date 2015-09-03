@@ -20,7 +20,7 @@ object IndexScanner {
     val filteredTuples = index.query(q, options)
 
     Table.retrieveTable(index.tablename).tuples
-      .filter(tuple => filteredTuples.contains(tuple))
+      .filter(tuple => filteredTuples.contains(tuple.tid))
       .map(tuple => {
       val f : WorkingVector = tuple.value
       Result(distance(q, f), tuple.tid)

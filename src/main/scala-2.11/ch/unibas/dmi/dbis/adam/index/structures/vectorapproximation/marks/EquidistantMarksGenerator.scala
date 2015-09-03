@@ -25,7 +25,7 @@ object EquidistantMarksGenerator extends MarksGenerator with Serializable {
     val min = getMin(sample.map(_.value), dimensionality)
     val max = getMax(sample.map(_.value), dimensionality)
 
-    (min zip max).map { case (min, max) => Seq.tabulate(maxMarks)(_ * (max - min) / maxMarks.toFloat + min).toList }
+    (min zip max).map { case (min, max) => Seq.tabulate(maxMarks)(_ * (max - min) / maxMarks.toFloat + min).map(_.toFloat).toList }
   }
 
   /**

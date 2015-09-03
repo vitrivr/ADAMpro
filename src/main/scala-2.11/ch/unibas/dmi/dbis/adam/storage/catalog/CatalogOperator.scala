@@ -3,6 +3,8 @@ package ch.unibas.dmi.dbis.adam.storage.catalog
 import ch.unibas.dmi.dbis.adam.data.IndexMeta
 import ch.unibas.dmi.dbis.adam.exception.{IndexNotExistingException, IndexExistingException, TableExistingException, TableNotExistingException}
 import ch.unibas.dmi.dbis.adam.index.Index.{IndexTypeName, IndexName}
+import ch.unibas.dmi.dbis.adam.index.structures.vectorapproximation.VectorApproximationIndexer.Marks
+import ch.unibas.dmi.dbis.adam.index.structures.vectorapproximation.signature.FixedSignatureGenerator
 import ch.unibas.dmi.dbis.adam.main.Startup
 import ch.unibas.dmi.dbis.adam.table.Table.TableName
 import org.json4s._
@@ -32,8 +34,8 @@ object CatalogOperator {
     db.run(mdd._2.schema.create)
   })
 
-  implicit val formats = Serialization.formats(NoTypeHints)
-
+  implicit val formats = Serialization.formats(FullTypeHints (List(
+    classOf[FixedSignatureGenerator], classOf[Marks])))
 
   private val tables = TableQuery[TablesCatalog]
   private val indexes = TableQuery[IndexesCatalog]
@@ -94,7 +96,7 @@ object CatalogOperator {
    * @return
    */
   def existsIndex(indexname : IndexName): Boolean = {
-    val query = indexes.filter(_.tablename === indexname).length.result
+    val query = indexes.filter(_.indexname === indexname).length.result
     val count = Await.result(db.run(query), 5.seconds)
 
     (count > 0)
@@ -114,6 +116,8 @@ object CatalogOperator {
     if(existsIndex(indexname)){
       throw new IndexExistingException()
     }
+
+
 
     val json =  write(indexmeta.map)
 
@@ -173,7 +177,7 @@ object CatalogOperator {
     val query = indexes.filter(_.indexname === indexname).map(_.indexmeta).result.head
 
     val json = Await.result(db.run(query), 5.seconds)
-    new IndexMeta(read[Map[String, String]](json))
+    new IndexMeta(read[Map[String, Any]](json))
   }
 
   /**

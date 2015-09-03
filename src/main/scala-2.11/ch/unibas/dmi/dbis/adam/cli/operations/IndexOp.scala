@@ -26,7 +26,7 @@ object IndexOp {
     val table = Table.retrieveTable(tablename)
 
     //TODO: change this so that indices do not have to look at data before creation
-    val data = table.data.map { x => IndexTuple(x.getLong(0), x.getSeq[VectorBase](1) : WorkingVector) }
+    val data = table.data.map { x => IndexTuple(x.getInt(0), x.getSeq[VectorBase](1) : WorkingVector) }
 
     val generator : IndexGenerator = indextype match {
       case "lsh" =>  LSHIndexer(properties, data)

@@ -21,7 +21,7 @@ trait IndexGenerator {
    *
    */
   def index(indexname : IndexName, tablename : TableName, data: DataFrame): Index = {
-    val rdd = data.map { x => IndexTuple(x.getLong(0), x.getSeq[VectorBase](1) : WorkingVector) }
+    val rdd = data.map { x => IndexTuple(x.getInt(0), x.getSeq[VectorBase](1) : WorkingVector) }
     index(indexname, tablename, rdd)
   }
 

@@ -7,7 +7,7 @@ import ch.unibas.dmi.dbis.adam.index.Index
 import ch.unibas.dmi.dbis.adam.index.Index.IndexName
 import ch.unibas.dmi.dbis.adam.index.structures.vectorapproximation.VectorApproximationIndexer.{Bounds, Marks, Signature}
 import ch.unibas.dmi.dbis.adam.index.structures.vectorapproximation.results.{BoundableResultHandler, ResultHandler}
-import ch.unibas.dmi.dbis.adam.index.structures.vectorapproximation.signature.SignatureGenerator
+import ch.unibas.dmi.dbis.adam.index.structures.vectorapproximation.signature.{FixedSignatureGenerator, SignatureGenerator}
 import ch.unibas.dmi.dbis.adam.query.distance.NormBasedDistanceFunction
 import ch.unibas.dmi.dbis.adam.table.Table._
 import org.apache.spark.sql.DataFrame
@@ -19,14 +19,14 @@ import org.apache.spark.sql.DataFrame
  * August 2015
  */
 class VectorApproximationIndex(val indexname : IndexName, val tablename : TableName, val indexdata: DataFrame, marks : Marks, signatureGenerator : SignatureGenerator)
-  extends Index {
+  extends Index with Serializable {
 
   /**
    *
    */
   def query(q: WorkingVector, options: Map[String, String]): Seq[TupleID] = {
-    val k = options("k").asInstanceOf[Integer]
-    val norm = options("norm").asInstanceOf[Integer]
+    val k = options("k").toInt
+    val norm = options("norm").toInt
 
     val lbounds: Bounds = lowerBounds(q, marks, new NormBasedDistanceFunction(norm))
     val ubounds: Bounds = upperBounds(q, marks, new NormBasedDistanceFunction(norm))
@@ -37,10 +37,10 @@ class VectorApproximationIndex(val indexname : IndexName, val tablename : TableN
       val rh = new BoundableResultHandler(k, lbounds, ubounds, signatureGenerator)
       rh.offerIndexTuple(indexTuplesIt)
       rh.iterator
-    })
+    }).collect()
 
     val globalResultHandler = new ResultHandler(k)
-    globalResultHandler.offerResultElement(localResultHandlers.collect.toSeq.iterator)
+    globalResultHandler.offerResultElement(localResultHandlers.iterator)
 
     globalResultHandler.results.map(_.indexTuple.tid)
   }
@@ -100,8 +100,11 @@ class VectorApproximationIndex(val indexname : IndexName, val tablename : TableN
 
 object VectorApproximationIndex {
   def apply(indexname : IndexName, tablename : TableName, data: DataFrame, meta : IndexMeta ) : Index = {
+    val marks : Marks = meta.get("marks").asInstanceOf[Seq[Seq[Double]]].map(_.map(_.toFloat))
+    val signatureGenerator =  meta.get("signatureGenerator").asInstanceOf[FixedSignatureGenerator]
+
     new VectorApproximationIndex(indexname, tablename, data,
-      meta.get("marks").asInstanceOf[Marks],
-      meta.get("signatureGenerator").asInstanceOf[SignatureGenerator])
+      marks, signatureGenerator
+     )
   }
 }

@@ -2,7 +2,7 @@ package ch.unibas.dmi.dbis.adam.index.structures.vectorapproximation.signature
 
 import java.util.BitSet
 
-import ch.unibas.dmi.dbis.adam.index.structures.vectorapproximation.VectorApproximationIndexer.{Bounds, Signature, Marks}
+import ch.unibas.dmi.dbis.adam.index.structures.vectorapproximation.VectorApproximationIndexer.Signature
 
 /**
  * adamtwo
@@ -42,7 +42,12 @@ class VariableSignatureGenerator(numberOfBitsPerDimension: Seq[Int]) extends Ser
     cumulativeNumberOfBitsPerDimension.toList.sliding(2).map {
       case List(start, end) =>
         val cellBits = bits.get(start, end)
-        cellBits.toLongArray()(0).toInt
+        val arr = cellBits.toLongArray
+        if(arr.length == 0){
+          0
+        } else {
+          arr(0).toInt
+        }
     }.toList.reverse
   }
 }

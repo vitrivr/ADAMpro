@@ -25,7 +25,7 @@ class CLI extends ILoop {
     new VarArgsCmd("count", "tablename", "counts tuples in table", countOp),
     new VarArgsCmd("seqquery", "tablename q k", "querys table in kNN search sequentially", seqQueryOp),
     new VarArgsCmd("index", "tablename indextype [properties]", "creates an index of given type with properties", indexOp),
-    new VarArgsCmd("indquery", "tablename indexname q k", "querys table in kNN search using index", indQueryOp),
+    new VarArgsCmd("indquery", "indexname q k", "querys table in kNN search using index", indQueryOp),
     new VarArgsCmd("drop", "tablename", "drops table", dropOp)
   )
 
@@ -119,12 +119,11 @@ class CLI extends ILoop {
 
   //TODO: replace by one query type
   private def indQueryOp(input: List[String]): Result = {
-    val tablename = input(0)
-    val indexname = input(1)
-    val query = input(2)
-    val k = input(3).toInt
+    val indexname = input(0)
+    val query = input(1)
+    val k = input(2).toInt
 
-    IndexQueryOp(tablename, query, k, NormBasedDistanceFunction(1))
+    IndexQueryOp(indexname, query, k, NormBasedDistanceFunction(1))
 
     Result.default
   }
