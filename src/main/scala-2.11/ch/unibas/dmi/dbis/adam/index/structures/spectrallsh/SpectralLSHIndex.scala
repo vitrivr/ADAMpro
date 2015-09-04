@@ -4,7 +4,7 @@ import breeze.linalg.{DenseMatrix, DenseVector}
 import ch.unibas.dmi.dbis.adam.data.Tuple._
 import ch.unibas.dmi.dbis.adam.data.types.Feature._
 import ch.unibas.dmi.dbis.adam.data.types.bitString.BitString
-import ch.unibas.dmi.dbis.adam.data.{IndexMeta, IndexMetaBuilder, IndexTuple}
+import ch.unibas.dmi.dbis.adam.data.{IndexMeta, IndexMetaBuilder}
 import ch.unibas.dmi.dbis.adam.index.Index
 import ch.unibas.dmi.dbis.adam.index.Index._
 import ch.unibas.dmi.dbis.adam.table.Table._
@@ -44,22 +44,15 @@ class SpectralLSHIndex(val indexname: IndexName, val tablename: TableName, val i
 
     val queryHashes = queries.map{q => SpectralLSHUtils.hashFeature(q, trainResult)}
 
-    //TODO take ordered
-    val results = indexdata
+    indexdata
       .map { tuple =>
       val bits = BitString.fromByteArray(tuple.getSeq[Byte](1).toArray)
-      IndexTuple(tuple.getLong(0), bits)
-    }
-      .map(indexTuple => {
-
-      val score : Int = queryHashes.map{query =>
-        indexTuple.value.intersectionCount(query)
+      val score: Int = queryHashes.view.map{query =>
+        bits.intersectionCount(query)
       }.sum
 
-      (indexTuple.tid, score)
-    }).sortBy { case (tid, score) => -score }
-
-    results.map(_._1).take(k * 5)
+      (tuple.getLong(0), score)
+    }.takeOrdered(k * 5)(Ordering[Int].reverse.on(x => x._2)).map(_._1).toSeq
   }
 
 

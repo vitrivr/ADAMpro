@@ -24,8 +24,8 @@ object IndexScanner {
       .map(tuple => {
       val f : WorkingVector = tuple.value
       Result(distance(q, f), tuple.tid)
-    })
-      .takeOrdered(k)
+    }).takeOrdered(k)
+
 
   }
 }
