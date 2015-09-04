@@ -40,7 +40,7 @@ class VectorApproximationIndexer(maxMarks: Int = 64, sampleSize: Int = 500, mark
       datum => {
         val cells = getCells(datum.value, marks)
         val signature = signatureGenerator.toSignature(cells)
-        IndexTuple(datum.tid, signature)
+        IndexTuple(datum.tid, signature.toByteArray)
       })
 
 

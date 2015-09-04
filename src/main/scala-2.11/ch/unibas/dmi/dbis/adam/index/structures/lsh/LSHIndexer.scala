@@ -2,6 +2,8 @@ package ch.unibas.dmi.dbis.adam.index.structures.lsh
 
 import ch.unibas.dmi.dbis.adam.data.IndexTuple
 import ch.unibas.dmi.dbis.adam.data.types.Feature.WorkingVector
+import ch.unibas.dmi.dbis.adam.data.types.bitString.BitString
+import ch.unibas.dmi.dbis.adam.data.types.bitString.BitString._
 import ch.unibas.dmi.dbis.adam.index.Index._
 import ch.unibas.dmi.dbis.adam.index.structures.lsh.hashfunction.{EuclideanHashFunction, Hasher, LSHashFunction}
 import ch.unibas.dmi.dbis.adam.index.{Index, IndexGenerator}
@@ -53,8 +55,9 @@ class LSHIndexer(hashFamily : () => LSHashFunction, numHashTables : Int, numHash
    * @param f
    * @return
    */
-  @inline private def hashFeature(f : WorkingVector) : Seq[Int] = {
-    hashTables.map(ht => ht(f))
+  @inline private def hashFeature(f : WorkingVector) : BitStringType = {
+    val indices = hashTables.map(ht => ht(f))
+    BitString.fromBitIndicesToSet(indices)
   }
 
 }

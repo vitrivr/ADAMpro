@@ -1,10 +1,9 @@
 package ch.unibas.dmi.dbis.adam.index.structures.spectrallsh
 
-import java.util.BitSet
-
-import breeze.linalg.{*, DenseMatrix, DenseVector}
+import breeze.linalg.{DenseMatrix, DenseVector}
 import ch.unibas.dmi.dbis.adam.data.Tuple._
 import ch.unibas.dmi.dbis.adam.data.types.Feature._
+import ch.unibas.dmi.dbis.adam.data.types.bitString.BitString
 import ch.unibas.dmi.dbis.adam.data.{IndexMeta, IndexMetaBuilder, IndexTuple}
 import ch.unibas.dmi.dbis.adam.index.Index
 import ch.unibas.dmi.dbis.adam.index.Index._
@@ -43,22 +42,18 @@ class SpectralLSHIndex(val indexname: IndexName, val tablename: TableName, val i
     val movableQuery = MovableDenseVector(q)
     val queries = List(q, movableQuery.move(radius), movableQuery.move(radius), movableQuery.move(radius), movableQuery.move(radius), movableQuery.move(radius))
 
-    val queryHashes = queries.map{q => BitSet.valueOf(hashFeature(q, trainResult))}
+    val queryHashes = queries.map{q => SpectralLSHUtils.hashFeature(q, trainResult)}
 
     //TODO take ordered
     val results = indexdata
       .map { tuple =>
-      var bits = tuple.getAs[Array[Byte]](1)
-      val bitset =  BitSet.valueOf(bits)
-
-      IndexTuple(tuple.getLong(0), bitset)
+      val bits = BitString.fromByteArray(tuple.getSeq[Byte](1).toArray)
+      IndexTuple(tuple.getLong(0), bits)
     }
       .map(indexTuple => {
 
       val score : Int = queryHashes.map{query =>
-        val iTuple = indexTuple.value.clone().asInstanceOf[BitSet]
-        iTuple.and(query)
-        iTuple.cardinality()
+        indexTuple.value.intersectionCount(query)
       }.sum
 
       (indexTuple.tid, score)
@@ -81,34 +76,6 @@ class SpectralLSHIndex(val indexname: IndexName, val tablename: TableName, val i
     metadataBuilder.build()
   }
 
-  /**
-   *
-   * @param f
-   * @param trainResult
-   * @return
-   */
-  @inline private def hashFeature(f : WorkingVector, trainResult : TrainResult) : Array[Byte] = {
-    val fMat = f.toDenseMatrix
-    val pca = trainResult.pca.toDenseMatrix
-
-    val v = fMat.*(pca).asInstanceOf[DenseMatrix[Float]].toDenseVector - trainResult.min.toDenseVector
-
-    val res = {
-      val omegai : DenseMatrix[VectorBase] = trainResult.omegas(*, ::) :* v
-      omegai :+= toVectorBase(Math.PI / 2.0)
-      val ys = omegai.map(x => math.sin(x))
-      val yi = ys(*, ::).map(_.toArray.product).toDenseVector
-
-      val res = yi.findAll(x => x > 0)
-      res.toArray
-    }
-
-    val bitset = new BitSet()
-    res.foreach{i =>
-      bitset.set(i)
-    }
-    bitset.toByteArray
-  }
 }
 
 object SpectralLSHIndex {

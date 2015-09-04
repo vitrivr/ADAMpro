@@ -2,10 +2,11 @@ package ch.unibas.dmi.dbis.adam.index.structures.vectorapproximation
 
 import ch.unibas.dmi.dbis.adam.data.Tuple._
 import ch.unibas.dmi.dbis.adam.data.types.Feature._
+import ch.unibas.dmi.dbis.adam.data.types.bitString.BitString
 import ch.unibas.dmi.dbis.adam.data.{IndexMeta, IndexMetaBuilder, IndexTuple}
 import ch.unibas.dmi.dbis.adam.index.Index
 import ch.unibas.dmi.dbis.adam.index.Index.IndexName
-import ch.unibas.dmi.dbis.adam.index.structures.vectorapproximation.VectorApproximationIndexer.{Bounds, Marks, Signature}
+import ch.unibas.dmi.dbis.adam.index.structures.vectorapproximation.VectorApproximationIndexer.{Bounds, Marks}
 import ch.unibas.dmi.dbis.adam.index.structures.vectorapproximation.results.{BoundableResultHandler, ResultHandler}
 import ch.unibas.dmi.dbis.adam.index.structures.vectorapproximation.signature.{FixedSignatureGenerator, SignatureGenerator}
 import ch.unibas.dmi.dbis.adam.query.distance.NormBasedDistanceFunction
@@ -32,7 +33,9 @@ class VectorApproximationIndex(val indexname : IndexName, val tablename : TableN
     val ubounds: Bounds = upperBounds(q, marks, new NormBasedDistanceFunction(norm))
 
     val localResultHandlers = indexdata
-      .map{ tuple => IndexTuple(tuple.getLong(0), tuple.getAs[Signature](1)) }
+      .map{ tuple =>
+      val bits = BitString.fromByteArray(tuple.getSeq[Byte](1).toArray)
+      IndexTuple(tuple.getLong(0), bits) }
       .mapPartitions(indexTuplesIt => {
       val rh = new BoundableResultHandler(k, lbounds, ubounds, signatureGenerator)
       rh.offerIndexTuple(indexTuplesIt)

@@ -1,12 +1,9 @@
 package ch.unibas.dmi.dbis.adam.index.structures.spectrallsh
 
-import java.util.BitSet
-
 import breeze.linalg.{Matrix, Vector, _}
 import ch.unibas.dmi.dbis.adam.data.IndexTuple
 import ch.unibas.dmi.dbis.adam.data.types.Feature.{VectorBase, _}
 import ch.unibas.dmi.dbis.adam.index.Index._
-import ch.unibas.dmi.dbis.adam.index.structures.vectorapproximation.VectorApproximationIndexer.Signature
 import ch.unibas.dmi.dbis.adam.index.{Index, IndexGenerator}
 import ch.unibas.dmi.dbis.adam.main.SparkStartup
 import ch.unibas.dmi.dbis.adam.table.Table._
@@ -34,8 +31,8 @@ class SpectralLSHIndexer(nfeatures : Int, nbits : Int, trainingSize : Int) exten
 
     val indexdata = data.map(
       datum => {
-        val hash = hashFeature(datum.value, trainResult)
-        IndexTuple(datum.tid, hash)
+        val hash = SpectralLSHUtils.hashFeature(datum.value, trainResult)
+        IndexTuple(datum.tid, hash.toByteArray)
       })
 
 
@@ -138,39 +135,8 @@ class SpectralLSHIndexer(nfeatures : Int, nbits : Int, trainingSize : Int) exten
     }
     selectedModes
   }
-
-
-
-
-  /**
-   *
-   * @param f
-   * @param trainResult
-   * @return
-   */
-  @inline private def hashFeature(f : WorkingVector, trainResult : TrainResult) : Signature = {
-    val fMat = f.toDenseMatrix
-    val pca = trainResult.pca.toDenseMatrix
-
-    val v = fMat.*(pca).asInstanceOf[DenseMatrix[Float]].toDenseVector - trainResult.min.toDenseVector
-
-    val res = {
-      val omegai : DenseMatrix[VectorBase] = trainResult.omegas(*, ::) :* v
-      omegai :+= toVectorBase(Math.PI / 2.0)
-      val ys = omegai.map(x => math.sin(x))
-      val yi = ys(*, ::).map(_.toArray.product).toDenseVector
-
-      val res = yi.findAll(x => x > 0)
-      res.toArray
-    }
-
-    val bitset = new BitSet()
-    res.foreach{i =>
-      bitset.set(i)
-    }
-    bitset.toByteArray
-  }
 }
+
 
 object SpectralLSHIndexer {
 
@@ -194,7 +160,7 @@ object SpectralLSHIndexer {
  * @param max
  * @param modes
  */
-case class TrainResult(pca : Matrix[VectorBase], min : Vector[VectorBase], max : Vector[VectorBase], modes : Matrix[VectorBase]) {
+private case class TrainResult(pca : Matrix[VectorBase], min : Vector[VectorBase], max : Vector[VectorBase], modes : Matrix[VectorBase]) {
   lazy val omegas: DenseMatrix[VectorBase] = {
     val range = max - min
     val omega0 = range.mapValues(r => (math.Pi / r).toFloat)

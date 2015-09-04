@@ -3,10 +3,11 @@ package ch.unibas.dmi.dbis.adam.index.structures.lsh
 import breeze.linalg.DenseVector
 import ch.unibas.dmi.dbis.adam.data.Tuple._
 import ch.unibas.dmi.dbis.adam.data.types.Feature._
-import ch.unibas.dmi.dbis.adam.data.{IndexMetaBuilder, IndexMeta, IndexTuple}
+import ch.unibas.dmi.dbis.adam.data.types.bitString.BitString.BitStringType
+import ch.unibas.dmi.dbis.adam.data.{IndexMeta, IndexMetaBuilder, IndexTuple}
+import ch.unibas.dmi.dbis.adam.index.Index
 import ch.unibas.dmi.dbis.adam.index.Index._
 import ch.unibas.dmi.dbis.adam.index.structures.lsh.hashfunction.Hasher
-import ch.unibas.dmi.dbis.adam.index.Index
 import ch.unibas.dmi.dbis.adam.table.Table._
 import org.apache.spark.sql.DataFrame
 
@@ -31,9 +32,10 @@ class LSHIndex(val indexname : IndexName, val tablename : TableName, val indexda
     val extendedQuery = getExtendedQuery(q, radius)
 
     val results = indexdata
-      .map{ tuple => IndexTuple(tuple.getLong(0), tuple.getSeq[Int](1)) }
+      .map{ tuple =>
+      IndexTuple(tuple.getLong(0), tuple.getAs[BitStringType](1)) }
       .filter { indexTuple =>
-      indexTuple.value.zip(extendedQuery).exists({
+      indexTuple.value.getIndexes.zip(extendedQuery).exists({
         case (indexHash, acceptedValues) => acceptedValues.contains(indexHash)
       })
     }.map { indexTuple => indexTuple.tid }

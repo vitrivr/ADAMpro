@@ -1,7 +1,7 @@
 package ch.unibas.dmi.dbis.adam.index.structures.vectorapproximation.results
 
 import ch.unibas.dmi.dbis.adam.data.IndexTuple
-import ch.unibas.dmi.dbis.adam.index.structures.vectorapproximation.VectorApproximationIndexer.Signature
+import ch.unibas.dmi.dbis.adam.data.types.bitString.BitString._
 import ch.unibas.dmi.dbis.adam.query.distance.Distance.Distance
 
 import scala.collection.mutable.ArrayBuffer
@@ -53,7 +53,7 @@ class ResultHandler(k: Int) {
  * August 2015
  */
 protected trait ResultElement {
-  val indexTuple: IndexTuple[Signature]
+  val indexTuple: IndexTuple[BitStringType]
   val ubound: Distance
   val lbound: Distance
 }
