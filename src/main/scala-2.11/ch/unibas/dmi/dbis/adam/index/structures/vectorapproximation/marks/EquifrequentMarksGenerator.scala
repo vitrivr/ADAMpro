@@ -1,16 +1,14 @@
 package ch.unibas.dmi.dbis.adam.index.structures.vectorapproximation.marks
 
-import ch.unibas.dmi.dbis.adam.data.IndexTuple
 import ch.unibas.dmi.dbis.adam.data.types.Feature._
-import ch.unibas.dmi.dbis.adam.index.structures.vectorapproximation.VectorApproximationIndexer.Marks
-import ch.unibas.dmi.dbis.adam.index.structures.vectorapproximation.IterableExtension._
-
+import ch.unibas.dmi.dbis.adam.index.IndexerTuple
+import ch.unibas.dmi.dbis.adam.index.structures.vectorapproximation.VectorApproximationIndex.Marks
 import org.apache.spark.rdd.RDD
 
 /**
  * 
  */
-object EquifrequentMarksGenerator extends MarksGenerator with Serializable {
+private[vectorapproximation] object EquifrequentMarksGenerator extends MarksGenerator with Serializable {
   val HistogramBucketCount = 500
 
   /**
@@ -19,7 +17,7 @@ object EquifrequentMarksGenerator extends MarksGenerator with Serializable {
    * @param maxMarks
    * @return
    */
-  def getMarksForSample(sample: RDD[IndexTuple[WorkingVector]], maxMarks: Int): Marks = {
+  private[vectorapproximation] def getMarks(sample : RDD[IndexerTuple[WorkingVector]], maxMarks : Int) : Marks = {
     val sampleSize = sample.count
     val dims = sample.first.value.length
 
@@ -46,7 +44,7 @@ object EquifrequentMarksGenerator extends MarksGenerator with Serializable {
    * @param maxMarks
    * @return
    */
-  def getCounts(hist: Seq[Long], sampleSize: Long, maxMarks: Int) = {
+  private def getCounts(hist: Seq[Long], sampleSize: Long, maxMarks: Int) = {
     (1 until (maxMarks - 1)).map { j =>
       val nppart = sampleSize * j / (maxMarks - 1)
       val countSum = hist.foldLeftWhileCounting(0.toLong)(_ <= nppart) { case (acc, bucket) => acc + bucket }

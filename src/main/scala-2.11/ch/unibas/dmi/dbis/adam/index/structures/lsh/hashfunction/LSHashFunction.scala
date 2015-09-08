@@ -15,5 +15,5 @@ trait LSHashFunction extends Serializable {
    * @param vector
    * @return
    */
-  def hash(vector: WorkingVector): Int;
+  def hash(vector: WorkingVector): Int
 }

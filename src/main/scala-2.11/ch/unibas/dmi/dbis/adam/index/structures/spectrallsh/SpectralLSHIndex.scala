@@ -1,16 +1,14 @@
 package ch.unibas.dmi.dbis.adam.index.structures.spectrallsh
 
-import breeze.linalg.{DenseMatrix, DenseVector}
+import breeze.linalg._
 import ch.unibas.dmi.dbis.adam.data.Tuple._
 import ch.unibas.dmi.dbis.adam.data.types.Feature._
 import ch.unibas.dmi.dbis.adam.data.types.bitString.BitString
-import ch.unibas.dmi.dbis.adam.data.{IndexMeta, IndexMetaBuilder}
-import ch.unibas.dmi.dbis.adam.index.Index
 import ch.unibas.dmi.dbis.adam.index.Index._
+import ch.unibas.dmi.dbis.adam.index.{Index, IndexMetaStorage, IndexMetaStorageBuilder}
 import ch.unibas.dmi.dbis.adam.table.Table._
+import org.apache.spark.FutureAction
 import org.apache.spark.sql.DataFrame
-
-import scala.util.Random
 
 /**
  * adamtwo
@@ -18,76 +16,81 @@ import scala.util.Random
  * Ivan Giangreco
  * August 2015
  */
-class SpectralLSHIndex(val indexname: IndexName, val tablename: TableName, val indexdata: DataFrame, trainResult: TrainResult)
+class SpectralLSHIndex(val indexname: IndexName, val tablename: TableName, protected val indexdata: DataFrame, private val indexMetaData: SpectralLSHIndexMetaData)
   extends Index {
-
-  case class MovableDenseVector(d : WorkingVector) {
-    def move(radius : Float) : WorkingVector = {
-      val diff = DenseVector.fill(d.length)(radius - 2 * radius * Random.nextFloat)
-      d + diff
-    }
-  }
-
   /**
    *
    * @param q
    * @param options
    * @return
    */
-  override def query(q: WorkingVector, options: Map[String, String]): Seq[TupleID] = {
+  override def scan(q: WorkingVector, options: Map[String, String]): FutureAction[Seq[TupleID]] = {
     val k = options("k").toInt
 
-    val radius = 0.1 //TODO: get this information during training
-
-    val movableQuery = MovableDenseVector(q)
-    val queries = List(q, movableQuery.move(radius), movableQuery.move(radius), movableQuery.move(radius), movableQuery.move(radius), movableQuery.move(radius))
-
-    val queryHashes = queries.map{q => SpectralLSHUtils.hashFeature(q, trainResult)}
+    import ch.unibas.dmi.dbis.adam.data.types.MovableFeature.conv_feature2MovableFeature
+    val queries = List.fill(5)(SpectralLSHUtils.hashFeature(q.move(indexMetaData.radius), indexMetaData))
 
     indexdata
       .map { tuple =>
       val bits = BitString.fromByteArray(tuple.getSeq[Byte](1).toArray)
-      val score: Int = queryHashes.view.map{query =>
-        bits.intersectionCount(query)
-      }.sum
-
+      val score: Int = queries.view.map{bits.intersectionCount(_)}.sum
       (tuple.getLong(0), score)
-    }.takeOrdered(k * 5)(Ordering[Int].reverse.on(x => x._2)).map(_._1).toSeq
+    }.sortBy(_._2, false).map(_._1).takeAsync(k * 5)
   }
 
+  /**
+   *
+   * @param metaBuilder
+   */
+  override private[index] def prepareMeta(metaBuilder : IndexMetaStorageBuilder) : Unit = {
+    metaBuilder.put("pca", indexMetaData.pca.toDenseMatrix)
+    metaBuilder.put("pca_mat", indexMetaData.pca.toDenseMatrix.toArray)
+    metaBuilder.put("pca_cols", indexMetaData.pca.cols)
+    metaBuilder.put("pca_rows", indexMetaData.pca.rows)
 
-  override def getMeta: IndexMeta = {
-    val metadataBuilder = new IndexMetaBuilder()
-    metadataBuilder.put("pca", trainResult.pca.toDenseMatrix.toArray)
-    metadataBuilder.put("pca_cols", trainResult.pca.cols)
-    metadataBuilder.put("pca_rows", trainResult.pca.rows)
-    metadataBuilder.put("min", trainResult.min.toArray)
-    metadataBuilder.put("max", trainResult.max.toArray)
-    metadataBuilder.put("modes", trainResult.modes.toDenseMatrix.toArray)
-    metadataBuilder.put("modes_cols", trainResult.modes.cols)
-    metadataBuilder.put("modes_rows", trainResult.modes.rows)
-    metadataBuilder.build()
+    metaBuilder.put("min_vec", indexMetaData.min.toArray)
+    metaBuilder.put("min", indexMetaData.min.toDenseVector)
+    metaBuilder.put("max_vec", indexMetaData.max.toArray)
+    metaBuilder.put("max", indexMetaData.min.toDenseVector)
+
+    metaBuilder.put("modes", indexMetaData.modes.toDenseMatrix)
+    metaBuilder.put("modes_mat", indexMetaData.modes.toDenseMatrix.toArray)
+    metaBuilder.put("modes_cols", indexMetaData.modes.cols)
+    metaBuilder.put("modes_rows", indexMetaData.modes.rows)
+
+    metaBuilder.put("radius_vec", indexMetaData.radius.toArray)
   }
-
 }
 
+
 object SpectralLSHIndex {
-  def apply(indexname: IndexName, tablename: TableName, data: DataFrame, meta: IndexMeta) : Index =  {
+  /**
+   *
+   * @param indexname
+   * @param tablename
+   * @param data
+   * @param meta
+   * @return
+   */
+  def apply(indexname: IndexName, tablename: TableName, data: DataFrame, meta: IndexMetaStorage) : Index =  {
+    //TODO: check that this works?
     val pca_rows = meta.get("pca_rows").toString.toInt
     val pca_cols = meta.get("pca_cols").toString.toInt
-    val pca_array = meta.get[List[Double]]("pca").map(_.toFloat).toArray
-    val pca = new DenseMatrix(pca_rows, pca_cols, pca_array)
+    val pca_array = meta.get[List[Double]]("pca_mat").map(_.toFloat).toArray
+    val pca = meta.get("pca").asInstanceOf[DenseMatrix[VectorBase]] //new DenseMatrix(pca_rows, pca_cols, pca_array)
 
-    val min = new DenseVector(meta.get[List[Double]]("min").toArray)
-    val max = new DenseVector(meta.get[List[Double]]("max").toArray)
+    val minProj = meta.get("min").asInstanceOf[DenseVector[VectorBase]] //new DenseVector(meta.get[List[Double]]("min_vec").toArray)
+    val maxProj = meta.get("max").asInstanceOf[DenseVector[VectorBase]] //new DenseVector(meta.get[List[Double]]("max_vec").toArray)
 
     val modes_rows = meta.get("modes_rows").toString.toInt
     val modes_cols = meta.get("modes_cols").toString.toInt
-    val modes_array = meta.get[List[Double]]("modes").map(_.toFloat).toArray
-    val modes = new DenseMatrix(modes_rows, modes_cols, modes_array)
+    val modes_array = meta.get[List[Double]]("modes_mat").map(_.toFloat).toArray
+    val modes = meta.get("modes").asInstanceOf[DenseMatrix[VectorBase]] //new DenseMatrix(modes_rows, modes_cols, modes_array)
 
-    val trainResult = TrainResult(pca, min, max, modes)
+    val radius = new DenseVector(meta.get[List[Double]]("radius_vec").toArray)
 
-    new SpectralLSHIndex(indexname, tablename, data, trainResult)
+    val indexMetaData = SpectralLSHIndexMetaData(pca, minProj, maxProj, modes, radius)
+
+    new SpectralLSHIndex(indexname, tablename, data, indexMetaData)
   }
 }

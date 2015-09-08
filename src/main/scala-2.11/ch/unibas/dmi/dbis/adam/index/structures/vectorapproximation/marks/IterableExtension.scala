@@ -5,7 +5,7 @@ import scala.collection.IterableLike
 /**
  *
  */
-package object IterableExtension {
+package object marks {
 
   /**
    *

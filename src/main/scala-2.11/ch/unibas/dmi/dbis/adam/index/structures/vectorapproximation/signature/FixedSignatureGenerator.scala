@@ -3,7 +3,6 @@ package ch.unibas.dmi.dbis.adam.index.structures.vectorapproximation.signature
 import java.util.BitSet
 
 import ch.unibas.dmi.dbis.adam.data.types.bitString.BitString
-import ch.unibas.dmi.dbis.adam.data.types.bitString.BitString._
 
 import scala.collection.mutable.ListBuffer
 
@@ -17,13 +16,14 @@ class FixedSignatureGenerator(val numberOfDimensions: Int, val numberOfBitsPerDi
 
   /**
    *
+   * @param cells
+   * @return
    */
-  def toSignature(cells: Seq[Int]): BitStringType = {
-//    require(cells.forall { cell => numberOfBitsPerDimension <= math.max(1.0, math.ceil(math.log(cell) / math.log(2))) })
-//    require(cells.size == numberOfDimensions)
+  def toSignature(cells: Seq[Int]): BitString[_] = {
+    //require(cells.forall { cell => numberOfBitsPerDimension <= math.max(1.0, math.ceil(math.log(cell) / math.log(2))) })
+    //require(cells.size == numberOfDimensions)
 
     val setBits = ListBuffer[Int]()
-
 
     cells.reverse.zipWithIndex.foreach {
       case (cell, dimIdx) =>
@@ -45,8 +45,10 @@ class FixedSignatureGenerator(val numberOfDimensions: Int, val numberOfBitsPerDi
 
   /**
    *
+   * @param signature
+   * @return
    */
-  def toCells(signature: BitStringType): Seq[Int] = {
+  def toCells(signature: BitString[_]): Seq[Int] = {
     (0 until numberOfDimensions).map { dimIdx =>
       val cellBits = signature.get(dimIdx * numberOfBitsPerDimension, (dimIdx + 1) * numberOfBitsPerDimension)
       cellBits.toLong.toInt

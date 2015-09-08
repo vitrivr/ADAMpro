@@ -1,12 +1,15 @@
 package ch.unibas.dmi.dbis.adam.storage.catalog
 
-import ch.unibas.dmi.dbis.adam.data.IndexMeta
+import breeze.linalg.DenseMatrix
+import ch.unibas.dmi.dbis.adam.data.types.Feature.VectorBase
 import ch.unibas.dmi.dbis.adam.exception.{IndexNotExistingException, IndexExistingException, TableExistingException, TableNotExistingException}
 import ch.unibas.dmi.dbis.adam.index.Index.{IndexTypeName, IndexName}
-import ch.unibas.dmi.dbis.adam.index.structures.vectorapproximation.VectorApproximationIndexer.Marks
+import ch.unibas.dmi.dbis.adam.index.IndexMetaStorage
+import ch.unibas.dmi.dbis.adam.index.structures.vectorapproximation.VectorApproximationIndex.Marks
 import ch.unibas.dmi.dbis.adam.index.structures.vectorapproximation.signature.FixedSignatureGenerator
 import ch.unibas.dmi.dbis.adam.main.Startup
 import ch.unibas.dmi.dbis.adam.table.Table.TableName
+import org.apache.spark.mllib.linalg.DenseVector
 import org.json4s._
 import org.json4s.native.Serialization
 import org.json4s.native.Serialization._
@@ -35,7 +38,11 @@ object CatalogOperator {
   })
 
   implicit val formats = Serialization.formats(FullTypeHints (List(
-    classOf[FixedSignatureGenerator], classOf[Marks])))
+    classOf[FixedSignatureGenerator],
+    classOf[Marks],
+    classOf[DenseMatrix[VectorBase]],
+    classOf[DenseVector]
+  )))
 
   private val tables = TableQuery[TablesCatalog]
   private val indexes = TableQuery[IndexesCatalog]
@@ -108,7 +115,7 @@ object CatalogOperator {
    * @param tablename
    * @param indexmeta
    */
-  def createIndex(indexname : IndexName, tablename : TableName, indextypename : IndexTypeName, indexmeta : IndexMeta): Unit ={
+  def createIndex(indexname : IndexName, tablename : TableName, indextypename : IndexTypeName, indexmeta : IndexMetaStorage): Unit ={
     if(!existsTable(tablename)){
       throw new TableNotExistingException()
     }
@@ -116,8 +123,6 @@ object CatalogOperator {
     if(existsIndex(indexname)){
       throw new IndexExistingException()
     }
-
-
 
     val json =  write(indexmeta.map)
 
@@ -173,11 +178,11 @@ object CatalogOperator {
    * @param indexname
    * @return
    */
-  def getIndexMeta(indexname : IndexName) : IndexMeta = {
+  def getIndexMeta(indexname : IndexName) : IndexMetaStorage = {
     val query = indexes.filter(_.indexname === indexname).map(_.indexmeta).result.head
 
     val json = Await.result(db.run(query), 5.seconds)
-    new IndexMeta(read[Map[String, Any]](json))
+    new IndexMetaStorage(read[Map[String, Any]](json))
   }
 
   /**
@@ -197,6 +202,14 @@ object CatalogOperator {
    */
   def getIndexTableName(indexname : IndexName) : TableName = {
     val query = indexes.filter(_.indexname === indexname).map(_.tablename).result.head
+    Await.result(db.run(query), 5.seconds)
+  }
+
+  /**
+   *
+   */
+  def dropAllIndexes() : Unit = {
+    val query = indexes.delete
     Await.result(db.run(query), 5.seconds)
   }
 }

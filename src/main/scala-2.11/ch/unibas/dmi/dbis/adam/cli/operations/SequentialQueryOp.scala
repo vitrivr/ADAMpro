@@ -11,7 +11,6 @@ import ch.unibas.dmi.dbis.adam.table.Table._
  * Ivan Giangreco
  * August 2015
  */
-//TODO: replace this by query
 object SequentialQueryOp {
   /**
    *
@@ -21,7 +20,7 @@ object SequentialQueryOp {
    * @param distance
    */
   def apply(tablename: TableName, query : WorkingVector, k : Int, distance : DistanceFunction) : Unit = {
-    val results = QueryHandler.query(query, distance, k, tablename)
+    val results = QueryHandler.sequentialQuery(query, distance, k, tablename).get()
     println(results.map(x => x.tid))
   }
 }

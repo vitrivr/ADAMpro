@@ -11,8 +11,25 @@ import org.apache.spark.sql.{DataFrame, SaveMode}
  * August 2015
  */
 trait TableStorage {
+  /**
+   *
+   * @param tablename
+   * @return
+   */
   def readTable(tablename: TableName): Table
+
+  /**
+   *
+   * @param tablename
+   * @param df
+   * @param mode
+   */
   def writeTable(tablename : TableName, df: DataFrame, mode : SaveMode = SaveMode.Append): Unit
+
+  /**
+   *
+   * @param tablename
+   */
   def dropTable(tablename :TableName) : Unit
 }
 

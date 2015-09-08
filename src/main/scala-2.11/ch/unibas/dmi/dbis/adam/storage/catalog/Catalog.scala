@@ -27,7 +27,6 @@ class IndexesCatalog(tag: Tag) extends Table[(String, String, String, String)](t
     foreignKey("TABLENAME", tablename, TableQuery[TablesCatalog])(_.tablename)
 }
 
-
 object Catalog {
   def apply() = List(
     ("__ADAMTWO_TABLES", TableQuery[TablesCatalog]),

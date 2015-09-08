@@ -1,10 +1,9 @@
 package ch.unibas.dmi.dbis.adam.index.structures.spectrallsh
 
 import breeze.linalg.{Matrix, Vector, _}
-import ch.unibas.dmi.dbis.adam.data.IndexTuple
 import ch.unibas.dmi.dbis.adam.data.types.Feature.{VectorBase, _}
 import ch.unibas.dmi.dbis.adam.index.Index._
-import ch.unibas.dmi.dbis.adam.index.{Index, IndexGenerator}
+import ch.unibas.dmi.dbis.adam.index.{IndexerTuple, IndexTuple, Index, IndexGenerator}
 import ch.unibas.dmi.dbis.adam.main.SparkStartup
 import ch.unibas.dmi.dbis.adam.table.Table._
 import org.apache.spark.rdd.RDD
@@ -26,18 +25,17 @@ class SpectralLSHIndexer(nfeatures : Int, nbits : Int, trainingSize : Int) exten
    * @param data
    * @return
    */
-  override def index(indexname : IndexName, tablename : TableName, data: RDD[IndexTuple[WorkingVector]]): Index = {
-    val trainResult = train(data)
+  override def index(indexname : IndexName, tablename : TableName, data: RDD[IndexerTuple[WorkingVector]]): Index = {
+    val indexMetaData = train(data)
 
     val indexdata = data.map(
       datum => {
-        val hash = SpectralLSHUtils.hashFeature(datum.value, trainResult)
-        IndexTuple(datum.tid, hash.toByteArray)
+        val hash = SpectralLSHUtils.hashFeature(datum.value, indexMetaData)
+        IndexTuple(datum.tid, hash)
       })
 
-
     import SparkStartup.sqlContext.implicits._
-    new SpectralLSHIndex(indexname, tablename, indexdata.toDF, trainResult)
+    new SpectralLSHIndex(indexname, tablename, indexdata.toDF, indexMetaData)
   }
 
   /**
@@ -45,7 +43,7 @@ class SpectralLSHIndexer(nfeatures : Int, nbits : Int, trainingSize : Int) exten
    * @param data
    * @return
    */
-  private def train(data : RDD[IndexTuple[WorkingVector]]) : TrainResult = {
+  private def train(data : RDD[IndexerTuple[WorkingVector]]) : SpectralLSHIndexMetaData = {
     //data
     val trainData = data.map(x => x.value.map(x => x.toDouble).toArray)
     val dataMatrix = DenseMatrix(trainData.take(trainingSize).toList : _*)
@@ -66,15 +64,20 @@ class SpectralLSHIndexer(nfeatures : Int, nbits : Int, trainingSize : Int) exten
     val projected = (dataMatrix.*(reorderEigv)).asInstanceOf[DenseMatrix[Double]]
 
     // fit uniform distribution
-    val min = breeze.linalg.min(projected(::, *)).toDenseVector
-    val max = breeze.linalg.max(projected(::, *)).toDenseVector
+    val minProj = breeze.linalg.min(projected(::, *)).toDenseVector
+    val maxProj = breeze.linalg.max(projected(::, *)).toDenseVector
 
     // enumerate eigenfunctions
-    val maxMode = computeShareOfBits(min, max, nbits)
+    val maxMode = computeShareOfBits(minProj, maxProj, nbits)
     val allModes = getAllModes(maxMode, numComponents)
-    val modes = getSortedModes(allModes, min, max, nbits)
+    val modes = getSortedModes(allModes, minProj, maxProj, nbits)
 
-    TrainResult(feigv, min, max, modes)
+    // compute "radius" for moving query around
+    val min = breeze.linalg.min(dataMatrix(*, ::)).toDenseVector
+    val max = breeze.linalg.max(dataMatrix(*, ::)).toDenseVector
+    val radius = 0.1 * (max - min)
+
+    SpectralLSHIndexMetaData(feigv, minProj, maxProj, modes.toDenseMatrix, radius)
   }
 
 
@@ -121,7 +124,7 @@ class SpectralLSHIndexer(nfeatures : Int, nbits : Int, trainingSize : Int) exten
    */
   private def getSortedModes(modes : DenseMatrix[VectorBase], min : Vector[VectorBase], max : Vector[VectorBase], nbits : Int) : Matrix[VectorBase] = {
     val range = max - min
-    val omega0 = range.mapValues(r => toVectorBase(math.Pi / math.abs(r))) //abs() added
+    val omega0 = range.mapValues(r => conv_double2vectorBase(math.Pi / math.abs(r))) //abs() added
     val omegas = modes(*, ::).:*(omega0)
     val omegas2 = omegas :* omegas
     val eigVal = sum(omegas2(*, ::))
@@ -139,34 +142,15 @@ class SpectralLSHIndexer(nfeatures : Int, nbits : Int, trainingSize : Int) exten
 
 
 object SpectralLSHIndexer {
-
   /**
    *
    * @param properties
    */
-  def apply(properties : Map[String, String] = Map[String, String](), data: RDD[IndexTuple[WorkingVector]]) : IndexGenerator = {
+  def apply(properties : Map[String, String] = Map[String, String](), data: RDD[IndexerTuple[WorkingVector]]) : IndexGenerator = {
     val nfeatures =  data.first.value.length
     val nbits = properties.getOrElse("nbits", "100").toInt
-    val trainingSize = properties.getOrElse("trainingSize", "200000").toInt
+    val trainingSize = properties.getOrElse("trainingSize", "50000").toInt
 
-    new SpectralLSHIndexer(nfeatures, nbits,trainingSize)
-  }
-}
-
-/**
- *
- * @param pca
- * @param min
- * @param max
- * @param modes
- */
-private case class TrainResult(pca : Matrix[VectorBase], min : Vector[VectorBase], max : Vector[VectorBase], modes : Matrix[VectorBase]) {
-  lazy val omegas: DenseMatrix[VectorBase] = {
-    val range = max - min
-    val omega0 = range.mapValues(r => (math.Pi / r).toFloat)
-    val modesMat = modes.toDenseMatrix
-    val omegas : DenseMatrix[VectorBase] = (modesMat(*, ::).:*(omega0)).toDenseMatrix
-
-    omegas
+    new SpectralLSHIndexer(nfeatures, nbits, trainingSize)
   }
 }

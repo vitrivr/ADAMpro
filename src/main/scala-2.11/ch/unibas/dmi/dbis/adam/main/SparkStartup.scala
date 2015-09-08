@@ -19,7 +19,7 @@ object SparkStartup {
   System.setProperty("spark.akka.askTimeout", "30"); // high CPU/IO load
 
 
-  val sparkConfig = new SparkConf().setAppName("ADAMtwo").setMaster("local[4]")
+  val sparkConfig = new SparkConf().setAppName("ADAMtwo").setMaster("local[16]")
   sparkConfig.set("spark.serializer", "org.apache.spark.serializer.KryoSerializer")
   sparkConfig.registerKryoClasses(Array())
 

@@ -3,15 +3,17 @@ package ch.unibas.dmi.dbis.adam.index.structures.vectorapproximation
 import ch.unibas.dmi.dbis.adam.data.Tuple._
 import ch.unibas.dmi.dbis.adam.data.types.Feature._
 import ch.unibas.dmi.dbis.adam.data.types.bitString.BitString
-import ch.unibas.dmi.dbis.adam.data.{IndexMeta, IndexMetaBuilder, IndexTuple}
-import ch.unibas.dmi.dbis.adam.index.Index
 import ch.unibas.dmi.dbis.adam.index.Index.IndexName
-import ch.unibas.dmi.dbis.adam.index.structures.vectorapproximation.VectorApproximationIndexer.{Bounds, Marks}
-import ch.unibas.dmi.dbis.adam.index.structures.vectorapproximation.results.{BoundableResultHandler, ResultHandler}
-import ch.unibas.dmi.dbis.adam.index.structures.vectorapproximation.signature.{FixedSignatureGenerator, SignatureGenerator}
+import ch.unibas.dmi.dbis.adam.index.structures.vectorapproximation.VectorApproximationIndex.{Bounds, Marks}
+import ch.unibas.dmi.dbis.adam.index.structures.vectorapproximation.results.VectorApproximationResultHandler
+import ch.unibas.dmi.dbis.adam.index.structures.vectorapproximation.signature.FixedSignatureGenerator
+import ch.unibas.dmi.dbis.adam.index.{Index, IndexMetaStorage, IndexMetaStorageBuilder, IndexTuple}
+import ch.unibas.dmi.dbis.adam.query.distance.Distance._
 import ch.unibas.dmi.dbis.adam.query.distance.NormBasedDistanceFunction
 import ch.unibas.dmi.dbis.adam.table.Table._
 import org.apache.spark.sql.DataFrame
+import org.apache.spark.{ComplexFutureAction, FutureAction}
+import scala.concurrent.ExecutionContext.Implicits.global
 
 /**
  * adamtwo
@@ -19,43 +21,72 @@ import org.apache.spark.sql.DataFrame
  * Ivan Giangreco
  * August 2015
  */
-class VectorApproximationIndex(val indexname : IndexName, val tablename : TableName, val indexdata: DataFrame, marks : Marks, signatureGenerator : SignatureGenerator)
+class VectorApproximationIndex(val indexname : IndexName, val tablename : TableName, protected val indexdata: DataFrame, private val indexMetaData: VectorApproximationIndexMetaData)
   extends Index with Serializable {
 
   /**
    *
    */
-  def query(q: WorkingVector, options: Map[String, String]): Seq[TupleID] = {
+  override def scan(q: WorkingVector, options: Map[String, String]): FutureAction[Seq[TupleID]] = {
     val k = options("k").toInt
     val norm = options("norm").toInt
 
-    val lbounds: Bounds = lowerBounds(q, marks, new NormBasedDistanceFunction(norm))
-    val ubounds: Bounds = upperBounds(q, marks, new NormBasedDistanceFunction(norm))
+    val lbounds: Bounds = lowerBounds(q, indexMetaData.marks, new NormBasedDistanceFunction(norm))
+    val ubounds: Bounds = upperBounds(q, indexMetaData.marks, new NormBasedDistanceFunction(norm))
 
-    val localResultHandlers = indexdata
+    val globalResultHandler = new VectorApproximationResultHandler(k)
+
+    indexdata
       .map{ tuple =>
-      val bits = BitString.fromByteArray(tuple.getSeq[Byte](1).toArray)
-      IndexTuple(tuple.getLong(0), bits) }
-      .mapPartitions(indexTuplesIt => {
-      val rh = new BoundableResultHandler(k, lbounds, ubounds, signatureGenerator)
-      rh.offerIndexTuple(indexTuplesIt)
-      rh.iterator
-    }).collect()
+        val bits = BitString.fromByteArray(tuple.getSeq[Byte](1).toArray)
+        val indexTuple : IndexTuple = IndexTuple(tuple.getLong(0), bits)
+        indexTuple }
+      .mapPartitions(tuplesIt => {
+        val localRh = new VectorApproximationResultHandler(k, lbounds, ubounds, indexMetaData.signatureGenerator)
+        tuplesIt.foreach { tuple =>
+          localRh.offerResultElement(tuple)
+        }
+        localRh.iterator})
+      .foreachAsync(x => globalResultHandler.offerResultElement(x))
 
-    val globalResultHandler = new ResultHandler(k)
-    globalResultHandler.offerResultElement(localResultHandlers.iterator)
+    val action = new ComplexFutureAction[Seq[TupleID]]
+    action.run({
+      globalResultHandler.results.map(x => x.indexTuple.tid).toList
+    })
 
-    globalResultHandler.results.map(_.indexTuple.tid)
+    action
+  }
+
+
+  /**
+   *
+   * @param bounds
+   * @param signature
+   * @return
+   */
+  private def computeBounds(bounds: Bounds, signature: BitString[_]): Distance = {
+    val cells = indexMetaData.signatureGenerator.toCells(signature)
+
+    var sum : Float = 0
+    cells.zipWithIndex.foreach { case(cell, index) =>
+      sum += bounds(index)(cell)
+    }
+
+    sum
   }
 
   /**
    *
+   * @param q
+   * @param marks
+   * @param distance
+   * @return
    */
-  def lowerBounds(q: WorkingVector, marks: => Marks, distance: NormBasedDistanceFunction): Bounds = {
+  private def lowerBounds(q: WorkingVector, marks: => Marks, distance: NormBasedDistanceFunction): Bounds = {
     val bounds = marks.zipWithIndex.map {
       case (dimMarks, i) =>
         val fvi = q(i)
-        dimMarks.iterator.sliding(2).withPartial(false).map { //TODO: valuesIterator?
+        dimMarks.iterator.sliding(2).withPartial(false).map {
           dimMark =>
             if (fvi < dimMark(0)) {
               distance(dimMark(0), fvi)
@@ -72,8 +103,12 @@ class VectorApproximationIndex(val indexname : IndexName, val tablename : TableN
 
   /**
    *
+   * @param q
+   * @param marks
+   * @param distance
+   * @return
    */
-  def upperBounds(q: WorkingVector, marks: => Marks, distance: NormBasedDistanceFunction): Bounds = {
+  private def upperBounds(q: WorkingVector, marks: => Marks, distance: NormBasedDistanceFunction): Bounds = {
     val bounds = marks.zipWithIndex.map {
       case (dimMarks, i) =>
         val fvi = q(i)
@@ -91,23 +126,27 @@ class VectorApproximationIndex(val indexname : IndexName, val tablename : TableN
     bounds
   }
 
-
-  override def getMeta: IndexMeta = {
-    val metadataBuilder = new IndexMetaBuilder()
-    metadataBuilder.put("marks", marks)
-    metadataBuilder.put("signatureGenerator", signatureGenerator)
-    metadataBuilder.build()
+  /**
+   *
+   * @param metaBuilder
+   */
+  override private[index] def prepareMeta(metaBuilder : IndexMetaStorageBuilder) : Unit = {
+    metaBuilder.put("marks", indexMetaData.marks)
+    metaBuilder.put("signatureGenerator", indexMetaData.signatureGenerator)
   }
 
 }
 
 object VectorApproximationIndex {
-  def apply(indexname : IndexName, tablename : TableName, data: DataFrame, meta : IndexMeta ) : Index = {
+  type Marks = Seq[Seq[VectorBase]]
+  type Bounds = Array[Array[Distance]]
+
+  def apply(indexname : IndexName, tablename : TableName, data: DataFrame, meta : IndexMetaStorage ) : Index = {
     val marks : Marks = meta.get("marks").asInstanceOf[Seq[Seq[Double]]].map(_.map(_.toFloat))
     val signatureGenerator =  meta.get("signatureGenerator").asInstanceOf[FixedSignatureGenerator]
 
-    new VectorApproximationIndex(indexname, tablename, data,
-      marks, signatureGenerator
-     )
+    val indexMetaData = VectorApproximationIndexMetaData(marks, signatureGenerator)
+
+    new VectorApproximationIndex(indexname, tablename, data, indexMetaData)
   }
 }

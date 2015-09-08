@@ -1,6 +1,6 @@
 package ch.unibas.dmi.dbis.adam.index.structures.vectorapproximation.signature
 
-import ch.unibas.dmi.dbis.adam.data.types.bitString.BitString._
+import ch.unibas.dmi.dbis.adam.data.types.bitString.BitString
 
 /**
  * adamtwo
@@ -8,14 +8,14 @@ import ch.unibas.dmi.dbis.adam.data.types.bitString.BitString._
  * Ivan Giangreco
  * August 2015
  */
-trait SignatureGenerator extends Serializable {
+private[vectorapproximation] trait SignatureGenerator extends Serializable {
   /**
    * 
    */
-  def toSignature(cells: Seq[Int]): BitStringType
+  def toSignature(cells: Seq[Int]): BitString[_]
   
   /**
    * 
    */
-  def toCells(signature: BitStringType): Seq[Int]
+  def toCells(signature: BitString[_]): Seq[Int]
 }

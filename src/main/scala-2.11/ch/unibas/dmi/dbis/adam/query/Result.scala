@@ -10,5 +10,10 @@ import ch.unibas.dmi.dbis.adam.query.distance.Distance.Distance
  * August 2015
  */
 case class Result (distance : Distance, tid : TupleID)  extends Ordered[Result] {
+  /**
+   *
+   * @param that
+   * @return
+   */
   override def compare(that: Result): Int = distance compare that.distance
 }

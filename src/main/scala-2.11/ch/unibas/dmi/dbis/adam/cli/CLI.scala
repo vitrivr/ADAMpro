@@ -3,6 +3,7 @@ package ch.unibas.dmi.dbis.adam.cli
 import ch.unibas.dmi.dbis.adam.cli.operations._
 import ch.unibas.dmi.dbis.adam.data.types.Feature._
 import ch.unibas.dmi.dbis.adam.query.distance.NormBasedDistanceFunction
+import ch.unibas.dmi.dbis.adam.storage.catalog.CatalogOperator
 import org.apache.spark.sql.types._
 
 import scala.tools.nsc.interpreter.ILoop
@@ -26,7 +27,10 @@ class CLI extends ILoop {
     new VarArgsCmd("seqquery", "tablename q k", "querys table in kNN search sequentially", seqQueryOp),
     new VarArgsCmd("index", "tablename indextype [properties]", "creates an index of given type with properties", indexOp),
     new VarArgsCmd("indquery", "indexname q k", "querys table in kNN search using index", indQueryOp),
-    new VarArgsCmd("drop", "tablename", "drops table", dropOp)
+    new VarArgsCmd("drop", "tablename", "drops table", dropOp),
+    new NullaryCmd("dropAllIndexes","drops all indexes", dropAllIndexesOp),
+    new VarArgsCmd("progQuery", "tablename q k", "querys table in kNN search using progressive query", progQueryOp)
+
   )
 
 
@@ -124,6 +128,21 @@ class CLI extends ILoop {
     val k = input(2).toInt
 
     IndexQueryOp(indexname, query, k, NormBasedDistanceFunction(1))
+
+    Result.default
+  }
+
+  private def dropAllIndexesOp(input : String) : Result = {
+    CatalogOperator.dropAllIndexes()
+  }
+
+
+  private def progQueryOp(input: List[String]): Result = {
+    val tablename = input(0)
+    val query = input(1)
+    val k = input(2).toInt
+
+    ProgressiveQueryOp(tablename, query, k, NormBasedDistanceFunction(1))
 
     Result.default
   }

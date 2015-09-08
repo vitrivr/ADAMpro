@@ -1,6 +1,5 @@
 package ch.unibas.dmi.dbis.adam.index
 
-import ch.unibas.dmi.dbis.adam.data.IndexMeta
 import ch.unibas.dmi.dbis.adam.data.Tuple._
 import ch.unibas.dmi.dbis.adam.data.types.Feature._
 import ch.unibas.dmi.dbis.adam.exception.IndexNotExistingException
@@ -12,6 +11,7 @@ import ch.unibas.dmi.dbis.adam.main.SparkStartup
 import ch.unibas.dmi.dbis.adam.storage.catalog.CatalogOperator
 import ch.unibas.dmi.dbis.adam.table.Table
 import ch.unibas.dmi.dbis.adam.table.Table.TableName
+import org.apache.spark.FutureAction
 import org.apache.spark.sql.DataFrame
 
 import scala.util.Random
@@ -25,12 +25,19 @@ import scala.util.Random
 trait Index{
   val indexname : IndexName
   val tablename : TableName
-  val indexdata : DataFrame
+  protected val indexdata : DataFrame
 
-  def getMeta : IndexMeta
+  def getMetadata = {
+    val metaBuilder = new IndexMetaStorageBuilder()
+    prepareMeta(metaBuilder)
+    metaBuilder.build()
+  }
 
-  def query(q: WorkingVector, options: Map[String, String]): Seq[TupleID]
+  private[index] def prepareMeta(metaBuilder : IndexMetaStorageBuilder) : Unit
+
+  def scan(q: WorkingVector, options: Map[String, String]): FutureAction[Seq[TupleID]]
 }
+
 
 object Index {
   type IndexName = String
@@ -47,11 +54,17 @@ object Index {
   def createIndex(table : Table, indexgenerator : IndexGenerator) : Index = {
     val indexname = createIndexName(table.tablename, indexgenerator.indextypename)
     val index = indexgenerator.index(indexname, table.tablename, table.data)
-    CatalogOperator.createIndex(indexname, table.tablename, indexgenerator.indextypename, index.getMeta)
+    CatalogOperator.createIndex(indexname, table.tablename, indexgenerator.indextypename, index.getMetadata)
     storage.writeIndex(indexname, index.indexdata)
     index
   }
 
+  /**
+   *
+   * @param tablename
+   * @param indextype
+   * @return
+   */
   private def createIndexName(tablename : TableName, indextype : IndexTypeName) : String = {
     val indexes = CatalogOperator.getIndexes(tablename)
 
@@ -63,7 +76,6 @@ object Index {
 
     indexname
   }
-
 
   /**
    *
@@ -120,5 +132,12 @@ object Index {
     }
   }
 
-
+  /**
+   *
+   * @param tablename
+   * @return
+   */
+  def getIndexnames(tablename : TableName) : Seq[IndexName] = {
+    CatalogOperator.getIndexes(tablename)
+  }
 }

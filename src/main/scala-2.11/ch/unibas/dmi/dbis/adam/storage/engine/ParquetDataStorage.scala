@@ -71,6 +71,5 @@ object ParquetDataStorage extends TableStorage with IndexStorage {
    */
   override def dropIndex(indexname: IndexName): Unit = {
     FileUtils.deleteQuietly(new File(config.indexPath + "/" + indexname))
-
   }
 }

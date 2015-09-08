@@ -88,7 +88,7 @@ object Table {
       throw new TableNotExistingException()
     }
 
-    //TODO: check schema equality
+    //TODO: check schema equality between DF and insertion
     //val schema = data.schema.fields
 
     val future = Future {
@@ -98,7 +98,6 @@ object Table {
     Await.ready(future, Duration.Inf)
     storage.readTable(tablename)
   }
-
 
   /**
    *
