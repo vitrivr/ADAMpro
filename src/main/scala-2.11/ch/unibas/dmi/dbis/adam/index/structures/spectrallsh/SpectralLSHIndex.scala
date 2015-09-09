@@ -75,7 +75,6 @@ object SpectralLSHIndex {
    * @return
    */
   def apply(indexname: IndexName, tablename: TableName, data: DataFrame, meta: IndexMetaStorage) : Index =  {
-    //TODO: check that this works?
     val pca_rows = meta.get("pca_rows").toString.toInt
     val pca_cols = meta.get("pca_cols").toString.toInt
     val pca_array = meta.get[List[Double]]("pca_mat").map(_.toFloat).toArray

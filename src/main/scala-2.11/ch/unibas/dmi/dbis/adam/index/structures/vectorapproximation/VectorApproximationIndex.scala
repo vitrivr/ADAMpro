@@ -47,7 +47,9 @@ class VectorApproximationIndex(val indexname : IndexName, val tablename : TableN
       .map(_.indexTuple.tid)
       .collectAsync()
 
-    /*.foreachAsync(x => globalResultHandler.offerResultElement(x))
+    /*
+    by leaving out this part we reduce the number of collects of data
+    .foreachAsync(x => globalResultHandler.offerResultElement(x))
 
     val action = new ComplexFutureAction[Seq[TupleID]]
     action.run({
