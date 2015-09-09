@@ -1,6 +1,7 @@
 package ch.unibas.dmi.dbis.adam.query
 
-import ch.unibas.dmi.dbis.adam.data.Tuple.TupleID
+import ch.unibas.dmi.dbis.adam.table.Tuple
+import Tuple.TupleID
 import ch.unibas.dmi.dbis.adam.query.distance.Distance.Distance
 
 /**

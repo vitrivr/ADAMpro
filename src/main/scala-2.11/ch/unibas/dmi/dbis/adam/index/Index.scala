@@ -1,7 +1,9 @@
 package ch.unibas.dmi.dbis.adam.index
 
-import ch.unibas.dmi.dbis.adam.data.Tuple._
-import ch.unibas.dmi.dbis.adam.data.types.Feature._
+import ch.unibas.dmi.dbis.adam.datatypes.Feature
+import ch.unibas.dmi.dbis.adam.table.{Tuple, Table}
+import Tuple._
+import Feature._
 import ch.unibas.dmi.dbis.adam.exception.IndexNotExistingException
 import ch.unibas.dmi.dbis.adam.index.Index._
 import ch.unibas.dmi.dbis.adam.index.structures.lsh.LSHIndex

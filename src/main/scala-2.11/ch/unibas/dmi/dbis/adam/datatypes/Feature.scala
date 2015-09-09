@@ -1,4 +1,4 @@
-package ch.unibas.dmi.dbis.adam.data.types
+package ch.unibas.dmi.dbis.adam.datatypes
 
 import breeze.linalg.DenseVector
 

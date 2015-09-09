@@ -1,6 +1,7 @@
 package ch.unibas.dmi.dbis.adam.query.distance
 
-import ch.unibas.dmi.dbis.adam.data.types.Feature.{WorkingVector, VectorBase, StoredVector}
+import ch.unibas.dmi.dbis.adam.datatypes.Feature
+import Feature.{WorkingVector, VectorBase, StoredVector}
 import ch.unibas.dmi.dbis.adam.query.distance.Distance.{Distance, _}
 
 /**

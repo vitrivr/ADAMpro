@@ -1,6 +1,7 @@
 package ch.unibas.dmi.dbis.adam.index.structures.lsh.hashfunction
 
-import ch.unibas.dmi.dbis.adam.data.types.Feature.WorkingVector
+import ch.unibas.dmi.dbis.adam.datatypes.Feature
+import Feature.WorkingVector
 
 /**
  * adamtwo

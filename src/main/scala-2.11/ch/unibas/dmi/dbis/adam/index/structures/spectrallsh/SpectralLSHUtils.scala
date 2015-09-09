@@ -1,8 +1,9 @@
 package ch.unibas.dmi.dbis.adam.index.structures.spectrallsh
 
 import breeze.linalg.{*, DenseMatrix}
-import ch.unibas.dmi.dbis.adam.data.types.Feature._
-import ch.unibas.dmi.dbis.adam.data.types.bitString.BitString
+import ch.unibas.dmi.dbis.adam.datatypes.Feature
+import Feature._
+import ch.unibas.dmi.dbis.adam.datatypes.bitString.BitString
 
 /**
  * adamtwo

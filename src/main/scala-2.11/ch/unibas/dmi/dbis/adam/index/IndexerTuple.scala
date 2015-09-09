@@ -1,6 +1,7 @@
 package ch.unibas.dmi.dbis.adam.index
 
-import ch.unibas.dmi.dbis.adam.data.Tuple._
+import ch.unibas.dmi.dbis.adam.table.Tuple
+import Tuple._
 
 /**
  * adamtwo

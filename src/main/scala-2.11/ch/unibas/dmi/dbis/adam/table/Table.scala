@@ -1,10 +1,10 @@
 package ch.unibas.dmi.dbis.adam.table
 
-import ch.unibas.dmi.dbis.adam.data.Tuple
 import ch.unibas.dmi.dbis.adam.exception.{TableCreationException, TableNotExistingException}
 import ch.unibas.dmi.dbis.adam.main.SparkStartup
 import ch.unibas.dmi.dbis.adam.storage.catalog.CatalogOperator
 import ch.unibas.dmi.dbis.adam.table.Table.TableName
+import ch.unibas.dmi.dbis.adam.table.Tuple
 import org.apache.spark.sql.types.StructType
 import org.apache.spark.sql.{DataFrame, Row, SaveMode}
 

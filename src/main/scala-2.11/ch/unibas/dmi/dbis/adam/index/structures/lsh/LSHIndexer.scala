@@ -1,6 +1,7 @@
 package ch.unibas.dmi.dbis.adam.index.structures.lsh
 
-import ch.unibas.dmi.dbis.adam.data.types.Feature.WorkingVector
+import ch.unibas.dmi.dbis.adam.datatypes.Feature
+import Feature.WorkingVector
 import ch.unibas.dmi.dbis.adam.index.Index._
 import ch.unibas.dmi.dbis.adam.index.structures.lsh.hashfunction.{EuclideanHashFunction, Hasher, LSHashFunction}
 import ch.unibas.dmi.dbis.adam.index.{IndexerTuple, Index, IndexGenerator, IndexTuple}

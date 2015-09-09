@@ -1,6 +1,7 @@
 package ch.unibas.dmi.dbis.adam.query
 
-import ch.unibas.dmi.dbis.adam.data.types.Feature._
+import ch.unibas.dmi.dbis.adam.datatypes.Feature
+import Feature._
 import ch.unibas.dmi.dbis.adam.index.Index
 import ch.unibas.dmi.dbis.adam.index.Index.IndexName
 import ch.unibas.dmi.dbis.adam.main.SparkStartup

@@ -4,7 +4,7 @@ package ch.unibas.dmi.dbis.adam.http;
 import akka.actor._
 import akka.util.Timeout
 import ch.unibas.dmi.dbis.adam.api._
-import ch.unibas.dmi.dbis.adam.data.types.Feature
+import ch.unibas.dmi.dbis.adam.datatypes.Feature
 import ch.unibas.dmi.dbis.adam.http.Protocol._
 import ch.unibas.dmi.dbis.adam.query.Result
 import ch.unibas.dmi.dbis.adam.query.distance.NormBasedDistanceFunction

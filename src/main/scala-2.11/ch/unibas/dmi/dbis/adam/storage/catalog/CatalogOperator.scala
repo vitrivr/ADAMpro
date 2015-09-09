@@ -1,7 +1,8 @@
 package ch.unibas.dmi.dbis.adam.storage.catalog
 
 import breeze.linalg.DenseMatrix
-import ch.unibas.dmi.dbis.adam.data.types.Feature.VectorBase
+import ch.unibas.dmi.dbis.adam.datatypes.Feature
+import Feature.VectorBase
 import ch.unibas.dmi.dbis.adam.exception.{IndexNotExistingException, IndexExistingException, TableExistingException, TableNotExistingException}
 import ch.unibas.dmi.dbis.adam.index.Index.{IndexTypeName, IndexName}
 import ch.unibas.dmi.dbis.adam.index.IndexMetaStorage

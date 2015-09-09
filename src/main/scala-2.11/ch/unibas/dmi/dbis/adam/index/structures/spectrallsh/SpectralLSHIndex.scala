@@ -1,9 +1,11 @@
 package ch.unibas.dmi.dbis.adam.index.structures.spectrallsh
 
 import breeze.linalg._
-import ch.unibas.dmi.dbis.adam.data.Tuple._
-import ch.unibas.dmi.dbis.adam.data.types.Feature._
-import ch.unibas.dmi.dbis.adam.data.types.bitString.BitString
+import ch.unibas.dmi.dbis.adam.datatypes.{MovableFeature, Feature}
+import ch.unibas.dmi.dbis.adam.datatypes.bitString.BitString
+import ch.unibas.dmi.dbis.adam.table.Tuple
+import Tuple._
+import Feature._
 import ch.unibas.dmi.dbis.adam.index.Index._
 import ch.unibas.dmi.dbis.adam.index.{Index, IndexMetaStorage, IndexMetaStorageBuilder, IndexTuple}
 import ch.unibas.dmi.dbis.adam.table.Table._
@@ -27,7 +29,7 @@ class SpectralLSHIndex(val indexname: IndexName, val tablename: TableName, prote
   override def scan(q: WorkingVector, options: Map[String, String]): FutureAction[Seq[TupleID]] = {
     val k = options("k").toInt
 
-    import ch.unibas.dmi.dbis.adam.data.types.MovableFeature.conv_feature2MovableFeature
+    import MovableFeature.conv_feature2MovableFeature
     val queries = List.fill(5)(SpectralLSHUtils.hashFeature(q.move(indexMetaData.radius), indexMetaData))
 
     indexdata

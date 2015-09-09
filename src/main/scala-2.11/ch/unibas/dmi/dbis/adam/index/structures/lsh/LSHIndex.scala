@@ -1,8 +1,10 @@
 package ch.unibas.dmi.dbis.adam.index.structures.lsh
 
-import ch.unibas.dmi.dbis.adam.data.Tuple._
-import ch.unibas.dmi.dbis.adam.data.types.Feature._
-import ch.unibas.dmi.dbis.adam.data.types.bitString.BitString
+import ch.unibas.dmi.dbis.adam.datatypes.{MovableFeature, Feature}
+import ch.unibas.dmi.dbis.adam.datatypes.bitString.BitString
+import ch.unibas.dmi.dbis.adam.table.Tuple
+import Tuple._
+import Feature._
 import ch.unibas.dmi.dbis.adam.index.Index._
 import ch.unibas.dmi.dbis.adam.index.structures.lsh.hashfunction.Hasher
 import ch.unibas.dmi.dbis.adam.index.{Index, IndexMetaStorage, IndexMetaStorageBuilder, IndexTuple}
@@ -27,7 +29,7 @@ class LSHIndex(val indexname : IndexName, val tablename : TableName, protected v
    * @return
    */
   override def scan(q: WorkingVector, options: Map[String, String]): FutureAction[Seq[TupleID]] = {
-    import ch.unibas.dmi.dbis.adam.data.types.MovableFeature.conv_feature2MovableFeature
+    import MovableFeature.conv_feature2MovableFeature
     val queries = List.fill(5)(q.move(0.1))
 
     val results = indexdata

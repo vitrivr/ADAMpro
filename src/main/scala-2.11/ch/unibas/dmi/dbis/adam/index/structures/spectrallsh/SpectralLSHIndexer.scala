@@ -1,7 +1,8 @@
 package ch.unibas.dmi.dbis.adam.index.structures.spectrallsh
 
 import breeze.linalg.{Matrix, Vector, _}
-import ch.unibas.dmi.dbis.adam.data.types.Feature.{VectorBase, _}
+import ch.unibas.dmi.dbis.adam.datatypes.Feature
+import Feature.{VectorBase, _}
 import ch.unibas.dmi.dbis.adam.index.Index._
 import ch.unibas.dmi.dbis.adam.index.{IndexerTuple, IndexTuple, Index, IndexGenerator}
 import ch.unibas.dmi.dbis.adam.main.SparkStartup

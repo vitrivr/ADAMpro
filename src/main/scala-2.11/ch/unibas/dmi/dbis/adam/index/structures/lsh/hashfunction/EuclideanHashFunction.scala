@@ -1,7 +1,8 @@
 package ch.unibas.dmi.dbis.adam.index.structures.lsh.hashfunction
 
 import breeze.linalg.DenseVector
-import ch.unibas.dmi.dbis.adam.data.types.Feature.WorkingVector
+import ch.unibas.dmi.dbis.adam.datatypes.Feature
+import Feature.WorkingVector
 
 import scala.util.Random
 

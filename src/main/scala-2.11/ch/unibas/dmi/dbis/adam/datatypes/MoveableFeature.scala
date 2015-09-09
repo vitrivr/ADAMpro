@@ -1,7 +1,7 @@
-package ch.unibas.dmi.dbis.adam.data.types
+package ch.unibas.dmi.dbis.adam.datatypes
 
 import breeze.linalg.DenseVector
-import ch.unibas.dmi.dbis.adam.data.types.Feature.{VectorBase, WorkingVector}
+import Feature.{VectorBase, WorkingVector}
 import breeze.linalg.{Matrix, Vector, _}
 
 import scala.util.Random

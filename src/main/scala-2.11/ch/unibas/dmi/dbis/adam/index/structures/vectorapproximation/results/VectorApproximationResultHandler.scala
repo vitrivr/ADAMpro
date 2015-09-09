@@ -1,6 +1,6 @@
 package ch.unibas.dmi.dbis.adam.index.structures.vectorapproximation.results
 
-import ch.unibas.dmi.dbis.adam.data.types.bitString.BitString
+import ch.unibas.dmi.dbis.adam.datatypes.bitString.BitString
 import ch.unibas.dmi.dbis.adam.index.IndexTuple
 import ch.unibas.dmi.dbis.adam.index.structures.vectorapproximation.VectorApproximationIndex._
 import ch.unibas.dmi.dbis.adam.index.structures.vectorapproximation.signature.SignatureGenerator

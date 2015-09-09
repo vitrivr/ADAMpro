@@ -1,6 +1,6 @@
 package ch.unibas.dmi.dbis.adam.api
 
-import ch.unibas.dmi.dbis.adam.data.types.Feature._
+import ch.unibas.dmi.dbis.adam.datatypes.Feature
 import ch.unibas.dmi.dbis.adam.index.Index.IndexName
 import ch.unibas.dmi.dbis.adam.query.{Result, QueryHandler}
 import ch.unibas.dmi.dbis.adam.query.distance.NormBasedDistanceFunction

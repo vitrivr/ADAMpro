@@ -1,4 +1,4 @@
-package ch.unibas.dmi.dbis.adam.data.types.bitString
+package ch.unibas.dmi.dbis.adam.datatypes.bitString
 
 import java.io.{ByteArrayInputStream, ObjectInputStream}
 import java.util

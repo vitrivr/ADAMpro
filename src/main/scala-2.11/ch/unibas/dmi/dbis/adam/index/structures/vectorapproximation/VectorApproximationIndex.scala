@@ -1,8 +1,10 @@
 package ch.unibas.dmi.dbis.adam.index.structures.vectorapproximation
 
-import ch.unibas.dmi.dbis.adam.data.Tuple._
-import ch.unibas.dmi.dbis.adam.data.types.Feature._
-import ch.unibas.dmi.dbis.adam.data.types.bitString.BitString
+import ch.unibas.dmi.dbis.adam.datatypes.Feature
+import ch.unibas.dmi.dbis.adam.datatypes.bitString.BitString
+import ch.unibas.dmi.dbis.adam.table.Tuple
+import Tuple._
+import Feature._
 import ch.unibas.dmi.dbis.adam.index.Index.IndexName
 import ch.unibas.dmi.dbis.adam.index.structures.vectorapproximation.VectorApproximationIndex.{Bounds, Marks}
 import ch.unibas.dmi.dbis.adam.index.structures.vectorapproximation.results.VectorApproximationResultHandler

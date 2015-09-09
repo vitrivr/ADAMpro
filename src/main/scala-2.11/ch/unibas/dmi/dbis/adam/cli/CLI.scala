@@ -1,7 +1,7 @@
 package ch.unibas.dmi.dbis.adam.cli
 
 import ch.unibas.dmi.dbis.adam.api._
-import ch.unibas.dmi.dbis.adam.data.types.Feature._
+import ch.unibas.dmi.dbis.adam.datatypes.Feature
 import ch.unibas.dmi.dbis.adam.main.SparkStartup
 import ch.unibas.dmi.dbis.adam.query.distance.NormBasedDistanceFunction
 import ch.unibas.dmi.dbis.adam.storage.catalog.CatalogOperator

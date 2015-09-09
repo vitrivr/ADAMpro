@@ -1,6 +1,7 @@
 package ch.unibas.dmi.dbis.adam.index.structures.vectorapproximation
 
-import ch.unibas.dmi.dbis.adam.data.types.Feature.{VectorBase, WorkingVector}
+import ch.unibas.dmi.dbis.adam.datatypes.Feature
+import Feature.{VectorBase, WorkingVector}
 import ch.unibas.dmi.dbis.adam.index.Index._
 import ch.unibas.dmi.dbis.adam.index.structures.vectorapproximation.marks.{EquidistantMarksGenerator, EquifrequentMarksGenerator, MarksGenerator}
 import ch.unibas.dmi.dbis.adam.index.structures.vectorapproximation.signature.{FixedSignatureGenerator, SignatureGenerator}
