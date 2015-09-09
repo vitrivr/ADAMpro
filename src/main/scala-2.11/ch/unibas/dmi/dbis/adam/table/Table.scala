@@ -4,7 +4,7 @@ import ch.unibas.dmi.dbis.adam.exception.{TableCreationException, TableNotExisti
 import ch.unibas.dmi.dbis.adam.main.SparkStartup
 import ch.unibas.dmi.dbis.adam.storage.catalog.CatalogOperator
 import ch.unibas.dmi.dbis.adam.table.Table.TableName
-import ch.unibas.dmi.dbis.adam.table.Tuple
+import ch.unibas.dmi.dbis.adam.table.Tuple._
 import org.apache.spark.sql.types.StructType
 import org.apache.spark.sql.{DataFrame, Row, SaveMode}
 

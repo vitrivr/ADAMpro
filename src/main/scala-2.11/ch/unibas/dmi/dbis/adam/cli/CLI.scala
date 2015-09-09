@@ -1,7 +1,7 @@
 package ch.unibas.dmi.dbis.adam.cli
 
 import ch.unibas.dmi.dbis.adam.api._
-import ch.unibas.dmi.dbis.adam.datatypes.Feature
+import ch.unibas.dmi.dbis.adam.datatypes.Feature._
 import ch.unibas.dmi.dbis.adam.main.SparkStartup
 import ch.unibas.dmi.dbis.adam.query.distance.NormBasedDistanceFunction
 import ch.unibas.dmi.dbis.adam.storage.catalog.CatalogOperator
@@ -180,6 +180,7 @@ class CLI extends ILoop {
     val query = input(1)
     val k = input(2).toInt
 
+    //implicit conversion!
     val results = SeqQueryOp(tablename, query, k, NormBasedDistanceFunction(1))
     Result.resultFromString(results.map(x => x.tid).mkString(", "))
   }
@@ -197,6 +198,7 @@ class CLI extends ILoop {
     //TODO: change so user doesn't have to give indexname but rather the tablename and we
     //choose the index based on a score
 
+    //implicit conversion!
     val results =  IndexQueryOp(indexname, query, k, NormBasedDistanceFunction(1))
     Result.resultFromString(results.map(x => x.tid).mkString(", "))
   }

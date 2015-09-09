@@ -1,9 +1,9 @@
 package ch.unibas.dmi.dbis.adam.api
 
-import ch.unibas.dmi.dbis.adam.datatypes.Feature
+import ch.unibas.dmi.dbis.adam.datatypes.Feature.WorkingVector
 import ch.unibas.dmi.dbis.adam.index.Index.IndexName
-import ch.unibas.dmi.dbis.adam.query.{Result, QueryHandler}
 import ch.unibas.dmi.dbis.adam.query.distance.NormBasedDistanceFunction
+import ch.unibas.dmi.dbis.adam.query.{QueryHandler, Result}
 
 import scala.collection.mutable.{Map => mMap}
 

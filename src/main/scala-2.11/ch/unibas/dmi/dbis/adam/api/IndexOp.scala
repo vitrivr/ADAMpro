@@ -1,6 +1,7 @@
 package ch.unibas.dmi.dbis.adam.api
 
-import ch.unibas.dmi.dbis.adam.datatypes.Feature
+import ch.unibas.dmi.dbis.adam.datatypes.Feature._
+import ch.unibas.dmi.dbis.adam.datatypes.Feature.{VectorBase, WorkingVector}
 import ch.unibas.dmi.dbis.adam.index.Index.IndexTypeName
 import ch.unibas.dmi.dbis.adam.index.structures.lsh.LSHIndexer
 import ch.unibas.dmi.dbis.adam.index.structures.spectrallsh.SpectralLSHIndexer

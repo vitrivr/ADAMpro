@@ -2,6 +2,7 @@ package ch.unibas.dmi.dbis.adam.table
 
 import ch.unibas.dmi.dbis.adam.datatypes.Feature
 import Feature.StoredVector
+import ch.unibas.dmi.dbis.adam.table.Tuple.TupleID
 import org.apache.spark.sql.Row
 
 /**

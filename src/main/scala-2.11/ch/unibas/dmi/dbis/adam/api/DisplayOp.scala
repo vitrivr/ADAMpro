@@ -1,6 +1,6 @@
 package ch.unibas.dmi.dbis.adam.api
 
-import ch.unibas.dmi.dbis.adam.datatypes.Feature
+import ch.unibas.dmi.dbis.adam.datatypes.Feature.VectorBase
 import ch.unibas.dmi.dbis.adam.table.Table
 import ch.unibas.dmi.dbis.adam.table.Table._
 

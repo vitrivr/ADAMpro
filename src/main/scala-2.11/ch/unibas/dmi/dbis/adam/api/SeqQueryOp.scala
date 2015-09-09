@@ -1,8 +1,8 @@
 package ch.unibas.dmi.dbis.adam.api
 
-import ch.unibas.dmi.dbis.adam.datatypes.Feature
-import ch.unibas.dmi.dbis.adam.query.{Result, QueryHandler}
+import ch.unibas.dmi.dbis.adam.datatypes.Feature.WorkingVector
 import ch.unibas.dmi.dbis.adam.query.distance.DistanceFunction
+import ch.unibas.dmi.dbis.adam.query.{QueryHandler, Result}
 import ch.unibas.dmi.dbis.adam.table.Table._
 
 /**
