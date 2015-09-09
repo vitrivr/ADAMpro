@@ -46,7 +46,7 @@ object QueryHandler {
   def indexQuery(q: WorkingVector, distance : DistanceFunction, k : Int, indexname : IndexName, options : Map[String, String]): FutureAction[Seq[Result]] = {
     val tablename = CatalogOperator.getIndexTableName(indexname)
     val tidList = IndexScanner(q, distance, k, indexname, options)
-    SequentialScanner(q, distance, k, tablename, tidList.value.get.get)
+    SequentialScanner(q, distance, k, tablename, tidList.get())
   }
 
 

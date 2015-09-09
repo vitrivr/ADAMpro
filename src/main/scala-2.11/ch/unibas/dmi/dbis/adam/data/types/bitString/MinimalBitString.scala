@@ -2,10 +2,6 @@ package ch.unibas.dmi.dbis.adam.data.types.bitString
 
 import java.util
 
-import org.apache.spark.sql.Row
-import org.apache.spark.sql.catalyst.expressions.GenericMutableRow
-import org.apache.spark.sql.types._
-
 import scala.collection.mutable.ListBuffer
 
 /**
@@ -14,7 +10,6 @@ import scala.collection.mutable.ListBuffer
  * Ivan Giangreco
  * September 2015
  */
-@SQLUserDefinedType(udt = classOf[MinimalBitStringUDT])
 class MinimalBitString(private val values : util.BitSet) extends BitString[MinimalBitString] with Serializable {
   /**
    *
@@ -62,42 +57,15 @@ class MinimalBitString(private val values : util.BitSet) extends BitString[Minim
    *
    * @return
    */
-  override def toLong: Long = values.get(0, 64).toLongArray()(0)
+  override def toLong: Long = values.get(0, 64).toLongArray().lift.apply(0).getOrElse(0.toLong)
 
   /**
    *
    * @return
    */
-  override def toByteSeq: Seq[Byte] = values.toByteArray
-}
-
-
-class MinimalBitStringUDT extends UserDefinedType[MinimalBitString] {
-
-  override def sqlType: DataType =
-    StructType(Seq(StructField("value", BinaryType)))
-
-  override def serialize(obj: Any): Row = {
-    obj match {
-      case dt: MinimalBitString =>
-        val row = new GenericMutableRow(1)
-        row.update(0, dt.toByteSeq)
-        row
-    }
+  override def toByteArray : Array[Byte] = {
+    values.toByteArray
   }
-
-  override def deserialize(datum: Any): MinimalBitString = {
-    datum match {
-      case row: Row =>
-        require(row.length == 1)
-        val values = util.BitSet.valueOf(row.getSeq[Byte](0).toArray)
-        new MinimalBitString(values)
-    }
-  }
-
-  override def userClass: Class[MinimalBitString] = classOf[MinimalBitString]
-
-  override def asNullable: MinimalBitStringUDT = this
 }
 
 
@@ -111,5 +79,15 @@ object MinimalBitString extends BitStringFactory[MinimalBitString] {
     val bitSet = new util.BitSet(values.max)
     values.foreach{bitSet.set(_)}
     new MinimalBitString(bitSet)
+  }
+
+  /**
+   *
+   * @param data
+   * @return
+   */
+  def fromByteSeq(data : Seq[Byte]) : BitString[MinimalBitString] = {
+    val values = util.BitSet.valueOf(data.toArray)
+    new MinimalBitString(values)
   }
 }

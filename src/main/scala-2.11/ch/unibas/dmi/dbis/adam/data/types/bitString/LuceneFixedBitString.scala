@@ -1,6 +1,6 @@
 package ch.unibas.dmi.dbis.adam.data.types.bitString
 
-import java.io.{ObjectOutputStream, ByteArrayOutputStream}
+import java.io.{ByteArrayInputStream, ByteArrayOutputStream, ObjectInputStream, ObjectOutputStream}
 
 import org.apache.lucene.util.FixedBitSet
 
@@ -78,11 +78,11 @@ class LuceneFixedBitString(private val values : FixedBitSet) extends BitString[L
    *
    * @return
    */
-  override def toByteSeq : Seq[Byte] = {
+  override def toByteArray : Array[Byte] = {
     val baos = new ByteArrayOutputStream()
     val o = new ObjectOutputStream(baos)
     o.writeObject(values)
-    baos.toByteArray.toSeq
+    baos.toByteArray
   }
 }
 
@@ -96,6 +96,18 @@ object LuceneFixedBitString extends BitStringFactory[LuceneFixedBitString] {
   override def fromBitIndicesToSet(values: Seq[Int]): BitString[LuceneFixedBitString] = {
     val bitSet = new FixedBitSet(values.max)
     values.foreach{bitSet.set(_)}
+    new LuceneFixedBitString(bitSet)
+  }
+
+  /**
+   *
+   * @param values
+   * @return
+   */
+  override def fromByteSeq(values: Seq[Byte]): BitString[LuceneFixedBitString] = {
+    val bais = new ByteArrayInputStream(values.toArray)
+    val o = new ObjectInputStream(bais)
+    val bitSet = o.readObject().asInstanceOf[FixedBitSet]
     new LuceneFixedBitString(bitSet)
   }
 }

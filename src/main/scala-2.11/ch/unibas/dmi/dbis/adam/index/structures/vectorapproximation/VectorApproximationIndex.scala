@@ -11,9 +11,8 @@ import ch.unibas.dmi.dbis.adam.index.{Index, IndexMetaStorage, IndexMetaStorageB
 import ch.unibas.dmi.dbis.adam.query.distance.Distance._
 import ch.unibas.dmi.dbis.adam.query.distance.NormBasedDistanceFunction
 import ch.unibas.dmi.dbis.adam.table.Table._
+import org.apache.spark.FutureAction
 import org.apache.spark.sql.DataFrame
-import org.apache.spark.{ComplexFutureAction, FutureAction}
-import scala.concurrent.ExecutionContext.Implicits.global
 
 /**
  * adamtwo
@@ -38,23 +37,22 @@ class VectorApproximationIndex(val indexname : IndexName, val tablename : TableN
 
     indexdata
       .map{ tuple =>
-        val bits = BitString.fromByteArray(tuple.getSeq[Byte](1).toArray)
-        val indexTuple : IndexTuple = IndexTuple(tuple.getLong(0), bits)
-        indexTuple }
+      IndexTuple(tuple.getLong(0), tuple.getAs[BitString[_]](1)) }
       .mapPartitions(tuplesIt => {
-        val localRh = new VectorApproximationResultHandler(k, lbounds, ubounds, indexMetaData.signatureGenerator)
-        tuplesIt.foreach { tuple =>
-          localRh.offerResultElement(tuple)
-        }
-        localRh.iterator})
-      .foreachAsync(x => globalResultHandler.offerResultElement(x))
+      val localRh = new VectorApproximationResultHandler(k, lbounds, ubounds, indexMetaData.signatureGenerator)
+      tuplesIt.foreach { tuple =>
+        localRh.offerResultElement(tuple)
+      }
+      localRh.iterator})
+      .map(_.indexTuple.tid)
+      .collectAsync()
+
+    /*.foreachAsync(x => globalResultHandler.offerResultElement(x))
 
     val action = new ComplexFutureAction[Seq[TupleID]]
     action.run({
       globalResultHandler.results.map(x => x.indexTuple.tid).toList
-    })
-
-    action
+    })*/
   }
 
 

@@ -3,6 +3,10 @@ package ch.unibas.dmi.dbis.adam.data.types.bitString
 import java.io.{ByteArrayInputStream, ObjectInputStream}
 import java.util
 
+import org.apache.spark.sql.Row
+import org.apache.spark.sql.catalyst.expressions.GenericMutableRow
+import org.apache.spark.sql.types._
+
 import scala.reflect.runtime.universe._
 
 /**
@@ -18,9 +22,11 @@ trait BitStringFactory[A] {
    * @return
    */
   def fromBitIndicesToSet(values : Seq[Int]) : BitString[A]
+  def fromByteSeq(values : Seq[Byte]) : BitString[A]
+
 }
 
-
+@SQLUserDefinedType(udt = classOf[BitStringUDT])
 trait BitString[A] {
   /**
    *
@@ -62,7 +68,84 @@ trait BitString[A] {
    *
    * @return
    */
-  def toByteSeq : Seq[Byte]
+  def toByteArray : Array[Byte]
+}
+
+
+class BitStringUDT extends UserDefinedType[BitString[_]] {
+
+  /**
+   *
+   * @return
+   */
+  override def sqlType: DataType =
+    StructType(Seq(StructField("code", StringType), StructField("value", BinaryType)))
+
+  /**
+   *
+   * @param obj
+   * @return
+   */
+  //TODO: use ENUMS
+  override def serialize(obj: Any): Row = {
+    obj match {
+      case cbs : ColtBitString =>
+        val row = new GenericMutableRow(2)
+        row.setString(0, "cbs")
+        row.update(1, cbs.toByteArray)
+        row
+      case lfbs : LuceneFixedBitString =>
+        val row = new GenericMutableRow(2)
+        row.setString(0, "lfbs")
+        row.update(1, lfbs.toByteArray)
+        row
+      case sbsbs : SparseBitSetBitString =>
+        val row = new GenericMutableRow(2)
+        row.setString(0, "sbsbs")
+        row.update(1, sbsbs.toByteArray)
+        row
+      case mbs : BitString[_] =>
+        val row = new GenericMutableRow(2)
+        row.setString(0, "mbs")
+        row.update(1, mbs.toByteArray)
+        row
+    }
+  }
+
+  /**
+   *
+   * @param datum
+   * @return
+   */
+  override def deserialize(datum: Any): BitString[_] = {
+    if(datum.isInstanceOf[Row]){
+      val row = datum.asInstanceOf[Row]
+        require(row.length == 2)
+
+        val code = row.getString(0)
+        val values = row.getAs[Array[Byte]](1)
+
+        return code match {
+          case "cbs" => ColtBitString.fromByteSeq(values)
+          case "lfbs" => LuceneFixedBitString.fromByteSeq(values)
+          case "sbsbs" => SparseBitSetBitString.fromByteSeq(values)
+          case "mbs" => MinimalBitString.fromByteSeq(values)
+        }
+    }
+    null
+  }
+
+  /**
+   *
+   * @return
+   */
+  override def userClass: Class[BitString[_]] = classOf[BitString[_]]
+
+  /**
+   *
+   * @return
+   */
+  override def asNullable: BitStringUDT = this
 }
 
 

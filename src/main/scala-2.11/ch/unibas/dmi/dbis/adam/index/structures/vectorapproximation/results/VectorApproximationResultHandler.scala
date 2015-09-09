@@ -14,7 +14,7 @@ import scala.collection.mutable.ArrayBuffer
  * Ivan Giangreco
  * August 2015
  */
-private[vectorapproximation] class VectorApproximationResultHandler(k: Int, lbounds: Bounds = null, ubounds: Bounds = null, signatureGenerator: SignatureGenerator = null) {
+private[vectorapproximation] class VectorApproximationResultHandler(k: Int, lbounds: Bounds = null, ubounds: Bounds = null, signatureGenerator: SignatureGenerator = null) extends Serializable {
   private var ls = new ArrayBuffer[ResultElement]()
   private var max = Float.MaxValue
 
@@ -71,8 +71,8 @@ private[vectorapproximation] class VectorApproximationResultHandler(k: Int, lbou
 
 
  case class BoundedResultElement(val indexTuple: IndexTuple) extends ResultElement {
-    lazy val lbound : Distance = computeBounds(lbounds, indexTuple.value)
-    lazy val ubound : Distance = computeBounds(ubounds, indexTuple.value)
+    lazy val lbound : Distance = computeBounds(lbounds, indexTuple.bits)
+    lazy val ubound : Distance = computeBounds(ubounds, indexTuple.bits)
 
     /**
      *

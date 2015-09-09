@@ -1,6 +1,6 @@
 package ch.unibas.dmi.dbis.adam.data.types.bitString
 
-import java.io.{ByteArrayOutputStream, ObjectOutputStream}
+import java.io.{ObjectInputStream, ByteArrayInputStream, ByteArrayOutputStream, ObjectOutputStream}
 
 import com.zaxxer.sparsebits.SparseBitSet
 
@@ -89,11 +89,11 @@ class SparseBitSetBitString(private val values : SparseBitSet) extends BitString
    *
    * @return
    */
-  override def toByteSeq : Seq[Byte] = {
+  override def toByteArray : Array[Byte] = {
     val baos = new ByteArrayOutputStream()
     val o = new ObjectOutputStream(baos)
     o.writeObject(values)
-    baos.toByteArray.toSeq
+    baos.toByteArray
   }
 }
 
@@ -107,6 +107,18 @@ object SparseBitSetBitString extends BitStringFactory[SparseBitSetBitString] {
   override def fromBitIndicesToSet(values: Seq[Int]): BitString[SparseBitSetBitString] = {
     val bitSet = new SparseBitSet(values.max)
     values.foreach{bitSet.set(_)}
+    new SparseBitSetBitString(bitSet)
+  }
+
+  /**
+   *
+   * @param values
+   * @return
+   */
+  override def fromByteSeq(values: Seq[Byte]): BitString[SparseBitSetBitString] = {
+    val bais = new ByteArrayInputStream(values.toArray)
+    val o = new ObjectInputStream(bais)
+    val bitSet = o.readObject().asInstanceOf[SparseBitSet]
     new SparseBitSetBitString(bitSet)
   }
 }

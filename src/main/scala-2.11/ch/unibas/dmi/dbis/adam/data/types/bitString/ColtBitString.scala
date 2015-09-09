@@ -1,5 +1,6 @@
 package ch.unibas.dmi.dbis.adam.data.types.bitString
 
+import java.io.{ByteArrayInputStream, ObjectInputStream}
 import java.nio.ByteBuffer
 
 import cern.colt.bitvector.BitVector
@@ -59,7 +60,7 @@ class ColtBitString(private val values : BitVector) extends BitString[ColtBitStr
    *
    * @return
    */
-  override def toByteSeq : Seq[Byte] = {
+  override def toByteArray : Array[Byte] = {
     val buf =  ByteBuffer.allocate(values.elements().length * 64)
     values.elements().foreach({buf.putLong(_)})
     buf.array()
@@ -75,6 +76,18 @@ object ColtBitString extends BitStringFactory[ColtBitString] {
   override def fromBitIndicesToSet(values: Seq[Int]): BitString[ColtBitString] = {
     val bitSet = new BitVector(values.max)
     values.foreach{bitSet.set(_)}
+    new ColtBitString(bitSet)
+  }
+
+  /**
+   *
+   * @param values
+   * @return
+   */
+  override def fromByteSeq(values: Seq[Byte]): BitString[ColtBitString] = {
+    val bais = new ByteArrayInputStream(values.toArray)
+    val o = new ObjectInputStream(bais)
+    val bitSet = o.readObject().asInstanceOf[BitVector]
     new ColtBitString(bitSet)
   }
 }

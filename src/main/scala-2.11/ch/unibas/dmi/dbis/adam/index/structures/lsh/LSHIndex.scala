@@ -2,7 +2,7 @@ package ch.unibas.dmi.dbis.adam.index.structures.lsh
 
 import ch.unibas.dmi.dbis.adam.data.Tuple._
 import ch.unibas.dmi.dbis.adam.data.types.Feature._
-import ch.unibas.dmi.dbis.adam.data.types.bitString.BitString.BitStringType
+import ch.unibas.dmi.dbis.adam.data.types.bitString.BitString
 import ch.unibas.dmi.dbis.adam.index.Index._
 import ch.unibas.dmi.dbis.adam.index.structures.lsh.hashfunction.Hasher
 import ch.unibas.dmi.dbis.adam.index.{Index, IndexMetaStorage, IndexMetaStorageBuilder, IndexTuple}
@@ -32,9 +32,9 @@ class LSHIndex(val indexname : IndexName, val tablename : TableName, protected v
 
     val results = indexdata
       .map{ tuple =>
-      IndexTuple(tuple.getLong(0), tuple.getAs[BitStringType](1)) }
+        IndexTuple(tuple.getLong(0), tuple.getAs[BitString[_]](1)) }
       .filter { indexTuple =>
-      indexTuple.value.getIndexes.zip(queries).exists({
+      indexTuple.bits.getIndexes.zip(queries).exists({
         case (indexHash, acceptedValues) => acceptedValues.contains(indexHash)
       })
     }.map { indexTuple => indexTuple.tid }
