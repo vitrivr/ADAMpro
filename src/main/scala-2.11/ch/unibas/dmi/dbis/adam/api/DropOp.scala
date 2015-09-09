@@ -1,4 +1,4 @@
-package ch.unibas.dmi.dbis.adam.cli.operations
+package ch.unibas.dmi.dbis.adam.api
 
 import ch.unibas.dmi.dbis.adam.table.Table
 import ch.unibas.dmi.dbis.adam.table.Table._

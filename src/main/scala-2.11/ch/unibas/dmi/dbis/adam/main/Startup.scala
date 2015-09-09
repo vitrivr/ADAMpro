@@ -1,8 +1,7 @@
 package ch.unibas.dmi.dbis.adam.main
 
-import ch.unibas.dmi.dbis.adam.cli.CLI
+
 import ch.unibas.dmi.dbis.adam.config.AdamConfig
-import scala.tools.nsc.Settings
 import com.typesafe.config.ConfigFactory
 
 /**
@@ -12,15 +11,10 @@ import com.typesafe.config.ConfigFactory
  * August 2015
  */
 object Startup {
-  val config = new AdamConfig(ConfigFactory.load())
-
-  val settings = new Settings
-  settings.usejavacp.value = true
-  settings.deprecation.value = true
+  val config: AdamConfig = new AdamConfig(ConfigFactory.load())
 
   def main(args : Array[String]) {
     SparkStartup
-
-    new CLI().process(settings)
+    new Thread(new CLIStartup(config)).start
   }
 }

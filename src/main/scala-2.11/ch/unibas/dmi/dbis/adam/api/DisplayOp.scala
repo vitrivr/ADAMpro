@@ -1,5 +1,6 @@
-package ch.unibas.dmi.dbis.adam.cli.operations
+package ch.unibas.dmi.dbis.adam.api
 
+import ch.unibas.dmi.dbis.adam.data.types.Feature.VectorBase
 import ch.unibas.dmi.dbis.adam.table.Table
 import ch.unibas.dmi.dbis.adam.table.Table._
 
@@ -14,14 +15,8 @@ object DisplayOp {
    *
    * @param tablename
    */
-  def apply(tablename: TableName) : Unit = {
+  def apply(tablename: TableName) : Seq[(Long, Seq[VectorBase])] = {
     val results = Table.retrieveTable(tablename)
-
-    if(results.count > 100){
-      results.show(100)
-      println("displaying 100 out of " + results.count)
-    } else {
-      results.show
-    }
+    results.show(100).map(row => (row.getLong(0), row.getSeq[VectorBase](1)))
   }
 }

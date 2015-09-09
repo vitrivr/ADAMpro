@@ -22,8 +22,8 @@ import scala.concurrent.{Await, Future}
 case class Table(tablename : TableName, data : DataFrame){
   def count = data.count()
 
-  def show = data.show()
-  def show(n : Int) = data.show(n)
+  def show() = data.collect()
+  def show(n : Int) = data.take(n)
 
   def rows = data.rdd
   def tuples = data.rdd.map(row => (row : Tuple))

@@ -1,7 +1,8 @@
 package ch.unibas.dmi.dbis.adam.cli
 
-import ch.unibas.dmi.dbis.adam.cli.operations._
+import ch.unibas.dmi.dbis.adam.api._
 import ch.unibas.dmi.dbis.adam.data.types.Feature._
+import ch.unibas.dmi.dbis.adam.main.SparkStartup
 import ch.unibas.dmi.dbis.adam.query.distance.NormBasedDistanceFunction
 import ch.unibas.dmi.dbis.adam.storage.catalog.CatalogOperator
 import org.apache.spark.sql.types._
@@ -34,6 +35,39 @@ class CLI extends ILoop {
   )
 
 
+  /**
+   *
+   * @param input
+   * @return
+   */
+  private def countOp(input : List[String]) : Result = {
+    val tablename = input(0)
+    val count = CountOp(tablename)
+    Result.resultFromString(s"COUNT for $tablename: $count")
+  }
+
+
+  /**
+   *
+   * @param input
+   * @return
+   */
+  private def displayOp(input : List[String]) : Result = {
+    val tablename = input(0)
+    val results = DisplayOp(tablename)
+
+    Result.resultFromString(
+      results.map { result => result._1 + "\t" + result._2.mkString("<", ",", ">")}
+        .mkString("\n")
+    )
+  }
+
+
+  /**
+   *
+   * @param input
+   * @return
+   */
   private def createOp(input : List[String]) : Result = {
     val tablename = input(0)
 
@@ -48,6 +82,12 @@ class CLI extends ILoop {
     Result.default
   }
 
+
+  /**
+   *
+   * @param input
+   * @return
+   */
   private def dropOp(input : List[String]) : Result = {
     val tablename = input(0)
 
@@ -55,14 +95,26 @@ class CLI extends ILoop {
     Result.default
   }
 
+  /**
+   *
+   * @param input
+   * @return
+   */
   private def importOp(input: List[String]): Result = {
     val tablename = input(0)
     val csvPath = input(1)
 
-    ImportOp(tablename, csvPath)
+    val csv = SparkStartup.sc.textFile(csvPath.toString)
+
+    ImportOp(tablename, csv.collect())
     Result.default
   }
 
+  /**
+   *
+   * @param input
+   * @return
+   */
   private def dbImportOp(input: List[String]): Result = {
     val url = input(0)
     val port = input(1).toInt
@@ -76,23 +128,11 @@ class CLI extends ILoop {
     Result.default
   }
 
-  private def listOp(input : String) : Result = {
-    ListOp()
-    Result.default
-  }
-
-  private def displayOp(input : List[String]) : Result = {
-    val tablename = input(0)
-    DisplayOp(tablename)
-    Result.default
-  }
-
-  private def countOp(input : List[String]) : Result = {
-    val tablename = input(0)
-    CountOp(tablename)
-    Result.default
-  }
-
+  /**
+   *
+   * @param input
+   * @return
+   */
   private def indexOp(input: List[String]): Result = {
     val tablename = input(0)
     val indextype = input(1)
@@ -110,39 +150,69 @@ class CLI extends ILoop {
     Result.default
   }
 
-  //TODO: replace by one query type
+  /**
+   *
+   * @param input
+   * @return
+   */
+  private def dropAllIndexesOp(input : String) : Result = {
+    CatalogOperator.dropAllIndexes()
+  }
+
+  /**
+   *
+   * @param input
+   * @return
+   */
+  private def listOp(input : String) : Result = {
+    val results = ListOp()
+
+    Result.resultFromString(results.mkString(", \n"))
+  }
+
+  /**
+   *
+   * @param input
+   * @return
+   */
   private def seqQueryOp(input: List[String]): Result = {
     val tablename = input(0)
     val query = input(1)
     val k = input(2).toInt
 
-    SequentialQueryOp(tablename, query, k, NormBasedDistanceFunction(1))
-
-    Result.default
+    val results = SeqQueryOp(tablename, query, k, NormBasedDistanceFunction(1))
+    Result.resultFromString(results.map(x => x.tid).mkString(", "))
   }
 
-  //TODO: replace by one query type
+  /**
+   *
+   * @param input
+   * @return
+   */
   private def indQueryOp(input: List[String]): Result = {
     val indexname = input(0)
     val query = input(1)
     val k = input(2).toInt
 
-    IndexQueryOp(indexname, query, k, NormBasedDistanceFunction(1))
+    //TODO: change so user doesn't have to give indexname but rather the tablename and we
+    //choose the index based on a score
 
-    Result.default
+    val results =  IndexQueryOp(indexname, query, k, NormBasedDistanceFunction(1))
+    Result.resultFromString(results.map(x => x.tid).mkString(", "))
   }
 
-  private def dropAllIndexesOp(input : String) : Result = {
-    CatalogOperator.dropAllIndexes()
-  }
 
-
+  /**
+   *
+   * @param input
+   * @return
+   */
   private def progQueryOp(input: List[String]): Result = {
     val tablename = input(0)
     val query = input(1)
     val k = input(2).toInt
 
-    ProgressiveQueryOp(tablename, query, k, NormBasedDistanceFunction(1))
+    ProgQueryOp(tablename, query, k, NormBasedDistanceFunction(1), (results) => println(results.mkString(", ")))
 
     Result.default
   }

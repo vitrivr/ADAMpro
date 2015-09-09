@@ -1,10 +1,8 @@
-package ch.unibas.dmi.dbis.adam.cli.operations
+package ch.unibas.dmi.dbis.adam.api
 
 import ch.unibas.dmi.dbis.adam.main.SparkStartup
 import ch.unibas.dmi.dbis.adam.table.Table
 import ch.unibas.dmi.dbis.adam.table.Table._
-
-import scala.tools.nsc.io.Path
 
 /**
  * adamtwo
@@ -14,21 +12,19 @@ import scala.tools.nsc.io.Path
  */
 object ImportOp {
   /**
-   * 
+   *
    * @param tablename
-   * @param path
+   * @param csv
    * @param separator
+   * @param ignoreErrors
    */
-  def apply(tablename: TableName, path : Path, separator : String = "\t", ignoreErrors : Boolean = true) : Unit = {
-    val csv = SparkStartup.sc.textFile(path.toString)
-
+  def apply(tablename : TableName, csv : Seq[String], separator : String = "\t", ignoreErrors : Boolean = true) : Unit = {
     val data = csv.filter(line => line.trim.length != 0)
       .filter(line => filterLine(line, separator, ignoreErrors))
       .map(line => line.split(separator))
       .map(line => (line(0).toLong, line(1).substring(1, line(1).length - 2).split(",").map(_.toFloat).toSeq))
 
     import SparkStartup.sqlContext.implicits._
-
     Table.insertData(tablename, data.toDF())
   }
 

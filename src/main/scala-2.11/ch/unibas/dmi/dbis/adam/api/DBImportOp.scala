@@ -1,6 +1,6 @@
-package ch.unibas.dmi.dbis.adam.cli.operations
+package ch.unibas.dmi.dbis.adam.api
 
-import ch.unibas.dmi.dbis.adam.main.{Startup, SparkStartup}
+import ch.unibas.dmi.dbis.adam.main.{SparkStartup, Startup}
 import ch.unibas.dmi.dbis.adam.table.Table
 import ch.unibas.dmi.dbis.adam.table.Table._
 import org.apache.spark.sql.SaveMode
@@ -42,7 +42,7 @@ object DBImportOp {
 
     import sqlContext.implicits._
     val columnsArray = columns.split(",")
-    val data = db.select(columnsArray(0), columnsArray(1)).map(x => (x.getInt(0), x(1).toString.substring(1, x(1).toString.length - 1).split(",").map(v => v.toFloat))).toDF
+    val data = db.select(columnsArray(0), columnsArray(1)).map(x => (x.getInt(0).toLong, x(1).toString.substring(1, x(1).toString.length - 1).split(",").map(v => v.toFloat))).toDF
     data.write.mode(SaveMode.Overwrite).save(Startup.config.dataPath + "/" + tablename)
     //Table.insertData(tablename, data)
   }

@@ -57,7 +57,7 @@ object QueryHandler {
    * @param k
    * @param tablename
    */
-  def progressiveQuery(q: WorkingVector, distance : NormBasedDistanceFunction, k : Int, tablename: TableName, onComplete : (Seq[Result]) => Unit): Unit ={
+  def progressiveQuery(q: WorkingVector, distance : NormBasedDistanceFunction, k : Int, tablename: TableName, onComplete : (Seq[Result]) => Unit): Int = {
     val indexes = Index.getIndexnames(tablename)
 
     val options = mMap[String, String]()
@@ -71,5 +71,7 @@ object QueryHandler {
       .map(action => action.onComplete(x => onComplete(x.get)))
 
     sequentialQuery(q, distance, k, tablename).onComplete(x => onComplete(x.get))
+
+    indexes.length + 1
   }
 }
