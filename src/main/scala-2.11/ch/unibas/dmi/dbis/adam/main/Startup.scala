@@ -15,6 +15,7 @@ object Startup {
 
   def main(args : Array[String]) {
     SparkStartup
+    new Thread(new RESTStartup(config)).start
     new Thread(new CLIStartup(config)).start
   }
 }
