@@ -66,15 +66,17 @@ object CatalogOperator {
   /**
    *
    * @param tablename
-   * @return
+   * @param ifExists
    */
-  def dropTable(tablename : TableName) = {
+  def dropTable(tablename : TableName, ifExists : Boolean = false) = {
     if(!existsTable(tablename)){
-      throw new TableNotExistingException()
+      if(!ifExists){
+        throw new TableNotExistingException()
+      }
+    } else {
+      val query = tables.filter(_.tablename === tablename).delete
+      val count = Await.result(db.run(query), 5.seconds)
     }
-
-    val query = tables.filter(_.tablename === tablename).delete
-    val count = Await.result(db.run(query), 5.seconds)
   }
 
   /**

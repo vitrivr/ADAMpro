@@ -13,8 +13,9 @@ object DropOp {
   /**
    *
    * @param tablename
+   * @param ifExists
    */
-  def apply(tablename: TableName): Unit ={
-    Table.dropTable(tablename)
+  def apply(tablename: TableName, ifExists : Boolean = false): Unit ={
+    Table.dropTable(tablename, ifExists)
   }
 }
