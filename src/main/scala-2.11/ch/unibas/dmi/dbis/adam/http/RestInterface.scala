@@ -12,7 +12,7 @@ import ch.unibas.dmi.dbis.adam.table.Table.TableName
 import org.apache.spark.sql.types._
 import spray.can.Http
 import spray.http._
-import spray.routing._
+import spray.routing.{RequestContext, _}
 
 import scala.concurrent.duration._
 import scala.language.postfixOps
@@ -27,7 +27,7 @@ trait RestApi extends HttpService with ActorLogging { actor: Actor =>
   implicit val timeout = Timeout(10 seconds)
 
   def routes: Route =
-    countRoute ~ createRoute ~ displayRoute ~ dropRoute ~ importRoute ~ indexRoute ~ listRoute ~ indexQueryRoute ~ seqQueryRoute
+    countRoute ~ createRoute ~ displayRoute ~ dropRoute ~ importRoute ~ importFileRoute ~ indexRoute ~ listRoute ~ indexQueryRoute ~ seqQueryRoute ~ progQueryRoute
 
   /**
    *
@@ -93,12 +93,24 @@ trait RestApi extends HttpService with ActorLogging { actor: Actor =>
    */
   private val importRoute : Route = pathPrefix("import") {
     path(Segment) { tablename =>
-      put {
+      post {
         entity(as[String]) { csv => requestContext =>
           val responder = createResponder(requestContext)
           ImportOp(tablename, csv.split("\n"))
           responder ! TableImported
         }
+      }
+    }
+  }
+
+
+  /**
+   *
+   */
+  private val importFileRoute : Route = pathPrefix("importfile") {
+    path(Segment) { tablename =>
+      put {
+        ??? //TODO
       }
     }
   }
@@ -189,20 +201,23 @@ trait RestApi extends HttpService with ActorLogging { actor: Actor =>
     actorRefFactory.actorOf {
       Props {
         new Actor with ActorLogging {
-          var nResponses = ProgQueryOp(tablename, Feature.conv_str2vector(query.q), query.k, NormBasedDistanceFunction(query.norm), nextChunkReady)
+          val responder = ctx.responder
+          var nResponses = ProgQueryOp(tablename, Feature.conv_str2vector(query.q), query.k, NormBasedDistanceFunction(query.norm), sendNextChunk)
 
-          ctx.responder ! ChunkedResponseStart(HttpResponse()).withAck(Ok(nResponses))
+          //start
+          responder ! ChunkedResponseStart(HttpResponse()).withAck(Ok(nResponses))
 
-          def nextChunkReady(res : Seq[Result]) : Unit = {
-            ctx.responder ! MessageChunk(res.mkString(",")).withAck(nResponses)
-            nResponses = nResponses - 1
+          //next chunk
+          def sendNextChunk(res : Seq[Result], details : Map[String, String]) : Unit = synchronized {
+              nResponses = nResponses - 1
+              responder ! MessageChunk(res.mkString(",")).withAck(Ok(nResponses)) //TODO: reformat result
           }
 
           def receive = {
-            case Ok(0) =>
-              ctx.responder ! ChunkedMessageEnd
+            case Ok(0) => //finished streaming, close
+              responder ! ChunkedMessageEnd
               context.stop(self)
-
+            case Ok(remaining) =>
             case ev: Http.ConnectionClosed =>
               log.warning("Stopping response streaming due to {}", ev)
           }
