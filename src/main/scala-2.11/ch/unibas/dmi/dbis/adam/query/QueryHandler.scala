@@ -8,6 +8,7 @@ import ch.unibas.dmi.dbis.adam.main.SparkStartup
 import ch.unibas.dmi.dbis.adam.query.distance.{DistanceFunction, NormBasedDistanceFunction}
 import ch.unibas.dmi.dbis.adam.storage.catalog.CatalogOperator
 import ch.unibas.dmi.dbis.adam.table.Table.TableName
+import org.apache.spark.Logging
 
 import scala.collection.mutable.{Map => mMap}
 
@@ -21,7 +22,7 @@ import ExecutionContext.Implicits.global
  * Ivan Giangreco
  * August 2015
  */
-object QueryHandler {
+object QueryHandler extends Logging {
   private val storage = SparkStartup.tableStorage
 
   /**
@@ -76,6 +77,7 @@ object QueryHandler {
    */
   def indexQueryNonBlocking(q: WorkingVector, distance : DistanceFunction, k : Int, indexname : IndexName, options : Map[String, String]): Future[Seq[Result]] = {
     Future {
+      log.debug(s"started query on index $indexname")
       val tablename = CatalogOperator.getIndexTableName(indexname)
       val tidList = IndexScanner(q, distance, k, indexname, options)
       TableScanner(q, distance, k, tablename, tidList)
@@ -90,19 +92,24 @@ object QueryHandler {
    * @param k
    * @param tablename
    */
-  def progressiveQuery(q: WorkingVector, distance : NormBasedDistanceFunction, k : Int, tablename: TableName, onComplete : (Seq[Result]) => Unit): Int = {
+  def progressiveQuery(q: WorkingVector, distance : NormBasedDistanceFunction, k : Int, tablename: TableName, onComplete : (Seq[Result], Map[String, String]) => Unit): Int = {
     val indexes = Index.getIndexnames(tablename)
 
     val options = mMap[String, String]()
     options += "k" -> k.toString
     options += "norm" -> distance.n.toString
 
+
     //TODO: // here we should actually keep the index information, especially on the level of onComplete: if the index returns exact information, we should stop the
     //execution completely; if the index returns only approximate information we should keep the retrieving process running
     indexes
-      .map(indexname => indexQueryNonBlocking(q, distance, k, indexname, options.toMap))
-      .map(action => action.onComplete(x => onComplete(x.get)))
-    sequentialQueryNonBlocking(q, distance, k, tablename).onComplete(x => onComplete(x.get))
+      .map{indexname =>
+        val info =  Map[String,String]("type" -> "index", "relation" -> tablename, "index" -> indexname)
+        indexQueryNonBlocking(q, distance, k, indexname, options.toMap).onComplete(x => onComplete(x.get, info))
+    }
+
+    val info =  Map[String,String]("type" -> "sequential", "relation" -> tablename)
+    sequentialQueryNonBlocking(q, distance, k, tablename).onComplete(x => onComplete(x.get, info))
 
     indexes.length + 1
   }
