@@ -3,7 +3,7 @@ package ch.unibas.dmi.dbis.adam.datatypes.bitString
 import java.io.{ByteArrayInputStream, ObjectInputStream}
 import java.util
 
-import org.apache.spark.sql.Row
+import org.apache.spark.sql.catalyst.InternalRow
 import org.apache.spark.sql.catalyst.expressions.GenericMutableRow
 import org.apache.spark.sql.types._
 
@@ -93,7 +93,6 @@ class BitStringUDT extends UserDefinedType[BitString[_]] {
    * @return
    */
   override def sqlType: DataType =
-    StructType(Seq(StructField("code", StringType), StructField("value", BinaryType)))
     StructType(Seq(StructField("code", ByteType), StructField("value", BinaryType)))
 
   /**
@@ -101,7 +100,7 @@ class BitStringUDT extends UserDefinedType[BitString[_]] {
    * @param obj
    * @return
    */
-  override def serialize(obj: Any): Row = {
+  override def serialize(obj: Any): InternalRow = {
     obj match {
       case cbs : ColtBitString =>
         val row = new GenericMutableRow(2)
@@ -132,12 +131,12 @@ class BitStringUDT extends UserDefinedType[BitString[_]] {
    * @return
    */
   override def deserialize(datum: Any): BitString[_] = {
-    if(datum.isInstanceOf[Row]){
-      val row = datum.asInstanceOf[Row]
-        require(row.length == 2)
+    if(datum.isInstanceOf[InternalRow]){
+      val row = datum.asInstanceOf[InternalRow]
+        require(row.numFields == 2)
 
-        val code = row.getString(0)
-        val values = row.getAs[Array[Byte]](1)
+        val code = row.getByte(0)
+        val values = row.getBinary(1)
 
         return code match {
           case BitStringTypes.CBS.num => ColtBitString.fromByteSeq(values)

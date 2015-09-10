@@ -12,10 +12,10 @@ resolvers ++= Seq(
 
 //libs
 libraryDependencies ++= Seq(
-  "org.apache.spark"       %   "spark-core_2.11"        % "1.4.1",
-  "org.apache.spark"       %   "spark-sql_2.11"         % "1.4.1",
-  "org.apache.spark"       %   "spark-hive_2.11"        % "1.4.1",
-  "org.apache.spark"       %   "spark-mllib_2.11"       % "1.4.1",
+  "org.apache.spark"       %   "spark-core_2.11"        % "1.5.0",
+  "org.apache.spark"       %   "spark-sql_2.11"         % "1.5.0",
+  "org.apache.spark"       %   "spark-hive_2.11"        % "1.5.0",
+  "org.apache.spark"       %   "spark-mllib_2.11"       % "1.5.0",
   "org.scalanlp" 		       %   "breeze_2.11" 				    % "0.11.2",
   "org.scalanlp" 		       %   "breeze-natives_2.11" 	  % "0.11.2",
   "io.spray"               %%  "spray-can"     		      % "1.3.3",
@@ -27,5 +27,6 @@ libraryDependencies ++= Seq(
   "org.scalatest"          %   "scalatest_2.11"         % "3.0.0-M7",
   "org.scalacheck"         %   "scalacheck_2.11"        % "1.12.4",
   "org.scala-lang.modules" %%  "scala-pickling" 	 	    % "0.10.1",
-  "org.json4s"             %%  "json4s-native"          % "3.2.11"
+  "org.json4s"             %%  "json4s-native"          % "3.2.11",
+  "org.slf4j"              %   "slf4j-nop"              % "1.7.12"
 )
