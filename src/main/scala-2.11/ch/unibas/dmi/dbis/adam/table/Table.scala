@@ -69,11 +69,11 @@ object Table {
   /**
    *
    * @param tablename
-   * @return
+   * @param ifExists
    */
-  def dropTable(tablename : TableName) : Unit = {
+  def dropTable(tablename : TableName, ifExists : Boolean = false) : Unit = {
     val indexes = CatalogOperator.getIndexes(tablename)
-    CatalogOperator.dropTable(tablename)
+    CatalogOperator.dropTable(tablename, ifExists)
 
     storage.dropTable(tablename)
   }
@@ -83,7 +83,7 @@ object Table {
    * @param tablename
    * @return
    */
-  def insertData(tablename : TableName, insertion: DataFrame): Table ={
+  def insertData(tablename : TableName, insertion: DataFrame): Unit ={
     if(!existsTable(tablename)){
       throw new TableNotExistingException()
     }
@@ -96,7 +96,6 @@ object Table {
     }
 
     Await.ready(future, Duration.Inf)
-    storage.readTable(tablename)
   }
 
   /**
