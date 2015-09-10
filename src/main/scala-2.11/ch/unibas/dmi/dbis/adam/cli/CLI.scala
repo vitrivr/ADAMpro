@@ -29,9 +29,10 @@ class CLI extends ILoop {
     new VarArgsCmd("index", "tablename indextype [properties]", "creates an index of given type with properties", indexOp),
     new VarArgsCmd("indquery", "indexname q k", "querys table in kNN search using index", indQueryOp),
     new VarArgsCmd("drop", "tablename", "drops table", dropOp),
-    new NullaryCmd("dropAllIndexes","drops all indexes", dropAllIndexesOp),
-    new VarArgsCmd("progQuery", "tablename q k", "querys table in kNN search using progressive query", progQueryOp)
+    new VarArgsCmd("progQuery", "tablename q k", "querys table in kNN search using progressive query", progQueryOp),
 
+    new NullaryCmd("dropAllIndexes","drops all indexes", dropAllIndexesOp),
+    new NullaryCmd("tmpOp","temporary operation only for testing purposes", tmpOp)
   )
 
 
@@ -155,15 +156,6 @@ class CLI extends ILoop {
    * @param input
    * @return
    */
-  private def dropAllIndexesOp(input : String) : Result = {
-    CatalogOperator.dropAllIndexes()
-  }
-
-  /**
-   *
-   * @param input
-   * @return
-   */
   private def listOp(input : String) : Result = {
     val results = ListOp()
 
@@ -218,4 +210,25 @@ class CLI extends ILoop {
 
     Result.default
   }
+
+
+
+  /**
+   *
+   * @param input
+   * @return
+   */
+  private def dropAllIndexesOp(input : String) : Result = {
+    CatalogOperator.dropAllIndexes()
+  }
+
+
+  /**
+   *
+   * @param input
+   * @return
+   */
+  private def tmpOp(input : String) : Result = {
+  }
+
 }
