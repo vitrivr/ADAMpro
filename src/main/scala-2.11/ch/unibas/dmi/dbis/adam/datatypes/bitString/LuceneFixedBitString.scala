@@ -94,7 +94,9 @@ object LuceneFixedBitString extends BitStringFactory[LuceneFixedBitString] {
    * @return
    */
   override def fromBitIndicesToSet(values: Seq[Int]): BitString[LuceneFixedBitString] = {
-    val bitSet = new FixedBitSet(values.max)
+    val max = if(values.length == 0) 0 else values.max
+
+    val bitSet = new FixedBitSet(max)
     values.foreach{bitSet.set(_)}
     new LuceneFixedBitString(bitSet)
   }

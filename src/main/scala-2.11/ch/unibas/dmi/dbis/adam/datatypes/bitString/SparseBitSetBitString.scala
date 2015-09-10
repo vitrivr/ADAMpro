@@ -105,7 +105,9 @@ object SparseBitSetBitString extends BitStringFactory[SparseBitSetBitString] {
    * @return
    */
   override def fromBitIndicesToSet(values: Seq[Int]): BitString[SparseBitSetBitString] = {
-    val bitSet = new SparseBitSet(values.max)
+    val max = if(values.length == 0) 0 else values.max
+
+    val bitSet = new SparseBitSet(max)
     values.foreach{bitSet.set(_)}
     new SparseBitSetBitString(bitSet)
   }

@@ -74,7 +74,9 @@ object ColtBitString extends BitStringFactory[ColtBitString] {
    * @return
    */
   override def fromBitIndicesToSet(values: Seq[Int]): BitString[ColtBitString] = {
-    val bitSet = new BitVector(values.max)
+    val max = if(values.length == 0) 0 else values.max
+
+    val bitSet = new BitVector(max)
     values.foreach{bitSet.set(_)}
     new ColtBitString(bitSet)
   }
