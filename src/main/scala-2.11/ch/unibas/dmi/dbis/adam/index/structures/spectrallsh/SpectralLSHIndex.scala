@@ -36,7 +36,7 @@ class SpectralLSHIndex(val indexname: IndexName, val tablename: TableName, prote
       .map { tuple =>
       val score: Int = queries.view.map{tuple.bits.intersectionCount(_)}.sum
       (tuple.tid, score)
-    }.sortBy(_._2, false).map(_._1).take(k * 5)
+    }.takeOrdered(k * 3)(Ordering[Int].reverse.on(x => x._2)).map(_._1).toSeq
   }
 
   /**
