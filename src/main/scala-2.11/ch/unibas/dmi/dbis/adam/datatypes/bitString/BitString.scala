@@ -71,7 +71,21 @@ trait BitString[A] {
   def toByteArray : Array[Byte]
 }
 
+/**
+ *
+ */
+object BitStringTypes {
+  sealed abstract class BitStringType(val num : Byte, val name : String)
 
+  case object CBS extends BitStringType(0, "ColtBitString")
+  case object LFBS extends BitStringType(1, "LuceneFixedBitString")
+  case object SBSBS extends BitStringType(2, "SparseBitSetBitString")
+  case object MBS extends BitStringType(3, "MinimalBitString")
+}
+
+/**
+ *
+ */
 class BitStringUDT extends UserDefinedType[BitString[_]] {
 
   /**
@@ -80,33 +94,33 @@ class BitStringUDT extends UserDefinedType[BitString[_]] {
    */
   override def sqlType: DataType =
     StructType(Seq(StructField("code", StringType), StructField("value", BinaryType)))
+    StructType(Seq(StructField("code", ByteType), StructField("value", BinaryType)))
 
   /**
    *
    * @param obj
    * @return
    */
-  //TODO: use ENUMS
   override def serialize(obj: Any): Row = {
     obj match {
       case cbs : ColtBitString =>
         val row = new GenericMutableRow(2)
-        row.setString(0, "cbs")
+        row.setByte(0, BitStringTypes.CBS.num)
         row.update(1, cbs.toByteArray)
         row
       case lfbs : LuceneFixedBitString =>
         val row = new GenericMutableRow(2)
-        row.setString(0, "lfbs")
+        row.setByte(0, BitStringTypes.LFBS.num)
         row.update(1, lfbs.toByteArray)
         row
       case sbsbs : SparseBitSetBitString =>
         val row = new GenericMutableRow(2)
-        row.setString(0, "sbsbs")
+        row.setByte(0, BitStringTypes.SBSBS.num)
         row.update(1, sbsbs.toByteArray)
         row
       case mbs : BitString[_] =>
         val row = new GenericMutableRow(2)
-        row.setString(0, "mbs")
+        row.setByte(0, BitStringTypes.MBS.num)
         row.update(1, mbs.toByteArray)
         row
     }
@@ -126,12 +140,13 @@ class BitStringUDT extends UserDefinedType[BitString[_]] {
         val values = row.getAs[Array[Byte]](1)
 
         return code match {
-          case "cbs" => ColtBitString.fromByteSeq(values)
-          case "lfbs" => LuceneFixedBitString.fromByteSeq(values)
-          case "sbsbs" => SparseBitSetBitString.fromByteSeq(values)
-          case "mbs" => MinimalBitString.fromByteSeq(values)
+          case BitStringTypes.CBS.num => ColtBitString.fromByteSeq(values)
+          case BitStringTypes.LFBS.num => LuceneFixedBitString.fromByteSeq(values)
+          case BitStringTypes.SBSBS.num => SparseBitSetBitString.fromByteSeq(values)
+          case BitStringTypes.MBS.num => MinimalBitString.fromByteSeq(values)
         }
     }
+
     null
   }
 
