@@ -1,7 +1,6 @@
 package ch.unibas.dmi.dbis.adam.table
 
-import ch.unibas.dmi.dbis.adam.datatypes.Feature
-import Feature.StoredVector
+import ch.unibas.dmi.dbis.adam.datatypes.Feature.StoredVector
 import ch.unibas.dmi.dbis.adam.table.Tuple.TupleID
 import org.apache.spark.sql.Row
 
@@ -17,6 +16,6 @@ object Tuple {
   type TupleID = Long
 
   implicit def conv_row2tuple[T](value : Row) : Tuple = {
-    Tuple(value.getInt(0), value.getSeq[Float](1))
+    Tuple(value.getLong(0), value.getSeq[Float](1))
   }
 }
