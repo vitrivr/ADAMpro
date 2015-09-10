@@ -11,16 +11,17 @@ import org.apache.spark.{SparkConf, SparkContext}
  * Ivan Giangreco
  * August 2015
  */
-object SparkStartup {
-    System.setProperty("spark.serializer", "spark.KryoSerializer"); // kryo is much faster
-    System.setProperty("spark.kryoserializer.buffer.mb", "1024"); // I serialize bigger objects
-    System.setProperty("spark.mesos.coarse", "true"); // link provided
-    System.setProperty("spark.akka.frameSize", "500"); // workers should be able to send bigger messages
-    System.setProperty("spark.akka.askTimeout", "30"); // high CPU/IO load
+object  SparkStartup {
+    System.setProperty("spark.serializer", "spark.KryoSerializer");
+    System.setProperty("spark.kryoserializer.buffer.max", "256m");
+    System.setProperty("spark.kryoserializer.buffer", "1m");
+    System.setProperty("spark.mesos.coarse", "true");
+    System.setProperty("spark.akka.frameSize", "500");
+    System.setProperty("spark.akka.askTimeout", "30");
 
-    val sparkConfig = new SparkConf().setAppName("ADAMtwo").setMaster("local[16]")
+    val sparkConfig = new SparkConf().setAppName("ADAMtwo").setMaster("local[64]")
     sparkConfig.set("spark.serializer", "org.apache.spark.serializer.KryoSerializer")
-    sparkConfig.registerKryoClasses(Array())
+    sparkConfig.registerKryoClasses(Array()) //TODO: check this!
 
     val sc = new SparkContext(sparkConfig)
     //val sqlContext = new SQLContext(sc)
