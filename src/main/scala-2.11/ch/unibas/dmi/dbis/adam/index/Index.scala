@@ -1,9 +1,6 @@
 package ch.unibas.dmi.dbis.adam.index
 
-import ch.unibas.dmi.dbis.adam.datatypes.Feature
-import ch.unibas.dmi.dbis.adam.table.{Tuple, Table}
-import Tuple._
-import Feature._
+import ch.unibas.dmi.dbis.adam.datatypes.Feature._
 import ch.unibas.dmi.dbis.adam.exception.IndexNotExistingException
 import ch.unibas.dmi.dbis.adam.index.Index._
 import ch.unibas.dmi.dbis.adam.index.structures.lsh.LSHIndex
@@ -13,7 +10,7 @@ import ch.unibas.dmi.dbis.adam.main.SparkStartup
 import ch.unibas.dmi.dbis.adam.storage.catalog.CatalogOperator
 import ch.unibas.dmi.dbis.adam.table.Table
 import ch.unibas.dmi.dbis.adam.table.Table.TableName
-import org.apache.spark.FutureAction
+import ch.unibas.dmi.dbis.adam.table.Tuple._
 import org.apache.spark.sql.DataFrame
 
 import scala.util.Random
@@ -37,7 +34,7 @@ trait Index{
 
   private[index] def prepareMeta(metaBuilder : IndexMetaStorageBuilder) : Unit
 
-  def scan(q: WorkingVector, options: Map[String, String]): FutureAction[Seq[TupleID]]
+  def scan(q: WorkingVector, options: Map[String, String]): Seq[TupleID]
 }
 
 

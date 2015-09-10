@@ -1,13 +1,10 @@
 package ch.unibas.dmi.dbis.adam.query
 
-import ch.unibas.dmi.dbis.adam.datatypes.Feature
-import ch.unibas.dmi.dbis.adam.table.{Tuple, Table}
-import Tuple.TupleID
-import Feature._
+import ch.unibas.dmi.dbis.adam.datatypes.Feature._
 import ch.unibas.dmi.dbis.adam.query.distance.DistanceFunction
 import ch.unibas.dmi.dbis.adam.table.Table
 import ch.unibas.dmi.dbis.adam.table.Table._
-import org.apache.spark.FutureAction
+import ch.unibas.dmi.dbis.adam.table.Tuple.TupleID
 
 /**
  * adamtwo
@@ -15,7 +12,7 @@ import org.apache.spark.FutureAction
  * Ivan Giangreco
  * August 2015
  */
-object SequentialScanner {
+object TableScanner {
   /**
    *
    * @param q
@@ -24,13 +21,13 @@ object SequentialScanner {
    * @param tablename
    * @return
    */
-  def apply(q: WorkingVector, distance : DistanceFunction, k : Int, tablename: TableName): FutureAction[Seq[Result]] = {
+  def apply(q: WorkingVector, distance : DistanceFunction, k : Int, tablename: TableName): Seq[Result] = {
     Table.retrieveTable(tablename).tuples
       .map(tuple => {
       val f : WorkingVector = tuple.value
       Result(distance(q, f), tuple.tid)
     })
-      .sortBy(_.distance).takeAsync(k)
+      .sortBy(_.distance).take(k)
   }
 
   /**
@@ -42,13 +39,13 @@ object SequentialScanner {
    * @param filter
    * @return
    */
-  def apply(q: WorkingVector, distance : DistanceFunction, k : Int, tablename: TableName, filter: Seq[TupleID]): FutureAction[Seq[Result]] = {
+  def apply(q: WorkingVector, distance : DistanceFunction, k : Int, tablename: TableName, filter: Seq[TupleID]): Seq[Result] = {
     Table.retrieveTable(tablename).tuples
       .filter(tuple => filter.contains(tuple.tid))
       .map(tuple => {
       val f : WorkingVector = tuple.value
       Result(distance(q, f), tuple.tid)
     })
-      .sortBy(_.distance).takeAsync(k)
+      .sortBy(_.distance).take(k)
   }
 }

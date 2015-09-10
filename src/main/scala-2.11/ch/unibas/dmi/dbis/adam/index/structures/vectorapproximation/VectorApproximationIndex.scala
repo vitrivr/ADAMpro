@@ -1,10 +1,7 @@
 package ch.unibas.dmi.dbis.adam.index.structures.vectorapproximation
 
-import ch.unibas.dmi.dbis.adam.datatypes.Feature
+import ch.unibas.dmi.dbis.adam.datatypes.Feature._
 import ch.unibas.dmi.dbis.adam.datatypes.bitString.BitString
-import ch.unibas.dmi.dbis.adam.table.Tuple
-import Tuple._
-import Feature._
 import ch.unibas.dmi.dbis.adam.index.Index.IndexName
 import ch.unibas.dmi.dbis.adam.index.structures.vectorapproximation.VectorApproximationIndex.{Bounds, Marks}
 import ch.unibas.dmi.dbis.adam.index.structures.vectorapproximation.results.VectorApproximationResultHandler
@@ -13,7 +10,7 @@ import ch.unibas.dmi.dbis.adam.index.{Index, IndexMetaStorage, IndexMetaStorageB
 import ch.unibas.dmi.dbis.adam.query.distance.Distance._
 import ch.unibas.dmi.dbis.adam.query.distance.NormBasedDistanceFunction
 import ch.unibas.dmi.dbis.adam.table.Table._
-import org.apache.spark.FutureAction
+import ch.unibas.dmi.dbis.adam.table.Tuple._
 import org.apache.spark.sql.DataFrame
 
 /**
@@ -28,14 +25,14 @@ class VectorApproximationIndex(val indexname : IndexName, val tablename : TableN
   /**
    *
    */
-  override def scan(q: WorkingVector, options: Map[String, String]): FutureAction[Seq[TupleID]] = {
+  override def scan(q: WorkingVector, options: Map[String, String]): Seq[TupleID] = {
     val k = options("k").toInt
     val norm = options("norm").toInt
 
     val lbounds: Bounds = lowerBounds(q, indexMetaData.marks, new NormBasedDistanceFunction(norm))
     val ubounds: Bounds = upperBounds(q, indexMetaData.marks, new NormBasedDistanceFunction(norm))
 
-    val globalResultHandler = new VectorApproximationResultHandler(k)
+    //val globalResultHandler = new VectorApproximationResultHandler(k)
 
     indexdata
       .map{ tuple =>
@@ -47,7 +44,7 @@ class VectorApproximationIndex(val indexname : IndexName, val tablename : TableN
       }
       localRh.iterator})
       .map(_.indexTuple.tid)
-      .collectAsync()
+      .collect()
 
     /*
     by leaving out this part we reduce the number of collects of data

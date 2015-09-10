@@ -1,15 +1,13 @@
 package ch.unibas.dmi.dbis.adam.index.structures.spectrallsh
 
 import breeze.linalg._
-import ch.unibas.dmi.dbis.adam.datatypes.{MovableFeature, Feature}
+import ch.unibas.dmi.dbis.adam.datatypes.Feature._
+import ch.unibas.dmi.dbis.adam.datatypes.MovableFeature
 import ch.unibas.dmi.dbis.adam.datatypes.bitString.BitString
-import ch.unibas.dmi.dbis.adam.table.Tuple
-import Tuple._
-import Feature._
 import ch.unibas.dmi.dbis.adam.index.Index._
 import ch.unibas.dmi.dbis.adam.index.{Index, IndexMetaStorage, IndexMetaStorageBuilder, IndexTuple}
 import ch.unibas.dmi.dbis.adam.table.Table._
-import org.apache.spark.FutureAction
+import ch.unibas.dmi.dbis.adam.table.Tuple._
 import org.apache.spark.sql.DataFrame
 
 /**
@@ -26,7 +24,7 @@ class SpectralLSHIndex(val indexname: IndexName, val tablename: TableName, prote
    * @param options
    * @return
    */
-  override def scan(q: WorkingVector, options: Map[String, String]): FutureAction[Seq[TupleID]] = {
+  override def scan(q: WorkingVector, options: Map[String, String]): Seq[TupleID] = {
     val k = options("k").toInt
 
     import MovableFeature.conv_feature2MovableFeature
@@ -38,7 +36,7 @@ class SpectralLSHIndex(val indexname: IndexName, val tablename: TableName, prote
       .map { tuple =>
       val score: Int = queries.view.map{tuple.bits.intersectionCount(_)}.sum
       (tuple.tid, score)
-    }.sortBy(_._2, false).map(_._1).takeAsync(k * 5)
+    }.sortBy(_._2, false).map(_._1).take(k * 5)
   }
 
   /**

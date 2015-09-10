@@ -1,15 +1,13 @@
 package ch.unibas.dmi.dbis.adam.index.structures.lsh
 
-import ch.unibas.dmi.dbis.adam.datatypes.{MovableFeature, Feature}
+import ch.unibas.dmi.dbis.adam.datatypes.Feature._
+import ch.unibas.dmi.dbis.adam.datatypes.MovableFeature
 import ch.unibas.dmi.dbis.adam.datatypes.bitString.BitString
-import ch.unibas.dmi.dbis.adam.table.Tuple
-import Tuple._
-import Feature._
 import ch.unibas.dmi.dbis.adam.index.Index._
 import ch.unibas.dmi.dbis.adam.index.structures.lsh.hashfunction.Hasher
 import ch.unibas.dmi.dbis.adam.index.{Index, IndexMetaStorage, IndexMetaStorageBuilder, IndexTuple}
 import ch.unibas.dmi.dbis.adam.table.Table._
-import org.apache.spark.FutureAction
+import ch.unibas.dmi.dbis.adam.table.Tuple._
 import org.apache.spark.sql.DataFrame
 
 
@@ -28,7 +26,7 @@ class LSHIndex(val indexname : IndexName, val tablename : TableName, protected v
    * @param options
    * @return
    */
-  override def scan(q: WorkingVector, options: Map[String, String]): FutureAction[Seq[TupleID]] = {
+  override def scan(q: WorkingVector, options: Map[String, String]): Seq[TupleID] = {
     import MovableFeature.conv_feature2MovableFeature
     val queries = List.fill(5)(q.move(0.1))
 
@@ -41,7 +39,7 @@ class LSHIndex(val indexname : IndexName, val tablename : TableName, protected v
       })
     }.map { indexTuple => indexTuple.tid }
 
-    results.collectAsync()
+    results.collect
   }
 
   /**

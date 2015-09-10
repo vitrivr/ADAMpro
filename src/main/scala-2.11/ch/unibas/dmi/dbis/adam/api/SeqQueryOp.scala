@@ -20,6 +20,6 @@ object SeqQueryOp {
    * @param distance
    */
   def apply(tablename: TableName, query : WorkingVector, k : Int, distance : DistanceFunction) : Seq[Result] = {
-    QueryHandler.sequentialQuery(query, distance, k, tablename).get()
+    QueryHandler.sequentialQuery(query, distance, k, tablename)
   }
 }

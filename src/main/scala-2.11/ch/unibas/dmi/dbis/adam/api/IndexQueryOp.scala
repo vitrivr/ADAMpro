@@ -19,6 +19,6 @@ object IndexQueryOp {
     options += "k" -> k.toString
     options += "norm" -> distance.n.toString
 
-    QueryHandler.indexQuery(query, distance, k, indexname, options.toMap).get()
+    QueryHandler.indexQuery(query, distance, k, indexname, options.toMap)
   }
 }
