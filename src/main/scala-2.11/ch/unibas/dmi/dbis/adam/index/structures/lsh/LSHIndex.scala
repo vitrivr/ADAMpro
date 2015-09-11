@@ -8,6 +8,7 @@ import ch.unibas.dmi.dbis.adam.index.structures.lsh.hashfunction.Hasher
 import ch.unibas.dmi.dbis.adam.index.{Index, IndexMetaStorage, IndexMetaStorageBuilder, IndexTuple}
 import ch.unibas.dmi.dbis.adam.table.Table._
 import ch.unibas.dmi.dbis.adam.table.Tuple._
+import org.apache.spark.rdd.RDD
 import org.apache.spark.sql.DataFrame
 
 
@@ -22,6 +23,16 @@ class LSHIndex(val indexname : IndexName, val tablename : TableName, protected v
 
   /**
    *
+   * @return
+   */
+  override protected lazy val indextuples : RDD[IndexTuple] = {
+    indexdata
+      .map{ tuple =>
+      IndexTuple(tuple.getLong(0), tuple.getAs[BitString[_]](1)) }
+  }
+
+  /**
+   *
    * @param q
    * @param options
    * @return
@@ -30,16 +41,12 @@ class LSHIndex(val indexname : IndexName, val tablename : TableName, protected v
     import MovableFeature.conv_feature2MovableFeature
     val queries = List.fill(5)(q.move(0.1))
 
-    val results = indexdata
-      .map{ tuple =>
-        IndexTuple(tuple.getLong(0), tuple.getAs[BitString[_]](1)) }
+    indextuples
       .filter { indexTuple =>
       indexTuple.bits.getIndexes.zip(queries).exists({
         case (indexHash, acceptedValues) => acceptedValues.contains(indexHash)
       })
-    }.map { indexTuple => indexTuple.tid }
-
-    results.collect
+    }.map { indexTuple => indexTuple.tid }.collect
   }
 
   /**

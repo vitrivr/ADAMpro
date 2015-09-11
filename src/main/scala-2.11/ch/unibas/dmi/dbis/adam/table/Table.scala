@@ -1,12 +1,14 @@
 package ch.unibas.dmi.dbis.adam.table
 
+import ch.unibas.dmi.dbis.adam.cache.RDDCache
 import ch.unibas.dmi.dbis.adam.exception.{TableCreationException, TableNotExistingException}
-import ch.unibas.dmi.dbis.adam.main.SparkStartup
+import ch.unibas.dmi.dbis.adam.main.{SparkStartup, Startup}
 import ch.unibas.dmi.dbis.adam.storage.catalog.CatalogOperator
 import ch.unibas.dmi.dbis.adam.table.Table.TableName
 import ch.unibas.dmi.dbis.adam.table.Tuple._
 import org.apache.spark.sql.types.StructType
 import org.apache.spark.sql.{DataFrame, Row, SaveMode}
+import org.apache.spark.storage.StorageLevel
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.duration._
@@ -29,6 +31,7 @@ case class Table(tablename : TableName, data : DataFrame){
   def tuples = data.rdd.map(row => (row : Tuple))
 }
 
+case class CacheableTable(table : Table)
 
 object Table {
   type TableName = String
@@ -108,6 +111,26 @@ object Table {
       throw new TableNotExistingException()
     }
 
-    storage.readTable(tablename)
+    if(RDDCache.containsTable(tablename)){
+      RDDCache.getTable(tablename)
+    } else {
+      storage.readTable(tablename)
+    }
+  }
+
+  /**
+   *
+   * @param tablename
+   * @return
+   */
+  def getCacheable(tablename : TableName) : CacheableTable = {
+    val table = Table.retrieveTable(tablename)
+
+    table.tuples
+      .repartition(Startup.config.partitions)
+      .setName(tablename).persist(StorageLevel.MEMORY_AND_DISK)
+      .collect()
+
+    CacheableTable(table)
   }
 }

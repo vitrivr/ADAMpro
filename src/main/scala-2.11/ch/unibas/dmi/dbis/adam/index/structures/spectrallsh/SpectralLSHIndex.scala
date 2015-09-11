@@ -8,6 +8,7 @@ import ch.unibas.dmi.dbis.adam.index.Index._
 import ch.unibas.dmi.dbis.adam.index.{Index, IndexMetaStorage, IndexMetaStorageBuilder, IndexTuple}
 import ch.unibas.dmi.dbis.adam.table.Table._
 import ch.unibas.dmi.dbis.adam.table.Tuple._
+import org.apache.spark.rdd.RDD
 import org.apache.spark.sql.DataFrame
 
 /**
@@ -18,6 +19,17 @@ import org.apache.spark.sql.DataFrame
  */
 class SpectralLSHIndex(val indexname: IndexName, val tablename: TableName, protected val indexdata: DataFrame, private val indexMetaData: SpectralLSHIndexMetaData)
   extends Index {
+
+  /**
+   *
+   * @return
+   */
+  override protected lazy val indextuples : RDD[IndexTuple] = {
+    indexdata
+      .map{ tuple =>
+      IndexTuple(tuple.getLong(0), tuple.getAs[BitString[_]](1)) }
+  }
+
   /**
    *
    * @param q
@@ -30,9 +42,7 @@ class SpectralLSHIndex(val indexname: IndexName, val tablename: TableName, prote
     import MovableFeature.conv_feature2MovableFeature
     val queries = List.fill(5)(SpectralLSHUtils.hashFeature(q.move(indexMetaData.radius), indexMetaData))
 
-    indexdata
-      .map{ tuple =>
-        IndexTuple(tuple.getLong(0), tuple.getAs[BitString[_]](1)) }
+      indextuples
       .map { tuple =>
       val score: Int = queries.view.map{tuple.bits.intersectionCount(_)}.sum
       (tuple.tid, score)

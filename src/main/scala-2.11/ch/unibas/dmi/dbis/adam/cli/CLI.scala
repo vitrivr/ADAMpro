@@ -5,6 +5,7 @@ import ch.unibas.dmi.dbis.adam.datatypes.Feature._
 import ch.unibas.dmi.dbis.adam.main.SparkStartup
 import ch.unibas.dmi.dbis.adam.query.distance.NormBasedDistanceFunction
 import ch.unibas.dmi.dbis.adam.storage.catalog.CatalogOperator
+import org.apache.spark.sql.Row
 import org.apache.spark.sql.types._
 
 import scala.tools.nsc.interpreter.ILoop
@@ -25,11 +26,12 @@ class CLI extends ILoop {
     new NullaryCmd("list", "lists tables", listOp),
     new VarArgsCmd("display", "tablename", "displays tuples of table", displayOp),
     new VarArgsCmd("count", "tablename", "counts tuples in table", countOp),
-    new VarArgsCmd("seqquery", "tablename q k", "querys table in kNN search sequentially", seqQueryOp),
     new VarArgsCmd("index", "tablename indextype [properties]", "creates an index of given type with properties", indexOp),
+    new VarArgsCmd("cache", "tablename", "caches all indexes of the given table", cacheOp),
+    new VarArgsCmd("seqquery", "tablename q k", "querys table in kNN search sequentially", seqQueryOp),
     new VarArgsCmd("indquery", "indexname q k", "querys table in kNN search using index", indQueryOp),
-    new VarArgsCmd("drop", "tablename", "drops table", dropOp),
     new VarArgsCmd("progQuery", "tablename q k", "querys table in kNN search using progressive query", progQueryOp),
+    new VarArgsCmd("drop", "tablename", "drops table", dropOp),
 
     new NullaryCmd("dropAllIndexes","drops all indexes", dropAllIndexesOp),
     new NullaryCmd("tmpOp","temporary operation only for testing purposes", tmpOp)
@@ -156,6 +158,17 @@ class CLI extends ILoop {
    * @param input
    * @return
    */
+  private def cacheOp(input : List[String]) : Result = {
+    val tablename = input(0)
+
+    CacheOp(tablename)
+  }
+
+  /**
+   *
+   * @param input
+   * @return
+   */
   private def listOp(input : String) : Result = {
     val results = ListOp()
 
@@ -229,6 +242,29 @@ class CLI extends ILoop {
    * @return
    */
   private def tmpOp(input : String) : Result = {
+    val files = new java.io.File("./data/old").listFiles.filter(_.getName.startsWith("data_")).sortBy(_.getName)
+
+
+    val schema = StructType(
+      List(
+        StructField("id", LongType, false),
+        StructField("feature", ArrayType(FloatType), false)
+      )
+    )
+
+    files.foreach{
+      file =>
+        val data = SparkStartup.sqlContext.read.parquet(file.getAbsolutePath)
+
+        val revData = data.map(r =>  Row(r.getInt(0).toLong, r.getSeq[Float](1)))
+        val df = SparkStartup.sqlContext.createDataFrame(revData, schema)
+
+        DropOp(file.getName, true)
+        CreateOp(file.getName, schema)
+        ImportOp(file.getName, df)
+    }
+
+    Result.default
   }
 
 }

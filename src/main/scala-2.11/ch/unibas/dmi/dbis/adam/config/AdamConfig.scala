@@ -18,5 +18,5 @@ class AdamConfig(config : Config) {
   val indexPath = basePath / "index"
   val catalogPath = basePath / "catalog"
 
-  val port = 6543
+  val partitions = 4
 }

@@ -24,6 +24,9 @@ object Protocol extends Json4sSupport {
 
   case object IndexCreated
 
+  case object AddedToCache
+
+
   case class ListTables(tables : Seq[String])
 
   case class IndexQuery(k : Int, q : String, norm : Int = 1)

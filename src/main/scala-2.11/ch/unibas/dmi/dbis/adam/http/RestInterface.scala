@@ -27,7 +27,9 @@ trait RestApi extends HttpService with ActorLogging { actor: Actor =>
   implicit val timeout = Timeout(10 seconds)
 
   def routes: Route =
-    countRoute ~ createRoute ~ displayRoute ~ dropRoute ~ importRoute ~ importFileRoute ~ indexRoute ~ listRoute ~ indexQueryRoute ~ seqQueryRoute ~ progQueryRoute
+    countRoute ~ createRoute ~ displayRoute ~ dropRoute ~ cacheRoute ~
+      importRoute ~ importFileRoute ~ indexRoute ~ listRoute ~ indexQueryRoute ~
+      seqQueryRoute ~ progQueryRoute
 
   /**
    *
@@ -139,6 +141,19 @@ trait RestApi extends HttpService with ActorLogging { actor: Actor =>
         val responder = createResponder(requestContext)
         val results = ListOp()
         responder ! ListTables(results)
+      }
+    }
+  }
+
+  /**
+   *
+   */
+  private val cacheRoute : Route = pathPrefix("cache") {
+    path(Segment) { tablename =>
+      post { requestContext =>
+        val responder = createResponder(requestContext)
+        CacheOp(tablename)
+        responder ! AddedToCache
       }
     }
   }

@@ -11,6 +11,7 @@ import ch.unibas.dmi.dbis.adam.query.distance.Distance._
 import ch.unibas.dmi.dbis.adam.query.distance.NormBasedDistanceFunction
 import ch.unibas.dmi.dbis.adam.table.Table._
 import ch.unibas.dmi.dbis.adam.table.Tuple._
+import org.apache.spark.rdd.RDD
 import org.apache.spark.sql.DataFrame
 
 /**
@@ -24,6 +25,16 @@ class VectorApproximationIndex(val indexname : IndexName, val tablename : TableN
 
   /**
    *
+   * @return
+   */
+  override protected lazy val indextuples : RDD[IndexTuple] = {
+    indexdata
+      .map{ tuple =>
+      IndexTuple(tuple.getLong(0), tuple.getAs[BitString[_]](1)) }
+  }
+
+  /**
+   *
    */
   override def scan(q: WorkingVector, options: Map[String, String]): Seq[TupleID] = {
     val k = options("k").toInt
@@ -34,9 +45,7 @@ class VectorApproximationIndex(val indexname : IndexName, val tablename : TableN
 
     //val globalResultHandler = new VectorApproximationResultHandler(k)
 
-    indexdata
-      .map{ tuple =>
-      IndexTuple(tuple.getLong(0), tuple.getAs[BitString[_]](1)) }
+    indextuples
       .mapPartitions(tuplesIt => {
       val localRh = new VectorApproximationResultHandler(k, lbounds, ubounds, indexMetaData.signatureGenerator)
       tuplesIt.foreach { tuple =>
