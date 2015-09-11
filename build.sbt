@@ -4,6 +4,8 @@ version := "1.0"
 
 scalaVersion := "2.11.7"
 
+organization := "ch.unibas.dmi.dbis"
+
 
 resolvers ++= Seq(
   "Sonatype Releases" at "https://oss.sonatype.org/content/repositories/releases/",
@@ -30,3 +32,7 @@ libraryDependencies ++= Seq(
   "org.json4s"             %%  "json4s-native"          % "3.2.11",
   "org.slf4j"              %   "slf4j-nop"              % "1.7.12"
 )
+
+
+mainClass := Some("ch.unibas.dmi.dbis.adam.main.Startup")
+unmanagedResourceDirectories in Compile += baseDirectory.value / "conf"
