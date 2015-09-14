@@ -43,7 +43,7 @@ class VectorApproximationIndex(val indexname : IndexName, val tablename : TableN
     val lbounds: Bounds = lowerBounds(q, indexMetaData.marks, new NormBasedDistanceFunction(norm))
     val ubounds: Bounds = upperBounds(q, indexMetaData.marks, new NormBasedDistanceFunction(norm))
 
-    //val globalResultHandler = new VectorApproximationResultHandler(k)
+    val globalResultHandler = new VectorApproximationResultHandler(k)
 
     indextuples
       .mapPartitions(tuplesIt => {
@@ -51,18 +51,10 @@ class VectorApproximationIndex(val indexname : IndexName, val tablename : TableN
       tuplesIt.foreach { tuple =>
         localRh.offerResultElement(tuple)
       }
-      localRh.iterator})
-      .map(_.indexTuple.tid)
-      .collect()
+      localRh.iterator}).collect()
+      .foreach(x => globalResultHandler.offerResultElement(x))
 
-    /*
-    by leaving out this part we reduce the number of collects of data
-    .foreachAsync(x => globalResultHandler.offerResultElement(x))
-
-    val action = new ComplexFutureAction[Seq[TupleID]]
-    action.run({
       globalResultHandler.results.map(x => x.indexTuple.tid).toList
-    })*/
   }
 
 

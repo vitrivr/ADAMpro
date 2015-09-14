@@ -5,6 +5,7 @@ import ch.unibas.dmi.dbis.adam.index.IndexTuple
 import ch.unibas.dmi.dbis.adam.index.structures.vectorapproximation.VectorApproximationIndex._
 import ch.unibas.dmi.dbis.adam.index.structures.vectorapproximation.signature.SignatureGenerator
 import ch.unibas.dmi.dbis.adam.query.distance.Distance.Distance
+import com.google.common.collect.MinMaxPriorityQueue
 
 import scala.collection.mutable.ArrayBuffer
 
@@ -15,8 +16,9 @@ import scala.collection.mutable.ArrayBuffer
  * August 2015
  */
 private[vectorapproximation] class VectorApproximationResultHandler(k: Int, lbounds: Bounds = null, ubounds: Bounds = null, signatureGenerator: SignatureGenerator = null) extends Serializable {
-  private var ls = new ArrayBuffer[ResultElement]()
-  private var max = Float.MaxValue
+  @transient private var ls = new ArrayBuffer[ResultElement]()
+  @transient private var queue = MinMaxPriorityQueue.orderedBy(scala.math.Ordering.Float).maximumSize(k).create[Float]
+  @transient private var max = Float.MaxValue
 
    /**
    *
@@ -26,8 +28,8 @@ private[vectorapproximation] class VectorApproximationResultHandler(k: Int, lbou
     it.foreach { res =>
       if (res.lbound < max || ls.size < k) {
         ls.+=(res)
-        ls = ls.sortBy(x => x.ubound)
-        max = ls(math.min(ls.size, k) - 1).ubound
+        queue.add(res.ubound)
+        max = queue.peekLast()
       }
     }
   }
@@ -39,8 +41,8 @@ private[vectorapproximation] class VectorApproximationResultHandler(k: Int, lbou
   def offerResultElement(res : ResultElement): Unit = {
     if (res.lbound < max || ls.size < k) {
       ls.+=(res)
-      ls = ls.sortBy(x => x.ubound)
-      max = ls(math.min(ls.size, k) - 1).ubound
+      queue.add(res.ubound)
+      max = queue.peekLast()
     }
   }
 
@@ -65,7 +67,7 @@ private[vectorapproximation] class VectorApproximationResultHandler(k: Int, lbou
    * @return
    */
   def results = {
-    ls.sortBy(x => x.ubound)
+    ls
   }
 
 
