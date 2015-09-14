@@ -40,12 +40,13 @@ object TableScanner {
    * @return
    */
   def apply(q: WorkingVector, distance : DistanceFunction, k : Int, tablename: TableName, filter: Seq[TupleID]): Seq[Result] = {
-    Table.retrieveTable(tablename).tuples
+    val data = Table.retrieveTable(tablename).tuples
       .filter(tuple => filter.contains(tuple.tid))
       .map(tuple => {
       val f : WorkingVector = tuple.value
       Result(distance(q, f), tuple.tid)
-    })
-      .sortBy(_.distance).take(k)
+    }).collect()
+
+      data.sortBy(_.distance).take(k)
   }
 }
