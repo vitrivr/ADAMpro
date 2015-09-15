@@ -28,8 +28,18 @@ class MinimalBitString(private val values : util.BitSet) extends BitString[Minim
    * @param end
    * @return
    */
-  override def get(start: Int, end: Int): BitString[MinimalBitString] = {
-    new MinimalBitString(values.get(start, end))
+  @inline override def get(start: Int, end: Int): Int = {
+   var bitInteger = 0
+
+    var i = start
+    while(i < end){
+      if(values.get(i)){
+       bitInteger |= (1 << (i - start))
+      }
+      i += 1
+    }
+
+    bitInteger
   }
 
   /**

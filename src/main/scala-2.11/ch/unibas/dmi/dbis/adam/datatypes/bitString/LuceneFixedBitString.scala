@@ -28,21 +28,8 @@ class LuceneFixedBitString(private val values : FixedBitSet) extends BitString[L
    * @param end
    * @return
    */
-  override def get(start: Int, end: Int): LuceneFixedBitString = {
-    val newValues = new FixedBitSet(end - start)
-
-    var nextIndex = start - 1
-
-    do{
-      nextIndex += 1
-      nextIndex = values.nextSetBit(nextIndex)
-
-      if(nextIndex != -1){
-        newValues.set(nextIndex)
-      }
-    } while (nextIndex != -1 && nextIndex < end)
-
-    new LuceneFixedBitString(newValues)
+  override def get(start: Int, end: Int): Int = {
+    ???
   }
 
   /**

@@ -30,30 +30,8 @@ class SparseBitSetBitString(private val values : SparseBitSet) extends BitString
    * @param end
    * @return
    */
-  override def get(start : Int, end : Int) : SparseBitSetBitString = {
-    val indexes = ListBuffer[Int]()
-    var nextIndex : Int = start - 1
-
-    do {
-      nextIndex += 1
-      nextIndex = values.nextSetBit(nextIndex)
-
-      if(nextIndex != -1 && nextIndex < end){
-        indexes += nextIndex - start
-      }
-
-    } while(nextIndex != -1 && nextIndex < end)
-
-
-    val max = if(indexes.isEmpty){
-      1
-    } else {
-      indexes.max
-    }
-
-    val bitSet = new SparseBitSet(max)
-    indexes.foreach{bitSet.set(_)}
-    new SparseBitSetBitString(bitSet)
+  override def get(start : Int, end : Int) : Int = {
+    ???
   }
 
   /**

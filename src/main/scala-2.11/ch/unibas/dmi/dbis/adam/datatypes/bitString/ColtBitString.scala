@@ -31,8 +31,8 @@ class ColtBitString(private val values : BitVector) extends BitString[ColtBitStr
    * @param end
    * @return
    */
-  override def get(start: Int, end: Int): ColtBitString = {
-    new ColtBitString(values.partFromTo(start, end))
+  override def get(start: Int, end: Int): Int = {
+    ???
   }
 
   /**

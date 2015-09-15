@@ -40,91 +40,64 @@ class VectorApproximationIndex(val indexname : IndexName, val tablename : TableN
     val k = options("k").toInt
     val norm = options("norm").toInt
 
-    val lbounds: Bounds = lowerBounds(q, indexMetaData.marks, new NormBasedDistanceFunction(norm))
-    val ubounds: Bounds = upperBounds(q, indexMetaData.marks, new NormBasedDistanceFunction(norm))
+    val (lbounds, ubounds) = computeBounds(q, indexMetaData.marks, new NormBasedDistanceFunction(norm))
 
-    val globalResultHandler = new VectorApproximationResultHandler(k)
-
-    indextuples
+    val it = indextuples
       .mapPartitions(tuplesIt => {
       val localRh = new VectorApproximationResultHandler(k, lbounds, ubounds, indexMetaData.signatureGenerator)
-      tuplesIt.foreach { tuple =>
-        localRh.offerResultElement(tuple)
-      }
-      localRh.iterator}).collect()
-      .foreach(x => globalResultHandler.offerResultElement(x))
+      localRh.offerIndexTuple(tuplesIt)
+      localRh.iterator}).collect().iterator
 
-      globalResultHandler.results.map(x => x.indexTuple.tid).toList
+    val globalResultHandler = new VectorApproximationResultHandler(k)
+    globalResultHandler.offerResultElement(it)
+    globalResultHandler.results.map(x => x.indexTuple.tid).toList
   }
-
 
   /**
    *
-   * @param bounds
-   * @param signature
+   * @param q
+   * @param marks
+   * @param distance
    * @return
    */
-  private def computeBounds(bounds: Bounds, signature: BitString[_]): Distance = {
-    val cells = indexMetaData.signatureGenerator.toCells(signature)
+  private[this] def computeBounds(q: WorkingVector, marks: => Marks, @inline distance: NormBasedDistanceFunction): (Bounds, Bounds) = {
+    val lbounds, ubounds = Array.ofDim[Distance](marks.length, marks(0).length - 1)
 
-    var sum : Float = 0
-    cells.zipWithIndex.foreach { case(cell, index) =>
-      sum += bounds(index)(cell)
+     var i = 0
+     while(i < marks.length) {
+        val dimMarks = marks(i)
+        val fvi = q(i)
+
+        var j = 0
+        val it = dimMarks.iterator.sliding(2).withPartial(false)
+
+        while(it.hasNext){
+          val dimMark = it.next()
+
+          lazy val d0fv1 = distance(dimMark(0), fvi)
+          lazy val d1fv1 = distance(dimMark(1), fvi)
+
+          if (fvi < dimMark(0)) {
+            lbounds(i)(j) = d0fv1
+          } else if (fvi > dimMark(1)) {
+            lbounds(i)(j) = d1fv1
+          }
+
+          if (fvi <= (dimMark(0) + dimMark(1)) / 2.toFloat) {
+            ubounds(i)(j) = d1fv1
+          } else {
+            ubounds(i)(j) = d0fv1
+          }
+
+          j += 1
+        }
+
+         i += 1
     }
 
-    sum
+    (lbounds, ubounds)
   }
 
-  /**
-   *
-   * @param q
-   * @param marks
-   * @param distance
-   * @return
-   */
-  private def lowerBounds(q: WorkingVector, marks: => Marks, distance: NormBasedDistanceFunction): Bounds = {
-    val bounds = marks.zipWithIndex.map {
-      case (dimMarks, i) =>
-        val fvi = q(i)
-        dimMarks.iterator.sliding(2).withPartial(false).map {
-          dimMark =>
-            if (fvi < dimMark(0)) {
-              distance(dimMark(0), fvi)
-            } else if (fvi > dimMark(1)) {
-              distance(fvi, dimMark(1))
-            } else {
-              0.toFloat
-            }
-        }.toArray
-    }.toArray
-
-    bounds
-  }
-
-  /**
-   *
-   * @param q
-   * @param marks
-   * @param distance
-   * @return
-   */
-  private def upperBounds(q: WorkingVector, marks: => Marks, distance: NormBasedDistanceFunction): Bounds = {
-    val bounds = marks.zipWithIndex.map {
-      case (dimMarks, i) =>
-        val fvi = q(i)
-
-        dimMarks.iterator.sliding(2).withPartial(false).map { //TODO: valuesIterator?
-          dimMark =>
-            if (fvi <= (dimMark(0) + dimMark(1)) / 2.toFloat) {
-              distance(dimMark(1), fvi)
-            } else {
-              distance(fvi, dimMark(0))
-            }
-        }.toArray
-    }.toArray
-
-    bounds
-  }
 
   /**
    *

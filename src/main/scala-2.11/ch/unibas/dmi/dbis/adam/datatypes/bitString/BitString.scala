@@ -50,7 +50,7 @@ trait BitString[A] {
    * @param end
    * @return
    */
-  def get(start : Int, end : Int) : BitString[A]
+  def get(start : Int, end : Int) : Int
 
   /**
    *
