@@ -1,23 +1,20 @@
 package ch.unibas.dmi.dbis.adam.index.structures.vectorapproximation
 
-import ch.unibas.dmi.dbis.adam.datatypes.Feature
-import Feature.{VectorBase, WorkingVector}
+import ch.unibas.dmi.dbis.adam.datatypes.Feature.{VectorBase, WorkingVector}
 import ch.unibas.dmi.dbis.adam.index.Index._
 import ch.unibas.dmi.dbis.adam.index.structures.vectorapproximation.marks.{EquidistantMarksGenerator, EquifrequentMarksGenerator, MarksGenerator}
 import ch.unibas.dmi.dbis.adam.index.structures.vectorapproximation.signature.{FixedSignatureGenerator, SignatureGenerator}
-import ch.unibas.dmi.dbis.adam.index.{IndexerTuple, IndexGenerator, IndexTuple}
+import ch.unibas.dmi.dbis.adam.index.{IndexGenerator, IndexTuple, IndexerTuple}
 import ch.unibas.dmi.dbis.adam.main.SparkStartup
 import ch.unibas.dmi.dbis.adam.table.Table._
 import org.apache.spark.adam.ADAMSamplingUtils
 import org.apache.spark.rdd.RDD
 
-import scala.collection.mutable.{Map => mMap}
-
 
 /**
  * 
  */
-class VectorApproximationIndexer(maxMarks: Int = 64, sampleSize: Int = 500, marksGenerator: MarksGenerator, signatureGenerator: SignatureGenerator, trainingSize : Int) extends IndexGenerator with Serializable {
+class VectorApproximationIndexer(maxMarks: Int = 64, marksGenerator: MarksGenerator, signatureGenerator: SignatureGenerator, trainingSize : Int) extends IndexGenerator with Serializable {
   override val indextypename: String = "va"
 
   /**
@@ -44,7 +41,7 @@ class VectorApproximationIndexer(maxMarks: Int = 64, sampleSize: Int = 500, mark
    */
   private def train(data : RDD[IndexerTuple[WorkingVector]]) : VectorApproximationIndexMetaData = {
     //data
-    val fraction = ADAMSamplingUtils.computeFractionForSampleSize(sampleSize, data.count(), false)
+    val fraction = ADAMSamplingUtils.computeFractionForSampleSize(trainingSize, data.count(), false)
     val trainData = data.sample(false, fraction)
 
     val marks = marksGenerator.getMarks(trainData, maxMarks)
@@ -72,9 +69,8 @@ object VectorApproximationIndexer {
    */
   def apply(properties : Map[String, String] = Map[String, String](), data: RDD[IndexerTuple[WorkingVector]]) : IndexGenerator = {
     val maxMarks = properties.getOrElse("maxMarks", "64").toInt
-    val sampleSize = properties.getOrElse("sampleSize", "500").toInt
 
-    val marksGeneratorDescription = properties.getOrElse("marksGenerator", "equidistant")
+    val marksGeneratorDescription = properties.getOrElse("marksGenerator", "equifrequent")
     val marksGenerator = marksGeneratorDescription.toLowerCase match {
       case "equifrequent" => EquifrequentMarksGenerator
       case "equidistant" => EquidistantMarksGenerator
@@ -91,9 +87,9 @@ object VectorApproximationIndexer {
       }
     }
 
-    val trainingSize = properties.getOrElse("trainingSize", "50000").toInt
+    val trainingSize = properties.getOrElse("trainingSize", "5000").toInt
 
 
-    new VectorApproximationIndexer(maxMarks, sampleSize, marksGenerator, signatureGenerator, trainingSize)
+    new VectorApproximationIndexer(maxMarks, marksGenerator, signatureGenerator, trainingSize)
   }
 }
