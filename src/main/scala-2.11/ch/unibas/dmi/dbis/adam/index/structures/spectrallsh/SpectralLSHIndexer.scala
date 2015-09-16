@@ -48,11 +48,12 @@ class SpectralLSHIndexer(nbits : Int, trainingSize : Int) extends IndexGenerator
   private def train(data : RDD[IndexerTuple[WorkingVector]]) : SpectralLSHIndexMetaData = {
     //data
     val fraction = ADAMSamplingUtils.computeFractionForSampleSize(trainingSize, data.count(), false)
-    val trainData = data.sample(false, fraction).map(x => x.value.map(x => x.toDouble).toArray)
+    val trainData = data.sample(false, fraction)
+    val dTrainData = trainData.map(x => x.value.map(x => x.toDouble).toArray)
 
-    val dataMatrix = DenseMatrix(trainData.collect.toList : _*)
+    val dataMatrix = DenseMatrix(dTrainData.collect.toList : _*)
 
-    val nfeatures =  trainData.first.length
+    val nfeatures =  dTrainData.first.length
 
     val numComponents = math.min(nfeatures, nbits)
 
