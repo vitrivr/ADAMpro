@@ -7,6 +7,7 @@ import ch.unibas.dmi.dbis.adam.index.Index._
 import ch.unibas.dmi.dbis.adam.index.{IndexerTuple, IndexTuple, Index, IndexGenerator}
 import ch.unibas.dmi.dbis.adam.main.SparkStartup
 import ch.unibas.dmi.dbis.adam.table.Table._
+import org.apache.spark.adam.ADAMSamplingUtils
 import org.apache.spark.rdd.RDD
 
 
@@ -17,7 +18,7 @@ import org.apache.spark.rdd.RDD
  * Ivan Giangreco
  * August 2015
  */
-class SpectralLSHIndexer(nfeatures : Int, nbits : Int, trainingSize : Int) extends IndexGenerator with Serializable {
+class SpectralLSHIndexer(nbits : Int, trainingSize : Int) extends IndexGenerator with Serializable {
   override val indextypename : String = "slsh"
 
 
@@ -46,8 +47,12 @@ class SpectralLSHIndexer(nfeatures : Int, nbits : Int, trainingSize : Int) exten
    */
   private def train(data : RDD[IndexerTuple[WorkingVector]]) : SpectralLSHIndexMetaData = {
     //data
-    val trainData = data.map(x => x.value.map(x => x.toDouble).toArray)
-    val dataMatrix = DenseMatrix(trainData.take(trainingSize).toList : _*)
+    val fraction = ADAMSamplingUtils.computeFractionForSampleSize(trainingSize, data.count(), false)
+    val trainData = data.sample(false, fraction).map(x => x.value.map(x => x.toDouble).toArray)
+
+    val dataMatrix = DenseMatrix(trainData.collect.toList : _*)
+
+    val nfeatures =  trainData.first.length
 
     val numComponents = math.min(nfeatures, nbits)
 
@@ -148,10 +153,9 @@ object SpectralLSHIndexer {
    * @param properties
    */
   def apply(properties : Map[String, String] = Map[String, String](), data: RDD[IndexerTuple[WorkingVector]]) : IndexGenerator = {
-    val nfeatures =  data.first.value.length
-    val nbits = properties.getOrElse("nbits", (nfeatures * 2).toString).toInt
+    val nbits = properties.getOrElse("nbits", (data.first.value.length * 2).toString).toInt
     val trainingSize = properties.getOrElse("trainingSize", "50000").toInt
 
-    new SpectralLSHIndexer(nfeatures, nbits, trainingSize)
+    new SpectralLSHIndexer(nbits, trainingSize)
   }
 }

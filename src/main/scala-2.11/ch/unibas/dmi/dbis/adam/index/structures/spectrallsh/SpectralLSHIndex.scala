@@ -38,13 +38,20 @@ class SpectralLSHIndex(val indexname: IndexName, val tablename: TableName, prote
    */
   override def scan(q: WorkingVector, options: Map[String, String]): Seq[TupleID] = {
     val k = options("k").toInt
+    val numOfQueries = options.getOrElse("numOfQ", "3").toInt
 
     import MovableFeature.conv_feature2MovableFeature
-    val queries = List.fill(5)(SpectralLSHUtils.hashFeature(q.move(indexMetaData.radius), indexMetaData))
+    val originalQuery = SpectralLSHUtils.hashFeature(q, indexMetaData)
+    val queries = List.fill(numOfQueries)(SpectralLSHUtils.hashFeature(q.move(indexMetaData.radius), indexMetaData)) ::: List(originalQuery)
 
-      indextuples
-      .map { tuple =>
-      val score: Int = queries.view.map{tuple.bits.intersectionCount(_)}.sum
+    indextuples.map { tuple =>
+        var i = 0
+        var score = 0
+        while(i < queries.length){
+          val query = queries(i)
+          score += tuple.bits.intersectionCount(query)
+        }
+
       (tuple.tid, score)
     }.takeOrdered(k * 3)(Ordering[Int].reverse.on(x => x._2)).map(_._1).toSeq
   }
