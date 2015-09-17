@@ -67,7 +67,7 @@ class SpectralLSHIndexer(nbits : Int, trainingSize : Int) extends IndexGenerator
       else { 0.toDouble }
     }}
     val reorderEigv = eigv * reorderPerm
-    val feigv = new DenseMatrix[Float](reorderEigv.rows, reorderEigv.cols, reorderEigv.toArray.map(x => x.toFloat))
+    val feigv = new DenseMatrix[Float](reorderEigv.rows, reorderEigv.cols, reorderEigv.toArray.map(_.toFloat))
     val projected = (dataMatrix.*(reorderEigv)).asInstanceOf[DenseMatrix[Double]]
 
     // fit uniform distribution
