@@ -77,7 +77,6 @@ object QueryHandler extends Logging {
    */
   def indexQueryNonBlocking(q: WorkingVector, distance : DistanceFunction, k : Int, indexname : IndexName, options : Map[String, String]): Future[Seq[Result]] = {
     Future {
-      log.debug(s"started query on index $indexname")
       val tablename = CatalogOperator.getIndexTableName(indexname)
       val tidList = IndexScanner(q, distance, k, indexname, options)
       TableScanner(q, distance, k, tablename, tidList)

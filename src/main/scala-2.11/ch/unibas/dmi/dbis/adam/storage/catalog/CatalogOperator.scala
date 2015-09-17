@@ -7,7 +7,7 @@ import ch.unibas.dmi.dbis.adam.exception.{IndexNotExistingException, IndexExisti
 import ch.unibas.dmi.dbis.adam.index.Index.{IndexTypeName, IndexName}
 import ch.unibas.dmi.dbis.adam.index.IndexMetaStorage
 import ch.unibas.dmi.dbis.adam.index.structures.vectorapproximation.VectorApproximationIndex.Marks
-import ch.unibas.dmi.dbis.adam.index.structures.vectorapproximation.signature.FixedSignatureGenerator
+import ch.unibas.dmi.dbis.adam.index.structures.vectorapproximation.signature.{VariableSignatureGenerator, FixedSignatureGenerator}
 import ch.unibas.dmi.dbis.adam.main.Startup
 import ch.unibas.dmi.dbis.adam.table.Table.TableName
 import org.apache.spark.mllib.linalg.DenseVector
@@ -40,6 +40,7 @@ object CatalogOperator {
 
   implicit val formats = Serialization.formats(FullTypeHints (List(
     classOf[FixedSignatureGenerator],
+    classOf[VariableSignatureGenerator],
     classOf[Marks],
     classOf[DenseMatrix[VectorBase]],
     classOf[DenseVector]

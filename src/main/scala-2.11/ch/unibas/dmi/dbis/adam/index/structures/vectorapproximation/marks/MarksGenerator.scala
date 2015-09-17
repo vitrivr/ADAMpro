@@ -20,5 +20,16 @@ private[vectorapproximation] trait MarksGenerator extends Serializable {
    * @param maxMarks
    * @return
    */
-  private[vectorapproximation] def getMarks(sample: RDD[IndexerTuple[WorkingVector]], maxMarks: Int): Marks
+  private[vectorapproximation] def getMarks(sample: RDD[IndexerTuple[WorkingVector]], maxMarks: Seq[Int]): Marks
+
+  /**
+   *
+   * @param sample
+   * @param maxMarks
+   * @return
+   */
+  private[vectorapproximation] def getMarks(sample: RDD[IndexerTuple[WorkingVector]], maxMarks: Int): Marks = {
+    val dimensionality = sample.first.value.length
+    getMarks(sample, Seq.fill(dimensionality)(maxMarks))
+  }
 }

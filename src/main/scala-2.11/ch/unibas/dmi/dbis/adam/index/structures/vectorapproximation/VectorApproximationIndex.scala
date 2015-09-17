@@ -5,7 +5,7 @@ import ch.unibas.dmi.dbis.adam.datatypes.bitString.BitString
 import ch.unibas.dmi.dbis.adam.index.Index.IndexName
 import ch.unibas.dmi.dbis.adam.index.structures.vectorapproximation.VectorApproximationIndex.{Bounds, Marks}
 import ch.unibas.dmi.dbis.adam.index.structures.vectorapproximation.results.VectorApproximationResultHandler
-import ch.unibas.dmi.dbis.adam.index.structures.vectorapproximation.signature.FixedSignatureGenerator
+import ch.unibas.dmi.dbis.adam.index.structures.vectorapproximation.signature.SignatureGenerator
 import ch.unibas.dmi.dbis.adam.index.{Index, IndexMetaStorage, IndexMetaStorageBuilder, IndexTuple}
 import ch.unibas.dmi.dbis.adam.query.distance.Distance._
 import ch.unibas.dmi.dbis.adam.query.distance.NormBasedDistanceFunction
@@ -39,7 +39,7 @@ class VectorApproximationIndex(val indexname : IndexName, val tablename : TableN
   override def scan(q: WorkingVector, options: Map[String, String]): Seq[TupleID] = {
     val k = options("k").toInt
     val norm = options("norm").toInt
-
+    
     val (lbounds, ubounds) = computeBounds(q, indexMetaData.marks, new NormBasedDistanceFunction(norm))
 
     val it = indextuples
@@ -61,7 +61,7 @@ class VectorApproximationIndex(val indexname : IndexName, val tablename : TableN
    * @return
    */
   private[this] def computeBounds(q: WorkingVector, marks: => Marks, @inline distance: NormBasedDistanceFunction): (Bounds, Bounds) = {
-    val lbounds, ubounds = Array.ofDim[Distance](marks.length, marks(0).length - 1)
+    val lbounds, ubounds = Array.tabulate(marks.length)(i => Array.ofDim[Distance](marks(i).length - 1))
 
      var i = 0
      while(i < marks.length) {
@@ -116,7 +116,8 @@ object VectorApproximationIndex {
 
   def apply(indexname : IndexName, tablename : TableName, data: DataFrame, meta : IndexMetaStorage ) : Index = {
     val marks : Marks = meta.get("marks").asInstanceOf[Seq[Seq[Double]]].map(_.map(_.toFloat))
-    val signatureGenerator =  meta.get("signatureGenerator").asInstanceOf[FixedSignatureGenerator]
+
+    val signatureGenerator =  meta.get("signatureGenerator").asInstanceOf[SignatureGenerator]
 
     val indexMetaData = VectorApproximationIndexMetaData(marks, signatureGenerator)
 

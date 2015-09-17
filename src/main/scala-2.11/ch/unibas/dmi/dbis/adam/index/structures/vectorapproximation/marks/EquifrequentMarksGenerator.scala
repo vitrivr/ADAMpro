@@ -19,25 +19,26 @@ private[vectorapproximation] object EquifrequentMarksGenerator extends MarksGene
    * @param maxMarks
    * @return
    */
-  private[vectorapproximation] def getMarks(samples : RDD[IndexerTuple[WorkingVector]], maxMarks : Int) : Marks = {
+  private[vectorapproximation] def getMarks(samples : RDD[IndexerTuple[WorkingVector]], maxMarks : Seq[Int]) : Marks = {
     val sampleSize = samples.count
-    val dims = samples.first.value.length
 
-    val min = treeReduceData(samples.map(_.value), dims, math.min)
-    val max = treeReduceData(samples.map(_.value), dims, math.max)
+    val min = treeReduceData(samples.map(_.value), math.min)
+    val max = treeReduceData(samples.map(_.value), math.max)
 
-    val result = (0 until dims).map(dim => Distribution(min(dim), max(dim), SamplingFrequency))
+    val dimensionality = min.length
+
+    val result = (0 until dimensionality).map(dim => Distribution(min(dim), max(dim), SamplingFrequency))
 
     samples.collect.foreach { sample =>
       var i = 0
-      while (i < dims){
+      while (i < dimensionality){
         result(i).add(sample.value(i))
         i += 1
       }
     }
 
-    (0 until dims).map({ dim =>
-      val counts = result(dim).getCounts(maxMarks)
+    (0 until dimensionality).map({ dim =>
+      val counts = result(dim).getCounts(maxMarks(dim))
 
       val interpolated = counts.map(_.toFloat).map(_ * (max(dim) - min(dim)) / sampleSize.toFloat + min(dim))
 
@@ -48,11 +49,9 @@ private[vectorapproximation] object EquifrequentMarksGenerator extends MarksGene
   /**
    *
    * @param data
-   * @param dimensionality
    * @return
    */
-  private def treeReduceData(data : RDD[StoredVector], dimensionality : Int, f : (VectorBase, VectorBase) => Float) : StoredVector = {
-    val base = Seq.fill(dimensionality)(Float.MaxValue)
+  private def treeReduceData(data : RDD[StoredVector], f : (VectorBase, VectorBase) => Float) : StoredVector = {
     data.treeReduce{case(baseV, newV) => baseV.zip(newV).map{case (b,v) => f(b,v)}}
   }
 
@@ -109,10 +108,8 @@ private[vectorapproximation] object EquifrequentMarksGenerator extends MarksGene
 
       (1 until (maxMarks - 1)).map { j =>
         val nppart = sampleSize * j / (maxMarks - 1)
-
         val countSum = hist.foldLeftWhileCounting(0.toLong)(_ <= nppart) { case (acc, bucket) => acc + bucket.length }
-        val res =  countSum._2
-        res
+        countSum._2
       }
     }
   }

@@ -20,13 +20,13 @@ private[vectorapproximation] object EquidistantMarksGenerator extends MarksGener
    * @param maxMarks
    * @return
    */
-  private[vectorapproximation] def getMarks(sample : RDD[IndexerTuple[WorkingVector]], maxMarks : Int) : Marks = {
-    val dimensionality = sample.first.value.length
+  private[vectorapproximation] def getMarks(sample : RDD[IndexerTuple[WorkingVector]], maxMarks : Seq[Int]) : Marks = {
+    val dimensionality = maxMarks.length
 
     val min = getMin(sample.map(_.value), dimensionality)
     val max = getMax(sample.map(_.value), dimensionality)
 
-    (min zip max).map { case (min, max) => Seq.tabulate(maxMarks)(_ * (max - min) / maxMarks.toFloat + min).map(_.toFloat).toList }
+    (min zip max).zipWithIndex.map { case (minmax, index) => Seq.tabulate(maxMarks(index))(_ * (minmax._2 - minmax._1) / maxMarks(index).toFloat + minmax._1).toList }
   }
 
   /**
