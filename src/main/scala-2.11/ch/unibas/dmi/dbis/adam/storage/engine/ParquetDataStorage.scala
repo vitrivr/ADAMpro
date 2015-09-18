@@ -44,7 +44,7 @@ object ParquetDataStorage extends TableStorage with IndexStorage {
    * @return
    */
   override def readIndex(indexname: IndexName) : DataFrame = {
-    SparkStartup.sqlContext.read.load(config.indexPath + "/" + indexname)
+    SparkStartup.sqlContext.read.parquet(config.indexPath + "/" + indexname)
   }
 
 
@@ -54,7 +54,7 @@ object ParquetDataStorage extends TableStorage with IndexStorage {
    * @param df
    */
   override def writeIndex(indexname: IndexName, df: DataFrame): Unit = {
-    df.write.mode(SaveMode.Overwrite).save(config.indexPath + "/" + indexname)
+    df.write.mode(SaveMode.Overwrite).parquet(config.indexPath + "/" + indexname)
   }
 
   /**
