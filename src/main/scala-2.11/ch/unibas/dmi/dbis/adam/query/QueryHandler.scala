@@ -1,19 +1,21 @@
 package ch.unibas.dmi.dbis.adam.query
 
-import ch.unibas.dmi.dbis.adam.datatypes.Feature
-import Feature._
+import java.util.concurrent.TimeUnit
+
+import ch.unibas.dmi.dbis.adam.datatypes.Feature._
 import ch.unibas.dmi.dbis.adam.index.Index
 import ch.unibas.dmi.dbis.adam.index.Index.IndexName
 import ch.unibas.dmi.dbis.adam.main.SparkStartup
 import ch.unibas.dmi.dbis.adam.query.distance.{DistanceFunction, NormBasedDistanceFunction}
 import ch.unibas.dmi.dbis.adam.storage.catalog.CatalogOperator
+import ch.unibas.dmi.dbis.adam.table.Table
 import ch.unibas.dmi.dbis.adam.table.Table.TableName
 import org.apache.spark.Logging
 
 import scala.collection.mutable.{Map => mMap}
-
+import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent._
-import ExecutionContext.Implicits.global
+import scala.concurrent.duration.Duration
 
 
 /**
@@ -42,34 +44,17 @@ object QueryHandler extends Logging {
    * @param q
    * @param distance
    * @param k
-   * @param tablename
-   * @return
-   */
-  def sequentialQueryNonBlocking(q: WorkingVector, distance : DistanceFunction, k : Int, tablename: TableName): Future[Seq[Result]] = {
-    Future{
-      TableScanner(q, distance, k, tablename)
-    }
-  }
-
-  /**
-   *
-   * @param q
-   * @param distance
-   * @param k
    * @param indexname
    * @param options
    * @return
    */
   def indexQuery(q: WorkingVector, distance : DistanceFunction, k : Int, indexname : IndexName, options : Map[String, String]): Seq[Result] = {
-    val tablename = CatalogOperator.getIndexTableName(indexname)
-    val tidList = IndexScanner(q, distance, k, indexname, options)
-
     val onlyIndexResults = options.getOrElse("onlyindex", "false").toBoolean
 
     if(!onlyIndexResults){
-      TableScanner(q, distance, k, tablename, tidList)
+      indexAndTableScan(q, distance, k, indexname, options)
     } else {
-      tidList.map(tid => Result(-1, tid))
+      indexScanOnly(q, distance, k, indexname, options)
     }
   }
 
@@ -82,14 +67,31 @@ object QueryHandler extends Logging {
    * @param options
    * @return
    */
-  def indexQueryNonBlocking(q: WorkingVector, distance : DistanceFunction, k : Int, indexname : IndexName, options : Map[String, String]): Future[Seq[Result]] = {
-    Future {
-      val tablename = CatalogOperator.getIndexTableName(indexname)
-      val tidList = IndexScanner(q, distance, k, indexname, options)
-      TableScanner(q, distance, k, tablename, tidList)
+  def indexAndTableScan(q: WorkingVector, distance : DistanceFunction, k : Int, indexname : IndexName, options : Map[String, String]): Seq[Result] = {
+    val tablename = CatalogOperator.getIndexTableName(indexname)
+
+    val tableFuture = Future {
+      Table.retrieveTable(tablename)
     }
+
+    val tidList = IndexScanner(q, distance, k, indexname, options)
+
+    val table = Await.result[Table](tableFuture, Duration(30, TimeUnit.SECONDS))
+    TableScanner(table, q, distance, k, tidList)
   }
 
+  /**
+   *
+   * @param q
+   * @param distance
+   * @param k
+   * @param indexname
+   * @param options
+   * @return
+   */
+  def indexScanOnly(q: WorkingVector, distance : DistanceFunction, k : Int, indexname : IndexName, options : Map[String, String]): Seq[Result] = {
+    IndexScanner(q, distance, k, indexname, options).map(tid => Result(-1, tid))
+  }
 
   /**
    *
@@ -111,11 +113,11 @@ object QueryHandler extends Logging {
     indexes
       .map{indexname =>
         val info =  Map[String,String]("type" -> "index", "relation" -> tablename, "index" -> indexname)
-        indexQueryNonBlocking(q, distance, k, indexname, options.toMap).onComplete(x => onComplete(x.get, info))
+        Future {indexQuery(q, distance, k, indexname, options.toMap)}.onComplete(x => onComplete(x.get, info))
     }
 
     val info =  Map[String,String]("type" -> "sequential", "relation" -> tablename)
-    sequentialQueryNonBlocking(q, distance, k, tablename).onComplete(x => onComplete(x.get, info))
+    Future{sequentialQuery(q, distance, k, tablename)}.onComplete(x => onComplete(x.get, info))
 
     indexes.length + 1
   }

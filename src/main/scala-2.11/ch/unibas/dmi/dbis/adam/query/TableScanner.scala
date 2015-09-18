@@ -32,6 +32,23 @@ object TableScanner {
 
   /**
    *
+   * @param table
+   * @param q
+   * @param distance
+   * @param k
+   * @return
+   */
+  def apply(table : Table, q: WorkingVector, distance : DistanceFunction, k : Int): Seq[Result] = {
+    table.tuples
+      .map(tuple => {
+      val f : WorkingVector = tuple.value
+      Result(distance(q, f), tuple.tid)
+    })
+      .sortBy(_.distance).take(k)
+  }
+
+  /**
+   *
    * @param q
    * @param distance
    * @param k
@@ -40,13 +57,26 @@ object TableScanner {
    * @return
    */
   def apply(q: WorkingVector, distance : DistanceFunction, k : Int, tablename: TableName, filter: Seq[TupleID]): Seq[Result] = {
-    val data = Table.retrieveTable(tablename).tuples
+    apply(Table.retrieveTable(tablename), q, distance, k, filter)
+  }
+
+  /**
+   *
+   * @param table
+   * @param q
+   * @param distance
+   * @param k
+   * @param filter
+   * @return
+   */
+  def apply(table : Table, q: WorkingVector, distance : DistanceFunction, k : Int, filter: Seq[TupleID]): Seq[Result] = {
+    val data = table.tuples
       .filter(tuple => filter.contains(tuple.tid))
       .map(tuple => {
       val f : WorkingVector = tuple.value
       Result(distance(q, f), tuple.tid)
     }).collect()
 
-      data.sortBy(_.distance).take(k)
+    data.sortBy(_.distance).take(k)
   }
 }
