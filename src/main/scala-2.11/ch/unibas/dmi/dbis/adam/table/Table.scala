@@ -6,6 +6,7 @@ import ch.unibas.dmi.dbis.adam.main.{SparkStartup, Startup}
 import ch.unibas.dmi.dbis.adam.storage.catalog.CatalogOperator
 import ch.unibas.dmi.dbis.adam.table.Table.TableName
 import ch.unibas.dmi.dbis.adam.table.Tuple._
+import org.apache.spark.partial.{BoundedDouble, PartialResult}
 import org.apache.spark.sql.types.StructType
 import org.apache.spark.sql.{DataFrame, Row, SaveMode}
 import org.apache.spark.storage.StorageLevel
@@ -94,8 +95,19 @@ object Table {
     //TODO: check schema equality between DF and insertion
     //val schema = data.schema.fields
 
+    //splits DF equally
+    val approxCount: PartialResult[BoundedDouble] = insertion.rdd.countApprox(5)
+    val splitData = if(approxCount.getFinalValue().mean > 250000){
+      insertion.randomSplit(Array.fill((approxCount.getFinalValue().mean / 100000).toInt)(1.0))
+    } else {
+      Array(insertion)
+    }
+
+
     val future = Future {
-      storage.writeTable(tablename, insertion, SaveMode.Append)
+      splitData.foreach{ data =>
+        storage.writeTable(tablename, data, SaveMode.Append)
+      }
     }
 
     Await.ready(future, Duration.Inf)
