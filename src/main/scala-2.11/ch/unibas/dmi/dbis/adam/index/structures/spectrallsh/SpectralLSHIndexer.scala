@@ -154,7 +154,7 @@ object SpectralLSHIndexer {
    * @param properties
    */
   def apply(properties : Map[String, String] = Map[String, String](), data: RDD[IndexerTuple[WorkingVector]]) : IndexGenerator = {
-    val nbits = properties.getOrElse("nbits", (data.first.value.length * 2).toString).toInt
+    val nbits = math.min(500, properties.getOrElse("nbits", (data.first.value.length * 2).toString).toInt)
     val trainingSize = properties.getOrElse("trainingSize", "50000").toInt
 
     new SpectralLSHIndexer(nbits, trainingSize)
