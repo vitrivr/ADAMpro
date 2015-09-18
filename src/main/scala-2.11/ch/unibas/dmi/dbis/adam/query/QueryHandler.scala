@@ -63,7 +63,14 @@ object QueryHandler extends Logging {
   def indexQuery(q: WorkingVector, distance : DistanceFunction, k : Int, indexname : IndexName, options : Map[String, String]): Seq[Result] = {
     val tablename = CatalogOperator.getIndexTableName(indexname)
     val tidList = IndexScanner(q, distance, k, indexname, options)
-    TableScanner(q, distance, k, tablename, tidList)
+
+    val onlyIndexResults = options.getOrElse("onlyindex", "false").toBoolean
+
+    if(!onlyIndexResults){
+      TableScanner(q, distance, k, tablename, tidList)
+    } else {
+      tidList.map(tid => Result(-1, tid))
+    }
   }
 
   /**
