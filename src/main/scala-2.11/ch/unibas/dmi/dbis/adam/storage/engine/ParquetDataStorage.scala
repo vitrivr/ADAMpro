@@ -8,6 +8,7 @@ import ch.unibas.dmi.dbis.adam.storage.components.{IndexStorage, TableStorage}
 import ch.unibas.dmi.dbis.adam.table.Table
 import ch.unibas.dmi.dbis.adam.table.Table.TableName
 import org.apache.commons.io.FileUtils
+import org.apache.spark.partial.{BoundedDouble, PartialResult}
 import org.apache.spark.sql.{DataFrame, SaveMode}
 
 /**
@@ -35,7 +36,22 @@ object ParquetDataStorage extends TableStorage with IndexStorage {
    * @param mode
    */
   override def writeTable(tablename : TableName, df: DataFrame, mode : SaveMode = SaveMode.Append): Unit = {
-    df.write.mode(mode).save(config.dataPath + "/" + tablename)
+    if(mode == SaveMode.Overwrite){
+      FileUtils.deleteQuietly(new File(config.dataPath + "/" + tablename))
+    }
+
+    //splits DF equally before writing
+    val approxCount: PartialResult[BoundedDouble] = df.rdd.countApprox(5)
+
+    val splitData = if(approxCount.getFinalValue().mean > 250000){
+      df.randomSplit(Array.fill((approxCount.getFinalValue().mean / 100000).toInt)(1.0))
+    } else {
+      Array(df)
+    }
+
+    splitData.foreach { subdf =>
+      df.write.mode(SaveMode.Append).save(config.dataPath + "/" + tablename)
+    }
   }
 
   /**
