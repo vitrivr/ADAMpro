@@ -12,15 +12,14 @@ import org.apache.spark.{SparkConf, SparkContext}
  * August 2015
  */
 object  SparkStartup {
-    System.setProperty("spark.serializer", "spark.KryoSerializer");
-    System.setProperty("spark.kryoserializer.buffer.max", "256m");
-    System.setProperty("spark.kryoserializer.buffer", "1m");
-    System.setProperty("spark.mesos.coarse", "true");
-    System.setProperty("spark.akka.frameSize", "500");
-    System.setProperty("spark.akka.askTimeout", "30");
-
-    val sparkConfig = new SparkConf().setAppName("ADAMtwo").setMaster("local[64]")
+    val sparkConfig = new SparkConf().setAppName("ADAMtwo").setMaster("local[128]")
     sparkConfig.set("spark.serializer", "org.apache.spark.serializer.KryoSerializer")
+    sparkConfig.set("spark.kryoserializer.buffer.max", "512m");
+    sparkConfig.set("spark.kryoserializer.buffer", "256");
+    sparkConfig.set("spark.driver.maxResultSize", "0");
+    sparkConfig.set("spark.driver.memory", "9g");
+    sparkConfig.set("spark.rdd.compress", "true");
+
     sparkConfig.registerKryoClasses(Array()) //TODO: check this!
 
     val sc = new SparkContext(sparkConfig)
