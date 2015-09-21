@@ -101,6 +101,14 @@ object Index {
 
   /**
    *
+   * @return
+   */
+  def getIndexnames() : Seq[IndexName] = {
+    CatalogOperator.getIndexes()
+  }
+
+  /**
+   *
    * @param indexname
    * @return
    */

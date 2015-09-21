@@ -179,6 +179,15 @@ object CatalogOperator {
 
   /**
    *
+   */
+  def getIndexes(): Seq[IndexName] = {
+    val query = indexes.map(_.indexname).result
+    Await.result(db.run(query), 5.seconds).toList
+  }
+
+
+  /**
+   *
    * @param indexname
    * @return
    */

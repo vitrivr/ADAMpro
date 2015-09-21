@@ -5,6 +5,7 @@ import ch.unibas.dmi.dbis.adam.datatypes.Feature._
 import ch.unibas.dmi.dbis.adam.main.SparkStartup
 import ch.unibas.dmi.dbis.adam.query.distance.NormBasedDistanceFunction
 import ch.unibas.dmi.dbis.adam.storage.catalog.CatalogOperator
+import org.apache.spark.sql.Row
 import org.apache.spark.sql.types._
 
 import scala.tools.nsc.interpreter.ILoop
