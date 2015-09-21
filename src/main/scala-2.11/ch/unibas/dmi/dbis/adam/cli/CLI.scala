@@ -5,7 +5,6 @@ import ch.unibas.dmi.dbis.adam.datatypes.Feature._
 import ch.unibas.dmi.dbis.adam.main.SparkStartup
 import ch.unibas.dmi.dbis.adam.query.distance.NormBasedDistanceFunction
 import ch.unibas.dmi.dbis.adam.storage.catalog.CatalogOperator
-import org.apache.spark.sql.Row
 import org.apache.spark.sql.types._
 
 import scala.tools.nsc.interpreter.ILoop
@@ -27,7 +26,8 @@ class CLI extends ILoop {
     new VarArgsCmd("display", "tablename", "displays tuples of table", displayOp),
     new VarArgsCmd("count", "tablename", "counts tuples in table", countOp),
     new VarArgsCmd("index", "tablename indextype [properties]", "creates an index of given type with properties", indexOp),
-    new VarArgsCmd("cache", "tablename", "caches all indexes of the given table", cacheOp),
+    new VarArgsCmd("cache", "tablename", "caches all indexes of the given table and the table", cacheOp),
+    new NullaryCmd("cacheAllIndexes", "caches all indexes of the given table", cacheAllIndexesOp),
     new VarArgsCmd("seqquery", "tablename q k", "querys table in kNN search sequentially", seqQueryOp),
     new VarArgsCmd("indquery", "indexname q k", "querys table in kNN search using index", indQueryOp),
     new VarArgsCmd("progQuery", "tablename q k", "querys table in kNN search using progressive query", progQueryOp),
@@ -162,6 +162,15 @@ class CLI extends ILoop {
     val tablename = input(0)
 
     CacheOp(tablename)
+  }
+
+  /**
+   *
+   * @param input
+   * @return
+   */
+  private def cacheAllIndexesOp(input : String) : Result = {
+    CacheAllIndexesOp()
   }
 
   /**
