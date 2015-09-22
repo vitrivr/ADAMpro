@@ -41,7 +41,11 @@ trait BitString[A] {
    * @return
    */
   def intersectionCount(other: BitString[_]): Int = {
-    getIndexes.intersect(other.getIndexes).length
+    if(other.isInstanceOf[A]){
+      intersectionCount(other.asInstanceOf[A])
+    } else {
+      getIndexes.intersect(other.getIndexes).length
+    }
   }
 
   /**
