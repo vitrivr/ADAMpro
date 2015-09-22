@@ -1,7 +1,7 @@
 package ch.unibas.dmi.dbis.adam.main
 
 import ch.unibas.dmi.dbis.adam.storage.components.{IndexStorage, TableStorage}
-import ch.unibas.dmi.dbis.adam.storage.engine.{OrcDataStorage, ParquetDataStorage}
+import ch.unibas.dmi.dbis.adam.storage.engine.ParquetDataStorage
 import org.apache.spark.sql.hive.HiveContext
 import org.apache.spark.{SparkConf, SparkContext}
 
@@ -12,7 +12,7 @@ import org.apache.spark.{SparkConf, SparkContext}
  * August 2015
  */
 object  SparkStartup {
-  val sparkConfig = new SparkConf().setAppName("ADAMtwo").setMaster("local[128]")
+  val sparkConfig = new SparkConf().setAppName("ADAMtwo").setMaster("local[32]")
   sparkConfig.set("spark.serializer", "org.apache.spark.serializer.KryoSerializer")
   sparkConfig.set("spark.kryoserializer.buffer.max", "512m");
   sparkConfig.set("spark.kryoserializer.buffer", "256");
@@ -29,8 +29,8 @@ object  SparkStartup {
 
   sqlContext.setConf("spark.sql.avro.compression.codec", "deflate")
   sqlContext.setConf("spark.sql.avro.deflate.level", "5")
-  sqlContext.setConf("spark.parquet.block.size", (1024 * 1024 * 16).toString)
+  sqlContext.setConf("spark.parquet.block.size", (1024 * 1024 * 8).toString)
 
-    val tableStorage: TableStorage = ParquetDataStorage
-    val indexStorage: IndexStorage = ParquetDataStorage
+  val tableStorage: TableStorage = ParquetDataStorage
+  val indexStorage: IndexStorage = ParquetDataStorage
 }
