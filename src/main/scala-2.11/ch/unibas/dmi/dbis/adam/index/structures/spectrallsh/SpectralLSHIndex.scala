@@ -7,10 +7,12 @@ import ch.unibas.dmi.dbis.adam.datatypes.bitString.BitString
 import ch.unibas.dmi.dbis.adam.index.Index._
 import ch.unibas.dmi.dbis.adam.index.{Index, IndexMetaStorage, IndexMetaStorageBuilder, IndexTuple}
 import ch.unibas.dmi.dbis.adam.table.Table._
+import com.google.common.collect.MinMaxPriorityQueue
 import org.apache.spark.rdd.RDD
 import org.apache.spark.sql.DataFrame
 
 import scala.collection.immutable.BitSet
+import scala.collection.mutable.ListBuffer
 
 /**
  * adamtwo
@@ -43,18 +45,35 @@ class SpectralLSHIndex(val indexname: IndexName, val tablename: TableName, prote
 
     import MovableFeature.conv_feature2MovableFeature
     val originalQuery = SpectralLSHUtils.hashFeature(q, indexMetaData)
-    val queries = List.fill(numOfQueries)(SpectralLSHUtils.hashFeature(q.move(indexMetaData.radius), indexMetaData)) ::: List(originalQuery)
+    val queries = (List.fill(numOfQueries)(SpectralLSHUtils.hashFeature(q.move(indexMetaData.radius), indexMetaData)) ::: List(originalQuery)).par
 
-    val ids = indextuples.map { tuple =>
-        var i = 0
-        var score = 0
-        while(i < queries.length){
-          val query = queries(i)
-          score += tuple.bits.intersectionCount(query)
+    val ids = indextuples
+      .mapPartitions(tuplesIt => {
+      //TODO: put in separate class, cf. VA
+        @transient var ls =  ListBuffer[Long]()
+        @transient var queue = MinMaxPriorityQueue.orderedBy(scala.math.Ordering.Int).maximumSize(k).create[Int]
+        @transient var max =  Float.MaxValue
+
+        while(tuplesIt.hasNext){
+          val tuple = tuplesIt.next()
+
+          var i = 0
+          var score = 0
+          while(i < queries.length){
+            val query = queries(i)
+            score += tuple.bits.intersectionCount(query)
+            i += 1
+          }
+
+          if(score < max || queue.size < k){
+            ls += tuple.tid
+            queue.add(score)
+            max = queue.peekLast()
+          }
         }
 
-      (tuple.tid, score)
-    }.takeOrdered(k * 3)(Ordering[Int].reverse.on(x => x._2)).map(_._1).toSeq
+        ls.toList.iterator
+      }).collect()
 
     BitSet(ids.map(_.toInt):_*)
   }
