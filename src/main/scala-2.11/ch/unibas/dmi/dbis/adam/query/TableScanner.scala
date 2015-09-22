@@ -70,8 +70,10 @@ object TableScanner {
    * @return
    */
   def apply(table : Table, q: WorkingVector, distance : DistanceFunction, k : Int, filter: Seq[TupleID]): Seq[Result] = {
+    val ids = BitSet(filter.map(_.toInt):_*) //TODO: int to long!!!
+
     val data = table.tuples
-      .filter(tuple => filter.contains(tuple.tid))
+      .filter(tuple => ids.contains(tuple.tid.toInt))
       .map(tuple => {
       val f : WorkingVector = tuple.value
       Result(distance(q, f), tuple.tid)
