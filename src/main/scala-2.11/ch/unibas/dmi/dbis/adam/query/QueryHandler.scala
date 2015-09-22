@@ -90,7 +90,7 @@ object QueryHandler extends Logging {
    * @return
    */
   def indexScanOnly(q: WorkingVector, distance : DistanceFunction, k : Int, indexname : IndexName, options : Map[String, String]): Seq[Result] = {
-    IndexScanner(q, distance, k, indexname, options).map(tid => Result(-1, tid))
+    IndexScanner(q, distance, k, indexname, options).toList.map(tid => Result(-1, tid))
   }
 
   /**

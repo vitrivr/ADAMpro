@@ -10,9 +10,10 @@ import ch.unibas.dmi.dbis.adam.index.{Index, IndexMetaStorage, IndexMetaStorageB
 import ch.unibas.dmi.dbis.adam.query.distance.Distance._
 import ch.unibas.dmi.dbis.adam.query.distance.NormBasedDistanceFunction
 import ch.unibas.dmi.dbis.adam.table.Table._
-import ch.unibas.dmi.dbis.adam.table.Tuple._
 import org.apache.spark.rdd.RDD
 import org.apache.spark.sql.DataFrame
+
+import scala.collection.immutable.BitSet
 
 /**
  * adamtwo
@@ -36,7 +37,7 @@ class VectorApproximationIndex(val indexname : IndexName, val tablename : TableN
   /**
    *
    */
-  override def scan(q: WorkingVector, options: Map[String, String]): Seq[TupleID] = {
+  override def scan(q: WorkingVector, options: Map[String, String]): BitSet = {
     val k = options("k").toInt
     val norm = options("norm").toInt
     
@@ -50,7 +51,9 @@ class VectorApproximationIndex(val indexname : IndexName, val tablename : TableN
 
     val globalResultHandler = new VectorApproximationResultHandler(k)
     globalResultHandler.offerResultElement(it)
-    globalResultHandler.results.map(x => x.indexTuple.tid).toList
+    val ids = globalResultHandler.results.map(x => x.indexTuple.tid).toList
+
+    BitSet(ids.map(_.toInt):_*)
   }
 
   /**

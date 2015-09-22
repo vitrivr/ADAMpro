@@ -11,11 +11,11 @@ import ch.unibas.dmi.dbis.adam.main.SparkStartup
 import ch.unibas.dmi.dbis.adam.storage.catalog.CatalogOperator
 import ch.unibas.dmi.dbis.adam.table.Table
 import ch.unibas.dmi.dbis.adam.table.Table.TableName
-import ch.unibas.dmi.dbis.adam.table.Tuple._
 import org.apache.spark.rdd.RDD
 import org.apache.spark.sql.DataFrame
 import org.apache.spark.storage.StorageLevel
 
+import scala.collection.immutable.BitSet
 import scala.util.Random
 
 /**
@@ -38,7 +38,7 @@ trait Index{
 
   private[index] def prepareMeta(metaBuilder : IndexMetaStorageBuilder) : Unit
 
-  def scan(q: WorkingVector, options: Map[String, String]): Seq[TupleID]
+  def scan(q: WorkingVector, options: Map[String, String]): BitSet
 }
 
 case class CacheableIndex(index : Index)

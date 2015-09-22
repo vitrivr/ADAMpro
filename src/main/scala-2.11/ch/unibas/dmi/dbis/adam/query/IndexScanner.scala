@@ -4,7 +4,8 @@ import ch.unibas.dmi.dbis.adam.datatypes.Feature._
 import ch.unibas.dmi.dbis.adam.index.Index
 import ch.unibas.dmi.dbis.adam.index.Index.IndexName
 import ch.unibas.dmi.dbis.adam.query.distance.DistanceFunction
-import ch.unibas.dmi.dbis.adam.table.Tuple.TupleID
+
+import scala.collection.immutable.BitSet
 
 
 /**
@@ -23,7 +24,7 @@ object IndexScanner {
    * @param options
    * @return
    */
-  def apply(q: WorkingVector, distance : DistanceFunction, k : Int, indexname: IndexName, options : Map[String, String]): Seq[TupleID] = {
+  def apply(q: WorkingVector, distance : DistanceFunction, k : Int, indexname: IndexName, options : Map[String, String]): BitSet = {
     Index.retrieveIndex(indexname).scan(q, options)
   }
 }

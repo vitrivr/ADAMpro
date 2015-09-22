@@ -4,7 +4,8 @@ import ch.unibas.dmi.dbis.adam.datatypes.Feature._
 import ch.unibas.dmi.dbis.adam.query.distance.DistanceFunction
 import ch.unibas.dmi.dbis.adam.table.Table
 import ch.unibas.dmi.dbis.adam.table.Table._
-import ch.unibas.dmi.dbis.adam.table.Tuple.TupleID
+
+import scala.collection.immutable.BitSet
 
 /**
  * adamtwo
@@ -53,11 +54,11 @@ object TableScanner {
    * @param distance
    * @param k
    * @param tablename
-   * @param filter
+   * @param ids
    * @return
    */
-  def apply(q: WorkingVector, distance : DistanceFunction, k : Int, tablename: TableName, filter: Seq[TupleID]): Seq[Result] = {
-    apply(Table.retrieveTable(tablename), q, distance, k, filter)
+  def apply(q: WorkingVector, distance : DistanceFunction, k : Int, tablename: TableName, ids: BitSet): Seq[Result] = {
+    apply(Table.retrieveTable(tablename), q, distance, k, ids)
   }
 
   /**
@@ -69,11 +70,9 @@ object TableScanner {
    * @param filter
    * @return
    */
-  def apply(table : Table, q: WorkingVector, distance : DistanceFunction, k : Int, filter: Seq[TupleID]): Seq[Result] = {
-    val ids = BitSet(filter.map(_.toInt):_*) //TODO: int to long!!!
-
+  def apply(table : Table, q: WorkingVector, distance : DistanceFunction, k : Int, filter: BitSet): Seq[Result] = {
     val data = table.tuples
-      .filter(tuple => ids.contains(tuple.tid.toInt))
+      .filter(tuple => filter.contains(tuple.tid.toInt))
       .map(tuple => {
       val f : WorkingVector = tuple.value
       Result(distance(q, f), tuple.tid)

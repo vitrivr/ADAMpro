@@ -7,9 +7,10 @@ import ch.unibas.dmi.dbis.adam.datatypes.bitString.BitString
 import ch.unibas.dmi.dbis.adam.index.Index._
 import ch.unibas.dmi.dbis.adam.index.{Index, IndexMetaStorage, IndexMetaStorageBuilder, IndexTuple}
 import ch.unibas.dmi.dbis.adam.table.Table._
-import ch.unibas.dmi.dbis.adam.table.Tuple._
 import org.apache.spark.rdd.RDD
 import org.apache.spark.sql.DataFrame
+
+import scala.collection.immutable.BitSet
 
 /**
  * adamtwo
@@ -36,7 +37,7 @@ class SpectralLSHIndex(val indexname: IndexName, val tablename: TableName, prote
    * @param options
    * @return
    */
-  override def scan(q: WorkingVector, options: Map[String, String]): Seq[TupleID] = {
+  override def scan(q: WorkingVector, options: Map[String, String]): BitSet = {
     val k = options("k").toInt
     val numOfQueries = options.getOrElse("numOfQ", "3").toInt
 
@@ -44,7 +45,7 @@ class SpectralLSHIndex(val indexname: IndexName, val tablename: TableName, prote
     val originalQuery = SpectralLSHUtils.hashFeature(q, indexMetaData)
     val queries = List.fill(numOfQueries)(SpectralLSHUtils.hashFeature(q.move(indexMetaData.radius), indexMetaData)) ::: List(originalQuery)
 
-    indextuples.map { tuple =>
+    val ids = indextuples.map { tuple =>
         var i = 0
         var score = 0
         while(i < queries.length){
@@ -54,6 +55,8 @@ class SpectralLSHIndex(val indexname: IndexName, val tablename: TableName, prote
 
       (tuple.tid, score)
     }.takeOrdered(k * 3)(Ordering[Int].reverse.on(x => x._2)).map(_._1).toSeq
+
+    BitSet(ids.map(_.toInt):_*)
   }
 
   /**

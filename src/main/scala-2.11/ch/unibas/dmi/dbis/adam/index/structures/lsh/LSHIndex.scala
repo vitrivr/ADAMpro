@@ -7,9 +7,10 @@ import ch.unibas.dmi.dbis.adam.index.Index._
 import ch.unibas.dmi.dbis.adam.index.structures.lsh.hashfunction.Hasher
 import ch.unibas.dmi.dbis.adam.index.{Index, IndexMetaStorage, IndexMetaStorageBuilder, IndexTuple}
 import ch.unibas.dmi.dbis.adam.table.Table._
-import ch.unibas.dmi.dbis.adam.table.Tuple._
 import org.apache.spark.rdd.RDD
 import org.apache.spark.sql.DataFrame
+
+import scala.collection.immutable.BitSet
 
 
 /**
@@ -37,16 +38,18 @@ class LSHIndex(val indexname : IndexName, val tablename : TableName, protected v
    * @param options
    * @return
    */
-  override def scan(q: WorkingVector, options: Map[String, String]): Seq[TupleID] = {
+  override def scan(q: WorkingVector, options: Map[String, String]): BitSet = {
     import MovableFeature.conv_feature2MovableFeature
     val queries = List.fill(5)(q.move(0.1))
 
-    indextuples
+    val ids =  indextuples
       .filter { indexTuple =>
       indexTuple.bits.getIndexes.zip(queries).exists({
         case (indexHash, acceptedValues) => acceptedValues.contains(indexHash)
       })
     }.map { indexTuple => indexTuple.tid }.collect
+
+    BitSet(ids.map(_.toInt):_*)
   }
 
   /**
