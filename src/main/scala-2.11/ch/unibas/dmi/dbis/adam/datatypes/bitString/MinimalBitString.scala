@@ -1,8 +1,6 @@
 package ch.unibas.dmi.dbis.adam.datatypes.bitString
 
-import java.util
-
-import scala.collection.mutable.ListBuffer
+import ch.unibas.dmi.dbis.adam.util.BitSet
 
 /**
  * adamtwo
@@ -10,16 +8,14 @@ import scala.collection.mutable.ListBuffer
  * Ivan Giangreco
  * September 2015
  */
-class MinimalBitString(private val values : util.BitSet) extends BitString[MinimalBitString] with Serializable {
+class MinimalBitString(private val values : BitSet) extends BitString[MinimalBitString] with Serializable {
   /**
    *
    * @param other
    * @return
    */
   override def intersectionCount(other: MinimalBitString): Int = {
-    val clone = values.clone().asInstanceOf[util.BitSet]
-    clone.and(other.values)
-    clone.cardinality()
+    values.intersectCount(other.values)
   }
 
   /**
@@ -47,20 +43,7 @@ class MinimalBitString(private val values : util.BitSet) extends BitString[Minim
    * @return
    */
   override def getIndexes: Seq[Int] = {
-    val indexes = ListBuffer[Int]()
-    var nextIndex : Int = -1
-
-    do {
-      nextIndex += 1
-      nextIndex = values.nextSetBit(nextIndex)
-
-      if(nextIndex != -1){
-        indexes += nextIndex
-      }
-
-    } while(nextIndex != -1)
-
-    indexes.toList
+    values.getAll
   }
 
   /**
@@ -88,7 +71,7 @@ object MinimalBitString extends BitStringFactory[MinimalBitString] {
   override def fromBitIndicesToSet(values: Seq[Int]): BitString[MinimalBitString] = {
     val max = if(values.length == 0) 0 else values.max
 
-    val bitSet = new util.BitSet(max)
+    val bitSet = new BitSet(max)
     values.foreach{bitSet.set(_)}
     new MinimalBitString(bitSet)
   }
@@ -99,7 +82,7 @@ object MinimalBitString extends BitStringFactory[MinimalBitString] {
    * @return
    */
   def fromByteSeq(data : Seq[Byte]) : BitString[MinimalBitString] = {
-    val values = util.BitSet.valueOf(data.toArray)
+    val values = BitSet.valueOf(data.toArray)
     new MinimalBitString(values)
   }
 }

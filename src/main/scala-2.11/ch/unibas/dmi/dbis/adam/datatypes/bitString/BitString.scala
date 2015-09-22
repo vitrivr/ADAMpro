@@ -1,8 +1,8 @@
 package ch.unibas.dmi.dbis.adam.datatypes.bitString
 
 import java.io.{ByteArrayInputStream, ObjectInputStream}
-import java.util
 
+import ch.unibas.dmi.dbis.adam.util.BitSet
 import org.apache.spark.sql.catalyst.InternalRow
 import org.apache.spark.sql.catalyst.expressions.GenericMutableRow
 import org.apache.spark.sql.types._
@@ -196,7 +196,7 @@ object BitString {
       case v : cern.colt.bitvector.BitVector => new ColtBitString(v)
       case v : org.apache.lucene.util.FixedBitSet => new LuceneFixedBitString(v)
       case v : com.zaxxer.sparsebits.SparseBitSet => new SparseBitSetBitString(v)
-      case _ => new MinimalBitString(util.BitSet.valueOf(bytes))
+      case _ => new MinimalBitString(BitSet.valueOf(bytes))
     }
   }
 }
