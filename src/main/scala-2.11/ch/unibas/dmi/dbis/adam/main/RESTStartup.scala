@@ -27,7 +27,7 @@ class RESTStartup(config : AdamConfig) extends Runnable {
     val api = system.actorOf(Props(new RestInterface()), "httpInterface")
 
     implicit val executionContext = system.dispatcher
-    implicit val timeout = Timeout(10 seconds)
+    implicit val timeout = Timeout(100 seconds)
 
     IO(Http).ask(Http.Bind(listener = api, interface = host, port = port))
       .mapTo[Http.Event]

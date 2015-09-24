@@ -24,7 +24,7 @@ class RestInterface extends HttpServiceActor with RestApi {
 trait RestApi extends HttpService with ActorLogging { actor: Actor =>
   import ch.unibas.dmi.dbis.adam.http.Protocol._
 
-  implicit val timeout = Timeout(10 seconds)
+  private implicit val requestTimeout = Timeout(100 seconds)
 
   def routes: Route =
     countRoute ~ createRoute ~ displayRoute ~ dropRoute ~ cacheRoute ~
