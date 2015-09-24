@@ -18,10 +18,14 @@ case class NormBasedDistanceFunction(n : Int) extends DistanceFunction with Seri
    * @return
    */
   def apply(v1: WorkingVector, v2: WorkingVector): Distance = {
-    n match {
-      case 1 => v1.valuesIterator.zip(v2.valuesIterator).map { case (vv1: Float, vv2: Float) => math.abs(vv1 - vv2) }.reduce(_ + _)
-      case _ => v1.valuesIterator.zip(v2.valuesIterator).map { case (vv1: Float, vv2: Float) => math.pow(math.abs(vv1 - vv2), n) }.reduce(_ + _)
+    var sum : Float = 0
+
+    var i = 0
+    while(i < math.min(v1.length, v2.length)){
+      sum += math.pow(math.abs(v1(i) - v2(i)), n)
     }
+
+    sum
   }
 
   /**
