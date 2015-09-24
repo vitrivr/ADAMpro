@@ -10,7 +10,7 @@ import ch.unibas.dmi.dbis.adam.table.Table._
 import org.apache.spark.rdd.RDD
 import org.apache.spark.sql.DataFrame
 
-import scala.collection.immutable.BitSet
+import scala.collection.immutable.HashSet
 
 
 /**
@@ -38,7 +38,7 @@ class LSHIndex(val indexname : IndexName, val tablename : TableName, protected v
    * @param options
    * @return
    */
-  override def scan(q: WorkingVector, options: Map[String, String]): BitSet = {
+  override def scan(q: WorkingVector, options: Map[String, String]): HashSet[Int] = {
     import MovableFeature.conv_feature2MovableFeature
     val queries = List.fill(5)(q.move(0.1))
 
@@ -49,7 +49,7 @@ class LSHIndex(val indexname : IndexName, val tablename : TableName, protected v
       })
     }.map { indexTuple => indexTuple.tid }.collect
 
-    BitSet(ids.map(_.toInt):_*)
+    HashSet(ids.map(_.toInt):_*)
   }
 
   /**

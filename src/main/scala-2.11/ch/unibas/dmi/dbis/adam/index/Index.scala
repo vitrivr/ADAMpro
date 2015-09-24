@@ -15,7 +15,7 @@ import org.apache.spark.rdd.RDD
 import org.apache.spark.sql.DataFrame
 import org.apache.spark.storage.StorageLevel
 
-import scala.collection.immutable.BitSet
+import scala.collection.immutable.HashSet
 import scala.util.Random
 
 /**
@@ -38,7 +38,7 @@ trait Index{
 
   private[index] def prepareMeta(metaBuilder : IndexMetaStorageBuilder) : Unit
 
-  def scan(q: WorkingVector, options: Map[String, String]): BitSet
+  def scan(q: WorkingVector, options: Map[String, String]): HashSet[Int]
 }
 
 case class CacheableIndex(index : Index)

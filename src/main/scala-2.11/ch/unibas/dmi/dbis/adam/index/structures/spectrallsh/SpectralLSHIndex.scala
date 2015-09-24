@@ -5,14 +5,13 @@ import ch.unibas.dmi.dbis.adam.datatypes.Feature._
 import ch.unibas.dmi.dbis.adam.datatypes.MovableFeature
 import ch.unibas.dmi.dbis.adam.datatypes.bitString.BitString
 import ch.unibas.dmi.dbis.adam.index.Index._
+import ch.unibas.dmi.dbis.adam.index.structures.spectrallsh.results.SpectralLSHResultHandler
 import ch.unibas.dmi.dbis.adam.index.{Index, IndexMetaStorage, IndexMetaStorageBuilder, IndexTuple}
 import ch.unibas.dmi.dbis.adam.table.Table._
-import com.google.common.collect.MinMaxPriorityQueue
 import org.apache.spark.rdd.RDD
 import org.apache.spark.sql.DataFrame
 
-import scala.collection.immutable.BitSet
-import scala.collection.mutable.ListBuffer
+import scala.collection.immutable.HashSet
 
 /**
  * adamtwo
@@ -27,10 +26,11 @@ class SpectralLSHIndex(val indexname: IndexName, val tablename: TableName, prote
    *
    * @return
    */
-  override protected lazy val indextuples : RDD[IndexTuple] = {
+  override protected lazy val indextuples: RDD[IndexTuple] = {
     indexdata
-      .map{ tuple =>
-      IndexTuple(tuple.getLong(0), tuple.getAs[BitString[_]](1)) }
+      .map { tuple =>
+      IndexTuple(tuple.getLong(0), tuple.getAs[BitString[_]](1))
+    }
   }
 
   /**
@@ -39,7 +39,7 @@ class SpectralLSHIndex(val indexname: IndexName, val tablename: TableName, prote
    * @param options
    * @return
    */
-  override def scan(q: WorkingVector, options: Map[String, String]): BitSet = {
+  override def scan(q: WorkingVector, options: Map[String, String]): HashSet[Int] = {
     val k = options("k").toInt
     val numOfQueries = options.getOrElse("numOfQ", "3").toInt
 
@@ -47,42 +47,40 @@ class SpectralLSHIndex(val indexname: IndexName, val tablename: TableName, prote
     val originalQuery = SpectralLSHUtils.hashFeature(q, indexMetaData)
     val queries = (List.fill(numOfQueries)(SpectralLSHUtils.hashFeature(q.move(indexMetaData.radius), indexMetaData)) ::: List(originalQuery)).par
 
-    val ids = indextuples
+    val it = indextuples
       .mapPartitions(tuplesIt => {
-      //TODO: put in separate class, cf. VA
-        @transient var ls =  ListBuffer[Long]()
-        @transient var queue = MinMaxPriorityQueue.orderedBy(scala.math.Ordering.Int).maximumSize(k).create[Int]
-        @transient var max =  Float.MaxValue
+      val localRh = new SpectralLSHResultHandler(k)
 
-        while(tuplesIt.hasNext){
-          val tuple = tuplesIt.next()
+      while (tuplesIt.hasNext) {
+        val tuple = tuplesIt.next()
 
-          var i = 0
-          var score = 0
-          while(i < queries.length){
-            val query = queries(i)
-            score += tuple.bits.intersectionCount(query)
-            i += 1
-          }
-
-          if(score < max || queue.size < k){
-            ls += tuple.tid
-            queue.add(score)
-            max = queue.peekLast()
-          }
+        var i = 0
+        var score = 0
+        while (i < queries.length) {
+          val query = queries(i)
+          score += tuple.bits.intersectionCount(query)
+          i += 1
         }
 
-        ls.toList.iterator
-      }).collect()
+        localRh.offerIndexTuple(tuple, score)
+      }
 
-    BitSet(ids.map(_.toInt):_*)
+      localRh.iterator
+    }).collect().iterator
+
+
+    val globalResultHandler = new SpectralLSHResultHandler(k)
+    globalResultHandler.offerResultElement(it)
+    val ids = globalResultHandler.results.map(x => x.tid).toList
+
+    HashSet(ids.map(_.toInt): _*)
   }
 
   /**
    *
    * @param metaBuilder
    */
-  override private[index] def prepareMeta(metaBuilder : IndexMetaStorageBuilder) : Unit = {
+  override private[index] def prepareMeta(metaBuilder: IndexMetaStorageBuilder): Unit = {
     //metaBuilder.put("pca", indexMetaData.pca.toDenseMatrix)
     metaBuilder.put("pca_mat", indexMetaData.pca.toDenseMatrix.toArray)
     metaBuilder.put("pca_cols", indexMetaData.pca.cols)
@@ -113,7 +111,7 @@ object SpectralLSHIndex {
    * @param meta
    * @return
    */
-  def apply(indexname: IndexName, tablename: TableName, data: DataFrame, meta: IndexMetaStorage) : Index =  {
+  def apply(indexname: IndexName, tablename: TableName, data: DataFrame, meta: IndexMetaStorage): Index = {
     val pca_rows = meta.get("pca_rows").toString.toInt
     val pca_cols = meta.get("pca_cols").toString.toInt
     val pca_array = meta.get[List[Double]]("pca_mat").map(_.toFloat).toArray

@@ -5,7 +5,7 @@ import ch.unibas.dmi.dbis.adam.index.Index
 import ch.unibas.dmi.dbis.adam.index.Index.IndexName
 import ch.unibas.dmi.dbis.adam.query.distance.DistanceFunction
 
-import scala.collection.immutable.BitSet
+import scala.collection.immutable.HashSet
 
 
 /**
@@ -24,7 +24,7 @@ object IndexScanner {
    * @param options
    * @return
    */
-  def apply(q: WorkingVector, distance : DistanceFunction, k : Int, indexname: IndexName, options : Map[String, String]): BitSet = {
+  def apply(q: WorkingVector, distance : DistanceFunction, k : Int, indexname: IndexName, options : Map[String, String]): HashSet[Int] = {
     Index.retrieveIndex(indexname).scan(q, options)
   }
 }
