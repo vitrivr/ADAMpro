@@ -5,7 +5,8 @@ import ch.unibas.dmi.dbis.adam.query.distance.DistanceFunction
 import ch.unibas.dmi.dbis.adam.table.Table
 import ch.unibas.dmi.dbis.adam.table.Table._
 
-import scala.collection.immutable.BitSet
+import scala.collection.immutable.HashSet
+import scala.collection.mutable.ListBuffer
 
 /**
  * adamtwo
@@ -57,7 +58,7 @@ object TableScanner {
    * @param ids
    * @return
    */
-  def apply(q: WorkingVector, distance : DistanceFunction, k : Int, tablename: TableName, ids: BitSet): Seq[Result] = {
+  def apply(q: WorkingVector, distance : DistanceFunction, k : Int, tablename: TableName, ids: HashSet[Int]): Seq[Result] = {
     apply(Table.retrieveTable(tablename), q, distance, k, ids)
   }
 
@@ -70,14 +71,18 @@ object TableScanner {
    * @param filter
    * @return
    */
-  def apply(table : Table, q: WorkingVector, distance : DistanceFunction, k : Int, filter: BitSet): Seq[Result] = {
-    val data = table.tuples
-      .filter(tuple => filter.contains(tuple.tid.toInt))
-      .map(tuple => {
-      val f : WorkingVector = tuple.value
-      Result(distance(q, f), tuple.tid)
-    }).collect()
+  def apply(table : Table, q: WorkingVector, distance : DistanceFunction, k : Int, filter: HashSet[Int]): Seq[Result] = {
+    val data = table.tuples.filter(tuple => filter.contains(tuple.tid.toInt)).collect()
 
-    data.sortBy(_.distance).take(k)
+    val it = data.par.iterator
+
+    val ls = ListBuffer[Result]()
+    while(it.hasNext){
+      val tuple = it.next
+      val f : WorkingVector = tuple.value
+      ls += Result(distance(q, f), tuple.tid)
+    }
+
+    ls.sortBy(_.distance).take(k)
   }
 }
