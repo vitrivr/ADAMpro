@@ -1,5 +1,6 @@
 package ch.unibas.dmi.dbis.adam.main
 
+import ch.unibas.dmi.dbis.adam.datatypes.bitString.{BitString, MinimalBitString}
 import ch.unibas.dmi.dbis.adam.storage.components.{IndexStorage, TableStorage}
 import ch.unibas.dmi.dbis.adam.storage.engine.ParquetDataStorage
 import org.apache.spark.sql.hive.HiveContext
@@ -20,8 +21,8 @@ object  SparkStartup {
   sparkConfig.set("spark.driver.memory", "9g");
   sparkConfig.set("spark.rdd.compress", "true");
   sparkConfig.set("spark.parquet.block.size", (1024 * 1024 * 16).toString)
-  sparkConfig.set("spark.sql.parquet.compression.codec", "lzo")
-  sparkConfig.registerKryoClasses(Array()) //TODO: check this!
+  sparkConfig.set("spark.sql.parquet.compression.codec", "gzip")
+  sparkConfig.registerKryoClasses(Array(classOf[BitString[_]], classOf[MinimalBitString]))
 
   val sc = new SparkContext(sparkConfig)
   //val sqlContext = new SQLContext(sc)
