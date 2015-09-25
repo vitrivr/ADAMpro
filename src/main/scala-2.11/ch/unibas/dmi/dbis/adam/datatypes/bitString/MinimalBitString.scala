@@ -69,7 +69,7 @@ object MinimalBitString extends BitStringFactory[MinimalBitString] {
    * @return
    */
   override def fromBitIndicesToSet(values: Seq[Int]): BitString[MinimalBitString] = {
-    val max = if(values.length == 0) 0 else values.max
+    val max = if(values.isEmpty) 0 else values.max
 
     val bitSet = new BitSet(max)
     values.foreach{bitSet.set(_)}
