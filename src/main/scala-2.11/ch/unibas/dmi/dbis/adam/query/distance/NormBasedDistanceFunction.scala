@@ -23,6 +23,7 @@ case class NormBasedDistanceFunction(n : Int) extends DistanceFunction with Seri
     var i = 0
     while(i < math.min(v1.length, v2.length)){
       sum += math.pow(math.abs(v1(i) - v2(i)), n)
+      i += 1
     }
 
     sum
