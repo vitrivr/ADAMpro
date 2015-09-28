@@ -26,7 +26,7 @@ object EvaluationOp {
   val experiments = mutable.Queue[(Int, Int)]()
 
   def apply() = {
-    pw.write("dbSize" + "," + "vecSize" + "," + "measure" + "\n")
+    pw.write("dbSize" + "," + "vecSize" + "," + "type" + "," + "measure1" + "," + "measure2" + "\n")
 
     dbSizes foreach { dbSize =>
       vectorSizes foreach { vecSize =>
