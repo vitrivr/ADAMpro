@@ -23,7 +23,7 @@ object Feature {
    if(value.length <= 3){
      return Seq[Float]()
    }
-    value.substring(1, value.length - 2).split(",").map(_.toFloat).toSeq
+    value.substring(1, value.length - 2).split(",").map(_.toDouble).map(_.toFloat).toSeq
   }
 
   implicit def conv_str2vector(value: String): WorkingVector =  conv_stored2vector(conv_str2stored(value))
