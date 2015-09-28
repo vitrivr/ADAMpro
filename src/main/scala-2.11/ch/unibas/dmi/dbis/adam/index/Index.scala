@@ -27,6 +27,7 @@ import scala.util.Random
 trait Index{
   val indexname : IndexName
   val tablename : TableName
+  val indextypename : IndexTypeName
   protected val indexdata : DataFrame
   protected val indextuples : RDD[IndexTuple]
 

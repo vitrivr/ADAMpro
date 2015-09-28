@@ -111,15 +111,18 @@ object QueryHandler extends Logging {
     status.startAll(indexes)
     status.start(tablename)
 
+    val qid = java.util.UUID.randomUUID.toString
+
     //TODO: // here we should actually keep the index information, especially on the level of onComplete: if the index returns exact information, we should stop the
     //execution completely; if the index returns only approximate information we should keep the retrieving process running
     indexes
       .map{indexname =>
-        val info =  Map[String,String]("type" -> "index", "relation" -> tablename, "index" -> indexname)
+        val indextypename = Index.retrieveIndex(indexname).indextypename
+        val info =  Map[String,String]("type" -> ("index: " + indextypename), "relation" -> tablename, "index" -> indexname, "qid" -> qid)
         Future {indexQuery(q, distance, k, indexname, options.toMap)}.onComplete(x => {status.end(indexname); onComplete(status, x.get, info)})
     }
 
-    val info =  Map[String,String]("type" -> "sequential", "relation" -> tablename)
+    val info =  Map[String,String]("type" -> "sequential", "relation" -> tablename, "qid" -> qid)
     Future{sequentialQuery(q, distance, k, tablename)}.onComplete(x => {status.end(tablename); onComplete(status, x.get, info)})
 
     indexes.length + 1

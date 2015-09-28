@@ -61,6 +61,10 @@ class LSHIndex(val indexname : IndexName, val tablename : TableName, protected v
     metaBuilder.put("hashtables", indexMetaData.hashTables)
   }
 
+  /**
+   *
+   */
+  override val indextypename: IndexTypeName = "lsh"
 }
 
 object LSHIndex {

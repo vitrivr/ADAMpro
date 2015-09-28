@@ -1,10 +1,10 @@
 package ch.unibas.dmi.dbis.adam.api
 
-import java.io.{PrintWriter, File}
+import java.io.{File, PrintWriter}
 
 import ch.unibas.dmi.dbis.adam.datatypes.Feature._
-import ch.unibas.dmi.dbis.adam.query.{ProgressiveQueryStatus, QueryHandler, Result}
 import ch.unibas.dmi.dbis.adam.query.distance.NormBasedDistanceFunction
+import ch.unibas.dmi.dbis.adam.query.{ProgressiveQueryStatus, QueryHandler, Result}
 
 import scala.collection.mutable
 import scala.util.Random
@@ -55,7 +55,11 @@ object EvaluationOp {
 
     val tabname = "data_" + dbSize + "_" + vecSize
 
+    try {
     QueryHandler.progressiveQuery(getRandomVector(vecSize) : WorkingVector, NormBasedDistanceFunction(1), k, tabname, onComplete(System.nanoTime(), dbSize, vecSize))
+    } catch {
+      case e : Exception =>
+    }
   }
 
   /**
@@ -68,10 +72,11 @@ object EvaluationOp {
    * @return
    */
   def onComplete(startTime : Long, dbSize : Int, vecSize : Int)(status : ProgressiveQueryStatus, results : Seq[Result], options : Map[String, String]) {
-    println("Completed on data_" + dbSize + "_" + vecSize)
-    pw.write(vecSize + "," +  dbSize + "," +  options.getOrElse("index", "table") + "," + System.nanoTime() + "," + startTime + "\n")
+    pw.write(options.getOrElse("qid", "") + "," + vecSize + "," +  dbSize + "," +  options.getOrElse("type", "") + "," + System.nanoTime() + "," + startTime + "\n")
 
     if(status.allEnded){
+      println("Completed: data_" + dbSize + "_" + vecSize)
+      Thread.sleep(5000L)
       nextExperiment()
     }
   }

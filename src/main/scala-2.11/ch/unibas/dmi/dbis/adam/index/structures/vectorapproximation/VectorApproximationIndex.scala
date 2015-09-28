@@ -2,10 +2,10 @@ package ch.unibas.dmi.dbis.adam.index.structures.vectorapproximation
 
 import ch.unibas.dmi.dbis.adam.datatypes.Feature._
 import ch.unibas.dmi.dbis.adam.datatypes.bitString.BitString
-import ch.unibas.dmi.dbis.adam.index.Index.IndexName
+import ch.unibas.dmi.dbis.adam.index.Index._
 import ch.unibas.dmi.dbis.adam.index.structures.vectorapproximation.VectorApproximationIndex.{Bounds, Marks}
 import ch.unibas.dmi.dbis.adam.index.structures.vectorapproximation.results.VectorApproximationResultHandler
-import ch.unibas.dmi.dbis.adam.index.structures.vectorapproximation.signature.SignatureGenerator
+import ch.unibas.dmi.dbis.adam.index.structures.vectorapproximation.signature.{VariableSignatureGenerator, FixedSignatureGenerator, SignatureGenerator}
 import ch.unibas.dmi.dbis.adam.index.{Index, IndexMetaStorage, IndexMetaStorageBuilder, IndexTuple}
 import ch.unibas.dmi.dbis.adam.query.distance.Distance._
 import ch.unibas.dmi.dbis.adam.query.distance.NormBasedDistanceFunction
@@ -111,6 +111,14 @@ class VectorApproximationIndex(val indexname : IndexName, val tablename : TableN
     metaBuilder.put("signatureGenerator", indexMetaData.signatureGenerator)
   }
 
+  /**
+   *
+   */
+  override val indextypename: IndexTypeName = indexMetaData.signatureGenerator match {
+    case fsg : FixedSignatureGenerator => "fva"
+    case vsg : VariableSignatureGenerator => "nva"
+    case _ => "va"
+  }
 }
 
 object VectorApproximationIndex {

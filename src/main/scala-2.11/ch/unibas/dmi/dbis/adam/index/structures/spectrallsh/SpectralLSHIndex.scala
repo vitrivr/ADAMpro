@@ -99,6 +99,11 @@ class SpectralLSHIndex(val indexname: IndexName, val tablename: TableName, prote
     //metaBuilder.put("radius", indexMetaData.radius.toDenseVector)
     metaBuilder.put("radius_vec", indexMetaData.radius.toArray)
   }
+
+  /**
+   *
+   */
+  override val indextypename: IndexTypeName = "slsh"
 }
 
 
