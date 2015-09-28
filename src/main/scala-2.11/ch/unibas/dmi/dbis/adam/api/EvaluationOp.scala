@@ -70,7 +70,7 @@ object EvaluationOp {
   def onComplete(startTime : Long, dbSize : Int, vecSize : Int)(results : Seq[Result], options : Map[String, String]) {
     println("Completed on data_" + dbSize + "_" + vecSize)
     pw.write(options + "," + vecSize + "," +  dbSize + "," +  options.getOrElse("index", "") + System.nanoTime() + "," + startTime + "\n")
-    //nextExperiment
+    nextExperiment
   }
 
 

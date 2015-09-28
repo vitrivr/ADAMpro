@@ -33,6 +33,7 @@ class CLI extends ILoop {
     new VarArgsCmd("indquery", "indexname q k", "querys table in kNN search using index", indQueryOp),
     new VarArgsCmd("progQuery", "tablename q k", "querys table in kNN search using progressive query", progQueryOp),
     new VarArgsCmd("drop", "tablename", "drops table", dropOp),
+    new NullaryCmd("evaluation","evaluation", evaluationOp),
 
     new NullaryCmd("dropAllIndexes","drops all indexes", dropAllIndexesOp),
     new NullaryCmd("tmpOp","temporary operation only for testing purposes", tmpOp)
@@ -234,7 +235,15 @@ class CLI extends ILoop {
     Result.default
   }
 
-
+  /**
+   *
+   * @param input
+   * @return
+   */
+  private def evaluationOp(input : String) : Result = {
+    EvaluationOp()
+    Result.default
+  }
 
   /**
    *
