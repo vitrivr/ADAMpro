@@ -116,11 +116,11 @@ object QueryHandler extends Logging {
     indexes
       .map{indexname =>
         val info =  Map[String,String]("type" -> "index", "relation" -> tablename, "index" -> indexname)
-        Future {indexQuery(q, distance, k, indexname, options.toMap)}.onComplete(x => onComplete(status, x.get, info))
+        Future {indexQuery(q, distance, k, indexname, options.toMap)}.onComplete(x => {status.end(indexname); onComplete(status, x.get, info)})
     }
 
     val info =  Map[String,String]("type" -> "sequential", "relation" -> tablename)
-    Future{sequentialQuery(q, distance, k, tablename)}.onComplete(x => onComplete(status, x.get, info))
+    Future{sequentialQuery(q, distance, k, tablename)}.onComplete(x => {status.end(tablename); onComplete(status, x.get, info)})
 
     indexes.length + 1
   }
