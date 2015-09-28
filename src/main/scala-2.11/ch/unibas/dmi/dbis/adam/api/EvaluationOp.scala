@@ -3,7 +3,7 @@ package ch.unibas.dmi.dbis.adam.api
 import java.io.{PrintWriter, File}
 
 import ch.unibas.dmi.dbis.adam.datatypes.Feature._
-import ch.unibas.dmi.dbis.adam.query.{QueryHandler, Result}
+import ch.unibas.dmi.dbis.adam.query.{ProgressiveQueryStatus, QueryHandler, Result}
 import ch.unibas.dmi.dbis.adam.query.distance.NormBasedDistanceFunction
 
 import scala.collection.mutable
@@ -67,10 +67,13 @@ object EvaluationOp {
    * @param options
    * @return
    */
-  def onComplete(startTime : Long, dbSize : Int, vecSize : Int)(results : Seq[Result], options : Map[String, String]) {
+  def onComplete(startTime : Long, dbSize : Int, vecSize : Int)(status : ProgressiveQueryStatus, results : Seq[Result], options : Map[String, String]) {
     println("Completed on data_" + dbSize + "_" + vecSize)
-    pw.write(options + "," + vecSize + "," +  dbSize + "," +  options.getOrElse("index", "") + System.nanoTime() + "," + startTime + "\n")
-    nextExperiment
+    pw.write(vecSize + "," +  dbSize + "," +  options.getOrElse("index", "table") + "," + System.nanoTime() + "," + startTime + "\n")
+
+    if(status.allEnded){
+      nextExperiment()
+    }
   }
 
 

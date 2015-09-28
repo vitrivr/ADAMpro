@@ -230,7 +230,7 @@ class CLI extends ILoop {
     val query = input(1)
     val k = input(2).toInt
 
-    ProgQueryOp(tablename, query, k, NormBasedDistanceFunction(1), (results, details) => println(results.mkString(", ")))
+    ProgQueryOp(tablename, query, k, NormBasedDistanceFunction(1), (status, results, details) => println(results.mkString(", ")))
 
     Result.default
   }

@@ -2,7 +2,7 @@ package ch.unibas.dmi.dbis.adam.api
 
 import ch.unibas.dmi.dbis.adam.datatypes.Feature.WorkingVector
 import ch.unibas.dmi.dbis.adam.query.distance.NormBasedDistanceFunction
-import ch.unibas.dmi.dbis.adam.query.{QueryHandler, Result}
+import ch.unibas.dmi.dbis.adam.query.{ProgressiveQueryStatus, QueryHandler, Result}
 import ch.unibas.dmi.dbis.adam.table.Table._
 
 /**
@@ -19,7 +19,7 @@ object ProgQueryOp {
    * @param k
    * @param distance
    */
-  def apply(tablename: TableName, query : WorkingVector, k : Int, distance : NormBasedDistanceFunction, onComplete : (Seq[Result], Map[String, String]) => Unit) : Int = {
+  def apply(tablename: TableName, query : WorkingVector, k : Int, distance : NormBasedDistanceFunction, onComplete : (ProgressiveQueryStatus, Seq[Result], Map[String, String]) => Unit) : Int = {
     QueryHandler.progressiveQuery(query, distance, k, tablename, onComplete)
   }
 }

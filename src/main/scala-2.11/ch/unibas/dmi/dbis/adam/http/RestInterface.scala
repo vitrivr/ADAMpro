@@ -6,7 +6,7 @@ import akka.util.Timeout
 import ch.unibas.dmi.dbis.adam.api._
 import ch.unibas.dmi.dbis.adam.datatypes.Feature
 import ch.unibas.dmi.dbis.adam.http.Protocol._
-import ch.unibas.dmi.dbis.adam.query.Result
+import ch.unibas.dmi.dbis.adam.query.{ProgressiveQueryStatus, Result}
 import ch.unibas.dmi.dbis.adam.query.distance.NormBasedDistanceFunction
 import ch.unibas.dmi.dbis.adam.table.Table.TableName
 import org.apache.spark.sql.types._
@@ -223,7 +223,7 @@ trait RestApi extends HttpService with ActorLogging { actor: Actor =>
           responder ! ChunkedResponseStart(HttpResponse()).withAck(Ok(nResponses))
 
           //next chunk
-          def sendNextChunk(res : Seq[Result], details : Map[String, String]) : Unit = synchronized {
+          def sendNextChunk(status : ProgressiveQueryStatus, res : Seq[Result], details : Map[String, String]) : Unit = synchronized {
               nResponses = nResponses - 1
               responder ! MessageChunk(res.mkString(",")).withAck(Ok(nResponses)) //TODO: reformat result
           }

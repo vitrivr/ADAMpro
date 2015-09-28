@@ -76,7 +76,7 @@ object QueryHandler extends Logging {
 
     val tidList = IndexScanner(q, distance, k, indexname, options)
 
-    val table = Await.result[Table](tableFuture, Duration(30, TimeUnit.SECONDS))
+    val table = Await.result[Table](tableFuture, Duration(100, TimeUnit.SECONDS))
     TableScanner(table, q, distance, k, tidList)
   }
 
@@ -100,24 +100,27 @@ object QueryHandler extends Logging {
    * @param k
    * @param tablename
    */
-  def progressiveQuery(q: WorkingVector, distance : NormBasedDistanceFunction, k : Int, tablename: TableName, onComplete : (Seq[Result], Map[String, String]) => Unit): Int = {
-    val indexes = Index.getIndexnames(tablename)
+  def progressiveQuery(q: WorkingVector, distance : NormBasedDistanceFunction, k : Int, tablename: TableName, onComplete : (ProgressiveQueryStatus, Seq[Result], Map[String, String]) => Unit): Int = {
+    val indexes: Seq[IndexName] = Index.getIndexnames(tablename)
 
     val options = mMap[String, String]()
     options += "k" -> k.toString
     options += "norm" -> distance.n.toString
 
+    val status = new ProgressiveQueryStatus()
+    status.startAll(indexes)
+    status.start(tablename)
 
     //TODO: // here we should actually keep the index information, especially on the level of onComplete: if the index returns exact information, we should stop the
     //execution completely; if the index returns only approximate information we should keep the retrieving process running
     indexes
       .map{indexname =>
         val info =  Map[String,String]("type" -> "index", "relation" -> tablename, "index" -> indexname)
-        Future {indexQuery(q, distance, k, indexname, options.toMap)}.onComplete(x => onComplete(x.get, info))
+        Future {indexQuery(q, distance, k, indexname, options.toMap)}.onComplete(x => onComplete(status, x.get, info))
     }
 
     val info =  Map[String,String]("type" -> "sequential", "relation" -> tablename)
-    Future{sequentialQuery(q, distance, k, tablename)}.onComplete(x => onComplete(x.get, info))
+    Future{sequentialQuery(q, distance, k, tablename)}.onComplete(x => onComplete(status, x.get, info))
 
     indexes.length + 1
   }
