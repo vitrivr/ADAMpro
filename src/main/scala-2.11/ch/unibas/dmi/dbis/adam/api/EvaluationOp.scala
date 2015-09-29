@@ -5,6 +5,7 @@ import java.io.{File, PrintWriter}
 import ch.unibas.dmi.dbis.adam.datatypes.Feature._
 import ch.unibas.dmi.dbis.adam.query.distance.NormBasedDistanceFunction
 import ch.unibas.dmi.dbis.adam.query.{ProgressiveQueryStatus, QueryHandler, Result}
+import ch.unibas.dmi.dbis.adam.table.Table
 
 import scala.collection.mutable
 import scala.util.Random
@@ -55,10 +56,14 @@ object EvaluationOp {
 
     val tabname = "data_" + dbSize + "_" + vecSize
 
-    try {
-    QueryHandler.progressiveQuery(getRandomVector(vecSize) : WorkingVector, NormBasedDistanceFunction(1), k, tabname, onComplete(System.nanoTime(), dbSize, vecSize))
-    } catch {
-      case e : Exception =>
+    if(Table.existsTable(tabname)){
+      try {
+        QueryHandler.progressiveQuery(getRandomVector(vecSize) : WorkingVector,
+          NormBasedDistanceFunction(1), k, tabname,
+          onComplete(System.nanoTime(), dbSize, vecSize))
+      } catch {
+        case e : Exception =>
+      }
     }
   }
 
