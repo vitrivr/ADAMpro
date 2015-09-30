@@ -18,7 +18,7 @@ import scala.util.Random
  * September 2015
  */
 object EvaluationOp {
-  val dbSizes = Seq(1000,10000,100000,1000000,10000000)
+  val dbSizes = Seq(1000, 1000,10000,100000,1000000,10000000)
   val vectorSizes = Seq(10, 50, 100, 200, 500)
   val k = 100
   val numExperiments = 10
@@ -27,13 +27,13 @@ object EvaluationOp {
   val experiments = mutable.Queue[(Int, Int)]()
 
   def apply() = {
-    pw.write("dbSize" + "," + "vecSize" + "," + "type" + "," + "measure1" + "," + "measure2" + "\n")
+    pw.write("id" + "," + "dbSize" + "," + "vecSize" + "," + "type" + "," + "measure1" + "," + "measure2" + "\n")
 
     dbSizes foreach { dbSize =>
       vectorSizes foreach { vecSize =>
-        experiments.enqueue((dbSize, vecSize))
-        experiments.enqueue((dbSize, vecSize))
-        experiments.enqueue((dbSize, vecSize))
+        (0 until numExperiments) foreach { exp =>
+          experiments.enqueue((dbSize, vecSize))
+        }
       }
     }
 
@@ -47,7 +47,6 @@ object EvaluationOp {
   def nextExperiment() {
     experiments.synchronized(
       if(experiments.isEmpty){
-      pw.close
       return
     })
 
@@ -78,6 +77,7 @@ object EvaluationOp {
    */
   def onComplete(startTime : Long, dbSize : Int, vecSize : Int)(status : ProgressiveQueryStatus, results : Seq[Result], options : Map[String, String]) {
     pw.write(options.getOrElse("qid", "") + "," + vecSize + "," +  dbSize + "," +  options.getOrElse("type", "") + "," + System.nanoTime() + "," + startTime + "\n")
+    pw.flush()
 
     if(status.allEnded){
       println("Completed: data_" + dbSize + "_" + vecSize)
