@@ -23,11 +23,11 @@ object EvaluationOp {
   val k = 100
   val numExperiments = 10
 
-  val pw = new PrintWriter(new File("results.txt"))
+  val pw = new PrintWriter(new File("results_" + System.currentTimeMillis() +".txt"))
   val experiments = mutable.Queue[(Int, Int)]()
 
   def apply() = {
-    pw.write("id" + "," + "dbSize" + "," + "vecSize" + "," + "type" + "," + "measure1" + "," + "measure2" + "\n")
+    pw.write("id" + "," + "dbSize" + "," + "vecSize" + "," + "type" + "," + "measure1" + "," + "measure2" + "," + "resultlist" + "\n")
 
     dbSizes foreach { dbSize =>
       vectorSizes foreach { vecSize =>
@@ -76,7 +76,15 @@ object EvaluationOp {
    * @return
    */
   def onComplete(startTime : Long, dbSize : Int, vecSize : Int)(status : ProgressiveQueryStatus, results : Seq[Result], options : Map[String, String]) {
-    pw.write(options.getOrElse("qid", "") + "," + vecSize + "," +  dbSize + "," +  options.getOrElse("type", "") + "," + System.nanoTime() + "," + startTime + "\n")
+    pw.write(
+      options.getOrElse("qid", "") + "," +
+        vecSize + "," +
+        dbSize + "," +
+        options.getOrElse("type", "") + "," +
+        System.nanoTime() + "," +
+        startTime + "," +
+        results.map(_.tid).mkString("{", ";", "}") +
+        "\n")
     pw.flush()
 
     if(status.allEnded){
