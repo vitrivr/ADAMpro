@@ -50,6 +50,37 @@ class MinimalBitString(private val values : BitSet) extends BitString[MinimalBit
 
   /**
    *
+   * @param dimensions
+   * @param length
+   * @return
+   */
+  @inline override def getWithBitLengths(dimensions : Int, length : Int): Array[Int] = {
+    val indexes = values.getAll
+    var i = 0
+
+    val bitIntegers = new Array[Int](dimensions)
+    var dim = 1
+
+    var sum = 0
+
+    while(i < indexes.length){
+      val index = indexes(i)
+
+      while(index >= sum + length){
+        sum += length
+        dim += 1
+      }
+
+      bitIntegers(dimensions - dim) |= (1 << (index - sum))
+
+      i += 1
+    }
+
+    bitIntegers
+  }
+
+  /**
+   *
    * @param start
    * @param end
    * @return

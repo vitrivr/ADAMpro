@@ -46,14 +46,6 @@ class FixedSignatureGenerator(val numberOfDimensions: Int, val numberOfBitsPerDi
    * @return
    */
   @inline def toCells(signature: BitString[_]): Seq[Int] = {
-    val res = new Array[Int](numberOfDimensions)
-
-    var i = 0
-    while(i < numberOfDimensions){
-      res(numberOfDimensions - 1 - i) = signature.get(i * numberOfBitsPerDimension, (i + 1) * numberOfBitsPerDimension)
-      i += 1
-    }
-
-    res
+    signature.getWithBitLengths(numberOfDimensions, numberOfBitsPerDimension)
   }
 }

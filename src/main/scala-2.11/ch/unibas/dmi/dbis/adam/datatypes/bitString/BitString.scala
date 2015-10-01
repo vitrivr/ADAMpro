@@ -55,6 +55,16 @@ trait BitString[A] {
    */
   def getWithBitLengths(lengths : Seq[Int]): Array[Int] = ???
 
+
+  /**
+   *
+   * @param dimensions
+   * @param length
+   * @return
+   */
+  def getWithBitLengths(dimensions : Int, length : Int): Array[Int] = ???
+
+
   /**
    *
    * @param start
