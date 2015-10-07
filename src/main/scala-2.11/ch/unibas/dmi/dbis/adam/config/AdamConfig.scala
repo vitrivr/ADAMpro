@@ -18,5 +18,10 @@ class AdamConfig(config : Config) {
   val indexPath = basePath / "index"
   val catalogPath = basePath / "catalog"
 
+
+  val jdbcUrl = "jdbc:postgresql://localhost:5432/evaluation"
+  val jdbcUser = "cineast"
+  val jdbcPassword = "ilikemovies"
+
   val partitions = 4
 }

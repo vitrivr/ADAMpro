@@ -1,12 +1,9 @@
 package ch.unibas.dmi.dbis.adam.index
 
-import ch.unibas.dmi.dbis.adam.datatypes.Feature
-import Feature.{WorkingVector, VectorBase}
-import Feature._
+import ch.unibas.dmi.dbis.adam.datatypes.Feature.WorkingVector
 import ch.unibas.dmi.dbis.adam.index.Index._
 import ch.unibas.dmi.dbis.adam.table.Table._
 import org.apache.spark.rdd.RDD
-import org.apache.spark.sql.DataFrame
 
 /**
  * adamtwo
@@ -16,14 +13,6 @@ import org.apache.spark.sql.DataFrame
  */
 trait IndexGenerator {
   def indextypename: IndexTypeName
-
-  /**
-   *
-   */
-  def index(indexname : IndexName, tablename : TableName, data: DataFrame): Index = {
-    val rdd = data.map { x => IndexerTuple(x.getLong(0), x.getSeq[VectorBase](1) : WorkingVector) }
-    index(indexname, tablename, rdd)
-  }
 
   /**
    *

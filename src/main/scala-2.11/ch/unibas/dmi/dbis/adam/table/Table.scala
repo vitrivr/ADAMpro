@@ -5,11 +5,12 @@ import ch.unibas.dmi.dbis.adam.exception.{TableCreationException, TableNotExisti
 import ch.unibas.dmi.dbis.adam.main.{SparkStartup, Startup}
 import ch.unibas.dmi.dbis.adam.storage.catalog.CatalogOperator
 import ch.unibas.dmi.dbis.adam.table.Table.TableName
-import ch.unibas.dmi.dbis.adam.table.Tuple._
+import org.apache.spark.rdd.RDD
 import org.apache.spark.sql.types.StructType
 import org.apache.spark.sql.{DataFrame, Row, SaveMode}
 import org.apache.spark.storage.StorageLevel
 
+import scala.collection.immutable.HashSet
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.duration._
 import scala.concurrent.{Await, Future}
@@ -21,17 +22,19 @@ import scala.concurrent.{Await, Future}
  * Ivan Giangreco
  * August 2015
  */
-case class Table(tablename : TableName, data : DataFrame){
-  def count = data.count()
+abstract class Table{
+  def tablename : TableName
+  def count : Long
 
-  def show() = data.collect()
-  def show(n : Int) = data.take(n)
+  def show() : Array[Row]
+  def show(n : Int) : Array[Row]
 
-  def rows = data.rdd
-  def tuples = data.rdd.map(row => (row : Tuple))
+  def rowsForKeys(filter: HashSet[Long]): RDD[Tuple]
+
+  def rows : RDD[Row]
+  def tuples  : RDD[Tuple]
 }
 
-case class CacheableTable(table : Table)
 
 object Table {
   type TableName = String
@@ -66,7 +69,7 @@ object Table {
 
     Await.ready(future, Duration.Inf)
 
-    Table(tablename, data)
+    DefaultTable(tablename, data)
   }
 
   /**

@@ -74,7 +74,8 @@ object QueryHandler extends Logging {
       Table.retrieveTable(tablename)
     }
 
-    val tidList = IndexScanner(q, distance, k, indexname, options)
+    //TODO: change to long being passed from indexscanner
+    val tidList = IndexScanner(q, distance, k, indexname, options).map(_.toLong)
 
     val table = Await.result[Table](tableFuture, Duration(100, TimeUnit.SECONDS))
     TableScanner(table, q, distance, k, tidList)

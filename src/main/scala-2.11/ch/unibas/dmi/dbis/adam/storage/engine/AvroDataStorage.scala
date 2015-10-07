@@ -5,7 +5,7 @@ import java.io.File
 import ch.unibas.dmi.dbis.adam.index.Index._
 import ch.unibas.dmi.dbis.adam.main.{SparkStartup, Startup}
 import ch.unibas.dmi.dbis.adam.storage.components.{IndexStorage, TableStorage}
-import ch.unibas.dmi.dbis.adam.table.Table
+import ch.unibas.dmi.dbis.adam.table.{DefaultTable, Table}
 import ch.unibas.dmi.dbis.adam.table.Table._
 import org.apache.commons.io.FileUtils
 import org.apache.spark.sql.{SaveMode, DataFrame}
@@ -27,7 +27,7 @@ object AvroDataStorage extends TableStorage with IndexStorage {
    * @return
    */
   override def readTable(tablename: TableName): Table = {
-    Table(tablename, SparkStartup.sqlContext.read.avro(config.dataPath + "/" + tablename + ".avro"))
+    DefaultTable(tablename, SparkStartup.sqlContext.read.avro(config.dataPath + "/" + tablename + ".avro"))
   }
 
   /**

@@ -58,7 +58,8 @@ object Index {
    */
   def createIndex(table : Table, indexgenerator : IndexGenerator) : Index = {
     val indexname = createIndexName(table.tablename, indexgenerator.indextypename)
-    val index = indexgenerator.index(indexname, table.tablename, table.data)
+    val rdd: RDD[IndexerTuple[WorkingVector]] = table.rows.map { x => IndexerTuple(x.getLong(0), x.getSeq[VectorBase](1) : WorkingVector) }
+    val index = indexgenerator.index(indexname, table.tablename, rdd)
     CatalogOperator.createIndex(indexname, table.tablename, indexgenerator.indextypename, index.getMetadata)
     storage.writeIndex(indexname, index.indexdata)
     index

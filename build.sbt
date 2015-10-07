@@ -31,7 +31,8 @@ libraryDependencies ++= Seq(
   "org.scala-lang.modules" %%  "scala-pickling" 	 	    % "0.10.1",
   "org.json4s"             %%  "json4s-native"          % "3.2.11",
   "org.slf4j"              %   "slf4j-nop"              % "1.7.12",
-  "com.databricks"         %%  "spark-avro"             % "2.0.1"
+  "com.databricks"         %%  "spark-avro"             % "2.0.1",
+  "org.iq80.leveldb" % "leveldb" % "0.7",
 )
 
 

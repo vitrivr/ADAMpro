@@ -1,7 +1,6 @@
 package ch.unibas.dmi.dbis.adam.api
 
-import ch.unibas.dmi.dbis.adam.datatypes.Feature._
-import ch.unibas.dmi.dbis.adam.datatypes.Feature.{VectorBase, WorkingVector}
+import ch.unibas.dmi.dbis.adam.datatypes.Feature.{VectorBase, WorkingVector, _}
 import ch.unibas.dmi.dbis.adam.index.Index.IndexTypeName
 import ch.unibas.dmi.dbis.adam.index.structures.lsh.LSHIndexer
 import ch.unibas.dmi.dbis.adam.index.structures.spectrallsh.SpectralLSHIndexer
@@ -9,6 +8,7 @@ import ch.unibas.dmi.dbis.adam.index.structures.vectorapproximation.{NewVectorAp
 import ch.unibas.dmi.dbis.adam.index.{Index, IndexGenerator, IndexerTuple}
 import ch.unibas.dmi.dbis.adam.table.Table
 import ch.unibas.dmi.dbis.adam.table.Table.TableName
+import org.apache.spark.rdd.RDD
 
 /**
  * adamtwo
@@ -25,7 +25,7 @@ object IndexOp {
     val table = Table.retrieveTable(tablename)
 
     //TODO: change this so that indices do not have to look at data before creation
-    val data = table.data.map { x => IndexerTuple(x.getLong(0), x.getSeq[VectorBase](1) : WorkingVector) }
+    val data: RDD[IndexerTuple[WorkingVector]] = table.rows.map { x => IndexerTuple(x.getLong(0), x.getSeq[VectorBase](1) : WorkingVector) }
 
     //TODO: replace by enum
     val generator : IndexGenerator = indextype match {

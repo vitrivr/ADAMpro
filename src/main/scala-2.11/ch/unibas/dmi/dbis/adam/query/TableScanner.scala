@@ -58,7 +58,7 @@ object TableScanner {
    * @param ids
    * @return
    */
-  def apply(q: WorkingVector, distance : DistanceFunction, k : Int, tablename: TableName, ids: HashSet[Int]): Seq[Result] = {
+  def apply(q: WorkingVector, distance : DistanceFunction, k : Int, tablename: TableName, ids: HashSet[Long]): Seq[Result] = {
     apply(Table.retrieveTable(tablename), q, distance, k, ids)
   }
 
@@ -71,8 +71,8 @@ object TableScanner {
    * @param filter
    * @return
    */
-  def apply(table : Table, q: WorkingVector, distance : DistanceFunction, k : Int, filter: HashSet[Int]): Seq[Result] = {
-    val data = table.tuples.filter(tuple => filter.contains(tuple.tid.toInt)).collect()
+  def apply(table : Table, q: WorkingVector, distance : DistanceFunction, k : Int, filter: HashSet[Long]): Seq[Result] = {
+    val data = table.rowsForKeys(filter).collect()
 
     val it = data.par.iterator
 
