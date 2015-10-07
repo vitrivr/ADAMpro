@@ -5,13 +5,17 @@ import ch.unibas.dmi.dbis.adam.datatypes.bitString.BitString
 import ch.unibas.dmi.dbis.adam.index.Index._
 import ch.unibas.dmi.dbis.adam.index.structures.vectorapproximation.VectorApproximationIndex.{Bounds, Marks}
 import ch.unibas.dmi.dbis.adam.index.structures.vectorapproximation.results.VectorApproximationResultHandler
-import ch.unibas.dmi.dbis.adam.index.structures.vectorapproximation.signature.{VariableSignatureGenerator, FixedSignatureGenerator, SignatureGenerator}
+import ch.unibas.dmi.dbis.adam.index.structures.vectorapproximation.signature.{FixedSignatureGenerator, SignatureGenerator, VariableSignatureGenerator}
 import ch.unibas.dmi.dbis.adam.index.{Index, IndexMetaStorage, IndexMetaStorageBuilder, IndexTuple}
+import ch.unibas.dmi.dbis.adam.main.SparkStartup
 import ch.unibas.dmi.dbis.adam.query.distance.Distance._
 import ch.unibas.dmi.dbis.adam.query.distance.NormBasedDistanceFunction
 import ch.unibas.dmi.dbis.adam.table.Table._
+import org.apache.spark.TaskContext
 import org.apache.spark.rdd.RDD
 import org.apache.spark.sql.DataFrame
+
+import com.timgroup.iterata.ParIterator.Implicits._
 
 import scala.collection.immutable.HashSet
 
@@ -43,14 +47,14 @@ class VectorApproximationIndex(val indexname : IndexName, val tablename : TableN
     
     val (lbounds, ubounds) = computeBounds(q, indexMetaData.marks, new NormBasedDistanceFunction(norm))
 
-    val it = indextuples
-      .mapPartitions(tuplesIt => {
+    val results = SparkStartup.sc.runJob(indextuples, (context : TaskContext, tuplesIt : Iterator[IndexTuple]) => {
       val localRh = new VectorApproximationResultHandler(k, lbounds, ubounds, indexMetaData.signatureGenerator)
-      localRh.offerIndexTuple(tuplesIt)
-      localRh.iterator}).collect().iterator
+      localRh.offerIndexTuple(tuplesIt.par())
+      localRh.results.toSeq
+    }).flatten
 
     val globalResultHandler = new VectorApproximationResultHandler(k)
-    globalResultHandler.offerResultElement(it)
+    globalResultHandler.offerResultElement(results.iterator)
     val ids = globalResultHandler.results.map(x => x.tid).toList
 
     HashSet(ids.map(_.toInt):_*)

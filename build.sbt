@@ -33,6 +33,7 @@ libraryDependencies ++= Seq(
   "org.slf4j"              %   "slf4j-nop"              % "1.7.12",
   "com.databricks"         %%  "spark-avro"             % "2.0.1",
   "org.iq80.leveldb" % "leveldb" % "0.7",
+  "com.timgroup" %% "iterata" % "0.1.3"
 )
 
 
