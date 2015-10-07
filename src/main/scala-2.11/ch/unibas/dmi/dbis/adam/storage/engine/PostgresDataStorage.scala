@@ -40,6 +40,7 @@ object PostgresDataStorage extends LazyTableStorage {
     ).load()
 
     val adamIDIdx = df.schema.fieldIndex("__adam_id")
+    //TODO: discover by datatype!
     val featureIdx = df.schema.fieldIndex("feature")
 
     val adaptedRDD = df.filter("id IN " + filter.mkString("(", ",", ")")).map(r => Row(r.getLong(adamIDIdx), r.getString(featureIdx) : StoredVector))
