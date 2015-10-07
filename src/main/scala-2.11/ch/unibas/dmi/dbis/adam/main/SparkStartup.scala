@@ -2,7 +2,7 @@ package ch.unibas.dmi.dbis.adam.main
 
 import ch.unibas.dmi.dbis.adam.datatypes.bitString.{BitString, MinimalBitString}
 import ch.unibas.dmi.dbis.adam.storage.components.{IndexStorage, TableStorage}
-import ch.unibas.dmi.dbis.adam.storage.engine.ParquetDataStorage
+import ch.unibas.dmi.dbis.adam.storage.engine.{ParquetDataStorage, PostgresDataStorage}
 import org.apache.spark.sql.hive.HiveContext
 import org.apache.spark.{SparkConf, SparkContext}
 
@@ -19,6 +19,7 @@ object  SparkStartup {
   sparkConfig.set("spark.kryoserializer.buffer", "256");
   sparkConfig.set("spark.driver.maxResultSize", "0");
   sparkConfig.set("spark.driver.memory", "9g");
+  sparkConfig.set("spark.driver.host", "localhost");
   sparkConfig.set("spark.rdd.compress", "true");
   sparkConfig.set("spark.parquet.block.size", (1024 * 1024 * 16).toString)
   sparkConfig.set("spark.sql.parquet.compression.codec", "gzip")
@@ -32,6 +33,6 @@ object  SparkStartup {
   sqlContext.setConf("spark.sql.avro.deflate.level", "5")
   sqlContext.setConf("spark.parquet.block.size", (1024 * 1024 * 8).toString)
 
-  val tableStorage: TableStorage = ParquetDataStorage
+  val tableStorage: TableStorage = PostgresDataStorage
   val indexStorage: IndexStorage = ParquetDataStorage
 }
