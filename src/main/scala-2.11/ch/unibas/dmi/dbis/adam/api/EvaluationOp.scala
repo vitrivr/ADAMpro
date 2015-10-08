@@ -61,7 +61,7 @@ object EvaluationOp {
           NormBasedDistanceFunction(1), k, tabname,
           onComplete(System.nanoTime(), dbSize, vecSize))
       } catch {
-        case e : Exception =>
+        case e : Exception =>  nextExperiment()
       }
     }
   }
