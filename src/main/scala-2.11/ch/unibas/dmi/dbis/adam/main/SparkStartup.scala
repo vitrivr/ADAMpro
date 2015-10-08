@@ -23,6 +23,7 @@ object  SparkStartup {
   sparkConfig.set("spark.rdd.compress", "true");
   sparkConfig.set("spark.parquet.block.size", (1024 * 1024 * 16).toString)
   sparkConfig.set("spark.sql.parquet.compression.codec", "gzip")
+  sparkConfig.set("spark.scheduler.mode", "FAIR")
   sparkConfig.registerKryoClasses(Array(classOf[BitString[_]], classOf[MinimalBitString]))
 
   val sc = new SparkContext(sparkConfig)
