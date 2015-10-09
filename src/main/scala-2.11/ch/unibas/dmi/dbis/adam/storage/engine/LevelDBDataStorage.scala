@@ -40,21 +40,22 @@ object LevelDBDataStorage extends LazyTableStorage {
    * @param options
    * @return
    */
-  private def  openConnection(tablename : TableName, options : Options): DB ={
-    if(databases.contains(tablename)){
+  private def openConnection(tablename : TableName, options : Options): DB ={
+    databases.synchronized({
+      if(databases.contains(tablename)){
        val dbStatus = databases.get(tablename)
       dbStatus.synchronized({
       dbStatus.get.locks += 1
       })
       return dbStatus.get.db
     } else {
-      databases.synchronized({
         val db: DB = factory.open(new File(config.dataPath + "/" + tablename + ".leveldb"), options)
         val dbStatus = DBStatus(db, 1)
         databases.putIfAbsent(tablename, dbStatus)
-      })
-      return databases.get(tablename).get.db;
+      }
+      return databases.get(tablename).get.db
     }
+    )
   }
 
   /**
