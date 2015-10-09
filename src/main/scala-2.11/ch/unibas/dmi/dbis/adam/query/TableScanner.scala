@@ -1,6 +1,7 @@
 package ch.unibas.dmi.dbis.adam.query
 
 import ch.unibas.dmi.dbis.adam.datatypes.Feature._
+import ch.unibas.dmi.dbis.adam.main.SparkStartup
 import ch.unibas.dmi.dbis.adam.query.distance.DistanceFunction
 import ch.unibas.dmi.dbis.adam.table.Table
 import ch.unibas.dmi.dbis.adam.table.Table._
@@ -24,6 +25,8 @@ object TableScanner {
    * @return
    */
   def apply(q: WorkingVector, distance : DistanceFunction, k : Int, tablename: TableName): Seq[Result] = {
+    SparkStartup.sc.setLocalProperty("spark.scheduler.pool", "table")
+
     Table.retrieveTable(tablename).tuples
       .map(tuple => {
       val f : WorkingVector = tuple.value
@@ -41,6 +44,8 @@ object TableScanner {
    * @return
    */
   def apply(table : Table, q: WorkingVector, distance : DistanceFunction, k : Int): Seq[Result] = {
+    SparkStartup.sc.setLocalProperty("spark.scheduler.pool", "table")
+
     table.tuples
       .map(tuple => {
       val f : WorkingVector = tuple.value
@@ -72,6 +77,8 @@ object TableScanner {
    * @return
    */
   def apply(table : Table, q: WorkingVector, distance : DistanceFunction, k : Int, filter: HashSet[Long]): Seq[Result] = {
+    SparkStartup.sc.setLocalProperty("spark.scheduler.pool", "index")
+
     val data = table.rowsForKeys(filter).collect()
 
     val it = data.par.iterator
