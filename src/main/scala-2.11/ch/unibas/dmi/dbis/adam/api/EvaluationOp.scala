@@ -18,7 +18,7 @@ import scala.util.Random
  * September 2015
  */
 object EvaluationOp {
-  val dbSizes = Seq(1000, 1000,10000,100000,1000000,10000000)
+  val dbSizes = Seq(1000,10000,100000,1000000,10000000)
   val vectorSizes = Seq(10, 50, 100, 200, 500)
   val k = 100
   val numExperiments = 10
