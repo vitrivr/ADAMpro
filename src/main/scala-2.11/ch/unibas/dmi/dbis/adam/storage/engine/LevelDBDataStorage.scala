@@ -16,7 +16,6 @@ import org.iq80.leveldb.impl.Iq80DBFactory._
 
 import scala.collection._
 import scala.collection.convert.decorateAsScala._
-import scala.collection.mutable.ListBuffer
 
 
 
@@ -146,8 +145,14 @@ object LevelDBDataStorage extends LazyTableStorage {
 
     try {
       val data = filter.par.map(f => {
-        (f, asFloatArray(db.get(bytes(f))))
-      }).map(r => Row(r._1, r._2)).toSeq.seq
+        val values = asFloatArray(db.get(bytes(f)), f)
+
+        if(values != null){
+          (f, values)
+        } else {
+          null
+        }
+      }).filter(x => x != null).map(r => Row(r._1, r._2)).toSeq.seq
 
       val rdd = SparkStartup.sc.parallelize(data)
 
@@ -187,7 +192,7 @@ object LevelDBDataStorage extends LazyTableStorage {
     val db = factory.open(new File(config.dataPath + "/" + tablename + ".leveldb"), options)
 
     try {
-      val it = df.rdd.toLocalIterator.sliding(50000, 50000)
+      val it = df.rdd.toLocalIterator.sliding(25000, 25000)
 
       while (it.hasNext) {
         val data = it.next()
@@ -197,17 +202,20 @@ object LevelDBDataStorage extends LazyTableStorage {
 
         while (i < data.length) {
           val t = data(i)
-          batch.put(bytes(t.tid), bytes(t.value))
+          val tid = bytes(t.tid)
+          val value = bytes(t.value, t.tid)
+          batch.put(tid, value)
           i += 1
         }
 
         db.write(batch)
+        batch.close()
       }
 
     } finally {
       // Make sure you close the db to shutdown the
       // database and avoid resource leaks.
-      db.close();
+      db.close()
     }
   }
 
@@ -216,8 +224,8 @@ object LevelDBDataStorage extends LazyTableStorage {
    * @param value
    * @return
    */
-  private def bytes(value: Long) = {
-    ByteBuffer.allocate(8).putLong(value).array();
+  private def bytes(value: Long) : Array[Byte] = {
+    ByteBuffer.allocate(8).putLong(value).array()
   }
 
   /**
@@ -226,10 +234,10 @@ object LevelDBDataStorage extends LazyTableStorage {
    * @return
    */
   private def asLong(v: Array[Byte]): Long = {
-    val buffer = ByteBuffer.allocate(8);
-    buffer.put(v);
-    buffer.flip();
-    buffer.getLong();
+    val buffer = ByteBuffer.allocate(8)
+    buffer.put(v)
+    buffer.flip()
+    buffer.getLong()
   }
 
   /**
@@ -237,13 +245,13 @@ object LevelDBDataStorage extends LazyTableStorage {
    * @param v
    * @return
    */
-  private def asFloatArray(v: Array[Byte]): Seq[Float] = {
+  private def asFloatArray(v: Array[Byte], tid : Long = 0): Seq[Float] = {
     if (v != null) {
       val dbuf = java.nio.FloatBuffer.allocate(v.length / 4)
       dbuf.put(java.nio.ByteBuffer.wrap(v).asFloatBuffer())
       dbuf.array.toSeq
     } else {
-      Seq(0.toFloat)
+      null
     }
   }
 
@@ -252,7 +260,7 @@ object LevelDBDataStorage extends LazyTableStorage {
    * @param values
    * @return
    */
-  private def bytes(values: Seq[Float]) = {
+  private def bytes(values: Seq[Float], tid : Long = 0) : Array[Byte] = {
     val bbuf = java.nio.ByteBuffer.allocate(4 * values.length)
     bbuf.asFloatBuffer.put(java.nio.FloatBuffer.wrap(values.toArray))
     val b = bbuf.array
