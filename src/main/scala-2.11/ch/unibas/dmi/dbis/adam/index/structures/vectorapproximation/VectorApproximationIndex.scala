@@ -5,17 +5,17 @@ import ch.unibas.dmi.dbis.adam.datatypes.bitString.BitString
 import ch.unibas.dmi.dbis.adam.index.Index._
 import ch.unibas.dmi.dbis.adam.index.structures.vectorapproximation.VectorApproximationIndex.{Bounds, Marks}
 import ch.unibas.dmi.dbis.adam.index.structures.vectorapproximation.results.VectorApproximationResultHandler
-import ch.unibas.dmi.dbis.adam.index.structures.vectorapproximation.signature.{FixedSignatureGenerator, SignatureGenerator, VariableSignatureGenerator}
-import ch.unibas.dmi.dbis.adam.index.{Index, IndexMetaStorage, IndexMetaStorageBuilder, IndexTuple}
+import ch.unibas.dmi.dbis.adam.index.structures.vectorapproximation.signature.{FixedSignatureGenerator, VariableSignatureGenerator}
+import ch.unibas.dmi.dbis.adam.index.{BitStringIndexTuple, Index}
 import ch.unibas.dmi.dbis.adam.main.SparkStartup
 import ch.unibas.dmi.dbis.adam.query.distance.Distance._
 import ch.unibas.dmi.dbis.adam.query.distance.NormBasedDistanceFunction
 import ch.unibas.dmi.dbis.adam.table.Table._
+import ch.unibas.dmi.dbis.adam.table.Tuple._
+import com.timgroup.iterata.ParIterator.Implicits._
 import org.apache.spark.TaskContext
 import org.apache.spark.rdd.RDD
 import org.apache.spark.sql.DataFrame
-
-import com.timgroup.iterata.ParIterator.Implicits._
 
 import scala.collection.immutable.HashSet
 
@@ -32,23 +32,23 @@ class VectorApproximationIndex(val indexname : IndexName, val tablename : TableN
    *
    * @return
    */
-  override protected lazy val indextuples : RDD[IndexTuple] = {
+  override protected lazy val indextuples : RDD[BitStringIndexTuple] = {
     indexdata
       .map{ tuple =>
-      IndexTuple(tuple.getLong(0), tuple.getAs[BitString[_]](1)) }
+      BitStringIndexTuple(tuple.getLong(0), tuple.getAs[BitString[_]](1)) }
   }
 
   /**
    *
    */
-  override def scan(q: WorkingVector, options: Map[String, String]): HashSet[Int] = {
+  override def scan(q: WorkingVector, options: Map[String, String]): HashSet[TupleID] = {
     val k = options("k").toInt
     val norm = options("norm").toInt
     
     val (lbounds, ubounds) = computeBounds(q, indexMetaData.marks, new NormBasedDistanceFunction(norm))
 
     SparkStartup.sc.setLocalProperty("spark.scheduler.pool", "index")
-    val results = SparkStartup.sc.runJob(indextuples, (context : TaskContext, tuplesIt : Iterator[IndexTuple]) => {
+    val results = SparkStartup.sc.runJob(indextuples, (context : TaskContext, tuplesIt : Iterator[BitStringIndexTuple]) => {
       val localRh = new VectorApproximationResultHandler(k, lbounds, ubounds, indexMetaData.signatureGenerator)
       localRh.offerIndexTuple(tuplesIt.par())
       localRh.results.toSeq
@@ -59,7 +59,7 @@ class VectorApproximationIndex(val indexname : IndexName, val tablename : TableN
     globalResultHandler.offerResultElement(results.iterator)
     val ids = globalResultHandler.results.map(x => x.tid).toList
 
-    HashSet(ids.map(_.toInt):_*)
+    HashSet(ids : _*)
   }
 
   /**
@@ -110,11 +110,9 @@ class VectorApproximationIndex(val indexname : IndexName, val tablename : TableN
 
   /**
    *
-   * @param metaBuilder
    */
-  override private[index] def prepareMeta(metaBuilder : IndexMetaStorageBuilder) : Unit = {
-    metaBuilder.put("marks", indexMetaData.marks)
-    metaBuilder.put("signatureGenerator", indexMetaData.signatureGenerator)
+  override private[index] def getMetadata(): Serializable = {
+    indexMetaData
   }
 
   /**
@@ -131,13 +129,8 @@ object VectorApproximationIndex {
   type Marks = Seq[Seq[VectorBase]]
   type Bounds = Array[Array[Distance]]
 
-  def apply(indexname : IndexName, tablename : TableName, data: DataFrame, meta : IndexMetaStorage ) : Index = {
-    val marks : Marks = meta.get("marks").asInstanceOf[Seq[Seq[Double]]].map(_.map(_.toFloat))
-
-    val signatureGenerator =  meta.get("signatureGenerator").asInstanceOf[SignatureGenerator]
-
-    val indexMetaData = VectorApproximationIndexMetaData(marks, signatureGenerator)
-
+  def apply(indexname : IndexName, tablename : TableName, data: DataFrame, meta : Any) : VectorApproximationIndex = {
+    val indexMetaData = meta.asInstanceOf[VectorApproximationIndexMetaData]
     new VectorApproximationIndex(indexname, tablename, data, indexMetaData)
   }
 }

@@ -5,7 +5,7 @@ import ch.unibas.dmi.dbis.adam.datatypes.Feature._
 import ch.unibas.dmi.dbis.adam.index.Index._
 import ch.unibas.dmi.dbis.adam.index.structures.vectorapproximation.marks.{EquidistantMarksGenerator, EquifrequentMarksGenerator, MarksGenerator}
 import ch.unibas.dmi.dbis.adam.index.structures.vectorapproximation.signature.VariableSignatureGenerator
-import ch.unibas.dmi.dbis.adam.index.{IndexGenerator, IndexTuple, IndexerTuple}
+import ch.unibas.dmi.dbis.adam.index.{IndexerTuple, IndexGenerator, BitStringIndexTuple}
 import ch.unibas.dmi.dbis.adam.main.SparkStartup
 import ch.unibas.dmi.dbis.adam.table.Table._
 import org.apache.spark.adam.ADAMSamplingUtils
@@ -30,7 +30,7 @@ class NewVectorApproximationIndexer (nbits : Int, marksGenerator: MarksGenerator
       datum => {
         val cells = getCells(datum.value, indexMetaData.marks)
         val signature = indexMetaData.signatureGenerator.toSignature(cells)
-        IndexTuple(datum.tid, signature)
+        BitStringIndexTuple(datum.tid, signature)
       })
 
     import SparkStartup.sqlContext.implicits._

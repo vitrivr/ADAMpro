@@ -9,6 +9,5 @@ import ch.unibas.dmi.dbis.adam.index.structures.vectorapproximation.signature.Si
  * Ivan Giangreco
  * September 2015
  */
-private[vectorapproximation] case class VectorApproximationIndexMetaData(marks : Marks, signatureGenerator : SignatureGenerator) {
-
-}
+private[vectorapproximation]
+case class VectorApproximationIndexMetaData(marks : Marks, signatureGenerator : SignatureGenerator) extends Serializable

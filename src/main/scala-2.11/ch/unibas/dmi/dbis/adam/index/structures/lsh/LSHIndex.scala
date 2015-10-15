@@ -1,21 +1,17 @@
 package ch.unibas.dmi.dbis.adam.index.structures.lsh
 
-import java.io._
-import java.util.Base64
-
 import ch.unibas.dmi.dbis.adam.datatypes.Feature._
 import ch.unibas.dmi.dbis.adam.datatypes.MovableFeature
 import ch.unibas.dmi.dbis.adam.datatypes.bitString.BitString
 import ch.unibas.dmi.dbis.adam.index.Index._
-import ch.unibas.dmi.dbis.adam.index.structures.lsh.hashfunction.Hasher
 import ch.unibas.dmi.dbis.adam.index.structures.spectrallsh.results.SpectralLSHResultHandler
-import ch.unibas.dmi.dbis.adam.index.{Index, IndexMetaStorage, IndexMetaStorageBuilder, IndexTuple}
+import ch.unibas.dmi.dbis.adam.index.{BitStringIndexTuple, Index}
 import ch.unibas.dmi.dbis.adam.table.Table._
+import ch.unibas.dmi.dbis.adam.table.Tuple.TupleID
 import org.apache.spark.rdd.RDD
 import org.apache.spark.sql.DataFrame
 
 import scala.collection.immutable.HashSet
-
 
 /**
  * adamtwo
@@ -30,10 +26,10 @@ class LSHIndex(val indexname: IndexName, val tablename: TableName, protected val
    *
    * @return
    */
-  override protected lazy val indextuples: RDD[IndexTuple] = {
+  override protected lazy val indextuples: RDD[BitStringIndexTuple] = {
     indexdata
       .map { tuple =>
-      IndexTuple(tuple.getLong(0), tuple.getAs[BitString[_]](1))
+      BitStringIndexTuple(tuple.getLong(0), tuple.getAs[BitString[_]](1))
     }
   }
 
@@ -43,7 +39,7 @@ class LSHIndex(val indexname: IndexName, val tablename: TableName, protected val
    * @param options
    * @return
    */
-  override def scan(q: WorkingVector, options: Map[String, String]): HashSet[Int] = {
+  override def scan(q: WorkingVector, options: Map[String, String]): HashSet[TupleID] = {
     val k = options("k").toInt
     val numOfQueries = options.getOrElse("numOfQ", "3").toInt
 
@@ -77,24 +73,15 @@ class LSHIndex(val indexname: IndexName, val tablename: TableName, protected val
     globalResultHandler.offerResultElement(it)
     val ids = globalResultHandler.results.map(x => x.tid).toList
 
-    HashSet(ids.map(_.toInt): _*)
+    HashSet(ids : _*)
   }
 
   /**
    *
    * @return
    */
-  override private[index] def prepareMeta(metaBuilder: IndexMetaStorageBuilder): Unit = {
-    metaBuilder.put("radius", indexMetaData.radius)
-
-
-    //TODO: change this!!!
-    val baos = new ByteArrayOutputStream()
-    val oos = new ObjectOutputStream(baos)
-    oos.writeObject(indexMetaData.hashTables)
-    oos.close()
-
-    metaBuilder.put("hashtables", Base64.getEncoder().encodeToString(baos.toByteArray()))
+  override private[index] def getMetadata(): Serializable = {
+    indexMetaData
   }
 
   /**
@@ -104,18 +91,9 @@ class LSHIndex(val indexname: IndexName, val tablename: TableName, protected val
 }
 
 object LSHIndex {
-  def apply(indexname: IndexName, tablename: TableName, data: DataFrame, meta: IndexMetaStorage): Index = {
+  def apply(indexname: IndexName, tablename: TableName, data: DataFrame, meta: Any): LSHIndex = {
 
-    //TODO: change this!!!
-    val hashTablesString  = meta.get("hashtables").toString
-    val ois = new ObjectInputStream(new ByteArrayInputStream(Base64.getDecoder().decode(hashTablesString)))
-    val hashTables = ois.readObject().asInstanceOf[Seq[Hasher]]
-    ois.close()
-
-    val radius = meta.get("radius").toString.toFloat
-
-    val indexMetaData = LSHIndexMetaData(hashTables, radius)
-
+    val indexMetaData = meta.asInstanceOf[LSHIndexMetaData]
     new LSHIndex(indexname, tablename, data, indexMetaData)
   }
 }

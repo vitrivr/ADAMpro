@@ -1,6 +1,6 @@
 package ch.unibas.dmi.dbis.adam.index.structures.spectrallsh.results
 
-import ch.unibas.dmi.dbis.adam.index.IndexTuple
+import ch.unibas.dmi.dbis.adam.index.BitStringIndexTuple
 import ch.unibas.dmi.dbis.adam.table.Tuple.TupleID
 import com.google.common.collect.MinMaxPriorityQueue
 
@@ -14,19 +14,19 @@ import scala.collection.mutable.ListBuffer
  */
 class SpectralLSHResultHandler(k: Int) extends Serializable {
   @transient var ls = ListBuffer[ResultElement]()
-  @transient var queue = MinMaxPriorityQueue.orderedBy(scala.math.Ordering.Int).maximumSize(k).create[Int]
-  @transient var max = Float.MaxValue
+  @transient var queue = MinMaxPriorityQueue.orderedBy(scala.math.Ordering.Int.reverse).maximumSize(k).create[Int]
+  @transient var min = Float.MinValue
 
 
   /**
    *
    * @param tuple
    */
-  def offerIndexTuple(tuple: IndexTuple, score : Int): Unit = {
-    if(score < max || queue.size < k){
+  def offerIndexTuple(tuple: BitStringIndexTuple, score : Int): Unit = {
+    if(score >= min || queue.size < k){
       ls += ResultElement(score, tuple.tid)
       queue.add(score)
-      max = queue.peekLast()
+      min = queue.peekLast()
     }
   }
 
@@ -38,10 +38,10 @@ class SpectralLSHResultHandler(k: Int) extends Serializable {
   def offerResultElement(it: Iterator[ResultElement]): Unit = {
     while (it.hasNext) {
       val res = it.next()
-      if(res.score < max || queue.size < k){
+      if(res.score >= min || queue.size < k){
         ls += res
         queue.add(res.score)
-        max = queue.peekLast()
+        min = queue.peekLast()
       }
     }
   }

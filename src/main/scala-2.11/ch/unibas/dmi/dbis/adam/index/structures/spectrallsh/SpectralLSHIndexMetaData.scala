@@ -1,8 +1,7 @@
 package ch.unibas.dmi.dbis.adam.index.structures.spectrallsh
 
 import breeze.linalg._
-import ch.unibas.dmi.dbis.adam.datatypes.Feature
-import Feature._
+import ch.unibas.dmi.dbis.adam.datatypes.Feature._
 
 /**
  * adamtwo
@@ -10,7 +9,11 @@ import Feature._
  * Ivan Giangreco
  * September 2015
  */
-private[spectrallsh] case class SpectralLSHIndexMetaData(pca : DenseMatrix[VectorBase], min : DenseVector[VectorBase], max : DenseVector[VectorBase], modes : DenseMatrix[VectorBase], radius : DenseVector[VectorBase]) {
+private[spectrallsh] case class SpectralLSHIndexMetaData
+  (pca : DenseMatrix[VectorBase], min : DenseVector[VectorBase], max : DenseVector[VectorBase], modes : DenseMatrix[VectorBase], radius : DenseVector[VectorBase])
+  extends Serializable {
+
+
   lazy val omegas: DenseMatrix[VectorBase] = {
     val range = max - min
     val omega0 = range.mapValues(r => conv_double2vectorBase(math.Pi / r))

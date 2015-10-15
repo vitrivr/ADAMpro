@@ -1,19 +1,11 @@
 package ch.unibas.dmi.dbis.adam.storage.catalog
 
-import breeze.linalg.DenseMatrix
-import ch.unibas.dmi.dbis.adam.datatypes.Feature
-import Feature.VectorBase
-import ch.unibas.dmi.dbis.adam.exception.{IndexNotExistingException, IndexExistingException, TableExistingException, TableNotExistingException}
-import ch.unibas.dmi.dbis.adam.index.Index.{IndexTypeName, IndexName}
-import ch.unibas.dmi.dbis.adam.index.IndexMetaStorage
-import ch.unibas.dmi.dbis.adam.index.structures.vectorapproximation.VectorApproximationIndex.Marks
-import ch.unibas.dmi.dbis.adam.index.structures.vectorapproximation.signature.{VariableSignatureGenerator, FixedSignatureGenerator}
+import java.io._
+
+import ch.unibas.dmi.dbis.adam.exception.{IndexExistingException, IndexNotExistingException, TableExistingException, TableNotExistingException}
+import ch.unibas.dmi.dbis.adam.index.Index.{IndexName, IndexTypeName}
 import ch.unibas.dmi.dbis.adam.main.Startup
 import ch.unibas.dmi.dbis.adam.table.Table.TableName
-import org.apache.spark.mllib.linalg.DenseVector
-import org.json4s._
-import org.json4s.native.Serialization
-import org.json4s.native.Serialization._
 import slick.driver.H2Driver.api._
 import slick.jdbc.meta.MTable
 
@@ -30,21 +22,13 @@ import scala.concurrent.duration._
 object CatalogOperator {
   private val config = Startup.config
   //TODO change path to config...
-  private val db = Database.forURL("jdbc:h2:./data/catalog", driver="org.h2.Driver")
+  private val db = Database.forURL("jdbc:h2:./data/catalog/catalog", driver="org.h2.Driver")
 
   //generate catalog tables in the beginning if not already existent
   val tableList = Await.result(db.run(MTable.getTables), 1.seconds).toList.map(x => x.name.name)
   Catalog().filterNot(mdd => tableList.contains(mdd._1)).foreach(mdd => {
     db.run(mdd._2.schema.create)
   })
-
-  implicit val formats = Serialization.formats(FullTypeHints (List(
-    classOf[FixedSignatureGenerator],
-    classOf[VariableSignatureGenerator],
-    classOf[Marks],
-    classOf[DenseMatrix[VectorBase]],
-    classOf[DenseVector]
-  )))
 
   private val tables = TableQuery[TablesCatalog]
   private val indexes = TableQuery[IndexesCatalog]
@@ -119,7 +103,7 @@ object CatalogOperator {
    * @param tablename
    * @param indexmeta
    */
-  def createIndex(indexname : IndexName, tablename : TableName, indextypename : IndexTypeName, indexmeta : IndexMetaStorage): Unit ={
+  def createIndex(indexname : IndexName, tablename : TableName, indextypename : IndexTypeName, indexmeta : Serializable): Unit ={
     if(!existsTable(tablename)){
       throw new TableNotExistingException()
     }
@@ -128,10 +112,14 @@ object CatalogOperator {
       throw new IndexExistingException()
     }
 
-    val json =  write(indexmeta.map)
+    val metaPath = config.indexPath + "/" + indexname + "/"
+    val metaFilePath =  metaPath + "_adam_metadata"
+    val oos = new ObjectOutputStream(new FileOutputStream(metaFilePath))
+    oos.writeObject(indexmeta)
+    oos.close
 
     val setup = DBIO.seq(
-      indexes.+=((indexname, tablename, indextypename, json))
+      indexes.+=((indexname, tablename, indextypename, metaFilePath))
     )
     db.run(setup)
   }
@@ -191,11 +179,11 @@ object CatalogOperator {
    * @param indexname
    * @return
    */
-  def getIndexMeta(indexname : IndexName) : IndexMetaStorage = {
+  def getIndexMeta(indexname : IndexName) : Any = {
     val query = indexes.filter(_.indexname === indexname).map(_.indexmeta).result.head
-
-    val json = Await.result(db.run(query), 5.seconds)
-    new IndexMetaStorage(read[Map[String, Any]](json))
+    val path = Await.result(db.run(query), 5.seconds)
+    val ois = new ObjectInputStream(new FileInputStream(path))
+    ois.readObject()
   }
 
   /**

@@ -11,6 +11,7 @@ import ch.unibas.dmi.dbis.adam.main.SparkStartup
 import ch.unibas.dmi.dbis.adam.storage.catalog.CatalogOperator
 import ch.unibas.dmi.dbis.adam.table.Table
 import ch.unibas.dmi.dbis.adam.table.Table.TableName
+import ch.unibas.dmi.dbis.adam.table.Tuple._
 import org.apache.spark.rdd.RDD
 import org.apache.spark.sql.DataFrame
 import org.apache.spark.storage.StorageLevel
@@ -29,17 +30,11 @@ trait Index{
   val tablename : TableName
   val indextypename : IndexTypeName
   protected val indexdata : DataFrame
-  protected val indextuples : RDD[IndexTuple]
+  protected val indextuples : RDD[_]
 
-  def getMetadata = {
-    val metaBuilder = new IndexMetaStorageBuilder()
-    prepareMeta(metaBuilder)
-    metaBuilder.build()
-  }
+  private[index] def getMetadata : Serializable
 
-  private[index] def prepareMeta(metaBuilder : IndexMetaStorageBuilder) : Unit
-
-  def scan(q: WorkingVector, options: Map[String, String]): HashSet[Int]
+  def scan(q: WorkingVector, options: Map[String, String]): HashSet[TupleID]
 }
 
 case class CacheableIndex(index : Index)
@@ -60,8 +55,8 @@ object Index {
     val indexname = createIndexName(table.tablename, indexgenerator.indextypename)
     val rdd: RDD[IndexerTuple[WorkingVector]] = table.rows.map { x => IndexerTuple(x.getLong(0), x.getSeq[VectorBase](1) : WorkingVector) }
     val index = indexgenerator.index(indexname, table.tablename, rdd)
-    CatalogOperator.createIndex(indexname, table.tablename, indexgenerator.indextypename, index.getMetadata)
     storage.writeIndex(indexname, index.indexdata)
+    CatalogOperator.createIndex(indexname, table.tablename, indexgenerator.indextypename, index.getMetadata)
     index
   }
 

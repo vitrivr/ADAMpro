@@ -2,8 +2,8 @@ package ch.unibas.dmi.dbis.adam.index.structures.lsh
 
 import ch.unibas.dmi.dbis.adam.datatypes.Feature.WorkingVector
 import ch.unibas.dmi.dbis.adam.index.Index._
+import ch.unibas.dmi.dbis.adam.index._
 import ch.unibas.dmi.dbis.adam.index.structures.lsh.hashfunction.{EuclideanHashFunction, Hasher}
-import ch.unibas.dmi.dbis.adam.index.{Index, IndexGenerator, IndexTuple, IndexerTuple}
 import ch.unibas.dmi.dbis.adam.main.SparkStartup
 import ch.unibas.dmi.dbis.adam.query.distance.NormBasedDistanceFunction
 import ch.unibas.dmi.dbis.adam.table.Table._
@@ -26,7 +26,7 @@ class LSHIndexer(hashFamily : String, numHashTables : Int, numHashes : Int, dist
     val indexdata = data.map(
       datum => {
         val hash = LSHUtils.hashFeature(datum.value, indexMetaData)
-        IndexTuple(datum.tid, hash)
+        BitStringIndexTuple(datum.tid, hash)
       })
 
     import SparkStartup.sqlContext.implicits._

@@ -1,7 +1,7 @@
 package ch.unibas.dmi.dbis.adam.index.structures.vectorapproximation.results
 
 import ch.unibas.dmi.dbis.adam.datatypes.bitString.BitString
-import ch.unibas.dmi.dbis.adam.index.IndexTuple
+import ch.unibas.dmi.dbis.adam.index.BitStringIndexTuple
 import ch.unibas.dmi.dbis.adam.index.structures.vectorapproximation.VectorApproximationIndex._
 import ch.unibas.dmi.dbis.adam.index.structures.vectorapproximation.signature.SignatureGenerator
 import ch.unibas.dmi.dbis.adam.query.distance.Distance.Distance
@@ -25,7 +25,7 @@ private[vectorapproximation] class VectorApproximationResultHandler(k: Int, lbou
    *
    * @param it
    */
-  def offerIndexTuple(it: Iterator[IndexTuple]): Unit = {
+  def offerIndexTuple(it: Iterator[BitStringIndexTuple]): Unit = {
     while (it.hasNext) {
       val indexTuple = it.next()
       val res = BoundedResultElement(indexTuple.tid, indexTuple.bits)
@@ -42,7 +42,7 @@ private[vectorapproximation] class VectorApproximationResultHandler(k: Int, lbou
    *
    * @param indexTuple
    */
-  def offerIndexTuple(indexTuple: IndexTuple): Unit = {
+  def offerIndexTuple(indexTuple: BitStringIndexTuple): Unit = {
     offerResultElement(BoundedResultElement(indexTuple.tid, indexTuple.bits))
   }
 

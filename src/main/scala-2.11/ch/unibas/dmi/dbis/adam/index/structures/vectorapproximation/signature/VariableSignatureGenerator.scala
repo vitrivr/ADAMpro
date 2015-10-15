@@ -12,7 +12,7 @@ import scala.collection.mutable.ListBuffer
  * Ivan Giangreco
  * September 2015
  */
-class VariableSignatureGenerator (val numberOfBitsPerDimension: Array[Int]) extends SignatureGenerator with Serializable {
+class VariableSignatureGenerator (numberOfBitsPerDimension: Array[Int]) extends SignatureGenerator with Serializable {
   var parNumberOfBitsPerDimension = numberOfBitsPerDimension.par //allows huge speedup!
   val numberOfDimensions: Int = numberOfBitsPerDimension.length
 
