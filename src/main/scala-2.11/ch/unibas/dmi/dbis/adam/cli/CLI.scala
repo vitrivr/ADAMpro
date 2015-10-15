@@ -5,7 +5,6 @@ import ch.unibas.dmi.dbis.adam.datatypes.Feature._
 import ch.unibas.dmi.dbis.adam.main.SparkStartup
 import ch.unibas.dmi.dbis.adam.query.distance.NormBasedDistanceFunction
 import ch.unibas.dmi.dbis.adam.storage.catalog.CatalogOperator
-import org.apache.spark.sql.Row
 import org.apache.spark.sql.types._
 
 import scala.tools.nsc.interpreter.ILoop
@@ -198,7 +197,7 @@ class CLI extends ILoop {
 
     //implicit conversion!
     val results = SeqQueryOp(tablename, query, k, NormBasedDistanceFunction(1))
-    Result.resultFromString(results.map(x => x.tid).mkString(", "))
+    Result.resultFromString(results.map(x => "(" + x.tid + "," + x.distance + ")").mkString("\n "))
   }
 
   /**
@@ -216,7 +215,7 @@ class CLI extends ILoop {
 
     //implicit conversion!
     val results =  IndexQueryOp(indexname, query, k, NormBasedDistanceFunction(1))
-    Result.resultFromString(results.map(x => x.tid).mkString(", "))
+    Result.resultFromString(results.map(x => "(" + x.tid + "," + x.distance + ")").mkString("\n "))
   }
 
 
