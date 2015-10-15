@@ -17,8 +17,8 @@ private[lsh] object LSHUtils {
    * @param f
    * @return
    */
-  @inline def hashFeature(f: WorkingVector, indexMetaData: LSHIndexMetaData): BitString[_] = {
-    val indices = indexMetaData.hashTables.map(ht => ht(f)).zipWithIndex.map{case(hash, idx) => int2Indices(hash, idx * 32)}.flatten
+  @inline def hashFeature(f: WorkingVector, indexMetaData: LSHIndexMetaData, m : Int = Int.MaxValue): BitString[_] = {
+    val indices = indexMetaData.hashTables.map(ht => ht(f,m)).zipWithIndex.map{case(hash, idx) => int2Indices(hash, idx * math.ceil(math.log(m) / math.log(2)).toInt + 1)}.flatten
     BitString.fromBitIndicesToSet(indices)
   }
 

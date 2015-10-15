@@ -24,7 +24,11 @@ sealed class Hasher(val functions: List[LSHashFunction]) extends Serializable {
    * @param v
    * @return
    */
-  def apply(v: WorkingVector): Int = {
-    functions.map(f => f.hash(v)).hashCode()
+  def apply(v: WorkingVector, m : Int = 0): Int = {
+    if ( m == 0){
+      functions.map(f => f.hash(v)).hashCode()
+    } else {
+      functions.map(f => f.hash(v)).hashCode() % m
+    }
   }
 }
