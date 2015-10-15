@@ -4,6 +4,7 @@ import ch.unibas.dmi.dbis.adam.cache.RDDCache
 import ch.unibas.dmi.dbis.adam.datatypes.Feature._
 import ch.unibas.dmi.dbis.adam.exception.IndexNotExistingException
 import ch.unibas.dmi.dbis.adam.index.Index._
+import ch.unibas.dmi.dbis.adam.index.structures.ecp.ECPIndex
 import ch.unibas.dmi.dbis.adam.index.structures.lsh.LSHIndex
 import ch.unibas.dmi.dbis.adam.index.structures.spectrallsh.SpectralLSHIndex
 import ch.unibas.dmi.dbis.adam.index.structures.vectorapproximation.VectorApproximationIndex
@@ -137,6 +138,7 @@ object Index {
       case "va" => VectorApproximationIndex(indexname, tablename, df, meta)
       case "lsh" => LSHIndex(indexname, tablename, df, meta)
       case "slsh" => SpectralLSHIndex(indexname, tablename, df, meta)
+      case "ecp" => ECPIndex(indexname, tablename, df, meta)
     }
   }
 

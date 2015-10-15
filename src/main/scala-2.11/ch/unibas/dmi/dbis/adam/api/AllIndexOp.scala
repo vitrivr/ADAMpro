@@ -18,5 +18,6 @@ object AllIndexOp {
     IndexOp(tablename, "lsh", Map[String, String]())
     IndexOp(tablename, "slsh", Map[String, String]())
     IndexOp(tablename, "va", Map[String, String]())
+    IndexOp(tablename, "ecp", Map[String, String]())
   }
 }

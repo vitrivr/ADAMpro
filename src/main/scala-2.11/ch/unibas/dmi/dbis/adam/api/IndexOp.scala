@@ -2,6 +2,7 @@ package ch.unibas.dmi.dbis.adam.api
 
 import ch.unibas.dmi.dbis.adam.datatypes.Feature.{VectorBase, WorkingVector, _}
 import ch.unibas.dmi.dbis.adam.index.Index.IndexTypeName
+import ch.unibas.dmi.dbis.adam.index.structures.ecp.ECPIndexer
 import ch.unibas.dmi.dbis.adam.index.structures.lsh.LSHIndexer
 import ch.unibas.dmi.dbis.adam.index.structures.spectrallsh.SpectralLSHIndexer
 import ch.unibas.dmi.dbis.adam.index.structures.vectorapproximation.{NewVectorApproximationIndexer, VectorApproximationIndexer}
@@ -32,6 +33,7 @@ object IndexOp {
       case "lsh" =>  LSHIndexer(properties, data)
       case "slsh" =>  SpectralLSHIndexer(properties, data)
       case "va" =>  VectorApproximationIndexer(properties, data)
+      case "ecp" =>  ECPIndexer(properties, data)
       case "nva" =>  NewVectorApproximationIndexer(properties, data)
     }
 
