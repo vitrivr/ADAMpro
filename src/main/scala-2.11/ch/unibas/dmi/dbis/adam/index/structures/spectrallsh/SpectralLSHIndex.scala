@@ -22,6 +22,8 @@ import scala.collection.immutable.HashSet
  */
 class SpectralLSHIndex(val indexname: IndexName, val tablename: TableName, protected val indexdata: DataFrame, private val indexMetaData: SpectralLSHIndexMetaData)
   extends Index[BitStringIndexTuple] {
+  override val indextypename: IndexTypeName = "slsh"
+  override val precise = false
 
   /**
    *
@@ -84,11 +86,6 @@ class SpectralLSHIndex(val indexname: IndexName, val tablename: TableName, prote
   override private[index] def getMetadata(): Serializable = {
     indexMetaData
   }
-
-  /**
-   *
-   */
-  override val indextypename: IndexTypeName = "slsh"
 }
 
 

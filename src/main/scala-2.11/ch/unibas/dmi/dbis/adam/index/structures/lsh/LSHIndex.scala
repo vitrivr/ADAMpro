@@ -21,6 +21,8 @@ import scala.collection.immutable.HashSet
  */
 class LSHIndex(val indexname: IndexName, val tablename: TableName, protected val indexdata: DataFrame, private val indexMetaData: LSHIndexMetaData)
   extends Index[BitStringIndexTuple] {
+  override val indextypename: IndexTypeName = "lsh"
+  override val precise = false
 
   /**
    *
@@ -83,11 +85,6 @@ class LSHIndex(val indexname: IndexName, val tablename: TableName, protected val
   override private[index] def getMetadata(): Serializable = {
     indexMetaData
   }
-
-  /**
-   *
-   */
-  override val indextypename: IndexTypeName = "lsh"
 }
 
 object LSHIndex {

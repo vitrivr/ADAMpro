@@ -5,7 +5,7 @@ import ch.unibas.dmi.dbis.adam.datatypes.bitString.BitString
 import ch.unibas.dmi.dbis.adam.index.Index._
 import ch.unibas.dmi.dbis.adam.index.structures.vectorapproximation.VectorApproximationIndex.{Bounds, Marks}
 import ch.unibas.dmi.dbis.adam.index.structures.vectorapproximation.results.VectorApproximationResultHandler
-import ch.unibas.dmi.dbis.adam.index.structures.vectorapproximation.signature.{FixedSignatureGenerator, VariableSignatureGenerator}
+import ch.unibas.dmi.dbis.adam.index.structures.vectorapproximation.signature.{VariableSignatureGenerator, FixedSignatureGenerator}
 import ch.unibas.dmi.dbis.adam.index.{BitStringIndexTuple, Index}
 import ch.unibas.dmi.dbis.adam.main.SparkStartup
 import ch.unibas.dmi.dbis.adam.query.distance.Distance._
@@ -27,6 +27,12 @@ import scala.collection.immutable.HashSet
  */
 class VectorApproximationIndex(val indexname : IndexName, val tablename : TableName, protected val indexdata: DataFrame, private val indexMetaData: VectorApproximationIndexMetaData)
   extends Index[BitStringIndexTuple] with Serializable {
+  override val indextypename: IndexTypeName = indexMetaData.signatureGenerator match {
+    case fsg : FixedSignatureGenerator => "fva"
+    case vsg : VariableSignatureGenerator => "nva"
+    case _ => "va"
+  }
+  override val precise = true
 
   /**
    *
@@ -42,6 +48,7 @@ class VectorApproximationIndex(val indexname : IndexName, val tablename : TableN
   /**
    *
    */
+  //TODO: change to Option
   override def scan(q: WorkingVector, options: Map[String, String], preselection : HashSet[TupleID] = null): HashSet[TupleID] = {
     val k = options("k").toInt
     val norm = options("norm").toInt
@@ -114,15 +121,6 @@ class VectorApproximationIndex(val indexname : IndexName, val tablename : TableN
    */
   override private[index] def getMetadata(): Serializable = {
     indexMetaData
-  }
-
-  /**
-   *
-   */
-  override val indextypename: IndexTypeName = indexMetaData.signatureGenerator match {
-    case fsg : FixedSignatureGenerator => "fva"
-    case vsg : VariableSignatureGenerator => "nva"
-    case _ => "va"
   }
 }
 

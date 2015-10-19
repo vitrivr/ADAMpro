@@ -36,11 +36,11 @@ object QueryHandler extends Logging {
    * @param tablename
    * @return
    */
-  def metadataQuery(where : Map[String, String], tablename: TableName): HashSet[TupleID] ={
+  def metadataQuery(where: Map[String, String], tablename: TableName): HashSet[TupleID] = {
     val filter = where.map(c => c._1 + " = " + c._2).mkString(" AND ")
     val res = metadataStorage.readTable(tablename).getData.filter(filter).map(r => r.getLong(0)).collect()
 
-    HashSet(res : _*)
+    HashSet(res: _*)
   }
 
 
@@ -50,12 +50,11 @@ object QueryHandler extends Logging {
    * @param tablename
    * @return
    */
-  def metadataQuery(where : String, tablename : TableName) : HashSet[TupleID] ={
+  def metadataQuery(where: String, tablename: TableName): HashSet[TupleID] = {
     val res = metadataStorage.readTable(tablename).getData.filter(where).map(r => r.getLong(0)).collect()
 
-    HashSet(res : _*)
+    HashSet(res: _*)
   }
-
 
 
   /**
@@ -66,7 +65,7 @@ object QueryHandler extends Logging {
    * @param tablename
    * @return
    */
-  def sequentialQuery(q: WorkingVector, distance : DistanceFunction, k : Int, tablename: TableName, preselection : HashSet[TupleID] = null): Seq[Result] = {
+  def sequentialQuery(q: WorkingVector, distance: DistanceFunction, k: Int, tablename: TableName, preselection: HashSet[TupleID] = null): Seq[Result] = {
     TableScanner(q, distance, k, tablename, preselection)
   }
 
@@ -79,10 +78,10 @@ object QueryHandler extends Logging {
    * @param options
    * @return
    */
-  def indexQuery(q: WorkingVector, distance : DistanceFunction, k : Int, indexname : IndexName, options : Map[String, String], preselection : HashSet[TupleID] = null): Seq[Result] = {
+  def indexQuery(q: WorkingVector, distance: DistanceFunction, k: Int, indexname: IndexName, options: Map[String, String], preselection: HashSet[TupleID] = null): Seq[Result] = {
     val onlyIndexResults = options.getOrElse("onlyindex", "false").toBoolean
 
-    if(!onlyIndexResults){
+    if (!onlyIndexResults) {
       indexAndTableScan(q, distance, k, indexname, options, preselection)
     } else {
       indexScanOnly(q, distance, k, indexname, options, preselection)
@@ -98,7 +97,7 @@ object QueryHandler extends Logging {
    * @param options
    * @return
    */
-  def indexAndTableScan(q: WorkingVector, distance : DistanceFunction, k : Int, indexname : IndexName, options : Map[String, String], preselection : HashSet[TupleID] = null): Seq[Result] = {
+  def indexAndTableScan(q: WorkingVector, distance: DistanceFunction, k: Int, indexname: IndexName, options: Map[String, String], preselection: HashSet[TupleID] = null): Seq[Result] = {
     val tablename = CatalogOperator.getIndexTableName(indexname)
 
     val tableFuture = Future {
@@ -120,7 +119,7 @@ object QueryHandler extends Logging {
    * @param options
    * @return
    */
-  def indexScanOnly(q: WorkingVector, distance : DistanceFunction, k : Int, indexname : IndexName, options : Map[String, String], preselection : HashSet[TupleID] = null): Seq[Result] = {
+  def indexScanOnly(q: WorkingVector, distance: DistanceFunction, k: Int, indexname: IndexName, options: Map[String, String], preselection: HashSet[TupleID] = null): Seq[Result] = {
     IndexScanner(q, distance, k, indexname, options, preselection).toList.map(tid => Result(-1, tid))
   }
 
@@ -131,31 +130,28 @@ object QueryHandler extends Logging {
    * @param k
    * @param tablename
    */
-  def progressiveQuery(q: WorkingVector, distance : NormBasedDistanceFunction, k : Int, tablename: TableName, onComplete : (ProgressiveQueryStatus, Seq[Result], Map[String, String]) => Unit, preselection : HashSet[TupleID] = null): Int = {
-    val indexes: Seq[IndexName] = Index.getIndexnames(tablename)
+  def progressiveQuery(q: WorkingVector, distance: NormBasedDistanceFunction, k: Int, tablename: TableName, onComplete: (ProgressiveQueryStatus.Value, Seq[Result], Map[String, String]) => Unit, preselection: HashSet[TupleID] = null): Int = {
+    val indexnames = Index.getIndexnames(tablename)
 
     val options = mMap[String, String]()
     options += "k" -> k.toString
     options += "norm" -> distance.n.toString
 
-    val status = new ProgressiveQueryStatus()
-    status.startAll(indexes)
-    status.start(tablename)
+    val tracker = new ProgressiveQueryStatusTracker()
+    val qid = java.util.UUID.randomUUID
 
-    val qid = java.util.UUID.randomUUID.toString
-
-    //TODO: // here we should actually keep the index information, especially on the level of onComplete: if the index returns exact information, we should stop the
-    //execution completely; if the index returns only approximate information we should keep the retrieving process running
-    indexes
-      .map{indexname =>
-        val indextypename = Index.retrieveIndex(indexname).indextypename
-        val info =  Map[String,String]("type" -> ("index: " + indextypename), "relation" -> tablename, "index" -> indexname, "qid" -> qid)
-        Future {indexQuery(q, distance, k, indexname, options.toMap)}.onComplete(x => {status.end(indexname); onComplete(status, x.get, info)})
+    //index scans
+    val indexScanFutures = indexnames.par.map { indexname =>
+      val isf = new IndexScanFuture(indexname, q, distance, k, options.toMap, onComplete, qid.toString, tracker)
     }
 
-    val info =  Map[String,String]("type" -> "sequential", "relation" -> tablename, "qid" -> qid)
-    Future{sequentialQuery(q, distance, k, tablename)}.onComplete(x => {status.end(tablename); onComplete(status, x.get, info)})
+    //sequential scan
+    val ssf = new SequentialScanFuture(tablename, q, distance, k, onComplete, qid.toString, tracker)
 
-    indexes.length + 1
+
+    //number of queries running (indexes + sequential)
+    indexnames.length + 1
   }
 }
+
+

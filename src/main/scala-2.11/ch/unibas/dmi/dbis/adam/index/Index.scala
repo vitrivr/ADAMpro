@@ -30,6 +30,7 @@ trait Index[A <: IndexTuple]{
   val indexname : IndexName
   val tablename : TableName
   val indextypename : IndexTypeName
+  val precise : Boolean
 
   protected val indexdata : DataFrame
 
@@ -48,12 +49,10 @@ trait Index[A <: IndexTuple]{
     }
   }
 
-
-
   private[index] def getMetadata : Serializable
-
   def scan(q: WorkingVector, options: Map[String, String], preselection : HashSet[TupleID] = null): HashSet[TupleID]
 }
+
 
 case class CacheableIndex(index : Index[_ <: IndexTuple])
 

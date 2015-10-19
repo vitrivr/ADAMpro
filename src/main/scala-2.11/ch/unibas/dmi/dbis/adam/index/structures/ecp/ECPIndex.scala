@@ -20,7 +20,7 @@ import scala.collection.mutable.ListBuffer
 class ECPIndex(val indexname: IndexName, val tablename: TableName, protected val indexdata: DataFrame, protected val indexMetaData : ECPIndexMetaData)
   extends Index[LongIndexTuple] {
   override val indextypename: IndexTypeName = "ecp"
-
+  override val precise = false
 
   /**
    *
