@@ -10,8 +10,10 @@ import ch.unibas.dmi.dbis.adam.query.distance.{DistanceFunction, NormBasedDistan
 import ch.unibas.dmi.dbis.adam.storage.catalog.CatalogOperator
 import ch.unibas.dmi.dbis.adam.table.Table
 import ch.unibas.dmi.dbis.adam.table.Table.TableName
+import ch.unibas.dmi.dbis.adam.table.Tuple.TupleID
 import org.apache.spark.Logging
 
+import scala.collection.immutable.HashSet
 import scala.collection.mutable.{Map => mMap}
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent._
@@ -25,7 +27,36 @@ import scala.concurrent.duration.Duration
  * August 2015
  */
 object QueryHandler extends Logging {
-  private val storage = SparkStartup.tableStorage
+  private val metadataStorage = SparkStartup.metadataStorage
+  private val tableStorage = SparkStartup.tableStorage
+
+  /**
+   *
+   * @param where
+   * @param tablename
+   * @return
+   */
+  def metadataQuery(where : Map[String, String], tablename: TableName): HashSet[TupleID] ={
+    val filter = where.map(c => c._1 + " = " + c._2).mkString(" AND ")
+    val res = metadataStorage.readTable(tablename).getData.filter(filter).map(r => r.getLong(0)).collect()
+
+    HashSet(res : _*)
+  }
+
+
+  /**
+   *
+   * @param where
+   * @param tablename
+   * @return
+   */
+  def metadataQuery(where : String, tablename : TableName) : HashSet[TupleID] ={
+    val res = metadataStorage.readTable(tablename).getData.filter(where).map(r => r.getLong(0)).collect()
+
+    HashSet(res : _*)
+  }
+
+
 
   /**
    *
@@ -35,8 +66,8 @@ object QueryHandler extends Logging {
    * @param tablename
    * @return
    */
-  def sequentialQuery(q: WorkingVector, distance : DistanceFunction, k : Int, tablename: TableName): Seq[Result] = {
-    TableScanner(q, distance, k, tablename)
+  def sequentialQuery(q: WorkingVector, distance : DistanceFunction, k : Int, tablename: TableName, preselection : HashSet[TupleID] = null): Seq[Result] = {
+    TableScanner(q, distance, k, tablename, preselection)
   }
 
   /**
@@ -48,13 +79,13 @@ object QueryHandler extends Logging {
    * @param options
    * @return
    */
-  def indexQuery(q: WorkingVector, distance : DistanceFunction, k : Int, indexname : IndexName, options : Map[String, String]): Seq[Result] = {
+  def indexQuery(q: WorkingVector, distance : DistanceFunction, k : Int, indexname : IndexName, options : Map[String, String], preselection : HashSet[TupleID] = null): Seq[Result] = {
     val onlyIndexResults = options.getOrElse("onlyindex", "false").toBoolean
 
     if(!onlyIndexResults){
-      indexAndTableScan(q, distance, k, indexname, options)
+      indexAndTableScan(q, distance, k, indexname, options, preselection)
     } else {
-      indexScanOnly(q, distance, k, indexname, options)
+      indexScanOnly(q, distance, k, indexname, options, preselection)
     }
   }
 
@@ -67,15 +98,14 @@ object QueryHandler extends Logging {
    * @param options
    * @return
    */
-  def indexAndTableScan(q: WorkingVector, distance : DistanceFunction, k : Int, indexname : IndexName, options : Map[String, String]): Seq[Result] = {
+  def indexAndTableScan(q: WorkingVector, distance : DistanceFunction, k : Int, indexname : IndexName, options : Map[String, String], preselection : HashSet[TupleID] = null): Seq[Result] = {
     val tablename = CatalogOperator.getIndexTableName(indexname)
 
     val tableFuture = Future {
       Table.retrieveTable(tablename)
     }
 
-    //TODO: change to long being passed from indexscanner
-    val tidList = IndexScanner(q, distance, k, indexname, options).map(_.toLong)
+    val tidList = IndexScanner(q, distance, k, indexname, options, preselection)
 
     val table = Await.result[Table](tableFuture, Duration(100, TimeUnit.SECONDS))
     TableScanner(table, q, distance, k, tidList)
@@ -90,8 +120,8 @@ object QueryHandler extends Logging {
    * @param options
    * @return
    */
-  def indexScanOnly(q: WorkingVector, distance : DistanceFunction, k : Int, indexname : IndexName, options : Map[String, String]): Seq[Result] = {
-    IndexScanner(q, distance, k, indexname, options).toList.map(tid => Result(-1, tid))
+  def indexScanOnly(q: WorkingVector, distance : DistanceFunction, k : Int, indexname : IndexName, options : Map[String, String], preselection : HashSet[TupleID] = null): Seq[Result] = {
+    IndexScanner(q, distance, k, indexname, options, preselection).toList.map(tid => Result(-1, tid))
   }
 
   /**
@@ -101,7 +131,7 @@ object QueryHandler extends Logging {
    * @param k
    * @param tablename
    */
-  def progressiveQuery(q: WorkingVector, distance : NormBasedDistanceFunction, k : Int, tablename: TableName, onComplete : (ProgressiveQueryStatus, Seq[Result], Map[String, String]) => Unit): Int = {
+  def progressiveQuery(q: WorkingVector, distance : NormBasedDistanceFunction, k : Int, tablename: TableName, onComplete : (ProgressiveQueryStatus, Seq[Result], Map[String, String]) => Unit, preselection : HashSet[TupleID] = null): Int = {
     val indexes: Seq[IndexName] = Index.getIndexnames(tablename)
 
     val options = mMap[String, String]()

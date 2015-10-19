@@ -5,7 +5,7 @@ import ch.unibas.dmi.dbis.adam.datatypes.Feature
 import Feature.{VectorBase, _}
 import ch.unibas.dmi.dbis.adam.datatypes.bitString.BitString
 import ch.unibas.dmi.dbis.adam.index.Index._
-import ch.unibas.dmi.dbis.adam.index.{BitStringIndexTuple, IndexerTuple, Index, IndexGenerator}
+import ch.unibas.dmi.dbis.adam.index._
 import ch.unibas.dmi.dbis.adam.main.SparkStartup
 import ch.unibas.dmi.dbis.adam.table.Table._
 import org.apache.spark.adam.ADAMSamplingUtils
@@ -28,7 +28,7 @@ class SpectralLSHIndexer(nbits : Int, trainingSize : Int) extends IndexGenerator
    * @param data
    * @return
    */
-  override def index(indexname : IndexName, tablename : TableName, data: RDD[IndexerTuple[WorkingVector]]): Index = {
+  override def index(indexname : IndexName, tablename : TableName, data: RDD[IndexerTuple[WorkingVector]]): Index[_ <: IndexTuple] = {
     val indexMetaData = train(data)
 
     val indexdata = data.map(

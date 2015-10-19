@@ -26,29 +26,30 @@ import scala.collection.immutable.HashSet
  * August 2015
  */
 class VectorApproximationIndex(val indexname : IndexName, val tablename : TableName, protected val indexdata: DataFrame, private val indexMetaData: VectorApproximationIndexMetaData)
-  extends Index with Serializable {
+  extends Index[BitStringIndexTuple] with Serializable {
 
   /**
    *
    * @return
    */
-  override protected lazy val indextuples : RDD[BitStringIndexTuple] = {
+  override protected def indexToTuple : RDD[BitStringIndexTuple] = {
     indexdata
-      .map{ tuple =>
-      BitStringIndexTuple(tuple.getLong(0), tuple.getAs[BitString[_]](1)) }
+      .map { tuple =>
+      BitStringIndexTuple(tuple.getLong(0), tuple.getAs[BitString[_]](1))
+    }
   }
 
   /**
    *
    */
-  override def scan(q: WorkingVector, options: Map[String, String]): HashSet[TupleID] = {
+  override def scan(q: WorkingVector, options: Map[String, String], preselection : HashSet[TupleID] = null): HashSet[TupleID] = {
     val k = options("k").toInt
     val norm = options("norm").toInt
     
     val (lbounds, ubounds) = computeBounds(q, indexMetaData.marks, new NormBasedDistanceFunction(norm))
 
     SparkStartup.sc.setLocalProperty("spark.scheduler.pool", "index")
-    val results = SparkStartup.sc.runJob(indextuples, (context : TaskContext, tuplesIt : Iterator[BitStringIndexTuple]) => {
+    val results = SparkStartup.sc.runJob(getIndexTuples(preselection), (context : TaskContext, tuplesIt : Iterator[BitStringIndexTuple]) => {
       val localRh = new VectorApproximationResultHandler(k, lbounds, ubounds, indexMetaData.signatureGenerator)
       localRh.offerIndexTuple(tuplesIt.par())
       localRh.results.toSeq

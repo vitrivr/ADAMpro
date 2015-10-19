@@ -16,4 +16,4 @@ import ch.unibas.dmi.dbis.adam.query.distance.NormBasedDistanceFunction
  * @param leaders
  * @param distance
  */
-private[ecp] case class ECPIndexMetaData(leaders : Array[IndexerTuple[WorkingVector]], distance : NormBasedDistanceFunction) {}
+private[ecp] case class ECPIndexMetaData(leaders : Seq[IndexerTuple[WorkingVector]], distance : NormBasedDistanceFunction) {}

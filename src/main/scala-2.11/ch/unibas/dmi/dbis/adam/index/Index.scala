@@ -26,19 +26,36 @@ import scala.util.Random
  * Ivan Giangreco
  * August 2015
  */
-trait Index{
+trait Index[A <: IndexTuple]{
   val indexname : IndexName
   val tablename : TableName
   val indextypename : IndexTypeName
+
   protected val indexdata : DataFrame
-  protected val indextuples : RDD[_]
+
+  protected def indexToTuple : RDD[A]
+
+
+  protected def getIndexTuples(preselection : HashSet[TupleID] = null) : RDD[A] = {
+    val res = indexToTuple
+
+    if(preselection != null){
+      res.filter(r => {
+        preselection.contains(r.tid)
+      })
+    } else {
+      res
+    }
+  }
+
+
 
   private[index] def getMetadata : Serializable
 
-  def scan(q: WorkingVector, options: Map[String, String]): HashSet[TupleID]
+  def scan(q: WorkingVector, options: Map[String, String], preselection : HashSet[TupleID] = null): HashSet[TupleID]
 }
 
-case class CacheableIndex(index : Index)
+case class CacheableIndex(index : Index[_ <: IndexTuple])
 
 object Index {
   type IndexName = String
@@ -52,7 +69,7 @@ object Index {
    * @param indexgenerator
    * @return
    */
-  def createIndex(table : Table, indexgenerator : IndexGenerator) : Index = {
+  def createIndex(table : Table, indexgenerator : IndexGenerator) :  Index[_ <: IndexTuple] = {
     val indexname = createIndexName(table.tablename, indexgenerator.indextypename)
     val rdd: RDD[IndexerTuple[WorkingVector]] = table.rows.map { x => IndexerTuple(x.getLong(0), x.getSeq[VectorBase](1) : WorkingVector) }
     val index = indexgenerator.index(indexname, table.tablename, rdd)
@@ -110,7 +127,7 @@ object Index {
    * @param indexname
    * @return
    */
-  def retrieveIndex(indexname : IndexName) : Index = {
+  def retrieveIndex(indexname : IndexName) :  Index[_ <: IndexTuple] = {
     if(!existsIndex(indexname)){
       throw new IndexNotExistingException()
     }
@@ -127,7 +144,7 @@ object Index {
    * @param indexname
    * @return
    */
-  private def loadCacheMissedIndex(indexname : IndexName) : Index = {
+  private def loadCacheMissedIndex(indexname : IndexName) : Index[_ <: IndexTuple] = {
     val df = storage.readIndex(indexname)
     val tablename = CatalogOperator.getIndexTableName(indexname)
     val meta = CatalogOperator.getIndexMeta(indexname)
@@ -150,13 +167,13 @@ object Index {
   def getCacheable(indexname : IndexName) : CacheableIndex = {
     val index = retrieveIndex(indexname)
 
-    index.indextuples
+    index.getIndexTuples()
       .setName(indexname)
       .persist(StorageLevel.MEMORY_AND_DISK)
 
       //.repartition(Startup.config.partitions) //TODO: loosing persistence information - bug?
 
-    index.indextuples.collect()
+    index.getIndexTuples().collect()
 
     CacheableIndex(index)
   }

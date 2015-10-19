@@ -21,13 +21,13 @@ import scala.collection.immutable.HashSet
  * August 2015
  */
 class SpectralLSHIndex(val indexname: IndexName, val tablename: TableName, protected val indexdata: DataFrame, private val indexMetaData: SpectralLSHIndexMetaData)
-  extends Index {
+  extends Index[BitStringIndexTuple] {
 
   /**
    *
    * @return
    */
-    override protected lazy val indextuples : RDD[BitStringIndexTuple] = {
+  override protected def indexToTuple : RDD[BitStringIndexTuple] = {
     indexdata
       .map { tuple =>
       BitStringIndexTuple(tuple.getLong(0), tuple.getAs[BitString[_]](1))
@@ -40,7 +40,7 @@ class SpectralLSHIndex(val indexname: IndexName, val tablename: TableName, prote
    * @param options
    * @return
    */
-  override def scan(q: WorkingVector, options: Map[String, String]): HashSet[TupleID] = {
+  override def scan(q: WorkingVector, options: Map[String, String], preselection : HashSet[TupleID] = null): HashSet[TupleID] = {
     val k = options("k").toInt
     val numOfQueries = options.getOrElse("numOfQ", "3").toInt
 
@@ -48,7 +48,7 @@ class SpectralLSHIndex(val indexname: IndexName, val tablename: TableName, prote
     val originalQuery = SpectralLSHUtils.hashFeature(q, indexMetaData)
     val queries = (List.fill(numOfQueries)(SpectralLSHUtils.hashFeature(q.move(indexMetaData.radius), indexMetaData)) ::: List(originalQuery)).par
 
-    val it = indextuples
+    val it = getIndexTuples(preselection)
       .mapPartitions(tuplesIt => {
       val localRh = new SpectralLSHResultHandler(k)
 
@@ -59,7 +59,7 @@ class SpectralLSHIndex(val indexname: IndexName, val tablename: TableName, prote
         var score = 0
         while (i < queries.length) {
           val query = queries(i)
-          score += tuple.bits.intersectionCount(query)
+          score += tuple.value.intersectionCount(query)
           i += 1
         }
 

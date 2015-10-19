@@ -4,7 +4,7 @@ import ch.unibas.dmi.dbis.adam.storage.components.LazyTableStorage
 import ch.unibas.dmi.dbis.adam.table.Table.TableName
 import ch.unibas.dmi.dbis.adam.table.Tuple._
 import org.apache.spark.rdd.RDD
-import org.apache.spark.sql.Row
+import org.apache.spark.sql.{DataFrame, Row}
 
 import scala.collection.immutable.HashSet
 
@@ -38,7 +38,7 @@ case class LazyTable(tablename : TableName, storage : LazyTableStorage)  extends
    * @param filter
    * @return
    */
-  override def rowsForKeys(filter: HashSet[TupleID]): RDD[Tuple] = storage.readFilteredTable(tablename, filter).map(r => (r : Tuple))
+  override def tuplesForKeys(filter: HashSet[TupleID]): RDD[Tuple] = storage.readFilteredTable(tablename, filter).map(r => (r : Tuple))
 
   /**
    *
@@ -52,4 +52,10 @@ case class LazyTable(tablename : TableName, storage : LazyTableStorage)  extends
    * @return
    */
   override def show(n: Int): Array[Row] = ???
+
+  /**
+   *
+   * @return
+   */
+  override def getData: DataFrame = ???
 }

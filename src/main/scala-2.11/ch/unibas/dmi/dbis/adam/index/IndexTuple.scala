@@ -9,10 +9,12 @@ import ch.unibas.dmi.dbis.adam.table.Tuple.TupleID
  * Ivan Giangreco
  * August 2015
  */
-case class IndexTuple(tid: TupleID)
+abstract class IndexTuple{
+  val tid: TupleID
+}
 
-case class BitStringIndexTuple(tid: TupleID, bits: BitString[_])
+case class BitStringIndexTuple(tid: TupleID, value : BitString[_]) extends IndexTuple
 
-case class IntIndexTuple(tid: TupleID, bits: Int)
+case class IntIndexTuple(tid: TupleID, value: Int) extends IndexTuple
 
-case class LongIndexTuple(tid: TupleID, bits: Long)
+case class LongIndexTuple(tid: TupleID, value : Long) extends IndexTuple

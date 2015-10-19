@@ -28,7 +28,7 @@ private[vectorapproximation] class VectorApproximationResultHandler(k: Int, lbou
   def offerIndexTuple(it: Iterator[BitStringIndexTuple]): Unit = {
     while (it.hasNext) {
       val indexTuple = it.next()
-      val res = BoundedResultElement(indexTuple.tid, indexTuple.bits)
+      val res = BoundedResultElement(indexTuple.tid, indexTuple.value)
       if (res.lbound < max || queue.size < k) {
         ls.+=(res)
         queue.add(res.ubound)
@@ -43,7 +43,7 @@ private[vectorapproximation] class VectorApproximationResultHandler(k: Int, lbou
    * @param indexTuple
    */
   def offerIndexTuple(indexTuple: BitStringIndexTuple): Unit = {
-    offerResultElement(BoundedResultElement(indexTuple.tid, indexTuple.bits))
+    offerResultElement(BoundedResultElement(indexTuple.tid, indexTuple.value))
   }
 
 

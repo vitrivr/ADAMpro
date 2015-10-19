@@ -79,7 +79,11 @@ object TableScanner {
   def apply(table : Table, q: WorkingVector, distance : DistanceFunction, k : Int, filter: HashSet[Long]): Seq[Result] = {
     SparkStartup.sc.setLocalProperty("spark.scheduler.pool", "index")
 
-    val data = table.rowsForKeys(filter).collect()
+    val data = if(filter != null) {
+      table.tuplesForKeys(filter).collect()
+    } else {
+      table.tuples.collect()
+    }
 
     val it = data.par.iterator
 

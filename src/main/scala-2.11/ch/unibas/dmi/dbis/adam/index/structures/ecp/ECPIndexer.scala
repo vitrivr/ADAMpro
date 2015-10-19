@@ -24,20 +24,20 @@ class ECPIndexer(distance : NormBasedDistanceFunction) extends IndexGenerator wi
    * @param data
    * @return
    */
-  override def index(indexname: IndexName, tablename: TableName, data: RDD[IndexerTuple[WorkingVector]]): Index = {
+  override def index(indexname: IndexName, tablename: TableName, data: RDD[IndexerTuple[WorkingVector]]): Index[_ <: IndexTuple] = {
     val n = data.countApprox(5000).getFinalValue().mean.toInt
-    val leaders: Array[IndexerTuple[WorkingVector]] = data.takeSample(true, n)
+    val leaders = data.takeSample(true, math.sqrt(n).toInt)
 
     val indexdata = data.map(datum => {
         val minTID = leaders.map({ l =>
           (l.tid, distance.apply(datum.value, l.value))
         }).minBy(_._2)._1
 
-      LongIndexTuple(datum.tid, minTID)
+        LongIndexTuple(datum.tid, minTID)
       })
 
     import SparkStartup.sqlContext.implicits._
-    new ECPIndex(indexname, tablename, indexdata.toDF, ECPIndexMetaData(leaders, distance))
+    new ECPIndex(indexname, tablename, indexdata.toDF, ECPIndexMetaData(leaders.toArray.toSeq, distance))
   }
 }
 

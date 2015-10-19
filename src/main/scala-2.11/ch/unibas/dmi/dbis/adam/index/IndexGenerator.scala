@@ -17,5 +17,5 @@ trait IndexGenerator {
   /**
    *
    */
-  def index(indexname : IndexName, tablename : TableName, data: RDD[IndexerTuple[WorkingVector]]): Index
+  def index(indexname : IndexName, tablename : TableName, data: RDD[IndexerTuple[WorkingVector]]):  Index[_ <: IndexTuple]
 }

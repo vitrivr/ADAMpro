@@ -20,7 +20,7 @@ class LSHIndexer(hashFamily : String, numHashTables : Int, numHashes : Int, dist
    * @param data
    * @return
    */
-  override def index(indexname : IndexName, tablename : TableName, data: RDD[IndexerTuple[WorkingVector]]): Index = {
+  override def index(indexname : IndexName, tablename : TableName, data: RDD[IndexerTuple[WorkingVector]]): Index[_ <: IndexTuple] = {
     val indexMetaData = train(data)
 
     val indexdata = data.map(

@@ -17,7 +17,8 @@ import scala.collection.mutable.ListBuffer
  * Ivan Giangreco
  * October 2015
  */
-class ECPIndex(val indexname: IndexName, val tablename: TableName, protected val indexdata: DataFrame, protected val indexMetaData : ECPIndexMetaData) extends Index {
+class ECPIndex(val indexname: IndexName, val tablename: TableName, protected val indexdata: DataFrame, protected val indexMetaData : ECPIndexMetaData)
+  extends Index[LongIndexTuple] {
   override val indextypename: IndexTypeName = "ecp"
 
 
@@ -25,7 +26,7 @@ class ECPIndex(val indexname: IndexName, val tablename: TableName, protected val
    *
    * @return
    */
-  override protected lazy val indextuples: RDD[LongIndexTuple] = {
+  override protected def indexToTuple : RDD[LongIndexTuple] = {
     indexdata
       .map { tuple =>
       LongIndexTuple(tuple.getLong(0), tuple.getLong(1))
@@ -38,7 +39,7 @@ class ECPIndex(val indexname: IndexName, val tablename: TableName, protected val
    * @param options
    * @return
    */
-  override def scan(q: WorkingVector, options: Map[String, String]): HashSet[TupleID] = {
+  override def scan(q: WorkingVector, options: Map[String, String], preselection : HashSet[TupleID] = null): HashSet[TupleID] = {
     val k = options("k").toInt
 
     val centroids = indexMetaData.leaders.map(l => {
@@ -48,7 +49,7 @@ class ECPIndex(val indexname: IndexName, val tablename: TableName, protected val
     var results = ListBuffer[TupleID]()
     var i = 0
     while(i < centroids.length && results.length < k){
-      results ++= indextuples.filter(_.bits == centroids(i)).map(_.tid).collect()
+      results ++= getIndexTuples(preselection).filter(_.value == centroids(i)).map(_.tid).collect()
       i += 1
     }
 

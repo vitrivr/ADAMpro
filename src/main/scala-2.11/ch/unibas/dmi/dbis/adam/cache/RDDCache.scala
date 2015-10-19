@@ -1,7 +1,7 @@
 package ch.unibas.dmi.dbis.adam.cache
 
 import ch.unibas.dmi.dbis.adam.index.Index.IndexName
-import ch.unibas.dmi.dbis.adam.index.{CacheableIndex, Index}
+import ch.unibas.dmi.dbis.adam.index.{IndexTuple, CacheableIndex, Index}
 import ch.unibas.dmi.dbis.adam.table.Table.TableName
 import ch.unibas.dmi.dbis.adam.table.{CacheableTable, Table}
 
@@ -17,7 +17,7 @@ object RDDCache {
   //TODO: Refactor
 
   val tableCache = mMap[TableName, Table]()
-  val indexCache = mMap[IndexName, Index]()
+  val indexCache = mMap[IndexName,  Index[_ <: IndexTuple]]()
 
   /**
    *
@@ -45,7 +45,7 @@ object RDDCache {
    * @param indexname
    * @return
    */
-  def getIndex(indexname : IndexName) : Index = {
+  def getIndex(indexname : IndexName) :  Index[_ <: IndexTuple] = {
     indexCache.getOrElse(indexname, null)
   }
 

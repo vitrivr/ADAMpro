@@ -37,7 +37,7 @@ case class DefaultTable(tablename : TableName, data : DataFrame) extends Table{
    * @param filter
    * @return
    */
-  override def rowsForKeys(filter: HashSet[Long]): RDD[Tuple] = {
+  override def tuplesForKeys(filter: HashSet[Long]): RDD[Tuple] = {
     tuples.filter(tuple => filter.contains(tuple.tid.toInt))
   }
 
@@ -52,4 +52,10 @@ case class DefaultTable(tablename : TableName, data : DataFrame) extends Table{
    * @return
    */
   override def tuples = data.rdd.map(row => (row : Tuple))
+
+  /**
+   *
+   * @return
+   */
+  override def getData: DataFrame = data
 }

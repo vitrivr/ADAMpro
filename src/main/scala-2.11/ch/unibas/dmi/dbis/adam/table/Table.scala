@@ -29,10 +29,12 @@ abstract class Table{
   def show() : Array[Row]
   def show(n : Int) : Array[Row]
 
-  def rowsForKeys(filter: HashSet[Long]): RDD[Tuple]
-
   def rows : RDD[Row]
+
   def tuples  : RDD[Tuple]
+  def tuplesForKeys(filter: HashSet[Long]): RDD[Tuple]
+
+  def getData : DataFrame
 }
 
 
