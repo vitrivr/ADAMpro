@@ -28,7 +28,7 @@ class ECPIndex(val indexname: IndexName, val tablename: TableName, protected val
   override protected lazy val indextuples: RDD[LongIndexTuple] = {
     indexdata
       .map { tuple =>
-      LongIndexTuple(tuple.getLong(0), tuple.getLong(0))
+      LongIndexTuple(tuple.getLong(0), tuple.getLong(1))
     }
   }
 
