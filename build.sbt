@@ -11,6 +11,8 @@ resolvers ++= Seq(
   "Sonatype Releases" at "https://oss.sonatype.org/content/repositories/releases/",
   "spray repo" at "http://repo.spray.io"
 )
+resolvers += Resolver.sonatypeRepo("snapshots")
+
 
 //libs
 libraryDependencies ++= Seq(
@@ -32,11 +34,14 @@ libraryDependencies ++= Seq(
   "org.json4s"             %%  "json4s-native"          % "3.2.11",
   "org.slf4j"              %   "slf4j-nop"              % "1.7.12",
   "com.databricks"         %%  "spark-avro"             % "2.0.1",
-  "org.iq80.leveldb" % "leveldb" % "0.7",
-  "com.timgroup" %% "iterata" % "0.1.3",
-  "com.datastax.spark" %% "spark-cassandra-connector" % "1.5.0-M1"
+  "org.iq80.leveldb"       %   "leveldb"                % "0.7",
+  "com.timgroup"           %%  "iterata"                % "0.1.3",
+  "com.datastax.spark"     %%  "spark-cassandra-connector" % "1.5.0-M1"
 )
 
 
 mainClass := Some("ch.unibas.dmi.dbis.adam.main.Startup")
 unmanagedResourceDirectories in Compile += baseDirectory.value / "conf"
+
+
+//scalacOptions += "-Xlog-implicits"
