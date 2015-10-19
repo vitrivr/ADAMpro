@@ -80,7 +80,7 @@ object EvaluationOp {
    * @param options
    * @return
    */
-  def onComplete(startTime : Long, dbSize : Int, vecSize : Int)(status : ProgressiveQueryStatus, results : Seq[Result], options : Map[String, String]) {
+  def onComplete(startTime : Long, dbSize : Int, vecSize : Int)(status : ProgressiveQueryStatus.Value, results : Seq[Result], options : Map[String, String]) {
     pw.write(
       options.getOrElse("qid", "") + "," +
         vecSize + "," +
@@ -92,7 +92,7 @@ object EvaluationOp {
         "\n")
     pw.flush()
 
-    if(status.allEnded){
+    if(status == ProgressiveQueryStatus.FINISHED){
       println("Completed: data_" + dbSize + "_" + vecSize)
       Thread.sleep(5000L)
       nextExperiment()

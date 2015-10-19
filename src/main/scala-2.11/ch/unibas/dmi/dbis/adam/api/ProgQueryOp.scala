@@ -19,7 +19,7 @@ object ProgQueryOp {
    * @param k
    * @param distance
    */
-  def apply(tablename: TableName, query : WorkingVector, k : Int, distance : NormBasedDistanceFunction, onComplete : (ProgressiveQueryStatus, Seq[Result], Map[String, String]) => Unit) : Int = {
+  def apply(tablename: TableName, query : WorkingVector, k : Int, distance : NormBasedDistanceFunction, onComplete : (ProgressiveQueryStatus.Value, Seq[Result], Map[String, String]) => Unit) : Int = {
     QueryHandler.progressiveQuery(query, distance, k, tablename, onComplete)
   }
 }
