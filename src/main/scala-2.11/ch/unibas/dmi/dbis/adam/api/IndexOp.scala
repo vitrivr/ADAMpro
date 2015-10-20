@@ -2,6 +2,7 @@ package ch.unibas.dmi.dbis.adam.api
 
 import ch.unibas.dmi.dbis.adam.datatypes.Feature.{VectorBase, WorkingVector, _}
 import ch.unibas.dmi.dbis.adam.index.Index.IndexTypeName
+import ch.unibas.dmi.dbis.adam.index.structures.IndexStructures
 import ch.unibas.dmi.dbis.adam.index.structures.ecp.ECPIndexer
 import ch.unibas.dmi.dbis.adam.index.structures.lsh.LSHIndexer
 import ch.unibas.dmi.dbis.adam.index.structures.spectrallsh.SpectralLSHIndexer
@@ -21,22 +22,33 @@ object IndexOp {
   /**
    *
    * @param tablename
+   * @param indextype
+   * @param properties
    */
-  def apply(tablename : TableName, indextype : IndexTypeName, properties : Map[String, String]): Unit = {
+  def apply(tablename : TableName, indextype : String, properties : Map[String, String]): Unit = {
+    val indextypename = IndexStructures.withName(indextype)
+    apply(tablename, indextypename, properties)
+  }
+
+  /**
+   *
+   * @param tablename
+   * @param indextypename
+   * @param properties
+   */
+  def apply(tablename : TableName, indextypename : IndexTypeName, properties : Map[String, String]): Unit = {
     val table = Table.retrieveTable(tablename)
 
     //TODO: change this so that indices do not have to look at data before creation
     val data: RDD[IndexerTuple[WorkingVector]] = table.rows.map { x => IndexerTuple(x.getLong(0), x.getSeq[VectorBase](1) : WorkingVector) }
 
-    //TODO: replace by enum
-    val generator : IndexGenerator = indextype match {
-      case "lsh" =>  LSHIndexer(properties, data)
-      case "slsh" =>  SpectralLSHIndexer(properties, data)
-      case "va" =>  VectorApproximationIndexer(properties, data)
-      case "ecp" =>  ECPIndexer(properties, data)
-      case "nva" =>  NewVectorApproximationIndexer(properties, data)
+    val generator : IndexGenerator = indextypename match {
+      case IndexStructures.ECP => ECPIndexer(properties, data)
+      case IndexStructures.LSH => LSHIndexer(properties, data)
+      case IndexStructures.SH => SpectralLSHIndexer(properties, data)
+      case IndexStructures.VAF => VectorApproximationIndexer(properties, data)
+      case IndexStructures.VAV => NewVectorApproximationIndexer(properties, data)
     }
-
 
     Index.createIndex(table, generator)
   }

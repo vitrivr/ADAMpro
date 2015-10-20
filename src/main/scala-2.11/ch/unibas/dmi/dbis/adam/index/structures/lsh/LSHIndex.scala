@@ -4,6 +4,7 @@ import ch.unibas.dmi.dbis.adam.datatypes.Feature._
 import ch.unibas.dmi.dbis.adam.datatypes.MovableFeature
 import ch.unibas.dmi.dbis.adam.datatypes.bitString.BitString
 import ch.unibas.dmi.dbis.adam.index.Index._
+import ch.unibas.dmi.dbis.adam.index.structures.IndexStructures
 import ch.unibas.dmi.dbis.adam.index.structures.spectrallsh.results.SpectralLSHResultHandler
 import ch.unibas.dmi.dbis.adam.index.{BitStringIndexTuple, Index}
 import ch.unibas.dmi.dbis.adam.main.SparkStartup
@@ -23,7 +24,7 @@ import scala.collection.immutable.HashSet
  */
 class LSHIndex(val indexname: IndexName, val tablename: TableName, protected val indexdata: DataFrame, private val indexMetaData: LSHIndexMetaData)
   extends Index[BitStringIndexTuple] {
-  override val indextypename: IndexTypeName = "lsh"
+  override val indextypename: IndexTypeName = IndexStructures.LSH
   override val precise = false
 
   /**
@@ -52,7 +53,7 @@ class LSHIndex(val indexname: IndexName, val tablename: TableName, protected val
     val queries = (List.fill(numOfQueries)(LSHUtils.hashFeature(q.move(indexMetaData.radius), indexMetaData)) ::: List(originalQuery)).par
 
     SparkStartup.sc.setLocalProperty("spark.scheduler.pool", "index")
-    SparkStartup.sc.setJobGroup(queryID.getOrElse(""), indextypename, true)
+    SparkStartup.sc.setJobGroup(queryID.getOrElse(""), indextypename.toString, true)
 
     val results = SparkStartup.sc.runJob(getIndexTuples(filter), (context : TaskContext, tuplesIt : Iterator[BitStringIndexTuple]) => {
       val localRh = new SpectralLSHResultHandler(k)

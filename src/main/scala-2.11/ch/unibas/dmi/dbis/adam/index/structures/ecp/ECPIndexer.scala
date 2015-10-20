@@ -3,6 +3,7 @@ package ch.unibas.dmi.dbis.adam.index.structures.ecp
 import ch.unibas.dmi.dbis.adam.datatypes.Feature.WorkingVector
 import ch.unibas.dmi.dbis.adam.index.Index.{IndexName, IndexTypeName}
 import ch.unibas.dmi.dbis.adam.index._
+import ch.unibas.dmi.dbis.adam.index.structures.IndexStructures
 import ch.unibas.dmi.dbis.adam.main.SparkStartup
 import ch.unibas.dmi.dbis.adam.query.distance.NormBasedDistanceFunction
 import ch.unibas.dmi.dbis.adam.table.Table.TableName
@@ -15,7 +16,7 @@ import org.apache.spark.rdd.RDD
  * October 2015
  */
 class ECPIndexer(distance : NormBasedDistanceFunction) extends IndexGenerator with Serializable {
-  override def indextypename: IndexTypeName = "ecp"
+  override val indextypename: IndexTypeName = IndexStructures.ECP
 
   /**
    *

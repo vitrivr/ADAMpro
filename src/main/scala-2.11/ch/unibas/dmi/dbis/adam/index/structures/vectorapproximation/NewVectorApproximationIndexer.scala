@@ -3,6 +3,7 @@ package ch.unibas.dmi.dbis.adam.index.structures.vectorapproximation
 import breeze.linalg._
 import ch.unibas.dmi.dbis.adam.datatypes.Feature._
 import ch.unibas.dmi.dbis.adam.index.Index._
+import ch.unibas.dmi.dbis.adam.index.structures.IndexStructures
 import ch.unibas.dmi.dbis.adam.index.structures.vectorapproximation.marks.{EquidistantMarksGenerator, EquifrequentMarksGenerator, MarksGenerator}
 import ch.unibas.dmi.dbis.adam.index.structures.vectorapproximation.signature.VariableSignatureGenerator
 import ch.unibas.dmi.dbis.adam.index.{IndexerTuple, IndexGenerator, BitStringIndexTuple}
@@ -18,7 +19,7 @@ import org.apache.spark.rdd.RDD
  * September 2015
  */
 class NewVectorApproximationIndexer (nbits : Int, marksGenerator: MarksGenerator, trainingSize : Int) extends IndexGenerator with Serializable {
-  override val indextypename: String = "va"
+  override val indextypename: IndexTypeName = IndexStructures.VAV
 
   /**
    *

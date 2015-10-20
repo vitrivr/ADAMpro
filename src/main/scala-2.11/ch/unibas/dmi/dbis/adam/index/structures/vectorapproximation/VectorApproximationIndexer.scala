@@ -2,6 +2,7 @@ package ch.unibas.dmi.dbis.adam.index.structures.vectorapproximation
 
 import ch.unibas.dmi.dbis.adam.datatypes.Feature.{VectorBase, WorkingVector}
 import ch.unibas.dmi.dbis.adam.index.Index._
+import ch.unibas.dmi.dbis.adam.index.structures.IndexStructures
 import ch.unibas.dmi.dbis.adam.index.structures.vectorapproximation.marks.{EquidistantMarksGenerator, EquifrequentMarksGenerator, MarksGenerator}
 import ch.unibas.dmi.dbis.adam.index.structures.vectorapproximation.signature.FixedSignatureGenerator
 import ch.unibas.dmi.dbis.adam.index.{IndexerTuple, IndexGenerator, BitStringIndexTuple}
@@ -15,7 +16,7 @@ import org.apache.spark.rdd.RDD
  * 
  */
 class VectorApproximationIndexer(maxMarks: Int = 64, marksGenerator: MarksGenerator, bitsPerDimension : Int, trainingSize : Int) extends IndexGenerator with Serializable {
-  override val indextypename: String = "va"
+  override val indextypename: IndexTypeName = IndexStructures.VAF
 
   /**
    * 

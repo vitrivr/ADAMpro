@@ -3,6 +3,7 @@ package ch.unibas.dmi.dbis.adam.index.structures.vectorapproximation
 import ch.unibas.dmi.dbis.adam.datatypes.Feature._
 import ch.unibas.dmi.dbis.adam.datatypes.bitString.BitString
 import ch.unibas.dmi.dbis.adam.index.Index._
+import ch.unibas.dmi.dbis.adam.index.structures.IndexStructures
 import ch.unibas.dmi.dbis.adam.index.structures.vectorapproximation.VectorApproximationIndex.{Bounds, Marks}
 import ch.unibas.dmi.dbis.adam.index.structures.vectorapproximation.results.VectorApproximationResultHandler
 import ch.unibas.dmi.dbis.adam.index.structures.vectorapproximation.signature.{VariableSignatureGenerator, FixedSignatureGenerator}
@@ -28,9 +29,8 @@ import scala.collection.immutable.HashSet
 class VectorApproximationIndex(val indexname : IndexName, val tablename : TableName, protected val indexdata: DataFrame, private val indexMetaData: VectorApproximationIndexMetaData)
   extends Index[BitStringIndexTuple] with Serializable {
   override val indextypename: IndexTypeName = indexMetaData.signatureGenerator match {
-    case fsg : FixedSignatureGenerator => "fva"
-    case vsg : VariableSignatureGenerator => "nva"
-    case _ => "va"
+    case fsg : FixedSignatureGenerator =>   IndexStructures.VAF
+    case vsg : VariableSignatureGenerator => IndexStructures.VAV
   }
   override val precise = true
 
@@ -55,7 +55,7 @@ class VectorApproximationIndex(val indexname : IndexName, val tablename : TableN
     val (lbounds, ubounds) = computeBounds(q, indexMetaData.marks, new NormBasedDistanceFunction(norm))
 
     SparkStartup.sc.setLocalProperty("spark.scheduler.pool", "index")
-    SparkStartup.sc.setJobGroup(queryID.getOrElse(""), indextypename, true)
+    SparkStartup.sc.setJobGroup(queryID.getOrElse(""), indextypename.toString, true)
     val results = SparkStartup.sc.runJob(getIndexTuples(filter), (context : TaskContext, tuplesIt : Iterator[BitStringIndexTuple]) => {
       val localRh = new VectorApproximationResultHandler(k, lbounds, ubounds, indexMetaData.signatureGenerator)
       localRh.offerIndexTuple(tuplesIt.par())

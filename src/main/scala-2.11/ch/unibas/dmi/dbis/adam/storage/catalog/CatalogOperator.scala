@@ -4,6 +4,7 @@ import java.io._
 
 import ch.unibas.dmi.dbis.adam.exception.{IndexExistingException, IndexNotExistingException, TableExistingException, TableNotExistingException}
 import ch.unibas.dmi.dbis.adam.index.Index.{IndexName, IndexTypeName}
+import ch.unibas.dmi.dbis.adam.index.structures.IndexStructures
 import ch.unibas.dmi.dbis.adam.main.Startup
 import ch.unibas.dmi.dbis.adam.table.Table.TableName
 import slick.driver.H2Driver.api._
@@ -119,7 +120,7 @@ object CatalogOperator {
     oos.close
 
     val setup = DBIO.seq(
-      indexes.+=((indexname, tablename, indextypename, metaFilePath))
+      indexes.+=((indexname, tablename, indextypename.toString, metaFilePath))
     )
     db.run(setup)
   }
@@ -193,7 +194,9 @@ object CatalogOperator {
    */
   def getIndexTypeName(indexname : IndexName)  : IndexTypeName = {
     val query = indexes.filter(_.indexname === indexname).map(_.indextypename).result.head
-    Await.result(db.run(query), 5.seconds)
+    val result = Await.result(db.run(query), 5.seconds)
+
+    IndexStructures.withName(result)
   }
 
   /**

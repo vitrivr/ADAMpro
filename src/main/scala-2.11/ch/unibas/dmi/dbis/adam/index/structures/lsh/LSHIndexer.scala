@@ -3,6 +3,7 @@ package ch.unibas.dmi.dbis.adam.index.structures.lsh
 import ch.unibas.dmi.dbis.adam.datatypes.Feature.WorkingVector
 import ch.unibas.dmi.dbis.adam.index.Index._
 import ch.unibas.dmi.dbis.adam.index._
+import ch.unibas.dmi.dbis.adam.index.structures.IndexStructures
 import ch.unibas.dmi.dbis.adam.index.structures.lsh.hashfunction.{EuclideanHashFunction, Hasher}
 import ch.unibas.dmi.dbis.adam.main.SparkStartup
 import ch.unibas.dmi.dbis.adam.query.distance.NormBasedDistanceFunction
@@ -11,7 +12,7 @@ import org.apache.spark.rdd.RDD
 
 
 class LSHIndexer(hashFamily : String, numHashTables : Int, numHashes : Int, distance : NormBasedDistanceFunction, trainingSize : Int) extends IndexGenerator with Serializable {
-  override val indextypename : String = "lsh"
+  override val indextypename: IndexTypeName = IndexStructures.LSH
 
   /**
    *

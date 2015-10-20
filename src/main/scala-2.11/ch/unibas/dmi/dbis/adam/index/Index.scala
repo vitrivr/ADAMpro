@@ -4,6 +4,7 @@ import ch.unibas.dmi.dbis.adam.cache.RDDCache
 import ch.unibas.dmi.dbis.adam.datatypes.Feature._
 import ch.unibas.dmi.dbis.adam.exception.IndexNotExistingException
 import ch.unibas.dmi.dbis.adam.index.Index._
+import ch.unibas.dmi.dbis.adam.index.structures.IndexStructures
 import ch.unibas.dmi.dbis.adam.index.structures.ecp.ECPIndex
 import ch.unibas.dmi.dbis.adam.index.structures.lsh.LSHIndex
 import ch.unibas.dmi.dbis.adam.index.structures.spectrallsh.SpectralLSHIndex
@@ -59,7 +60,7 @@ case class CacheableIndex(index : Index[_ <: IndexTuple])
 
 object Index {
   type IndexName = String
-  type IndexTypeName = String
+  type IndexTypeName = IndexStructures.Value
 
   private val storage = SparkStartup.indexStorage
 
@@ -152,10 +153,11 @@ object Index {
     val indextypename = CatalogOperator.getIndexTypeName(indexname)
 
     indextypename match {
-      case "va" => VectorApproximationIndex(indexname, tablename, df, meta)
-      case "lsh" => LSHIndex(indexname, tablename, df, meta)
-      case "slsh" => SpectralLSHIndex(indexname, tablename, df, meta)
-      case "ecp" => ECPIndex(indexname, tablename, df, meta)
+      case IndexStructures.ECP => ECPIndex(indexname, tablename, df, meta)
+      case IndexStructures.LSH => LSHIndex(indexname, tablename, df, meta)
+      case IndexStructures.SH => SpectralLSHIndex(indexname, tablename, df, meta)
+      case IndexStructures.VAF => VectorApproximationIndex(indexname, tablename, df, meta)
+      case IndexStructures.VAV => VectorApproximationIndex(indexname, tablename, df, meta)
     }
   }
 

@@ -3,6 +3,7 @@ package ch.unibas.dmi.dbis.adam.index.structures.ecp
 import ch.unibas.dmi.dbis.adam.datatypes.Feature.WorkingVector
 import ch.unibas.dmi.dbis.adam.index.Index.{IndexName, IndexTypeName}
 import ch.unibas.dmi.dbis.adam.index._
+import ch.unibas.dmi.dbis.adam.index.structures.IndexStructures
 import ch.unibas.dmi.dbis.adam.main.SparkStartup
 import ch.unibas.dmi.dbis.adam.table.Table.TableName
 import ch.unibas.dmi.dbis.adam.table.Tuple.TupleID
@@ -21,7 +22,7 @@ import scala.collection.mutable.ListBuffer
  */
 class ECPIndex(val indexname: IndexName, val tablename: TableName, protected val indexdata: DataFrame, protected val indexMetaData : ECPIndexMetaData)
   extends Index[LongIndexTuple] {
-  override val indextypename: IndexTypeName = "ecp"
+  override val indextypename: IndexTypeName = IndexStructures.ECP
   override val precise = false
 
   /**
@@ -49,7 +50,7 @@ class ECPIndex(val indexname: IndexName, val tablename: TableName, protected val
     }).sortBy(_._2).map(_._1)
 
     SparkStartup.sc.setLocalProperty("spark.scheduler.pool", "index")
-    SparkStartup.sc.setJobGroup(queryID.getOrElse(""), indextypename, true)
+    SparkStartup.sc.setJobGroup(queryID.getOrElse(""), indextypename.toString, true)
     val results = SparkStartup.sc.runJob(getIndexTuples(filter), (context : TaskContext, tuplesIt : Iterator[LongIndexTuple]) => {
       var results = ListBuffer[TupleID]()
       var i = 0

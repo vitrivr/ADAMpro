@@ -6,6 +6,7 @@ import Feature.{VectorBase, _}
 import ch.unibas.dmi.dbis.adam.datatypes.bitString.BitString
 import ch.unibas.dmi.dbis.adam.index.Index._
 import ch.unibas.dmi.dbis.adam.index._
+import ch.unibas.dmi.dbis.adam.index.structures.IndexStructures
 import ch.unibas.dmi.dbis.adam.main.SparkStartup
 import ch.unibas.dmi.dbis.adam.table.Table._
 import org.apache.spark.adam.ADAMSamplingUtils
@@ -20,7 +21,7 @@ import org.apache.spark.rdd.RDD
  * August 2015
  */
 class SpectralLSHIndexer(nbits : Int, trainingSize : Int) extends IndexGenerator with Serializable {
-  override val indextypename : String = "slsh"
+  override val indextypename: IndexTypeName = IndexStructures.SH
 
 
   /**
