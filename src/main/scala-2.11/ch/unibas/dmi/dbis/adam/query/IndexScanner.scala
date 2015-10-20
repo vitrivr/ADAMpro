@@ -25,7 +25,7 @@ object IndexScanner {
    * @param options
    * @return
    */
-  def apply(q: WorkingVector, distance : DistanceFunction, k : Int, indexname: IndexName, options : Map[String, String], preselection : HashSet[TupleID] = null): HashSet[TupleID] = {
-    Index.retrieveIndex(indexname).scan(q, options, preselection)
+  def apply(q: WorkingVector, distance : DistanceFunction, k : Int, indexname: IndexName, options : Map[String, String], filter : Option[HashSet[TupleID]], queryID : String = ""): HashSet[TupleID] = {
+    Index.retrieveIndex(indexname).scan(q, options, filter, queryID)
   }
 }

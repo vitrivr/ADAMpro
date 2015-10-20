@@ -6,8 +6,10 @@ import ch.unibas.dmi.dbis.adam.datatypes.bitString.BitString
 import ch.unibas.dmi.dbis.adam.index.Index._
 import ch.unibas.dmi.dbis.adam.index.structures.spectrallsh.results.SpectralLSHResultHandler
 import ch.unibas.dmi.dbis.adam.index.{BitStringIndexTuple, Index}
+import ch.unibas.dmi.dbis.adam.main.SparkStartup
 import ch.unibas.dmi.dbis.adam.table.Table._
 import ch.unibas.dmi.dbis.adam.table.Tuple.TupleID
+import org.apache.spark.TaskContext
 import org.apache.spark.rdd.RDD
 import org.apache.spark.sql.DataFrame
 
@@ -41,7 +43,7 @@ class LSHIndex(val indexname: IndexName, val tablename: TableName, protected val
    * @param options
    * @return
    */
-  override def scan(q: WorkingVector, options: Map[String, String], preselection : HashSet[TupleID] = null): HashSet[TupleID] = {
+  override def scan(q: WorkingVector, options: Map[String, String], filter : Option[HashSet[TupleID]], queryID : String): HashSet[TupleID] = {
     val k = options("k").toInt
     val numOfQueries = options.getOrElse("numOfQ", "3").toInt
 
@@ -49,10 +51,11 @@ class LSHIndex(val indexname: IndexName, val tablename: TableName, protected val
     val originalQuery = LSHUtils.hashFeature(q, indexMetaData)
     val queries = (List.fill(numOfQueries)(LSHUtils.hashFeature(q.move(indexMetaData.radius), indexMetaData)) ::: List(originalQuery)).par
 
-    val it = getIndexTuples(preselection)
-      .mapPartitions(tuplesIt => {
-      val localRh = new SpectralLSHResultHandler(k)
+    SparkStartup.sc.setLocalProperty("spark.scheduler.pool", "index")
+    SparkStartup.sc.setJobGroup(queryID, indextypename, true)
 
+    val results = SparkStartup.sc.runJob(getIndexTuples(filter), (context : TaskContext, tuplesIt : Iterator[BitStringIndexTuple]) => {
+      val localRh = new SpectralLSHResultHandler(k)
       while (tuplesIt.hasNext) {
         val tuple = tuplesIt.next()
 
@@ -67,12 +70,11 @@ class LSHIndex(val indexname: IndexName, val tablename: TableName, protected val
         localRh.offerIndexTuple(tuple, score)
       }
 
-      localRh.iterator
-    }).collect().iterator
-
+      localRh.results.toSeq
+    }).flatten
 
     val globalResultHandler = new SpectralLSHResultHandler(k)
-    globalResultHandler.offerResultElement(it)
+    globalResultHandler.offerResultElement(results.iterator)
     val ids = globalResultHandler.results.map(x => x.tid).toList
 
     HashSet(ids : _*)

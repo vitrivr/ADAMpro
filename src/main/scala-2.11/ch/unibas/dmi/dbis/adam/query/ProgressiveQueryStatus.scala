@@ -1,6 +1,8 @@
 package ch.unibas.dmi.dbis.adam.query
 
 
+import ch.unibas.dmi.dbis.adam.main.SparkStartup
+
 import scala.collection.mutable.ListBuffer
 
 
@@ -22,6 +24,7 @@ class ProgressiveQueryStatusTracker {
   def notifyCompletion(future : ScanFuture): Unit ={
     futures.synchronized({
       if(future.preciseScan){
+        SparkStartup.sc.cancelJobGroup(future.queryID)
         returnedGoodResults = true
       }
       futures -= future

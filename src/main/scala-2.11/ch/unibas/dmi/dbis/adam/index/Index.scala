@@ -37,12 +37,12 @@ trait Index[A <: IndexTuple]{
   protected def indexToTuple : RDD[A]
 
 
-  protected def getIndexTuples(preselection : HashSet[TupleID] = null) : RDD[A] = {
+  protected def getIndexTuples(filter : Option[HashSet[TupleID]]) : RDD[A] = {
     val res = indexToTuple
 
-    if(preselection != null){
+    if(filter.isDefined){
       res.filter(r => {
-        preselection.contains(r.tid)
+        filter.contains(r.tid)
       })
     } else {
       res
@@ -50,7 +50,8 @@ trait Index[A <: IndexTuple]{
   }
 
   private[index] def getMetadata : Serializable
-  def scan(q: WorkingVector, options: Map[String, String], preselection : HashSet[TupleID] = null): HashSet[TupleID]
+
+  def scan(q: WorkingVector, options: Map[String, String], filter : Option[HashSet[TupleID]], queryID : String = ""): HashSet[TupleID]
 }
 
 
@@ -166,13 +167,13 @@ object Index {
   def getCacheable(indexname : IndexName) : CacheableIndex = {
     val index = retrieveIndex(indexname)
 
-    index.getIndexTuples()
+    index.getIndexTuples(None)
       .setName(indexname)
       .persist(StorageLevel.MEMORY_AND_DISK)
 
       //.repartition(Startup.config.partitions) //TODO: loosing persistence information - bug?
 
-    index.getIndexTuples().collect()
+    index.getIndexTuples(None).collect()
 
     CacheableIndex(index)
   }

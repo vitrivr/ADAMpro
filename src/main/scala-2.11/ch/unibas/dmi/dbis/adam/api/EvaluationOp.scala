@@ -58,8 +58,8 @@ object EvaluationOp {
     if(Table.existsTable(tabname)){
       try {
         QueryHandler.progressiveQuery(getRandomVector(vecSize) : WorkingVector,
-          NormBasedDistanceFunction(1), k, tabname,
-          onComplete(System.nanoTime(), dbSize, vecSize))
+          NormBasedDistanceFunction(1), k, tabname, None,
+          onComplete(System.nanoTime(), dbSize, vecSize), java.util.UUID.randomUUID.toString)
       } catch {
         case e : Exception =>  {
           println(e.getMessage)
