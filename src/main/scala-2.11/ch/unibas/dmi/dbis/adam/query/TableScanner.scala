@@ -25,9 +25,9 @@ object TableScanner {
    * @param filter
    * @return
    */
-  def apply(table : Table, q: WorkingVector, distance : DistanceFunction, k : Int, filter: Option[HashSet[Long]], queryID : String = ""): Seq[Result] = {
+  def apply(table : Table, q: WorkingVector, distance : DistanceFunction, k : Int, filter: Option[HashSet[Long]], queryID : Option[String] = None): Seq[Result] = {
     SparkStartup.sc.setLocalProperty("spark.scheduler.pool", "table")
-    SparkStartup.sc.setJobGroup(queryID, table.tablename, true)
+    SparkStartup.sc.setJobGroup(queryID.getOrElse(""), table.tablename, true)
 
     val data = if(filter.isDefined) {
       table.tuplesForKeys(filter.get).collect()

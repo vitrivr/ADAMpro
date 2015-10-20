@@ -51,7 +51,7 @@ trait Index[A <: IndexTuple]{
 
   private[index] def getMetadata : Serializable
 
-  def scan(q: WorkingVector, options: Map[String, String], filter : Option[HashSet[TupleID]], queryID : String = ""): HashSet[TupleID]
+  def scan(q: WorkingVector, options: Map[String, String], filter : Option[HashSet[TupleID]], queryID : Option[String] = None): HashSet[TupleID]
 }
 
 

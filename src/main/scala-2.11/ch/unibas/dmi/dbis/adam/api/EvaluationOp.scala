@@ -59,7 +59,7 @@ object EvaluationOp {
       try {
         QueryHandler.progressiveQuery(getRandomVector(vecSize) : WorkingVector,
           NormBasedDistanceFunction(1), k, tabname, None,
-          onComplete(System.nanoTime(), dbSize, vecSize), java.util.UUID.randomUUID.toString)
+          onComplete(System.nanoTime(), dbSize, vecSize))
       } catch {
         case e : Exception =>  {
           println(e.getMessage)

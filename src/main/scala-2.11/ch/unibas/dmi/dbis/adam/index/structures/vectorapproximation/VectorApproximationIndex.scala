@@ -48,14 +48,14 @@ class VectorApproximationIndex(val indexname : IndexName, val tablename : TableN
   /**
    *
    */
-  override def scan(q: WorkingVector, options: Map[String, String], filter : Option[HashSet[TupleID]], queryID : String): HashSet[TupleID] = {
+  override def scan(q: WorkingVector, options: Map[String, String], filter : Option[HashSet[TupleID]], queryID : Option[String]): HashSet[TupleID] = {
     val k = options("k").toInt
     val norm = options("norm").toInt
     
     val (lbounds, ubounds) = computeBounds(q, indexMetaData.marks, new NormBasedDistanceFunction(norm))
 
     SparkStartup.sc.setLocalProperty("spark.scheduler.pool", "index")
-    SparkStartup.sc.setJobGroup(queryID, indextypename, true)
+    SparkStartup.sc.setJobGroup(queryID.getOrElse(""), indextypename, true)
     val results = SparkStartup.sc.runJob(getIndexTuples(filter), (context : TaskContext, tuplesIt : Iterator[BitStringIndexTuple]) => {
       val localRh = new VectorApproximationResultHandler(k, lbounds, ubounds, indexMetaData.signatureGenerator)
       localRh.offerIndexTuple(tuplesIt.par())

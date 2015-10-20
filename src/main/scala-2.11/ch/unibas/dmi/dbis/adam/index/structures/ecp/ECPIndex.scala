@@ -41,7 +41,7 @@ class ECPIndex(val indexname: IndexName, val tablename: TableName, protected val
    * @param options
    * @return
    */
-  override def scan(q: WorkingVector, options: Map[String, String], filter : Option[HashSet[TupleID]], queryID : String): HashSet[TupleID] = {
+  override def scan(q: WorkingVector, options: Map[String, String], filter : Option[HashSet[TupleID]], queryID : Option[String]): HashSet[TupleID] = {
     val k = options("k").toInt
 
     val centroids = indexMetaData.leaders.map(l => {
@@ -49,7 +49,7 @@ class ECPIndex(val indexname: IndexName, val tablename: TableName, protected val
     }).sortBy(_._2).map(_._1)
 
     SparkStartup.sc.setLocalProperty("spark.scheduler.pool", "index")
-    SparkStartup.sc.setJobGroup(queryID, indextypename, true)
+    SparkStartup.sc.setJobGroup(queryID.getOrElse(""), indextypename, true)
     val results = SparkStartup.sc.runJob(getIndexTuples(filter), (context : TaskContext, tuplesIt : Iterator[LongIndexTuple]) => {
       var results = ListBuffer[TupleID]()
       var i = 0

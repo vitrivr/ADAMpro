@@ -44,7 +44,7 @@ class SpectralLSHIndex(val indexname: IndexName, val tablename: TableName, prote
    * @param options
    * @return
    */
-  override def scan(q: WorkingVector, options: Map[String, String], filter : Option[HashSet[TupleID]], queryID : String): HashSet[TupleID] = {
+  override def scan(q: WorkingVector, options: Map[String, String], filter : Option[HashSet[TupleID]], queryID : Option[String]): HashSet[TupleID] = {
     val k = options("k").toInt
     val numOfQueries = options.getOrElse("numOfQ", "3").toInt
 
@@ -53,7 +53,7 @@ class SpectralLSHIndex(val indexname: IndexName, val tablename: TableName, prote
     val queries = (List.fill(numOfQueries)(SpectralLSHUtils.hashFeature(q.move(indexMetaData.radius), indexMetaData)) ::: List(originalQuery)).par
 
     SparkStartup.sc.setLocalProperty("spark.scheduler.pool", "index")
-    SparkStartup.sc.setJobGroup(queryID, indextypename, true)
+    SparkStartup.sc.setJobGroup(queryID.getOrElse(""), indextypename, true)
 
     val results = SparkStartup.sc.runJob(getIndexTuples(filter), (context : TaskContext, tuplesIt : Iterator[BitStringIndexTuple]) => {
       val localRh = new SpectralLSHResultHandler(k)

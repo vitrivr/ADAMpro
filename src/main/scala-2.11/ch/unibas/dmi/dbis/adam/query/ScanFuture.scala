@@ -30,7 +30,7 @@ class IndexScanFuture(indexname : IndexName, q : WorkingVector, distance : NormB
 
   val info =  Map[String,String]("type" -> ("index: " + indexname), "index" -> indexname, "qid" -> queryID)
 
-  val future = Future {QueryHandler.indexQuery(q, distance, k, indexname, options.toMap, None, queryID)}
+  val future = Future {QueryHandler.indexQuery(q, distance, k, indexname, options.toMap, None, Some(queryID))}
   future.onSuccess({
     case x =>
       if(!tracker.returnedGoodResults){
@@ -48,7 +48,7 @@ class SequentialScanFuture(tablename : TableName, q : WorkingVector, distance : 
 
   val info =  Map[String,String]("type" -> "sequential", "relation" -> tablename, "qid" -> queryID)
 
-  val future = Future {QueryHandler.sequentialQuery(q, distance, k, tablename, None, queryID)}
+  val future = Future {QueryHandler.sequentialQuery(q, distance, k, tablename, None, Some(queryID))}
   future.onSuccess({
     case x =>
       if(!tracker.returnedGoodResults){
