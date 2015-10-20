@@ -4,6 +4,7 @@ import ch.unibas.dmi.dbis.adam.datatypes.Feature._
 import ch.unibas.dmi.dbis.adam.main.SparkStartup
 import ch.unibas.dmi.dbis.adam.query.distance.DistanceFunction
 import ch.unibas.dmi.dbis.adam.table.Table
+import ch.unibas.dmi.dbis.adam.table.Tuple._
 
 import scala.collection.immutable.HashSet
 import scala.collection.mutable.ListBuffer
@@ -25,7 +26,7 @@ object TableScanner {
    * @param filter
    * @return
    */
-  def apply(table : Table, q: WorkingVector, distance : DistanceFunction, k : Int, filter: Option[HashSet[Long]], queryID : Option[String] = None): Seq[Result] = {
+  def apply(table : Table, q: WorkingVector, distance : DistanceFunction, k : Int, filter: Option[HashSet[TupleID]], queryID : Option[String] = None): Seq[Result] = {
     SparkStartup.sc.setLocalProperty("spark.scheduler.pool", "table")
     SparkStartup.sc.setJobGroup(queryID.getOrElse(""), table.tablename, true)
 

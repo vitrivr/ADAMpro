@@ -91,7 +91,7 @@ object Index {
     var indexname = ""
 
     do {
-     indexname =  tablename + "_" + indextype + "_" + Random.nextInt(1000)
+     indexname =  tablename + "_" + indextype.toString + "_" + Random.nextInt(1000)
     } while(indexes.contains(tablename))
 
     indexname
