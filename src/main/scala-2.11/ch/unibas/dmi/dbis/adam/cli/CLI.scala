@@ -232,7 +232,7 @@ class CLI extends ILoop {
     val query = input(1)
     val k = input(2).toInt
 
-    ProgressiveQueryOp(tablename, query, k, NormBasedDistanceFunction(1), (status, results, details) => println(results.mkString(", ")))
+    ProgressiveQueryOp(tablename, query, k, NormBasedDistanceFunction(1), (status, results, confidence, details) => println(results.mkString(", ")))
 
     Result.default
   }
@@ -248,7 +248,7 @@ class CLI extends ILoop {
     val k = input(2).toInt
     val time = Duration(input(3).toLong, "millis")
 
-    val results =  TimedProgressiveQueryOp(tablename, query, k, NormBasedDistanceFunction(1), time)
+    val (results, confidence) =  TimedProgressiveQueryOp(tablename, query, k, NormBasedDistanceFunction(1), time)
     Result.resultFromString(results.map(x => "(" + x.tid + "," + x.distance + ")").mkString("\n "))
 
     Result.default

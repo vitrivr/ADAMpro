@@ -25,7 +25,7 @@ import scala.collection.immutable.HashSet
 class LSHIndex(val indexname: IndexName, val tablename: TableName, protected val indexdata: DataFrame, private val indexMetaData: LSHIndexMetaData)
   extends Index[BitStringIndexTuple] {
   override val indextypename: IndexTypeName = IndexStructures.LSH
-  override val precise = false
+  override val confidence = 0.toFloat
 
   /**
    *

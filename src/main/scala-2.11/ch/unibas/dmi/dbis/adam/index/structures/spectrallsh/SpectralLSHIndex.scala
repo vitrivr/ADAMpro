@@ -26,7 +26,7 @@ import scala.collection.immutable.HashSet
 class SpectralLSHIndex(val indexname: IndexName, val tablename: TableName, protected val indexdata: DataFrame, private val indexMetaData: SpectralLSHIndexMetaData)
   extends Index[BitStringIndexTuple] {
   override val indextypename: IndexTypeName = IndexStructures.SH
-  override val precise = false
+  override val confidence = 0.toFloat
 
   /**
    *

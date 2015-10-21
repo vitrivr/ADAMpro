@@ -80,7 +80,7 @@ object EvaluationOp {
    * @param options
    * @return
    */
-  def onComplete(startTime : Long, dbSize : Int, vecSize : Int)(status : ProgressiveQueryStatus.Value, results : Seq[Result], options : Map[String, String]) {
+  def onComplete(startTime : Long, dbSize : Int, vecSize : Int)(status : ProgressiveQueryStatus.Value, results : Seq[Result], confidence : Float, options : Map[String, String]) {
     pw.write(
       options.getOrElse("qid", "") + "," +
         vecSize + "," +

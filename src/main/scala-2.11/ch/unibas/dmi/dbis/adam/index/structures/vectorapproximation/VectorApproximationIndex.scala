@@ -32,7 +32,7 @@ class VectorApproximationIndex(val indexname : IndexName, val tablename : TableN
     case fsg : FixedSignatureGenerator =>   IndexStructures.VAF
     case vsg : VariableSignatureGenerator => IndexStructures.VAV
   }
-  override val precise = true
+  override val confidence = 1.toFloat
 
   /**
    *

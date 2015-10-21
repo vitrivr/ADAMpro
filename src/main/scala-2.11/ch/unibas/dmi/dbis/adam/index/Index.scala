@@ -31,7 +31,7 @@ trait Index[A <: IndexTuple]{
   val indexname : IndexName
   val tablename : TableName
   val indextypename : IndexTypeName
-  val precise : Boolean //TODO: confidence score?
+  val confidence : Float
 
   protected val indexdata : DataFrame
 
@@ -121,6 +121,15 @@ object Index {
    */
   def getIndexnames() : Seq[IndexName] = {
     CatalogOperator.getIndexes()
+  }
+
+  /**
+   *
+   * @param indexname
+   * @return
+   */
+  def retrieveIndexConfidence(indexname : IndexName) : Float = {
+    retrieveIndex(indexname).confidence
   }
 
   /**

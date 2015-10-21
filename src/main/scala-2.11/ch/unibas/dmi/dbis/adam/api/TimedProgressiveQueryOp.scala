@@ -21,7 +21,7 @@ object TimedProgressiveQueryOp {
    * @param k
    * @param distance
    */
-  def apply(tablename: TableName, query : WorkingVector, k : Int, distance : NormBasedDistanceFunction, timelimit : Duration) : Seq[Result] = {
+  def apply(tablename: TableName, query : WorkingVector, k : Int, distance : NormBasedDistanceFunction, timelimit : Duration) : (Seq[Result], Float) = {
     QueryHandler.timedProgressiveQuery(query, distance, k, tablename, None, timelimit)
   }
 }

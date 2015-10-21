@@ -15,6 +15,7 @@ import scala.collection.mutable.ListBuffer
 class ProgressiveQueryStatusTracker(queryID : String) {
   private val futures = ListBuffer[ScanFuture]()
   private var runningStatus = ProgressiveQueryStatus.RUNNING
+  private var resultConfidence = 0.toFloat
   private var results = Seq[Result]()
 
   /**
@@ -35,7 +36,7 @@ class ProgressiveQueryStatusTracker(queryID : String) {
         results = futureResults
       }
 
-      if(future.preciseScan){
+      if(future.confidence > resultConfidence){
         stop(ProgressiveQueryStatus.FINISHED)
       }
       futures -= future
@@ -46,7 +47,7 @@ class ProgressiveQueryStatusTracker(queryID : String) {
    *
    * @return
    */
-  def getResults() = results //TODO: return with confidence score?
+  def getResults() = (results, resultConfidence)
 
   /**
    *

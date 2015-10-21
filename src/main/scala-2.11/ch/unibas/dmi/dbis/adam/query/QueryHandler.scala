@@ -130,7 +130,7 @@ object QueryHandler extends Logging {
    * @param k
    * @param tablename
    */
-  def progressiveQuery(q: WorkingVector, distance: NormBasedDistanceFunction, k: Int, tablename: TableName, filter: Option[HashSet[TupleID]], onComplete: (ProgressiveQueryStatus.Value, Seq[Result], Map[String, String]) => Unit, queryID : Option[String] = Some(java.util.UUID.randomUUID().toString)): Int = {
+  def progressiveQuery(q: WorkingVector, distance: NormBasedDistanceFunction, k: Int, tablename: TableName, filter: Option[HashSet[TupleID]], onComplete: (ProgressiveQueryStatus.Value, Seq[Result], Float, Map[String, String]) => Unit, queryID : Option[String] = Some(java.util.UUID.randomUUID().toString)): Int = {
     val indexnames = Index.getIndexnames(tablename)
 
     val options = mMap[String, String]()
@@ -160,7 +160,7 @@ object QueryHandler extends Logging {
    * @param k
    * @param tablename
    */
-  def timedProgressiveQuery(q: WorkingVector, distance: NormBasedDistanceFunction, k: Int, tablename: TableName, filter: Option[HashSet[TupleID]], timelimit : Duration, queryID : Option[String] = Some(java.util.UUID.randomUUID().toString)): Seq[Result] = {
+  def timedProgressiveQuery(q: WorkingVector, distance: NormBasedDistanceFunction, k: Int, tablename: TableName, filter: Option[HashSet[TupleID]], timelimit : Duration, queryID : Option[String] = Some(java.util.UUID.randomUUID().toString)): (Seq[Result], Float) = {
     val indexnames = Index.getIndexnames(tablename)
 
     val options = mMap[String, String]()
@@ -173,11 +173,11 @@ object QueryHandler extends Logging {
 
     //index scans
     val indexScanFutures = indexnames.par.map { indexname =>
-      val isf = new IndexScanFuture(indexname, q, distance, k, options.toMap, (status, result, info) => (), queryID.get, tracker)
+      val isf = new IndexScanFuture(indexname, q, distance, k, options.toMap, (status, result, confidence, info) => (), queryID.get, tracker)
     }
 
     //sequential scan
-    val ssf = new SequentialScanFuture(tablename, q, distance, k, (status, result, info) => (), queryID.get, tracker)
+    val ssf = new SequentialScanFuture(tablename, q, distance, k, (status, result, confidence, info) => (), queryID.get, tracker)
 
     Await.result(timerFuture, timelimit)
 
