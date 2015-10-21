@@ -22,8 +22,7 @@ import scala.concurrent.duration._
  */
 object CatalogOperator {
   private val config = Startup.config
-  //TODO change path to config...
-  private val db = Database.forURL("jdbc:h2:./data/catalog/catalog", driver="org.h2.Driver")
+  private val db = Database.forURL("jdbc:h2:" + (config.catalogPath / "catalog").toAbsolute.toString(), driver="org.h2.Driver")
 
   //generate catalog tables in the beginning if not already existent
   val tableList = Await.result(db.run(MTable.getTables), 1.seconds).toList.map(x => x.name.name)
