@@ -12,27 +12,48 @@ import scala.collection.mutable.ListBuffer
  * Ivan Giangreco
  * September 2015
  */
-class ProgressiveQueryStatusTracker {
-  val futures = ListBuffer[ScanFuture]()
-  var returnedGoodResults = false
+class ProgressiveQueryStatusTracker(queryID : String) {
+  private val futures = ListBuffer[ScanFuture]()
+  private var returnedGoodResults = false
 
+  /**
+   *
+   * @param future
+   */
   def register(future : ScanFuture): Unit ={
     futures.synchronized(futures += future)
   }
 
-
+  /**
+   *
+   * @param future
+   */
   def notifyCompletion(future : ScanFuture): Unit ={
     futures.synchronized({
       if(future.preciseScan){
-        SparkStartup.sc.cancelJobGroup(future.queryID)
+        stop()
         returnedGoodResults = true
       }
       futures -= future
     })
   }
 
+
+  /**
+   *
+   */
+  def stop() : Unit = {
+    SparkStartup.sc.cancelJobGroup(queryID)
+    futures.clear()
+  }
+
+
+  /**
+   *
+   * @return
+   */
   def status = {
-    if(futures.isEmpty){
+    if(futures.isEmpty || returnedGoodResults){
       ProgressiveQueryStatus.FINISHED
     } else {
       ProgressiveQueryStatus.RUNNING
@@ -40,7 +61,9 @@ class ProgressiveQueryStatusTracker {
   }
 }
 
-
+/**
+ *
+ */
 object ProgressiveQueryStatus extends Enumeration {
   val FINISHED = Value("finished")
   val RUNNING = Value("running")

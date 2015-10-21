@@ -137,7 +137,7 @@ object QueryHandler extends Logging {
     options += "k" -> k.toString
     options += "norm" -> distance.n.toString
 
-    val tracker = new ProgressiveQueryStatusTracker()
+    val tracker = new ProgressiveQueryStatusTracker(queryID.get)
 
     //index scans
     val indexScanFutures = indexnames.par.map { indexname =>

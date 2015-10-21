@@ -33,9 +33,8 @@ class IndexScanFuture(indexname : IndexName, q : WorkingVector, distance : NormB
   val future = Future {QueryHandler.indexQuery(q, distance, k, indexname, options.toMap, None, Some(queryID))}
   future.onSuccess({
     case x =>
-      if(!tracker.returnedGoodResults){
-        onComplete(tracker.status, x, info)
-      }
+      onComplete(tracker.status, x, info)
+
       tracker.notifyCompletion(this)
   })
 
@@ -51,9 +50,7 @@ class SequentialScanFuture(tablename : TableName, q : WorkingVector, distance : 
   val future = Future {QueryHandler.sequentialQuery(q, distance, k, tablename, None, Some(queryID))}
   future.onSuccess({
     case x =>
-      if(!tracker.returnedGoodResults){
-        onComplete(tracker.status, x, info)
-      }
+      onComplete(tracker.status, x, info)
       tracker.notifyCompletion(this)
   })
 
