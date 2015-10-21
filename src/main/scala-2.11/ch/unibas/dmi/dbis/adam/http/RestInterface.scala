@@ -182,7 +182,7 @@ trait RestApi extends HttpService with ActorLogging { actor: Actor =>
       post {
         entity(as[SeqQuery]) { query => requestContext =>
           val responder = createResponder(requestContext)
-          val results = SeqQueryOp(tablename, Feature.conv_str2vector(query.q), query.k, NormBasedDistanceFunction(query.norm))
+          val results = SequentialQueryOp(tablename, Feature.conv_str2vector(query.q), query.k, NormBasedDistanceFunction(query.norm))
           responder ! QueryResults(results)
         }
       }
@@ -217,7 +217,7 @@ trait RestApi extends HttpService with ActorLogging { actor: Actor =>
       Props {
         new Actor with ActorLogging {
           val responder = ctx.responder
-          var nResponses = ProgQueryOp(tablename, Feature.conv_str2vector(query.q), query.k, NormBasedDistanceFunction(query.norm), sendNextChunk)
+          var nResponses = ProgressiveQueryOp(tablename, Feature.conv_str2vector(query.q), query.k, NormBasedDistanceFunction(query.norm), sendNextChunk)
 
           //start
           responder ! ChunkedResponseStart(HttpResponse()).withAck(Ok(nResponses))

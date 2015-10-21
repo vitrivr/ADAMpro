@@ -11,7 +11,7 @@ import ch.unibas.dmi.dbis.adam.table.Table._
  * Ivan Giangreco
  * September 2015
  */
-object ProgQueryOp {
+object ProgressiveQueryOp {
   /**
    *
    * @param tablename

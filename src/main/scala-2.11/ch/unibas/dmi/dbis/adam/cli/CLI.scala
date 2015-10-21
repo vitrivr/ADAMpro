@@ -197,7 +197,7 @@ class CLI extends ILoop {
     val k = input(2).toInt
 
     //implicit conversion!
-    val results = SeqQueryOp(tablename, query, k, NormBasedDistanceFunction(1))
+    val results = SequentialQueryOp(tablename, query, k, NormBasedDistanceFunction(1))
     Result.resultFromString(results.map(x => "(" + x.tid + "," + x.distance + ")").mkString("\n "))
   }
 
@@ -230,7 +230,7 @@ class CLI extends ILoop {
     val query = input(1)
     val k = input(2).toInt
 
-    ProgQueryOp(tablename, query, k, NormBasedDistanceFunction(1), (status, results, details) => println(results.mkString(", ")))
+    ProgressiveQueryOp(tablename, query, k, NormBasedDistanceFunction(1), (status, results, details) => println(results.mkString(", ")))
 
     Result.default
   }

@@ -11,7 +11,7 @@ import ch.unibas.dmi.dbis.adam.table.Table._
  * Ivan Giangreco
  * August 2015
  */
-object SeqQueryOp {
+object SequentialQueryOp {
   /**
    *
    * @param tablename
