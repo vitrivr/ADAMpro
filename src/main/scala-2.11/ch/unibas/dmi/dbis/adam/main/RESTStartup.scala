@@ -18,9 +18,8 @@ import scala.concurrent.duration._
  */
 class RESTStartup(config : AdamConfig) extends Runnable {
   def run() : Unit = {
-    //TODO: get from config
-    val host = "localhost"
-    val port = 8080
+    val host = config.restHost
+    val port = config.restPort
 
     implicit val system = ActorSystem("adam-management-service")
 

@@ -12,16 +12,17 @@ class AdamConfig(config : Config) {
   config.checkValid(ConfigFactory.defaultReference(), "adamtwo")
 
   private val base = Some(config.getString("adamtwo.basePath")).getOrElse("data/")
-
   val basePath : File = File(base)
   val dataPath = basePath / "data"
   val indexPath = basePath / "index"
   val catalogPath = basePath / "catalog"
 
-
   val jdbcUrl = "jdbc:postgresql://localhost:5432/evaluation"
   val jdbcUser = "cineast"
   val jdbcPassword = "ilikemovies"
+
+  val restHost = "localhost"
+  val restPort = 8888
 
   val partitions = 4
 }
