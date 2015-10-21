@@ -14,7 +14,8 @@ import scala.collection.mutable.ListBuffer
  */
 class ProgressiveQueryStatusTracker(queryID : String) {
   private val futures = ListBuffer[ScanFuture]()
-  private var returnedGoodResults = false
+  private var runningStatus = ProgressiveQueryStatus.RUNNING
+  private var results = Seq[Result]()
 
   /**
    *
@@ -28,35 +29,52 @@ class ProgressiveQueryStatusTracker(queryID : String) {
    *
    * @param future
    */
-  def notifyCompletion(future : ScanFuture): Unit ={
+  def notifyCompletion(future : ScanFuture, futureResults : Seq[Result]): Unit ={
     futures.synchronized({
+      if(runningStatus == ProgressiveQueryStatus.RUNNING){
+        results = futureResults
+      }
+
       if(future.preciseScan){
-        stop()
-        returnedGoodResults = true
+        stop(ProgressiveQueryStatus.FINISHED)
       }
       futures -= future
     })
   }
 
+  /**
+   *
+   * @return
+   */
+  def getResults() = results //TODO: return with confidence score?
 
   /**
    *
    */
   def stop() : Unit = {
+    stop(ProgressiveQueryStatus.PREMATURE_FINISHED)
+  }
+
+  /**
+   * 
+   * @param status
+   */
+  private def stop(status : ProgressiveQueryStatus.Value) : Unit = {
     SparkStartup.sc.cancelJobGroup(queryID)
+    runningStatus = status
     futures.clear()
   }
 
 
-  /**
+    /**
    *
    * @return
    */
-  def status = {
-    if(futures.isEmpty || returnedGoodResults){
-      ProgressiveQueryStatus.FINISHED
+  def getStatus = {
+    if(futures.isEmpty && runningStatus == ProgressiveQueryStatus.RUNNING){
+      ProgressiveQueryStatus.PREMATURE_FINISHED
     } else {
-      ProgressiveQueryStatus.RUNNING
+      runningStatus
     }
   }
 }
@@ -65,6 +83,7 @@ class ProgressiveQueryStatusTracker(queryID : String) {
  *
  */
 object ProgressiveQueryStatus extends Enumeration {
-  val FINISHED = Value("finished")
   val RUNNING = Value("running")
+  val PREMATURE_FINISHED = Value("premature")
+  val FINISHED = Value("finished")
 }

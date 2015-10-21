@@ -31,7 +31,7 @@ trait Index[A <: IndexTuple]{
   val indexname : IndexName
   val tablename : TableName
   val indextypename : IndexTypeName
-  val precise : Boolean
+  val precise : Boolean //TODO: confidence score?
 
   protected val indexdata : DataFrame
 

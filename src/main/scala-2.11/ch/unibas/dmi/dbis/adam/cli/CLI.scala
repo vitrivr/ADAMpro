@@ -8,6 +8,7 @@ import ch.unibas.dmi.dbis.adam.storage.catalog.CatalogOperator
 import org.apache.spark.sql.Row
 import org.apache.spark.sql.types._
 
+import scala.concurrent.duration.Duration
 import scala.tools.nsc.interpreter.ILoop
 
 
@@ -32,6 +33,7 @@ class CLI extends ILoop {
     new VarArgsCmd("seqQuery", "tablename q k", "querys table in kNN search sequentially", seqQueryOp),
     new VarArgsCmd("indQuery", "indexname q k", "querys table in kNN search using index", indQueryOp),
     new VarArgsCmd("progQuery", "tablename q k", "querys table in kNN search using progressive query", progQueryOp),
+    new VarArgsCmd("timedProgQuery", "tablename q k t", "querys table in kNN search using progressive query", timedProgQueryOp),
     new VarArgsCmd("drop", "tablename", "drops table", dropOp),
     new NullaryCmd("evaluation","evaluation", evaluationOp),
 
@@ -231,6 +233,23 @@ class CLI extends ILoop {
     val k = input(2).toInt
 
     ProgressiveQueryOp(tablename, query, k, NormBasedDistanceFunction(1), (status, results, details) => println(results.mkString(", ")))
+
+    Result.default
+  }
+
+  /**
+   *
+   * @param input
+   * @return
+   */
+  private def timedProgQueryOp(input: List[String]): Result = {
+    val tablename = input(0)
+    val query = input(1)
+    val k = input(2).toInt
+    val time = Duration(input(3).toLong, "millis")
+
+    val results =  TimedProgressiveQueryOp(tablename, query, k, NormBasedDistanceFunction(1), time)
+    Result.resultFromString(results.map(x => "(" + x.tid + "," + x.distance + ")").mkString("\n "))
 
     Result.default
   }

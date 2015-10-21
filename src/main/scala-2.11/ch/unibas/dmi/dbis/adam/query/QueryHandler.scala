@@ -151,6 +151,38 @@ object QueryHandler extends Logging {
     //number of queries running (indexes + sequential)
     indexnames.length + 1
   }
+
+
+  /**
+   *
+   * @param q
+   * @param distance
+   * @param k
+   * @param tablename
+   */
+  def timedProgressiveQuery(q: WorkingVector, distance: NormBasedDistanceFunction, k: Int, tablename: TableName, filter: Option[HashSet[TupleID]], timelimit : Duration, queryID : Option[String] = Some(java.util.UUID.randomUUID().toString)): Seq[Result] = {
+    val indexnames = Index.getIndexnames(tablename)
+
+    val options = mMap[String, String]()
+    options += "k" -> k.toString
+    options += "norm" -> distance.n.toString
+
+    val tracker = new ProgressiveQueryStatusTracker(queryID.get)
+
+    val timerFuture = Future{Thread.sleep(timelimit.toMillis)}
+
+    //index scans
+    val indexScanFutures = indexnames.par.map { indexname =>
+      val isf = new IndexScanFuture(indexname, q, distance, k, options.toMap, (status, result, info) => (), queryID.get, tracker)
+    }
+
+    //sequential scan
+    val ssf = new SequentialScanFuture(tablename, q, distance, k, (status, result, info) => (), queryID.get, tracker)
+
+    Await.result(timerFuture, timelimit)
+
+    tracker.getResults()
+  }
 }
 
 

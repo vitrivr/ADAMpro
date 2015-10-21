@@ -32,10 +32,9 @@ class IndexScanFuture(indexname : IndexName, q : WorkingVector, distance : NormB
 
   val future = Future {QueryHandler.indexQuery(q, distance, k, indexname, options.toMap, None, Some(queryID))}
   future.onSuccess({
-    case x =>
-      onComplete(tracker.status, x, info)
-
-      tracker.notifyCompletion(this)
+    case res =>
+      onComplete(tracker.getStatus, res, info)
+      tracker.notifyCompletion(this, res)
   })
 
   override def preciseScan: Boolean = indexname.contains("va") //TODO: take from index!
@@ -49,9 +48,9 @@ class SequentialScanFuture(tablename : TableName, q : WorkingVector, distance : 
 
   val future = Future {QueryHandler.sequentialQuery(q, distance, k, tablename, None, Some(queryID))}
   future.onSuccess({
-    case x =>
-      onComplete(tracker.status, x, info)
-      tracker.notifyCompletion(this)
+    case res =>
+      onComplete(tracker.getStatus, res, info)
+      tracker.notifyCompletion(this, res)
   })
 
   override def preciseScan: Boolean = true
