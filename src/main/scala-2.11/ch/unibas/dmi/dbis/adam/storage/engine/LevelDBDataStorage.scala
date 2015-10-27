@@ -5,10 +5,9 @@ import java.nio.ByteBuffer
 import java.util.concurrent.ConcurrentHashMap
 
 import ch.unibas.dmi.dbis.adam.main.{SparkStartup, Startup}
-import ch.unibas.dmi.dbis.adam.storage.components.LazyTableStorage
+import ch.unibas.dmi.dbis.adam.storage.components.TableStorage
 import ch.unibas.dmi.dbis.adam.table.Table.TableName
 import ch.unibas.dmi.dbis.adam.table.Tuple._
-import ch.unibas.dmi.dbis.adam.table.{LazyTable, Table}
 import org.apache.spark.sql.types._
 import org.apache.spark.sql.{DataFrame, Row, SaveMode}
 import org.iq80.leveldb._
@@ -16,7 +15,6 @@ import org.iq80.leveldb.impl.Iq80DBFactory._
 
 import scala.collection._
 import scala.collection.convert.decorateAsScala._
-import scala.collection.mutable.ListBuffer
 
 
 /**
@@ -27,7 +25,7 @@ import scala.collection.mutable.ListBuffer
  */
 
 
-object LevelDBDataStorage extends LazyTableStorage {
+object LevelDBDataStorage extends TableStorage {
   protected case class DBStatus(db : DB, var locks : Int)
 
   val config = Startup.config
@@ -83,53 +81,9 @@ object LevelDBDataStorage extends LazyTableStorage {
    * @param tablename
    * @return
    */
-  override def readTable(tablename: TableName): Table = {
-    LazyTable(tablename,  this)
+  override def readTable(tablename: TableName): DataFrame = {
+    SparkStartup.sqlContext.read.load(config.dataPath + "/" + tablename)
   }
-
-  /**
-   *
-   * @param tablename
-   * @return
-   */
-  override def readFullTable(tablename: TableName): DataFrame = {
-    val options = new Options()
-    options.createIfMissing(true)
-
-    val db = openConnection(tablename, options)
-
-    //TODO: error?
-
-    val it = db.iterator()
-
-    try {
-      val lb = ListBuffer[Row]()
-
-      while(it.hasNext) {
-        val next = it.peekNext
-        val row = Row(asLong(next.getKey), asFloatArray(next.getValue))
-        lb.+=(row)
-      }
-
-      val rdd = SparkStartup.sc.parallelize(lb.toSeq)
-
-      val schema = StructType(
-        List(
-          StructField("id", LongType, false),
-          StructField("feature", ArrayType(FloatType), false)
-        )
-      )
-
-      SparkStartup.sqlContext.createDataFrame(rdd, schema)
-    } finally {
-      // Make sure you close the db to shutdown the
-      // database and avoid resource leaks.
-      it.close()
-
-      closeConnection(tablename)
-    }
-  }
-
 
   /**
    *

@@ -1,31 +1,21 @@
 package ch.unibas.dmi.dbis.adam.storage.components
 
-import ch.unibas.dmi.dbis.adam.table.Table.TableName
+import ch.unibas.dmi.dbis.adam.table.Table._
 import org.apache.spark.sql.{DataFrame, SaveMode}
 
 /**
  * adamtwo
  *
  * Ivan Giangreco
- * August 2015
+ * October 2015
  */
-trait TableStorage {
+trait MetadataStorage {
   /**
    *
    * @param tablename
    * @return
    */
   def readTable(tablename: TableName): DataFrame
-
-  /**
-   *
-   * @param tablename
-   * @param filter
-   */
-  def readFilteredTable(tablename : TableName, filter : Set[Long]) : DataFrame = {
-    val data = readTable(tablename)
-    data.filter(data("__adam_id") isin filter)
-  }
 
   /**
    *
@@ -41,4 +31,3 @@ trait TableStorage {
    */
   def dropTable(tablename :TableName) : Unit
 }
-

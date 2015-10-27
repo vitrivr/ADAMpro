@@ -6,7 +6,7 @@ import ch.unibas.dmi.dbis.adam.main.{SparkStartup, Startup}
 import ch.unibas.dmi.dbis.adam.storage.catalog.CatalogOperator
 import ch.unibas.dmi.dbis.adam.table.Table.TableName
 import org.apache.spark.rdd.RDD
-import org.apache.spark.sql.types.StructType
+import org.apache.spark.sql.types._
 import org.apache.spark.sql.{DataFrame, Row, SaveMode}
 import org.apache.spark.storage.StorageLevel
 
@@ -22,7 +22,7 @@ import scala.concurrent.{Await, Future}
  * Ivan Giangreco
  * August 2015
  */
-abstract class Table{
+abstract class Table {
   def tablename : TableName
   def count : Long
 
@@ -35,14 +35,17 @@ abstract class Table{
   def tuplesForKeys(filter: HashSet[Long]): RDD[Tuple]
 
   def getData : DataFrame
+
+  def getMetadata : DataFrame
 }
 
 
 object Table {
   type TableName = String
 
-  private val storage = SparkStartup.tableStorage
   private val sqlContext = SparkStartup.sqlContext
+  private val tableStorage = SparkStartup.tableStorage
+  private val metadataStorage = SparkStartup.metadataStorage
 
 
   /**
@@ -61,17 +64,36 @@ object Table {
    * @return
    */
   def createTable(tablename : TableName, schema : StructType) : Table = {
+    val fields = schema.fields
+
+    require(fields.filter(_.name == "feature").length <= 1)
+
     CatalogOperator.createTable(tablename)
-    val data = sqlContext.createDataFrame(SparkStartup.sc.emptyRDD[Row], schema)
+
+    val tableSchema = StructType(
+      List(
+        StructField("__adam_id", LongType, false),
+        StructField("feature", ArrayType(FloatType), false)
+      )
+    )
+    val tableData = sqlContext.createDataFrame(SparkStartup.sc.emptyRDD[Row], tableSchema)
+
+
+    val metadataSchema = StructType(
+      List(StructField("__adam_id", LongType, false)) ::: fields.filterNot(_.name == "feature").toList
+    )
+    val metadataData = sqlContext.createDataFrame(SparkStartup.sc.emptyRDD[Row], metadataSchema)
+
 
     val future = Future {
-        storage.writeTable(tablename, data, SaveMode.ErrorIfExists)
+        tableStorage.writeTable(tablename, tableData, SaveMode.ErrorIfExists)
+        metadataStorage.writeTable(tablename, metadataData, SaveMode.ErrorIfExists)
       }
     future onFailure {case t => new TableCreationException()}
 
     Await.ready(future, Duration.Inf)
 
-    DefaultTable(tablename, data)
+    DefaultTable(tablename, tableData, metadataData)
   }
 
   /**
@@ -83,7 +105,7 @@ object Table {
     val indexes = CatalogOperator.getIndexes(tablename)
     CatalogOperator.dropTable(tablename, ifExists)
 
-    storage.dropTable(tablename)
+    tableStorage.dropTable(tablename)
   }
 
   /**
@@ -96,11 +118,8 @@ object Table {
       throw new TableNotExistingException()
     }
 
-    //TODO: check schema equality between DF and insertion
-    //val schema = data.schema.fields
-
     val future = Future {
-        storage.writeTable(tablename, insertion, SaveMode.Append)
+        tableStorage.writeTable(tablename, insertion, SaveMode.Append)
     }
 
     Await.ready(future, Duration.Inf)
@@ -119,7 +138,7 @@ object Table {
     if(RDDCache.containsTable(tablename)){
       RDDCache.getTable(tablename)
     } else {
-      storage.readTable(tablename)
+      DefaultTable(tablename, tableStorage.readTable(tablename), metadataStorage.readTable(tablename))
     }
   }
 

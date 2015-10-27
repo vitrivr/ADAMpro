@@ -5,7 +5,6 @@ import java.io.File
 import ch.unibas.dmi.dbis.adam.index.Index.IndexName
 import ch.unibas.dmi.dbis.adam.main.{SparkStartup, Startup}
 import ch.unibas.dmi.dbis.adam.storage.components.{IndexStorage, TableStorage}
-import ch.unibas.dmi.dbis.adam.table.{DefaultTable, Table}
 import ch.unibas.dmi.dbis.adam.table.Table.TableName
 import org.apache.commons.io.FileUtils
 import org.apache.spark.partial.{BoundedDouble, PartialResult}
@@ -25,8 +24,8 @@ object ParquetDataStorage extends TableStorage with IndexStorage {
    * @param tablename
    * @return
    */
-  override def readTable(tablename: TableName): Table = {
-    DefaultTable(tablename, SparkStartup.sqlContext.read.load(config.dataPath + "/" + tablename))
+  override def readTable(tablename: TableName): DataFrame = {
+    SparkStartup.sqlContext.read.load(config.dataPath + "/" + tablename)
   }
 
   /**

@@ -12,25 +12,25 @@ import scala.collection.immutable.HashSet
  * Ivan Giangreco
  * October 2015
  */
-case class DefaultTable(tablename : TableName, data : DataFrame) extends Table{
+case class DefaultTable(tablename : TableName, featureData : DataFrame, metadataData : DataFrame) extends Table {
   /**
    *
    * @return
    */
-  override def count = data.count()
+  override def count = featureData.count()
 
   /**
    *
    * @return
    */
-  override def show() = data.collect()
+  override def show() = featureData.collect()
 
   /**
    *
    * @param n
    * @return
    */
-  override def show(n : Int) = data.take(n)
+  override def show(n : Int) = featureData.take(n)
 
   /**
    *
@@ -45,17 +45,23 @@ case class DefaultTable(tablename : TableName, data : DataFrame) extends Table{
    *
    * @return
    */
-  override def rows = data.rdd
+  override def rows = featureData.rdd
 
   /**
    *
    * @return
    */
-  override def tuples = data.rdd.map(row => (row : Tuple))
+  override def tuples = featureData.rdd.map(row => (row : Tuple))
 
   /**
    *
    * @return
    */
-  override def getData: DataFrame = data
+  override def getData: DataFrame = featureData
+
+  /**
+   *
+   * @return
+   */
+  override def getMetadata : DataFrame = metadataData
 }

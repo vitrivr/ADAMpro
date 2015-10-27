@@ -42,9 +42,15 @@ object TableScanner {
     while(it.hasNext){
       val tuple = it.next
       val f : WorkingVector = tuple.value
-      ls += Result(distance(q, f), tuple.tid)
+      ls += Result(distance(q, f), tuple.tid, null)
     }
 
-    ls.sortBy(_.distance).take(k)
+    val finalResult = ls.sortBy(_.distance).take(k)
+
+    val metadata = table.getMetadata.filter(table.getMetadata("__adam_id") isin (finalResult.map(_.tid) : _*)).map(r => r.getAs[Long]("__adam_id") -> r).collectAsMap()
+
+    finalResult.map(r => r.metadata = metadata(r.tid))
+
+    finalResult
   }
 }

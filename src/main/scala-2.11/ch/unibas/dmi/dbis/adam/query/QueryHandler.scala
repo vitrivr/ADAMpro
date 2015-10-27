@@ -38,7 +38,7 @@ object QueryHandler extends Logging {
    */
   def metadataQuery(where: Map[String, String], tablename: TableName): HashSet[TupleID] = {
     val filter = where.map(c => c._1 + " = " + c._2).mkString(" AND ")
-    val res = metadataStorage.readTable(tablename).getData.filter(filter).map(r => r.getLong(0)).collect()
+    val res = metadataStorage.readTable(tablename).filter(filter).map(r => r.getLong(0)).collect()
 
     HashSet(res: _*)
   }
@@ -51,7 +51,7 @@ object QueryHandler extends Logging {
    * @return
    */
   def metadataQuery(where: String, tablename: TableName): HashSet[TupleID] = {
-    val res = metadataStorage.readTable(tablename).getData.filter(where).map(r => r.getLong(0)).collect()
+    val res = metadataStorage.readTable(tablename).filter(where).map(r => r.getLong(0)).collect()
 
     HashSet(res: _*)
   }
@@ -120,7 +120,7 @@ object QueryHandler extends Logging {
    * @return
    */
   def indexScanOnly(q: WorkingVector, distance: DistanceFunction, k: Int, indexname: IndexName, options: Map[String, String], filter: Option[HashSet[TupleID]], queryID : Option[String] = None): Seq[Result] = {
-    IndexScanner(q, distance, k, indexname, options, filter).toList.map(tid => Result(-1, tid))
+    IndexScanner(q, distance, k, indexname, options, filter).toList.map(tid => Result(-1, tid, null))
   }
 
   /**

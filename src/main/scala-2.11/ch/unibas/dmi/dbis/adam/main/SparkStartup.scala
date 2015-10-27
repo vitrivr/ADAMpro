@@ -1,7 +1,7 @@
 package ch.unibas.dmi.dbis.adam.main
 
 import ch.unibas.dmi.dbis.adam.datatypes.bitString.{BitString, MinimalBitString}
-import ch.unibas.dmi.dbis.adam.storage.components.{IndexStorage, TableStorage}
+import ch.unibas.dmi.dbis.adam.storage.components.{MetadataStorage, IndexStorage, TableStorage}
 import ch.unibas.dmi.dbis.adam.storage.engine.{PostgresDataStorage, LevelDBDataStorage, ParquetDataStorage}
 import org.apache.spark.sql.hive.HiveContext
 import org.apache.spark.{SparkConf, SparkContext}
@@ -38,6 +38,6 @@ object SparkStartup {
   sqlContext.setConf("spark.parquet.block.size", (1024 * 1024 * 8).toString)
 
   val tableStorage : TableStorage = LevelDBDataStorage
-  val metadataStorage : TableStorage = PostgresDataStorage
+  val metadataStorage : MetadataStorage = PostgresDataStorage
   val indexStorage: IndexStorage = ParquetDataStorage
 }

@@ -1,13 +1,12 @@
 package ch.unibas.dmi.dbis.adam.storage.engine
 
-import ch.unibas.dmi.dbis.adam.datatypes.Feature.{StoredVector, _}
+import java.util.Properties
+
 import ch.unibas.dmi.dbis.adam.main.{SparkStartup, Startup}
-import ch.unibas.dmi.dbis.adam.storage.components.LazyTableStorage
+import ch.unibas.dmi.dbis.adam.storage.components.MetadataStorage
 import ch.unibas.dmi.dbis.adam.table.Table.TableName
-import ch.unibas.dmi.dbis.adam.table.{LazyTable, Table}
 import org.apache.spark.sql.jdbc.AdamDialectRegistrar
-import org.apache.spark.sql.types._
-import org.apache.spark.sql.{DataFrame, Row, SaveMode}
+import org.apache.spark.sql.{DataFrame, SaveMode}
 
 /**
  * adamtwo
@@ -15,7 +14,7 @@ import org.apache.spark.sql.{DataFrame, Row, SaveMode}
  * Ivan Giangreco
  * October 2015
  */
-object PostgresDataStorage extends LazyTableStorage {
+object PostgresDataStorage extends MetadataStorage {
   val config = Startup.config
   val url = config.jdbcUrl
   AdamDialectRegistrar.register(url)
@@ -25,58 +24,10 @@ object PostgresDataStorage extends LazyTableStorage {
    * @param tablename
    * @return
    */
-  override def readTable(tablename: TableName): Table = {
-    LazyTable(tablename,  this)
-  }
-
-  /**
-   *
-   * @param tablename
-   * @param filter
-   */
-  override def readFilteredTable(tablename: TableName, filter: Set[Long]): DataFrame = {
-    val df = SparkStartup.sqlContext.read.format("jdbc").options(
+  override def readTable(tablename: TableName): DataFrame = {
+    SparkStartup.sqlContext.read.format("jdbc").options(
       Map("url" -> url, "dbtable" -> tablename, "user" -> config.jdbcUser, "password" -> config.jdbcPassword)
     ).load()
-
-    val adamIDIdx = df.schema.fieldIndex("__adam_id")
-    //TODO: discover by datatype!
-    val featureIdx = df.schema.fieldIndex("feature")
-
-    val adaptedRDD = df.filter("id IN " + filter.mkString("(", ",", ")")).map(r => Row(r.getLong(adamIDIdx), r.getString(featureIdx) : StoredVector))
-
-    val schema = StructType(
-      List(
-        StructField("id", LongType, false),
-        StructField("feature", ArrayType(FloatType), false)
-      )
-    )
-
-    SparkStartup.sqlContext.createDataFrame(adaptedRDD, schema)
-  }
-
-  /**
-   *
-   * @param tablename
-   */
-  override def readFullTable(tablename: TableName): DataFrame = {
-    val df = SparkStartup.sqlContext.read.format("jdbc").options(
-      Map("url" -> url, "dbtable" -> tablename, "user" -> config.jdbcUser, "password" -> config.jdbcPassword)
-    ).load()
-
-    val adamIDIdx = df.schema.fieldIndex("__adam_id")
-    val featureIdx = df.schema.fieldIndex("feature")
-
-    val adaptedRDD = df.map(r => Row(r.getLong(adamIDIdx), r.getString(featureIdx) : StoredVector))
-
-    val schema = StructType(
-      List(
-        StructField("id", LongType, false),
-        StructField("feature", ArrayType(FloatType), false)
-      )
-    )
-
-    SparkStartup.sqlContext.createDataFrame(adaptedRDD, schema)
   }
 
   /**
@@ -85,11 +36,20 @@ object PostgresDataStorage extends LazyTableStorage {
    * @param df
    * @param mode
    */
-  override def writeTable(tablename: TableName, df: DataFrame, mode: SaveMode): Unit = ???
+  override def writeTable(tablename: TableName, df: DataFrame, mode: SaveMode = SaveMode.Append): Unit = {
+    val props = new Properties()
+    props.put("user", config.jdbcUser)
+    props.put("password", config.jdbcPassword)
+    df.write.mode(mode).jdbc(url, tablename, props)
+  }
 
   /**
    *
    * @param tablename
    */
-  override def dropTable(tablename: TableName): Unit = ???
+  override def dropTable(tablename: TableName): Unit = {
+    SparkStartup.sqlContext.read.format("jdbc").options(
+      Map("url" -> url, "dbtable" -> tablename, "user" -> config.jdbcUser, "password" -> config.jdbcPassword)
+    ).load()
+  }
 }
