@@ -34,8 +34,12 @@ class IndexScanFuture(indexname : IndexName, q : WorkingVector, distance : NormB
   val future = Future {QueryHandler.indexQuery(q, distance, k, indexname, options.toMap, None, Some(queryID))}
   future.onSuccess({
     case res =>
-      onComplete(tracker.getStatus, res, confidence, info)
-      tracker.notifyCompletion(this, res)
+      tracker.synchronized {
+        if(tracker.getStatus() == ProgressiveQueryStatus.RUNNING){
+         onComplete(tracker.getStatus, res, confidence, info)
+        }
+       tracker.notifyCompletion(this, res)
+      }
   })
 
   lazy val confidence: Float = Index.retrieveIndexConfidence(indexname)
@@ -50,8 +54,12 @@ class SequentialScanFuture(tablename : TableName, q : WorkingVector, distance : 
   val future = Future {QueryHandler.sequentialQuery(q, distance, k, tablename, None, Some(queryID))}
   future.onSuccess({
     case res =>
-      onComplete(tracker.getStatus, res, confidence, info)
-      tracker.notifyCompletion(this, res)
+      tracker.synchronized {
+        if (tracker.getStatus() == ProgressiveQueryStatus.RUNNING) {
+          onComplete(tracker.getStatus, res, confidence, info)
+        }
+        tracker.notifyCompletion(this, res)
+      }
   })
 
   val confidence: Float = 1.toFloat

@@ -32,13 +32,15 @@ class ProgressiveQueryStatusTracker(queryID : String) {
    */
   def notifyCompletion(future : ScanFuture, futureResults : Seq[Result]): Unit ={
     futures.synchronized({
-      if(runningStatus == ProgressiveQueryStatus.RUNNING){
+      if(future.confidence > resultConfidence && runningStatus == ProgressiveQueryStatus.RUNNING){
         results = futureResults
+        resultConfidence = future.confidence
       }
 
-      if(future.confidence > resultConfidence){
+      if(resultConfidence == 1.0){
         stop(ProgressiveQueryStatus.FINISHED)
       }
+
       futures -= future
     })
   }
@@ -61,9 +63,11 @@ class ProgressiveQueryStatusTracker(queryID : String) {
    * @param status
    */
   private def stop(status : ProgressiveQueryStatus.Value) : Unit = {
-    SparkStartup.sc.cancelJobGroup(queryID)
-    runningStatus = status
-    futures.clear()
+    futures.synchronized {
+      SparkStartup.sc.cancelJobGroup(queryID)
+      runningStatus = status
+      futures.clear()
+    }
   }
 
 
@@ -71,12 +75,10 @@ class ProgressiveQueryStatusTracker(queryID : String) {
    *
    * @return
    */
-  def getStatus = {
-    if(futures.isEmpty && runningStatus == ProgressiveQueryStatus.RUNNING){
-      ProgressiveQueryStatus.PREMATURE_FINISHED
-    } else {
-      runningStatus
-    }
+  def getStatus() = {
+      futures.synchronized {
+        runningStatus
+      }
   }
 }
 
