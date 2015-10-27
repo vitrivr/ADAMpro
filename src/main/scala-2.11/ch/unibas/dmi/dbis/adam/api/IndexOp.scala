@@ -39,7 +39,6 @@ object IndexOp {
   def apply(tablename : TableName, indextypename : IndexTypeName, properties : Map[String, String]): Unit = {
     val table = Table.retrieveTable(tablename)
 
-    //TODO: change this so that indices do not have to look at data before creation
     val data: RDD[IndexerTuple[WorkingVector]] = table.rows.map { x => IndexerTuple(x.getLong(0), x.getSeq[VectorBase](1) : WorkingVector) }
 
     val generator : IndexGenerator = indextypename match {

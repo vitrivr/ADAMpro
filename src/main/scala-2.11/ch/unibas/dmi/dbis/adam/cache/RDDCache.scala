@@ -13,8 +13,7 @@ import scala.collection.mutable.{Map => mMap}
  * Ivan Giangreco
  * September 2015
  */
-object RDDCache {
-  //TODO: Refactor
+ object RDDCache {
 
   val tableCache = mMap[TableName, Table]()
   val indexCache = mMap[IndexName,  Index[_ <: IndexTuple]]()

@@ -213,9 +213,6 @@ class CLI extends ILoop {
     val query = input(1)
     val k = input(2).toInt
 
-    //TODO: change so user doesn't have to give indexname but rather the tablename and we
-    //choose the index based on a score
-
     //implicit conversion!
     val results =  IndexQueryOp(indexname, query, k, NormBasedDistanceFunction(1))
     Result.resultFromString(results.map(x => "(" + x.tid + "," + x.distance + ")").mkString("\n "))
