@@ -1,7 +1,6 @@
 package ch.unibas.dmi.dbis.adam.query.distance
 
-import ch.unibas.dmi.dbis.adam.datatypes.Feature
-import Feature.{WorkingVector, VectorBase, StoredVector}
+import ch.unibas.dmi.dbis.adam.datatypes.Feature.{VectorBase, WorkingVector}
 import ch.unibas.dmi.dbis.adam.query.distance.Distance.{Distance, _}
 
 /**
@@ -29,18 +28,6 @@ case class NormBasedDistanceFunction(n : Int) extends DistanceFunction with Seri
     sum
   }
 
-  /**
-   *
-   * @param v1
-   * @param v2
-   * @return
-   */
-  def apply(v1: StoredVector, v2: StoredVector): Distance = {
-    n match {
-      case 1 => v1.iterator.zip(v2.iterator).map { case (vv1: Float, vv2: Float) => math.abs(vv1 - vv2) }.reduce(_ + _)
-      case _ => v1.iterator.zip(v2.iterator).map { case (vv1: Float, vv2: Float) => math.pow(math.abs(vv1 - vv2), n) }.reduce(_ + _)
-    }
-  }
 
   /**
    *

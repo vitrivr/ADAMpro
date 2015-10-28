@@ -4,6 +4,7 @@ import java.io._
 import java.nio.ByteBuffer
 import java.util.concurrent.ConcurrentHashMap
 
+import ch.unibas.dmi.dbis.adam.datatypes.WorkingVectorWrapper
 import ch.unibas.dmi.dbis.adam.main.{SparkStartup, Startup}
 import ch.unibas.dmi.dbis.adam.storage.components.TableStorage
 import ch.unibas.dmi.dbis.adam.table.Table.TableName
@@ -15,6 +16,7 @@ import org.iq80.leveldb.impl.Iq80DBFactory._
 
 import scala.collection._
 import scala.collection.convert.decorateAsScala._
+import scala.collection.mutable.ListBuffer
 
 
 /**
@@ -26,10 +28,12 @@ import scala.collection.convert.decorateAsScala._
 
 
 object LevelDBDataStorage extends TableStorage {
-  protected case class DBStatus(db : DB, var locks : Int)
+
+  protected case class DBStatus(db: DB, var locks: Int)
 
   val config = Startup.config
   val databases: concurrent.Map[TableName, DBStatus] = new ConcurrentHashMap[TableName, DBStatus]().asScala
+
 
   /**
    *
@@ -37,15 +41,15 @@ object LevelDBDataStorage extends TableStorage {
    * @param options
    * @return
    */
-  private def openConnection(tablename : TableName, options : Options): DB ={
+  private def openConnection(tablename: TableName, options: Options): DB = {
     databases.synchronized({
-      if(databases.contains(tablename)){
-       val dbStatus = databases.get(tablename)
-      dbStatus.synchronized({
-      dbStatus.get.locks += 1
-      })
-      return dbStatus.get.db
-    } else {
+      if (databases.contains(tablename)) {
+        val dbStatus = databases.get(tablename)
+        dbStatus.synchronized({
+          dbStatus.get.locks += 1
+        })
+        return dbStatus.get.db
+      } else {
         val db: DB = factory.open(new File(config.dataPath + "/" + tablename + ".leveldb"), options)
         val dbStatus = DBStatus(db, 1)
         databases.putIfAbsent(tablename, dbStatus)
@@ -59,7 +63,7 @@ object LevelDBDataStorage extends TableStorage {
    *
    * @param tablename
    */
-  private def closeConnection(tablename : TableName): Unit = {
+  private def closeConnection(tablename: TableName): Unit = {
     if (databases.contains(tablename)) {
       databases.synchronized({
         val status = databases.get(tablename).get
@@ -82,7 +86,38 @@ object LevelDBDataStorage extends TableStorage {
    * @return
    */
   override def readTable(tablename: TableName): DataFrame = {
-    SparkStartup.sqlContext.read.load(config.dataPath + "/" + tablename)
+    val options = new Options()
+    options.createIfMissing(true)
+    try {
+      val db = openConnection(tablename, options)
+
+      val iterator = db.iterator()
+      iterator.seekToFirst()
+
+
+      val results = ListBuffer[Row]()
+      while (iterator.hasNext()) {
+        val key = asLong(iterator.peekNext().getKey())
+        val value = asWorkingVectorWrapper(iterator.peekNext().getValue())
+
+        results += Row(key, value)
+
+        iterator.next()
+      }
+
+      val rdd = SparkStartup.sc.parallelize(results)
+      val schema = StructType(
+        List(
+          StructField("id", LongType, false),
+          StructField("feature", BinaryType, false)
+        )
+      )
+
+      SparkStartup.sqlContext.createDataFrame(rdd, schema)
+
+    } finally {
+      closeConnection(tablename)
+    }
   }
 
   /**
@@ -91,7 +126,7 @@ object LevelDBDataStorage extends TableStorage {
    * @param filter
    * @return
    */
-  override def readFilteredTable(tablename: TableName, filter: Predef.Set[TupleID]): DataFrame  = {
+  override def readFilteredTable(tablename: TableName, filter: Predef.Set[TupleID]): DataFrame = {
     val options = new Options()
     options.createIfMissing(true)
 
@@ -99,28 +134,26 @@ object LevelDBDataStorage extends TableStorage {
 
     try {
       val data = filter.par.map(f => {
-        val values = asFloatArray(db.get(bytes(f)), f)
+        val values = db.get(bytes(f))
 
-        if(values != null){
+        if (values != null) {
           (f, values)
         } else {
           null
         }
-      }).filter(x => x != null).map(r => Row(r._1, r._2)).toSeq.seq
+      }).filter(x => x != null).map(r => Row(r._1, asWorkingVectorWrapper(r._2))).toSeq.seq
 
       val rdd = SparkStartup.sc.parallelize(data)
 
       val schema = StructType(
         List(
           StructField("id", LongType, false),
-          StructField("feature", ArrayType(FloatType), false)
+          StructField("feature", BinaryType, false)
         )
       )
-
       SparkStartup.sqlContext.createDataFrame(rdd, schema)
+
     } finally {
-      // Make sure you close the db to shutdown the
-      // database and avoid resource leaks.
       closeConnection(tablename)
     }
   }
@@ -146,19 +179,22 @@ object LevelDBDataStorage extends TableStorage {
     val db = factory.open(new File(config.dataPath + "/" + tablename + ".leveldb"), options)
 
     try {
-      val it = df.rdd.toLocalIterator.sliding(25000, 25000)
+      val it = df.rdd.collect().iterator
 
       while (it.hasNext) {
-        val data = it.next()
+        val data: List[Row] = List(it.next())
 
         val batch = db.createWriteBatch()
         var i = 0
 
         while (i < data.length) {
           val t = data(i)
-          val tid = bytes(t.tid)
-          val value = bytes(t.value, t.tid)
+
+          val tid = bytes(t.getLong(0))
+          val value = bytes(t.getAs[WorkingVectorWrapper](1))
+
           batch.put(tid, value)
+
           i += 1
         }
 
@@ -167,8 +203,6 @@ object LevelDBDataStorage extends TableStorage {
       }
 
     } finally {
-      // Make sure you close the db to shutdown the
-      // database and avoid resource leaks.
       db.close()
     }
   }
@@ -178,7 +212,7 @@ object LevelDBDataStorage extends TableStorage {
    * @param value
    * @return
    */
-  private def bytes(value: Long) : Array[Byte] = {
+  private def bytes(value: Long): Array[Byte] = {
     ByteBuffer.allocate(8).putLong(value).array()
   }
 
@@ -196,29 +230,28 @@ object LevelDBDataStorage extends TableStorage {
 
   /**
    *
-   * @param v
+   * @param value
    * @return
    */
-  private def asFloatArray(v: Array[Byte], tid : Long = 0): Seq[Float] = {
-    if (v != null) {
-      val dbuf = java.nio.FloatBuffer.allocate(v.length / 4)
-      dbuf.put(java.nio.ByteBuffer.wrap(v).asFloatBuffer())
-      dbuf.array.toSeq
-    } else {
-      null
-    }
+  private def bytes(value: WorkingVectorWrapper): Array[Byte] = {
+    val bos = new ByteArrayOutputStream()
+    val out = new ObjectOutputStream(bos)
+    out.writeObject(value)
+    bos.toByteArray
   }
 
   /**
    *
-   * @param values
+   * @param value
    * @return
    */
-  private def bytes(values: Seq[Float], tid : Long = 0) : Array[Byte] = {
-    val bbuf = java.nio.ByteBuffer.allocate(4 * values.length)
-    bbuf.asFloatBuffer.put(java.nio.FloatBuffer.wrap(values.toArray))
-    val b = bbuf.array
-    b
+  private def asWorkingVectorWrapper(value: Array[Byte]): WorkingVectorWrapper = {
+    try {
+      val bis = new ByteArrayInputStream(value)
+      val in = new ObjectInputStream(bis)
+      in.readObject().asInstanceOf[WorkingVectorWrapper]
+    } catch {
+      case e : Exception => null
+    }
   }
-
 }

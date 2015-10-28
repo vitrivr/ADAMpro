@@ -19,7 +19,7 @@ private[spectrallsh] object SpectralLSHUtils {
    * @return
    */
   @inline def hashFeature(f : WorkingVector, indexMetaData : SpectralLSHIndexMetaData) : BitString[_] = {
-    val fMat = f.toDenseMatrix
+    val fMat = f.toDenseVector.toDenseMatrix
     val pca = indexMetaData.pca.toDenseMatrix
 
     val v = fMat.*(pca).asInstanceOf[DenseMatrix[Float]].toDenseVector - indexMetaData.min.toDenseVector

@@ -1,5 +1,6 @@
 package ch.unibas.dmi.dbis.adam.table
 
+import ch.unibas.dmi.dbis.adam.storage.components.{MetadataStorage, TableStorage}
 import ch.unibas.dmi.dbis.adam.table.Table.TableName
 import org.apache.spark.rdd.RDD
 import org.apache.spark.sql.DataFrame
@@ -12,7 +13,10 @@ import scala.collection.immutable.HashSet
  * Ivan Giangreco
  * October 2015
  */
-case class DefaultTable(tablename : TableName, featureData : DataFrame, metadataData : DataFrame) extends Table {
+case class DefaultTable(tablename : TableName, tableStorage : TableStorage, metadataStorage: MetadataStorage) extends Table {
+  lazy val featureData = tableStorage.readTable(tablename)
+  lazy val metaData = metadataStorage.readTable(tablename)
+
   /**
    *
    * @return
@@ -38,7 +42,7 @@ case class DefaultTable(tablename : TableName, featureData : DataFrame, metadata
    * @return
    */
   override def tuplesForKeys(filter: HashSet[Long]): RDD[Tuple] = {
-    tuples.filter(tuple => filter.contains(tuple.tid.toInt))
+    tableStorage.readFilteredTable(tablename, filter).rdd.map(r => r :Tuple)
   }
 
   /**
@@ -63,5 +67,5 @@ case class DefaultTable(tablename : TableName, featureData : DataFrame, metadata
    *
    * @return
    */
-  override def getMetadata : DataFrame = metadataData
+  override def getMetadata : DataFrame = metaData
 }

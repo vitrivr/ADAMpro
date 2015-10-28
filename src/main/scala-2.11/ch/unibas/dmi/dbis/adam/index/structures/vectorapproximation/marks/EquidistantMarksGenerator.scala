@@ -34,7 +34,7 @@ private[vectorapproximation] object EquidistantMarksGenerator extends MarksGener
    * @param dimensionality
    * @return
    */
-  private def getMin(data : RDD[StoredVector], dimensionality : Int) : StoredVector = {
+  private def getMin(data : RDD[WorkingVector], dimensionality : Int) : WorkingVector = {
     val base = Seq.fill(dimensionality)(Float.MaxValue)
     data.treeReduce{case(baseV, newV) => baseV.zip(newV).map{case (b,v) => math.min(b,v)}}
   }
@@ -45,7 +45,7 @@ private[vectorapproximation] object EquidistantMarksGenerator extends MarksGener
    * @param dimensionality
    * @return
    */
-  private def getMax(data : RDD[StoredVector], dimensionality : Int) : StoredVector = {
+  private def getMax(data : RDD[WorkingVector], dimensionality : Int) : WorkingVector = {
     val base = Seq.fill(dimensionality)(Float.MinValue)
     data.treeReduce{case(baseV, newV) => baseV.zip(newV).map{case (b,v) => math.max(b,v)}}
   }

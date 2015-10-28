@@ -10,7 +10,7 @@ import ch.unibas.dmi.dbis.adam.datatypes.Feature._
  * September 2015
  */
 private[spectrallsh] case class SpectralLSHIndexMetaData
-  (pca : DenseMatrix[VectorBase], min : DenseVector[VectorBase], max : DenseVector[VectorBase], modes : DenseMatrix[VectorBase], radius : DenseVector[VectorBase])
+  (pca : DenseMatrix[VectorBase], min : Vector[VectorBase], max : Vector[VectorBase], modes : DenseMatrix[VectorBase], radius : Vector[VectorBase])
   extends Serializable {
 
 

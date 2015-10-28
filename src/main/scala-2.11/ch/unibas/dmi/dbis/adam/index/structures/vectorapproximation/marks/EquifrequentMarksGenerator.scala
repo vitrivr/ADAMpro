@@ -1,7 +1,7 @@
 package ch.unibas.dmi.dbis.adam.index.structures.vectorapproximation.marks
 
 import ch.unibas.dmi.dbis.adam.datatypes.Feature._
-import ch.unibas.dmi.dbis.adam.index.{IndexerTuple, BitStringIndexTuple}
+import ch.unibas.dmi.dbis.adam.index.IndexerTuple
 import ch.unibas.dmi.dbis.adam.index.structures.vectorapproximation.VectorApproximationIndex.Marks
 import org.apache.spark.rdd.RDD
 
@@ -51,7 +51,7 @@ private[vectorapproximation] object EquifrequentMarksGenerator extends MarksGene
    * @param data
    * @return
    */
-  private def treeReduceData(data : RDD[StoredVector], f : (VectorBase, VectorBase) => Float) : StoredVector = {
+  private def treeReduceData(data : RDD[WorkingVector], f : (VectorBase, VectorBase) => Float) : WorkingVector = {
     data.treeReduce{case(baseV, newV) => baseV.zip(newV).map{case (b,v) => f(b,v)}}
   }
 

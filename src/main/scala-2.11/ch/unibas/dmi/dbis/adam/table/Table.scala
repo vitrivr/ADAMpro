@@ -93,7 +93,7 @@ object Table {
 
     Await.ready(future, Duration.Inf)
 
-    DefaultTable(tablename, tableData, metadataData)
+    DefaultTable(tablename, tableStorage, metadataStorage)
   }
 
   /**
@@ -138,7 +138,7 @@ object Table {
     if(RDDCache.containsTable(tablename)){
       RDDCache.getTable(tablename)
     } else {
-      DefaultTable(tablename, tableStorage.readTable(tablename), metadataStorage.readTable(tablename))
+      DefaultTable(tablename, tableStorage, metadataStorage)
     }
   }
 

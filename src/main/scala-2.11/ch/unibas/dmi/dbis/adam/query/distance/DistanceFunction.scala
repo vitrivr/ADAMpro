@@ -25,13 +25,5 @@ trait DistanceFunction {
    * @param v2
    * @return
    */
-  def apply(v1: StoredVector, v2: StoredVector): Distance
-
-  /**
-   *
-   * @param v1
-   * @param v2
-   * @return
-   */
   def apply(v1: VectorBase, v2: VectorBase): Distance
 }

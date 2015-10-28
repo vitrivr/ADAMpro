@@ -1,5 +1,6 @@
 package ch.unibas.dmi.dbis.adam.main
 
+import ch.unibas.dmi.dbis.adam.datatypes.WorkingVectorWrapper
 import ch.unibas.dmi.dbis.adam.datatypes.bitString.{BitString, MinimalBitString}
 import ch.unibas.dmi.dbis.adam.storage.components.{MetadataStorage, IndexStorage, TableStorage}
 import ch.unibas.dmi.dbis.adam.storage.engine.{PostgresDataStorage, LevelDBDataStorage, ParquetDataStorage}
@@ -27,7 +28,7 @@ object SparkStartup {
     .set("spark.cassandra.auth.username", "cassandra")
     .set("spark.cassandra.auth.password", "cassandra")
     .set("spark.scheduler.allocation.file", "/Users/gianiv01/Development/adamtwo/conf/scheduler.xml")
-    .registerKryoClasses(Array(classOf[BitString[_]], classOf[MinimalBitString]))
+    .registerKryoClasses(Array(classOf[BitString[_]], classOf[MinimalBitString], classOf[WorkingVectorWrapper]))
 
   val sc = new SparkContext(sparkConfig)
   //val sqlContext = new SQLContext(sc)
