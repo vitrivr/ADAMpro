@@ -3,6 +3,7 @@ package ch.unibas.dmi.dbis.adam.api
 import ch.unibas.dmi.dbis.adam.datatypes.feature.Feature
 import Feature.FeatureVector
 import ch.unibas.dmi.dbis.adam.query.distance.DistanceFunction
+import ch.unibas.dmi.dbis.adam.query.query.NearestNeighbourQuery
 import ch.unibas.dmi.dbis.adam.query.{QueryHandler, Result}
 import ch.unibas.dmi.dbis.adam.entity.Entity._
 
@@ -15,12 +16,13 @@ import ch.unibas.dmi.dbis.adam.entity.Entity._
 object SequentialQueryOp {
   /**
    *
-   * @param tablename
-   * @param query
+   * @param entityname
+   * @param qv
    * @param k
    * @param distance
    */
-  def apply(tablename: EntityName, query : FeatureVector, k : Int, distance : DistanceFunction) : Seq[Result] = {
-    QueryHandler.sequentialQuery(query, distance, k, tablename, None)
+  def apply(entityname: EntityName, qv : FeatureVector, k : Int, distance : DistanceFunction) : Seq[Result] = {
+    val query = NearestNeighbourQuery(qv, distance, k)
+    QueryHandler.sequentialQuery(entityname, query, None)
   }
 }

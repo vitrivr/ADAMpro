@@ -2,17 +2,18 @@ package ch.unibas.dmi.dbis.adam.query
 
 import java.util.concurrent.TimeUnit
 
-import ch.unibas.dmi.dbis.adam.datatypes.feature.Feature._
-import ch.unibas.dmi.dbis.adam.index.Index
-import ch.unibas.dmi.dbis.adam.index.Index.IndexName
-import ch.unibas.dmi.dbis.adam.main.SparkStartup
-import ch.unibas.dmi.dbis.adam.query.distance.DistanceFunction
-import ch.unibas.dmi.dbis.adam.query.progressive.{IndexScanFuture, ProgressiveQueryStatus, ProgressiveQueryStatusTracker, SequentialScanFuture}
-import ch.unibas.dmi.dbis.adam.storage.engine.CatalogOperator
 import ch.unibas.dmi.dbis.adam.entity.Entity
 import ch.unibas.dmi.dbis.adam.entity.Entity.EntityName
 import ch.unibas.dmi.dbis.adam.entity.Tuple.TupleID
+import ch.unibas.dmi.dbis.adam.index.Index
+import ch.unibas.dmi.dbis.adam.index.Index.IndexName
+import ch.unibas.dmi.dbis.adam.main.SparkStartup
+import ch.unibas.dmi.dbis.adam.query.progressive.{IndexScanFuture, ProgressiveQueryStatus, ProgressiveQueryStatusTracker, SequentialScanFuture}
+import ch.unibas.dmi.dbis.adam.query.query.{BooleanQuery, NearestNeighbourQuery}
+import ch.unibas.dmi.dbis.adam.query.scanner.MetadataScanner
+import ch.unibas.dmi.dbis.adam.storage.engine.CatalogOperator
 import org.apache.spark.Logging
+import org.apache.spark.sql.Row
 
 import scala.collection.immutable.HashSet
 import scala.collection.mutable.{Map => mMap}
@@ -28,120 +29,97 @@ import scala.concurrent.duration.Duration
  * August 2015
  */
 object QueryHandler extends Logging {
-  private val metadataStorage = SparkStartup.metadataStorage
   private val featureStorage = SparkStartup.featureStorage
 
+
   /**
    *
-   * @param where
    * @param entityname
+   * @param query
    * @return
    */
-  def metadataQuery(where: Map[String, String], entityname: EntityName): HashSet[TupleID] = {
-    val filter = where.map(c => c._1 + " = " + c._2).mkString(" AND ")
-    val res = metadataStorage.read(entityname).filter(filter).map(r => r.getLong(0)).collect()
-    HashSet(res : _*)
+  def metadataQuery(entityname: EntityName, query : BooleanQuery): Seq[Row] = {
+    MetadataScanner(Entity.retrieveEntity(entityname), query)
   }
 
-
   /**
    *
-   * @param where
    * @param entityname
+   * @param filter
    * @return
    */
-  def metadataQuery(where: String, entityname: EntityName): HashSet[TupleID] = {
-    val res = metadataStorage.read(entityname).filter(where).map(r => r.getLong(0)).collect()
-    HashSet(res : _*)
+  def sequentialQuery(entityname: EntityName, query : NearestNeighbourQuery, filter: Option[HashSet[TupleID]]): Seq[Result] = {
+    FeatureScanner(Entity.retrieveEntity(entityname), query, filter)
   }
 
-
   /**
    *
-   * @param q
-   * @param distance
-   * @param k
-   * @param entityname
-   * @return
-   */
-  def sequentialQuery(q: FeatureVector, distance: DistanceFunction, k: Int, entityname: EntityName, filter: Option[HashSet[TupleID]], queryID : Option[String] = None): Seq[Result] =
-    FeatureScanner(Entity.retrieveEntity(entityname), q, distance, k, filter, queryID)
-
-  /**
-   *
-   * @param q
-   * @param distance
-   * @param k
    * @param indexname
-   * @param options
+   * @param query
+   * @param filter
    * @return
    */
-  def indexQuery(q: FeatureVector, distance: DistanceFunction, k: Int, indexname: IndexName, options: Map[String, String], filter: Option[HashSet[TupleID]], queryID : Option[String] = None): Seq[Result] = {
-    val onlyIndexResults = options.getOrElse("onlyindex", "false").toBoolean
-
-    if (!onlyIndexResults) {
-      indexAndFeatureScan(q, distance, k, indexname, options, filter, queryID)
+  def indexQuery(indexname : IndexName, query : NearestNeighbourQuery, filter: Option[HashSet[TupleID]]): Seq[Result] = {
+    if(query.indexOnly){
+      indexOnlyQuery(indexname, query, filter)
     } else {
-      indexScanOnly(q, distance, k, indexname, options, filter, queryID)
+      indexQueryWithResults(indexname, query, filter)
     }
   }
 
   /**
    *
-   * @param q
-   * @param distance
-   * @param k
    * @param indexname
-   * @param options
+   * @param query
+   * @param filter
    * @return
    */
-  def indexAndFeatureScan(q: FeatureVector, distance: DistanceFunction, k: Int, indexname: IndexName, options: Map[String, String], filter: Option[HashSet[TupleID]], queryID : Option[String] = None): Seq[Result] = {
+  def indexQueryWithResults(indexname : IndexName, query : NearestNeighbourQuery, filter: Option[HashSet[TupleID]]): Seq[Result] = {
     val entityname = CatalogOperator.getIndexEntity(indexname)
 
     val future = Future {
       Entity.retrieveEntity(entityname)
     }
 
-    val tidList = IndexScanner(q, distance, k, indexname, options, filter, queryID)
+    val tidList = IndexScanner(Index.retrieveIndex(indexname), query, filter)
 
     val entity = Await.result[Entity](future, Duration(100, TimeUnit.SECONDS))
-    FeatureScanner(entity, q, distance, k, Some(tidList), queryID)
+    FeatureScanner(entity, query, Some(tidList))
   }
 
   /**
    *
-   * @param q
-   * @param distance
-   * @param k
    * @param indexname
-   * @param options
+   * @param query
+   * @param filter
    * @return
    */
-  def indexScanOnly(q: FeatureVector, distance: DistanceFunction, k: Int, indexname: IndexName, options: Map[String, String], filter: Option[HashSet[TupleID]], queryID : Option[String] = None): Seq[Result] =
-    IndexScanner(q, distance, k, indexname, options, filter).toList.map(tid => Result(-1, tid, null))
-
+  def indexOnlyQuery(indexname : IndexName, query : NearestNeighbourQuery, filter: Option[HashSet[TupleID]]): Seq[Result] = {
+    IndexScanner(Index.retrieveIndex(indexname), query, filter).map(Result(0, _, null)).toSeq
+  }
 
   /**
    *
-   * @param q
-   * @param distance
-   * @param k
    * @param entityname
+   * @param query
+   * @param filter
+   * @param onComplete
+   * @return
    */
-  def progressiveQuery(q: FeatureVector, distance: DistanceFunction, k: Int, entityname: EntityName, filter: Option[HashSet[TupleID]], onComplete: (ProgressiveQueryStatus.Value, Seq[Result], Float, Map[String, String]) => Unit, queryID : Option[String] = Some(java.util.UUID.randomUUID().toString)): Int = {
+  def progressiveQuery(entityname: EntityName, query : NearestNeighbourQuery, filter: Option[HashSet[TupleID]], onComplete: (ProgressiveQueryStatus.Value, Seq[Result], Float, Map[String, String]) => Unit): Int = {
     val indexnames = Index.getIndexnames(entityname)
 
     val options = mMap[String, String]()
 
-    val tracker = new ProgressiveQueryStatusTracker(queryID.get)
+    val tracker = new ProgressiveQueryStatusTracker(query.queryID.get)
 
     //index scans
     val indexScanFutures = indexnames.par.map { indexname =>
-      val isf = new IndexScanFuture(indexname, q, distance, k, options.toMap, onComplete, queryID.get, tracker)
+      val isf = new IndexScanFuture(indexname, query, onComplete, tracker)
     }
 
     //sequential scan
-    val ssf = new SequentialScanFuture(entityname, q, distance, k, onComplete, queryID.get, tracker)
+    val ssf = new SequentialScanFuture(entityname, query, onComplete, tracker)
 
 
     //number of queries running (indexes + sequential)
@@ -151,27 +129,27 @@ object QueryHandler extends Logging {
 
   /**
    *
-   * @param q
-   * @param distance
-   * @param k
    * @param entityname
+   * @param query
+   * @param filter
+   * @return
    */
-  def timedProgressiveQuery(q: FeatureVector, distance: DistanceFunction, k: Int, entityname: EntityName, filter: Option[HashSet[TupleID]], timelimit : Duration, queryID : Option[String] = Some(java.util.UUID.randomUUID().toString)): (Seq[Result], Float) = {
+  def timedProgressiveQuery(entityname: EntityName, query : NearestNeighbourQuery, filter: Option[HashSet[TupleID]], timelimit : Duration): (Seq[Result], Float) = {
     val indexnames = Index.getIndexnames(entityname)
 
     val options = mMap[String, String]()
 
-    val tracker = new ProgressiveQueryStatusTracker(queryID.get)
+    val tracker = new ProgressiveQueryStatusTracker(query.queryID.get)
 
     val timerFuture = Future{Thread.sleep(timelimit.toMillis)}
 
     //index scans
     val indexScanFutures = indexnames.par.map { indexname =>
-      val isf = new IndexScanFuture(indexname, q, distance, k, options.toMap, (status, result, confidence, info) => (), queryID.get, tracker)
+      val isf = new IndexScanFuture(indexname, query, (status, result, confidence, info) => (), tracker)
     }
 
     //sequential scan
-    val ssf = new SequentialScanFuture(entityname, q, distance, k, (status, result, confidence, info) => (), queryID.get, tracker)
+    val ssf = new SequentialScanFuture(entityname, query, (status, result, confidence, info) => (), tracker)
 
     Await.result(timerFuture, timelimit)
 

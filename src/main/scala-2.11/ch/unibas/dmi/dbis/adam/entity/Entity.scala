@@ -23,8 +23,8 @@ import scala.concurrent.{Await, Future}
  * October 2015
  */
 case class Entity(entityname : EntityName, featureStorage : FeatureStorage, metadataStorage: MetadataStorage) {
-  lazy val featureData = featureStorage.read(entityname)
-  lazy val metaData = metadataStorage.read(entityname)
+  private lazy val featureData = featureStorage.read(entityname)
+  private lazy val metaData = metadataStorage.read(entityname)
   
   def count = featureData.count()
   def show() = featureData.collect()
