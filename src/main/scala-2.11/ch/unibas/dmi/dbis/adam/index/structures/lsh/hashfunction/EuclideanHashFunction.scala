@@ -1,8 +1,7 @@
 package ch.unibas.dmi.dbis.adam.index.structures.lsh.hashfunction
 
 import breeze.linalg.DenseVector
-import ch.unibas.dmi.dbis.adam.datatypes.Feature
-import Feature.WorkingVector
+import ch.unibas.dmi.dbis.adam.datatypes.feature.Feature.FeatureVector
 
 import scala.util.Random
 
@@ -12,7 +11,7 @@ import scala.util.Random
  * Ivan Giangreco
  * August 2015
  */
-class EuclideanHashFunction(w: Float, offset: Float, proj: WorkingVector, m: Int) extends LSHashFunction with Serializable {
+class EuclideanHashFunction(w: Float, offset: Float, proj: FeatureVector, m: Int) extends LSHashFunction with Serializable {
   /**
    *
    * @param d
@@ -23,26 +22,10 @@ class EuclideanHashFunction(w: Float, offset: Float, proj: WorkingVector, m: Int
     this(w, w * Random.nextFloat(), DenseVector.fill(d)(Random.nextGaussian().toFloat), m: Int)
   }
 
-  /**
-   *
-   * @param v
-   * @return
-   */
-  def hash(v: WorkingVector): Int = {
-    math.round(((v dot proj): Float) + offset / w.toFloat) % m
-  }
+  def hash(v: FeatureVector): Int = math.round(((v dot proj): Float) + offset / w.toFloat) % m
 }
 
 
 object EuclideanHashFunction {
-  /**
-   *
-   * @param d
-   * @param w
-   * @param m
-   * @return
-   */
-  def apply(d: Int, w: Float, m: Int) = {
-    new EuclideanHashFunction(d, w, m)
-  }
+  def apply(d: Int, w: Float, m: Int) = new EuclideanHashFunction(d, w, m)
 }

@@ -1,8 +1,8 @@
 package ch.unibas.dmi.dbis.adam.main
 
-import ch.unibas.dmi.dbis.adam.datatypes.WorkingVectorWrapper
 import ch.unibas.dmi.dbis.adam.datatypes.bitString.{BitString, MinimalBitString}
-import ch.unibas.dmi.dbis.adam.storage.components.{MetadataStorage, IndexStorage, TableStorage}
+import ch.unibas.dmi.dbis.adam.datatypes.feature.FeatureVectorWrapper
+import ch.unibas.dmi.dbis.adam.storage.components.{MetadataStorage, IndexStorage, FeatureStorage}
 import ch.unibas.dmi.dbis.adam.storage.engine.{PostgresDataStorage, LevelDBDataStorage, ParquetDataStorage}
 import org.apache.spark.sql.hive.HiveContext
 import org.apache.spark.{SparkConf, SparkContext}
@@ -28,7 +28,7 @@ object SparkStartup {
     .set("spark.cassandra.auth.username", "cassandra")
     .set("spark.cassandra.auth.password", "cassandra")
     .set("spark.scheduler.allocation.file", "/Users/gianiv01/Development/adamtwo/conf/scheduler.xml")
-    .registerKryoClasses(Array(classOf[BitString[_]], classOf[MinimalBitString], classOf[WorkingVectorWrapper]))
+    .registerKryoClasses(Array(classOf[BitString[_]], classOf[MinimalBitString], classOf[FeatureVectorWrapper]))
 
   val sc = new SparkContext(sparkConfig)
   //val sqlContext = new SQLContext(sc)
@@ -38,7 +38,7 @@ object SparkStartup {
   sqlContext.setConf("spark.sql.avro.deflate.level", "5")
   sqlContext.setConf("spark.parquet.block.size", (1024 * 1024 * 8).toString)
 
-  val tableStorage : TableStorage = LevelDBDataStorage
+  val featureStorage : FeatureStorage = LevelDBDataStorage
   val metadataStorage : MetadataStorage = PostgresDataStorage
   val indexStorage: IndexStorage = ParquetDataStorage
 }

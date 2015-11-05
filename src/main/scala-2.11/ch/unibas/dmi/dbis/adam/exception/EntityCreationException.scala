@@ -6,5 +6,5 @@ package ch.unibas.dmi.dbis.adam.exception
  * Ivan Giangreco
  * August 2015
  */
-class TableCreationException extends AdamTwoException {
+class EntityCreationException extends AdamTwoException {
 }

@@ -1,9 +1,9 @@
 package ch.unibas.dmi.dbis.adam.cache
 
 import ch.unibas.dmi.dbis.adam.index.Index.IndexName
-import ch.unibas.dmi.dbis.adam.index.{IndexTuple, CacheableIndex, Index}
-import ch.unibas.dmi.dbis.adam.table.Table.TableName
-import ch.unibas.dmi.dbis.adam.table.{CacheableTable, Table}
+import ch.unibas.dmi.dbis.adam.index.{CacheableIndex, Index, IndexTuple}
+import ch.unibas.dmi.dbis.adam.entity.Entity.EntityName
+import ch.unibas.dmi.dbis.adam.entity.{CacheableEntity, Entity}
 
 import scala.collection.mutable.{Map => mMap}
 
@@ -15,7 +15,7 @@ import scala.collection.mutable.{Map => mMap}
  */
  object RDDCache {
 
-  val tableCache = mMap[TableName, Table]()
+  val tableCache = mMap[EntityName, Entity]()
   val indexCache = mMap[IndexName,  Index[_ <: IndexTuple]]()
 
   /**
@@ -54,11 +54,11 @@ import scala.collection.mutable.{Map => mMap}
    *
    * @param cacheableTable
    */
-  def putTable(cacheableTable : CacheableTable): Unit = {
-    val tablename = cacheableTable.table.tablename
+  def putTable(cacheableTable : CacheableEntity): Unit = {
+    val tablename = cacheableTable.entity.entityname
 
     if(!tableCache.contains(tablename)){
-      tableCache.put(cacheableTable.table.tablename, cacheableTable.table)
+      tableCache.put(cacheableTable.entity.entityname, cacheableTable.entity)
     }
   }
 
@@ -68,7 +68,7 @@ import scala.collection.mutable.{Map => mMap}
    * @param tableName
    * @return
    */
-  def containsTable(tableName: TableName): Boolean ={
+  def containsTable(tableName: EntityName): Boolean ={
     tableCache.contains(tableName)
   }
 
@@ -77,7 +77,7 @@ import scala.collection.mutable.{Map => mMap}
    * @param tableName
    * @return
    */
-  def getTable(tableName: TableName) : Table = {
+  def getTable(tableName: EntityName) : Entity = {
     tableCache.getOrElse(tableName, null)
   }
 

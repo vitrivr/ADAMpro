@@ -10,23 +10,7 @@ import org.apache.spark.sql.DataFrame
  * August 2015
  */
 trait IndexStorage {
-  /**
-   *
-   * @param indexName
-   * @return
-   */
-  def readIndex(indexName : IndexName) : DataFrame
-
-  /**
-   *
-   * @param indexName
-   * @param index
-   */
-  def writeIndex(indexName: IndexName, index: DataFrame): Unit
-
-  /**
-   *
-   * @param indexName
-   */
-  def dropIndex(indexName : IndexName) : Unit
+  def read(indexName : IndexName) : DataFrame
+  def write(indexName: IndexName, index: DataFrame): Unit
+  def drop(indexName : IndexName) : Unit
 }

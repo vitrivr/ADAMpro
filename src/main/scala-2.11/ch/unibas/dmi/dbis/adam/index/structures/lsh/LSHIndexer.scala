@@ -1,27 +1,26 @@
 package ch.unibas.dmi.dbis.adam.index.structures.lsh
 
-import ch.unibas.dmi.dbis.adam.datatypes.Feature.WorkingVector
 import ch.unibas.dmi.dbis.adam.index.Index._
 import ch.unibas.dmi.dbis.adam.index._
 import ch.unibas.dmi.dbis.adam.index.structures.IndexStructures
 import ch.unibas.dmi.dbis.adam.index.structures.lsh.hashfunction.{EuclideanHashFunction, Hasher}
 import ch.unibas.dmi.dbis.adam.main.SparkStartup
-import ch.unibas.dmi.dbis.adam.query.distance.NormBasedDistanceFunction
-import ch.unibas.dmi.dbis.adam.table.Table._
+import ch.unibas.dmi.dbis.adam.query.distance.DistanceFunction
+import ch.unibas.dmi.dbis.adam.entity.Entity._
 import org.apache.spark.rdd.RDD
 
 
-class LSHIndexer(hashFamily : String, numHashTables : Int, numHashes : Int, distance : NormBasedDistanceFunction, trainingSize : Int) extends IndexGenerator with Serializable {
+class LSHIndexer(hashFamily : String, numHashTables : Int, numHashes : Int, distance : DistanceFunction, trainingSize : Int) extends IndexGenerator with Serializable {
   override val indextypename: IndexTypeName = IndexStructures.LSH
 
   /**
    *
    * @param indexname
-   * @param tablename
+   * @param entityname
    * @param data
    * @return
    */
-  override def index(indexname : IndexName, tablename : TableName, data: RDD[IndexerTuple[WorkingVector]]): Index[_ <: IndexTuple] = {
+  override def index(indexname : IndexName, entityname : EntityName, data: RDD[IndexerTuple]): Index[_ <: IndexTuple] = {
     val indexMetaData = train(data)
 
     val indexdata = data.map(
@@ -31,7 +30,7 @@ class LSHIndexer(hashFamily : String, numHashTables : Int, numHashes : Int, dist
       })
 
     import SparkStartup.sqlContext.implicits._
-    new LSHIndex(indexname, tablename, indexdata.toDF, indexMetaData)
+    new LSHIndex(indexname, entityname, indexdata.toDF, indexMetaData)
   }
 
   /**
@@ -39,7 +38,7 @@ class LSHIndexer(hashFamily : String, numHashTables : Int, numHashes : Int, dist
    * @param data
    * @return
    */
-  private def train(data : RDD[IndexerTuple[WorkingVector]]) : LSHIndexMetaData = {
+  private def train(data : RDD[IndexerTuple]) : LSHIndexMetaData = {
     //data
     val trainData = data.takeSample(true, trainingSize)
     val trainData2 = data.takeSample(true, trainingSize).par
@@ -74,9 +73,7 @@ object LSHIndexer {
    *
    * @param properties
    */
-  def apply(properties : Map[String, String] = Map[String, String](), data: RDD[IndexerTuple[WorkingVector]]) : IndexGenerator = {
-    //val totalNumBits = properties.getOrElse("totalNumBits", (data.first.value.length * 8).toString).toInt
-
+  def apply(properties : Map[String, String] = Map[String, String](), distance : DistanceFunction, data: RDD[IndexerTuple]) : IndexGenerator = {
     val hashFamilyDescription = properties.getOrElse("hashFamily", "euclidean")
     val hashFamily = hashFamilyDescription.toLowerCase match {
       case "euclidean" => "euclidean" //TODO: params
@@ -90,6 +87,6 @@ object LSHIndexer {
 
     val trainingSize = properties.getOrElse("trainingSize", "5000").toInt
 
-    new LSHIndexer(hashFamily, numHashTables, numHashes, new NormBasedDistanceFunction(norm), trainingSize)
+    new LSHIndexer(hashFamily, numHashTables, numHashes, distance, trainingSize)
   }
 }

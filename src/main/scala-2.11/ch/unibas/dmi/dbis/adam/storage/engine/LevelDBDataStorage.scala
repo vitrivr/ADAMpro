@@ -3,12 +3,11 @@ package ch.unibas.dmi.dbis.adam.storage.engine
 import java.io._
 import java.nio.ByteBuffer
 import java.util.concurrent.ConcurrentHashMap
-
-import ch.unibas.dmi.dbis.adam.datatypes.WorkingVectorWrapper
+import ch.unibas.dmi.dbis.adam.datatypes.feature.FeatureVectorWrapper
 import ch.unibas.dmi.dbis.adam.main.{SparkStartup, Startup}
-import ch.unibas.dmi.dbis.adam.storage.components.TableStorage
-import ch.unibas.dmi.dbis.adam.table.Table.TableName
-import ch.unibas.dmi.dbis.adam.table.Tuple._
+import ch.unibas.dmi.dbis.adam.storage.components.FeatureStorage
+import ch.unibas.dmi.dbis.adam.entity.Entity.EntityName
+import ch.unibas.dmi.dbis.adam.entity.Tuple._
 import org.apache.spark.sql.types._
 import org.apache.spark.sql.{DataFrame, Row, SaveMode}
 import org.iq80.leveldb._
@@ -25,14 +24,12 @@ import scala.collection.mutable.ListBuffer
  * Ivan Giangreco
  * October 2015
  */
-
-
-object LevelDBDataStorage extends TableStorage {
+object LevelDBDataStorage extends FeatureStorage {
 
   protected case class DBStatus(db: DB, var locks: Int)
 
   val config = Startup.config
-  val databases: concurrent.Map[TableName, DBStatus] = new ConcurrentHashMap[TableName, DBStatus]().asScala
+  val databases: concurrent.Map[EntityName, DBStatus] = new ConcurrentHashMap[EntityName, DBStatus]().asScala
 
 
   /**
@@ -41,7 +38,7 @@ object LevelDBDataStorage extends TableStorage {
    * @param options
    * @return
    */
-  private def openConnection(tablename: TableName, options: Options): DB = {
+  private def openConnection(tablename: EntityName, options: Options): DB = {
     databases.synchronized({
       if (databases.contains(tablename)) {
         val dbStatus = databases.get(tablename)
@@ -63,7 +60,7 @@ object LevelDBDataStorage extends TableStorage {
    *
    * @param tablename
    */
-  private def closeConnection(tablename: TableName): Unit = {
+  private def closeConnection(tablename: EntityName): Unit = {
     if (databases.contains(tablename)) {
       databases.synchronized({
         val status = databases.get(tablename).get
@@ -82,18 +79,31 @@ object LevelDBDataStorage extends TableStorage {
 
   /**
    *
-   * @param tablename
+   * @param entityname
+   * @param filter
    * @return
    */
-  override def readTable(tablename: TableName): DataFrame = {
+  override def read(entityname: EntityName, filter: Option[scala.collection.Set[TupleID]]): DataFrame = {
+    if(filter.isDefined){
+      internalRead(entityname, filter.get)
+    } else {
+      internalRead(entityname)
+    }
+  }
+
+    /**
+   *
+   * @param entityname
+   * @return
+   */
+  private def internalRead(entityname: EntityName): DataFrame = {
     val options = new Options()
     options.createIfMissing(true)
     try {
-      val db = openConnection(tablename, options)
+      val db = openConnection(entityname, options)
 
       val iterator = db.iterator()
       iterator.seekToFirst()
-
 
       val results = ListBuffer[Row]()
       while (iterator.hasNext()) {
@@ -116,21 +126,21 @@ object LevelDBDataStorage extends TableStorage {
       SparkStartup.sqlContext.createDataFrame(rdd, schema)
 
     } finally {
-      closeConnection(tablename)
+      closeConnection(entityname)
     }
   }
 
   /**
    *
-   * @param tablename
+   * @param entityname
    * @param filter
    * @return
    */
-  override def readFilteredTable(tablename: TableName, filter: Predef.Set[TupleID]): DataFrame = {
+  private def internalRead(entityname: EntityName, filter: Set[TupleID]): DataFrame = {
     val options = new Options()
     options.createIfMissing(true)
 
-    val db = openConnection(tablename, options)
+    val db = openConnection(entityname, options)
 
     try {
       val data = filter.par.map(f => {
@@ -154,7 +164,7 @@ object LevelDBDataStorage extends TableStorage {
       SparkStartup.sqlContext.createDataFrame(rdd, schema)
 
     } finally {
-      closeConnection(tablename)
+      closeConnection(entityname)
     }
   }
 
@@ -163,9 +173,8 @@ object LevelDBDataStorage extends TableStorage {
    *
    * @param tablename
    */
-  override def dropTable(tablename: TableName): Unit = {
-    factory.destroy(new File(config.dataPath + "/" + tablename + ".leveldb"), new Options())
-  }
+  override def drop(tablename: EntityName): Unit = factory.destroy(new File(config.dataPath + "/" + tablename + ".leveldb"), new Options())
+
 
   /**
    *
@@ -173,7 +182,7 @@ object LevelDBDataStorage extends TableStorage {
    * @param df
    * @param mode
    */
-  override def writeTable(tablename: TableName, df: DataFrame, mode: SaveMode): Unit = {
+  override def write(tablename: EntityName, df: DataFrame, mode: SaveMode): Unit = {
     val options = new Options()
     options.createIfMissing(true)
     val db = factory.open(new File(config.dataPath + "/" + tablename + ".leveldb"), options)
@@ -191,7 +200,7 @@ object LevelDBDataStorage extends TableStorage {
           val t = data(i)
 
           val tid = bytes(t.getLong(0))
-          val value = bytes(t.getAs[WorkingVectorWrapper](1))
+          val value = bytes(t.getAs[FeatureVectorWrapper](1))
 
           batch.put(tid, value)
 
@@ -212,9 +221,7 @@ object LevelDBDataStorage extends TableStorage {
    * @param value
    * @return
    */
-  private def bytes(value: Long): Array[Byte] = {
-    ByteBuffer.allocate(8).putLong(value).array()
-  }
+  private def bytes(value: Long): Array[Byte] = ByteBuffer.allocate(8).putLong(value).array()
 
   /**
    *
@@ -233,11 +240,15 @@ object LevelDBDataStorage extends TableStorage {
    * @param value
    * @return
    */
-  private def bytes(value: WorkingVectorWrapper): Array[Byte] = {
+  private def bytes(value: FeatureVectorWrapper): Array[Byte] = {
     val bos = new ByteArrayOutputStream()
     val out = new ObjectOutputStream(bos)
     out.writeObject(value)
-    bos.toByteArray
+    val res = bos.toByteArray
+    bos.close()
+    out.close()
+
+    res
   }
 
   /**
@@ -245,11 +256,11 @@ object LevelDBDataStorage extends TableStorage {
    * @param value
    * @return
    */
-  private def asWorkingVectorWrapper(value: Array[Byte]): WorkingVectorWrapper = {
+  private def asWorkingVectorWrapper(value: Array[Byte]): FeatureVectorWrapper = {
     try {
       val bis = new ByteArrayInputStream(value)
       val in = new ObjectInputStream(bis)
-      in.readObject().asInstanceOf[WorkingVectorWrapper]
+      in.readObject().asInstanceOf[FeatureVectorWrapper]
     } catch {
       case e : Exception => null
     }

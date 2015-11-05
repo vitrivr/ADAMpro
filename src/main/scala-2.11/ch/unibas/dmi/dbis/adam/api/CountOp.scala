@@ -1,7 +1,7 @@
 package ch.unibas.dmi.dbis.adam.api
 
-import ch.unibas.dmi.dbis.adam.table.Table
-import ch.unibas.dmi.dbis.adam.table.Table.TableName
+import ch.unibas.dmi.dbis.adam.entity.Entity
+import ch.unibas.dmi.dbis.adam.entity.Entity._
 
 /**
  * adamtwo
@@ -14,8 +14,8 @@ object CountOp {
    *
    * @param tablename
    */
-  def apply(tablename : TableName): Long = {
-    val table = Table.retrieveTable(tablename)
+  def apply(tablename : EntityName): Long = {
+    val table = Entity.retrieveEntity(tablename)
     table.count
   }
 }

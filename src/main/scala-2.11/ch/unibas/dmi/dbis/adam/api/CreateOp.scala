@@ -1,7 +1,7 @@
 package ch.unibas.dmi.dbis.adam.api
 
-import ch.unibas.dmi.dbis.adam.table.Table
-import ch.unibas.dmi.dbis.adam.table.Table.TableName
+import ch.unibas.dmi.dbis.adam.entity.Entity
+import ch.unibas.dmi.dbis.adam.entity.Entity._
 import org.apache.spark.sql.types._
 
 /**
@@ -16,8 +16,8 @@ object CreateOp {
    * @param tablename
    * @param schema
    */
-  def apply(tablename: TableName, schema : StructType) : Unit = {
-    Table.createTable(tablename, schema)
+  def apply(tablename: EntityName, schema : StructType) : Unit = {
+    Entity.createEntity(tablename, schema)
   }
 
 }

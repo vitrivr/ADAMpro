@@ -1,6 +1,5 @@
 package ch.unibas.dmi.dbis.adam.index.structures.vectorapproximation.marks
 
-import ch.unibas.dmi.dbis.adam.datatypes.Feature._
 import ch.unibas.dmi.dbis.adam.index.IndexerTuple
 import ch.unibas.dmi.dbis.adam.index.structures.vectorapproximation.VectorApproximationIndex.Marks
 import org.apache.spark.rdd.RDD
@@ -19,7 +18,7 @@ private[vectorapproximation] trait MarksGenerator extends Serializable {
    * @param maxMarks
    * @return
    */
-  private[vectorapproximation] def getMarks(sample: RDD[IndexerTuple[WorkingVector]], maxMarks: Seq[Int]): Marks
+  private[vectorapproximation] def getMarks(sample: RDD[IndexerTuple], maxMarks: Seq[Int]): Marks
 
   /**
    *
@@ -27,7 +26,7 @@ private[vectorapproximation] trait MarksGenerator extends Serializable {
    * @param maxMarks
    * @return
    */
-  private[vectorapproximation] def getMarks(sample: RDD[IndexerTuple[WorkingVector]], maxMarks: Int): Marks = {
+  private[vectorapproximation] def getMarks(sample: RDD[IndexerTuple], maxMarks: Int): Marks = {
     val dimensionality = sample.first.value.length
     getMarks(sample, Seq.fill(dimensionality)(maxMarks))
   }

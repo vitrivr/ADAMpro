@@ -1,7 +1,7 @@
-package ch.unibas.dmi.dbis.adam.index.structures.spectrallsh.results
+package ch.unibas.dmi.dbis.adam.index.structures.lsh.results
 
 import ch.unibas.dmi.dbis.adam.index.BitStringIndexTuple
-import ch.unibas.dmi.dbis.adam.table.Tuple.TupleID
+import ch.unibas.dmi.dbis.adam.entity.Tuple.TupleID
 import com.google.common.collect.MinMaxPriorityQueue
 
 import scala.collection.mutable.ListBuffer
@@ -12,11 +12,13 @@ import scala.collection.mutable.ListBuffer
  * Ivan Giangreco
  * September 2015
  */
-class SpectralLSHResultHandler(k: Int) extends Serializable {
+class LSHResultHandler(k: Int) extends Serializable {
   @transient var ls = ListBuffer[ResultElement]()
   @transient var queue = MinMaxPriorityQueue.orderedBy(scala.math.Ordering.Int.reverse).maximumSize(k).create[Int]
   @transient var min = Float.MinValue
 
+  def iterator: Iterator[ResultElement] = results.iterator
+  def results = ls.sortBy(_.score)
 
   /**
    *
@@ -45,25 +47,6 @@ class SpectralLSHResultHandler(k: Int) extends Serializable {
       }
     }
   }
-
-  /**
-   *
-   * @return
-   */
-  def iterator: Iterator[ResultElement] = {
-    results.iterator
-  }
-
-  /**
-   *
-   * @return
-   */
-  def results = {
-    ls.sortBy(_.score)
-  }
 }
 
-
 case class ResultElement(val score : Int, val tid : TupleID) {}
-
-

@@ -1,6 +1,7 @@
 package ch.unibas.dmi.dbis.adam.index.structures.lsh
 
-import ch.unibas.dmi.dbis.adam.datatypes.Feature._
+import ch.unibas.dmi.dbis.adam.datatypes.feature.Feature
+import Feature._
 import ch.unibas.dmi.dbis.adam.datatypes.bitString.BitString
 
 import scala.collection.mutable.ListBuffer
@@ -17,9 +18,9 @@ private[lsh] object LSHUtils {
    * @param f
    * @return
    */
-  @inline def hashFeature(f: WorkingVector, indexMetaData: LSHIndexMetaData, m : Int = Int.MaxValue): BitString[_] = {
+  @inline def hashFeature(f: FeatureVector, indexMetaData: LSHIndexMetaData, m : Int = Int.MaxValue): BitString[_] = {
     val indices = indexMetaData.hashTables.map(ht => ht(f,m)).zipWithIndex.map{case(hash, idx) => int2Indices(hash, idx * math.ceil(math.log(m) / math.log(2)).toInt + 1)}.flatten
-    BitString.fromBitIndicesToSet(indices)
+    BitString(indices)
   }
 
   private def int2Indices(hash: Int, zero : Int): Seq[Int] = {

@@ -4,10 +4,8 @@ import java.io.File
 
 import ch.unibas.dmi.dbis.adam.index.Index.IndexName
 import ch.unibas.dmi.dbis.adam.main.{SparkStartup, Startup}
-import ch.unibas.dmi.dbis.adam.storage.components.{IndexStorage, TableStorage}
-import ch.unibas.dmi.dbis.adam.table.Table.TableName
+import ch.unibas.dmi.dbis.adam.storage.components.IndexStorage
 import org.apache.commons.io.FileUtils
-import org.apache.spark.partial.{BoundedDouble, PartialResult}
 import org.apache.spark.sql.{DataFrame, SaveMode}
 
 /**
@@ -16,75 +14,11 @@ import org.apache.spark.sql.{DataFrame, SaveMode}
  * Ivan Giangreco
  * August 2015
  */
-object ParquetDataStorage extends TableStorage with IndexStorage {
+object ParquetDataStorage extends IndexStorage {
   val config = Startup.config
 
-  /**
-   *
-   * @param tablename
-   * @return
-   */
-  override def readTable(tablename: TableName): DataFrame = {
-    SparkStartup.sqlContext.read.load(config.dataPath + "/" + tablename)
-  }
+  override def read(indexname: IndexName) : DataFrame =  SparkStartup.sqlContext.read.parquet(config.indexPath + "/" + indexname)
+  override def write(indexname: IndexName, df: DataFrame): Unit = df.write.mode(SaveMode.Overwrite).parquet(config.indexPath + "/" + indexname)
+  override def drop(indexname: IndexName): Unit = FileUtils.deleteQuietly(new File(config.indexPath + "/" + indexname))
 
-  /**
-   *
-   * @param tablename
-   * @param df
-   * @param mode
-   */
-  override def writeTable(tablename : TableName, df: DataFrame, mode : SaveMode = SaveMode.Append): Unit = {
-    if(mode == SaveMode.Overwrite){
-      FileUtils.deleteQuietly(new File(config.dataPath + "/" + tablename))
-    }
-
-    //splits DF equally before writing
-    val approxCount: PartialResult[BoundedDouble] = df.rdd.countApprox(5)
-
-    val splitData = if(approxCount.getFinalValue().mean > 250000){
-      df.randomSplit(Array.fill((approxCount.getFinalValue().mean / 100000).toInt)(1.0))
-    } else {
-      Array(df)
-    }
-
-    splitData.foreach { subdf =>
-      df.write.mode(SaveMode.Append).save(config.dataPath + "/" + tablename)
-    }
-  }
-
-  /**
-   *
-   * @param indexname
-   * @return
-   */
-  override def readIndex(indexname: IndexName) : DataFrame = {
-    SparkStartup.sqlContext.read.parquet(config.indexPath + "/" + indexname)
-  }
-
-
-  /**
-   *
-   * @param indexname
-   * @param df
-   */
-  override def writeIndex(indexname: IndexName, df: DataFrame): Unit = {
-    df.write.mode(SaveMode.Overwrite).parquet(config.indexPath + "/" + indexname)
-  }
-
-  /**
-   *
-   * @param tablename
-   */
-  override def dropTable(tablename: TableName): Unit = {
-    FileUtils.deleteQuietly(new File(config.dataPath + "/" + tablename))
-  }
-
-  /**
-   *
-   * @param indexname
-   */
-  override def dropIndex(indexname: IndexName): Unit = {
-    FileUtils.deleteQuietly(new File(config.indexPath + "/" + indexname))
-  }
 }

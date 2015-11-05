@@ -1,7 +1,7 @@
-package ch.unibas.dmi.dbis.adam.query
-
+package ch.unibas.dmi.dbis.adam.query.progressive
 
 import ch.unibas.dmi.dbis.adam.main.SparkStartup
+import ch.unibas.dmi.dbis.adam.query.Result
 
 import scala.collection.mutable.ListBuffer
 
@@ -16,15 +16,9 @@ class ProgressiveQueryStatusTracker(queryID : String) {
   private val futures = ListBuffer[ScanFuture]()
   private var runningStatus = ProgressiveQueryStatus.RUNNING
   private var resultConfidence = 0.toFloat
-  private var results = Seq[Result]()
+  private var queryResults = Seq[Result]()
 
-  /**
-   *
-   * @param future
-   */
-  def register(future : ScanFuture): Unit ={
-    futures.synchronized(futures += future)
-  }
+  def register(future : ScanFuture): Unit = futures.synchronized(futures += future)
 
   /**
    *
@@ -33,7 +27,7 @@ class ProgressiveQueryStatusTracker(queryID : String) {
   def notifyCompletion(future : ScanFuture, futureResults : Seq[Result]): Unit ={
     futures.synchronized({
       if(future.confidence > resultConfidence && runningStatus == ProgressiveQueryStatus.RUNNING){
-        results = futureResults
+        queryResults = futureResults
         resultConfidence = future.confidence
       }
 
@@ -45,23 +39,8 @@ class ProgressiveQueryStatusTracker(queryID : String) {
     })
   }
 
-  /**
-   *
-   * @return
-   */
-  def getResults() = (results, resultConfidence)
+  def stop() : Unit = stop(ProgressiveQueryStatus.PREMATURE_FINISHED)
 
-  /**
-   *
-   */
-  def stop() : Unit = {
-    stop(ProgressiveQueryStatus.PREMATURE_FINISHED)
-  }
-
-  /**
-   * 
-   * @param status
-   */
   private def stop(status : ProgressiveQueryStatus.Value) : Unit = {
     futures.synchronized {
       SparkStartup.sc.cancelJobGroup(queryID)
@@ -70,16 +49,9 @@ class ProgressiveQueryStatusTracker(queryID : String) {
     }
   }
 
+  def results = (queryResults, resultConfidence)
 
-    /**
-   *
-   * @return
-   */
-  def getStatus() = {
-      futures.synchronized {
-        runningStatus
-      }
-  }
+  def status = futures.synchronized { runningStatus }
 }
 
 /**

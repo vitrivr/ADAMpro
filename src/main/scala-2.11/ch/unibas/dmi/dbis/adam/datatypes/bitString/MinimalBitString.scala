@@ -1,6 +1,9 @@
 package ch.unibas.dmi.dbis.adam.datatypes.bitString
 
 import ch.unibas.dmi.dbis.adam.util.BitSet
+import org.apache.spark.sql.catalyst.InternalRow
+import org.apache.spark.sql.catalyst.expressions.GenericMutableRow
+import org.apache.spark.sql.types.{BinaryType, DataType, SQLUserDefinedType, UserDefinedType}
 
 /**
  * adamtwo
@@ -8,22 +11,14 @@ import ch.unibas.dmi.dbis.adam.util.BitSet
  * Ivan Giangreco
  * September 2015
  */
+@SQLUserDefinedType(udt = classOf[MinimalBitStringUDT])
 class MinimalBitString(private val values : BitSet) extends BitString[MinimalBitString] with Serializable {
-  /**
-   *
-   * @param other
-   * @return
-   */
-  override def intersectionCount(other: MinimalBitString): Int = {
-    values.intersectCount(other.values)
-  }
+  override def intersectionCount(other: MinimalBitString): Int =  values.intersectCount(other.values)
 
-  /**
-   *
-   * @param lengths
-   * @return
-   */
-  @inline override def getWithBitLengths(lengths : Seq[Int]): Array[Int] = {
+  override def getBitIndexes: Seq[Int] = values.getAll
+  override def toByteArray : Array[Byte] = values.toByteArray
+
+  @inline override def toInts(lengths : Seq[Int]): Array[Int] = {
     val indexes = values.getAll
     var i = 0
 
@@ -48,13 +43,7 @@ class MinimalBitString(private val values : BitSet) extends BitString[MinimalBit
     bitIntegers
   }
 
-  /**
-   *
-   * @param dimensions
-   * @param length
-   * @return
-   */
-  @inline override def getWithBitLengths(dimensions : Int, length : Int): Array[Int] = {
+  @inline override def toInts(dimensions : Int, length : Int): Array[Int] = {
     val indexes = values.getAll
     var i = 0
 
@@ -79,57 +68,26 @@ class MinimalBitString(private val values : BitSet) extends BitString[MinimalBit
     bitIntegers
   }
 
-  /**
-   *
-   * @param start
-   * @param end
-   * @return
-   */
-  @inline override def get(start: Int, end: Int): Int = {
-   var bitInteger = 0
+  override def toLong: Long = {
+    if (values.length > 64) throw new IndexOutOfBoundsException()
+    values.get(0, 64).toLongArray().lift.apply(0).getOrElse(0.toLong)
+  }
 
+  @inline override def toLong(start: Int, end: Int): Long = {
+    if (start < 0 || end < 0 || end - start > 64) throw new IndexOutOfBoundsException()
+    var bitInteger = 0
     var i = start
     while(i < end){
-      if(values.get(i)){
-       bitInteger |= (1 << (i - start))
-      }
+      if(values.get(i)){ bitInteger |= (1 << (i - start)) }
       i += 1
     }
-
     bitInteger
-  }
-
-  /**
-   *
-   * @return
-   */
-  override def getIndexes: Seq[Int] = {
-    values.getAll
-  }
-
-  /**
-   *
-   * @return
-   */
-  override def toLong: Long = values.get(0, 64).toLongArray().lift.apply(0).getOrElse(0.toLong)
-
-  /**
-   *
-   * @return
-   */
-  override def toByteArray : Array[Byte] = {
-    values.toByteArray
   }
 }
 
 
-object MinimalBitString extends BitStringFactory[MinimalBitString] {
-  /**
-   *
-   * @param values
-   * @return
-   */
-  override def fromBitIndicesToSet(values: Seq[Int]): BitString[MinimalBitString] = {
+object MinimalBitString extends BitStringFactory {
+  override def apply(values: Seq[Int]): MinimalBitString = {
     val max = if(values.isEmpty) 0 else values.max
 
     val bitSet = new BitSet(max)
@@ -137,13 +95,34 @@ object MinimalBitString extends BitStringFactory[MinimalBitString] {
     new MinimalBitString(bitSet)
   }
 
-  /**
-   *
-   * @param data
-   * @return
-   */
-  def fromByteSeq(data : Seq[Byte]) : BitString[MinimalBitString] = {
-    val values = BitSet.valueOf(data.toArray)
-    new MinimalBitString(values)
+  override def deserialize(data : Seq[Byte]) : MinimalBitString = new MinimalBitString(BitSet.valueOf(data.toArray))
+}
+
+
+
+class MinimalBitStringUDT extends UserDefinedType[MinimalBitString] {
+  override def sqlType: DataType = BinaryType
+  override def userClass: Class[MinimalBitString] = classOf[MinimalBitString]
+  override def asNullable: MinimalBitStringUDT = this
+
+  override def serialize(obj: Any): InternalRow = {
+    val row = new GenericMutableRow(1)
+
+    if(obj.isInstanceOf[MinimalBitString]){
+      row.update(0, obj.asInstanceOf[MinimalBitString].toByteArray)
+    } else {
+      row.setNullAt(0)
+    }
+
+    row
+  }
+
+  override def deserialize(datum: Any): MinimalBitString = {
+    if(datum.isInstanceOf[InternalRow]){
+      val row = datum.asInstanceOf[InternalRow]
+      MinimalBitString.deserialize(row.getBinary(0))
+    } else {
+      null
+    }
   }
 }

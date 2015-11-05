@@ -1,7 +1,7 @@
 package ch.unibas.dmi.dbis.adam.api
 
-import ch.unibas.dmi.dbis.adam.table.Table
-import ch.unibas.dmi.dbis.adam.table.Table._
+import ch.unibas.dmi.dbis.adam.entity.Entity
+import ch.unibas.dmi.dbis.adam.entity.Entity._
 
 /**
  * adamtwo
@@ -15,7 +15,7 @@ object DropOp {
    * @param tablename
    * @param ifExists
    */
-  def apply(tablename: TableName, ifExists : Boolean = false): Unit ={
-    Table.dropTable(tablename, ifExists)
+  def apply(tablename: EntityName, ifExists : Boolean = false): Unit ={
+    Entity.dropEntity(tablename, ifExists)
   }
 }

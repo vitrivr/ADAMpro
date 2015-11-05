@@ -2,8 +2,8 @@ package ch.unibas.dmi.dbis.adam.api
 
 import ch.unibas.dmi.dbis.adam.cache.RDDCache
 import ch.unibas.dmi.dbis.adam.index.Index
-import ch.unibas.dmi.dbis.adam.table.Table
-import ch.unibas.dmi.dbis.adam.table.Table._
+import ch.unibas.dmi.dbis.adam.entity.Entity
+import ch.unibas.dmi.dbis.adam.entity.Entity._
 
 /**
  * adamtwo
@@ -16,7 +16,7 @@ object CacheOp {
    *
    * @param tablename
    */
-  def apply(tablename : TableName): Unit = {
+  def apply(tablename : EntityName): Unit = {
     val indexes = Index.getIndexnames(tablename)
 
     indexes.foreach{
@@ -27,7 +27,7 @@ object CacheOp {
     }
 
     if(!RDDCache.containsTable(tablename)) {
-      RDDCache.putTable(Table.getCacheable(tablename))
+      RDDCache.putTable(Entity.getCacheable(tablename))
     }
   }
 }

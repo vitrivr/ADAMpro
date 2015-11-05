@@ -1,8 +1,9 @@
 package ch.unibas.dmi.dbis.adam.api
 
-import ch.unibas.dmi.dbis.adam.datatypes.Feature.VectorBase
-import ch.unibas.dmi.dbis.adam.table.Table
-import ch.unibas.dmi.dbis.adam.table.Table._
+import ch.unibas.dmi.dbis.adam.datatypes.feature.Feature
+import Feature.VectorBase
+import ch.unibas.dmi.dbis.adam.entity.Entity
+import ch.unibas.dmi.dbis.adam.entity.Entity._
 
 /**
  * adamtwo
@@ -15,8 +16,8 @@ object DisplayOp {
    *
    * @param tablename
    */
-  def apply(tablename: TableName) : Seq[(Long, Seq[VectorBase])] = {
-    val results = Table.retrieveTable(tablename)
+  def apply(tablename: EntityName) : Seq[(Long, Seq[VectorBase])] = {
+    val results = Entity.retrieveEntity(tablename)
     results.show(100).map(row => (row.getLong(0), row.getSeq[VectorBase](1)))
   }
 }

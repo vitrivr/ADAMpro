@@ -1,25 +1,25 @@
 package ch.unibas.dmi.dbis.adam.index
 
 import ch.unibas.dmi.dbis.adam.cache.RDDCache
-import ch.unibas.dmi.dbis.adam.datatypes.Feature._
+import ch.unibas.dmi.dbis.adam.datatypes.feature.Feature._
 import ch.unibas.dmi.dbis.adam.exception.IndexNotExistingException
 import ch.unibas.dmi.dbis.adam.index.Index._
 import ch.unibas.dmi.dbis.adam.index.structures.IndexStructures
+import ch.unibas.dmi.dbis.adam.index.structures.IndexStructures.IndexStructureType
 import ch.unibas.dmi.dbis.adam.index.structures.ecp.ECPIndex
 import ch.unibas.dmi.dbis.adam.index.structures.lsh.LSHIndex
 import ch.unibas.dmi.dbis.adam.index.structures.spectrallsh.SpectralLSHIndex
 import ch.unibas.dmi.dbis.adam.index.structures.vectorapproximation.VectorApproximationIndex
 import ch.unibas.dmi.dbis.adam.main.SparkStartup
-import ch.unibas.dmi.dbis.adam.storage.catalog.CatalogOperator
-import ch.unibas.dmi.dbis.adam.table.Table
-import ch.unibas.dmi.dbis.adam.table.Table.TableName
-import ch.unibas.dmi.dbis.adam.table.Tuple._
+import ch.unibas.dmi.dbis.adam.storage.engine.CatalogOperator
+import ch.unibas.dmi.dbis.adam.entity.Entity
+import ch.unibas.dmi.dbis.adam.entity.Entity._
+import ch.unibas.dmi.dbis.adam.entity.Tuple._
 import org.apache.spark.rdd.RDD
 import org.apache.spark.sql.DataFrame
 import org.apache.spark.storage.StorageLevel
 
 import scala.collection.immutable.HashSet
-import scala.util.Random
 
 /**
  * adamtwo
@@ -28,31 +28,26 @@ import scala.util.Random
  * August 2015
  */
 trait Index[A <: IndexTuple]{
-  val indexname : IndexName
-  val tablename : TableName
   val indextypename : IndexTypeName
+
+  val indexname : IndexName
+  val entityname : EntityName
   val confidence : Float
 
-  protected val indexdata : DataFrame
+  protected val df : DataFrame
+  protected def rdd : RDD[A]
+  protected def rdd(filter : Option[HashSet[TupleID]]) : RDD[A] = if(filter.isDefined){ rdd.filter(t => filter.contains(t.tid)) } else { rdd }
 
-  protected def indexToTuple : RDD[A]
+  private[index] def metadata : Serializable
 
+  def scan(q : FeatureVector, options: Map[String, Any], k : Int, filter : Option[HashSet[TupleID]], queryID : Option[String] = None) : HashSet[TupleID] = {
+    SparkStartup.sc.setLocalProperty("spark.scheduler.pool", "index")
+    SparkStartup.sc.setJobGroup(queryID.getOrElse(""), indextypename.toString, true)
 
-  protected def getIndexTuples(filter : Option[HashSet[TupleID]]) : RDD[A] = {
-    val res = indexToTuple
-
-    if(filter.isDefined){
-      res.filter(r => {
-        filter.contains(r.tid)
-      })
-    } else {
-      res
-    }
+    scan(rdd(filter), q, options, k)
   }
 
-  private[index] def getMetadata : Serializable
-
-  def scan(q: WorkingVector, options: Map[String, String], filter : Option[HashSet[TupleID]], queryID : Option[String] = None): HashSet[TupleID]
+  def scan(data : RDD[A], q: FeatureVector, options: Map[String, Any], k : Int): HashSet[TupleID]
 }
 
 
@@ -60,39 +55,41 @@ case class CacheableIndex(index : Index[_ <: IndexTuple])
 
 object Index {
   type IndexName = String
-  type IndexTypeName = IndexStructures.Value
+  type IndexTypeName = IndexStructureType
 
   private val storage = SparkStartup.indexStorage
 
   /**
    *
-   * @param table
+   * @param entity
    * @param indexgenerator
    * @return
    */
-  def createIndex(table : Table, indexgenerator : IndexGenerator) :  Index[_ <: IndexTuple] = {
-    val indexname = createIndexName(table.tablename, indexgenerator.indextypename)
-    val rdd: RDD[IndexerTuple[WorkingVector]] = table.rows.map { x => IndexerTuple(x.getLong(0), x.getSeq[VectorBase](1) : WorkingVector) }
-    val index = indexgenerator.index(indexname, table.tablename, rdd)
-    storage.writeIndex(indexname, index.indexdata)
-    CatalogOperator.createIndex(indexname, table.tablename, indexgenerator.indextypename, index.getMetadata)
+  def createIndex(entity : Entity, indexgenerator : IndexGenerator) :  Index[_ <: IndexTuple] = {
+    val indexname = createIndexName(entity.entityname, indexgenerator.indextypename)
+    val rdd: RDD[IndexerTuple] = entity.featuresRDD.map { x => IndexerTuple(x.getLong(0), x.getAs[FeatureVector](1)) }
+    val index = indexgenerator.index(indexname, entity.entityname, rdd)
+    storage.write(indexname, index.df)
+    CatalogOperator.createIndex(indexname, entity.entityname, indexgenerator.indextypename, index.metadata)
     index
   }
 
   /**
    *
-   * @param tablename
+   * @param entityname
    * @param indextype
    * @return
    */
-  private def createIndexName(tablename : TableName, indextype : IndexTypeName) : String = {
-    val indexes = CatalogOperator.getIndexes(tablename)
+  private def createIndexName(entityname : EntityName, indextype : IndexTypeName) : String = {
+    val indexes = CatalogOperator.getIndexes(entityname)
 
     var indexname = ""
 
+    var i = 0
     do {
-     indexname =  tablename + "_" + indextype.toString + "_" + Random.nextInt(1000)
-    } while(indexes.contains(tablename))
+     indexname =  entityname + "_" + indextype.toString + "_" + i
+      i += 1
+    } while(indexes.contains(entityname))
 
     indexname
   }
@@ -108,11 +105,11 @@ object Index {
 
   /**
    *
-   * @param tablename
+   * @param entityname
    * @return
    */
-  def getIndexnames(tablename : TableName) : Seq[IndexName] = {
-    CatalogOperator.getIndexes(tablename)
+  def getIndexnames(entityname : EntityName) : Seq[IndexName] = {
+    CatalogOperator.getIndexes(entityname)
   }
 
   /**
@@ -155,18 +152,18 @@ object Index {
    * @return
    */
   private def loadCacheMissedIndex(indexname : IndexName) : Index[_ <: IndexTuple] = {
-    val df = storage.readIndex(indexname)
-    val tablename = CatalogOperator.getIndexTableName(indexname)
+    val df = storage.read(indexname)
+    val entityname = CatalogOperator.getIndexEntity(indexname)
     val meta = CatalogOperator.getIndexMeta(indexname)
 
     val indextypename = CatalogOperator.getIndexTypeName(indexname)
 
     indextypename match {
-      case IndexStructures.ECP => ECPIndex(indexname, tablename, df, meta)
-      case IndexStructures.LSH => LSHIndex(indexname, tablename, df, meta)
-      case IndexStructures.SH => SpectralLSHIndex(indexname, tablename, df, meta)
-      case IndexStructures.VAF => VectorApproximationIndex(indexname, tablename, df, meta)
-      case IndexStructures.VAV => VectorApproximationIndex(indexname, tablename, df, meta)
+      case IndexStructures.ECP => ECPIndex(indexname, entityname, df, meta)
+      case IndexStructures.LSH => LSHIndex(indexname, entityname, df, meta)
+      case IndexStructures.SH => SpectralLSHIndex(indexname, entityname, df, meta)
+      case IndexStructures.VAF => VectorApproximationIndex(indexname, entityname, df, meta)
+      case IndexStructures.VAV => VectorApproximationIndex(indexname, entityname, df, meta)
     }
   }
 
@@ -178,13 +175,13 @@ object Index {
   def getCacheable(indexname : IndexName) : CacheableIndex = {
     val index = retrieveIndex(indexname)
 
-    index.getIndexTuples(None)
+    index.rdd(None)
       .setName(indexname)
       .persist(StorageLevel.MEMORY_AND_DISK)
 
       //.repartition(Startup.config.partitions) //TODO: loosing persistence information - bug?
 
-    index.getIndexTuples(None).collect()
+    index.rdd(None).collect()
 
     CacheableIndex(index)
   }
@@ -197,19 +194,19 @@ object Index {
    */
   def dropIndex(indexname : IndexName) : Unit = {
     CatalogOperator.dropIndex(indexname)
-    storage.dropIndex(indexname)
+    storage.drop(indexname)
   }
 
   /**
    *
-   * @param tablename
+   * @param entityname
    * @return
    */
-  def dropIndexesForTable(tablename: TableName) : Unit = {
-    val indexes = CatalogOperator.dropIndexesForTable(tablename)
+  def dropIndexesForTable(entityname: EntityName) : Unit = {
+    val indexes = CatalogOperator.dropIndexesForEntity(entityname)
 
     indexes.foreach {
-      index => storage.dropIndex(index)
+      index => storage.drop(index)
     }
   }
 }

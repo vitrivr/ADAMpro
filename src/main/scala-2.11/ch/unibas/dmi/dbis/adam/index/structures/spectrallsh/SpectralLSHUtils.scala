@@ -1,9 +1,10 @@
 package ch.unibas.dmi.dbis.adam.index.structures.spectrallsh
 
 import breeze.linalg.{*, DenseMatrix}
-import ch.unibas.dmi.dbis.adam.datatypes.Feature
+import ch.unibas.dmi.dbis.adam.datatypes.feature.Feature
 import Feature._
 import ch.unibas.dmi.dbis.adam.datatypes.bitString.BitString
+import ch.unibas.dmi.dbis.adam.datatypes.feature.Feature
 
 /**
  * adamtwo
@@ -18,7 +19,7 @@ private[spectrallsh] object SpectralLSHUtils {
    * @param indexMetaData
    * @return
    */
-  @inline def hashFeature(f : WorkingVector, indexMetaData : SpectralLSHIndexMetaData) : BitString[_] = {
+  @inline def hashFeature(f : FeatureVector, indexMetaData : SpectralLSHIndexMetaData) : BitString[_] = {
     val fMat = f.toDenseVector.toDenseMatrix
     val pca = indexMetaData.pca.toDenseMatrix
 
@@ -33,6 +34,6 @@ private[spectrallsh] object SpectralLSHUtils {
       yi.findAll(x => x > 0)
     }
 
-    BitString.fromBitIndicesToSet(res)
+    BitString(res)
   }
 }

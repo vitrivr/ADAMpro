@@ -1,15 +1,14 @@
 package ch.unibas.dmi.dbis.adam.index.structures.lsh
 
-import ch.unibas.dmi.dbis.adam.datatypes.Feature._
-import ch.unibas.dmi.dbis.adam.datatypes.MovableFeature
-import ch.unibas.dmi.dbis.adam.datatypes.bitString.BitString
+import ch.unibas.dmi.dbis.adam.datatypes.feature.Feature._
+import ch.unibas.dmi.dbis.adam.datatypes.feature.MovableFeature
 import ch.unibas.dmi.dbis.adam.index.Index._
 import ch.unibas.dmi.dbis.adam.index.structures.IndexStructures
-import ch.unibas.dmi.dbis.adam.index.structures.spectrallsh.results.SpectralLSHResultHandler
+import ch.unibas.dmi.dbis.adam.index.structures.lsh.results.LSHResultHandler
 import ch.unibas.dmi.dbis.adam.index.{BitStringIndexTuple, Index}
 import ch.unibas.dmi.dbis.adam.main.SparkStartup
-import ch.unibas.dmi.dbis.adam.table.Table._
-import ch.unibas.dmi.dbis.adam.table.Tuple.TupleID
+import ch.unibas.dmi.dbis.adam.entity.Entity._
+import ch.unibas.dmi.dbis.adam.entity.Tuple.TupleID
 import org.apache.spark.TaskContext
 import org.apache.spark.rdd.RDD
 import org.apache.spark.sql.DataFrame
@@ -22,41 +21,24 @@ import scala.collection.immutable.HashSet
  * Ivan Giangreco
  * August 2015
  */
-class LSHIndex(val indexname: IndexName, val tablename: TableName, protected val indexdata: DataFrame, private val indexMetaData: LSHIndexMetaData)
+class LSHIndex(val indexname: IndexName, val entityname: EntityName, protected val df: DataFrame, private[index] val metadata: LSHIndexMetaData)
   extends Index[BitStringIndexTuple] {
+
   override val indextypename: IndexTypeName = IndexStructures.LSH
   override val confidence = 0.toFloat
 
-  /**
-   *
-   * @return
-   */
-  override protected def indexToTuple : RDD[BitStringIndexTuple] = {
-    indexdata
-      .map { tuple =>
-      BitStringIndexTuple(tuple.getLong(0), tuple.getAs[BitString[_]](1))
-    }
-  }
+  override protected def rdd : RDD[BitStringIndexTuple] = df.map(r => r : BitStringIndexTuple)
 
-  /**
-   *
-   * @param q
-   * @param options
-   * @return
-   */
-  override def scan(q: WorkingVector, options: Map[String, String], filter : Option[HashSet[TupleID]], queryID : Option[String]): HashSet[TupleID] = {
-    val k = options("k").toInt
-    val numOfQueries = options.getOrElse("numOfQ", "3").toInt
+  override def scan(data : RDD[BitStringIndexTuple], q : FeatureVector, options : Map[String, Any], k : Int): HashSet[TupleID] = {
+    val numOfQueries = options.getOrElse("numOfQ", "3").asInstanceOf[Int]
 
     import MovableFeature.conv_feature2MovableFeature
-    val originalQuery = LSHUtils.hashFeature(q, indexMetaData)
-    val queries = (List.fill(numOfQueries)(LSHUtils.hashFeature(q.move(indexMetaData.radius), indexMetaData)) ::: List(originalQuery)).par
+    val originalQuery = LSHUtils.hashFeature(q, metadata)
+    val queries = (List.fill(numOfQueries)(LSHUtils.hashFeature(q.move(metadata.radius), metadata)) ::: List(originalQuery)).par
 
-    SparkStartup.sc.setLocalProperty("spark.scheduler.pool", "index")
-    SparkStartup.sc.setJobGroup(queryID.getOrElse(""), indextypename.toString, true)
 
-    val results = SparkStartup.sc.runJob(getIndexTuples(filter), (context : TaskContext, tuplesIt : Iterator[BitStringIndexTuple]) => {
-      val localRh = new SpectralLSHResultHandler(k)
+    val results = SparkStartup.sc.runJob(data, (context : TaskContext, tuplesIt : Iterator[BitStringIndexTuple]) => {
+      val localRh = new LSHResultHandler(k)
       while (tuplesIt.hasNext) {
         val tuple = tuplesIt.next()
 
@@ -74,26 +56,17 @@ class LSHIndex(val indexname: IndexName, val tablename: TableName, protected val
       localRh.results.toSeq
     }).flatten
 
-    val globalResultHandler = new SpectralLSHResultHandler(k)
+    val globalResultHandler = new LSHResultHandler(k)
     globalResultHandler.offerResultElement(results.iterator)
     val ids = globalResultHandler.results.map(x => x.tid).toList
 
     HashSet(ids : _*)
   }
-
-  /**
-   *
-   * @return
-   */
-  override private[index] def getMetadata(): Serializable = {
-    indexMetaData
-  }
 }
 
 object LSHIndex {
-  def apply(indexname: IndexName, tablename: TableName, data: DataFrame, meta: Any): LSHIndex = {
-
+  def apply(indexname: IndexName, entityname: EntityName, data: DataFrame, meta: Any): LSHIndex = {
     val indexMetaData = meta.asInstanceOf[LSHIndexMetaData]
-    new LSHIndex(indexname, tablename, data, indexMetaData)
+    new LSHIndex(indexname, entityname, data, indexMetaData)
   }
 }

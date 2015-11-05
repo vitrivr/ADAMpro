@@ -1,8 +1,8 @@
 package ch.unibas.dmi.dbis.adam.api
 
 import ch.unibas.dmi.dbis.adam.main.SparkStartup
-import ch.unibas.dmi.dbis.adam.table.Table
-import ch.unibas.dmi.dbis.adam.table.Table._
+import ch.unibas.dmi.dbis.adam.entity.Entity
+import ch.unibas.dmi.dbis.adam.entity.Entity._
 import org.apache.spark.sql.DataFrame
 
 /**
@@ -19,22 +19,22 @@ object ImportOp {
    * @param separator
    * @param ignoreErrors
    */
-  def apply(tablename : TableName, csv : Seq[String], separator : String = "\t", ignoreErrors : Boolean = true) : Unit = {
+  def apply(tablename : EntityName, csv : Seq[String], separator : String = "\t", ignoreErrors : Boolean = true) : Unit = {
     val data = csv.filter(line => line.trim.length != 0)
       .filter(line => filterLine(line, separator, ignoreErrors))
       .map(line => line.split(separator))
       .map(line => (line(0).toLong, line(1).substring(1, line(1).length - 2).split(",").map(_.toFloat).toSeq)) //TODO: make this a tuple
 
     import SparkStartup.sqlContext.implicits._
-    Table.insertData(tablename, data.toDF())
+    Entity.insertData(tablename, data.toDF())
   }
 
   /**
    *
    * @param tablename
    */
-  def apply(tablename : TableName, data : DataFrame) : Unit = {
-    Table.insertData(tablename, data)
+  def apply(tablename : EntityName, data : DataFrame) : Unit = {
+    Entity.insertData(tablename, data)
   }
 
   /**

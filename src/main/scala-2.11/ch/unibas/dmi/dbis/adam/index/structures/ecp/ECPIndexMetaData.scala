@@ -1,8 +1,7 @@
 package ch.unibas.dmi.dbis.adam.index.structures.ecp
 
-import ch.unibas.dmi.dbis.adam.datatypes.Feature.WorkingVector
 import ch.unibas.dmi.dbis.adam.index.IndexerTuple
-import ch.unibas.dmi.dbis.adam.query.distance.NormBasedDistanceFunction
+import ch.unibas.dmi.dbis.adam.query.distance.DistanceFunction
 
 
 /**
@@ -11,9 +10,5 @@ import ch.unibas.dmi.dbis.adam.query.distance.NormBasedDistanceFunction
  * Ivan Giangreco
  * October 2015
  */
-/**
- *
- * @param leaders
- * @param distance
- */
-private[ecp] case class ECPIndexMetaData(leaders : Seq[IndexerTuple[WorkingVector]], distance : NormBasedDistanceFunction) {}
+private[ecp]
+case class ECPIndexMetaData(leaders : Seq[IndexerTuple], distance : DistanceFunction) {}

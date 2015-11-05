@@ -1,10 +1,11 @@
 package ch.unibas.dmi.dbis.adam.index.structures.vectorapproximation.marks
 
-import ch.unibas.dmi.dbis.adam.datatypes.Feature._
+import ch.unibas.dmi.dbis.adam.datatypes.feature.Feature._
 import ch.unibas.dmi.dbis.adam.index.IndexerTuple
 import ch.unibas.dmi.dbis.adam.index.structures.vectorapproximation.VectorApproximationIndex.Marks
 import org.apache.spark.rdd.RDD
 
+import scala.collection.IterableLike
 import scala.collection.mutable.ListBuffer
 
 /**
@@ -19,7 +20,7 @@ private[vectorapproximation] object EquifrequentMarksGenerator extends MarksGene
    * @param maxMarks
    * @return
    */
-  private[vectorapproximation] def getMarks(samples : RDD[IndexerTuple[WorkingVector]], maxMarks : Seq[Int]) : Marks = {
+  private[vectorapproximation] def getMarks(samples : RDD[IndexerTuple], maxMarks : Seq[Int]) : Marks = {
     val sampleSize = samples.count
 
     val min = treeReduceData(samples.map(_.value), math.min)
@@ -51,7 +52,7 @@ private[vectorapproximation] object EquifrequentMarksGenerator extends MarksGene
    * @param data
    * @return
    */
-  private def treeReduceData(data : RDD[WorkingVector], f : (VectorBase, VectorBase) => Float) : WorkingVector = {
+  private def treeReduceData(data : RDD[FeatureVector], f : (VectorBase, VectorBase) => Float) : FeatureVector = {
     data.treeReduce{case(baseV, newV) => baseV.zip(newV).map{case (b,v) => f(b,v)}}
   }
 
@@ -70,9 +71,7 @@ private[vectorapproximation] object EquifrequentMarksGenerator extends MarksGene
      *
      * @param item
      */
-    def add(item : VectorBase): Unit ={
-      data += item
-    }
+    def add(item : VectorBase): Unit = data += item
 
     /**
      *
@@ -111,6 +110,45 @@ private[vectorapproximation] object EquifrequentMarksGenerator extends MarksGene
         val countSum = hist.foldLeftWhileCounting(0.toLong)(_ <= nppart) { case (acc, bucket) => acc + bucket.length }
         countSum._2
       }
+    }
+  }
+
+
+
+  implicit class IterableLikeExtension[A, Repr <: IterableLike[A, Repr]](val iterableLike: IterableLike[A, Repr]) extends AnyVal {
+
+    /**
+     *
+     */
+    def foldLeftWhile[B](z: B)(p: B => Boolean)(op: (B, A) => B): B = {
+      var result = z
+      val it = iterableLike.iterator
+      while (it.hasNext && p(result)) {
+        val next = it.next()
+        result = op(result, next)
+      }
+      result
+    }
+
+    /**
+     *
+     */
+    def foldLeftWhileCounting[B](z: B)(p: B => Boolean)(op: (B, A) => B): (Long, B) = {
+      var result = z
+      var i: Long = 0
+      val it = iterableLike.iterator
+      while (it.hasNext) {
+        val next = it.next()
+        result = op(result, next)
+
+        if (!p(result)) {
+          return (i, result)
+        } else {
+          i += 1
+        }
+      }
+
+      return (i, result)
     }
   }
 

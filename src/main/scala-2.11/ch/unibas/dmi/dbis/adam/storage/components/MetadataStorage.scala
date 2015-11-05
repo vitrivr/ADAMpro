@@ -1,6 +1,6 @@
 package ch.unibas.dmi.dbis.adam.storage.components
 
-import ch.unibas.dmi.dbis.adam.table.Table._
+import ch.unibas.dmi.dbis.adam.entity.Entity._
 import org.apache.spark.sql.{DataFrame, SaveMode}
 
 /**
@@ -10,24 +10,7 @@ import org.apache.spark.sql.{DataFrame, SaveMode}
  * October 2015
  */
 trait MetadataStorage {
-  /**
-   *
-   * @param tablename
-   * @return
-   */
-  def readTable(tablename: TableName): DataFrame
-
-  /**
-   *
-   * @param tablename
-   * @param df
-   * @param mode
-   */
-  def writeTable(tablename : TableName, df: DataFrame, mode : SaveMode = SaveMode.Append): Unit
-
-  /**
-   *
-   * @param tablename
-   */
-  def dropTable(tablename :TableName) : Unit
+  def read(tablename: EntityName): DataFrame
+  def write(tablename : EntityName, df: DataFrame, mode : SaveMode = SaveMode.Append): Unit
+  def drop(tablename :EntityName) : Unit
 }

@@ -1,9 +1,10 @@
 package ch.unibas.dmi.dbis.adam.api
 
-import ch.unibas.dmi.dbis.adam.datatypes.Feature._
-import ch.unibas.dmi.dbis.adam.query.distance.NormBasedDistanceFunction
+import ch.unibas.dmi.dbis.adam.datatypes.feature.Feature
+import Feature._
+import ch.unibas.dmi.dbis.adam.query.distance.DistanceFunction
 import ch.unibas.dmi.dbis.adam.query.{QueryHandler, Result}
-import ch.unibas.dmi.dbis.adam.table.Table._
+import ch.unibas.dmi.dbis.adam.entity.Entity._
 
 import scala.concurrent.duration.Duration
 
@@ -21,7 +22,7 @@ object TimedProgressiveQueryOp {
    * @param k
    * @param distance
    */
-  def apply(tablename: TableName, query : WorkingVector, k : Int, distance : NormBasedDistanceFunction, timelimit : Duration) : (Seq[Result], Float) = {
+  def apply(tablename: EntityName, query : FeatureVector, k : Int, distance : DistanceFunction, timelimit : Duration) : (Seq[Result], Float) = {
     QueryHandler.timedProgressiveQuery(query, distance, k, tablename, None, timelimit)
   }
 }

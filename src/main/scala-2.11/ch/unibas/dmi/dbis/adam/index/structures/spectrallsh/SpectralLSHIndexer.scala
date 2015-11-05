@@ -1,17 +1,17 @@
 package ch.unibas.dmi.dbis.adam.index.structures.spectrallsh
 
 import breeze.linalg.{Matrix, Vector, _}
-import ch.unibas.dmi.dbis.adam.datatypes.Feature
+import ch.unibas.dmi.dbis.adam.datatypes.feature.Feature
 import Feature.{VectorBase, _}
 import ch.unibas.dmi.dbis.adam.datatypes.bitString.BitString
+import ch.unibas.dmi.dbis.adam.datatypes.feature.Feature
 import ch.unibas.dmi.dbis.adam.index.Index._
 import ch.unibas.dmi.dbis.adam.index._
 import ch.unibas.dmi.dbis.adam.index.structures.IndexStructures
 import ch.unibas.dmi.dbis.adam.main.SparkStartup
-import ch.unibas.dmi.dbis.adam.table.Table._
-import org.apache.spark.adam.ADAMSamplingUtils
+import ch.unibas.dmi.dbis.adam.entity.Entity._
 import org.apache.spark.rdd.RDD
-
+import org.apache.spark.util.random.ADAMSamplingUtils
 
 
 /**
@@ -29,7 +29,7 @@ class SpectralLSHIndexer(nbits : Int, trainingSize : Int) extends IndexGenerator
    * @param data
    * @return
    */
-  override def index(indexname : IndexName, tablename : TableName, data: RDD[IndexerTuple[WorkingVector]]): Index[_ <: IndexTuple] = {
+  override def index(indexname : IndexName, tablename : EntityName, data: RDD[IndexerTuple]): Index[_ <: IndexTuple] = {
     val indexMetaData = train(data)
 
     val indexdata = data.map(
@@ -47,7 +47,7 @@ class SpectralLSHIndexer(nbits : Int, trainingSize : Int) extends IndexGenerator
    * @param data
    * @return
    */
-  private def train(data : RDD[IndexerTuple[WorkingVector]]) : SpectralLSHIndexMetaData = {
+  private def train(data : RDD[IndexerTuple]) : SpectralLSHIndexMetaData = {
     //data
     val fraction = ADAMSamplingUtils.computeFractionForSampleSize(trainingSize, data.count(), false)
     val trainData = data.sample(false, fraction)
@@ -155,7 +155,7 @@ object SpectralLSHIndexer {
    *
    * @param properties
    */
-  def apply(properties : Map[String, String] = Map[String, String](), data: RDD[IndexerTuple[WorkingVector]]) : IndexGenerator = {
+  def apply(properties : Map[String, String] = Map[String, String](), data: RDD[IndexerTuple]) : IndexGenerator = {
     val nbits = math.min(500, properties.getOrElse("nbits", (data.first.value.length * 2).toString).toInt)
     val trainingSize = properties.getOrElse("trainingSize", "50000").toInt
 

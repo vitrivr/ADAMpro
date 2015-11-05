@@ -1,7 +1,8 @@
 package ch.unibas.dmi.dbis.adam.api
 
 import ch.unibas.dmi.dbis.adam.index.structures.IndexStructures
-import ch.unibas.dmi.dbis.adam.table.Table._
+import ch.unibas.dmi.dbis.adam.query.distance.DistanceFunction
+import ch.unibas.dmi.dbis.adam.entity.Entity._
 
 /**
  * adamtwo
@@ -14,9 +15,9 @@ object AllIndexOp {
    *
    * @param tablename
    */
-  def apply(tablename : TableName): Unit = {
+  def apply(tablename : EntityName, distance : DistanceFunction): Unit = {
     IndexStructures.values.foreach({ structure =>
-      IndexOp(tablename, structure, Map[String, String]())
+      IndexOp(tablename, structure, distance, Map[String, String]())
     })
   }
 }

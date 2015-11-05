@@ -50,7 +50,7 @@ class VariableSignatureGenerator (numberOfBitsPerDimension: Array[Int]) extends 
     }
 
 
-    BitString.fromBitIndicesToSet(setBits)
+    BitString(setBits)
   }
 
   /**
@@ -58,7 +58,5 @@ class VariableSignatureGenerator (numberOfBitsPerDimension: Array[Int]) extends 
    * @param signature
    * @return
    */
-  @inline def toCells(signature: BitString[_]): Seq[Int] = {
-    signature.getWithBitLengths(numberOfBitsPerDimension)
-  }
+  @inline def toCells(signature: BitString[_]): Seq[Int] = signature.toInts(numberOfBitsPerDimension)
 }

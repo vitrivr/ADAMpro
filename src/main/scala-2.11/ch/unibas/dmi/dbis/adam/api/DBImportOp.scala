@@ -1,8 +1,8 @@
 package ch.unibas.dmi.dbis.adam.api
 
 import ch.unibas.dmi.dbis.adam.main.{SparkStartup, Startup}
-import ch.unibas.dmi.dbis.adam.table.Table
-import ch.unibas.dmi.dbis.adam.table.Table._
+import ch.unibas.dmi.dbis.adam.entity.Entity
+import ch.unibas.dmi.dbis.adam.entity.Entity._
 import org.apache.spark.sql.SaveMode
 import org.apache.spark.sql.jdbc.AdamDialectRegistrar
 import org.apache.spark.sql.types._
@@ -15,7 +15,7 @@ import org.apache.spark.sql.types._
  */
 object DBImportOp {
   //TODO: refactor, atm only for testing purposes
-  def apply(url : String, port : Int, database : String, user : String, password : String, tablename: TableName, columns : String) : Unit = {
+  def apply(url : String, port : Int, database : String, user : String, password : String, tablename: EntityName, columns : String) : Unit = {
     val sqlContext = SparkStartup.sqlContext
 
     val props: java.util.Properties = new java.util.Properties()
@@ -34,7 +34,7 @@ object DBImportOp {
         StructField("feature", ArrayType(FloatType), false)
       )
     )
-    Table.createTable(tablename, schema)
+    Entity.createEntity(tablename, schema)
 
     //import data
     //val db = sqlContext.read.jdbc(fullUrl , tablename, props)

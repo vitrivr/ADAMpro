@@ -4,11 +4,12 @@ package ch.unibas.dmi.dbis.adam.http;
 import akka.actor._
 import akka.util.Timeout
 import ch.unibas.dmi.dbis.adam.api._
-import ch.unibas.dmi.dbis.adam.datatypes.Feature
+import ch.unibas.dmi.dbis.adam.datatypes.feature.Feature
 import ch.unibas.dmi.dbis.adam.http.Protocol._
-import ch.unibas.dmi.dbis.adam.query.{ProgressiveQueryStatus, Result}
-import ch.unibas.dmi.dbis.adam.query.distance.NormBasedDistanceFunction
-import ch.unibas.dmi.dbis.adam.table.Table.TableName
+import ch.unibas.dmi.dbis.adam.query.Result
+import ch.unibas.dmi.dbis.adam.query.distance.MinkowskiDistance
+import ch.unibas.dmi.dbis.adam.query.progressive.ProgressiveQueryStatus
+import ch.unibas.dmi.dbis.adam.entity.Entity.EntityName
 import org.apache.spark.sql.types._
 import spray.can.Http
 import spray.http._
@@ -125,7 +126,7 @@ trait RestApi extends HttpService with ActorLogging { actor: Actor =>
       path(Segment) { indextypename =>
         post { requestContext =>
           val responder = createResponder(requestContext)
-          IndexOp(tablename, indextypename, Map[String, String]())
+          IndexOp(tablename, indextypename, new MinkowskiDistance(1), Map[String, String]())
           responder ! IndexCreated
         }
       }
@@ -166,7 +167,7 @@ trait RestApi extends HttpService with ActorLogging { actor: Actor =>
         post {
           entity(as[IndexQuery]) { query => requestContext =>
             val responder = createResponder(requestContext)
-            val results = IndexQueryOp(indexname, Feature.conv_str2vector(query.q), query.k, NormBasedDistanceFunction(query.norm))
+            val results = IndexQueryOp(indexname, Feature.conv_str2vector(query.q), query.k, new MinkowskiDistance(query.norm))
             responder ! QueryResults(results)
           }
         }
@@ -182,7 +183,7 @@ trait RestApi extends HttpService with ActorLogging { actor: Actor =>
       post {
         entity(as[SeqQuery]) { query => requestContext =>
           val responder = createResponder(requestContext)
-          val results = SequentialQueryOp(tablename, Feature.conv_str2vector(query.q), query.k, NormBasedDistanceFunction(query.norm))
+          val results = SequentialQueryOp(tablename, Feature.conv_str2vector(query.q), query.k, new MinkowskiDistance(query.norm))
           responder ! QueryResults(results)
         }
       }
@@ -212,12 +213,12 @@ trait RestApi extends HttpService with ActorLogging { actor: Actor =>
    *
    * @param ctx
    */
-  private def streamProgResponse(tablename : TableName, query : ProgQuery)(ctx: RequestContext): Unit =
+  private def streamProgResponse(tablename : EntityName, query : ProgQuery)(ctx: RequestContext): Unit =
     actorRefFactory.actorOf {
       Props {
         new Actor with ActorLogging {
           val responder = ctx.responder
-          var nResponses = ProgressiveQueryOp(tablename, Feature.conv_str2vector(query.q), query.k, NormBasedDistanceFunction(query.norm), sendNextChunk)
+          var nResponses = ProgressiveQueryOp(tablename, Feature.conv_str2vector(query.q), query.k, new MinkowskiDistance(query.norm), sendNextChunk)
 
           //start
           responder ! ChunkedResponseStart(HttpResponse()).withAck(Ok(nResponses))

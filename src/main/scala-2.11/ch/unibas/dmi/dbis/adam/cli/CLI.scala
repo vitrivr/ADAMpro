@@ -1,15 +1,17 @@
 package ch.unibas.dmi.dbis.adam.cli
 
 import ch.unibas.dmi.dbis.adam.api._
-import ch.unibas.dmi.dbis.adam.datatypes.Feature._
+import ch.unibas.dmi.dbis.adam.datatypes.feature.{FeatureVectorWrapper, Feature}
+import Feature._
 import ch.unibas.dmi.dbis.adam.main.SparkStartup
-import ch.unibas.dmi.dbis.adam.query.distance.NormBasedDistanceFunction
-import ch.unibas.dmi.dbis.adam.storage.catalog.CatalogOperator
-import org.apache.spark.sql.Row
+import ch.unibas.dmi.dbis.adam.query.distance.{ManhattanDistance, MinkowskiDistance}
+import ch.unibas.dmi.dbis.adam.storage.engine.CatalogOperator
+import ch.unibas.dmi.dbis.adam.entity.WrappingTuple
 import org.apache.spark.sql.types._
 
 import scala.concurrent.duration.Duration
 import scala.tools.nsc.interpreter.ILoop
+import scala.util.Random
 
 
 /**
@@ -35,10 +37,10 @@ class CLI extends ILoop {
     new VarArgsCmd("progQuery", "tablename q k", "querys table in kNN search using progressive query", progQueryOp),
     new VarArgsCmd("timedProgQuery", "tablename q k t", "querys table in kNN search using progressive query", timedProgQueryOp),
     new VarArgsCmd("drop", "tablename", "drops table", dropOp),
-    new NullaryCmd("evaluation","evaluation", evaluationOp),
+    new NullaryCmd("evaluation", "evaluation", evaluationOp),
 
-    new NullaryCmd("dropAllIndexes","drops all indexes", dropAllIndexesOp),
-    new NullaryCmd("tmpOp","temporary operation only for testing purposes", tmpOp)
+    new NullaryCmd("dropAllIndexes", "drops all indexes", dropAllIndexesOp),
+    new NullaryCmd("tmpOp", "temporary operation only for testing purposes", tmpOp)
   )
 
 
@@ -47,7 +49,7 @@ class CLI extends ILoop {
    * @param input
    * @return
    */
-  private def countOp(input : List[String]) : Result = {
+  private def countOp(input: List[String]): Result = {
     val tablename = input(0)
     val count = CountOp(tablename)
     Result.resultFromString(s"COUNT for $tablename: $count")
@@ -59,12 +61,12 @@ class CLI extends ILoop {
    * @param input
    * @return
    */
-  private def displayOp(input : List[String]) : Result = {
+  private def displayOp(input: List[String]): Result = {
     val tablename = input(0)
     val results = DisplayOp(tablename)
 
     Result.resultFromString(
-      results.map { result => result._1 + "\t" + result._2.mkString("<", ",", ">")}
+      results.map { result => result._1 + "\t" + result._2.mkString("<", ",", ">") }
         .mkString("\n")
     )
   }
@@ -75,7 +77,7 @@ class CLI extends ILoop {
    * @param input
    * @return
    */
-  private def createOp(input : List[String]) : Result = {
+  private def createOp(input: List[String]): Result = {
     val tablename = input(0)
 
     val schema = StructType(
@@ -95,7 +97,7 @@ class CLI extends ILoop {
    * @param input
    * @return
    */
-  private def dropOp(input : List[String]) : Result = {
+  private def dropOp(input: List[String]): Result = {
     val tablename = input(0)
 
     DropOp(tablename)
@@ -144,7 +146,7 @@ class CLI extends ILoop {
     val tablename = input(0)
     val indextype = input(1)
 
-    var properties = Map[String,String]()
+    var properties = Map[String, String]()
 
     /*if(input.length == 3){
       val json = input(2)
@@ -152,7 +154,7 @@ class CLI extends ILoop {
       properties = read[Map[String, String]](json)
     }*/
 
-    IndexOp(tablename, indextype, properties)
+    IndexOp(tablename, indextype, new MinkowskiDistance(1), properties)
 
     Result.default
   }
@@ -162,7 +164,7 @@ class CLI extends ILoop {
    * @param input
    * @return
    */
-  private def cacheOp(input : List[String]) : Result = {
+  private def cacheOp(input: List[String]): Result = {
     val tablename = input(0)
 
     CacheOp(tablename)
@@ -173,7 +175,7 @@ class CLI extends ILoop {
    * @param input
    * @return
    */
-  private def cacheAllIndexesOp(input : String) : Result = {
+  private def cacheAllIndexesOp(input: String): Result = {
     CacheAllIndexesOp()
   }
 
@@ -182,7 +184,7 @@ class CLI extends ILoop {
    * @param input
    * @return
    */
-  private def listOp(input : String) : Result = {
+  private def listOp(input: String): Result = {
     val results = ListOp()
 
     Result.resultFromString(results.mkString(", \n"))
@@ -199,7 +201,7 @@ class CLI extends ILoop {
     val k = input(2).toInt
 
     //implicit conversion!
-    val results = SequentialQueryOp(tablename, query, k, NormBasedDistanceFunction(1))
+    val results = SequentialQueryOp(tablename, query, k, ManhattanDistance)
     Result.resultFromString(results.map(x => "(" + x.tid + "," + x.distance + ")").mkString("\n "))
   }
 
@@ -214,7 +216,7 @@ class CLI extends ILoop {
     val k = input(2).toInt
 
     //implicit conversion!
-    val results =  IndexQueryOp(indexname, query, k, NormBasedDistanceFunction(1))
+    val results = IndexQueryOp(indexname, query, k, ManhattanDistance)
     Result.resultFromString(results.map(x => "(" + x.tid + "," + x.distance + ")").mkString("\n "))
   }
 
@@ -229,7 +231,7 @@ class CLI extends ILoop {
     val query = input(1)
     val k = input(2).toInt
 
-    ProgressiveQueryOp(tablename, query, k, NormBasedDistanceFunction(1), (status, results, confidence, details) => println(results.mkString(", ")))
+    ProgressiveQueryOp(tablename, query, k, ManhattanDistance, (status, results, confidence, details) => println(results.mkString(", ")))
 
     Result.default
   }
@@ -245,7 +247,7 @@ class CLI extends ILoop {
     val k = input(2).toInt
     val time = Duration(input(3).toLong, "millis")
 
-    val (results, confidence) =  TimedProgressiveQueryOp(tablename, query, k, NormBasedDistanceFunction(1), time)
+    val (results, confidence) = TimedProgressiveQueryOp(tablename, query, k, ManhattanDistance, time)
     Result.resultFromString(results.map(x => "(" + x.tid + "," + x.distance + ")").mkString("\n "))
 
     Result.default
@@ -256,7 +258,7 @@ class CLI extends ILoop {
    * @param input
    * @return
    */
-  private def evaluationOp(input : String) : Result = {
+  private def evaluationOp(input: String): Result = {
     EvaluationOp()
     Result.default
   }
@@ -266,7 +268,7 @@ class CLI extends ILoop {
    * @param input
    * @return
    */
-  private def dropAllIndexesOp(input : String) : Result = {
+  private def dropAllIndexesOp(input: String): Result = {
     CatalogOperator.dropAllIndexes()
   }
 
@@ -276,30 +278,7 @@ class CLI extends ILoop {
    * @param input
    * @return
    */
-  private def tmpOp(input : String) : Result = {
-    val files = new java.io.File("./data/old").listFiles.filter(_.getName.startsWith("data_")).sortBy(_.getName)
-
-
-    val schema = StructType(
-      List(
-        StructField("id", LongType, false),
-        StructField("feature", ArrayType(FloatType), false)
-      )
-    )
-
-    files.foreach{
-      file =>
-        val data = SparkStartup.sqlContext.read.parquet(file.getAbsolutePath)
-
-        val revData = data.map(r =>  Row(r.getInt(0).toLong, r.getSeq[Float](1)))
-        val df = SparkStartup.sqlContext.createDataFrame(revData, schema)
-
-        DropOp(file.getName, true)
-        CreateOp(file.getName, schema)
-        ImportOp(file.getName, df)
-    }
-
+  private def tmpOp(input: String): Result = {
     Result.default
   }
-
 }

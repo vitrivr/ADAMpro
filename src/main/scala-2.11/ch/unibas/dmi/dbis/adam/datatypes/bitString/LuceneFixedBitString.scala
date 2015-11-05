@@ -13,30 +13,13 @@ import scala.collection.mutable.ListBuffer
  * September 2015
  */
 class LuceneFixedBitString(private val values : FixedBitSet) extends BitString[LuceneFixedBitString] with Serializable {
-  /**
-   *
-   * @param other
-   * @return
-   */
-  override def intersectionCount(other: LuceneFixedBitString): Int = {
-    FixedBitSet.intersectionCount(values, other.values).toInt
-  }
+  override def toLong : Long = getBitIndexes.map(x => math.pow(2, x).toLong).sum
+  override def toLong(start: Int, end: Int): Long = ???
 
-  /**
-   *
-   * @param start
-   * @param end
-   * @return
-   */
-  override def get(start: Int, end: Int): Int = {
-    ???
-  }
+  override def intersectionCount(other: LuceneFixedBitString): Int = FixedBitSet.intersectionCount(values, other.values).toInt
 
-  /**
-   *
-   * @return
-   */
-  override def getIndexes: Seq[Int] = {
+
+  override def getBitIndexes: Seq[Int] = {
     val indexes = ListBuffer[Int]()
     var nextIndex : Int = -1
 
@@ -53,18 +36,6 @@ class LuceneFixedBitString(private val values : FixedBitSet) extends BitString[L
     indexes.toList
   }
 
-  /**
-   *
-   * @return
-   */
-  override def toLong : Long = {
-    getIndexes.map(x => math.pow(2, x).toLong).sum
-  }
-
-  /**
-   *
-   * @return
-   */
   override def toByteArray : Array[Byte] = {
     val baos = new ByteArrayOutputStream()
     val o = new ObjectOutputStream(baos)
@@ -74,26 +45,15 @@ class LuceneFixedBitString(private val values : FixedBitSet) extends BitString[L
 }
 
 
-object LuceneFixedBitString extends BitStringFactory[LuceneFixedBitString] {
-  /**
-   *
-   * @param values
-   * @return
-   */
-  override def fromBitIndicesToSet(values: Seq[Int]): BitString[LuceneFixedBitString] = {
-    val max = if(values.length == 0) 0 else values.max
-
+object LuceneFixedBitString extends BitStringFactory {
+  override def apply(values: Seq[Int]): LuceneFixedBitString = {
+    val max = if(values.isEmpty) 0 else values.max
     val bitSet = new FixedBitSet(max)
     values.foreach{bitSet.set(_)}
     new LuceneFixedBitString(bitSet)
   }
 
-  /**
-   *
-   * @param values
-   * @return
-   */
-  override def fromByteSeq(values: Seq[Byte]): BitString[LuceneFixedBitString] = {
+  override def deserialize(values: Seq[Byte]): LuceneFixedBitString = {
     val bais = new ByteArrayInputStream(values.toArray)
     val o = new ObjectInputStream(bais)
     val bitSet = o.readObject().asInstanceOf[FixedBitSet]

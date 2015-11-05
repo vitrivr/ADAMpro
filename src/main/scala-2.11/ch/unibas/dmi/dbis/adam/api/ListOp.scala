@@ -1,6 +1,6 @@
 package ch.unibas.dmi.dbis.adam.api
 
-import ch.unibas.dmi.dbis.adam.storage.catalog.CatalogOperator
+import ch.unibas.dmi.dbis.adam.storage.engine.CatalogOperator
 
 /**
  * adamtwo
@@ -10,6 +10,6 @@ import ch.unibas.dmi.dbis.adam.storage.catalog.CatalogOperator
  */
 object ListOp {
   def apply() : Seq[String] = {
-    CatalogOperator.listTables()
+    CatalogOperator.listEntities()
   }
 }

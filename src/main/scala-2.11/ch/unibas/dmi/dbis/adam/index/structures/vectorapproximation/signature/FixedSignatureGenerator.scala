@@ -37,7 +37,7 @@ class FixedSignatureGenerator(val numberOfDimensions: Int, val numberOfBitsPerDi
         } while(bitPosition != -1 && bitPosition < numberOfBitsPerDimension)
     }
 
-    BitString.fromBitIndicesToSet(setBits)
+    BitString(setBits)
   }
 
   /**
@@ -45,7 +45,6 @@ class FixedSignatureGenerator(val numberOfDimensions: Int, val numberOfBitsPerDi
    * @param signature
    * @return
    */
-  @inline def toCells(signature: BitString[_]): Seq[Int] = {
-    signature.getWithBitLengths(numberOfDimensions, numberOfBitsPerDimension)
-  }
+  @inline def toCells(signature: BitString[_]): Seq[Int] = signature.toInts(numberOfDimensions, numberOfBitsPerDimension)
+
 }

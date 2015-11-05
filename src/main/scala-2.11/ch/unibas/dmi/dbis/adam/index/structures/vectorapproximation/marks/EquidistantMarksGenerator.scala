@@ -1,6 +1,7 @@
 package ch.unibas.dmi.dbis.adam.index.structures.vectorapproximation.marks
 
-import ch.unibas.dmi.dbis.adam.datatypes.Feature._
+import ch.unibas.dmi.dbis.adam.datatypes.feature.Feature
+import Feature._
 import ch.unibas.dmi.dbis.adam.index.IndexerTuple
 import ch.unibas.dmi.dbis.adam.index.structures.vectorapproximation.VectorApproximationIndex.Marks
 import org.apache.spark.rdd.RDD
@@ -19,7 +20,7 @@ private[vectorapproximation] object EquidistantMarksGenerator extends MarksGener
    * @param maxMarks
    * @return
    */
-  private[vectorapproximation] def getMarks(sample : RDD[IndexerTuple[WorkingVector]], maxMarks : Seq[Int]) : Marks = {
+  private[vectorapproximation] def getMarks(sample : RDD[IndexerTuple], maxMarks : Seq[Int]) : Marks = {
     val dimensionality = maxMarks.length
 
     val min = getMin(sample.map(_.value), dimensionality)
@@ -34,7 +35,7 @@ private[vectorapproximation] object EquidistantMarksGenerator extends MarksGener
    * @param dimensionality
    * @return
    */
-  private def getMin(data : RDD[WorkingVector], dimensionality : Int) : WorkingVector = {
+  private def getMin(data : RDD[FeatureVector], dimensionality : Int) : FeatureVector = {
     val base = Seq.fill(dimensionality)(Float.MaxValue)
     data.treeReduce{case(baseV, newV) => baseV.zip(newV).map{case (b,v) => math.min(b,v)}}
   }
@@ -45,7 +46,7 @@ private[vectorapproximation] object EquidistantMarksGenerator extends MarksGener
    * @param dimensionality
    * @return
    */
-  private def getMax(data : RDD[WorkingVector], dimensionality : Int) : WorkingVector = {
+  private def getMax(data : RDD[FeatureVector], dimensionality : Int) : FeatureVector = {
     val base = Seq.fill(dimensionality)(Float.MinValue)
     data.treeReduce{case(baseV, newV) => baseV.zip(newV).map{case (b,v) => math.max(b,v)}}
   }

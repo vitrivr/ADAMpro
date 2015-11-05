@@ -5,7 +5,7 @@ import ch.unibas.dmi.dbis.adam.index.BitStringIndexTuple
 import ch.unibas.dmi.dbis.adam.index.structures.vectorapproximation.VectorApproximationIndex._
 import ch.unibas.dmi.dbis.adam.index.structures.vectorapproximation.signature.SignatureGenerator
 import ch.unibas.dmi.dbis.adam.query.distance.Distance.Distance
-import ch.unibas.dmi.dbis.adam.table.Tuple.TupleID
+import ch.unibas.dmi.dbis.adam.entity.Tuple.TupleID
 import com.google.common.collect.MinMaxPriorityQueue
 
 import scala.collection.mutable.ListBuffer
@@ -20,6 +20,9 @@ private[vectorapproximation] class VectorApproximationResultHandler(k: Int, lbou
   @transient private var ls = ListBuffer[ResultElement]()
   @transient private var queue = MinMaxPriorityQueue.orderedBy(scala.math.Ordering.Float).maximumSize(k).create[Float]
   @transient private var max = Float.MaxValue
+
+  def iterator: Iterator[ResultElement] = results.iterator
+  def results = ls.sortBy(_.ubound)
 
   /**
    *
@@ -42,9 +45,7 @@ private[vectorapproximation] class VectorApproximationResultHandler(k: Int, lbou
    *
    * @param indexTuple
    */
-  def offerIndexTuple(indexTuple: BitStringIndexTuple): Unit = {
-    offerResultElement(BoundedResultElement(indexTuple.tid, indexTuple.value))
-  }
+  def offerIndexTuple(indexTuple: BitStringIndexTuple): Unit = offerResultElement(BoundedResultElement(indexTuple.tid, indexTuple.value))
 
 
   /**
@@ -76,25 +77,7 @@ private[vectorapproximation] class VectorApproximationResultHandler(k: Int, lbou
   }
 
 
-  /**
-   *
-   * @return
-   */
-  def iterator: Iterator[ResultElement] = {
-    results.iterator
-  }
-
-  /**
-   *
-   * @return
-   */
-  def results = {
-    ls.sortBy(_.ubound)
-  }
-
-
-  case class BoundedResultElement(val tid: TupleID, @transient bits: BitString[_]) extends ResultElement {
-
+  private case class BoundedResultElement(val tid: TupleID, @transient bits: BitString[_]) extends ResultElement {
     val lbound: Distance = computeBounds(lbounds, bits)
     lazy val ubound: Distance = computeBounds(ubounds, bits)
 

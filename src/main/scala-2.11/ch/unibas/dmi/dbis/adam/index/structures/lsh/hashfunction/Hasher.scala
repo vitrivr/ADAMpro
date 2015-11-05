@@ -1,7 +1,6 @@
 package ch.unibas.dmi.dbis.adam.index.structures.lsh.hashfunction
 
-import ch.unibas.dmi.dbis.adam.datatypes.Feature
-import Feature.WorkingVector
+import ch.unibas.dmi.dbis.adam.datatypes.feature.Feature.FeatureVector
 
 /**
  * adamtwo
@@ -24,7 +23,7 @@ sealed class Hasher(val functions: List[LSHashFunction]) extends Serializable {
    * @param v
    * @return
    */
-  def apply(v: WorkingVector, m : Int = 0): Int = {
+  def apply(v: FeatureVector, m : Int = 0): Int = {
     if ( m == 0){
       functions.map(f => f.hash(v)).hashCode()
     } else {

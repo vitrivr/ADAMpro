@@ -4,7 +4,7 @@ import java.util.Properties
 
 import ch.unibas.dmi.dbis.adam.main.{SparkStartup, Startup}
 import ch.unibas.dmi.dbis.adam.storage.components.MetadataStorage
-import ch.unibas.dmi.dbis.adam.table.Table.TableName
+import ch.unibas.dmi.dbis.adam.entity.Entity.EntityName
 import org.apache.spark.sql.jdbc.AdamDialectRegistrar
 import org.apache.spark.sql.{DataFrame, SaveMode}
 
@@ -17,6 +17,7 @@ import org.apache.spark.sql.{DataFrame, SaveMode}
 object PostgresDataStorage extends MetadataStorage {
   val config = Startup.config
   val url = config.jdbcUrl
+
   AdamDialectRegistrar.register(url)
 
   /**
@@ -24,7 +25,7 @@ object PostgresDataStorage extends MetadataStorage {
    * @param tablename
    * @return
    */
-  override def readTable(tablename: TableName): DataFrame = {
+  override def read(tablename: EntityName): DataFrame = {
     SparkStartup.sqlContext.read.format("jdbc").options(
       Map("url" -> url, "dbtable" -> tablename, "user" -> config.jdbcUser, "password" -> config.jdbcPassword)
     ).load()
@@ -36,7 +37,7 @@ object PostgresDataStorage extends MetadataStorage {
    * @param df
    * @param mode
    */
-  override def writeTable(tablename: TableName, df: DataFrame, mode: SaveMode = SaveMode.Append): Unit = {
+  override def write(tablename: EntityName, df: DataFrame, mode: SaveMode = SaveMode.Append): Unit = {
     val props = new Properties()
     props.put("user", config.jdbcUser)
     props.put("password", config.jdbcPassword)
@@ -47,7 +48,7 @@ object PostgresDataStorage extends MetadataStorage {
    *
    * @param tablename
    */
-  override def dropTable(tablename: TableName): Unit = {
+  override def drop(tablename: EntityName): Unit = {
     SparkStartup.sqlContext.read.format("jdbc").options(
       Map("url" -> url, "dbtable" -> tablename, "user" -> config.jdbcUser, "password" -> config.jdbcPassword)
     ).load()
