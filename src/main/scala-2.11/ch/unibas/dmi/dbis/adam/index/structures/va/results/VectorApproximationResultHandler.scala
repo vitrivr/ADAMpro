@@ -1,9 +1,9 @@
-package ch.unibas.dmi.dbis.adam.index.structures.vectorapproximation.results
+package ch.unibas.dmi.dbis.adam.index.structures.va.results
 
 import ch.unibas.dmi.dbis.adam.datatypes.bitString.BitString
 import ch.unibas.dmi.dbis.adam.index.BitStringIndexTuple
-import ch.unibas.dmi.dbis.adam.index.structures.vectorapproximation.VectorApproximationIndex._
-import ch.unibas.dmi.dbis.adam.index.structures.vectorapproximation.signature.SignatureGenerator
+import ch.unibas.dmi.dbis.adam.index.structures.va.VectorApproximationIndex._
+import ch.unibas.dmi.dbis.adam.index.structures.va.signature.SignatureGenerator
 import ch.unibas.dmi.dbis.adam.query.distance.Distance.Distance
 import ch.unibas.dmi.dbis.adam.entity.Tuple.TupleID
 import com.google.common.collect.MinMaxPriorityQueue
@@ -16,7 +16,7 @@ import scala.collection.mutable.ListBuffer
  * Ivan Giangreco
  * August 2015
  */
-private[vectorapproximation] class VectorApproximationResultHandler(k: Int, lbounds: => Bounds = null, ubounds: => Bounds = null, signatureGenerator: SignatureGenerator = null) extends Serializable {
+private[va] class VectorApproximationResultHandler(k: Int, lbounds: => Bounds = null, ubounds: => Bounds = null, signatureGenerator: SignatureGenerator = null) extends Serializable {
   @transient private var ls = ListBuffer[ResultElement]()
   @transient private var queue = MinMaxPriorityQueue.orderedBy(scala.math.Ordering.Float).maximumSize(k).create[Float]
   @transient private var max = Float.MaxValue

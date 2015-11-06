@@ -1,4 +1,4 @@
-package ch.unibas.dmi.dbis.adam.index.structures.spectrallsh
+package ch.unibas.dmi.dbis.adam.index.structures.sh
 
 import breeze.linalg._
 import ch.unibas.dmi.dbis.adam.datatypes.feature.Feature
@@ -10,7 +10,7 @@ import Feature._
  * Ivan Giangreco
  * September 2015
  */
-private[spectrallsh]
+private[sh]
 case class SpectralLSHIndexMetaData
   (pca : DenseMatrix[VectorBase], min : FeatureVector, max : FeatureVector, modes : DenseMatrix[VectorBase], radius : FeatureVector) {
   lazy val omegas: DenseMatrix[VectorBase] = {

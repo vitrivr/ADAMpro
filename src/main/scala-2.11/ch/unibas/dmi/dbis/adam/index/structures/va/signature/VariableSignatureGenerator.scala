@@ -1,4 +1,4 @@
-package ch.unibas.dmi.dbis.adam.index.structures.vectorapproximation.signature
+package ch.unibas.dmi.dbis.adam.index.structures.va.signature
 
 import java.util.BitSet
 

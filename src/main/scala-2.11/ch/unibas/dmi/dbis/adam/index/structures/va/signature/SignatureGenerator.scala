@@ -1,4 +1,4 @@
-package ch.unibas.dmi.dbis.adam.index.structures.vectorapproximation.signature
+package ch.unibas.dmi.dbis.adam.index.structures.va.signature
 
 import ch.unibas.dmi.dbis.adam.datatypes.bitString.BitString
 
@@ -8,7 +8,7 @@ import ch.unibas.dmi.dbis.adam.datatypes.bitString.BitString
  * Ivan Giangreco
  * August 2015
  */
-private[vectorapproximation] trait SignatureGenerator extends Serializable {
+private[va] trait SignatureGenerator extends Serializable {
   /**
    * 
    */

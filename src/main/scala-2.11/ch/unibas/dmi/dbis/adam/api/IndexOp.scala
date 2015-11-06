@@ -6,8 +6,8 @@ import ch.unibas.dmi.dbis.adam.index.Index.IndexTypeName
 import ch.unibas.dmi.dbis.adam.index.structures.IndexStructures
 import ch.unibas.dmi.dbis.adam.index.structures.ecp.ECPIndexer
 import ch.unibas.dmi.dbis.adam.index.structures.lsh.LSHIndexer
-import ch.unibas.dmi.dbis.adam.index.structures.spectrallsh.SpectralLSHIndexer
-import ch.unibas.dmi.dbis.adam.index.structures.vectorapproximation.{NewVectorApproximationIndexer, VectorApproximationIndexer}
+import ch.unibas.dmi.dbis.adam.index.structures.sh.SpectralLSHIndexer
+import ch.unibas.dmi.dbis.adam.index.structures.va.{NewVectorApproximationIndexer, VectorApproximationIndexer}
 import ch.unibas.dmi.dbis.adam.index.{Index, IndexGenerator, IndexerTuple}
 import ch.unibas.dmi.dbis.adam.query.distance.{DistanceFunction, MinkowskiDistance}
 import ch.unibas.dmi.dbis.adam.entity.Entity

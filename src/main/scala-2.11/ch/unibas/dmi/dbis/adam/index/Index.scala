@@ -8,8 +8,8 @@ import ch.unibas.dmi.dbis.adam.index.structures.IndexStructures
 import ch.unibas.dmi.dbis.adam.index.structures.IndexStructures.IndexStructureType
 import ch.unibas.dmi.dbis.adam.index.structures.ecp.ECPIndex
 import ch.unibas.dmi.dbis.adam.index.structures.lsh.LSHIndex
-import ch.unibas.dmi.dbis.adam.index.structures.spectrallsh.SpectralLSHIndex
-import ch.unibas.dmi.dbis.adam.index.structures.vectorapproximation.VectorApproximationIndex
+import ch.unibas.dmi.dbis.adam.index.structures.sh.SpectralLSHIndex
+import ch.unibas.dmi.dbis.adam.index.structures.va.VectorApproximationIndex
 import ch.unibas.dmi.dbis.adam.main.SparkStartup
 import ch.unibas.dmi.dbis.adam.storage.engine.CatalogOperator
 import ch.unibas.dmi.dbis.adam.entity.Entity

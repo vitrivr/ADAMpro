@@ -1,9 +1,9 @@
-package ch.unibas.dmi.dbis.adam.index.structures.vectorapproximation.marks
+package ch.unibas.dmi.dbis.adam.index.structures.va.marks
 
 import ch.unibas.dmi.dbis.adam.datatypes.feature.Feature
 import Feature._
 import ch.unibas.dmi.dbis.adam.index.IndexerTuple
-import ch.unibas.dmi.dbis.adam.index.structures.vectorapproximation.VectorApproximationIndex.Marks
+import ch.unibas.dmi.dbis.adam.index.structures.va.VectorApproximationIndex.Marks
 import org.apache.spark.rdd.RDD
 
 /**
@@ -12,7 +12,7 @@ import org.apache.spark.rdd.RDD
  * Ivan Giangreco
  * August 2015
  */
-private[vectorapproximation] object EquidistantMarksGenerator extends MarksGenerator with Serializable {
+private[va] object EquidistantMarksGenerator extends MarksGenerator with Serializable {
 
   /**
    *
@@ -20,7 +20,7 @@ private[vectorapproximation] object EquidistantMarksGenerator extends MarksGener
    * @param maxMarks
    * @return
    */
-  private[vectorapproximation] def getMarks(sample : RDD[IndexerTuple], maxMarks : Seq[Int]) : Marks = {
+  private[va] def getMarks(sample : RDD[IndexerTuple], maxMarks : Seq[Int]) : Marks = {
     val dimensionality = maxMarks.length
 
     val min = getMin(sample.map(_.value), dimensionality)

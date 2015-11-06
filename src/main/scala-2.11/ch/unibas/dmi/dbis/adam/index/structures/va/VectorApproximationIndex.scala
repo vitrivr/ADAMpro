@@ -1,11 +1,11 @@
-package ch.unibas.dmi.dbis.adam.index.structures.vectorapproximation
+package ch.unibas.dmi.dbis.adam.index.structures.va
 
 import ch.unibas.dmi.dbis.adam.datatypes.feature.Feature._
 import ch.unibas.dmi.dbis.adam.index.Index._
 import ch.unibas.dmi.dbis.adam.index.structures.IndexStructures
-import ch.unibas.dmi.dbis.adam.index.structures.vectorapproximation.VectorApproximationIndex.{Bounds, Marks}
-import ch.unibas.dmi.dbis.adam.index.structures.vectorapproximation.results.VectorApproximationResultHandler
-import ch.unibas.dmi.dbis.adam.index.structures.vectorapproximation.signature.{FixedSignatureGenerator, VariableSignatureGenerator}
+import ch.unibas.dmi.dbis.adam.index.structures.va.VectorApproximationIndex.{Bounds, Marks}
+import ch.unibas.dmi.dbis.adam.index.structures.va.results.VectorApproximationResultHandler
+import ch.unibas.dmi.dbis.adam.index.structures.va.signature.{FixedSignatureGenerator, VariableSignatureGenerator}
 import ch.unibas.dmi.dbis.adam.index.{BitStringIndexTuple, Index}
 import ch.unibas.dmi.dbis.adam.main.SparkStartup
 import ch.unibas.dmi.dbis.adam.query.distance.Distance._

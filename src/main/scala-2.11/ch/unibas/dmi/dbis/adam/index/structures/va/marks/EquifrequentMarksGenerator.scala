@@ -1,8 +1,8 @@
-package ch.unibas.dmi.dbis.adam.index.structures.vectorapproximation.marks
+package ch.unibas.dmi.dbis.adam.index.structures.va.marks
 
 import ch.unibas.dmi.dbis.adam.datatypes.feature.Feature._
 import ch.unibas.dmi.dbis.adam.index.IndexerTuple
-import ch.unibas.dmi.dbis.adam.index.structures.vectorapproximation.VectorApproximationIndex.Marks
+import ch.unibas.dmi.dbis.adam.index.structures.va.VectorApproximationIndex.Marks
 import org.apache.spark.rdd.RDD
 
 import scala.collection.IterableLike
@@ -11,7 +11,7 @@ import scala.collection.mutable.ListBuffer
 /**
  * 
  */
-private[vectorapproximation] object EquifrequentMarksGenerator extends MarksGenerator with Serializable {
+private[va] object EquifrequentMarksGenerator extends MarksGenerator with Serializable {
   val SamplingFrequency = 500
 
   /**
@@ -20,7 +20,7 @@ private[vectorapproximation] object EquifrequentMarksGenerator extends MarksGene
    * @param maxMarks
    * @return
    */
-  private[vectorapproximation] def getMarks(samples : RDD[IndexerTuple], maxMarks : Seq[Int]) : Marks = {
+  private[va] def getMarks(samples : RDD[IndexerTuple], maxMarks : Seq[Int]) : Marks = {
     val sampleSize = samples.count
 
     val min = treeReduceData(samples.map(_.value), math.min)

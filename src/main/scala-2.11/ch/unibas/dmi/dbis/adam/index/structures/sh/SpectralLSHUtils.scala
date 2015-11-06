@@ -1,4 +1,4 @@
-package ch.unibas.dmi.dbis.adam.index.structures.spectrallsh
+package ch.unibas.dmi.dbis.adam.index.structures.sh
 
 import breeze.linalg.{*, DenseMatrix}
 import ch.unibas.dmi.dbis.adam.datatypes.feature.Feature
@@ -12,7 +12,7 @@ import ch.unibas.dmi.dbis.adam.datatypes.feature.Feature
  * Ivan Giangreco
  * September 2015
  */
-private[spectrallsh] object SpectralLSHUtils {
+private[sh] object SpectralLSHUtils {
   /**
    *
    * @param f

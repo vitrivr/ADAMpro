@@ -1,4 +1,4 @@
-package ch.unibas.dmi.dbis.adam.index.structures.spectrallsh
+package ch.unibas.dmi.dbis.adam.index.structures.sh
 
 import breeze.linalg.{Matrix, Vector, _}
 import ch.unibas.dmi.dbis.adam.datatypes.feature.Feature

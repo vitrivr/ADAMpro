@@ -1,12 +1,12 @@
-package ch.unibas.dmi.dbis.adam.index.structures.vectorapproximation
+package ch.unibas.dmi.dbis.adam.index.structures.va
 
 import breeze.linalg._
 import ch.unibas.dmi.dbis.adam.datatypes.feature.Feature
 import Feature._
 import ch.unibas.dmi.dbis.adam.index.Index._
 import ch.unibas.dmi.dbis.adam.index.structures.IndexStructures
-import ch.unibas.dmi.dbis.adam.index.structures.vectorapproximation.marks.{EquidistantMarksGenerator, EquifrequentMarksGenerator, MarksGenerator}
-import ch.unibas.dmi.dbis.adam.index.structures.vectorapproximation.signature.VariableSignatureGenerator
+import ch.unibas.dmi.dbis.adam.index.structures.va.marks.{EquidistantMarksGenerator, EquifrequentMarksGenerator, MarksGenerator}
+import ch.unibas.dmi.dbis.adam.index.structures.va.signature.VariableSignatureGenerator
 import ch.unibas.dmi.dbis.adam.index.{IndexerTuple, IndexGenerator, BitStringIndexTuple}
 import ch.unibas.dmi.dbis.adam.main.SparkStartup
 import ch.unibas.dmi.dbis.adam.query.distance.MinkowskiDistance
