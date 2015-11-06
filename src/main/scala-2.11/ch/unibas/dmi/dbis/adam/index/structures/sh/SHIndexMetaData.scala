@@ -11,7 +11,7 @@ import Feature._
  * September 2015
  */
 private[sh]
-case class SpectralLSHIndexMetaData
+case class SHIndexMetaData
   (pca : DenseMatrix[VectorBase], min : FeatureVector, max : FeatureVector, modes : DenseMatrix[VectorBase], radius : FeatureVector) {
   lazy val omegas: DenseMatrix[VectorBase] = {
     val range = max - min

@@ -20,7 +20,7 @@ import org.apache.spark.util.random.ADAMSamplingUtils
  * Ivan Giangreco
  * August 2015
  */
-class SpectralLSHIndexer(nbits : Int, trainingSize : Int) extends IndexGenerator with Serializable {
+class SHIndexer(nbits : Int, trainingSize : Int) extends IndexGenerator with Serializable {
   override val indextypename: IndexTypeName = IndexStructures.SH
 
 
@@ -34,12 +34,12 @@ class SpectralLSHIndexer(nbits : Int, trainingSize : Int) extends IndexGenerator
 
     val indexdata = data.map(
       datum => {
-        val hash = SpectralLSHUtils.hashFeature(datum.value, indexMetaData)
+        val hash = SHUtils.hashFeature(datum.value, indexMetaData)
         BitStringIndexTuple(datum.tid, hash)
       })
 
     import SparkStartup.sqlContext.implicits._
-    new SpectralLSHIndex(indexname, tablename, indexdata.toDF, indexMetaData)
+    new SHIndex(indexname, tablename, indexdata.toDF, indexMetaData)
   }
 
   /**
@@ -47,7 +47,7 @@ class SpectralLSHIndexer(nbits : Int, trainingSize : Int) extends IndexGenerator
    * @param data
    * @return
    */
-  private def train(data : RDD[IndexerTuple]) : SpectralLSHIndexMetaData = {
+  private def train(data : RDD[IndexerTuple]) : SHIndexMetaData = {
     //data
     val fraction = ADAMSamplingUtils.computeFractionForSampleSize(trainingSize, data.count(), false)
     val trainData = data.sample(false, fraction)
@@ -86,7 +86,7 @@ class SpectralLSHIndexer(nbits : Int, trainingSize : Int) extends IndexGenerator
     val max = breeze.linalg.max(dataMatrix(*, ::)).toDenseVector
     val radius = 0.1 * (max - min)
 
-    SpectralLSHIndexMetaData(feigv, minProj, maxProj, modes.toDenseMatrix, radius)
+    SHIndexMetaData(feigv, minProj, maxProj, modes.toDenseMatrix, radius)
   }
 
 
@@ -150,7 +150,7 @@ class SpectralLSHIndexer(nbits : Int, trainingSize : Int) extends IndexGenerator
 }
 
 
-object SpectralLSHIndexer {
+object SHIndexer {
   /**
    *
    * @param properties
@@ -159,6 +159,6 @@ object SpectralLSHIndexer {
     val nbits = math.min(500, properties.getOrElse("nbits", (data.first.value.length * 2).toString).toInt)
     val trainingSize = properties.getOrElse("trainingSize", "50000").toInt
 
-    new SpectralLSHIndexer(nbits, trainingSize)
+    new SHIndexer(nbits, trainingSize)
   }
 }

@@ -6,8 +6,8 @@ import ch.unibas.dmi.dbis.adam.index.Index.IndexTypeName
 import ch.unibas.dmi.dbis.adam.index.structures.IndexStructures
 import ch.unibas.dmi.dbis.adam.index.structures.ecp.ECPIndexer
 import ch.unibas.dmi.dbis.adam.index.structures.lsh.LSHIndexer
-import ch.unibas.dmi.dbis.adam.index.structures.sh.SpectralLSHIndexer
-import ch.unibas.dmi.dbis.adam.index.structures.va.{NewVectorApproximationIndexer, VectorApproximationIndexer}
+import ch.unibas.dmi.dbis.adam.index.structures.sh.{SHIndexer, SHIndexer$}
+import ch.unibas.dmi.dbis.adam.index.structures.va.{VAVIndexer$, VAFIndexer$}
 import ch.unibas.dmi.dbis.adam.index.{Index, IndexGenerator, IndexerTuple}
 import ch.unibas.dmi.dbis.adam.query.distance.{DistanceFunction, MinkowskiDistance}
 import ch.unibas.dmi.dbis.adam.entity.Entity
@@ -46,9 +46,9 @@ object IndexOp {
     val generator : IndexGenerator = indextypename match {
       case IndexStructures.ECP => ECPIndexer(properties, distance, data)
       case IndexStructures.LSH => LSHIndexer(properties, distance, data)
-      case IndexStructures.SH => SpectralLSHIndexer(properties, data)
-      case IndexStructures.VAF => VectorApproximationIndexer(properties, distance.asInstanceOf[MinkowskiDistance], data)
-      case IndexStructures.VAV => NewVectorApproximationIndexer(properties, distance.asInstanceOf[MinkowskiDistance], data)
+      case IndexStructures.SH => SHIndexer(properties, data)
+      case IndexStructures.VAF => VAFIndexer(properties, distance.asInstanceOf[MinkowskiDistance], data)
+      case IndexStructures.VAV => VAVIndexer(properties, distance.asInstanceOf[MinkowskiDistance], data)
     }
 
     Index.createIndex(table, generator)

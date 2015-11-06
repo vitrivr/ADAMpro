@@ -2,7 +2,7 @@ package ch.unibas.dmi.dbis.adam.index.structures.va.marks
 
 import ch.unibas.dmi.dbis.adam.datatypes.feature.Feature._
 import ch.unibas.dmi.dbis.adam.index.IndexerTuple
-import ch.unibas.dmi.dbis.adam.index.structures.va.VectorApproximationIndex.Marks
+import ch.unibas.dmi.dbis.adam.index.structures.va.VAIndex.Marks
 import org.apache.spark.rdd.RDD
 
 import scala.collection.IterableLike

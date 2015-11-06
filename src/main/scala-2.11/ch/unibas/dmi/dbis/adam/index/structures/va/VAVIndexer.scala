@@ -20,13 +20,13 @@ import org.apache.spark.util.random.ADAMSamplingUtils
  * Ivan Giangreco
  * September 2015
  */
-class NewVectorApproximationIndexer (nbits : Int, marksGenerator: MarksGenerator, trainingSize : Int, distance : MinkowskiDistance) extends IndexGenerator with Serializable {
+class VAVIndexer (nbits : Int, marksGenerator: MarksGenerator, trainingSize : Int, distance : MinkowskiDistance) extends IndexGenerator with Serializable {
   override val indextypename: IndexTypeName = IndexStructures.VAV
 
   /**
    *
    */
-  override def index(indexname : IndexName, entityname : EntityName, data: RDD[IndexerTuple]): VectorApproximationIndex = {
+  override def index(indexname : IndexName, entityname : EntityName, data: RDD[IndexerTuple]): VAIndex = {
     val indexMetaData = train(data)
 
     val indexdata = data.map(
@@ -37,7 +37,7 @@ class NewVectorApproximationIndexer (nbits : Int, marksGenerator: MarksGenerator
       })
 
     import SparkStartup.sqlContext.implicits._
-    new VectorApproximationIndex(indexname, entityname, indexdata.toDF, indexMetaData)
+    new VAIndex(indexname, entityname, indexdata.toDF, indexMetaData)
   }
 
   /**
@@ -45,7 +45,7 @@ class NewVectorApproximationIndexer (nbits : Int, marksGenerator: MarksGenerator
    * @param data
    * @return
    */
-  private def train(data : RDD[IndexerTuple]) : VectorApproximationIndexMetaData = {
+  private def train(data : RDD[IndexerTuple]) : VAIndexMetaData = {
     //data
     val fraction = ADAMSamplingUtils.computeFractionForSampleSize(trainingSize, data.count(), false)
     val trainData = data.sample(false, fraction)
@@ -66,7 +66,7 @@ class NewVectorApproximationIndexer (nbits : Int, marksGenerator: MarksGenerator
     val signatureGenerator =  new VariableSignatureGenerator(modes)
     val marks = marksGenerator.getMarks(trainData, modes.map(x => 2 << (x - 1)))
 
-    VectorApproximationIndexMetaData(marks, signatureGenerator, distance)
+    VAIndexMetaData(marks, signatureGenerator, distance)
   }
 
 
@@ -83,7 +83,7 @@ class NewVectorApproximationIndexer (nbits : Int, marksGenerator: MarksGenerator
 }
 
 
-object NewVectorApproximationIndexer {
+object VAVIndexer {
   /**
    *
    * @param properties
@@ -103,6 +103,6 @@ object NewVectorApproximationIndexer {
     val trainingSize = properties.getOrElse("trainingSize", "5000").toInt
 
 
-    new NewVectorApproximationIndexer(totalNumBits, marksGenerator, trainingSize, distance)
+    new VAVIndexer(totalNumBits, marksGenerator, trainingSize, distance)
   }
 }

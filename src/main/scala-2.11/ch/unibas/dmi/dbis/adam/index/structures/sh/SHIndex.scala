@@ -22,7 +22,7 @@ import scala.collection.immutable.HashSet
  * Ivan Giangreco
  * August 2015
  */
-class SpectralLSHIndex(val indexname: IndexName, val entityname: EntityName, protected val df : DataFrame, private[index] val metadata: SpectralLSHIndexMetaData)
+class SHIndex(val indexname: IndexName, val entityname: EntityName, protected val df : DataFrame, private[index] val metadata: SHIndexMetaData)
   extends Index[BitStringIndexTuple] {
 
   override val indextypename: IndexTypeName = IndexStructures.SH
@@ -34,8 +34,8 @@ class SpectralLSHIndex(val indexname: IndexName, val entityname: EntityName, pro
     val numOfQueries = options.getOrElse("numOfQ", "3").asInstanceOf[Int]
 
     import MovableFeature.conv_feature2MovableFeature
-    val originalQuery = SpectralLSHUtils.hashFeature(q, metadata)
-    val queries = (List.fill(numOfQueries)(SpectralLSHUtils.hashFeature(q.move(metadata.radius), metadata)) ::: List(originalQuery)).par
+    val originalQuery = SHUtils.hashFeature(q, metadata)
+    val queries = (List.fill(numOfQueries)(SHUtils.hashFeature(q.move(metadata.radius), metadata)) ::: List(originalQuery)).par
 
     val results = SparkStartup.sc.runJob(data, (context : TaskContext, tuplesIt : Iterator[BitStringIndexTuple]) => {
       val localRh = new LSHResultHandler(k)
@@ -91,9 +91,9 @@ class SpectralLSHIndex(val indexname: IndexName, val entityname: EntityName, pro
 }
 
 
-object SpectralLSHIndex {
-  def apply(indexname: IndexName, tablename: EntityName, data: DataFrame, meta: Any): SpectralLSHIndex = {
-    val indexMetaData = meta.asInstanceOf[SpectralLSHIndexMetaData]
-    new SpectralLSHIndex(indexname, tablename, data, indexMetaData)
+object SHIndex {
+  def apply(indexname: IndexName, tablename: EntityName, data: DataFrame, meta: Any): SHIndex = {
+    val indexMetaData = meta.asInstanceOf[SHIndexMetaData]
+    new SHIndex(indexname, tablename, data, indexMetaData)
   }
 }

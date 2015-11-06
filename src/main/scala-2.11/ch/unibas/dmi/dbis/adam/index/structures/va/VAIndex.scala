@@ -3,8 +3,8 @@ package ch.unibas.dmi.dbis.adam.index.structures.va
 import ch.unibas.dmi.dbis.adam.datatypes.feature.Feature._
 import ch.unibas.dmi.dbis.adam.index.Index._
 import ch.unibas.dmi.dbis.adam.index.structures.IndexStructures
-import ch.unibas.dmi.dbis.adam.index.structures.va.VectorApproximationIndex.{Bounds, Marks}
-import ch.unibas.dmi.dbis.adam.index.structures.va.results.VectorApproximationResultHandler
+import ch.unibas.dmi.dbis.adam.index.structures.va.VAIndex.{Bounds, Marks}
+import ch.unibas.dmi.dbis.adam.index.structures.va.results.VAResultHandler
 import ch.unibas.dmi.dbis.adam.index.structures.va.signature.{FixedSignatureGenerator, VariableSignatureGenerator}
 import ch.unibas.dmi.dbis.adam.index.{BitStringIndexTuple, Index}
 import ch.unibas.dmi.dbis.adam.main.SparkStartup
@@ -25,7 +25,7 @@ import scala.collection.immutable.HashSet
  * Ivan Giangreco
  * August 2015
  */
-class VectorApproximationIndex(val indexname : IndexName, val entityname : EntityName, protected val df: DataFrame, private[index] val metadata: VectorApproximationIndexMetaData)
+class VAIndex(val indexname : IndexName, val entityname : EntityName, protected val df: DataFrame, private[index] val metadata: VAIndexMetaData)
   extends Index[BitStringIndexTuple] with Serializable {
 
   override val indextypename: IndexTypeName = metadata.signatureGenerator match {
@@ -41,12 +41,12 @@ class VectorApproximationIndex(val indexname : IndexName, val entityname : Entit
     val (lbounds, ubounds) = computeBounds(q, metadata.marks, distance)
 
     val results = SparkStartup.sc.runJob(data, (context : TaskContext, tuplesIt : Iterator[BitStringIndexTuple]) => {
-      val localRh = new VectorApproximationResultHandler(k, lbounds, ubounds, metadata.signatureGenerator)
+      val localRh = new VAResultHandler(k, lbounds, ubounds, metadata.signatureGenerator)
       localRh.offerIndexTuple(tuplesIt.par())
       localRh.results.toSeq
     }).flatten
 
-    val globalResultHandler = new VectorApproximationResultHandler(k)
+    val globalResultHandler = new VAResultHandler(k)
     globalResultHandler.offerResultElement(results.iterator)
     val ids = globalResultHandler.results.map(x => x.tid).toList
 
@@ -100,12 +100,12 @@ class VectorApproximationIndex(val indexname : IndexName, val entityname : Entit
 }
 
 
-object VectorApproximationIndex {
+object VAIndex {
   type Marks = Seq[Seq[VectorBase]]
   type Bounds = Array[Array[Distance]]
 
-  def apply(indexname : IndexName, entityname : EntityName, data: DataFrame, meta : Any) : VectorApproximationIndex = {
-    val indexMetaData = meta.asInstanceOf[VectorApproximationIndexMetaData]
-    new VectorApproximationIndex(indexname, entityname, data, indexMetaData)
+  def apply(indexname : IndexName, entityname : EntityName, data: DataFrame, meta : Any) : VAIndex = {
+    val indexMetaData = meta.asInstanceOf[VAIndexMetaData]
+    new VAIndex(indexname, entityname, data, indexMetaData)
   }
 }

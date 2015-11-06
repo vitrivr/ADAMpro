@@ -12,14 +12,14 @@ import ch.unibas.dmi.dbis.adam.datatypes.feature.Feature
  * Ivan Giangreco
  * September 2015
  */
-private[sh] object SpectralLSHUtils {
+private[sh] object SHUtils {
   /**
    *
    * @param f
    * @param indexMetaData
    * @return
    */
-  @inline def hashFeature(f : FeatureVector, indexMetaData : SpectralLSHIndexMetaData) : BitString[_] = {
+  @inline def hashFeature(f : FeatureVector, indexMetaData : SHIndexMetaData) : BitString[_] = {
     val fMat = f.toDenseVector.toDenseMatrix
     val pca = indexMetaData.pca.toDenseMatrix
 

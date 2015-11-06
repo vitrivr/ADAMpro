@@ -8,8 +8,8 @@ import ch.unibas.dmi.dbis.adam.index.structures.IndexStructures
 import ch.unibas.dmi.dbis.adam.index.structures.IndexStructures.IndexStructureType
 import ch.unibas.dmi.dbis.adam.index.structures.ecp.ECPIndex
 import ch.unibas.dmi.dbis.adam.index.structures.lsh.LSHIndex
-import ch.unibas.dmi.dbis.adam.index.structures.sh.SpectralLSHIndex
-import ch.unibas.dmi.dbis.adam.index.structures.va.VectorApproximationIndex
+import ch.unibas.dmi.dbis.adam.index.structures.sh.{SHIndex, SHIndex$}
+import ch.unibas.dmi.dbis.adam.index.structures.va.VAIndex$
 import ch.unibas.dmi.dbis.adam.main.SparkStartup
 import ch.unibas.dmi.dbis.adam.storage.engine.CatalogOperator
 import ch.unibas.dmi.dbis.adam.entity.Entity
@@ -161,9 +161,9 @@ object Index {
     indextypename match {
       case IndexStructures.ECP => ECPIndex(indexname, entityname, df, meta)
       case IndexStructures.LSH => LSHIndex(indexname, entityname, df, meta)
-      case IndexStructures.SH => SpectralLSHIndex(indexname, entityname, df, meta)
-      case IndexStructures.VAF => VectorApproximationIndex(indexname, entityname, df, meta)
-      case IndexStructures.VAV => VectorApproximationIndex(indexname, entityname, df, meta)
+      case IndexStructures.SH => SHIndex(indexname, entityname, df, meta)
+      case IndexStructures.VAF => VAIndex(indexname, entityname, df, meta)
+      case IndexStructures.VAV => VAIndex(indexname, entityname, df, meta)
     }
   }
 
