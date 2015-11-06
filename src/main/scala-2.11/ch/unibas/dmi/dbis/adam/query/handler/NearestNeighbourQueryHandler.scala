@@ -119,7 +119,7 @@ object NearestNeighbourQueryHandler extends Logging {
    * @param filter
    * @return
    */
-  def timedProgressiveQuery(entityname: EntityName, query : NearestNeighbourQuery, filter: Option[HashSet[TupleID]], timelimit : Duration): (Seq[Result], Float) = {
+  def progressiveQuery(entityname: EntityName, query : NearestNeighbourQuery, filter: Option[HashSet[TupleID]], timelimit : Duration): (Seq[Result], Float) = {
     val indexnames = Index.getIndexnames(entityname)
 
     val options = mMap[String, String]()

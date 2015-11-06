@@ -169,6 +169,16 @@ object CatalogOperator {
     Await.result(db.run(query), MAX_WAITING_TIME).toList
   }
 
+
+  /**
+   *
+   * @param entityname
+   */
+  def getIndexesAndType(entityname : EntityName): Seq[(IndexName, IndexTypeName)] = {
+    val query = indexes.filter(_.entityname === entityname).map(index => (index.indexname, index.indextypename)).result
+    Await.result(db.run(query), MAX_WAITING_TIME).map(index => (index._1, IndexStructures.withName(index._2)))
+  }
+
   /**
    *
    * @return

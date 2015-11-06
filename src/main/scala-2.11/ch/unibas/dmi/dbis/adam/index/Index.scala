@@ -9,7 +9,7 @@ import ch.unibas.dmi.dbis.adam.index.structures.IndexStructures.IndexStructureTy
 import ch.unibas.dmi.dbis.adam.index.structures.ecp.ECPIndex
 import ch.unibas.dmi.dbis.adam.index.structures.lsh.LSHIndex
 import ch.unibas.dmi.dbis.adam.index.structures.sh.{SHIndex, SHIndex$}
-import ch.unibas.dmi.dbis.adam.index.structures.va.VAIndex$
+import ch.unibas.dmi.dbis.adam.index.structures.va.{VAIndex, VAIndex$}
 import ch.unibas.dmi.dbis.adam.main.SparkStartup
 import ch.unibas.dmi.dbis.adam.storage.engine.CatalogOperator
 import ch.unibas.dmi.dbis.adam.entity.Entity

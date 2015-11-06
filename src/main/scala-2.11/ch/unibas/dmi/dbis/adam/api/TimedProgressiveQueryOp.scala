@@ -26,6 +26,6 @@ object TimedProgressiveQueryOp {
    */
   def apply(entityname: EntityName, qv : FeatureVector, k : Int, distance : DistanceFunction, timelimit : Duration) : (Seq[Result], Float) = {
     val query = NearestNeighbourQuery(qv, distance, k)
-    NearestNeighbourQueryHandler.timedProgressiveQuery(entityname, query, None, timelimit)
+    NearestNeighbourQueryHandler.progressiveQuery(entityname, query, None, timelimit)
   }
 }

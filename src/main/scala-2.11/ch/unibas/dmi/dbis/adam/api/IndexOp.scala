@@ -7,7 +7,7 @@ import ch.unibas.dmi.dbis.adam.index.structures.IndexStructures
 import ch.unibas.dmi.dbis.adam.index.structures.ecp.ECPIndexer
 import ch.unibas.dmi.dbis.adam.index.structures.lsh.LSHIndexer
 import ch.unibas.dmi.dbis.adam.index.structures.sh.{SHIndexer, SHIndexer$}
-import ch.unibas.dmi.dbis.adam.index.structures.va.{VAVIndexer$, VAFIndexer$}
+import ch.unibas.dmi.dbis.adam.index.structures.va.{VAVIndexer, VAFIndexer, VAVIndexer$, VAFIndexer$}
 import ch.unibas.dmi.dbis.adam.index.{Index, IndexGenerator, IndexerTuple}
 import ch.unibas.dmi.dbis.adam.query.distance.{DistanceFunction, MinkowskiDistance}
 import ch.unibas.dmi.dbis.adam.entity.Entity
