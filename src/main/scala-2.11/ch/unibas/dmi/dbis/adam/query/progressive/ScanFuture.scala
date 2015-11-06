@@ -3,8 +3,9 @@ package ch.unibas.dmi.dbis.adam.query.progressive
 import ch.unibas.dmi.dbis.adam.entity.Entity.EntityName
 import ch.unibas.dmi.dbis.adam.index.Index
 import ch.unibas.dmi.dbis.adam.index.Index.IndexName
+import ch.unibas.dmi.dbis.adam.query.handler.NearestNeighbourQueryHandler
 import ch.unibas.dmi.dbis.adam.query.query.NearestNeighbourQuery
-import ch.unibas.dmi.dbis.adam.query.{QueryHandler, Result}
+import ch.unibas.dmi.dbis.adam.query.Result
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
@@ -28,7 +29,7 @@ class IndexScanFuture(indexname : IndexName, query : NearestNeighbourQuery, onCo
 
   val info =  Map[String,String]("type" -> ("index: " + indexname), "index" -> indexname, "qid" -> query.queryID.get)
 
-  val future = Future {QueryHandler.indexQuery(indexname, query, None)}
+  val future = Future {NearestNeighbourQueryHandler.indexQuery(indexname, query, None)}
   future.onSuccess({
     case res =>
       tracker.synchronized {
@@ -48,7 +49,7 @@ class SequentialScanFuture(entityname : EntityName, query : NearestNeighbourQuer
 
   val info =  Map[String,String]("type" -> "sequential", "relation" -> entityname, "qid" -> query.queryID.get)
 
-  val future = Future {QueryHandler.sequentialQuery(entityname, query, None)}
+  val future = Future {NearestNeighbourQueryHandler.sequentialQuery(entityname, query, None)}
   future.onSuccess({
     case res =>
       tracker.synchronized {

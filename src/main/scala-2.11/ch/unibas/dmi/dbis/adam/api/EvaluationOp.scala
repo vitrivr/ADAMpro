@@ -5,9 +5,10 @@ import java.io.{File, PrintWriter}
 import ch.unibas.dmi.dbis.adam.datatypes.feature.Feature._
 import ch.unibas.dmi.dbis.adam.entity.Entity
 import ch.unibas.dmi.dbis.adam.query.distance.ManhattanDistance
+import ch.unibas.dmi.dbis.adam.query.handler.NearestNeighbourQueryHandler
 import ch.unibas.dmi.dbis.adam.query.progressive.ProgressiveQueryStatus
 import ch.unibas.dmi.dbis.adam.query.query.NearestNeighbourQuery
-import ch.unibas.dmi.dbis.adam.query.{QueryHandler, Result}
+import ch.unibas.dmi.dbis.adam.query.Result
 
 import scala.collection.mutable
 import scala.util.Random
@@ -61,7 +62,7 @@ object EvaluationOp {
       val query = NearestNeighbourQuery(getRandomVector(vecSize) : FeatureVector, ManhattanDistance, k, false)
 
       try {
-        QueryHandler.progressiveQuery(tabname, query, None, onComplete(System.nanoTime(), dbSize, vecSize))
+        NearestNeighbourQueryHandler.progressiveQuery(tabname, query, None, onComplete(System.nanoTime(), dbSize, vecSize))
       } catch {
         case e : Exception =>  {
           println(e.getMessage)

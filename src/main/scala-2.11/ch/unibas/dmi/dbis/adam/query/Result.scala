@@ -11,6 +11,6 @@ import org.apache.spark.sql.Row
  * Ivan Giangreco
  * August 2015
  */
-case class Result (distance : Distance, tid : TupleID, var metadata : Row)  extends Ordered[Result] {
+case class Result (distance : Distance, tid : TupleID, var metadata : Option[Row])  extends Ordered[Result] {
   override def compare(that: Result): Int = distance compare that.distance
 }

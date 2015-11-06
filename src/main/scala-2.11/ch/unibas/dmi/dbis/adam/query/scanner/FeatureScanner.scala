@@ -1,9 +1,10 @@
-package ch.unibas.dmi.dbis.adam.query
+package ch.unibas.dmi.dbis.adam.query.scanner
 
 import ch.unibas.dmi.dbis.adam.datatypes.feature.Feature._
 import ch.unibas.dmi.dbis.adam.entity.Entity
 import ch.unibas.dmi.dbis.adam.entity.Tuple.TupleID
 import ch.unibas.dmi.dbis.adam.main.SparkStartup
+import ch.unibas.dmi.dbis.adam.query.Result
 import ch.unibas.dmi.dbis.adam.query.query.NearestNeighbourQuery
 
 import scala.collection.immutable.HashSet

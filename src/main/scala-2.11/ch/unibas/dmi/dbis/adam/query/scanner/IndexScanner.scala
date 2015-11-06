@@ -1,7 +1,7 @@
-package ch.unibas.dmi.dbis.adam.query
+package ch.unibas.dmi.dbis.adam.query.scanner
 
 import ch.unibas.dmi.dbis.adam.entity.Tuple.TupleID
-import ch.unibas.dmi.dbis.adam.index.{IndexTuple, Index}
+import ch.unibas.dmi.dbis.adam.index.{Index, IndexTuple}
 import ch.unibas.dmi.dbis.adam.query.query.NearestNeighbourQuery
 
 import scala.collection.immutable.HashSet
