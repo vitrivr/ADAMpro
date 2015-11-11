@@ -126,7 +126,15 @@ object NearestNeighbourQueryHandler extends Logging {
 
     val tracker = new ProgressiveQueryStatusTracker(query.queryID.get)
 
-    val timerFuture = Future{Thread.sleep(timelimit.toMillis)}
+    val timerFuture = Future{
+      val sleepTime = Duration(500.toLong, "millis")
+      var nSleep = (timelimit / sleepTime).toInt
+
+      while(tracker.status != ProgressiveQueryStatus.FINISHED && nSleep > 0){
+        nSleep -= 1
+        Thread.sleep(sleepTime.toMillis)
+      }
+    }
 
     //index scans
     val indexScanFutures = indexnames.par.map { indexname =>
@@ -137,6 +145,7 @@ object NearestNeighbourQueryHandler extends Logging {
     val ssf = new SequentialScanFuture(entityname, query, (status, result, confidence, info) => (), tracker)
 
     Await.result(timerFuture, timelimit)
+    tracker.stop()
     tracker.results
   }
 }

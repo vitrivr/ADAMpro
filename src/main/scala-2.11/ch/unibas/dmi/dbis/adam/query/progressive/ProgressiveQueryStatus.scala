@@ -31,7 +31,7 @@ class ProgressiveQueryStatusTracker(queryID : String) {
         resultConfidence = future.confidence
       }
 
-      if(resultConfidence == 1.0){
+      if(math.abs(resultConfidence - 1.0) < 0.000001){
         stop(ProgressiveQueryStatus.FINISHED)
       }
 
@@ -41,10 +41,14 @@ class ProgressiveQueryStatusTracker(queryID : String) {
 
   def stop() : Unit = stop(ProgressiveQueryStatus.PREMATURE_FINISHED)
 
-  private def stop(status : ProgressiveQueryStatus.Value) : Unit = {
+  private def stop(newStatus : ProgressiveQueryStatus.Value) : Unit = {
+    if(runningStatus == ProgressiveQueryStatus.FINISHED){
+      return
+    }
+
     futures.synchronized {
       SparkStartup.sc.cancelJobGroup(queryID)
-      runningStatus = status
+      runningStatus = newStatus
       futures.clear()
     }
   }
