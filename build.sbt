@@ -16,10 +16,10 @@ resolvers += Resolver.sonatypeRepo("snapshots")
 
 //libs
 libraryDependencies ++= Seq(
-  "org.apache.spark"       %   "spark-core_2.11"        % "1.5.1",
-  "org.apache.spark"       %   "spark-sql_2.11"         % "1.5.1",
-  "org.apache.spark"       %   "spark-hive_2.11"        % "1.5.1",
-  "org.apache.spark"       %   "spark-mllib_2.11"       % "1.5.1",
+  "org.apache.spark"       %   "spark-core_2.11"        % "1.5.2",
+  "org.apache.spark"       %   "spark-sql_2.11"         % "1.5.2",
+  "org.apache.spark"       %   "spark-hive_2.11"        % "1.5.2",
+  "org.apache.spark"       %   "spark-mllib_2.11"       % "1.5.2",
   "org.scalanlp" 		       %   "breeze_2.11" 				    % "0.11.2",
   "org.scalanlp" 		       %   "breeze-natives_2.11" 	  % "0.11.2",
   "io.spray"               %%  "spray-can"     		      % "1.3.3",
