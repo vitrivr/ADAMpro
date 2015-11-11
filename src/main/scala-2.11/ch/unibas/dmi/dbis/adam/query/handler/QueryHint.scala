@@ -1,5 +1,6 @@
 package ch.unibas.dmi.dbis.adam.query.handler
 
+import ch.unibas.dmi.dbis.adam.index.Index.IndexTypeName
 import ch.unibas.dmi.dbis.adam.index.structures.IndexStructures._
 
 /**
@@ -11,7 +12,7 @@ import ch.unibas.dmi.dbis.adam.index.structures.IndexStructures._
 object QueryHints {
   sealed abstract class QueryHint
   sealed abstract class SimpleQueryHint extends QueryHint
-  sealed abstract class IndexQueryHint(val structureType : IndexStructureType) extends SimpleQueryHint
+  sealed abstract class IndexQueryHint(val structureType : IndexTypeName) extends SimpleQueryHint
   sealed abstract class CompoundQueryHint(val hints : Seq[SimpleQueryHint]) extends QueryHint
 
   case object SEQUENTIAL_QUERY extends SimpleQueryHint

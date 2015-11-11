@@ -2,15 +2,15 @@ package ch.unibas.dmi.dbis.adam.storage.engine
 
 import java.io._
 
-import ch.unibas.dmi.dbis.adam.exception.{IndexExistingException, IndexNotExistingException, EntityExistingException, EntityNotExistingException}
+import ch.unibas.dmi.dbis.adam.entity.Entity.EntityName
+import ch.unibas.dmi.dbis.adam.exception.{EntityExistingException, EntityNotExistingException, IndexExistingException, IndexNotExistingException}
 import ch.unibas.dmi.dbis.adam.index.Index.{IndexName, IndexTypeName}
 import ch.unibas.dmi.dbis.adam.index.structures.IndexStructures
 import ch.unibas.dmi.dbis.adam.main.Startup
-import ch.unibas.dmi.dbis.adam.entity.Entity.EntityName
 import slick.dbio.Effect.{Read, Write}
 import slick.driver.H2Driver.api._
 import slick.jdbc.meta.MTable
-import slick.profile.{SqlAction, FixedSqlAction}
+import slick.profile.{FixedSqlAction, SqlAction}
 
 import scala.concurrent.Await
 import scala.concurrent.duration._
@@ -25,7 +25,7 @@ import scala.concurrent.duration._
 object CatalogOperator {
   private val MAX_WAITING_TIME : Duration = 5.seconds
 
-  private val db = Database.forURL("jdbc:h2:" + (Startup.config.catalogPath / "catalog").toAbsolute.toString(), driver="org.h2.Driver")
+  private val db = Database.forURL("jdbc:h2:" +  (Startup.config.catalogPath / "catalog").toAbsolute.toString(), driver="org.h2.Driver")
 
   //generate catalog entities in the beginning if not already existent
   val entityList = Await.result(db.run(MTable.getTables), MAX_WAITING_TIME).toList.map(x => x.name.name)

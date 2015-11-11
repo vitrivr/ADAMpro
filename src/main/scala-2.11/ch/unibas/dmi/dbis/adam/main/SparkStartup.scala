@@ -33,6 +33,8 @@ object SparkStartup {
   val sc = new SparkContext(sparkConfig)
   //val sqlContext = new SQLContext(sc)
   val sqlContext = new HiveContext(sc)
+  sqlContext.setConf("hive.metastore.warehouse.dir", Startup.config.hivePath.toAbsolute.toString())
+
 
   sqlContext.setConf("spark.sql.avro.compression.codec", "deflate")
   sqlContext.setConf("spark.sql.avro.deflate.level", "5")

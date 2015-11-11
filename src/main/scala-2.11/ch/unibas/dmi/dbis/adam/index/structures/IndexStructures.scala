@@ -6,16 +6,10 @@ package ch.unibas.dmi.dbis.adam.index.structures
  * Ivan Giangreco
  * October 2015
  */
-object IndexStructures {
-  sealed abstract class IndexStructureType(val name : String)
-
-  case object ECP extends IndexStructureType("ecp")
-  case object LSH extends IndexStructureType("lsh")
-  case object SH extends IndexStructureType("sh")
-  case object VAF extends IndexStructureType("vaf")
-  case object VAV extends IndexStructureType("vav")
-
-  def values : Seq[IndexStructureType] = Seq(ECP, LSH, SH, VAF, VAV)
-
-  def withName(name : String) : IndexStructureType = values.find(_.name == name).getOrElse(null)
+object IndexStructures extends Enumeration {
+  val ECP = Value("ecp")
+  val LSH = Value("lsh")
+  val SH = Value("sh")
+  val VAF = Value("vaf")
+  val VAV = Value("vav")
 }

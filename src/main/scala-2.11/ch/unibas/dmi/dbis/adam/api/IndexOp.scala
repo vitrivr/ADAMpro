@@ -1,6 +1,6 @@
 package ch.unibas.dmi.dbis.adam.api
 
-import ch.unibas.dmi.dbis.adam.datatypes.feature.Feature
+import ch.unibas.dmi.dbis.adam.datatypes.feature.{FeatureVectorWrapper, Feature}
 import Feature.FeatureVector
 import ch.unibas.dmi.dbis.adam.index.Index.IndexTypeName
 import ch.unibas.dmi.dbis.adam.index.structures.IndexStructures
@@ -41,7 +41,7 @@ object IndexOp {
   def apply(tablename : EntityName, indextypename : IndexTypeName, distance : DistanceFunction, properties : Map[String, String]): Unit = {
     val table = Entity.retrieveEntity(tablename)
 
-    val data: RDD[IndexerTuple] = table.featuresRDD.map { x => IndexerTuple(x.getLong(0), x.getAs[FeatureVector](1)) }
+    val data: RDD[IndexerTuple] = table.featuresRDD.map { x => IndexerTuple(x.getLong(0), x.getAs[FeatureVectorWrapper](1).value) }
 
     val generator : IndexGenerator = indextypename match {
       case IndexStructures.ECP => ECPIndexer(properties, distance, data)

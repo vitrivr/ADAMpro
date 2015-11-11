@@ -13,6 +13,7 @@ class AdamConfig(config : Config) {
 
   private val base = Some(config.getString("adamtwo.basePath")).getOrElse("data/")
   val basePath : File = File(base)
+  val hivePath = basePath / "hive"
   val dataPath = basePath / "data"
   val indexPath = basePath / "index"
   val catalogPath = basePath / "catalog"

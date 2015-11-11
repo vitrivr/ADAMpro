@@ -1,17 +1,14 @@
 package ch.unibas.dmi.dbis.adam.cli
 
 import ch.unibas.dmi.dbis.adam.api._
-import ch.unibas.dmi.dbis.adam.datatypes.feature.{FeatureVectorWrapper, Feature}
-import Feature._
+import ch.unibas.dmi.dbis.adam.datatypes.feature.Feature._
 import ch.unibas.dmi.dbis.adam.main.SparkStartup
 import ch.unibas.dmi.dbis.adam.query.distance.{ManhattanDistance, MinkowskiDistance}
 import ch.unibas.dmi.dbis.adam.storage.engine.CatalogOperator
-import ch.unibas.dmi.dbis.adam.entity.WrappingTuple
 import org.apache.spark.sql.types._
 
 import scala.concurrent.duration.Duration
 import scala.tools.nsc.interpreter.ILoop
-import scala.util.Random
 
 
 /**
@@ -35,7 +32,7 @@ class CLI extends ILoop {
     new VarArgsCmd("seqQuery", "tablename q k", "querys table in kNN search sequentially", seqQueryOp),
     new VarArgsCmd("indQuery", "indexname q k", "querys table in kNN search using index", indQueryOp),
     new VarArgsCmd("progQuery", "tablename q k", "querys table in kNN search using progressive query", progQueryOp),
-    new VarArgsCmd("timedProgQuery", "tablename q k t", "querys table in kNN search using progressive query", timedProgQueryOp),
+    new VarArgsCmd("timedProgQuery", "tablename q k t", "querys table in kNN search using progressive query, t in ms", timedProgQueryOp),
     new VarArgsCmd("drop", "tablename", "drops table", dropOp),
     new NullaryCmd("evaluation", "evaluation", evaluationOp),
 

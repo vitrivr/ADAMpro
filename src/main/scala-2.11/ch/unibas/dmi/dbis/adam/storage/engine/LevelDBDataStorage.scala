@@ -34,42 +34,42 @@ object LevelDBDataStorage extends FeatureStorage {
 
   /**
    *
-   * @param tablename
+   * @param entityname
    * @param options
    * @return
    */
-  private def openConnection(tablename: EntityName, options: Options): DB = {
+  private def openConnection(entityname: EntityName, options: Options): DB = {
     databases.synchronized({
-      if (databases.contains(tablename)) {
-        val dbStatus = databases.get(tablename)
+      if (databases.contains(entityname)) {
+        val dbStatus = databases.get(entityname)
         dbStatus.synchronized({
           dbStatus.get.locks += 1
         })
         return dbStatus.get.db
       } else {
-        val db: DB = factory.open(new File(config.dataPath + "/" + tablename + ".leveldb"), options)
+        val db: DB = factory.open(new File(config.dataPath + "/" + entityname + ".leveldb"), options)
         val dbStatus = DBStatus(db, 1)
-        databases.putIfAbsent(tablename, dbStatus)
+        databases.putIfAbsent(entityname, dbStatus)
       }
-      return databases.get(tablename).get.db
+      return databases.get(entityname).get.db
     }
     )
   }
 
   /**
    *
-   * @param tablename
+   * @param entityname
    */
-  private def closeConnection(tablename: EntityName): Unit = {
-    if (databases.contains(tablename)) {
+  private def closeConnection(entityname: EntityName): Unit = {
+    if (databases.contains(entityname)) {
       databases.synchronized({
-        val status = databases.get(tablename).get
+        val status = databases.get(entityname).get
         status.synchronized({
           status.locks -= 1
 
           if (status.locks == 0) {
             status.db.close()
-            databases.remove(tablename)
+            databases.remove(entityname)
           }
         })
 
@@ -171,21 +171,21 @@ object LevelDBDataStorage extends FeatureStorage {
 
   /**
    *
-   * @param tablename
+   * @param entityname
    */
-  override def drop(tablename: EntityName): Unit = factory.destroy(new File(config.dataPath + "/" + tablename + ".leveldb"), new Options())
+  override def drop(entityname: EntityName): Unit = factory.destroy(new File(config.dataPath + "/" + entityname + ".leveldb"), new Options())
 
 
   /**
    *
-   * @param tablename
+   * @param entityname
    * @param df
    * @param mode
    */
-  override def write(tablename: EntityName, df: DataFrame, mode: SaveMode): Unit = {
+  override def write(entityname: EntityName, df: DataFrame, mode: SaveMode): Unit = {
     val options = new Options()
     options.createIfMissing(true)
-    val db = factory.open(new File(config.dataPath + "/" + tablename + ".leveldb"), options)
+    val db = openConnection(entityname, options)
 
     try {
       val it = df.rdd.collect().iterator
@@ -212,7 +212,7 @@ object LevelDBDataStorage extends FeatureStorage {
       }
 
     } finally {
-      db.close()
+      closeConnection(entityname)
     }
   }
 

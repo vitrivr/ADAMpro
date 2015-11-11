@@ -1,8 +1,9 @@
 package ch.unibas.dmi.dbis.adam.api
 
-import ch.unibas.dmi.dbis.adam.main.SparkStartup
+import ch.unibas.dmi.dbis.adam.datatypes.feature.FeatureVectorWrapper
 import ch.unibas.dmi.dbis.adam.entity.Entity
 import ch.unibas.dmi.dbis.adam.entity.Entity._
+import ch.unibas.dmi.dbis.adam.main.SparkStartup
 import org.apache.spark.sql.DataFrame
 
 /**
@@ -33,7 +34,14 @@ object ImportOp {
    *
    * @param tablename
    */
-  def apply(tablename : EntityName, data : DataFrame) : Unit = {
+  def apply(tablename : EntityName, floatVectorData : DataFrame) : Unit = {
+    //assume schema [id: bigint, feature: array<float>]
+
+    import SparkStartup.sqlContext.implicits._
+    val  data = floatVectorData.map(r =>
+      (r.getLong(0), new FeatureVectorWrapper(r.getSeq[Float](1)))
+    ).toDF()
+
     Entity.insertData(tablename, data)
   }
 

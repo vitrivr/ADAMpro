@@ -1,9 +1,6 @@
 package ch.unibas.dmi.dbis.adam.datatypes.bitString
 
 import ch.unibas.dmi.dbis.adam.util.BitSet
-import org.apache.spark.sql.catalyst.InternalRow
-import org.apache.spark.sql.catalyst.expressions.GenericMutableRow
-import org.apache.spark.sql.types.{BinaryType, DataType, SQLUserDefinedType, UserDefinedType}
 
 /**
  * adamtwo
@@ -11,7 +8,6 @@ import org.apache.spark.sql.types.{BinaryType, DataType, SQLUserDefinedType, Use
  * Ivan Giangreco
  * September 2015
  */
-@SQLUserDefinedType(udt = classOf[MinimalBitStringUDT])
 class MinimalBitString(private val values : BitSet) extends BitString[MinimalBitString] with Serializable {
   override def intersectionCount(other: MinimalBitString): Int =  values.intersectCount(other.values)
 
@@ -96,33 +92,4 @@ object MinimalBitString extends BitStringFactory {
   }
 
   override def deserialize(data : Seq[Byte]) : MinimalBitString = new MinimalBitString(BitSet.valueOf(data.toArray))
-}
-
-
-
-class MinimalBitStringUDT extends UserDefinedType[MinimalBitString] {
-  override def sqlType: DataType = BinaryType
-  override def userClass: Class[MinimalBitString] = classOf[MinimalBitString]
-  override def asNullable: MinimalBitStringUDT = this
-
-  override def serialize(obj: Any): InternalRow = {
-    val row = new GenericMutableRow(1)
-
-    if(obj.isInstanceOf[MinimalBitString]){
-      row.update(0, obj.asInstanceOf[MinimalBitString].toByteArray)
-    } else {
-      row.setNullAt(0)
-    }
-
-    row
-  }
-
-  override def deserialize(datum: Any): MinimalBitString = {
-    if(datum.isInstanceOf[InternalRow]){
-      val row = datum.asInstanceOf[InternalRow]
-      MinimalBitString.deserialize(row.getBinary(0))
-    } else {
-      null
-    }
-  }
 }

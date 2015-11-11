@@ -2,14 +2,14 @@ package ch.unibas.dmi.dbis.adam.index
 
 import ch.unibas.dmi.dbis.adam.cache.RDDCache
 import ch.unibas.dmi.dbis.adam.datatypes.feature.Feature._
+import ch.unibas.dmi.dbis.adam.datatypes.feature.FeatureVectorWrapper
 import ch.unibas.dmi.dbis.adam.exception.IndexNotExistingException
 import ch.unibas.dmi.dbis.adam.index.Index._
 import ch.unibas.dmi.dbis.adam.index.structures.IndexStructures
-import ch.unibas.dmi.dbis.adam.index.structures.IndexStructures.IndexStructureType
 import ch.unibas.dmi.dbis.adam.index.structures.ecp.ECPIndex
 import ch.unibas.dmi.dbis.adam.index.structures.lsh.LSHIndex
-import ch.unibas.dmi.dbis.adam.index.structures.sh.{SHIndex, SHIndex$}
-import ch.unibas.dmi.dbis.adam.index.structures.va.{VAIndex, VAIndex$}
+import ch.unibas.dmi.dbis.adam.index.structures.sh.SHIndex
+import ch.unibas.dmi.dbis.adam.index.structures.va.VAIndex
 import ch.unibas.dmi.dbis.adam.main.SparkStartup
 import ch.unibas.dmi.dbis.adam.storage.engine.CatalogOperator
 import ch.unibas.dmi.dbis.adam.entity.Entity
@@ -55,7 +55,7 @@ case class CacheableIndex(index : Index[_ <: IndexTuple])
 
 object Index {
   type IndexName = String
-  type IndexTypeName = IndexStructureType
+  type IndexTypeName = IndexStructures.Value
 
   private val storage = SparkStartup.indexStorage
 
@@ -67,7 +67,7 @@ object Index {
    */
   def createIndex(entity : Entity, indexgenerator : IndexGenerator) :  Index[_ <: IndexTuple] = {
     val indexname = createIndexName(entity.entityname, indexgenerator.indextypename)
-    val rdd: RDD[IndexerTuple] = entity.featuresRDD.map { x => IndexerTuple(x.getLong(0), x.getAs[FeatureVector](1)) }
+    val rdd: RDD[IndexerTuple] = entity.featuresRDD.map { x => IndexerTuple(x.getLong(0), x.getAs[FeatureVectorWrapper](1).value) }
     val index = indexgenerator.index(indexname, entity.entityname, rdd)
     storage.write(indexname, index.df)
     CatalogOperator.createIndex(indexname, entity.entityname, indexgenerator.indextypename, index.metadata)
@@ -89,7 +89,7 @@ object Index {
     do {
      indexname =  entityname + "_" + indextype.toString + "_" + i
       i += 1
-    } while(indexes.contains(entityname))
+    } while(indexes.contains(indexname))
 
     indexname
   }
