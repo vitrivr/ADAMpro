@@ -43,7 +43,7 @@ class IndexScanFuture(indexname : IndexName, query : NearestNeighbourQuery, onCo
   lazy val confidence: Float = Index.retrieveIndexConfidence(indexname)
 }
 
-//TODO: use query object
+
 class SequentialScanFuture(entityname : EntityName, query : NearestNeighbourQuery, onComplete: (ProgressiveQueryStatus.Value, Seq[Result], Float, Map[String, String]) => Unit, val tracker : ProgressiveQueryStatusTracker) extends ScanFuture(tracker) {
   tracker.register(this)
 
