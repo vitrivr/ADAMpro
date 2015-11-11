@@ -30,13 +30,13 @@ object QueryHandler extends Logging {
    * @param withMetadata
    * @return
    */
-  def query(entityname: EntityName, hint: QueryHint, nnq: NearestNeighbourQuery, bq: Option[BooleanQuery], withMetadata: Boolean): Seq[Result] = {
+  def query(entityname: EntityName, hint: Option[QueryHint], nnq: NearestNeighbourQuery, bq: Option[BooleanQuery], withMetadata: Boolean): Seq[Result] = {
     val indexes: Map[IndexTypeName, Seq[IndexName]] = CatalogOperator.getIndexesAndType(entityname).groupBy(_._2).mapValues(_.map(_._1))
 
     var plan = choosePlan(entityname, indexes, hint)
 
     if (!plan.isDefined) {
-      plan = choosePlan(entityname, indexes, QueryHints.FALLBACK_HINTS)
+      plan = choosePlan(entityname, indexes, Option(QueryHints.FALLBACK_HINTS))
     }
 
     plan.get(nnq, bq, withMetadata)
@@ -49,29 +49,35 @@ object QueryHandler extends Logging {
    * @param hint
    * @return
    */
-  private def choosePlan(entityname: EntityName, indexes: Map[IndexTypeName, Seq[IndexName]], hint: QueryHint): Option[(NearestNeighbourQuery, Option[BooleanQuery], Boolean) => Seq[Result]] = hint match {
-    case iqh: IndexQueryHint => {  //index scan
-      val indexChoice = indexes.get(hint.asInstanceOf[IndexQueryHint].structureType)
-
-      if (indexChoice.isDefined) {
-        return Option(indexQuery(indexChoice.get.head)) //TODO: use old measurements for choice rather than head
-      } else {
-        return None
-      }
-    }
-    case SEQUENTIAL_QUERY => return Option(sequentialQuery(entityname)) //sequential
-    case cqh: CompoundQueryHint => { //compound query hint
-      val hints = cqh.hints
-      var i = 0
-
-      while (i < hints.length) {
-        val plan = choosePlan(entityname, indexes, hints(i))
-        if (plan.isDefined) return plan
-      }
-
+  private def choosePlan(entityname: EntityName, indexes: Map[IndexTypeName, Seq[IndexName]], hint: Option[QueryHint]): Option[(NearestNeighbourQuery, Option[BooleanQuery], Boolean) => Seq[Result]] = {
+    if(!hint.isDefined){
       return None
     }
-    case _ => None //default
+
+    hint.get match {
+      case iqh: IndexQueryHint => {  //index scan
+        val indexChoice = indexes.get(iqh.structureType)
+
+        if (indexChoice.isDefined) {
+          return Option(indexQuery(indexChoice.get.head)) //TODO: use old measurements for choice rather than head
+        } else {
+          return None
+        }
+      }
+      case SEQUENTIAL_QUERY => return Option(sequentialQuery(entityname)) //sequential
+      case cqh: CompoundQueryHint => { //compound query hint
+      val hints = cqh.hints
+        var i = 0
+
+        while (i < hints.length) {
+          val plan = choosePlan(entityname, indexes, Option(hints(i)))
+          if (plan.isDefined) return plan
+        }
+
+        return None
+      }
+      case _ => None //default
+    }
   }
 
 
@@ -102,10 +108,9 @@ object QueryHandler extends Logging {
    */
   private def indexQuery(indexname: IndexName)(nnq: NearestNeighbourQuery, bq: Option[BooleanQuery], withMetadata: Boolean): Seq[Result] = {
     val entityname = Index.retrieveIndex(indexname).entityname
-
-    var res = NearestNeighbourQueryHandler.indexQuery(entityname, nnq, getFilter(entityname, bq))
+    var res = NearestNeighbourQueryHandler.indexQuery(indexname, nnq, getFilter(entityname, bq))
     if (withMetadata) {
-      res = joinWithMetadata(entityname, res)
+      res = joinWithMetadata(indexname, res)
     }
     res
   }

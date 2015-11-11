@@ -29,6 +29,7 @@ class CLI extends ILoop {
     new VarArgsCmd("index", "tablename indextype [properties]", "creates an index of given type with properties", indexOp),
     new VarArgsCmd("cache", "tablename", "caches all indexes of the given table and the table", cacheOp),
     new NullaryCmd("cacheAllIndexes", "caches all indexes of the given table", cacheAllIndexesOp),
+    new VarArgsCmd("query", "tablename q k", "querys table in kNN search", queryOp),
     new VarArgsCmd("seqQuery", "tablename q k", "querys table in kNN search sequentially", seqQueryOp),
     new VarArgsCmd("indQuery", "indexname q k", "querys table in kNN search using index", indQueryOp),
     new VarArgsCmd("progQuery", "tablename q k", "querys table in kNN search using progressive query", progQueryOp),
@@ -185,6 +186,21 @@ class CLI extends ILoop {
     val results = ListOp()
 
     Result.resultFromString(results.mkString(", \n"))
+  }
+
+  /**
+   *
+   * @param input
+   * @return
+   */
+  private def queryOp(input: List[String]): Result = {
+    val tablename = input(0)
+    val query = input(1)
+    val k = input(2).toInt
+
+    //implicit conversion!
+    val results = QueryOp(tablename, query, k, ManhattanDistance)
+    Result.resultFromString(results.map(x => "(" + x.tid + "," + x.distance + ")").mkString("\n "))
   }
 
   /**
