@@ -18,6 +18,10 @@ case class FeatureVectorWrapper(value: FeatureVector) extends Serializable {
   def this(value : Seq[Float]){
     this(new Feature.DenseFeatureVector(value.toArray))
   }
+
+  def this(index : Seq[Int], value : Seq[Float], length : Int){
+    this(new Feature.SparseFeatureVector(index.toArray, value.toArray, length))
+  }
 }
 
 

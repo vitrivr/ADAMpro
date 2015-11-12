@@ -18,7 +18,7 @@ object Feature {
 
   //conversions
   implicit def conv_stored2vector(value: Seq[VectorBase]): DenseFeatureVector = new DenseVector[Float](value.toArray)
-  implicit def conv_stored2vector(value: (Int, Seq[Int], Seq[VectorBase])): SparseFeatureVector = new SparseVector(value._2.toArray, value._3.toArray, value._1)
+  implicit def conv_stored2vector(value: (Seq[Int], Seq[VectorBase], Int)): SparseFeatureVector = new SparseVector(value._1.toArray, value._2.toArray, value._3)
   implicit def conv_vector2stored(value: FeatureVector): Seq[VectorBase] = value.toArray
   implicit def conv_str2stored(value: String): Seq[VectorBase] = {
     require(value.length > 3)

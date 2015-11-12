@@ -1,5 +1,6 @@
 package ch.unibas.dmi.dbis.adam.index.structures.va.marks
 
+import breeze.linalg.{max, min}
 import ch.unibas.dmi.dbis.adam.datatypes.feature.Feature._
 import ch.unibas.dmi.dbis.adam.index.IndexerTuple
 import ch.unibas.dmi.dbis.adam.index.structures.va.VAIndex.Marks
@@ -23,8 +24,8 @@ private[va] object EquifrequentMarksGenerator extends MarksGenerator with Serial
   private[va] def getMarks(samples : RDD[IndexerTuple], maxMarks : Seq[Int]) : Marks = {
     val sampleSize = samples.count
 
-    val min = treeReduceData(samples.map(_.value), math.min)
-    val max = treeReduceData(samples.map(_.value), math.max)
+    val min = getMin(samples.map(_.value))
+    val max = getMax(samples.map(_.value))
 
     val dimensionality = min.length
 
@@ -47,14 +48,8 @@ private[va] object EquifrequentMarksGenerator extends MarksGenerator with Serial
     })
   }
 
-  /**
-   *
-   * @param data
-   * @return
-   */
-  private def treeReduceData(data : RDD[FeatureVector], f : (VectorBase, VectorBase) => Float) : FeatureVector = {
-    data.treeReduce{case(baseV, newV) => baseV.zip(newV).map{case (b,v) => f(b,v)}}
-  }
+  private def getMin(data : RDD[FeatureVector]) : FeatureVector = data.treeReduce { case (baseV, newV) =>  min(baseV, newV)  }
+  private def getMax(data : RDD[FeatureVector]) : FeatureVector = data.treeReduce { case (baseV, newV) =>  max(baseV, newV)  }
 
   /**
    *
