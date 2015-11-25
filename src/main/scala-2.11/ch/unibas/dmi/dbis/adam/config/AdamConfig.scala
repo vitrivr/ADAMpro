@@ -22,6 +22,8 @@ class AdamConfig(config : Config) {
   val jdbcUser = "postgres"
   val jdbcPassword = "postgres"
 
+  val solrUrl = "localhost:8983"
+
   val restHost = "localhost"
   val restPort = 8888
 
