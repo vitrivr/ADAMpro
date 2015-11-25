@@ -33,7 +33,7 @@ object QueryOp {
     QueryHandler.progressiveQuery(entityname)(nnq, bq, onComplete, withMetadata)
   }
 
-  def progressive(entityname: EntityName, nnq: NearestNeighbourQuery, bq: Option[BooleanQuery], timelimit: Duration, withMetadata: Boolean) : (Seq[Result], Float) = {
+  def timedProgressive(entityname: EntityName, nnq: NearestNeighbourQuery, bq: Option[BooleanQuery], timelimit: Duration, withMetadata: Boolean) : (Seq[Result], Float) = {
     QueryHandler.timedProgressiveQuery(entityname)(nnq, bq, timelimit, withMetadata)
   }
 }
