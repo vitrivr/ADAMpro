@@ -21,21 +21,14 @@ import org.apache.spark.rdd.RDD
  * August 2015
  */
 object IndexOp {
-  /**
-   *
-   * @param tablename
-   * @param indextype
-   * @param properties
-   */
-  def apply(tablename : EntityName, indextype : String, distance : DistanceFunction, properties : Map[String, String]): Unit = {
-    val indextypename = IndexStructures.withName(indextype)
-    apply(tablename, indextypename, distance, properties)
-  }
+  def apply(tablename : EntityName, indextype : String, distance : DistanceFunction, properties : Map[String, String]): Unit =
+    apply(tablename, IndexStructures.withName(indextype), distance, properties)
 
   /**
    *
    * @param tablename
    * @param indextypename
+   * @param distance
    * @param properties
    */
   def apply(tablename : EntityName, indextypename : IndexTypeName, distance : DistanceFunction, properties : Map[String, String]): Unit = {

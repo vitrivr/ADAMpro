@@ -10,12 +10,5 @@ import ch.unibas.dmi.dbis.adam.entity.Entity._
  * August 2015
  */
 object CountOp {
-  /**
-   *
-   * @param tablename
-   */
-  def apply(tablename : EntityName): Long = {
-    val table = Entity.retrieveEntity(tablename)
-    table.count
-  }
+  def apply(tablename : EntityName): Long = Entity.retrieveEntity(tablename).count
 }

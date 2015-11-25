@@ -53,14 +53,9 @@ object Entity {
   /**
    *
    * @param entityname
-   * @param schema
    * @return
    */
-  def createEntity(entityname : EntityName, schema : StructType) : Entity = {
-    val fields = schema.fields
-
-    require(fields.filter(_.name == "feature").length <= 1)
-
+  def createEntity(entityname : EntityName) : Entity = {
     CatalogOperator.createEntity(entityname)
 
     val featureSchema = StructType(
@@ -71,16 +66,8 @@ object Entity {
     )
     val featureData = sqlContext.createDataFrame(SparkStartup.sc.emptyRDD[Row], featureSchema)
 
-
-    val metadataSchema = StructType(
-      List(StructField("__adam_id", LongType, false)) ::: fields.filterNot(_.name == "feature").toList
-    )
-    val metadataData = sqlContext.createDataFrame(SparkStartup.sc.emptyRDD[Row], metadataSchema)
-
-
     val future = Future {
       featureStorage.write(entityname, featureData, SaveMode.ErrorIfExists)
-      metadataStorage.write(entityname, metadataData, SaveMode.ErrorIfExists)
     }
     future onFailure {case t => new EntityCreationException()}
 
@@ -94,11 +81,14 @@ object Entity {
    * @param entityname
    * @param ifExists
    */
-  def dropEntity(entityname : EntityName, ifExists : Boolean = false) : Unit = {
+  def dropEntity(entityname : EntityName, ifExists : Boolean = false) : Boolean = {
     val indexes = CatalogOperator.getIndexes(entityname)
-    CatalogOperator.dropEntity(entityname, ifExists)
 
     featureStorage.drop(entityname)
+    metadataStorage.drop(entityname)
+    CatalogOperator.dropEntity(entityname, ifExists)
+
+    true
   }
 
   /**
@@ -106,7 +96,7 @@ object Entity {
    * @param entityname
    * @return
    */
-  def insertData(entityname : EntityName, insertion: DataFrame): Unit ={
+  def insertData(entityname : EntityName, insertion: DataFrame): Boolean ={
     if(!existsEntity(entityname)){
       throw new EntityNotExistingException()
     }
@@ -116,6 +106,7 @@ object Entity {
     }
 
     Await.ready(future, Duration.Inf)
+    true
   }
 
   /**

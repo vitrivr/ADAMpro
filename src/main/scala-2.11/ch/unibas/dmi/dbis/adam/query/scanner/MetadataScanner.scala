@@ -14,8 +14,10 @@ import scala.collection.immutable.HashSet
  * November 2015
  */
 object MetadataScanner {
-  def apply(entity: Entity, query : BooleanQuery) : Seq[Row] =
-    entity.getMetadata.filter(query.getWhereClause()).collect()
+  def apply(entity: Entity, query : BooleanQuery) : Seq[Row] = {
+    var df = entity.getMetadata
+    df.filter(query.getWhereClause()).collect()
+  }
 
   def apply(entity: Entity, filter: HashSet[TupleID]) : Seq[Row] = {
     val df = entity.getMetadata

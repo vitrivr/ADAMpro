@@ -36,7 +36,7 @@ libraryDependencies ++= Seq(
   "com.databricks"         %%  "spark-avro"             % "2.0.1",
   "org.iq80.leveldb"       %   "leveldb"                % "0.7",
   "com.timgroup"           %%  "iterata"                % "0.1.3",
-  "com.datastax.spark"     %%  "spark-cassandra-connector" % "1.5.0-M1"
+  "com.datastax.spark"     %%  "spark-cassandra-connector" % "1.5.0-M2"
 )
 
 

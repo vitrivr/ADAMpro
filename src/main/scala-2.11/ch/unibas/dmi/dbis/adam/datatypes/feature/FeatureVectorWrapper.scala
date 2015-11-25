@@ -1,7 +1,7 @@
 package ch.unibas.dmi.dbis.adam.datatypes.feature
 
 import breeze.linalg.{DenseVector, SparseVector}
-import ch.unibas.dmi.dbis.adam.datatypes.feature.Feature.{DenseFeatureVector, FeatureVector, SparseFeatureVector}
+import ch.unibas.dmi.dbis.adam.datatypes.feature.Feature.{VectorBase, DenseFeatureVector, FeatureVector, SparseFeatureVector}
 import ch.unibas.dmi.dbis.adam.datatypes.feature.FeatureVectorTypes.{DenseFeatureVectorType, SparseFeatureVectorType}
 import org.apache.spark.sql.catalyst.InternalRow
 import org.apache.spark.sql.catalyst.expressions.GenericMutableRow
@@ -15,13 +15,15 @@ import org.apache.spark.sql.types._
  */
 @SQLUserDefinedType(udt = classOf[FeatureVectorWrapperUDT])
 case class FeatureVectorWrapper(value: FeatureVector) extends Serializable {
-  def this(value : Seq[Float]){
+  def this(value : Seq[VectorBase]){
     this(new Feature.DenseFeatureVector(value.toArray))
   }
 
-  def this(index : Seq[Int], value : Seq[Float], length : Int){
+  def this(index : Seq[Int], value : Seq[VectorBase], length : Int){
     this(new Feature.SparseFeatureVector(index.toArray, value.toArray, length))
   }
+
+  def getSeq() : Seq[VectorBase] = value.toDenseVector.toArray
 }
 
 

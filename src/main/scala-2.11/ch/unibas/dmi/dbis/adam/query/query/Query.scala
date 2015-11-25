@@ -14,12 +14,22 @@ abstract class Query(queryID: Option[String] = Some(java.util.UUID.randomUUID().
 
 case class BooleanQuery(
                          where: Map[String, String],
+                         join : List[(String, List[String])], //table, columns
                          queryID: Option[String] = Some(java.util.UUID.randomUUID().toString))
   extends Query(queryID) {
   def getWhereClause() : String = where.map(c => c._1 + " = " + c._2).mkString(" AND ")
 }
 
 
+/**
+ *
+ * @param q
+ * @param distance
+ * @param k
+ * @param indexOnly
+ * @param options
+ * @param queryID
+ */
 case class NearestNeighbourQuery(
                                   q: FeatureVector,
                                   distance: DistanceFunction,

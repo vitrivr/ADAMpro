@@ -89,7 +89,7 @@ object QueryHandler extends Logging {
    * @param withMetadata
    * @return
    */
-  private def sequentialQuery(entityname: EntityName)(nnq: NearestNeighbourQuery, bq: Option[BooleanQuery], withMetadata: Boolean): Seq[Result] = {
+  def sequentialQuery(entityname: EntityName)(nnq: NearestNeighbourQuery, bq: Option[BooleanQuery], withMetadata: Boolean): Seq[Result] = {
     var res = NearestNeighbourQueryHandler.sequentialQuery(entityname, nnq, getFilter(entityname, bq))
     if (withMetadata) {
       res = joinWithMetadata(entityname, res)
@@ -106,7 +106,7 @@ object QueryHandler extends Logging {
    * @param withMetadata
    * @return
    */
-  private def indexQuery(indexname: IndexName)(nnq: NearestNeighbourQuery, bq: Option[BooleanQuery], withMetadata: Boolean): Seq[Result] = {
+  def indexQuery(indexname: IndexName)(nnq: NearestNeighbourQuery, bq: Option[BooleanQuery], withMetadata: Boolean): Seq[Result] = {
     val entityname = Index.retrieveIndex(indexname).entityname
     var res = NearestNeighbourQueryHandler.indexQuery(indexname, nnq, getFilter(entityname, bq))
     if (withMetadata) {
@@ -124,7 +124,7 @@ object QueryHandler extends Logging {
    * @param withMetadata
    * @return
    */
-  def progressiveQuery(entityname: EntityName, nnq: NearestNeighbourQuery, bq: Option[BooleanQuery], onComplete: (ProgressiveQueryStatus.Value, Seq[Result], Float, Map[String, String]) => Unit, withMetadata: Boolean): Int = {
+  def progressiveQuery(entityname: EntityName)(nnq: NearestNeighbourQuery, bq: Option[BooleanQuery], onComplete: (ProgressiveQueryStatus.Value, Seq[Result], Float, Map[String, String]) => Unit, withMetadata: Boolean): Int = {
     val onCompleteFunction = if (withMetadata) {
       (pqs: ProgressiveQueryStatus.Value, res: Seq[Result], conf: Float, info: Map[String, String]) => onComplete(pqs, joinWithMetadata(entityname, res), conf, info)
     } else {
@@ -144,8 +144,8 @@ object QueryHandler extends Logging {
    * @param withMetadata
    * @return
    */
-  def progressiveQuery(entityname: EntityName, nnq: NearestNeighbourQuery, bq: Option[BooleanQuery], timelimit: Duration, withMetadata: Boolean): (Seq[Result], Float) = {
-    var (res, confidence) = NearestNeighbourQueryHandler.progressiveQuery(entityname, nnq, getFilter(entityname, bq), timelimit)
+  def timedProgressiveQuery(entityname: EntityName)(nnq: NearestNeighbourQuery, bq: Option[BooleanQuery], timelimit: Duration, withMetadata: Boolean): (Seq[Result], Float) = {
+    var (res, confidence) = NearestNeighbourQueryHandler.timedProgressiveQuery(entityname, nnq, getFilter(entityname, bq), timelimit)
     if (withMetadata) {
       res = joinWithMetadata(entityname, res)
     }

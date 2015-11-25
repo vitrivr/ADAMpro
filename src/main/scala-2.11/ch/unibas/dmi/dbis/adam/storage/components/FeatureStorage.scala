@@ -12,7 +12,7 @@ import org.apache.spark.sql.{DataFrame, SaveMode}
  */
 trait FeatureStorage {
   def read(entityname: EntityName, filter: Option[scala.collection.Set[TupleID]] = None): DataFrame
-  def write(tablename : EntityName, df: DataFrame, mode : SaveMode = SaveMode.Append): Unit
-  def drop(tablename :EntityName) : Unit
+  def write(entityname : EntityName, df: DataFrame, mode : SaveMode = SaveMode.Append): Unit
+  def drop(entityname :EntityName) : Unit
 }
 

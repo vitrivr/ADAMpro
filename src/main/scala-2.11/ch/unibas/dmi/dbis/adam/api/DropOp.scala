@@ -10,12 +10,5 @@ import ch.unibas.dmi.dbis.adam.entity.Entity._
  * September 2015
  */
 object DropOp {
-  /**
-   *
-   * @param tablename
-   * @param ifExists
-   */
-  def apply(tablename: EntityName, ifExists : Boolean = false): Unit ={
-    Entity.dropEntity(tablename, ifExists)
-  }
+  def apply(tablename: EntityName, ifExists : Boolean = false): Boolean = Entity.dropEntity(tablename, ifExists)
 }

@@ -6,6 +6,7 @@ import ch.unibas.dmi.dbis.adam.datatypes.feature.Feature._
 import ch.unibas.dmi.dbis.adam.entity.Entity
 import ch.unibas.dmi.dbis.adam.query.Result
 import ch.unibas.dmi.dbis.adam.query.distance.ManhattanDistance
+import ch.unibas.dmi.dbis.adam.query.handler.NearestNeighbourQueryHandler
 import ch.unibas.dmi.dbis.adam.query.progressive.ProgressiveQueryStatus
 import ch.unibas.dmi.dbis.adam.query.query.NearestNeighbourQuery
 
@@ -20,12 +21,12 @@ import scala.util.Random
  * September 2015
  */
 object EvaluationOp {
-  val dbSizes = Seq(1000,10000,100000,1000000,10000000)
+  val dbSizes = Seq(1000, 10000, 100000, 1000000, 10000000)
   val vectorSizes = Seq(10, 50, 100, 200, 500)
   val k = 100
   val numExperiments = 10
 
-  val pw = new PrintWriter(new File("results_" + System.currentTimeMillis() +".txt"))
+  val pw = new PrintWriter(new File("results_" + System.currentTimeMillis() + ".txt"))
   val experiments = mutable.Queue[(Int, Int)]()
 
   def apply() = {
@@ -48,27 +49,26 @@ object EvaluationOp {
    */
   def nextExperiment() {
     experiments.synchronized(
-      if(experiments.isEmpty){
-      return
-    })
+      if (experiments.isEmpty) {
+        return
+      })
 
+    try {
+      val (dbSize, vecSize) = experiments.dequeue()
 
-    val (dbSize, vecSize) = experiments.dequeue()
-
-    val tabname = "data_" + dbSize + "_" + vecSize
-
-    if(Entity.existsEntity(tabname)){
-      val query = NearestNeighbourQuery(getRandomVector(vecSize) : FeatureVector, ManhattanDistance, k, false)
-
-      try {
-        //NearestNeighbourQueryHandler.progressiveQuery(tabname, query, None, onComplete(System.nanoTime(), dbSize, vecSize))
-      } catch {
-        case e : Exception =>  {
-          println(e.getMessage)
-          nextExperiment()
-        }
+      val entityname = "data_" + dbSize + "_" + vecSize
+      if (!Entity.existsEntity(entityname)) {
+        throw new IllegalStateException("Exception thrown");
       }
-    } else {
+
+      val query = NearestNeighbourQuery(getRandomVector(vecSize): FeatureVector, ManhattanDistance, k, false)
+      NearestNeighbourQueryHandler.progressiveQuery(entityname, query, None, onComplete(System.nanoTime(), dbSize, vecSize))
+
+    } catch {
+      case e: Exception => {
+        println(e.getMessage)
+      }
+    } finally {
       nextExperiment()
     }
   }
@@ -82,7 +82,7 @@ object EvaluationOp {
    * @param options
    * @return
    */
-  def onComplete(startTime : Long, dbSize : Int, vecSize : Int)(status : ProgressiveQueryStatus.Value, results : Seq[Result], confidence : Float, options : Map[String, String]) {
+  def onComplete(startTime: Long, dbSize: Int, vecSize: Int)(status: ProgressiveQueryStatus.Value, results: Seq[Result], confidence: Float, options: Map[String, String]) {
     pw.write(
       options.getOrElse("qid", "") + "," +
         vecSize + "," +
@@ -94,15 +94,13 @@ object EvaluationOp {
         "\n")
     pw.flush()
 
-    if(status == ProgressiveQueryStatus.FINISHED){
-      println("Completed: data_" + dbSize + "_" + vecSize)
+    if (status == ProgressiveQueryStatus.FINISHED) {
       Thread.sleep(5000L)
       nextExperiment()
     }
   }
 
-
-    /**
+  /**
    *
    * @param k
    * @return

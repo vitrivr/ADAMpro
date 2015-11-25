@@ -9,7 +9,5 @@ import ch.unibas.dmi.dbis.adam.storage.engine.CatalogOperator
  * August 2015
  */
 object ListOp {
-  def apply() : Seq[String] = {
-    CatalogOperator.listEntities()
-  }
+  def apply() : Seq[String] = CatalogOperator.listEntities()
 }
