@@ -12,7 +12,6 @@ import ch.unibas.dmi.dbis.adam.query.distance.Distance._
 import ch.unibas.dmi.dbis.adam.query.distance.MinkowskiDistance
 import ch.unibas.dmi.dbis.adam.entity.Entity._
 import ch.unibas.dmi.dbis.adam.entity.Tuple._
-import com.timgroup.iterata.ParIterator.Implicits._
 import org.apache.spark.TaskContext
 import org.apache.spark.rdd.RDD
 import org.apache.spark.sql.DataFrame
@@ -42,7 +41,7 @@ class VAIndex(val indexname : IndexName, val entityname : EntityName, protected 
 
     val results = SparkStartup.sc.runJob(data, (context : TaskContext, tuplesIt : Iterator[BitStringIndexTuple]) => {
       val localRh = new VAResultHandler(k, lbounds, ubounds, metadata.signatureGenerator)
-      localRh.offerIndexTuple(tuplesIt.par())
+      localRh.offerIndexTuple(tuplesIt)
       localRh.results.toSeq
     }).flatten
 
