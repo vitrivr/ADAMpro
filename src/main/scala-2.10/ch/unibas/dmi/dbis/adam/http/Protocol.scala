@@ -1,5 +1,6 @@
 package ch.unibas.dmi.dbis.adam.http
 
+
 import ch.unibas.dmi.dbis.adam.query.Result
 import org.json4s.{DefaultFormats, Formats}
 import spray.httpx.Json4sSupport

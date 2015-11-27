@@ -47,7 +47,6 @@ object Entity {
   private val featureStorage = SparkStartup.featureStorage
   private val metadataStorage = SparkStartup.metadataStorage
 
-
   def existsEntity(entityname : EntityName) : Boolean = CatalogOperator.existsEntity(entityname)
 
   /**

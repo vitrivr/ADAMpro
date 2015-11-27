@@ -2,8 +2,8 @@ package ch.unibas.dmi.dbis.adam.main
 
 import ch.unibas.dmi.dbis.adam.datatypes.bitString.{BitString, MinimalBitString}
 import ch.unibas.dmi.dbis.adam.datatypes.feature.FeatureVectorWrapper
-import ch.unibas.dmi.dbis.adam.storage.components.{MetadataStorage, IndexStorage, FeatureStorage}
-import ch.unibas.dmi.dbis.adam.storage.engine.{PostgresDataStorage, LevelDBDataStorage, ParquetDataStorage}
+import ch.unibas.dmi.dbis.adam.storage.components.{FeatureStorage, IndexStorage, MetadataStorage}
+import ch.unibas.dmi.dbis.adam.storage.engine.{LevelDBDataStorage, ParquetDataStorage, PostgresDataStorage}
 import org.apache.spark.sql.hive.HiveContext
 import org.apache.spark.{SparkConf, SparkContext}
 
@@ -24,7 +24,7 @@ object SparkStartup {
     .set("spark.rdd.compress", "true")
     .set("spark.parquet.block.size", (1024 * 1024 * 16).toString)
     .set("spark.sql.parquet.compression.codec", "gzip")
-    .set("spark.cassandra.connection.host", "192.168.123.10")
+    .set("spark.cassandra.connection.host", "192.168.99.100")
     .set("spark.cassandra.auth.username", "cassandra")
     .set("spark.cassandra.auth.password", "cassandra")
     .set("spark.scheduler.allocation.file", "/Users/gianiv01/Development/adamtwo/conf/scheduler.xml")

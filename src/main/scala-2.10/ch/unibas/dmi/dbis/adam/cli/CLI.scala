@@ -1,6 +1,6 @@
 package ch.unibas.dmi.dbis.adam.cli
 
-import ch.unibas.dmi.dbis.adam.api._
+/*import ch.unibas.dmi.dbis.adam.api._
 import ch.unibas.dmi.dbis.adam.datatypes.feature.Feature._
 import ch.unibas.dmi.dbis.adam.query.distance.{DistanceFunction, ManhattanDistance, MinkowskiDistance}
 import ch.unibas.dmi.dbis.adam.query.handler.QueryHints
@@ -279,4 +279,4 @@ class CLI extends ILoop {
 
 
 
-}
+}*/

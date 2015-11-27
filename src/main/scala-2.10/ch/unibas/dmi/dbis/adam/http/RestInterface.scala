@@ -22,6 +22,8 @@ class RestInterface extends HttpServiceActor with RestApi {
   def receive = runRoute(routes)
 }
 
+//TODO: switch to akka-http
+
 trait RestApi extends HttpService with ActorLogging { actor: Actor =>
   import ch.unibas.dmi.dbis.adam.http.Protocol._
 
