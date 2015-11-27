@@ -36,7 +36,7 @@ trait Index[A <: IndexTuple]{
 
   protected val df : DataFrame
   protected def rdd : RDD[A]
-  protected def rdd(filter : Option[HashSet[TupleID]]) : RDD[A] = if(filter.isDefined){ rdd.filter(t => filter.contains(t.tid)) } else { rdd }
+  protected def rdd(filter : Option[HashSet[TupleID]]) : RDD[A] = if(filter.isDefined){ rdd.filter(t => filter.get.contains(t.tid)) } else { rdd }
 
   private[index] def metadata : Serializable
 
