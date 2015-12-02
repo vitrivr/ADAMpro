@@ -30,7 +30,8 @@ libraryDependencies ++= Seq(
   "com.typesafe.akka"      %%   "akka-actor"             % "2.3.14",
   "org.json4s"             %%   "json4s-native"          % "3.3.0",
   "org.slf4j"              %    "slf4j-nop"              % "1.7.13",
-  "org.iq80.leveldb"       %    "leveldb"                % "0.7"
+  "org.iq80.leveldb"       %    "leveldb"                % "0.7",
+  "com.datastax.spark"     %%  "spark-cassandra-connector" % "1.5.0-M2"
 )
 
 

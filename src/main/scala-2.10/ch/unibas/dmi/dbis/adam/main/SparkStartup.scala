@@ -18,6 +18,9 @@ object SparkStartup {
     .set("spark.serializer", "org.apache.spark.serializer.KryoSerializer")
     .set("spark.kryoserializer.buffer.max", "512m")
     .set("spark.kryoserializer.buffer", "256")
+    .set("spark.cassandra.connection.host", "192.168.99.100")
+    .set("spark.cassandra.auth.username", "cassandra")
+    .set("spark.cassandra.auth.password", "cassandra")
     .registerKryoClasses(Array(classOf[BitString[_]], classOf[MinimalBitString], classOf[FeatureVectorWrapper]))
 
   val sc = new SparkContext(sparkConfig)
