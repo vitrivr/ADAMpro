@@ -15,6 +15,9 @@ object EvaluationPerformanceStartup {
 
     def main(args : Array[String]) {
       SparkStartup
-      new EvaluationPerformer().start()
+
+      val ep = new EvaluationPerformer()
+      ep.init()
+      ep.start()
     }
   }

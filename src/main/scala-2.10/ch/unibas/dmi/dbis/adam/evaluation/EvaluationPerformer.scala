@@ -9,7 +9,7 @@ import ch.unibas.dmi.dbis.adam.entity.Entity
 import ch.unibas.dmi.dbis.adam.main.Startup
 import ch.unibas.dmi.dbis.adam.query.Result
 import ch.unibas.dmi.dbis.adam.query.distance.ManhattanDistance
-import ch.unibas.dmi.dbis.adam.query.handler.NearestNeighbourQueryHandler
+import ch.unibas.dmi.dbis.adam.query.handler.QueryHandler
 import ch.unibas.dmi.dbis.adam.query.progressive.ProgressiveQueryStatus
 import ch.unibas.dmi.dbis.adam.query.query.NearestNeighbourQuery
 
@@ -23,8 +23,11 @@ import scala.util.Random
  * November 2015
  */
 class EvaluationPerformer {
-  val path = Startup.config.evaluationPath / ("results_" + System.currentTimeMillis() + ".txt")
-  val pw = new PrintWriter(new File(path.toAbsolute.toString()))
+  //make dirs
+  new File(Startup.config.evaluationPath).mkdirs()
+
+  val path = Startup.config.evaluationPath + "/" + ("results_" + System.currentTimeMillis() + ".txt")
+  val pw = new PrintWriter(new File(path))
   val experiments = mutable.Queue[(Int, Int, Int)]()
 
   val dateFormat = new SimpleDateFormat("hh:mm:ss")
@@ -32,7 +35,7 @@ class EvaluationPerformer {
   /**
    *
    */
-  def start() = {
+  def init() = {
     pw.write("id" + "," + "dbSize" + "," + "vecSize" + "," + "type" + "," + "measure1" + "," + "measure2" + "," + "resultlist" + "\n")
 
     EvaluationConfig.dbSizes foreach { dbSize =>
@@ -42,9 +45,9 @@ class EvaluationPerformer {
         }
       }
     }
-
-    nextExperiment()
   }
+
+  def start() = nextExperiment()
 
   /**
    *
@@ -68,7 +71,11 @@ class EvaluationPerformer {
       println(dbSize + "\t" + vecSize + "\t" + experimentN + "\t" + dateFormat.format(today))
 
       val query = NearestNeighbourQuery(getRandomVector(vecSize): FeatureVector, ManhattanDistance, EvaluationConfig.k, false)
-      NearestNeighbourQueryHandler.progressiveQuery(entityname, query, None, onComplete(System.nanoTime(), dbSize, vecSize))
+
+      QueryHandler.progressiveQuery(entityname)(query, None, onComplete(System.nanoTime(), dbSize, vecSize), false)
+      nextExperiment()
+
+
 
     } catch {
       case e: Exception => {
@@ -101,7 +108,6 @@ class EvaluationPerformer {
 
     if (status == ProgressiveQueryStatus.FINISHED) {
       Thread.sleep(5000L)
-
       nextExperiment()
     }
   }
