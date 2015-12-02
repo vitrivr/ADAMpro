@@ -19,16 +19,19 @@ object Protocol extends Json4sSupport {
   case class CountResult(count : Long)
   case class DisplayResult(tuples : Seq[(Long, String)])
 
-  case object TableCreated
-  case object TableDropped
-  case object TableImported
+  case object EntityCreated
+  case object EntityDropped
 
   case object IndexCreated
 
   case object AddedToCache
 
+  case class ListEntities(tables : Seq[String])
+  case class EntityPreview(entries : Seq[String])
 
-  case class ListTables(tables : Seq[String])
+  case class ImportPath(path : String)
+  case object EntityImported
+
 
   case class IndexQuery(k : Int, q : String, norm : Int = 1)
   case class SeqQuery(k : Int, q : String, norm : Int = 1)
@@ -36,8 +39,11 @@ object Protocol extends Json4sSupport {
 
   case class QueryResults(tuples : Seq[Result])
 
+  case object EvaluationStarted
+
+
   //Exceptions
   case object IndexNotExistingException
-  case object TableExistingException
-  case object TableNotExistingException
+  case object EntityExistingException
+  case object EntityNotExistingException
 }

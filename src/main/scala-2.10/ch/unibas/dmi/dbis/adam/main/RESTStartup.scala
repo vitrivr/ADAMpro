@@ -34,8 +34,7 @@ class RESTStartup(config : AdamConfig) extends Runnable {
       case Http.Bound(address) =>
         println(s"REST interface bound to $address")
       case Http.CommandFailed(cmd) =>
-        println("REST interface could not bind to " +
-          s"$host:$port, ${cmd.failureMessage}")
+        println("REST interface could not bind to " + s"$host:$port, ${cmd.failureMessage}")
         system.shutdown()
     }
   }

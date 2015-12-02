@@ -1,5 +1,4 @@
-package ch.unibas.dmi.dbis.adam.http;
-
+package ch.unibas.dmi.dbis.adam.http
 
 import akka.actor._
 import akka.util.Timeout
@@ -18,44 +17,132 @@ import spray.routing.{RequestContext, _}
 import scala.concurrent.duration._
 import scala.language.postfixOps
 
+//TODO: switch REST code to akka-http
 class RestInterface extends HttpServiceActor with RestApi {
   def receive = runRoute(routes)
 }
 
-//TODO: switch to akka-http
-
-trait RestApi extends HttpService with ActorLogging { actor: Actor =>
-  import ch.unibas.dmi.dbis.adam.http.Protocol._
+trait RestApi extends HttpService with ActorLogging {
+  actor: Actor =>
 
   private implicit val requestTimeout = Timeout(100 seconds)
 
   def routes: Route =
-    countRoute ~ createRoute ~ dropRoute ~
+    countRoute ~ createRoute ~ generateDataRoute ~ dropRoute ~
       indexRoute ~ listRoute ~ indexQueryRoute ~
-      seqQueryRoute ~ progQueryRoute
+      seqQueryRoute ~ progQueryRoute ~
+      importRoute ~  previewRoute ~
+      generateRoute ~ evaluationRoute
 
   /**
    *
    */
-  private val countRoute : Route = pathPrefix("count") {
-    path(Segment) { tablename =>
-      post { requestContext =>
+  private def countRoute: Route = pathPrefix("count" / Segment) { entityname =>
+    get { requestContext =>
+      val responder = createResponder(requestContext)
+      val result = CountOp(entityname)
+      responder ! CountResult(result)
+    }
+  }
+
+  /**
+   *
+   */
+  private def createRoute: Route = pathPrefix("create" / Segment) { entityname =>
+    get { requestContext =>
+      val responder = createResponder(requestContext)
+      val result = CreateOp(entityname)
+      responder ! EntityCreated
+    }
+  }
+
+  /**
+   *
+   */
+  private def generateDataRoute: Route = pathPrefix("generate" / Segment / Segment / Segment) { (entityname, numberOfElements, numberOfDimensions) =>
+    get { requestContext =>
+      val responder = createResponder(requestContext)
+      GenerateDataOp(entityname, numberOfElements.toInt, numberOfDimensions.toInt)
+      responder ! EntityImported
+    }
+  }
+
+  /**
+   *
+   */
+  private def dropRoute: Route = pathPrefix("drop" / Segment) { entityname =>
+    get { requestContext =>
+      val responder = createResponder(requestContext)
+      DropOp(entityname)
+      responder ! EntityDropped
+    }
+  }
+
+
+  /**
+   *
+   */
+  private def indexRoute: Route = pathPrefix("index" / Segment / Segment) { (entityname, indextypename) =>
+
+    get { requestContext =>
+      val responder = createResponder(requestContext)
+      IndexOp(entityname, indextypename, new MinkowskiDistance(1), Map[String, String]())
+      responder ! IndexCreated
+    }
+  }
+
+  /**
+   *
+   */
+  private def listRoute: Route = pathPrefix("list") {
+    get { requestContext =>
+      val responder = createResponder(requestContext)
+      val results = ListOp()
+      responder ! ListEntities(results)
+    }
+  }
+
+  /**
+   *
+   */
+  private def indexQueryRoute: Route = pathPrefix("indexquery" / Segment) { indexname =>
+    post {
+      entity(as[IndexQuery]) { queryobj => requestContext =>
         val responder = createResponder(requestContext)
-        val result = CountOp(tablename)
-        responder ! CountResult(result)
+
+        val query = Feature.conv_str2vector(queryobj.q)
+        val k = queryobj.k
+        val norm = 1
+        val withMetadata = true
+
+        val nnq = NearestNeighbourQuery(query, new MinkowskiDistance(norm), k)
+        val bq = None
+
+        val results = QueryOp.index(indexname, nnq, bq, withMetadata)
+        responder ! QueryResults(results)
       }
     }
   }
 
+
   /**
    *
    */
-  private val createRoute : Route = pathPrefix("create") {
-    path(Segment) { tablename =>
-      post { requestContext =>
+  private def seqQueryRoute: Route = pathPrefix("seqquery" / Segment) { entityname =>
+    post {
+      entity(as[IndexQuery]) { queryobj => requestContext =>
         val responder = createResponder(requestContext)
-        val result = CreateOp(tablename)
-        responder ! TableCreated
+
+        val query = Feature.conv_str2vector(queryobj.q)
+        val k = queryobj.k
+        val norm = 1
+        val withMetadata = false
+
+        val nnq = NearestNeighbourQuery(query, new MinkowskiDistance(norm), k)
+        val bq = None
+
+        val results = QueryOp.sequential(entityname, nnq, bq, withMetadata)
+        responder ! QueryResults(results)
       }
     }
   }
@@ -63,107 +150,10 @@ trait RestApi extends HttpService with ActorLogging { actor: Actor =>
   /**
    *
    */
-  private val dropRoute : Route = pathPrefix("drop") {
-    path(Segment) { tablename =>
-      post { requestContext =>
-        val responder = createResponder(requestContext)
-        DropOp(tablename)
-        responder ! TableDropped
-      }
-    }
-  }
-
-
-  /**
-   *
-   */
-  private val indexRoute : Route = pathPrefix("index") {
-    path(Segment) { tablename =>
-      path(Segment) { indextypename =>
-        post { requestContext =>
-          val responder = createResponder(requestContext)
-          IndexOp(tablename, indextypename, new MinkowskiDistance(1), Map[String, String]())
-          responder ! IndexCreated
-        }
-      }
-    }
-  }
-
-  /**
-   *
-   */
-  private val listRoute : Route = pathPrefix("list") {
-    pathEnd {
-      post { requestContext =>
-        val responder = createResponder(requestContext)
-        val results = ListOp()
-        responder ! ListTables(results)
-      }
-    }
-  }
-
-  /**
-   *
-   */
-  private val indexQueryRoute : Route = pathPrefix("indexquery") {
-    path(Segment) { iname =>
-        post {
-          entity(as[IndexQuery]) { queryobj => requestContext =>
-            val responder = createResponder(requestContext)
-
-            val indexname = iname
-            val query = Feature.conv_str2vector(queryobj.q)
-            val k = queryobj.k
-            val norm = 1
-            val withMetadata = true
-
-            val nnq = NearestNeighbourQuery(query, new MinkowskiDistance(norm), k)
-            val bq = None
-
-            val results = QueryOp.index(indexname, nnq, bq, withMetadata)
-
-            responder ! QueryResults(results)
-          }
-        }
-      }
-   }
-
-
-  /**
-   *
-   */
-  private val seqQueryRoute : Route = pathPrefix("seqquery") {
-    path(Segment) { ename =>
-      post {
-        entity(as[IndexQuery]) { queryobj => requestContext =>
-          val responder = createResponder(requestContext)
-
-          val entityname = ename
-          val query = Feature.conv_str2vector(queryobj.q)
-          val k = queryobj.k
-          val norm = 1
-          val withMetadata = true
-
-          val nnq = NearestNeighbourQuery(query, new MinkowskiDistance(norm), k)
-          val bq = None
-
-          val results = QueryOp.sequential(entityname, nnq, bq, withMetadata)
-
-          responder ! QueryResults(results)
-        }
-      }
-    }
-  }
-
-  /**
-   *
-   */
-  private val progQueryRoute : Route = pathPrefix("progquery") {
-    path(Segment) { entityname =>
-      post {
-        entity(as[ProgQuery]) { queryobj =>
-          streamProgResponse(entityname, queryobj)
-        }
+  private def progQueryRoute: Route = pathPrefix("progquery" / Segment) { entityname =>
+    post {
+      entity(as[ProgQuery]) { queryobj =>
+        streamProgResponse(entityname, queryobj)
       }
     }
   }
@@ -178,7 +168,7 @@ trait RestApi extends HttpService with ActorLogging { actor: Actor =>
    *
    * @param ctx
    */
-  private def streamProgResponse(ename : EntityName, queryobj : ProgQuery)(ctx: RequestContext): Unit =
+  private def streamProgResponse(ename: EntityName, queryobj: ProgQuery)(ctx: RequestContext): Unit =
     actorRefFactory.actorOf {
       Props {
         new Actor with ActorLogging {
@@ -199,9 +189,9 @@ trait RestApi extends HttpService with ActorLogging { actor: Actor =>
           responder ! ChunkedResponseStart(HttpResponse()).withAck(Ok(nResponses))
 
           //next chunk
-          def sendNextChunk(status : ProgressiveQueryStatus.Value, res : Seq[Result], confidence : Float, details : Map[String, String]) : Unit = synchronized {
-              nResponses = nResponses - 1
-              responder ! MessageChunk(res.mkString(",")).withAck(Ok(nResponses)) //TODO: reformat result
+          def sendNextChunk(status: ProgressiveQueryStatus.Value, res: Seq[Result], confidence: Float, details: Map[String, String]): Unit = synchronized {
+            nResponses = nResponses - 1
+            responder ! MessageChunk(res.mkString(",")).withAck(Ok(nResponses)) //TODO: reformat result
           }
 
           def receive = {
@@ -217,27 +207,58 @@ trait RestApi extends HttpService with ActorLogging { actor: Actor =>
     }
 
 
-  private def createResponder(requestContext:RequestContext) = context.actorOf(Props(new Responder(requestContext)))
+  private def importRoute: Route = pathPrefix("import" / Segment / Segment) { (entityname, filename) =>
+    get { requestContext =>
+      val responder = createResponder(requestContext)
+      ImportOp(entityname, "hdfs://original/" + filename)
+      responder ! EntityImported
+    }
+  }
+
+  private def previewRoute: Route = pathPrefix("preview" / Segment) { entityname =>
+    get { requestContext =>
+      val responder = createResponder(requestContext)
+      val results = PreviewOp(entityname)
+      responder ! EntityPreview(results)
+    }
+  }
+
+  private def generateRoute: Route = pathPrefix("generate" / Segment / Segment) { (numberOfElements, numberOfDimensions) =>
+    get { requestContext =>
+      val responder = createResponder(requestContext)
+      EvaluationOp.generate()
+    }
+  }
+
+  private def evaluationRoute: Route = pathPrefix("evaluation") {
+    get { requestContext =>
+      val responder = createResponder(requestContext)
+      EvaluationOp.perform()
+    }
+  }
+
+
+  private def createResponder(requestContext: RequestContext) = context.actorOf(Props(new Responder(requestContext)))
 }
 
-class Responder(requestContext:RequestContext) extends Actor with ActorLogging {
+class Responder(requestContext: RequestContext) extends Actor with ActorLogging {
   /**
    *
    * @return
    */
   def receive = {
-    case result : CountResult =>
+    case result: CountResult =>
       requestContext.complete(StatusCodes.OK, result)
 
-    case TableCreated =>
+    case EntityCreated =>
       requestContext.complete(StatusCodes.OK)
       killYourself
 
-    case TableDropped =>
+    case EntityDropped =>
       requestContext.complete(StatusCodes.OK)
       killYourself
 
-    case TableImported =>
+    case EntityImported =>
       requestContext.complete(StatusCodes.OK)
       killYourself
 
@@ -245,12 +266,16 @@ class Responder(requestContext:RequestContext) extends Actor with ActorLogging {
       requestContext.complete(StatusCodes.OK)
       killYourself
 
-    case result : ListTables =>
+    case result: ListEntities =>
       requestContext.complete(StatusCodes.OK, result)
       killYourself
 
-    case result : QueryResults =>
+    case result: QueryResults =>
       requestContext.complete(StatusCodes.OK, result)
+      killYourself
+
+    case EvaluationStarted =>
+      requestContext.complete(StatusCodes.OK)
       killYourself
 
     case _ =>
