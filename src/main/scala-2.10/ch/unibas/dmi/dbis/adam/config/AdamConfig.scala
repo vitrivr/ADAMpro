@@ -9,6 +9,7 @@ import scala.reflect.io.File
  * August 2015
  */
 class AdamConfig(config : Config) {
+  //TODO: move to external config file
   config.checkValid(ConfigFactory.defaultReference(), "adamtwo")
 
   private val hadoopBase = "hdfs://HadoopMaster:54310/spark/adamtwo"
