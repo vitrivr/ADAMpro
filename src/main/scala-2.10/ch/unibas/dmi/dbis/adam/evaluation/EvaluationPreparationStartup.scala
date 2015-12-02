@@ -10,9 +10,7 @@ import com.typesafe.config.ConfigFactory
  * Ivan Giangreco
  * December 2015
  */
-object EvaluationStartup {
-
-
+object EvaluationPreparationStartup {
   val config: AdamConfig = new AdamConfig(ConfigFactory.load())
 
   def main(args : Array[String]) {
