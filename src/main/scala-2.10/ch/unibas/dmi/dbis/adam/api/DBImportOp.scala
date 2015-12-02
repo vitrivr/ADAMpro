@@ -10,6 +10,6 @@ import ch.unibas.dmi.dbis.adam.entity.Entity._
  */
 object DBImportOp {
   def apply(url : String, port : Int, database : String, user : String, password : String, tablename: EntityName, columns : String) : Unit = {
-    //TODO
+    //TODO create function to import data from database, see GenerateDataOp
   }
 }

@@ -179,8 +179,6 @@ object Index {
       .setName(indexname)
       .persist(StorageLevel.MEMORY_AND_DISK)
 
-      //.repartition(Startup.config.partitions) //TODO: loosing persistence information - bug?
-
     index.rdd(None).collect()
 
     CacheableIndex(index)

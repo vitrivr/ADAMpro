@@ -58,33 +58,6 @@ class SHIndex(val indexname: IndexName, val entityname: EntityName, protected va
 
     val globalResultHandler = new LSHResultHandler(k)
 
-    //TODO: test this
-    /*
-    SparkStartup.sc.runJob[BitStringIndexTuple, Seq[ResultElement]](
-      data,
-      (it : Iterator[BitStringIndexTuple]) => {
-        val localRh = new SpectralLSHResultHandler(k)
-        while (it.hasNext) {
-          val tuple = it.next()
-
-          var i = 0
-          var score = 0
-          while (i < queries.length) {
-            val query = queries(i)
-            score += tuple.value.intersectionCount(query)
-            i += 1
-          }
-
-          localRh.offerIndexTuple(tuple, score)
-        }
-
-        localRh.results.toSeq
-      },
-      (i : Int, results : Seq[ResultElement]) => {
-        globalResultHandler.offerResultElement(results.iterator)
-      }
-    )*/
-
     val ids = globalResultHandler.results.map(x => x.tid).toList
     HashSet(ids : _*)
   }

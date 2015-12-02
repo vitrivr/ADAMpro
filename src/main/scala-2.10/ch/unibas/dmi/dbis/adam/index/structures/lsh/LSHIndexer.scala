@@ -57,7 +57,7 @@ class LSHIndexer(hashFamily : String, numHashTables : Int, numHashes : Int, dist
       max
     }).sum / trainData.length
 
-    //TODO: move to apply
+    //TODO: hashFamily move to apply; use currying?
     val dims = data.first.value.length
     val hashFamily = () => EuclideanHashFunction(dims, radius.toFloat, 256)
 
@@ -76,7 +76,7 @@ object LSHIndexer {
   def apply(properties : Map[String, String] = Map[String, String](), distance : DistanceFunction, data: RDD[IndexerTuple]) : IndexGenerator = {
     val hashFamilyDescription = properties.getOrElse("hashFamily", "euclidean")
     val hashFamily = hashFamilyDescription.toLowerCase match {
-      case "euclidean" => "euclidean" //TODO: params
+      case "euclidean" => "euclidean" //TODO: check how to pass params
       case _ => null
     }
 
