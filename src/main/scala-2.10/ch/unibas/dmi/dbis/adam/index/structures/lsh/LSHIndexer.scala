@@ -1,12 +1,12 @@
 package ch.unibas.dmi.dbis.adam.index.structures.lsh
 
+import ch.unibas.dmi.dbis.adam.entity.Entity._
 import ch.unibas.dmi.dbis.adam.index.Index._
 import ch.unibas.dmi.dbis.adam.index._
 import ch.unibas.dmi.dbis.adam.index.structures.IndexStructures
 import ch.unibas.dmi.dbis.adam.index.structures.lsh.hashfunction.{EuclideanHashFunction, Hasher}
 import ch.unibas.dmi.dbis.adam.main.SparkStartup
 import ch.unibas.dmi.dbis.adam.query.distance.DistanceFunction
-import ch.unibas.dmi.dbis.adam.entity.Entity._
 import org.apache.spark.rdd.RDD
 
 
@@ -40,22 +40,15 @@ class LSHIndexer(hashFamily : String, numHashTables : Int, numHashes : Int, dist
    */
   private def train(data : RDD[IndexerTuple]) : LSHIndexMetaData = {
     //data
-    val trainData = data.takeSample(true, trainingSize)
-    val trainData2 = data.takeSample(true, trainingSize).par
+    val n = data.countApprox(5000).getFinalValue().mean.toInt
 
-    val radius = trainData.map({ sample =>
-      var max = 0.toFloat
-      val it = trainData2.iterator
-      while(it.hasNext){
-        val datum = it.next()
-        val d = distance(sample.value, datum.value)
+    val trainData = data.sample(false, math.min(trainingSize, n) / n)
 
-        if(d > max){
-          max = d
-        }
-      }
-      max
-    }).sum / trainData.length
+    val radius = trainData.mapPartitions { iter =>
+        val seq = iter.toSeq
+        val res = for (a <- seq; b <- seq) yield distance(a.value, b.value)
+        res.iterator
+      }.mean()
 
     //TODO: hashFamily move to apply; use currying?
     val dims = data.first.value.length

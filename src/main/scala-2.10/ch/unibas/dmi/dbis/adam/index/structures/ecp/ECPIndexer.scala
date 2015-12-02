@@ -26,10 +26,12 @@ class ECPIndexer(distance : DistanceFunction) extends IndexGenerator with Serial
    */
   override def index(indexname: IndexName, entityname: EntityName, data: RDD[IndexerTuple]): Index[_ <: IndexTuple] = {
     val n = data.countApprox(5000).getFinalValue().mean.toInt
-    val leaders = data.takeSample(true, math.sqrt(n).toInt)
+
+    val leaders = data.sample(true, math.sqrt(n) / n).collect
+    val broadcastLeaders = SparkStartup.sc.broadcast(leaders)
 
     val indexdata = data.map(datum => {
-        val minTID = leaders.map({ l =>
+        val minTID = broadcastLeaders.value.map({ l =>
           (l.tid, distance.apply(datum.value, l.value))
         }).minBy(_._2)._1
 
