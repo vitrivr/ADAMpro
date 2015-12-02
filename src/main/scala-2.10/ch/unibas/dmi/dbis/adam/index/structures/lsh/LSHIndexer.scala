@@ -49,7 +49,7 @@ class LSHIndexer(hashFamily : String, numHashTables : Int, numHashes : Int, dist
     val radius = trainData.mapPartitions { iter =>
         val seq = iter.toSeq
         val res = for (a <- seq; b <- seq) yield distance(a.value, b.value)
-        res.iterator
+        Seq(res.max).iterator
       }.mean()
 
     //TODO: hashFamily move to apply; use currying?
