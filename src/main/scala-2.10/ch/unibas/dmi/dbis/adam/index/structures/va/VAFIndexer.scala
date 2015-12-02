@@ -1,17 +1,15 @@
 package ch.unibas.dmi.dbis.adam.index.structures.va
 
-import ch.unibas.dmi.dbis.adam.datatypes.feature.Feature
-import Feature.{VectorBase, FeatureVector}
+import ch.unibas.dmi.dbis.adam.datatypes.feature.Feature.{FeatureVector, VectorBase}
+import ch.unibas.dmi.dbis.adam.entity.Entity._
 import ch.unibas.dmi.dbis.adam.index.Index._
 import ch.unibas.dmi.dbis.adam.index.structures.IndexStructures
 import ch.unibas.dmi.dbis.adam.index.structures.va.marks.{EquidistantMarksGenerator, EquifrequentMarksGenerator, MarksGenerator}
 import ch.unibas.dmi.dbis.adam.index.structures.va.signature.FixedSignatureGenerator
-import ch.unibas.dmi.dbis.adam.index.{IndexerTuple, IndexGenerator, BitStringIndexTuple}
+import ch.unibas.dmi.dbis.adam.index.{BitStringIndexTuple, IndexGenerator, IndexerTuple}
 import ch.unibas.dmi.dbis.adam.main.SparkStartup
 import ch.unibas.dmi.dbis.adam.query.distance.MinkowskiDistance
-import ch.unibas.dmi.dbis.adam.entity.Entity._
 import org.apache.spark.rdd.RDD
-import org.apache.spark.util.random.ADAMSamplingUtils
 
 
 /**
@@ -44,8 +42,9 @@ class VAFIndexer(maxMarks: Int = 64, marksGenerator: MarksGenerator, bitsPerDime
    */
   private def train(data : RDD[IndexerTuple]) : VAIndexMetaData = {
     //data
-    val fraction = ADAMSamplingUtils.computeFractionForSampleSize(trainingSize, data.count(), false)
-    val trainData = data.sample(false, fraction)
+    val n = data.countApprox(5000).getFinalValue().mean.toInt
+
+    val trainData = data.sample(false, math.min(trainingSize, n) / n)
 
     val dim = trainData.first.value.length
 

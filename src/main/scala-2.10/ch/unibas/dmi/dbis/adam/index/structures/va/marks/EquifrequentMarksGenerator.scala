@@ -13,7 +13,7 @@ import scala.collection.mutable.ListBuffer
  * 
  */
 private[va] object EquifrequentMarksGenerator extends MarksGenerator with Serializable {
-  val SamplingFrequency = 500
+  val distanceSamples = 500
 
   /**
    *
@@ -29,7 +29,7 @@ private[va] object EquifrequentMarksGenerator extends MarksGenerator with Serial
 
     val dimensionality = min.length
 
-    val result = (0 until dimensionality).map(dim => Distribution(min(dim), max(dim), SamplingFrequency))
+    val result = (0 until dimensionality).map(dim => Distribution(min(dim), max(dim), distanceSamples))
 
     samples.collect.foreach { sample =>
       var i = 0
