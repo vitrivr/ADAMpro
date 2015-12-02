@@ -8,6 +8,7 @@ import ch.unibas.dmi.dbis.adam.index.structures.lsh.hashfunction.{EuclideanHashF
 import ch.unibas.dmi.dbis.adam.main.SparkStartup
 import ch.unibas.dmi.dbis.adam.query.distance.DistanceFunction
 import org.apache.spark.rdd.RDD
+import org.apache.spark.util.random.ADAMSamplingUtils
 
 
 class LSHIndexer(hashFamily : String, numHashTables : Int, numHashes : Int, distance : DistanceFunction, trainingSize : Int) extends IndexGenerator with Serializable {
@@ -41,8 +42,9 @@ class LSHIndexer(hashFamily : String, numHashTables : Int, numHashes : Int, dist
   private def train(data : RDD[IndexerTuple]) : LSHIndexMetaData = {
     //data
     val n = data.countApprox(5000).getFinalValue().mean.toInt
+    val fraction = ADAMSamplingUtils.computeFractionForSampleSize(trainingSize, n, false)
 
-    val trainData = data.sample(false, math.min(trainingSize, n) / n)
+    val trainData = data.sample(false, fraction)
 
     val radius = trainData.mapPartitions { iter =>
         val seq = iter.toSeq

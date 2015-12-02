@@ -10,6 +10,7 @@ import ch.unibas.dmi.dbis.adam.index.{BitStringIndexTuple, IndexGenerator, Index
 import ch.unibas.dmi.dbis.adam.main.SparkStartup
 import ch.unibas.dmi.dbis.adam.query.distance.MinkowskiDistance
 import org.apache.spark.rdd.RDD
+import org.apache.spark.util.random.ADAMSamplingUtils
 
 
 /**
@@ -43,8 +44,9 @@ class VAFIndexer(maxMarks: Int = 64, marksGenerator: MarksGenerator, bitsPerDime
   private def train(data : RDD[IndexerTuple]) : VAIndexMetaData = {
     //data
     val n = data.countApprox(5000).getFinalValue().mean.toInt
+    val fraction = ADAMSamplingUtils.computeFractionForSampleSize(trainingSize, n, false)
 
-    val trainData = data.sample(false, math.min(trainingSize, n) / n)
+    val trainData = data.sample(false, fraction)
 
     val dim = trainData.first.value.length
 

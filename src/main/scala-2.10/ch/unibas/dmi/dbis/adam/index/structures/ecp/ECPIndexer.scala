@@ -7,6 +7,7 @@ import ch.unibas.dmi.dbis.adam.main.SparkStartup
 import ch.unibas.dmi.dbis.adam.query.distance.DistanceFunction
 import ch.unibas.dmi.dbis.adam.entity.Entity.EntityName
 import org.apache.spark.rdd.RDD
+import org.apache.spark.util.random.ADAMSamplingUtils
 
 /**
  * adamtwo
@@ -27,7 +28,11 @@ class ECPIndexer(distance : DistanceFunction) extends IndexGenerator with Serial
   override def index(indexname: IndexName, entityname: EntityName, data: RDD[IndexerTuple]): Index[_ <: IndexTuple] = {
     val n = data.countApprox(5000).getFinalValue().mean.toInt
 
-    val leaders = data.sample(true, math.sqrt(n) / n).collect
+    val trainingSize = math.sqrt(n)
+    val fraction = ADAMSamplingUtils.computeFractionForSampleSize(trainingSize.toInt, n, false)
+
+
+    val leaders = data.sample(true, fraction).collect
     val broadcastLeaders = SparkStartup.sc.broadcast(leaders)
 
     val indexdata = data.map(datum => {

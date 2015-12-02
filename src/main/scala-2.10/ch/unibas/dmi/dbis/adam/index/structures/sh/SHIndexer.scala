@@ -50,8 +50,9 @@ class SHIndexer(nbits : Int, trainingSize : Int) extends IndexGenerator with Ser
   private def train(data : RDD[IndexerTuple]) : SHIndexMetaData = {
     //data
     val n = data.countApprox(5000).getFinalValue().mean.toInt
+    val fraction = ADAMSamplingUtils.computeFractionForSampleSize(trainingSize, n, false)
 
-    val trainData = data.sample(false, math.min(trainingSize, n) / n)
+    val trainData = data.sample(false, fraction)
     val dTrainData = trainData.map(x => x.value.map(x => x.toDouble).toArray)
 
     val dataMatrix = DenseMatrix(dTrainData.collect.toList : _*)
