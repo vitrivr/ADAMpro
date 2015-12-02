@@ -18,12 +18,9 @@ object SparkStartup {
     .set("spark.serializer", "org.apache.spark.serializer.KryoSerializer")
     .set("spark.kryoserializer.buffer.max", "512m")
     .set("spark.kryoserializer.buffer", "256")
-    .set("spark.driver.maxResultSize", "0")
-    .set("spark.driver.memory", "9g")
     .registerKryoClasses(Array(classOf[BitString[_]], classOf[MinimalBitString], classOf[FeatureVectorWrapper]))
 
   val sc = new SparkContext(sparkConfig)
-  //val sqlContext = new SQLContext(sc)
   val sqlContext = new HiveContext(sc)
 
   val featureStorage : FeatureStorage = LevelDBDataStorage
