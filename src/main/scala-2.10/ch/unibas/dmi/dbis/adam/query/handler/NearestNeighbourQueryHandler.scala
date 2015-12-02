@@ -107,6 +107,16 @@ object NearestNeighbourQueryHandler extends Logging {
     //sequential scan
     val ssf = new SequentialScanFuture(entityname, query, onComplete, tracker)
 
+    val timerFuture = Future{
+      val sleepTime = Duration(1000.toLong, "millis")
+
+      while(tracker.status != ProgressiveQueryStatus.FINISHED){
+        Thread.sleep(sleepTime.toMillis)
+      }
+    }
+
+    Await.result(timerFuture, Duration(100, "seconds"))
+
     //number of queries running (indexes + sequential)
     indexnames.length + 1
   }
