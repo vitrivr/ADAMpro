@@ -72,10 +72,9 @@ class EvaluationPerformer {
 
     } catch {
       case e: Exception => {
-        println(e.getMessage)
+        println("ERROR: " + e.getMessage)
+        nextExperiment()
       }
-    } finally {
-      nextExperiment()
     }
   }
 
@@ -101,7 +100,8 @@ class EvaluationPerformer {
     pw.flush()
 
     if (status == ProgressiveQueryStatus.FINISHED) {
-      Thread.sleep(1000L)
+      Thread.sleep(5000L)
+
       nextExperiment()
     }
   }
