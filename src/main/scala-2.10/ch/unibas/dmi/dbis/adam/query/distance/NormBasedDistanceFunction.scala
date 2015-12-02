@@ -17,11 +17,11 @@ class MinkowskiDistance(val n : Double) extends DistanceFunction with Serializab
   def apply(v1: VectorBase, v2: VectorBase): Distance = minkowskiDistance(DenseVector(v1), DenseVector(v2), n).toFloat
 }
 
-object ManhattanDistance extends DistanceFunction with Serializable {
+object ManhattanDistance extends MinkowskiDistance(1) with Serializable {
   override def apply(v1: FeatureVector, v2: FeatureVector): Distance =  manhattanDistance(v1, v2).toFloat
 }
 
-object EuclideanDistance extends DistanceFunction with Serializable {
+object EuclideanDistance extends MinkowskiDistance(2) with Serializable {
   override def apply(v1: FeatureVector, v2: FeatureVector): Distance =  euclideanDistance(v1, v2).toFloat
 }
 
