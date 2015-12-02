@@ -1,6 +1,5 @@
 package ch.unibas.dmi.dbis.adam.config
-import com.typesafe.config.{ ConfigFactory, Config }
-import scala.reflect.io.File
+import com.typesafe.config.{Config, ConfigFactory}
 
 /**
  * adamtwo
@@ -15,15 +14,12 @@ class AdamConfig(config : Config) {
   private val hadoopBase = "hdfs://HadoopMaster:54310/spark/adamtwo"
   private val localBase = "/datadrive/adamtwo"
 
-  val hadoopBasePath : File = File(hadoopBase)
-  val localBasePath : File = File(localBase)
-
-  val hivePath = hadoopBasePath / "hive"
-  val dataPath = localBasePath / "data"
-  val indexPath = "hdfs://HadoopMaster:54310/spark/adamtwo/index"
-  val catalogPath = localBasePath / "catalog"
-  val indexMetaCatalogPath = catalogPath / "indexmeta"
-  val evaluationPath = localBasePath / "evaluation"
+  val hivePath = hadoopBase + "/" +  "hive"
+  val dataPath = localBase + "/" + "data"
+  val indexPath = hadoopBase + "/" + "index"
+  val catalogPath = localBase + "/" + "catalog"
+  val indexMetaCatalogPath = catalogPath + "/" + "indexmeta"
+  val evaluationPath = localBase + "/" + "evaluation"
 
   val jdbcUrl = "jdbc:postgresql://192.168.99.101:6543/postgres"
   val jdbcUser = "postgres"

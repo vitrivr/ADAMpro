@@ -26,7 +26,7 @@ import scala.concurrent.duration._
 object CatalogOperator {
   private val MAX_WAITING_TIME : Duration = 5.seconds
 
-  private val db = Database.forURL("jdbc:h2:" +  (Startup.config.catalogPath / "catalog").toAbsolute.toString(), driver="org.h2.Driver")
+  private val db = Database.forURL("jdbc:h2:" +  (Startup.config.catalogPath + "/" + "catalog"), driver="org.h2.Driver")
 
   //generate catalog entities in the beginning if not already existent
   val entityList = Await.result(db.run(MTable.getTables), MAX_WAITING_TIME).toList.map(x => x.name.name)

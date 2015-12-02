@@ -17,8 +17,7 @@ import org.apache.spark.sql.{DataFrame, SaveMode}
 object ParquetDataStorage extends IndexStorage {
   val config = Startup.config
 
-  override def read(indexname: IndexName) : DataFrame =  SparkStartup.sqlContext.read.parquet(config.indexPath + "/" + indexname)
+  override def read(indexname: IndexName) : DataFrame = SparkStartup.sqlContext.read.parquet(config.indexPath + "/" + indexname)
   override def write(indexname: IndexName, df: DataFrame): Unit = df.write.mode(SaveMode.Overwrite).parquet(config.indexPath + "/" + indexname)
   override def drop(indexname: IndexName): Unit = FileUtils.deleteQuietly(new File(config.indexPath + "/" + indexname))
-
 }
