@@ -19,8 +19,9 @@ class AdamConfig(config : Config) {
 
   val hivePath = hadoopBasePath / "hive"
   val dataPath = localBasePath / "data"
-  val indexPath = hadoopBasePath / "index"
+  val indexPath = "hdfs://HadoopMaster:54310/spark/adamtwo/index"
   val catalogPath = localBasePath / "catalog"
+  val indexMetaCatalogPath = catalogPath / "indexmeta"
   val evaluationPath = localBasePath / "evaluation"
 
   val jdbcUrl = "jdbc:postgresql://192.168.99.101:6543/postgres"

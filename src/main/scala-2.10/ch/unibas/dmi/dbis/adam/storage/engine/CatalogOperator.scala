@@ -7,6 +7,7 @@ import ch.unibas.dmi.dbis.adam.exception.{EntityExistingException, EntityNotExis
 import ch.unibas.dmi.dbis.adam.index.Index.{IndexName, IndexTypeName}
 import ch.unibas.dmi.dbis.adam.index.structures.IndexStructures
 import ch.unibas.dmi.dbis.adam.main.Startup
+import org.apache.commons.io.FileUtils
 import slick.dbio.Effect.{Read, Write}
 import slick.driver.H2Driver.api._
 import slick.jdbc.meta.MTable
@@ -32,6 +33,7 @@ object CatalogOperator {
   Catalog().filterNot(mdd => entityList.contains(mdd._1)).foreach(mdd => {
     db.run(mdd._2.schema.create)
   })
+
 
   private val entities = TableQuery[EntitiesCatalog]
   private val indexes = TableQuery[IndexesCatalog]
@@ -116,8 +118,11 @@ object CatalogOperator {
       throw new IndexExistingException()
     }
 
-    val metaPath = Startup.config.indexPath + "/" + indexname + "/"
+    val metaPath = Startup.config.indexMetaCatalogPath + "/" + indexname + "/"
     val metaFilePath =  metaPath + "_adam_metadata"
+
+    new File(metaPath).mkdirs()
+
     val oos = new ObjectOutputStream(new FileOutputStream(metaFilePath))
     oos.writeObject(indexmeta)
     oos.close
@@ -137,6 +142,9 @@ object CatalogOperator {
     if(!existsIndex(indexname)){
       throw new IndexNotExistingException()
     }
+
+    val metaPath = Startup.config.indexMetaCatalogPath + "/" + indexname + "/"
+    FileUtils.deleteDirectory(new File(metaPath))
 
     val query = indexes.filter(_.indexname === indexname).delete
     Await.result(db.run(query), MAX_WAITING_TIME)
