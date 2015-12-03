@@ -16,8 +16,16 @@ object EvaluationPerformanceStartup {
     def main(args : Array[String]) {
       SparkStartup
 
-      val ep = new EvaluationProgressiveQueryPerformer()
-      ep.init()
-      ep.start()
+      val epprog = new EvaluationProgressiveQueryPerformer()
+      epprog.init()
+      epprog.start()
+
+      val epindex = new EvaluationIndexQueryPerformer()
+      epindex.init()
+      epindex.start()
+
+      val epseq = new EvaluationSequentialQueryPerformer()
+      epseq.init()
+      epseq.start()
     }
   }
