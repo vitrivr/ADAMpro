@@ -5,7 +5,7 @@ import ch.unibas.dmi.dbis.adam.index.Index._
 import ch.unibas.dmi.dbis.adam.query.Result
 import ch.unibas.dmi.dbis.adam.query.handler.QueryHandler
 import ch.unibas.dmi.dbis.adam.query.handler.QueryHints._
-import ch.unibas.dmi.dbis.adam.query.progressive.ProgressiveQueryStatus
+import ch.unibas.dmi.dbis.adam.query.progressive.{ProgressiveQueryStatusTracker, ProgressiveQueryStatus}
 import ch.unibas.dmi.dbis.adam.query.query.{BooleanQuery, NearestNeighbourQuery}
 
 import scala.concurrent.duration.Duration
@@ -29,7 +29,7 @@ object QueryOp {
     QueryHandler.indexQuery(indexname)(nnq, bq, withMetadata)
   }
 
-  def progressive(entityname: EntityName, nnq : NearestNeighbourQuery, bq : Option[BooleanQuery], onComplete : (ProgressiveQueryStatus.Value, Seq[Result], Float, Map[String, String]) => Unit, withMetadata : Boolean) : Int = {
+  def progressive(entityname: EntityName, nnq : NearestNeighbourQuery, bq : Option[BooleanQuery], onComplete : (ProgressiveQueryStatus.Value, Seq[Result], Float, Map[String, String]) => Unit, withMetadata : Boolean) : ProgressiveQueryStatusTracker = {
     QueryHandler.progressiveQuery(entityname)(nnq, bq, onComplete, withMetadata)
   }
 

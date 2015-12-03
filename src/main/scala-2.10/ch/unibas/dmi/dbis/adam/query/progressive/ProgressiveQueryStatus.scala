@@ -56,6 +56,8 @@ class ProgressiveQueryStatusTracker(queryID : String) {
   def results = (queryResults, resultConfidence)
 
   def status = futures.synchronized { runningStatus }
+
+  def numberOfFutures = futures.size
 }
 
 /**

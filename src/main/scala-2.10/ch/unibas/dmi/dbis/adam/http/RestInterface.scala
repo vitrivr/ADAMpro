@@ -183,7 +183,8 @@ trait RestApi extends HttpService with ActorLogging {
           val nnq = NearestNeighbourQuery(query, new MinkowskiDistance(norm), k)
           val bq = None
 
-          var nResponses = QueryOp.progressive(entityname, nnq, bq, sendNextChunk, withMetadata) //TODO: change this as progressive might still have to be blocking
+          val tracker = QueryOp.progressive(entityname, nnq, bq, sendNextChunk, withMetadata) //TODO: change this as progressive might still have to be blocking
+          var nResponses = tracker.numberOfFutures
 
           //start
           responder ! ChunkedResponseStart(HttpResponse()).withAck(Ok(nResponses))

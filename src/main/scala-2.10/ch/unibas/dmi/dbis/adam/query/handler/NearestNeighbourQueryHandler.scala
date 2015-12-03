@@ -8,7 +8,7 @@ import ch.unibas.dmi.dbis.adam.entity.Tuple.TupleID
 import ch.unibas.dmi.dbis.adam.index.Index
 import ch.unibas.dmi.dbis.adam.index.Index.IndexName
 import ch.unibas.dmi.dbis.adam.query.Result
-import ch.unibas.dmi.dbis.adam.query.progressive.{IndexScanFuture, ProgressiveQueryStatus, ProgressiveQueryStatusTracker, SequentialScanFuture}
+import ch.unibas.dmi.dbis.adam.query.progressive._
 import ch.unibas.dmi.dbis.adam.query.query.NearestNeighbourQuery
 import ch.unibas.dmi.dbis.adam.query.scanner.{FeatureScanner, IndexScanner}
 import ch.unibas.dmi.dbis.adam.storage.engine.CatalogOperator
@@ -28,6 +28,7 @@ import scala.concurrent.duration.Duration
  * August 2015
  */
 object NearestNeighbourQueryHandler extends Logging {
+
   /**
    *
    * @param entityname
@@ -92,7 +93,7 @@ object NearestNeighbourQueryHandler extends Logging {
    * @param onComplete
    * @return
    */
-  def progressiveQuery(entityname: EntityName, query : NearestNeighbourQuery, filter: Option[HashSet[TupleID]], onComplete: (ProgressiveQueryStatus.Value, Seq[Result], Float, Map[String, String]) => Unit): Int = {
+  def progressiveQuery(entityname: EntityName, query : NearestNeighbourQuery, filter: Option[HashSet[TupleID]], onComplete: (ProgressiveQueryStatus.Value, Seq[Result], Float, Map[String, String]) => Unit): ProgressiveQueryStatusTracker = {
     val indexnames = Index.getIndexnames(entityname)
 
     val options = mMap[String, String]()
@@ -106,19 +107,8 @@ object NearestNeighbourQueryHandler extends Logging {
 
     //sequential scan
     val ssf = new SequentialScanFuture(entityname, query, onComplete, tracker)
-
-    val timerFuture = Future{
-      val sleepTime = Duration(1000.toLong, "millis")
-
-      while(tracker.status != ProgressiveQueryStatus.FINISHED){
-        Thread.sleep(sleepTime.toMillis)
-      }
-    }
-
-    Await.result(timerFuture, Duration(100, "seconds"))
-
-    //number of queries running (indexes + sequential)
-    indexnames.length + 1
+    
+    tracker
   }
 
 
