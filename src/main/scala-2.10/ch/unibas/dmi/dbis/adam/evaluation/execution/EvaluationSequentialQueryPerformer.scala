@@ -1,4 +1,4 @@
-package ch.unibas.dmi.dbis.adam.evaluation
+package ch.unibas.dmi.dbis.adam.evaluation.execution
 
 import java.io.{File, PrintWriter}
 import java.text.SimpleDateFormat
@@ -6,11 +6,11 @@ import java.util.Calendar
 
 import ch.unibas.dmi.dbis.adam.datatypes.feature.Feature._
 import ch.unibas.dmi.dbis.adam.entity.Entity
+import ch.unibas.dmi.dbis.adam.evaluation.EvaluationConfig
 import ch.unibas.dmi.dbis.adam.main.Startup
 import ch.unibas.dmi.dbis.adam.query.Result
 import ch.unibas.dmi.dbis.adam.query.distance.ManhattanDistance
 import ch.unibas.dmi.dbis.adam.query.handler.QueryHandler
-import ch.unibas.dmi.dbis.adam.query.progressive.ProgressiveQueryStatus
 import ch.unibas.dmi.dbis.adam.query.query.NearestNeighbourQuery
 
 import scala.collection.mutable
@@ -20,13 +20,13 @@ import scala.util.Random
  * adamtwo
  *
  * Ivan Giangreco
- * November 2015
+ * December 2015
  */
-class EvaluationPerformer {
+class EvaluationSequentialQueryPerformer {
   //make dirs
   new File(Startup.config.evaluationPath).mkdirs()
 
-  val path = Startup.config.evaluationPath + "/" + ("results_" + System.currentTimeMillis() + ".txt")
+  val path = Startup.config.evaluationPath + "/" + ("results_singlequery" + System.currentTimeMillis() + ".txt")
   val pw = new PrintWriter(new File(path))
   val experiments = mutable.Queue[(Int, Int, Int)]()
 
@@ -36,7 +36,7 @@ class EvaluationPerformer {
    *
    */
   def init() = {
-    pw.write("id" + "," + "dbSize" + "," + "vecSize" + "," + "type" + "," + "measure1" + "," + "measure2" + "," + "resultlist" + "\n")
+    pw.write("id" + "," + "dbSize" + "," + "vecSize" + "," + "time" + "," + "resultlist" + "\n")
 
     EvaluationConfig.dbSizes foreach { dbSize =>
       EvaluationConfig.vectorSizes foreach { vecSize =>
@@ -47,6 +47,9 @@ class EvaluationPerformer {
     }
   }
 
+  /**
+   *
+   */
   def start() = nextExperiment()
 
   /**
@@ -64,7 +67,7 @@ class EvaluationPerformer {
 
       val entityname = "data_" + dbSize + "_" + vecSize
       if (!Entity.existsEntity(entityname)) {
-        throw new IllegalStateException("Exception thrown");
+        throw new IllegalStateException("Entity not found.");
       }
 
       val today = Calendar.getInstance().getTime()
@@ -72,10 +75,21 @@ class EvaluationPerformer {
 
       val query = NearestNeighbourQuery(getRandomVector(vecSize): FeatureVector, ManhattanDistance, EvaluationConfig.k, false)
 
-      QueryHandler.progressiveQuery(entityname)(query, None, onComplete(System.nanoTime(), dbSize, vecSize), false)
+      var results: Seq[Result] = Seq()
+      val runningTime = time {
+        results = QueryHandler.sequentialQuery(entityname)(query, None, false)
+      }
+
+      pw.write(
+        System.nanoTime() + "," +
+          dbSize + "," +
+          vecSize + "," +
+          runningTime + "," +
+          results.map(_.tid).mkString("{", ";", "}") +
+          "\n")
+      pw.flush()
+
       nextExperiment()
-
-
 
     } catch {
       case e: Exception => {
@@ -85,41 +99,7 @@ class EvaluationPerformer {
     }
   }
 
-  /**
-   *
-   * @param startTime
-   * @param vecSize
-   * @param dbSize
-   * @param results
-   * @param options
-   * @return
-   */
-  def onComplete(startTime: Long, dbSize: Int, vecSize: Int)(status: ProgressiveQueryStatus.Value, results: Seq[Result], confidence: Float, options: Map[String, String]) {
-    pw.write(
-      options.getOrElse("qid", "") + "," +
-        vecSize + "," +
-        dbSize + "," +
-        options.getOrElse("type", "") + "," +
-        System.nanoTime() + "," +
-        startTime + "," +
-        results.map(_.tid).mkString("{", ";", "}") +
-        "\n")
-    pw.flush()
-
-    if (status == ProgressiveQueryStatus.FINISHED) {
-      Thread.sleep(5000L)
-      nextExperiment()
-    }
-  }
-
-  /**
-   *
-   * @param k
-   * @return
-   */
-  def getRandomVector(k: Int): String = {
-    Seq.fill(k)(Random.nextFloat).mkString("<", ",", ">")
-  }
+  def getRandomVector(k: Int): String = Seq.fill(k)(Random.nextFloat).mkString("<", ",", ">")
 
   /**
    *

@@ -1,6 +1,7 @@
 package ch.unibas.dmi.dbis.adam.api
 
-import ch.unibas.dmi.dbis.adam.evaluation.{EvaluationDataGenerator, EvaluationIndexCreator, EvaluationPerformer}
+import ch.unibas.dmi.dbis.adam.evaluation.execution.EvaluationProgressiveQueryPerformer
+import ch.unibas.dmi.dbis.adam.evaluation.preparation.{EvaluationDataGenerator, EvaluationIndexCreator}
 
 import scala.concurrent.Future
 
@@ -24,7 +25,7 @@ object EvaluationOp {
   def perform(): Boolean = {
     import scala.concurrent.ExecutionContext.Implicits.global
     Future{
-      new EvaluationPerformer().start()
+      new EvaluationProgressiveQueryPerformer().start()
     }
     true
   }

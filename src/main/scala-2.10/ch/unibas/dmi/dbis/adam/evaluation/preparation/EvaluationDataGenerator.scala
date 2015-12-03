@@ -1,6 +1,7 @@
-package ch.unibas.dmi.dbis.adam.evaluation
+package ch.unibas.dmi.dbis.adam.evaluation.preparation
 
 import ch.unibas.dmi.dbis.adam.api.GenerateDataOp
+import ch.unibas.dmi.dbis.adam.evaluation.EvaluationConfig
 
 /**
  * adamtwo

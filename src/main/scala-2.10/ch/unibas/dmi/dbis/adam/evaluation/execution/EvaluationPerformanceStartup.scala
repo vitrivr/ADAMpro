@@ -1,4 +1,4 @@
-package ch.unibas.dmi.dbis.adam.evaluation
+package ch.unibas.dmi.dbis.adam.evaluation.execution
 
 import ch.unibas.dmi.dbis.adam.config.AdamConfig
 import ch.unibas.dmi.dbis.adam.main.SparkStartup
@@ -16,7 +16,7 @@ object EvaluationPerformanceStartup {
     def main(args : Array[String]) {
       SparkStartup
 
-      val ep = new EvaluationPerformer()
+      val ep = new EvaluationProgressiveQueryPerformer()
       ep.init()
       ep.start()
     }
