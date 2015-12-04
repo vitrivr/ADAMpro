@@ -11,6 +11,8 @@ import ch.unibas.dmi.dbis.adam.main.SparkStartup
  */
 object EvaluationPerformanceStartup {
     def main(args : Array[String]) {
+      AdamConfig.evaluation = true
+
       SparkStartup
 
       val epprog = new EvaluationProgressiveQueryPerformer()

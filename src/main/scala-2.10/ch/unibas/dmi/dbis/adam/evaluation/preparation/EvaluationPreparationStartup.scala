@@ -11,6 +11,8 @@ import ch.unibas.dmi.dbis.adam.main.SparkStartup
  */
 object EvaluationPreparationStartup {
   def main(args : Array[String]) {
+    AdamConfig.evaluation = true
+
     SparkStartup
     EvaluationDataGenerator()
     EvaluationIndexCreator()

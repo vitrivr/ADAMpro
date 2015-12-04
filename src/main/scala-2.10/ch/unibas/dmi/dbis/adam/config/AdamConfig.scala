@@ -30,4 +30,6 @@ object AdamConfig{
   val restPort = 5890
 
   val partitions = 4
+
+  var evaluation = false
 }

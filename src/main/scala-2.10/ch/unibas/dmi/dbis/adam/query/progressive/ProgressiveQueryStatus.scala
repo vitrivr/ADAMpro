@@ -1,5 +1,6 @@
 package ch.unibas.dmi.dbis.adam.query.progressive
 
+import ch.unibas.dmi.dbis.adam.config.AdamConfig
 import ch.unibas.dmi.dbis.adam.main.SparkStartup
 import ch.unibas.dmi.dbis.adam.query.Result
 
@@ -12,37 +13,40 @@ import scala.collection.mutable.ListBuffer
  * Ivan Giangreco
  * September 2015
  */
-class ProgressiveQueryStatusTracker(queryID : String) {
+class ProgressiveQueryStatusTracker(queryID: String) {
   private val futures = ListBuffer[ScanFuture]()
   private var runningStatus = ProgressiveQueryStatus.RUNNING
   private var resultConfidence = 0.toFloat
   private var queryResults = Seq[Result]()
 
-  def register(future : ScanFuture): Unit = futures.synchronized(futures += future)
+  def register(future: ScanFuture): Unit = futures.synchronized(futures += future)
 
   /**
    *
    * @param future
    */
-  def notifyCompletion(future : ScanFuture, futureResults : Seq[Result]): Unit ={
+  def notifyCompletion(future: ScanFuture, futureResults: Seq[Result]): Unit = {
     futures.synchronized({
-      if(future.confidence > resultConfidence && runningStatus == ProgressiveQueryStatus.RUNNING){
+      if (future.confidence > resultConfidence && runningStatus == ProgressiveQueryStatus.RUNNING) {
         queryResults = futureResults
         resultConfidence = future.confidence
       }
 
-      if(math.abs(resultConfidence - 1.0) < 0.000001){
-        stop(ProgressiveQueryStatus.FINISHED)
+      if (!AdamConfig.evaluation) {
+        // in evaluation mode we want to keep all results and do not stop
+        if (math.abs(resultConfidence - 1.0) < 0.000001) {
+          stop(ProgressiveQueryStatus.FINISHED)
+        }
       }
 
       futures -= future
     })
   }
 
-  def stop() : Unit = stop(ProgressiveQueryStatus.PREMATURE_FINISHED)
+  def stop(): Unit = stop(ProgressiveQueryStatus.PREMATURE_FINISHED)
 
-  private def stop(newStatus : ProgressiveQueryStatus.Value) : Unit = {
-    if(runningStatus == ProgressiveQueryStatus.FINISHED){
+  private def stop(newStatus: ProgressiveQueryStatus.Value): Unit = {
+    if (runningStatus == ProgressiveQueryStatus.FINISHED) {
       return
     }
 
@@ -55,7 +59,9 @@ class ProgressiveQueryStatusTracker(queryID : String) {
 
   def results = (queryResults, resultConfidence)
 
-  def status = futures.synchronized { runningStatus }
+  def status = futures.synchronized {
+    runningStatus
+  }
 
   def numberOfFutures = futures.size
 }
