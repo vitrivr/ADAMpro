@@ -2,11 +2,11 @@ package ch.unibas.dmi.dbis.adam.storage.engine
 
 import java.io._
 
+import ch.unibas.dmi.dbis.adam.config.AdamConfig
 import ch.unibas.dmi.dbis.adam.entity.Entity.EntityName
 import ch.unibas.dmi.dbis.adam.exception.{EntityExistingException, EntityNotExistingException, IndexExistingException, IndexNotExistingException}
 import ch.unibas.dmi.dbis.adam.index.Index.{IndexName, IndexTypeName}
 import ch.unibas.dmi.dbis.adam.index.structures.IndexStructures
-import ch.unibas.dmi.dbis.adam.main.Startup
 import org.apache.commons.io.FileUtils
 import slick.dbio.Effect.{Read, Write}
 import slick.driver.H2Driver.api._
@@ -26,7 +26,7 @@ import scala.concurrent.duration._
 object CatalogOperator {
   private val MAX_WAITING_TIME : Duration = 5.seconds
 
-  private val db = Database.forURL("jdbc:h2:" +  (Startup.config.catalogPath + "/" + "catalog"), driver="org.h2.Driver")
+  private val db = Database.forURL("jdbc:h2:" +  (AdamConfig.catalogPath + "/" + "catalog"), driver="org.h2.Driver")
 
   //generate catalog entities in the beginning if not already existent
   val entityList = Await.result(db.run(MTable.getTables), MAX_WAITING_TIME).toList.map(x => x.name.name)
@@ -118,7 +118,7 @@ object CatalogOperator {
       throw new IndexExistingException()
     }
 
-    val metaPath = Startup.config.indexMetaCatalogPath + "/" + indexname + "/"
+    val metaPath = AdamConfig.indexMetaCatalogPath + "/" + indexname + "/"
     val metaFilePath =  metaPath + "_adam_metadata"
 
     new File(metaPath).mkdirs()
@@ -143,7 +143,7 @@ object CatalogOperator {
       throw new IndexNotExistingException()
     }
 
-    val metaPath = Startup.config.indexMetaCatalogPath + "/" + indexname + "/"
+    val metaPath = AdamConfig.indexMetaCatalogPath + "/" + indexname + "/"
     FileUtils.deleteDirectory(new File(metaPath))
 
     val query = indexes.filter(_.indexname === indexname).delete

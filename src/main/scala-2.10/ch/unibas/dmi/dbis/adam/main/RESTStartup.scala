@@ -16,10 +16,10 @@ import scala.concurrent.duration._
  * Ivan Giangreco
  * September 2015
  */
-class RESTStartup(config : AdamConfig) extends Runnable {
+class RESTStartup extends Runnable {
   def run() : Unit = {
-    val host = config.restHost
-    val port = config.restPort
+    val host = AdamConfig.restHost
+    val port = AdamConfig.restPort
 
     implicit val system = ActorSystem("adam-management-service")
 

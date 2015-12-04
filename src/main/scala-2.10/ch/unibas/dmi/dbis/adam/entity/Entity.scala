@@ -1,9 +1,10 @@
 package ch.unibas.dmi.dbis.adam.entity
 
 import ch.unibas.dmi.dbis.adam.cache.RDDCache
+import ch.unibas.dmi.dbis.adam.config.AdamConfig
 import ch.unibas.dmi.dbis.adam.entity.Entity._
 import ch.unibas.dmi.dbis.adam.exception.{EntityCreationException, EntityNotExistingException}
-import ch.unibas.dmi.dbis.adam.main.{SparkStartup, Startup}
+import ch.unibas.dmi.dbis.adam.main.SparkStartup
 import ch.unibas.dmi.dbis.adam.storage.components.{FeatureStorage, MetadataStorage}
 import ch.unibas.dmi.dbis.adam.storage.engine.CatalogOperator
 import org.apache.spark.rdd.RDD
@@ -130,11 +131,12 @@ object Entity {
    * @param entityname
    * @return
    */
+  @deprecated
   def getCacheable(entityname : EntityName) : CacheableEntity = {
     val entity = Entity.retrieveEntity(entityname)
 
     entity.featuresTuples
-      .repartition(Startup.config.partitions)
+      .repartition(AdamConfig.partitions)
       .setName(entityname).persist(StorageLevel.MEMORY_AND_DISK)
       .collect()
 

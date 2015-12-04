@@ -2,9 +2,10 @@ package ch.unibas.dmi.dbis.adam.storage.engine
 
 import java.util.Properties
 
-import ch.unibas.dmi.dbis.adam.main.{SparkStartup, Startup}
-import ch.unibas.dmi.dbis.adam.storage.components.MetadataStorage
+import ch.unibas.dmi.dbis.adam.config.AdamConfig
 import ch.unibas.dmi.dbis.adam.entity.Entity.EntityName
+import ch.unibas.dmi.dbis.adam.main.SparkStartup
+import ch.unibas.dmi.dbis.adam.storage.components.MetadataStorage
 import org.apache.spark.sql.jdbc.AdamDialectRegistrar
 import org.apache.spark.sql.{DataFrame, SaveMode}
 
@@ -15,8 +16,7 @@ import org.apache.spark.sql.{DataFrame, SaveMode}
  * October 2015
  */
 object PostgresDataStorage extends MetadataStorage {
-  val config = Startup.config
-  val url = config.jdbcUrl
+  val url = AdamConfig.jdbcUrl
 
   AdamDialectRegistrar.register(url)
 
@@ -27,7 +27,7 @@ object PostgresDataStorage extends MetadataStorage {
    */
   override def read(tablename: EntityName): DataFrame = {
     SparkStartup.sqlContext.read.format("jdbc").options(
-      Map("url" -> url, "dbtable" -> tablename, "user" -> config.jdbcUser, "password" -> config.jdbcPassword)
+      Map("url" -> url, "dbtable" -> tablename, "user" -> AdamConfig.jdbcUser, "password" -> AdamConfig.jdbcPassword)
     ).load()
   }
 
@@ -39,8 +39,8 @@ object PostgresDataStorage extends MetadataStorage {
    */
   override def write(tablename: EntityName, df: DataFrame, mode: SaveMode = SaveMode.Append): Unit = {
     val props = new Properties()
-    props.put("user", config.jdbcUser)
-    props.put("password", config.jdbcPassword)
+    props.put("user", AdamConfig.jdbcUser)
+    props.put("password", AdamConfig.jdbcPassword)
     df.write.mode(mode).jdbc(url, tablename, props)
   }
 
@@ -50,7 +50,7 @@ object PostgresDataStorage extends MetadataStorage {
    */
   override def drop(tablename: EntityName): Unit = {
     SparkStartup.sqlContext.read.format("jdbc").options(
-      Map("url" -> url, "dbtable" -> tablename, "user" -> config.jdbcUser, "password" -> config.jdbcPassword)
+      Map("url" -> url, "dbtable" -> tablename, "user" -> AdamConfig.jdbcUser, "password" -> AdamConfig.jdbcPassword)
     ).load()
   }
 }

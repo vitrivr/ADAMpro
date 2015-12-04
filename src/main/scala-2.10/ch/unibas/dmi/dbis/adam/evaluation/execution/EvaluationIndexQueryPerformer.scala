@@ -4,10 +4,10 @@ import java.io.{File, PrintWriter}
 import java.text.SimpleDateFormat
 import java.util.Calendar
 
+import ch.unibas.dmi.dbis.adam.config.AdamConfig
 import ch.unibas.dmi.dbis.adam.datatypes.feature.Feature._
 import ch.unibas.dmi.dbis.adam.evaluation.EvaluationConfig
 import ch.unibas.dmi.dbis.adam.index.Index
-import ch.unibas.dmi.dbis.adam.main.Startup
 import ch.unibas.dmi.dbis.adam.query.Result
 import ch.unibas.dmi.dbis.adam.query.distance.ManhattanDistance
 import ch.unibas.dmi.dbis.adam.query.handler.QueryHandler
@@ -24,9 +24,9 @@ import scala.util.Random
  */
 class EvaluationIndexQueryPerformer {
   //make dirs
-  new File(Startup.config.evaluationPath).mkdirs()
+  new File(AdamConfig.evaluationPath).mkdirs()
 
-  val path = Startup.config.evaluationPath + "/" + ("results_singlequery" + System.currentTimeMillis() + ".txt")
+  val path = AdamConfig.evaluationPath + "/" + ("results_singlequery" + System.currentTimeMillis() + ".txt")
   val pw = new PrintWriter(new File(path))
   val experiments = mutable.Queue[(Int, Int, String, Int)]()
 

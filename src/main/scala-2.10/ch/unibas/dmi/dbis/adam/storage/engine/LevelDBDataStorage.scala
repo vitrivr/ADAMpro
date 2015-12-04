@@ -3,11 +3,13 @@ package ch.unibas.dmi.dbis.adam.storage.engine
 import java.io._
 import java.nio.ByteBuffer
 import java.util.concurrent.ConcurrentHashMap
+
+import ch.unibas.dmi.dbis.adam.config.AdamConfig
 import ch.unibas.dmi.dbis.adam.datatypes.feature.FeatureVectorWrapper
-import ch.unibas.dmi.dbis.adam.main.{SparkStartup, Startup}
-import ch.unibas.dmi.dbis.adam.storage.components.FeatureStorage
 import ch.unibas.dmi.dbis.adam.entity.Entity.EntityName
 import ch.unibas.dmi.dbis.adam.entity.Tuple._
+import ch.unibas.dmi.dbis.adam.main.SparkStartup
+import ch.unibas.dmi.dbis.adam.storage.components.FeatureStorage
 import org.apache.spark.sql.types._
 import org.apache.spark.sql.{DataFrame, Row, SaveMode}
 import org.iq80.leveldb._
@@ -28,7 +30,6 @@ object LevelDBDataStorage extends FeatureStorage {
 
   protected case class DBStatus(db: DB, var locks: Int)
 
-  val config = Startup.config
   val databases: concurrent.Map[EntityName, DBStatus] = new ConcurrentHashMap[EntityName, DBStatus]().asScala
 
 
@@ -47,7 +48,7 @@ object LevelDBDataStorage extends FeatureStorage {
         })
         return dbStatus.get.db
       } else {
-        val db: DB = factory.open(new File(config.dataPath + "/" + entityname + ".leveldb"), options)
+        val db: DB = factory.open(new File(AdamConfig.dataPath + "/" + entityname + ".leveldb"), options)
         val dbStatus = DBStatus(db, 1)
         databases.putIfAbsent(entityname, dbStatus)
       }
@@ -173,7 +174,7 @@ object LevelDBDataStorage extends FeatureStorage {
    *
    * @param entityname
    */
-  override def drop(entityname: EntityName): Unit = factory.destroy(new File(config.dataPath + "/" + entityname + ".leveldb"), new Options())
+  override def drop(entityname: EntityName): Unit = factory.destroy(new File(AdamConfig.dataPath + "/" + entityname + ".leveldb"), new Options())
 
 
   /**

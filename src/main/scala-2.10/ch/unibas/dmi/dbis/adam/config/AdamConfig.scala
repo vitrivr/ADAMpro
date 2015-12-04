@@ -1,5 +1,5 @@
 package ch.unibas.dmi.dbis.adam.config
-import com.typesafe.config.{Config, ConfigFactory}
+import com.typesafe.config.ConfigFactory
 
 /**
  * adamtwo
@@ -7,10 +7,11 @@ import com.typesafe.config.{Config, ConfigFactory}
  * Ivan Giangreco
  * August 2015
  */
-class AdamConfig(config : Config) {
-  //TODO: move to external config file
+object AdamConfig{
+  val config = ConfigFactory.load()
   config.checkValid(ConfigFactory.defaultReference(), "adamtwo")
 
+  //TODO: move to external config file
   private val hadoopBase = "hdfs://HadoopMaster:54310/spark/adamtwo"
   private val localBase = "/datadrive/adamtwo"
 
