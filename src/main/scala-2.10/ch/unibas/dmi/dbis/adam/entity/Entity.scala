@@ -119,11 +119,22 @@ object Entity {
       throw new EntityNotExistingException()
     }
 
+    //TODO: switch to lazy retrieval?
+
     if(RDDCache.containsTable(entityname)){
       RDDCache.getTable(entityname)
     } else {
       Entity(entityname, featureStorage, metadataStorage)
     }
+  }
+
+  /**
+   *
+   * @param entityname
+   * @return
+   */
+  def countEntity(entityname : EntityName) : Int = {
+    featureStorage.count(entityname)
   }
 
   /**

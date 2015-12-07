@@ -173,6 +173,35 @@ object LevelDBDataStorage extends FeatureStorage {
   /**
    *
    * @param entityname
+   * @return
+   */
+  def count(entityname: EntityName): Int = {
+    val options = new Options()
+    options.createIfMissing(true)
+    try {
+      val db = openConnection(entityname, options)
+
+      val iterator = db.iterator()
+      iterator.seekToFirst()
+
+      var counter = 0
+
+      while (iterator.hasNext()) {
+        counter += 1
+        iterator.next()
+      }
+
+      counter
+
+    } finally {
+      closeConnection(entityname)
+    }
+  }
+
+
+  /**
+   *
+   * @param entityname
    */
   override def drop(entityname: EntityName): Unit = factory.destroy(new File(AdamConfig.dataPath + "/" + entityname + ".leveldb"), new Options())
 

@@ -28,5 +28,7 @@ object CassandraDataStorage extends FeatureStorage {
   override def write(entityname: EntityName, df: DataFrame, mode: SaveMode): Unit = {
     df.rdd.map(r => InternalCassandraRowFormat(r.getLong(0), r.getAs[FeatureVectorWrapper](1).getSeq())).saveAsCassandraTable("adamtwo", entityname)
   }
+
+  override def count(entityname: EntityName): Int = ???
 }
 
