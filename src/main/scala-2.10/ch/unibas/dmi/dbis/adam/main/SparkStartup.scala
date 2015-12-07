@@ -16,8 +16,9 @@ import org.apache.spark.{SparkConf, SparkContext}
 object SparkStartup {
   val sparkConfig = new SparkConf().setAppName("ADAMtwo")
     .set("spark.serializer", "org.apache.spark.serializer.KryoSerializer")
-    .set("spark.kryoserializer.buffer.max", "512m")
-    .set("spark.kryoserializer.buffer", "256")
+    .set("spark.driver.maxResultSize", "4096m")
+    .set("spark.kryoserializer.buffer.max", "2047m")
+    .set("spark.kryoserializer.buffer", "2047")
     .set("spark.cassandra.connection.host", "192.168.99.100")
     .set("spark.cassandra.auth.username", "cassandra")
     .set("spark.cassandra.auth.password", "cassandra")
