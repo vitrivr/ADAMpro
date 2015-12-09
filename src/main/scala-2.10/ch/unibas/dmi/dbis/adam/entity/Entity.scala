@@ -27,7 +27,7 @@ case class Entity(entityname : EntityName, featureStorage : FeatureStorage, meta
   private lazy val featureData = featureStorage.read(entityname)
   private lazy val metaData = metadataStorage.read(entityname)
   
-  def count = featureData.count()
+  def count = featureStorage.count(entityname)
   def show() = featureData.collect()
   def show(n : Int) = featureData.take(n)
   
