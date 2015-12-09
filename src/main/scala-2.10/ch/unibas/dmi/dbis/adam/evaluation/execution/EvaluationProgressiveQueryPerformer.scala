@@ -119,5 +119,10 @@ class EvaluationProgressiveQueryPerformer {
     pw.flush()
   }
 
-  def getRandomVector(k: Int): String = Seq.fill(k)(Random.nextFloat).mkString("<", ",", ">")
+  /**
+   *
+   * @param dims
+   * @return
+   */
+  private def getRandomVector(dims: Int): String = Seq.fill(dims)(Random.nextFloat).mkString("<", ",", ">")
 }

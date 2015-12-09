@@ -99,7 +99,12 @@ class EvaluationSequentialQueryPerformer {
     }
   }
 
-  def getRandomVector(k: Int): String = Seq.fill(k)(Random.nextFloat).mkString("<", ",", ">")
+  /**
+   *
+   * @param dims
+   * @return
+   */
+  private def getRandomVector(dims: Int): String = Seq.fill(dims)(Random.nextFloat).mkString("<", ",", ">")
 
   /**
    *
@@ -107,7 +112,7 @@ class EvaluationSequentialQueryPerformer {
    * @tparam R
    * @return
    */
-  def time[R](block: => R): Long = {
+  private def time[R](block: => R): Long = {
     val t0 = System.nanoTime()
     block
     val t1 = System.nanoTime()
