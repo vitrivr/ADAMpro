@@ -19,6 +19,7 @@ object SparkStartup {
     .set("spark.driver.maxResultSize", "4096m")
     .set("spark.kryoserializer.buffer.max", "2047m")
     .set("spark.kryoserializer.buffer", "2047")
+    .set("spark.akka.frameSize", "1024")
     .set("spark.cassandra.connection.host", "192.168.99.100")
     .set("spark.cassandra.auth.username", "cassandra")
     .set("spark.cassandra.auth.password", "cassandra")
