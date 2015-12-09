@@ -5,6 +5,7 @@ import ch.unibas.dmi.dbis.adam.datatypes.feature.Feature
 import Feature.{VectorBase, _}
 import ch.unibas.dmi.dbis.adam.datatypes.bitString.BitString
 import ch.unibas.dmi.dbis.adam.datatypes.feature.Feature
+import ch.unibas.dmi.dbis.adam.entity.Entity
 import ch.unibas.dmi.dbis.adam.index.Index._
 import ch.unibas.dmi.dbis.adam.index._
 import ch.unibas.dmi.dbis.adam.index.structures.IndexStructures
@@ -29,8 +30,12 @@ class SHIndexer(nbits : Int, trainingSize : Int) extends IndexGenerator with Ser
    * @param data
    * @return
    */
-  override def index(indexname : IndexName, tablename : EntityName, data: RDD[IndexerTuple]): Index[_ <: IndexTuple] = {
-    val indexMetaData = train(data)
+  override def index(indexname : IndexName, entityname : EntityName, data: RDD[IndexerTuple]): Index[_ <: IndexTuple] = {
+    val n = Entity.countEntity(entityname)
+    val fraction = ADAMSamplingUtils.computeFractionForSampleSize(trainingSize, n, false)
+    val trainData = data.sample(false, fraction)
+
+    val indexMetaData = train(trainData)
 
     val indexdata = data.map(
       datum => {
@@ -39,25 +44,21 @@ class SHIndexer(nbits : Int, trainingSize : Int) extends IndexGenerator with Ser
       })
 
     import SparkStartup.sqlContext.implicits._
-    new SHIndex(indexname, tablename, indexdata.toDF, indexMetaData)
+    new SHIndex(indexname, entityname, indexdata.toDF, indexMetaData)
   }
 
   /**
    *
-   * @param data
+   * @param trainData
    * @return
    */
-  private def train(data : RDD[IndexerTuple]) : SHIndexMetaData = {
-    //data
-    val n = data.countApprox(5000).getFinalValue().mean.toInt
-    val fraction = ADAMSamplingUtils.computeFractionForSampleSize(trainingSize, n, false)
+  private def train(trainData : RDD[IndexerTuple]) : SHIndexMetaData = {
+    val collTrainData = trainData.collect()
+    val dTrainData = collTrainData.map(x => x.value.map(x => x.toDouble).toArray)
 
-    val trainData = data.sample(false, fraction)
-    val dTrainData = trainData.map(x => x.value.map(x => x.toDouble).toArray)
+    val dataMatrix = DenseMatrix(dTrainData.toList : _*)
 
-    val dataMatrix = DenseMatrix(dTrainData.collect.toList : _*)
-
-    val nfeatures =  dTrainData.first.length
+    val nfeatures =  dTrainData.head.length
 
     val numComponents = math.min(nfeatures, nbits)
 

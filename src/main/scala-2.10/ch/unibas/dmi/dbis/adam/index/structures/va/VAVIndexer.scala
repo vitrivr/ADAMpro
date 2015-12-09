@@ -2,6 +2,7 @@ package ch.unibas.dmi.dbis.adam.index.structures.va
 
 import breeze.linalg._
 import ch.unibas.dmi.dbis.adam.datatypes.feature.Feature._
+import ch.unibas.dmi.dbis.adam.entity.Entity
 import ch.unibas.dmi.dbis.adam.entity.Entity._
 import ch.unibas.dmi.dbis.adam.index.Index._
 import ch.unibas.dmi.dbis.adam.index.structures.IndexStructures
@@ -26,7 +27,11 @@ class VAVIndexer (nbits : Int, marksGenerator: MarksGenerator, trainingSize : In
    *
    */
   override def index(indexname : IndexName, entityname : EntityName, data: RDD[IndexerTuple]): VAIndex = {
-    val indexMetaData = train(data)
+    val n = Entity.countEntity(entityname)
+    val fraction = ADAMSamplingUtils.computeFractionForSampleSize(trainingSize, n, false)
+    val trainData = data.sample(false, fraction)
+
+    val indexMetaData = train(trainData)
 
     val indexdata = data.map(
       datum => {
@@ -41,15 +46,11 @@ class VAVIndexer (nbits : Int, marksGenerator: MarksGenerator, trainingSize : In
 
   /**
    *
-   * @param data
+   * @param trainData
    * @return
    */
-  private def train(data : RDD[IndexerTuple]) : VAIndexMetaData = {
+  private def train(trainData : RDD[IndexerTuple]) : VAIndexMetaData = {
     //data
-    val n = data.countApprox(5000).getFinalValue().mean.toInt
-    val fraction = ADAMSamplingUtils.computeFractionForSampleSize(trainingSize, n, false)
-
-    val trainData = data.sample(false, fraction)
     val dTrainData = trainData.map(x => x.value.map(x => x.toDouble).toArray)
 
     val dataMatrix = DenseMatrix(dTrainData.collect.toList : _*)

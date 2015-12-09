@@ -1,6 +1,7 @@
 package ch.unibas.dmi.dbis.adam.index.structures.va
 
 import ch.unibas.dmi.dbis.adam.datatypes.feature.Feature.{FeatureVector, VectorBase}
+import ch.unibas.dmi.dbis.adam.entity.Entity
 import ch.unibas.dmi.dbis.adam.entity.Entity._
 import ch.unibas.dmi.dbis.adam.index.Index._
 import ch.unibas.dmi.dbis.adam.index.structures.IndexStructures
@@ -14,16 +15,20 @@ import org.apache.spark.util.random.ADAMSamplingUtils
 
 
 /**
- * 
+ *
  */
 class VAFIndexer(maxMarks: Int = 64, marksGenerator: MarksGenerator, bitsPerDimension : Int, trainingSize : Int, distance : MinkowskiDistance) extends IndexGenerator with Serializable {
   override val indextypename: IndexTypeName = IndexStructures.VAF
 
   /**
-   * 
+   *
    */
   override def index(indexname : IndexName, entityname : EntityName, data: RDD[IndexerTuple]): VAIndex = {
-    val indexMetaData = train(data)
+    val n = Entity.countEntity(entityname)
+    val fraction = ADAMSamplingUtils.computeFractionForSampleSize(trainingSize, n, false)
+    val trainData = data.sample(false, fraction)
+
+    val indexMetaData = train(trainData)
 
     val indexdata = data.map(
       datum => {
@@ -38,16 +43,10 @@ class VAFIndexer(maxMarks: Int = 64, marksGenerator: MarksGenerator, bitsPerDime
 
   /**
    *
-   * @param data
+   * @param trainData
    * @return
    */
-  private def train(data : RDD[IndexerTuple]) : VAIndexMetaData = {
-    //data
-    val n = data.countApprox(5000).getFinalValue().mean.toInt
-    val fraction = ADAMSamplingUtils.computeFractionForSampleSize(trainingSize, n, false)
-
-    val trainData = data.sample(false, fraction)
-
+  private def train(trainData : RDD[IndexerTuple]) : VAIndexMetaData = {
     val dim = trainData.first.value.length
 
     val signatureGenerator =  new FixedSignatureGenerator(dim, bitsPerDimension)

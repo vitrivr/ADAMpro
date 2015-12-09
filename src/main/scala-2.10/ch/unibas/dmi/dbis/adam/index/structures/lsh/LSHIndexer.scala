@@ -1,5 +1,6 @@
 package ch.unibas.dmi.dbis.adam.index.structures.lsh
 
+import ch.unibas.dmi.dbis.adam.entity.Entity
 import ch.unibas.dmi.dbis.adam.entity.Entity._
 import ch.unibas.dmi.dbis.adam.index.Index._
 import ch.unibas.dmi.dbis.adam.index._
@@ -22,7 +23,11 @@ class LSHIndexer(hashFamily : String, numHashTables : Int, numHashes : Int, dist
    * @return
    */
   override def index(indexname : IndexName, entityname : EntityName, data: RDD[IndexerTuple]): Index[_ <: IndexTuple] = {
-    val indexMetaData = train(data)
+    val n = Entity.countEntity(entityname)
+    val fraction = ADAMSamplingUtils.computeFractionForSampleSize(trainingSize, n, false)
+    val trainData = data.sample(false, fraction)
+
+    val indexMetaData = train(trainData)
 
     val indexdata = data.map(
       datum => {
@@ -36,16 +41,11 @@ class LSHIndexer(hashFamily : String, numHashTables : Int, numHashes : Int, dist
 
   /**
    *
-   * @param data
+   * @param trainData
    * @return
    */
-  private def train(data : RDD[IndexerTuple]) : LSHIndexMetaData = {
+  private def train(trainData : RDD[IndexerTuple]) : LSHIndexMetaData = {
     //data
-    val n = data.countApprox(5000).getFinalValue().mean.toInt
-    val fraction = ADAMSamplingUtils.computeFractionForSampleSize(trainingSize, n, false)
-
-    val trainData = data.sample(false, fraction)
-
     val radius = trainData.mapPartitions { iter =>
         val seq = iter.toSeq
         val res = for (a <- seq; b <- seq) yield distance(a.value, b.value)
@@ -53,7 +53,8 @@ class LSHIndexer(hashFamily : String, numHashTables : Int, numHashes : Int, dist
       }.mean()
 
     //TODO: hashFamily move to apply; use currying?
-    val dims = data.first.value.length
+    val dims = trainData.first().value.size
+
     val hashFamily = () => EuclideanHashFunction(dims, radius.toFloat, 256)
 
     val hashTables = (0 until numHashTables).map(i => new Hasher(hashFamily, numHashes))
