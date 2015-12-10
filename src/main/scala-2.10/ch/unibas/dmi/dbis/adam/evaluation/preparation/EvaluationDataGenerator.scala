@@ -22,7 +22,7 @@ object EvaluationDataGenerator {
     try {
       GenerateDataOp("data_" + dbSize + "_" + vecSize, dbSize, vecSize, true)
     } catch {
-      case e : Exception => println("Exception")
+      case e : Exception => e.printStackTrace()
     }
   }
 }

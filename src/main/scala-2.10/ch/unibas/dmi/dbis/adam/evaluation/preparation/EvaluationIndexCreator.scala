@@ -18,11 +18,9 @@ object EvaluationIndexCreator {
         EvaluationConfig.indexes.foreach { indextypename =>
 
           val entityname = "data_" + dbSize + "_" + vecSize
-
-          if(Index.getIndexnames(entityname).isEmpty){
+          if(Index.getIndexnames(entityname).filter(x => x.contains(indextypename)).isEmpty){
             IndexOp(entityname, indextypename, ManhattanDistance, Map[String, String]())
           }
-
         }
       }
     }

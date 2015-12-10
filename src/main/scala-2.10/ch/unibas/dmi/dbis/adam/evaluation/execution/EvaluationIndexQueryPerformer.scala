@@ -96,7 +96,7 @@ class EvaluationIndexQueryPerformer {
 
     } catch {
       case e: Exception => {
-        println("ERROR: " + e.getMessage)
+        e.printStackTrace()
         nextExperiment()
       }
     }
