@@ -26,6 +26,11 @@ object AdamConfig{
   val jdbcUser = "postgres"
   val jdbcPassword = "postgres"
 
+  val cassandraUrl = "localhost"
+  val cassandraPort = "9042"
+  val cassandraUsername = "cassandra"
+  val cassandraPassword = "cassandra"
+
   val restHost = "0.0.0.0"
   val restPort = 5890
 

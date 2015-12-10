@@ -1,9 +1,10 @@
 package ch.unibas.dmi.dbis.adam.main
 
+import ch.unibas.dmi.dbis.adam.config.AdamConfig
 import ch.unibas.dmi.dbis.adam.datatypes.bitString.{BitString, MinimalBitString}
 import ch.unibas.dmi.dbis.adam.datatypes.feature.FeatureVectorWrapper
 import ch.unibas.dmi.dbis.adam.storage.components.{FeatureStorage, IndexStorage, MetadataStorage}
-import ch.unibas.dmi.dbis.adam.storage.engine.{LevelDBDataStorage, ParquetDataStorage, PostgresDataStorage}
+import ch.unibas.dmi.dbis.adam.storage.engine.{CassandraDataStorage, ParquetDataStorage, PostgresDataStorage}
 import org.apache.spark.sql.hive.HiveContext
 import org.apache.spark.{SparkConf, SparkContext}
 
@@ -20,15 +21,17 @@ object SparkStartup {
     .set("spark.kryoserializer.buffer.max", "2047m")
     .set("spark.kryoserializer.buffer", "2047")
     .set("spark.akka.frameSize", "1024")
-    .set("spark.cassandra.connection.host", "192.168.99.100")
-    .set("spark.cassandra.auth.username", "cassandra")
-    .set("spark.cassandra.auth.password", "cassandra")
+    .set("spark.cassandra.connection.host", AdamConfig.cassandraUrl)
+    .set("spark.cassandra.connection.port", AdamConfig.cassandraPort)
+    .set("spark.cassandra.auth.username", AdamConfig.cassandraUsername)
+    .set("spark.cassandra.auth.password", AdamConfig.cassandraPassword)
     .registerKryoClasses(Array(classOf[BitString[_]], classOf[MinimalBitString], classOf[FeatureVectorWrapper]))
 
   val sc = new SparkContext(sparkConfig)
   val sqlContext = new HiveContext(sc)
 
-  val featureStorage : FeatureStorage = LevelDBDataStorage
+
+  val featureStorage : FeatureStorage = CassandraDataStorage
   val metadataStorage : MetadataStorage = PostgresDataStorage
   val indexStorage: IndexStorage = ParquetDataStorage
 }
