@@ -101,11 +101,9 @@ object Entity {
       throw new EntityNotExistingException()
     }
 
-    val future = Future {
-      featureStorage.write(entityname, insertion, SaveMode.Append)
-    }
+    featureStorage.write(entityname, insertion, SaveMode.Append)
 
-    Await.ready(future, Duration.Inf)
+
     true
   }
 
