@@ -30,7 +30,7 @@ class LSHIndex(val indexname: IndexName, val entityname: EntityName, protected v
   override protected def rdd : RDD[BitStringIndexTuple] = df.map(r => r : BitStringIndexTuple)
 
   override def scan(data : RDD[BitStringIndexTuple], q : FeatureVector, options : Map[String, Any], k : Int): HashSet[TupleID] = {
-    val numOfQueries = options.getOrElse("numOfQ", "3").asInstanceOf[Int]
+    val numOfQueries = options.getOrElse("numOfQ", "3").asInstanceOf[String].toInt
 
     import MovableFeature.conv_feature2MovableFeature
     val originalQuery = LSHUtils.hashFeature(q, metadata)
