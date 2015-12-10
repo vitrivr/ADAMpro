@@ -17,7 +17,6 @@ import org.iq80.leveldb.impl.Iq80DBFactory._
 
 import scala.collection._
 import scala.collection.convert.decorateAsScala._
-import scala.collection.mutable.ListBuffer
 
 
 /**
@@ -30,6 +29,7 @@ object LevelDBDataStorage extends FeatureStorage {
 
   protected case class DBStatus(db: DB, var locks: Int)
 
+  //TODO: works only for one single machine!
   val databases: concurrent.Map[EntityName, DBStatus] = new ConcurrentHashMap[EntityName, DBStatus]().asScala
 
 
@@ -39,7 +39,7 @@ object LevelDBDataStorage extends FeatureStorage {
    * @param options
    * @return
    */
-  private def openConnection(entityname: EntityName, options: Options): DB = {
+  private def openConnection(entityname: EntityName, options: Options = new Options()): DB = {
     databases.synchronized({
       if (databases.contains(entityname)) {
         val dbStatus = databases.get(entityname)
@@ -78,6 +78,8 @@ object LevelDBDataStorage extends FeatureStorage {
     }
   }
 
+
+
   /**
    *
    * @param entityname
@@ -85,50 +87,32 @@ object LevelDBDataStorage extends FeatureStorage {
    * @return
    */
   override def read(entityname: EntityName, filter: Option[scala.collection.Set[TupleID]]): DataFrame = {
-    if(filter.isDefined){
+    if (filter.isDefined) {
       internalRead(entityname, filter.get)
     } else {
       internalRead(entityname)
     }
   }
 
-    /**
+  /**
    *
    * @param entityname
    * @return
    */
   private def internalRead(entityname: EntityName): DataFrame = {
-    val options = new Options()
-    options.createIfMissing(true)
-    try {
-      val db = openConnection(entityname, options)
+    val numRows = count(entityname)
+    val result = SparkStartup.sqlContext.sparkContext.parallelize(0L until numRows)
 
-      val iterator = db.iterator()
-      iterator.seekToFirst()
+    val rdd = result.map(x => Row(x, asWorkingVectorWrapper(openConnection(entityname).get(bytes(x)))))
 
-      val results = ListBuffer[Row]()
-      while (iterator.hasNext()) {
-        val key = asLong(iterator.peekNext().getKey())
-        val value = asWorkingVectorWrapper(iterator.peekNext().getValue())
-
-        results += Row(key, value)
-
-        iterator.next()
-      }
-
-      val rdd = SparkStartup.sc.parallelize(results)
-      val schema = StructType(
-        List(
-          StructField("id", LongType, false),
-          StructField("feature", BinaryType, false)
-        )
+    val schema = StructType(
+      List(
+        StructField("id", LongType, false),
+        StructField("feature", BinaryType, false)
       )
+    )
 
-      SparkStartup.sqlContext.createDataFrame(rdd, schema)
-
-    } finally {
-      closeConnection(entityname)
-    }
+    SparkStartup.sqlContext.createDataFrame(rdd, schema)
   }
 
   /**
@@ -138,10 +122,7 @@ object LevelDBDataStorage extends FeatureStorage {
    * @return
    */
   private def internalRead(entityname: EntityName, filter: Set[TupleID]): DataFrame = {
-    val options = new Options()
-    options.createIfMissing(true)
-
-    val db = openConnection(entityname, options)
+    val db = openConnection(entityname)
 
     try {
       val data = filter.par.map(f => {
@@ -169,7 +150,6 @@ object LevelDBDataStorage extends FeatureStorage {
     }
   }
 
-
   /**
    *
    * @param entityname
@@ -177,7 +157,6 @@ object LevelDBDataStorage extends FeatureStorage {
    */
   def count(entityname: EntityName): Int = {
     val options = new Options()
-    options.createIfMissing(true)
     try {
       val db = openConnection(entityname, options)
 
@@ -199,6 +178,7 @@ object LevelDBDataStorage extends FeatureStorage {
   }
 
 
+
   /**
    *
    * @param entityname
@@ -212,39 +192,7 @@ object LevelDBDataStorage extends FeatureStorage {
    * @param df
    * @param mode
    */
-  override def write(entityname: EntityName, df: DataFrame, mode: SaveMode): Unit = {
-    val options = new Options()
-    options.createIfMissing(true)
-    val db = openConnection(entityname, options)
-
-    try {
-      val it = df.rdd.collect().iterator
-
-      while (it.hasNext) {
-        val data: List[Row] = List(it.next())
-
-        val batch = db.createWriteBatch()
-        var i = 0
-
-        while (i < data.length) {
-          val t = data(i)
-
-          val tid = bytes(t.getLong(0))
-          val value = bytes(t.getAs[FeatureVectorWrapper](1))
-
-          batch.put(tid, value)
-
-          i += 1
-        }
-
-        db.write(batch)
-        batch.close()
-      }
-
-    } finally {
-      closeConnection(entityname)
-    }
-  }
+  override def write(entityname: EntityName, df: DataFrame, mode: SaveMode): Unit = ???
 
   /**
    *
@@ -292,7 +240,7 @@ object LevelDBDataStorage extends FeatureStorage {
       val in = new ObjectInputStream(bis)
       in.readObject().asInstanceOf[FeatureVectorWrapper]
     } catch {
-      case e : Exception => null
+      case e: Exception => null
     }
   }
 }
