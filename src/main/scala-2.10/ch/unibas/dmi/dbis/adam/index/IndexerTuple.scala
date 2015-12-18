@@ -9,4 +9,5 @@ import ch.unibas.dmi.dbis.adam.entity.Tuple._
  * Ivan Giangreco
  * September 2015
  */
-case class IndexerTuple(tid: TupleID, value: FeatureVector)
+@SerialVersionUID(100L)
+case class IndexerTuple(tid: TupleID, value: FeatureVector) extends Serializable

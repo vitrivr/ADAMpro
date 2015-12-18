@@ -10,5 +10,5 @@ import ch.unibas.dmi.dbis.adam.query.distance.DistanceFunction
  * Ivan Giangreco
  * October 2015
  */
-private[ecp]
-case class ECPIndexMetaData(leaders : Seq[IndexerTuple], distance : DistanceFunction) {}
+@SerialVersionUID(100L)
+private[ecp] case class ECPIndexMetaData(leaders : Seq[IndexerTuple], distance : DistanceFunction) {}

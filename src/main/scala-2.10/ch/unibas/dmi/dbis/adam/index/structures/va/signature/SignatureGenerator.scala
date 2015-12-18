@@ -8,6 +8,7 @@ import ch.unibas.dmi.dbis.adam.datatypes.bitString.BitString
  * Ivan Giangreco
  * August 2015
  */
+@SerialVersionUID(100L)
 private[va] trait SignatureGenerator extends Serializable {
   /**
    * 

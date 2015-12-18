@@ -10,9 +10,8 @@ import Feature._
  * Ivan Giangreco
  * September 2015
  */
-private[sh]
-case class SHIndexMetaData
-  (pca : DenseMatrix[VectorBase], min : FeatureVector, max : FeatureVector, modes : DenseMatrix[VectorBase], radius : FeatureVector) {
+@SerialVersionUID(100L)
+private[sh] case class SHIndexMetaData (pca : DenseMatrix[VectorBase], min : FeatureVector, max : FeatureVector, modes : DenseMatrix[VectorBase], radius : FeatureVector)  {
   lazy val omegas: DenseMatrix[VectorBase] = {
     val range = max - min
     val omega0 = range.mapValues(r => conv_double2vectorBase(math.Pi / r))

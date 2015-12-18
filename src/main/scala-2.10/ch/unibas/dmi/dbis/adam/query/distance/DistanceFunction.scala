@@ -9,12 +9,7 @@ import ch.unibas.dmi.dbis.adam.query.distance.Distance._
  * Ivan Giangreco
  * August 2015
  */
+@SerialVersionUID(100L)
 trait DistanceFunction {
-  /**
-   *
-   * @param v1
-   * @param v2
-   * @return
-   */
   def apply(v1: FeatureVector, v2: FeatureVector): Distance
 }

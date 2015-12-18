@@ -12,6 +12,7 @@ import ch.unibas.dmi.dbis.adam.query.distance.Distance.Distance
  * Ivan Giangreco
  * August 2015
  */
+@SerialVersionUID(100L)
 class MinkowskiDistance(val n : Double) extends DistanceFunction with Serializable {
   override def apply(v1: FeatureVector, v2: FeatureVector): Distance =  minkowskiDistance(v1, v2, n).toFloat
   def apply(v1: VectorBase, v2: VectorBase): Distance = minkowskiDistance(DenseVector(v1), DenseVector(v2), n).toFloat

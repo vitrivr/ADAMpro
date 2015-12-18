@@ -8,6 +8,7 @@ import ch.unibas.dmi.dbis.adam.datatypes.feature.Feature.FeatureVector
  * Ivan Giangreco
  * August 2015
  */
+@SerialVersionUID(100L)
 sealed class Hasher(val functions: List[LSHashFunction]) extends Serializable {
   /**
    *

@@ -11,6 +11,7 @@ import scala.util.Random
  * Ivan Giangreco
  * August 2015
  */
+@SerialVersionUID(100L)
 class EuclideanHashFunction(w: Float, offset: Float, proj: FeatureVector, m: Int) extends LSHashFunction with Serializable {
   /**
    *
