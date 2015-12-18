@@ -102,7 +102,7 @@ object VAVIndexer {
     val signatureGeneratorDescription = properties.getOrElse("signatureGenerator", "variable")
     val totalNumBits = properties.getOrElse("totalNumBits", (data.first.value.length * 8).toString).toInt
 
-    val trainingSize = properties.getOrElse("trainingSize", "5000").toInt
+    val trainingSize = properties.getOrElse("trainingSize", "1000").toInt
 
 
     new VAVIndexer(totalNumBits, marksGenerator, trainingSize, distance)

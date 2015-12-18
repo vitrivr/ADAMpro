@@ -158,7 +158,7 @@ object SHIndexer {
    */
   def apply(properties : Map[String, String] = Map[String, String](), data: RDD[IndexerTuple]) : IndexGenerator = {
     val nbits = math.min(500, properties.getOrElse("nbits", (data.first.value.length * 2).toString).toInt)
-    val trainingSize = properties.getOrElse("trainingSize", "5000").toInt
+    val trainingSize = properties.getOrElse("trainingSize", "500").toInt
 
     new SHIndexer(nbits, trainingSize)
   }

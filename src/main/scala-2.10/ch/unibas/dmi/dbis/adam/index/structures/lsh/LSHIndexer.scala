@@ -85,7 +85,7 @@ object LSHIndexer {
 
     val norm = properties.getOrElse("norm", "2").toInt
 
-    val trainingSize = properties.getOrElse("trainingSize", "5000").toInt
+    val trainingSize = properties.getOrElse("trainingSize", "500").toInt
 
     new LSHIndexer(hashFamily, numHashTables, numHashes, distance, trainingSize)
   }
