@@ -18,12 +18,13 @@ import scala.collection.mutable.ListBuffer
  */
 object FeatureScanner {
   def apply(entity : Entity, query : NearestNeighbourQuery, filter: Option[HashSet[TupleID]]): Seq[Result] = {
-    SparkStartup.sc.setLocalProperty("spark.scheduler.pool", "feature")
-    SparkStartup.sc.setJobGroup(query.queryID.getOrElse(""), entity.entityname, true)
-
     val data = if(filter.isDefined) {
+      SparkStartup.sc.setLocalProperty("spark.scheduler.pool", "feature")
+      SparkStartup.sc.setJobGroup(query.queryID.getOrElse(""), entity.entityname, true)
       entity.featuresForKeys(filter.get).collect()
     } else {
+      SparkStartup.sc.setLocalProperty("spark.scheduler.pool", "slow")
+      SparkStartup.sc.setJobGroup(query.queryID.getOrElse(""), entity.entityname, true)
       entity.featuresTuples.collect()
     }
 

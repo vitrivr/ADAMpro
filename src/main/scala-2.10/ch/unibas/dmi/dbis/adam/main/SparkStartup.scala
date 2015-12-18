@@ -21,6 +21,8 @@ object SparkStartup {
     .set("spark.kryoserializer.buffer.max", "2047m")
     .set("spark.kryoserializer.buffer", "2047")
     .set("spark.akka.frameSize", "1024")
+    .set("spark.scheduler.mode", "FAIR")
+    .set("spark.scheduler.allocation.file", "/usr/local/spark/conf/fairscheduler.xml")
     .set("spark.cassandra.connection.host", AdamConfig.cassandraUrl)
     .set("spark.cassandra.connection.port", AdamConfig.cassandraPort)
     .set("spark.cassandra.auth.username", AdamConfig.cassandraUsername)
