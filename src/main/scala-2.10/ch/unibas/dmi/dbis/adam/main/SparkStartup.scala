@@ -17,7 +17,7 @@ import org.apache.spark.{SparkConf, SparkContext}
 object SparkStartup {
   val sparkConfig = new SparkConf().setAppName("ADAMtwo")
     .set("spark.serializer", "org.apache.spark.serializer.KryoSerializer")
-    .set("spark.driver.maxResultSize", "4096m")
+    .set("spark.driver.maxResultSize", "12000m")
     .set("spark.kryoserializer.buffer.max", "2047m")
     .set("spark.kryoserializer.buffer", "2047")
     .set("spark.akka.frameSize", "1024")
