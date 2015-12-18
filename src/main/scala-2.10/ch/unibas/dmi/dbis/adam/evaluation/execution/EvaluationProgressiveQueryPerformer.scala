@@ -8,6 +8,7 @@ import ch.unibas.dmi.dbis.adam.config.AdamConfig
 import ch.unibas.dmi.dbis.adam.datatypes.feature.Feature._
 import ch.unibas.dmi.dbis.adam.entity.Entity
 import ch.unibas.dmi.dbis.adam.evaluation.EvaluationConfig
+import ch.unibas.dmi.dbis.adam.main.SparkStartup
 import ch.unibas.dmi.dbis.adam.query.Result
 import ch.unibas.dmi.dbis.adam.query.distance.ManhattanDistance
 import ch.unibas.dmi.dbis.adam.query.handler.QueryHandler
@@ -85,8 +86,20 @@ class EvaluationProgressiveQueryPerformer {
         while (tracker.status == ProgressiveQueryStatus.RUNNING) {
           Thread.sleep(10000L)
         }
-      }, Duration.apply(500, "seconds"))
+      }, Duration.apply(2000, "seconds"))
+      println("done")
       tracker.stop()
+
+      Await.ready(Future {
+          Thread.sleep(10000L)
+      }, Duration.apply(15, "seconds"))
+
+      SparkStartup.sc.cancelAllJobs()
+
+      Await.ready(Future {
+        Thread.sleep(10000L)
+      }, Duration.apply(15, "seconds"))
+
       nextExperiment()
 
     } catch {
