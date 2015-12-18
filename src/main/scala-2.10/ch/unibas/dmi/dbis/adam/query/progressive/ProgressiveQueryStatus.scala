@@ -40,6 +40,10 @@ class ProgressiveQueryStatusTracker(queryID: String) {
       }
 
       futures -= future
+
+      if(futures.isEmpty){
+        stop(ProgressiveQueryStatus.FINISHED)
+      }
     })
   }
 
