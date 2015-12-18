@@ -25,8 +25,3 @@ class EuclideanHashFunction(w: Float, offset: Float, proj: FeatureVector, m: Int
 
   def hash(v: FeatureVector): Int = math.round(((v dot proj): Float) + offset / w.toFloat) % m
 }
-
-
-object EuclideanHashFunction {
-  def apply(d: Int, w: Float, m: Int) = new EuclideanHashFunction(d, w, m)
-}

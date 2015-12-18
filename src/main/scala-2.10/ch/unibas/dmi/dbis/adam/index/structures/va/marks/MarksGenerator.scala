@@ -2,7 +2,6 @@ package ch.unibas.dmi.dbis.adam.index.structures.va.marks
 
 import ch.unibas.dmi.dbis.adam.index.IndexerTuple
 import ch.unibas.dmi.dbis.adam.index.structures.va.VAIndex.Marks
-import org.apache.spark.rdd.RDD
 
 
 /**
@@ -18,7 +17,7 @@ private[va] trait MarksGenerator extends Serializable {
    * @param maxMarks
    * @return
    */
-  private[va] def getMarks(sample: RDD[IndexerTuple], maxMarks: Seq[Int]): Marks
+  private[va] def getMarks(sample: Array[IndexerTuple], maxMarks: Seq[Int]): Marks
 
   /**
    *
@@ -26,8 +25,8 @@ private[va] trait MarksGenerator extends Serializable {
    * @param maxMarks
    * @return
    */
-  private[va] def getMarks(sample: RDD[IndexerTuple], maxMarks: Int): Marks = {
-    val dimensionality = sample.first.value.length
+  private[va] def getMarks(sample: Array[IndexerTuple], maxMarks: Int): Marks = {
+    val dimensionality = sample.head.value.length
     getMarks(sample, Seq.fill(dimensionality)(maxMarks))
   }
 }

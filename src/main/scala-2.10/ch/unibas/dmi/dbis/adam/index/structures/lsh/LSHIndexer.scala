@@ -27,7 +27,7 @@ class LSHIndexer(hashFamily : String, numHashTables : Int, numHashes : Int, dist
     val fraction = ADAMSamplingUtils.computeFractionForSampleSize(trainingSize, n, false)
     val trainData = data.sample(false, fraction)
 
-    val indexMetaData = train(trainData)
+    val indexMetaData = train(trainData.collect())
 
     val indexdata = data.map(
       datum => {
@@ -44,18 +44,22 @@ class LSHIndexer(hashFamily : String, numHashTables : Int, numHashes : Int, dist
    * @param trainData
    * @return
    */
-  private def train(trainData : RDD[IndexerTuple]) : LSHIndexMetaData = {
+  private def train(trainData : Array[IndexerTuple]) : LSHIndexMetaData = {
     //data
-    val radius = trainData.mapPartitions { iter =>
-        val seq = iter.toSeq
-        val res = for (a <- seq; b <- seq) yield distance(a.value, b.value)
-        Seq(res.max).iterator
-      }.mean()
+    val radiuses = {
+        val res = for (a <- trainData; b <- trainData) yield distance(a.value, b.value)
+        if(res.isEmpty){
+          Seq().iterator
+        }  else {
+          Seq(res.max).iterator
+        }
+      }
+    val radius = radiuses.sum / radiuses.length
 
     //TODO: hashFamily move to apply; use currying?
-    val dims = trainData.first().value.size
+    val dims = trainData.head.value.size
 
-    val hashFamily = () => EuclideanHashFunction(dims, radius.toFloat, 256)
+    val hashFamily = () => new EuclideanHashFunction(dims, radius.toFloat, 256)
 
     val hashTables = (0 until numHashTables).map(i => new Hasher(hashFamily, numHashes))
 

@@ -4,7 +4,6 @@ import breeze.linalg.{max, min}
 import ch.unibas.dmi.dbis.adam.datatypes.feature.Feature._
 import ch.unibas.dmi.dbis.adam.index.IndexerTuple
 import ch.unibas.dmi.dbis.adam.index.structures.va.VAIndex.Marks
-import org.apache.spark.rdd.RDD
 
 import scala.collection.IterableLike
 import scala.collection.mutable.ListBuffer
@@ -21,8 +20,8 @@ private[va] object EquifrequentMarksGenerator extends MarksGenerator with Serial
    * @param maxMarks
    * @return
    */
-  private[va] def getMarks(samples : RDD[IndexerTuple], maxMarks : Seq[Int]) : Marks = {
-    val sampleSize = samples.count
+  private[va] def getMarks(samples : Array[IndexerTuple], maxMarks : Seq[Int]) : Marks = {
+    val sampleSize = samples.length
 
     val min = getMin(samples.map(_.value))
     val max = getMax(samples.map(_.value))
@@ -31,7 +30,7 @@ private[va] object EquifrequentMarksGenerator extends MarksGenerator with Serial
 
     val result = (0 until dimensionality).map(dim => Distribution(min(dim), max(dim), distanceSamples))
 
-    samples.collect.foreach { sample =>
+    samples.foreach { sample =>
       var i = 0
       while (i < dimensionality){
         result(i).add(sample.value(i))
@@ -48,8 +47,29 @@ private[va] object EquifrequentMarksGenerator extends MarksGenerator with Serial
     })
   }
 
-  private def getMin(data : RDD[FeatureVector]) : FeatureVector = data.treeReduce { case (baseV, newV) =>  min(baseV, newV)  }
-  private def getMax(data : RDD[FeatureVector]) : FeatureVector = data.treeReduce { case (baseV, newV) =>  max(baseV, newV)  }
+  /**
+   *
+   * @param data
+   * @return
+   */
+  private def getMin(data : Array[FeatureVector]) : FeatureVector = {
+    val dimensionality = data.head.size
+    val base : FeatureVector = Seq.fill(dimensionality)(Float.MaxValue)
+
+    data.foldLeft(base)((baseV, newV) =>  min(baseV, newV))
+  }
+
+  /**
+   *
+   * @param data
+   * @return
+   */
+  private def getMax(data : Array[FeatureVector]) : FeatureVector = {
+    val dimensionality = data.head.size
+    val base : FeatureVector = Seq.fill(dimensionality)(Float.MinValue)
+
+    data.foldLeft(base)((baseV, newV) =>  max(baseV, newV))
+  }
 
   /**
    *

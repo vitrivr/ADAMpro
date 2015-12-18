@@ -28,7 +28,7 @@ class VAFIndexer(maxMarks: Int = 64, marksGenerator: MarksGenerator, bitsPerDime
     val fraction = ADAMSamplingUtils.computeFractionForSampleSize(trainingSize, n, false)
     val trainData = data.sample(false, fraction)
 
-    val indexMetaData = train(trainData)
+    val indexMetaData = train(trainData.collect())
 
     val indexdata = data.map(
       datum => {
@@ -46,8 +46,8 @@ class VAFIndexer(maxMarks: Int = 64, marksGenerator: MarksGenerator, bitsPerDime
    * @param trainData
    * @return
    */
-  private def train(trainData : RDD[IndexerTuple]) : VAIndexMetaData = {
-    val dim = trainData.first.value.length
+  private def train(trainData : Array[IndexerTuple]) : VAIndexMetaData = {
+    val dim = trainData.head.value.length
 
     val signatureGenerator =  new FixedSignatureGenerator(dim, bitsPerDimension)
     val marks = marksGenerator.getMarks(trainData, maxMarks)
