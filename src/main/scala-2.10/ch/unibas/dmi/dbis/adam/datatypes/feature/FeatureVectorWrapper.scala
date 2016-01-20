@@ -5,6 +5,7 @@ import ch.unibas.dmi.dbis.adam.datatypes.feature.Feature.{VectorBase, DenseFeatu
 import ch.unibas.dmi.dbis.adam.datatypes.feature.FeatureVectorTypes.{DenseFeatureVectorType, SparseFeatureVectorType}
 import org.apache.spark.sql.catalyst.InternalRow
 import org.apache.spark.sql.catalyst.expressions.GenericMutableRow
+import org.apache.spark.sql.catalyst.util.GenericArrayData
 import org.apache.spark.sql.types._
 
 /**
