@@ -15,5 +15,9 @@ import org.apache.spark.sql.{DataFrame, SaveMode}
 object ParquetDataStorage extends IndexStorage {
   override def read(indexname: IndexName) : DataFrame = SparkStartup.sqlContext.read.parquet(AdamConfig.indexPath + "/" + indexname)
   override def write(indexname: IndexName, df: DataFrame): Unit = df.write.mode(SaveMode.Overwrite).parquet(AdamConfig.indexPath + "/" + indexname)
-  override def drop(indexname: IndexName): Unit = ??? //TODO: hadoop
+  override def drop(indexname: IndexName): Unit = {
+    val hadoopConf = new org.apache.hadoop.conf.Configuration()
+    val hdfs = org.apache.hadoop.fs.FileSystem.get(new java.net.URI(AdamConfig.hadoopBase), hadoopConf)
+    try { hdfs.delete(new org.apache.hadoop.fs.Path(AdamConfig.indexPath + "/" + indexname), true) } catch { case _ : Throwable => { } }
+  }
 }

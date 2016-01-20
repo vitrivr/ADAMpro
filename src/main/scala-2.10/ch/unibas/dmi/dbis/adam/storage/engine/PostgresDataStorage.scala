@@ -20,6 +20,8 @@ object PostgresDataStorage extends MetadataStorage {
 
   AdamDialectRegistrar.register(url)
 
+  //TODO: create schema
+
   /**
    *
    * @param tablename
