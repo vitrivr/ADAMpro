@@ -20,4 +20,5 @@ private[sh] case class SHIndexMetaData (pca : DenseMatrix[VectorBase], min : Fea
 
     omegas
   }
+
 }

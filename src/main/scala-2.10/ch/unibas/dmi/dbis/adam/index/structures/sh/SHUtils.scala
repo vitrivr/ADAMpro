@@ -20,9 +20,8 @@ private[sh] object SHUtils {
   @inline def hashFeature(f : FeatureVector, indexMetaData : SHIndexMetaData) : BitString[_] = {
     //TODO: store values!
     val fMat = f.toDenseVector.toDenseMatrix
-    val pca = indexMetaData.pca.toDenseMatrix
 
-    val v = fMat.*(pca).asInstanceOf[DenseMatrix[Float]].toDenseVector - indexMetaData.min.toDenseVector
+    val v = fMat.*(indexMetaData.pca).asInstanceOf[DenseMatrix[Float]].toDenseVector - indexMetaData.min.toDenseVector
 
     val res = {
       val omegai : DenseMatrix[VectorBase] = indexMetaData.omegas(*, ::) :* v
