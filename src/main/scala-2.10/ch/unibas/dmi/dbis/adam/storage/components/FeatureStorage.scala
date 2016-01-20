@@ -11,6 +11,7 @@ import org.apache.spark.sql.{DataFrame, SaveMode}
  * August 2015
  */
 trait FeatureStorage {
+  def create(entityname : EntityName, df: DataFrame) = write(entityname, df, SaveMode.Overwrite)
   def read(entityname: EntityName, filter: Option[scala.collection.Set[TupleID]] = None): DataFrame
   def count(entityname: EntityName): Int
   def write(entityname : EntityName, df: DataFrame, mode : SaveMode = SaveMode.Append): Unit
