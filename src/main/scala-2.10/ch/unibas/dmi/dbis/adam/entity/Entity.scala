@@ -3,7 +3,7 @@ package ch.unibas.dmi.dbis.adam.entity
 import ch.unibas.dmi.dbis.adam.cache.RDDCache
 import ch.unibas.dmi.dbis.adam.config.AdamConfig
 import ch.unibas.dmi.dbis.adam.entity.Entity._
-import ch.unibas.dmi.dbis.adam.exception.{EntityCreationException, EntityNotExistingException}
+import ch.unibas.dmi.dbis.adam.exception.{EntityExistingException, EntityCreationException, EntityNotExistingException}
 import ch.unibas.dmi.dbis.adam.main.SparkStartup
 import ch.unibas.dmi.dbis.adam.storage.components.{FeatureStorage, MetadataStorage}
 import ch.unibas.dmi.dbis.adam.storage.engine.CatalogOperator
@@ -56,21 +56,24 @@ object Entity {
    * @return
    */
   def createEntity(entityname : EntityName) : Entity = {
-    CatalogOperator.createEntity(entityname)
+    if(existsEntity(entityname)){
+      throw new EntityExistingException()
+    }
 
     val featureSchema = StructType(
       List(
-        StructField("__adam_id", LongType, false),
+        StructField("id", LongType, false),
         StructField("feature", ArrayType(FloatType), false)
       )
     )
     val featureData = sqlContext.createDataFrame(SparkStartup.sc.emptyRDD[Row], featureSchema)
 
     val future = Future {
-      featureStorage.write(entityname, featureData, SaveMode.ErrorIfExists)
+      featureStorage.create(entityname, featureData)
+      //TODO: metadataStorage.create(entityname, featureData)
     }
     future onFailure {case t => new EntityCreationException()}
-
+    future onSuccess {case t => CatalogOperator.createEntity(entityname) }
     Await.ready(future, Duration.Inf)
 
     Entity(entityname, featureStorage, metadataStorage)
@@ -85,7 +88,7 @@ object Entity {
     val indexes = CatalogOperator.getIndexes(entityname)
 
     featureStorage.drop(entityname)
-    metadataStorage.drop(entityname)
+    //TODO: metadataStorage.drop(entityname)
     CatalogOperator.dropEntity(entityname, ifExists)
 
     true
@@ -116,8 +119,6 @@ object Entity {
     if(!existsEntity(entityname)){
       throw new EntityNotExistingException()
     }
-
-    //TODO: switch to lazy retrieval?
 
     if(RDDCache.containsTable(entityname)){
       RDDCache.getTable(entityname)
