@@ -3,3 +3,7 @@ target
 metastore_db
 derby.log
 /data
+.gradle
+adamtwo.iml
+build
+src/generated
