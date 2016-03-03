@@ -1,0 +1,86 @@
+apply plugin: 'scala'
+apply plugin: 'java'
+
+apply plugin: 'idea'
+apply plugin: 'com.google.protobuf'
+
+repositories {
+    mavenCentral()
+}
+
+dependencies {
+    compile 'org.scala-lang:scala-library:2.11.7'
+    compile ('org.apache.spark:spark-core_2.11:1.5.2'){
+        exclude group: 'io.netty'
+    }
+    compile 'org.apache.spark:spark-sql_2.11:1.5.2'
+    compile 'org.apache.spark:spark-hive_2.11:1.5.2'
+    compile 'org.apache.spark:spark-mllib_2.11:1.5.2'
+    compile 'org.scalanlp:breeze_2.11:0.11.2'
+    compile 'org.scalanlp:breeze-natives_2.11:0.11.2'
+    compile 'com.typesafe.slick:slick_2.11:3.1.0'
+    compile 'com.h2database:h2:1.4.188'
+    compile 'org.postgresql:postgresql:9.4-1201-jdbc41'
+    compile "org.iq80.leveldb:leveldb:0.7"
+    compile "com.google.protobuf:protobuf-java:3.0.0-beta-2"
+    compile 'io.grpc:grpc-all:0.13.1'
+}
+
+sourceSets {
+    main {
+        java {
+            srcDirs 'src/main/java'
+        }
+        scala {
+            srcDirs 'src/main/scala-2.10'
+        }
+        proto {
+            srcDir 'src/main/protobuf'
+            include '**/*.protodevel'
+        }
+    }
+}
+
+buildscript {
+    repositories {
+        mavenCentral()
+        jcenter()
+    }
+    dependencies {
+        classpath 'com.google.protobuf:protobuf-gradle-plugin:0.7.4'
+        classpath 'com.github.jengelman.gradle.plugins:shadow:1.2.3'
+    }
+}
+
+
+protobuf {
+    protoc {
+        // The version of protoc must match protobuf-java. If you don't depend on
+        // protobuf-java directly, you will be transitively depending on the
+        // protobuf-java version that grpc depends on.
+        artifact = "com.google.protobuf:protoc:3.0.0-beta-2"
+    }
+    plugins {
+        grpc {
+            artifact = 'io.grpc:protoc-gen-grpc-java:0.13.1'
+        }
+    }
+    generatedFilesBaseDir = "$projectDir/src/generated"
+    generateProtoTasks {
+        all()*.plugins {
+            grpc {}
+        }
+
+    }
+}
+
+tasks.withType(ScalaCompile) {
+    scalaCompileOptions.useAnt = false
+}
+
+idea {
+    module {
+        sourceDirs += file("${projectDir}/src/generated/main/java");
+        sourceDirs += file("${projectDir}/src/generated/main/grpc");
+    }
+}
