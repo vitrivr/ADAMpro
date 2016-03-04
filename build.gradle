@@ -1,8 +1,22 @@
-apply plugin: 'scala'
-apply plugin: 'java'
+buildscript {
+    repositories {
+        mavenCentral()
+        jcenter()
+    }
+    dependencies {
+        classpath 'com.google.protobuf:protobuf-gradle-plugin:0.7.4'
+        classpath 'com.github.jengelman.gradle.plugins:shadow:1.2.3'
+    }
+}
 
-apply plugin: 'idea'
-apply plugin: 'com.google.protobuf'
+plugins {
+    id 'scala'
+    id 'java'
+    id 'idea'
+    id 'com.google.protobuf'
+    id 'com.github.johnrengelman.shadow' version '1.2.3'
+}
+
 
 repositories {
     mavenCentral()
@@ -10,9 +24,7 @@ repositories {
 
 dependencies {
     compile 'org.scala-lang:scala-library:2.11.7'
-    compile ('org.apache.spark:spark-core_2.11:1.5.2'){
-        exclude group: 'io.netty'
-    }
+    compile 'org.apache.spark:spark-core_2.11:1.5.2'
     compile 'org.apache.spark:spark-sql_2.11:1.5.2'
     compile 'org.apache.spark:spark-hive_2.11:1.5.2'
     compile 'org.apache.spark:spark-mllib_2.11:1.5.2'
@@ -24,6 +36,11 @@ dependencies {
     compile "org.iq80.leveldb:leveldb:0.7"
     compile "com.google.protobuf:protobuf-java:3.0.0-beta-2"
     compile 'io.grpc:grpc-all:0.13.1'
+    compile 'com.datastax.spark:spark-cassandra-connector_2.11:1.6.0-M1'
+}
+
+configurations {
+    runtime.exclude group: 'io.netty', module: 'netty-all'
 }
 
 sourceSets {
@@ -38,17 +55,6 @@ sourceSets {
             srcDir 'src/main/protobuf'
             include '**/*.protodevel'
         }
-    }
-}
-
-buildscript {
-    repositories {
-        mavenCentral()
-        jcenter()
-    }
-    dependencies {
-        classpath 'com.google.protobuf:protobuf-gradle-plugin:0.7.4'
-        classpath 'com.github.jengelman.gradle.plugins:shadow:1.2.3'
     }
 }
 
