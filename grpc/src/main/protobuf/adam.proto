@@ -3,27 +3,30 @@ syntax = "proto3";
 package ch.unibas.dmi.dbis.adam.http.grpc;
 
 service AdamDefinition {
-  rpc CreateEntity(EntityMessage) returns (AckMessage) {}
-  rpc DropEntity(EntityMessage) returns (AckMessage) {}
+  rpc CreateEntity(EntityNameMessage) returns (AckMessage) {}
+  rpc DropEntity(EntityNameMessage) returns (AckMessage) {}
   rpc Insert(InsertMessage) returns (AckMessage) {}
   rpc Index(IndexMessage) returns (AckMessage) {}
-  rpc DropIndex(IndexMessage) returns (AckMessage) {}
-  rpc Count(EntityMessage) returns (AckMessage) {}
+  rpc DropIndex(IndexNameMessage) returns (AckMessage) {}
+  rpc Count(EntityNameMessage) returns (AckMessage) {}
 }
 
 service AdamSearch {
-  rpc DoStandardQuery(SimpleQueryMessage) returns (QueryResponseList) {}
-  rpc DoSequentialQuery(SimpleSequentialQueryMessage) returns (QueryResponseList) {}
-  rpc DoIndexQuery(SimpleIndexQueryMessage) returns (QueryResponseList) {}
-  rpc DoProgressiveQuery(SimpleQueryMessage) returns (QueryResponseList) {}
-  rpc DoTimedProgressiveQuery(TimedQueryMessage) returns (QueryResponseList) {}
+  rpc DoStandardQuery(SimpleQueryMessage) returns (QueryResponseListMessage) {}
+  rpc DoSequentialQuery(SimpleSequentialQueryMessage) returns (QueryResponseListMessage) {}
+  rpc DoIndexQuery(SimpleIndexQueryMessage) returns (QueryResponseListMessage) {}
+  rpc DoTimedProgressiveQuery(TimedQueryMessage) returns (QueryResponseListMessage) {}
 }
 
-message EntityMessage {
+service AdamSearchStreaming {
+  rpc DoProgressiveQuery(SimpleQueryMessage) returns (QueryResponseListMessage) {}
+}
+
+message EntityNameMessage {
   string entity = 1;
 }
 
-message IndexMessage {
+message IndexNameMessage {
   string entity = 1;
 }
 
@@ -32,8 +35,8 @@ message AckMessage {
     OK = 0;
     ERROR = 1;
   }
-  Code code = 0;
-  string message = 1;
+  Code code = 1;
+  string message = 2;
 }
 
 //insert and update (if id exists already)
