@@ -1,0 +1,97 @@
+syntax = "proto3";
+
+package ch.unibas.dmi.dbis.adam.http.grpc;
+
+service AdamDefinition {
+  rpc CreateEntity(EntityMessage) returns (AckMessage) {}
+  rpc DropEntity(EntityMessage) returns (AckMessage) {}
+  rpc Insert(InsertMessage) returns (AckMessage) {}
+  rpc Index(IndexMessage) returns (AckMessage) {}
+  rpc DropIndex(IndexMessage) returns (AckMessage) {}
+  rpc Count(EntityMessage) returns (AckMessage) {}
+}
+
+service AdamSearch {
+  rpc DoStandardQuery(SimpleQueryMessage) returns (QueryResponseList) {}
+  rpc DoSequentialQuery(SimpleSequentialQueryMessage) returns (QueryResponseList) {}
+  rpc DoIndexQuery(SimpleIndexQueryMessage) returns (QueryResponseList) {}
+  rpc DoProgressiveQuery(SimpleQueryMessage) returns (QueryResponseList) {}
+  rpc DoTimedProgressiveQuery(TimedQueryMessage) returns (QueryResponseList) {}
+}
+
+message EntityMessage {
+  string entity = 1;
+}
+
+message IndexMessage {
+  string entity = 1;
+}
+
+message AckMessage {
+  enum Code {
+    OK = 0;
+    ERROR = 1;
+  }
+  Code code = 0;
+  string message = 1;
+}
+
+//insert and update (if id exists already)
+message InsertMessage {
+  string entity = 1;
+  int64 id = 2;
+  repeated float vector = 3 [packed=true];
+  map<string, string> metadata = 4;
+}
+
+message IndexMessage {
+  string entity = 1;
+  enum Type {
+    lsh = 0;
+    sh = 1;
+    ecp = 2;
+    va = 3;
+  }
+  Type type = 2;
+  map<string, string> options = 3;
+}
+
+message SimpleQueryMessage {
+  string entity = 1;
+  repeated float query = 2 [packed=true];
+  int32 k = 3;
+  map<string, string> metadata = 4;
+  string hint = 5;
+}
+
+message SimpleSequentialQueryMessage {
+  string entity = 1;
+  repeated float query = 2 [packed=true];
+  int32 k = 3;
+  map<string, string> metadata = 4;
+}
+
+message SimpleIndexQueryMessage {
+  string index = 1;
+  repeated float query = 2 [packed=true];
+  int32 k = 3;
+  map<string, string> metadata = 4;
+}
+
+message TimedQueryMessage {
+  string entity = 1;
+  repeated float query = 2 [packed=true];
+  int32 k = 3;
+  map<string, string> metadata = 4;
+  int64 time = 5;
+}
+
+message QueryResponseMessage {
+  int64 id = 1;
+  double distance = 2;
+  string metadata = 3;
+}
+
+message QueryResponseListMessage {
+  repeated QueryResponseMessage responses = 1;
+}

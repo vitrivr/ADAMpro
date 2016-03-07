@@ -9,5 +9,6 @@ package ch.unibas.dmi.dbis.adam.main
 object Startup {
   def main(args : Array[String]) {
     SparkStartup
+    new Thread(new RPCStartup()).start
   }
 }
