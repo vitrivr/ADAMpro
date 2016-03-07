@@ -15,21 +15,20 @@ import org.apache.spark.{SparkConf, SparkContext}
  * August 2015
  */
 object SparkStartup {
-  val sparkConfig = new SparkConf().setAppName("ADAMtwo")
-    .set("spark.serializer", "org.apache.spark.serializer.KryoSerializer")
+  val sparkConfig = new SparkConf().setAppName("ADAMtwo").setMaster("spark://localhost:7077")
+      .set("spark.serializer", "org.apache.spark.serializer.KryoSerializer")
     .set("spark.driver.maxResultSize", "12000m")
     .set("spark.kryoserializer.buffer.max", "2047m")
     .set("spark.kryoserializer.buffer", "2047")
     .set("spark.akka.frameSize", "1024")
     .set("spark.scheduler.mode", "FAIR")
-    .set("spark.scheduler.allocation.file", "/usr/local/spark/conf/fairscheduler.xml")
     .set("spark.cassandra.connection.host", AdamConfig.cassandraUrl)
     .set("spark.cassandra.connection.port", AdamConfig.cassandraPort)
     .set("spark.cassandra.auth.username", AdamConfig.cassandraUsername)
     .set("spark.cassandra.auth.password", AdamConfig.cassandraPassword)
     .registerKryoClasses(Array(classOf[BitString[_]], classOf[MinimalBitString], classOf[FeatureVectorWrapper]))
-
   val sc = new SparkContext(sparkConfig)
+  sc.setLogLevel("INFO")
   val sqlContext = new HiveContext(sc)
 
 

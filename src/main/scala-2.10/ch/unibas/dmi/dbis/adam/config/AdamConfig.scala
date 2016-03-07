@@ -2,37 +2,37 @@ package ch.unibas.dmi.dbis.adam.config
 import com.typesafe.config.ConfigFactory
 
 /**
- * adamtwo
- *
- * Ivan Giangreco
- * August 2015
- */
+  * adamtwo
+  *
+  * Ivan Giangreco
+  * August 2015
+  */
 object AdamConfig{
   val config = ConfigFactory.load()
   config.checkValid(ConfigFactory.defaultReference(), "adamtwo")
 
   //TODO: move to external config file
-  private val hadoopBase = "hdfs://HadoopMaster:54310/spark/adamtwo"
-  private val localBase = "/datadrive/adamtwo"
+  val hadoopUrl = "hdfs://127.0.0.1:9000" //default: 9000
 
-  val hivePath = hadoopBase + "/" +  "hive"
-  val dataPath = localBase + "/" + "data"
-  val indexPath = hadoopBase + "/" + "index"
-  val catalogPath = localBase + "/" + "catalog"
+  val dataBase = "/Users/gianiv01/tmp"
+  val indexBase = hadoopUrl
+
+  val dataPath = dataBase + "/" + "data"
+  val indexPath = "/Users/gianiv01/tmp/hdfs/adamtwo/index"
+  val catalogPath = dataBase + "/" + "catalog"
   val indexMetaCatalogPath = catalogPath + "/" + "indexmeta"
-  val evaluationPath = localBase + "/" + "evaluation"
+  val evaluationPath = dataBase + "/" + "evaluation"
 
-  val jdbcUrl = "jdbc:postgresql://192.168.99.101:6543/postgres"
-  val jdbcUser = "postgres"
-  val jdbcPassword = "postgres"
+  val jdbcUrl = "jdbc:postgresql://127.0.0.1:5432/docker" //default: 5432
+  val jdbcUser = "docker"
+  val jdbcPassword = "docker"
 
-  val cassandraUrl = "localhost"
-  val cassandraPort = "9042"
+  val cassandraUrl = "127.0.0.1"
+  val cassandraPort = "9042" //default: 9042
   val cassandraUsername = "cassandra"
   val cassandraPassword = "cassandra"
 
-  val restHost = "0.0.0.0"
-  val restPort = 5890
+  val grpcPort = 5890
 
   val partitions = 4
 
