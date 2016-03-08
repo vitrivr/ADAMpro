@@ -1,5 +1,6 @@
 //protobuf
 import com.trueaccord.scalapb.{ScalaPbPlugin => PB}
+import sbtassembly.AssemblyPlugin.autoImport._
 
 PB.protobufSettings
 
@@ -15,7 +16,8 @@ libraryDependencies ++= Seq(
 
 //assembly
 assemblyShadeRules in assembly := Seq(
-  ShadeRule.rename("io.netty.**" -> "shaded.io.netty.@1").inAll
+  ShadeRule.rename("io.netty.**" -> "shaded.io.netty.@1").inAll,
+  ShadeRule.rename("com.google.guava.**" -> "shaded.io.guava.@1").inAll
 )
 
 assemblyOption in assembly :=

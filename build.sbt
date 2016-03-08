@@ -42,7 +42,8 @@ libraryDependencies ++= Seq(
   "com.h2database"         %    "h2"                     % "1.4.188",
   "org.postgresql"         %    "postgresql"             % "9.4-1201-jdbc41",
   "org.iq80.leveldb"       %    "leveldb"                % "0.7",
-  "com.datastax.spark"     %%   "spark-cassandra-connector" % "1.6.0-M1"
+  "com.datastax.spark"     %%   "spark-cassandra-connector" % "1.6.0-M1",
+  "com.google.guava"       %    "guava"                  % "19.0"
 )
 
 unmanagedBase <<= baseDirectory { base => base / "lib" }
