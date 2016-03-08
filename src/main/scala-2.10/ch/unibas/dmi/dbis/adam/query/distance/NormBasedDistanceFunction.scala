@@ -12,6 +12,15 @@ import ch.unibas.dmi.dbis.adam.query.distance.Distance.Distance
  * Ivan Giangreco
  * August 2015
  */
+object NormBasedDistanceFunction {
+  def apply(n : Int) = n match {
+    case 1 => ManhattanDistance
+    case 2 => EuclideanDistance
+    case n : Int => new MinkowskiDistance(n)
+  }
+}
+
+
 @SerialVersionUID(100L)
 class MinkowskiDistance(val n : Double) extends DistanceFunction with Serializable {
   override def apply(v1: FeatureVector, v2: FeatureVector): Distance =  minkowskiDistance(v1, v2, n).toFloat

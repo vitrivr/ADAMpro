@@ -1,6 +1,6 @@
 package ch.unibas.dmi.dbis.adam.main
 
-import ch.unibas.dmi.dbis.adam.rpc.AdamServer
+import ch.unibas.dmi.dbis.adam.rpc.RPCServer
 
 /**
   * adamtwo
@@ -10,7 +10,7 @@ import ch.unibas.dmi.dbis.adam.rpc.AdamServer
   */
 class RPCStartup extends Thread {
   override def run() : Unit = {
-    val server = new AdamServer(scala.concurrent.ExecutionContext.global)
+    val server = new RPCServer(scala.concurrent.ExecutionContext.global)
     server.start()
     server.blockUntilShutdown()
   }

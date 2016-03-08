@@ -190,9 +190,10 @@ object Index {
    * @param indexname
    * @return
    */
-  def dropIndex(indexname : IndexName) : Unit = {
+  def dropIndex(indexname : IndexName) : Boolean = {
     CatalogOperator.dropIndex(indexname)
     storage.drop(indexname)
+    true
   }
 
   /**

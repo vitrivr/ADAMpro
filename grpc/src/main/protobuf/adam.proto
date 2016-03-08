@@ -15,11 +15,8 @@ service AdamSearch {
   rpc DoStandardQuery(SimpleQueryMessage) returns (QueryResponseListMessage) {}
   rpc DoSequentialQuery(SimpleSequentialQueryMessage) returns (QueryResponseListMessage) {}
   rpc DoIndexQuery(SimpleIndexQueryMessage) returns (QueryResponseListMessage) {}
-  rpc DoTimedProgressiveQuery(TimedQueryMessage) returns (QueryResponseListMessage) {}
-}
-
-service AdamSearchStreaming {
-  rpc DoProgressiveQuery(SimpleQueryMessage) returns (QueryResponseListMessage) {}
+  rpc DoProgressiveQuery(SimpleQueryMessage) returns (stream QueryResponseInfoMessage) {}
+  rpc DoTimedProgressiveQuery(TimedQueryMessage) returns (QueryResponseInfoMessage) {}
 }
 
 message EntityNameMessage {
@@ -49,44 +46,67 @@ message InsertMessage {
 
 message IndexMessage {
   string entity = 1;
-  enum Type {
+  enum IndexType {
     lsh = 0;
     sh = 1;
     ecp = 2;
-    va = 3;
+    vaf = 3;
+    vav = 4;
   }
-  Type type = 2;
-  map<string, string> options = 3;
+  IndexType indextype = 2;
+  int32 norm = 3;
+  map<string, string> options = 4;
 }
+
+message NearestNeighbourQueryMessage {
+  repeated float query = 1 [packed=true];
+  int32 norm = 2;
+  int32 k = 3;
+  bool indexOnly = 4;
+  map<string, string> options = 5;
+}
+
+message BooleanQueryMessage {
+  map<string, string> where = 1;
+  repeated JoinMessage joins = 2;
+
+  message JoinMessage {
+    string table = 1;
+    repeated string columns = 2;
+  }
+}
+
+
 
 message SimpleQueryMessage {
   string entity = 1;
-  repeated float query = 2 [packed=true];
-  int32 k = 3;
-  map<string, string> metadata = 4;
-  string hint = 5;
+  string hint = 2;
+  NearestNeighbourQueryMessage nnq = 3;
+  BooleanQueryMessage bq = 4;
 }
 
 message SimpleSequentialQueryMessage {
   string entity = 1;
-  repeated float query = 2 [packed=true];
-  int32 k = 3;
-  map<string, string> metadata = 4;
+  NearestNeighbourQueryMessage nnq = 2;
+  BooleanQueryMessage bq = 3;
 }
 
 message SimpleIndexQueryMessage {
   string index = 1;
-  repeated float query = 2 [packed=true];
-  int32 k = 3;
-  map<string, string> metadata = 4;
+  NearestNeighbourQueryMessage nnq = 2;
+  BooleanQueryMessage bq = 3;
 }
 
 message TimedQueryMessage {
   string entity = 1;
-  repeated float query = 2 [packed=true];
-  int32 k = 3;
-  map<string, string> metadata = 4;
-  int64 time = 5;
+  NearestNeighbourQueryMessage nnq = 2;
+  BooleanQueryMessage bq = 3;
+  int64 time = 4;
+}
+
+message QueryResponseInfoMessage {
+  double confidence = 1;
+  QueryResponseListMessage queryResponseList = 2;
 }
 
 message QueryResponseMessage {
