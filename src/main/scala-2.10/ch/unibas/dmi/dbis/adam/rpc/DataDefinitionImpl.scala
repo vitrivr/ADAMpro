@@ -1,6 +1,6 @@
 package ch.unibas.dmi.dbis.adam.rpc
 
-import ch.unibas.dmi.dbis.adam.api.{CountOp, CreateOp, DropOp, IndexOp}
+import ch.unibas.dmi.dbis.adam.api._
 import ch.unibas.dmi.dbis.adam.http.grpc.adam._
 import ch.unibas.dmi.dbis.adam.index.structures.IndexStructures
 import ch.unibas.dmi.dbis.adam.query.distance.NormBasedDistanceFunction
@@ -71,8 +71,8 @@ class DataDefinitionImpl extends AdamDefinitionGrpc.AdamDefinition {
 
   override def dropIndex(request: IndexNameMessage): Future[AckMessage] ={
     try {
-      val count = CountOp(request.entity)
-      Future.successful(AckMessage(code = AckMessage.Code.OK, message = count.toString))
+      DropIndexOp(request.entity)
+      Future.successful(AckMessage(code = AckMessage.Code.OK))
     } catch {
       case e: Exception => Future.successful(AckMessage(code = AckMessage.Code.ERROR, message = e.getMessage))
     }

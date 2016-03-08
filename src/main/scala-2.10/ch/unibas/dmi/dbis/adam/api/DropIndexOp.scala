@@ -9,7 +9,7 @@ import ch.unibas.dmi.dbis.adam.index.Index.IndexName
   * Ivan Giangreco
   * March 2016
   */
-class DropIndexOp {
+object DropIndexOp {
   def apply(indexname: IndexName): Boolean = Index.dropIndex(indexname)
 }
 
