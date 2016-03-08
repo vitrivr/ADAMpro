@@ -13,6 +13,10 @@ lazy val root = (project in file(".")).
 lazy val grpc = project.
   settings(commonSettings: _*)
 
+lazy val client = project.
+  settings(commonSettings: _*)
+
+
 //build
 lazy val buildSettings = Seq(
   scalaVersion := "2.10.6",
