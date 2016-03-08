@@ -6,6 +6,6 @@ package ch.unibas.dmi.dbis.adam.exception
  * Ivan Giangreco
  * August 2015
  */
-class EntityNotExistingException extends AdamTwoException {
-}
+case class EntityNotExistingException  extends AdamTwoException("Entity not existing.")
+
 

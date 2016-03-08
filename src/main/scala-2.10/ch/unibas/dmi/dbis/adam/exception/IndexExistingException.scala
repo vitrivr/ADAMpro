@@ -6,5 +6,4 @@ package ch.unibas.dmi.dbis.adam.exception
  * Ivan Giangreco
  * August 2015
  */
-class IndexExistingException extends AdamTwoException {
-}
+case class IndexExistingException  extends AdamTwoException("Index exists already.")

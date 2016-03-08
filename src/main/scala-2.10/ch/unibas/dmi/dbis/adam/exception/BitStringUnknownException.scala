@@ -6,6 +6,6 @@ package ch.unibas.dmi.dbis.adam.exception
  * Ivan Giangreco
  * September 2015
  */
-class BitStringUnknownException extends AdamTwoException {
-}
+case class BitStringUnknownException  extends AdamTwoException("Bit String format unknown.")
+
 

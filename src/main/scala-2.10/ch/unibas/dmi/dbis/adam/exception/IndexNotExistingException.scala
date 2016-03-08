@@ -6,5 +6,4 @@ package ch.unibas.dmi.dbis.adam.exception
  * Ivan Giangreco
  * August 2015
  */
-class IndexNotExistingException extends AdamTwoException {
-}
+case class IndexNotExistingException  extends AdamTwoException("Index not existing.")
