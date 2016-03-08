@@ -1,7 +1,7 @@
 package ch.unibas.dmi.dbis.adam.rpc
 
 import ch.unibas.dmi.dbis.adam.config.AdamConfig
-import ch.unibas.dmi.dbis.adam.http.grpc.adam.AdamSearchGrpc
+import ch.unibas.dmi.dbis.adam.http.grpc.adam.{AdamDefinitionGrpc, AdamSearchGrpc}
 import io.grpc.Server
 import io.grpc.netty.NettyServerBuilder
 
@@ -20,7 +20,10 @@ class RPCServer(executionContext: ExecutionContext) { self =>
   private val port = AdamConfig.grpcPort
 
   def start(): Unit = {
-    server = NettyServerBuilder.forPort(port).addService(AdamSearchGrpc.bindService(new SearchImpl, executionContext)).build.start
+    server = NettyServerBuilder.forPort(port).
+      addService(AdamDefinitionGrpc.bindService(new DataDefinitionImpl, executionContext)).
+      addService(AdamSearchGrpc.bindService(new SearchImpl, executionContext)).
+      build.start
     Runtime.getRuntime.addShutdownHook(new Thread() {
       override def run(): Unit = {
         System.err.println("*** shutting down gRPC server since JVM is shutting down")
