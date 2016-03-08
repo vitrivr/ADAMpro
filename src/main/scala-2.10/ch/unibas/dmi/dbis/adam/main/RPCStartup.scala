@@ -1,6 +1,6 @@
 package ch.unibas.dmi.dbis.adam.main
 
-import ch.unibas.dmi.dbis.adam.http.grpc.AdamServer
+import ch.unibas.dmi.dbis.adam.rpc.AdamServer
 
 /**
   * adamtwo
