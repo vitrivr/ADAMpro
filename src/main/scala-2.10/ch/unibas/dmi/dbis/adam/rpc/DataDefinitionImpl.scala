@@ -19,7 +19,7 @@ class DataDefinitionImpl extends AdamDefinitionGrpc.AdamDefinition {
       CreateOp(request.entity)
       Future.successful(AckMessage(code = AckMessage.Code.OK))
     } catch {
-      case e: Exception => Future.failed(e)
+      case e: Exception => Future.successful(AckMessage(code = AckMessage.Code.ERROR, message = e.getMessage))
     }
   }
 
@@ -28,7 +28,7 @@ class DataDefinitionImpl extends AdamDefinitionGrpc.AdamDefinition {
       val count = CountOp(request.entity)
       Future.successful(AckMessage(code = AckMessage.Code.OK, message = count.toString))
     } catch {
-      case e: Exception => Future.failed(e)
+      case e: Exception => Future.successful(AckMessage(code = AckMessage.Code.ERROR, message = e.getMessage))
     }
   }
 
@@ -55,7 +55,7 @@ class DataDefinitionImpl extends AdamDefinitionGrpc.AdamDefinition {
       IndexOp(request.entity, indextypename, NormBasedDistanceFunction(request.norm),  request.options )
       Future.successful(AckMessage(code = AckMessage.Code.OK))
     } catch {
-      case e: Exception => Future.failed(e)
+      case e: Exception => Future.successful(AckMessage(code = AckMessage.Code.ERROR, message = e.getMessage))
     }
   }
 
@@ -64,7 +64,7 @@ class DataDefinitionImpl extends AdamDefinitionGrpc.AdamDefinition {
       DropOp(request.entity)
       Future.successful(AckMessage(code = AckMessage.Code.OK))
     } catch {
-      case e: Exception => Future.failed(e)
+      case e: Exception => Future.successful(AckMessage(code = AckMessage.Code.ERROR, message = e.getMessage))
     }
   }
 
@@ -74,7 +74,7 @@ class DataDefinitionImpl extends AdamDefinitionGrpc.AdamDefinition {
       val count = CountOp(request.entity)
       Future.successful(AckMessage(code = AckMessage.Code.OK, message = count.toString))
     } catch {
-      case e: Exception => Future.failed(e)
+      case e: Exception => Future.successful(AckMessage(code = AckMessage.Code.ERROR, message = e.getMessage))
     }
   }
 }
