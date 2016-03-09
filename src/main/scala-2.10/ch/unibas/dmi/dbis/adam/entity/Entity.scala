@@ -1,16 +1,13 @@
 package ch.unibas.dmi.dbis.adam.entity
 
-import ch.unibas.dmi.dbis.adam.cache.RDDCache
-import ch.unibas.dmi.dbis.adam.config.AdamConfig
 import ch.unibas.dmi.dbis.adam.entity.Entity._
-import ch.unibas.dmi.dbis.adam.exception.{EntityExistingException, EntityCreationException, EntityNotExistingException}
+import ch.unibas.dmi.dbis.adam.exception.{EntityCreationException, EntityExistingException, EntityNotExistingException}
 import ch.unibas.dmi.dbis.adam.main.SparkStartup
 import ch.unibas.dmi.dbis.adam.storage.components.{FeatureStorage, MetadataStorage}
 import ch.unibas.dmi.dbis.adam.storage.engine.CatalogOperator
 import org.apache.spark.rdd.RDD
-import org.apache.spark.sql.types._
-import org.apache.spark.sql.{DataFrame, Row, SaveMode}
-import org.apache.spark.storage.StorageLevel
+import org.apache.spark.sql.types.{LongType, StructField, StructType}
+import org.apache.spark.sql.{Row, DataFrame, SaveMode}
 
 import scala.collection.immutable.HashSet
 import scala.concurrent.ExecutionContext.Implicits.global
@@ -18,138 +15,154 @@ import scala.concurrent.duration.Duration
 import scala.concurrent.{Await, Future}
 
 /**
- * adamtwo
- *
- * Ivan Giangreco
- * October 2015
- */
-case class Entity(entityname : EntityName, featureStorage : FeatureStorage, metadataStorage: MetadataStorage) {
+  * adamtwo
+  *
+  * Ivan Giangreco
+  * October 2015
+  */
+case class Entity(entityname: EntityName, featureStorage: FeatureStorage, metadataStorage: MetadataStorage) {
   private lazy val featureData = featureStorage.read(entityname)
   private lazy val metaData = metadataStorage.read(entityname)
-  
+
+  /**
+    * Returns number of elements in the entity (only feature storage is considered).
+    *
+    * @return
+    */
   def count = featureStorage.count(entityname)
-  def show() = featureData.collect()
-  def show(n : Int) = featureData.take(n)
-  
-  def featuresForKeys(filter: HashSet[Long]): RDD[Tuple] = {
-    featureStorage.read(entityname, Option(filter)).rdd.map(r => r :Tuple)
+
+  /**
+    * Gives preview of entity.
+    *
+    * @param k number of elements to show in preview
+    * @return
+    */
+  def show(k: Int) = featureData.join(metaData).take(k)
+
+  /**
+    *
+    * @param filter
+    * @return
+    */
+  def filter(filter: HashSet[Long]): RDD[Tuple] = {
+    featureStorage.read(entityname, Option(filter)).rdd.map(r => r: Tuple)
   }
-  def featuresRDD = featureData.rdd
-  def featuresTuples = featureData.rdd.map(row => (row : Tuple))
+
+  def rdd = featureData.join(metaData).rdd
+
   def getFeaturedata: DataFrame = featureData
-  
-  def getMetadata : DataFrame = metaData
+
+  def getMetadata: DataFrame = metaData
 }
 
 object Entity {
   type EntityName = String
 
-  private val sqlContext = SparkStartup.sqlContext
   private val featureStorage = SparkStartup.featureStorage
   private val metadataStorage = SparkStartup.metadataStorage
 
-  def existsEntity(entityname : EntityName) : Boolean = CatalogOperator.existsEntity(entityname)
+  def existsEntity(entityname: EntityName): Boolean = CatalogOperator.existsEntity(entityname)
 
   /**
-   *
-   * @param entityname
-   * @return
-   */
-  def createEntity(entityname : EntityName) : Entity = {
-    if(existsEntity(entityname)){
+    * Creates an entity.
+    *
+    * @param entityname
+    * @param fields if fields is specified, in the metadata storage a table is created with these names, specify fields
+    *               as key = name, value = SQL type
+    * @return
+    */
+  def create(entityname: EntityName, fields: Option[Map[String, String]] = None): Entity = {
+    if (existsEntity(entityname)) {
       throw new EntityExistingException()
     }
 
-    val featureSchema = StructType(
-      List(
-        StructField("id", LongType, false),
-        StructField("feature", ArrayType(FloatType), false)
-      )
-    )
-    val featureData = sqlContext.createDataFrame(SparkStartup.sc.emptyRDD[Row], featureSchema)
-
     val future = Future {
-      featureStorage.create(entityname, featureData)
-      //TODO: metadataStorage.create(entityname, featureData)
+      featureStorage.create(entityname)
+      metadataStorage.create(entityname, fields)
     }
-    future onFailure {case t => new EntityCreationException()}
-    future onSuccess {case t => CatalogOperator.createEntity(entityname) }
+
+    future onFailure { case t => new EntityCreationException() }
+    future onSuccess { case t => CatalogOperator.createEntity(entityname) }
     Await.ready(future, Duration.Inf)
 
     Entity(entityname, featureStorage, metadataStorage)
   }
 
   /**
-   *
-   * @param entityname
-   * @param ifExists
-   */
-  def dropEntity(entityname : EntityName, ifExists : Boolean = false) : Boolean = {
-    val indexes = CatalogOperator.getIndexes(entityname)
+    * Drops an entity.
+    *
+    * @param entityname
+    * @param ifExists
+    * @return
+    */
+  def drop(entityname: EntityName, ifExists: Boolean = false): Boolean = {
+    if (!existsEntity(entityname)) {
+      if (!ifExists) {
+        throw new EntityNotExistingException()
+      } else {
+        return false
+      }
+    }
 
-    featureStorage.drop(entityname)
-    //TODO: metadataStorage.drop(entityname)
-    CatalogOperator.dropEntity(entityname, ifExists)
+    val indexes = CatalogOperator.listIndexes(entityname)
 
-    true
+    featureStorage.drop(entityname) && metadataStorage.drop(entityname) && CatalogOperator.dropEntity(entityname, ifExists)
   }
 
   /**
-   *
-   * @param entityname
-   * @return
-   */
-  def insertData(entityname : EntityName, insertion: DataFrame): Boolean ={
-    if(!existsEntity(entityname)){
+    * Inserts data into an entity.
+    *
+    * @param entityname
+    * @param insertion data frame containing all columns (of both the feature storage and the metadata storage);
+    *                  note that you should name the feature column as specified in the feature storage class ("feature").
+    * @return
+    */
+  def insertData(entityname: EntityName, insertion: DataFrame): Boolean = {
+    if (!existsEntity(entityname)) {
       throw new EntityNotExistingException()
     }
 
-    featureStorage.write(entityname, insertion, SaveMode.Append)
+    val rows = insertion.rdd.zipWithUniqueId.map { case (r: Row, id: Long) => Row.fromSeq(id +: r.toSeq) }
+    val insertionWithPK = SparkStartup.sqlContext.createDataFrame(
+      rows, StructType(StructField(featureStorage.idColumnName, LongType, false) +: insertion.schema.fields))
 
-
-    true
+    featureStorage.write(entityname, insertionWithPK.select(featureStorage.idColumnName, featureStorage.featureColumnName), SaveMode.Append)
+    metadataStorage.write(entityname, insertionWithPK.drop(featureStorage.featureColumnName), SaveMode.Append)
   }
 
   /**
-   *
-   * @param entityname
-   * @return
-   */
-  def retrieveEntity(entityname : EntityName) : Entity = {
-    if(!existsEntity(entityname)){
+    * Loads an entity.
+    *
+    * @param entityname
+    * @return
+    */
+  def load(entityname: EntityName): Entity = {
+    if (!existsEntity(entityname)) {
       throw new EntityNotExistingException()
     }
 
-    if(RDDCache.containsTable(entityname)){
-      RDDCache.getTable(entityname)
-    } else {
-      Entity(entityname, featureStorage, metadataStorage)
-    }
+    Entity(entityname, featureStorage, metadataStorage)
+
   }
 
   /**
-   *
-   * @param entityname
-   * @return
-   */
-  def countEntity(entityname : EntityName) : Int = {
+    * Returns number of tuples in entity (only feature storage is considered).
+    *
+    * @param entityname
+    * @return the number of tuples in the entity
+    */
+  def countTuples(entityname: EntityName): Int = {
+    if (!existsEntity(entityname)) {
+      throw new EntityNotExistingException()
+    }
+
     featureStorage.count(entityname)
   }
 
   /**
-   *
-   * @param entityname
-   * @return
-   */
-  @deprecated
-  def getCacheable(entityname : EntityName) : CacheableEntity = {
-    val entity = Entity.retrieveEntity(entityname)
-
-    entity.featuresTuples
-      .repartition(AdamConfig.partitions)
-      .setName(entityname).persist(StorageLevel.MEMORY_AND_DISK)
-      .collect()
-
-    CacheableEntity(entity)
-  }
+    * Lists names of all entities.
+    *
+    * @return name of entities
+    */
+  def list(): List[EntityName] = CatalogOperator.listEntities()
 }

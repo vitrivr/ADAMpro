@@ -22,8 +22,8 @@ class LSHIndexer(hashFamily : String, numHashTables : Int, numHashes : Int, dist
    * @param data
    * @return
    */
-  override def index(indexname : IndexName, entityname : EntityName, data: RDD[IndexerTuple]): Index[_ <: IndexTuple] = {
-    val n = Entity.countEntity(entityname)
+  override def index(indexname : IndexName, entityname : EntityName, data: RDD[IndexingTaskTuple]): Index[_ <: IndexTuple] = {
+    val n = Entity.countTuples(entityname)
     val fraction = ADAMSamplingUtils.computeFractionForSampleSize(trainingSize, n, false)
     val trainData = data.sample(false, fraction)
 
@@ -44,7 +44,7 @@ class LSHIndexer(hashFamily : String, numHashTables : Int, numHashes : Int, dist
    * @param trainData
    * @return
    */
-  private def train(trainData : Array[IndexerTuple]) : LSHIndexMetaData = {
+  private def train(trainData : Array[IndexingTaskTuple]) : LSHIndexMetaData = {
     //data
     val radiuses = {
         val res = for (a <- trainData; b <- trainData) yield distance(a.value, b.value)
@@ -73,7 +73,7 @@ object LSHIndexer {
    *
    * @param properties
    */
-  def apply(properties : Map[String, String] = Map[String, String](), distance : DistanceFunction, data: RDD[IndexerTuple]) : IndexGenerator = {
+  def apply(distance : DistanceFunction, properties : Map[String, String] = Map[String, String]()) : IndexGenerator = {
     val hashFamilyDescription = properties.getOrElse("hashFamily", "euclidean")
     val hashFamily = hashFamilyDescription.toLowerCase match {
       case "euclidean" => "euclidean" //TODO: check how to pass params

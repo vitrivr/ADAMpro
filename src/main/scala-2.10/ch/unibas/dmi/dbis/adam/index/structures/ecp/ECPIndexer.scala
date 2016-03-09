@@ -26,8 +26,8 @@ class ECPIndexer(distance : DistanceFunction) extends IndexGenerator with Serial
    * @param data
    * @return
    */
-  override def index(indexname: IndexName, entityname: EntityName, data: RDD[IndexerTuple]): Index[_ <: IndexTuple] = {
-    val n = Entity.countEntity(entityname)
+  override def index(indexname: IndexName, entityname: EntityName, data: RDD[IndexingTaskTuple]): Index[_ <: IndexTuple] = {
+    val n = Entity.countTuples(entityname)
     val trainingSize = math.sqrt(n)
     val fraction = ADAMSamplingUtils.computeFractionForSampleSize(trainingSize.toInt, n, false)
     val trainData = data.sample(false, fraction)
@@ -49,5 +49,5 @@ class ECPIndexer(distance : DistanceFunction) extends IndexGenerator with Serial
 }
 
 object ECPIndexer {
-  def apply(properties : Map[String, String] = Map[String, String](), distance : DistanceFunction, data: RDD[IndexerTuple]) : IndexGenerator = new ECPIndexer(distance)
+  def apply(distance : DistanceFunction) : IndexGenerator = new ECPIndexer(distance)
 }

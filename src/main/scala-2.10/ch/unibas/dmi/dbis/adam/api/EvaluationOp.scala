@@ -12,6 +12,7 @@ import scala.concurrent.Future
  * Ivan Giangreco
  * September 2015
  */
+@deprecated("Should be rewritten to new evaluation framework","2016-03")
 object EvaluationOp {
   def generate(): Unit = EvaluationDataGenerator()
 

@@ -24,7 +24,7 @@ import scala.collection.mutable.ListBuffer
 class ECPIndex(val indexname: IndexName, val entityname: EntityName, protected val df: DataFrame, private[index] val metadata : ECPIndexMetaData)
   extends Index[LongIndexTuple] {
 
-  override val indextypename: IndexTypeName = IndexStructures.ECP
+  override val indextype: IndexTypeName = IndexStructures.ECP
   override val confidence = 0.toFloat
 
   override protected def rdd : RDD[LongIndexTuple] = df.map(r => r : LongIndexTuple)

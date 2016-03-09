@@ -8,13 +8,23 @@ import scala.collection.immutable.HashSet
 
 
 /**
- * adamtwo
- *
- * Ivan Giangreco
- * August 2015
- */
+  * adamtwo
+  *
+  * Performs an index scan.
+  *
+  * Ivan Giangreco
+  * August 2015
+  */
 object IndexScanner {
-  def apply(index : Index[_ <: IndexTuple], query : NearestNeighbourQuery, filter : Option[HashSet[TupleID]]): HashSet[TupleID] = {
+  /**
+    * Performs an index scan.
+    *
+    * @param index
+    * @param query
+    * @param filter pre-filter to use when scanning the index
+    * @return
+    */
+  def apply(index: Index[_ <: IndexTuple], query: NearestNeighbourQuery, filter: Option[HashSet[TupleID]]): HashSet[TupleID] = {
     index.scan(query.q, query.options, query.k, filter, query.queryID)
   }
 }

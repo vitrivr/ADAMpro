@@ -21,7 +21,7 @@ import scala.concurrent.duration.Duration
   * Ivan Giangreco
   * March 2016
   */
-class SearchImpl extends AdamSearchGrpc.AdamSearch {
+class SearchRPC extends AdamSearchGrpc.AdamSearch {
   /**
     *
     * @param request

@@ -13,10 +13,10 @@ import scala.concurrent.Future
   * Ivan Giangreco
   * March 2016
   */
-class DataDefinitionImpl extends AdamDefinitionGrpc.AdamDefinition {
+class DataDefinitionRPC extends AdamDefinitionGrpc.AdamDefinition {
   override def createEntity(request: EntityNameMessage): Future[AckMessage] = {
     try {
-      CreateOp(request.entity)
+      CreateEntityOp(request.entity)
       Future.successful(AckMessage(code = AckMessage.Code.OK))
     } catch {
       case e: Exception => Future.successful(AckMessage(code = AckMessage.Code.ERROR, message = e.getMessage))
@@ -61,7 +61,7 @@ class DataDefinitionImpl extends AdamDefinitionGrpc.AdamDefinition {
 
   override def dropEntity(request: EntityNameMessage): Future[AckMessage] = {
     try {
-      DropOp(request.entity)
+      DropEntityOp(request.entity)
       Future.successful(AckMessage(code = AckMessage.Code.OK))
     } catch {
       case e: Exception => Future.successful(AckMessage(code = AckMessage.Code.ERROR, message = e.getMessage))

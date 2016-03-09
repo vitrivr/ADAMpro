@@ -25,7 +25,7 @@ import scala.collection.immutable.HashSet
 class SHIndex(val indexname: IndexName, val entityname: EntityName, protected val df : DataFrame, private[index] val metadata: SHIndexMetaData)
   extends Index[BitStringIndexTuple] {
 
-  override val indextypename: IndexTypeName = IndexStructures.SH
+  override val indextype: IndexTypeName = IndexStructures.SH
   override val confidence = 0.toFloat
 
   override protected def rdd : RDD[BitStringIndexTuple] = df.map(r => r : BitStringIndexTuple)

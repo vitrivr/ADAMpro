@@ -1,11 +1,6 @@
 package ch.unibas.dmi.dbis.adam.api
 
-import ch.unibas.dmi.dbis.adam.datatypes.feature.FeatureVectorWrapper
-import ch.unibas.dmi.dbis.adam.entity.{WrappingTuple, Entity}
-import ch.unibas.dmi.dbis.adam.entity.Entity._
-import ch.unibas.dmi.dbis.adam.main.SparkStartup
-
-import scala.util.Random
+import ch.unibas.dmi.dbis.adam.entity.Entity.EntityName
 
 /**
  * adamtwo
@@ -13,11 +8,12 @@ import scala.util.Random
  * Ivan Giangreco
  * November 2015
  */
+@deprecated("Should be rewritten to new evaluation framework","2016-03")
 object GenerateDataOp {
   val limit = 500000
 
-  def apply(entityname: EntityName, numberOfElements : Int, numberOfDimensions : Int, createIfNotExists : Boolean = false) : Boolean = {
-    if(createIfNotExists && !Entity.existsEntity(entityname)){
+  def apply(entityname: EntityName, numberOfElements : Int, numberOfDimensions : Int, createIfNotExists : Boolean = false) : Boolean = ???
+    /*if(createIfNotExists && !Entity.existsEntity(entityname)){
       Entity.createEntity(entityname)
     } else if(!Entity.existsEntity(entityname)){
       return false
@@ -32,9 +28,6 @@ object GenerateDataOp {
       Entity.insertData(entityname, data)
     }
 
-    true
-  }
-
-
+    true*/
 
 }

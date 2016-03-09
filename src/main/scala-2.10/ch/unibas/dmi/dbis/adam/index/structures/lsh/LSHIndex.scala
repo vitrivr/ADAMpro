@@ -24,7 +24,7 @@ import scala.collection.immutable.HashSet
 class LSHIndex(val indexname: IndexName, val entityname: EntityName, protected val df: DataFrame, private[index] val metadata: LSHIndexMetaData)
   extends Index[BitStringIndexTuple] {
 
-  override val indextypename: IndexTypeName = IndexStructures.LSH
+  override val indextype: IndexTypeName = IndexStructures.LSH
   override val confidence = 0.toFloat
 
   override protected def rdd : RDD[BitStringIndexTuple] = df.map(r => r : BitStringIndexTuple)

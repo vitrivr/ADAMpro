@@ -4,7 +4,7 @@ import ch.unibas.dmi.dbis.adam.config.AdamConfig
 import ch.unibas.dmi.dbis.adam.datatypes.bitString.{BitString, MinimalBitString}
 import ch.unibas.dmi.dbis.adam.datatypes.feature.FeatureVectorWrapper
 import ch.unibas.dmi.dbis.adam.storage.components.{FeatureStorage, IndexStorage, MetadataStorage}
-import ch.unibas.dmi.dbis.adam.storage.engine.{CassandraDataStorage, ParquetDataStorage, PostgresDataStorage}
+import ch.unibas.dmi.dbis.adam.storage.engine.{CassandraFeatureStorage, ParquetIndexStorage, PostgresMetadataStorage}
 import org.apache.spark.sql.hive.HiveContext
 import org.apache.spark.{SparkConf, SparkContext}
 
@@ -32,7 +32,7 @@ object SparkStartup {
   val sqlContext = new HiveContext(sc)
 
 
-  val featureStorage : FeatureStorage = CassandraDataStorage
-  val metadataStorage : MetadataStorage = PostgresDataStorage
-  val indexStorage: IndexStorage = ParquetDataStorage
+  val featureStorage : FeatureStorage = CassandraFeatureStorage
+  val metadataStorage : MetadataStorage = PostgresMetadataStorage
+  val indexStorage: IndexStorage = ParquetIndexStorage
 }

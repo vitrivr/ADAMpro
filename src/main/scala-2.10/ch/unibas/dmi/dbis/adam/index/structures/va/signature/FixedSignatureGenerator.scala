@@ -12,7 +12,7 @@ import scala.collection.mutable.ListBuffer
  * Ivan Giangreco
  * August 2015
  */
-class FixedSignatureGenerator(val numberOfDimensions: Int, val numberOfBitsPerDimension: Int) extends SignatureGenerator with Serializable {
+class FixedSignatureGenerator(val dimensions: Int, val bitsPerDimension: Int) extends SignatureGenerator with Serializable {
 
   /**
    *
@@ -30,11 +30,11 @@ class FixedSignatureGenerator(val numberOfDimensions: Int, val numberOfBitsPerDi
         var fromPosition = 0
         do{
           bitPosition = cellBits.nextSetBit(fromPosition)
-          if(bitPosition != -1  && bitPosition < numberOfBitsPerDimension){
+          if(bitPosition != -1  && bitPosition < bitsPerDimension){
             fromPosition = bitPosition + 1
-            setBits.+=(bitPosition + numberOfBitsPerDimension * dimIdx)
+            setBits.+=(bitPosition + bitsPerDimension * dimIdx)
           }
-        } while(bitPosition != -1 && bitPosition < numberOfBitsPerDimension)
+        } while(bitPosition != -1 && bitPosition < bitsPerDimension)
     }
 
     BitString(setBits)
@@ -45,6 +45,6 @@ class FixedSignatureGenerator(val numberOfDimensions: Int, val numberOfBitsPerDi
    * @param signature
    * @return
    */
-  @inline def toCells(signature: BitString[_]): Seq[Int] = signature.toInts(numberOfDimensions, numberOfBitsPerDimension)
+  @inline def toCells(signature: BitString[_]): Seq[Int] = signature.toInts(dimensions, bitsPerDimension)
 
 }

@@ -15,12 +15,13 @@ import org.apache.spark.sql.{DataFrame, SaveMode}
  * Ivan Giangreco
  * October 2015
  */
-object PostgresDataStorage extends MetadataStorage {
+object PostgresMetadataStorage extends MetadataStorage {
   val url = AdamConfig.jdbcUrl
 
   AdamDialectRegistrar.register(url)
 
-  //TODO: create schema
+  //TODO: create schema and index on id
+  override def create(entityname: EntityName, fields: Option[Map[String, String]]): Unit = ???
 
   /**
    *
@@ -39,20 +40,22 @@ object PostgresDataStorage extends MetadataStorage {
    * @param df
    * @param mode
    */
-  override def write(tablename: EntityName, df: DataFrame, mode: SaveMode = SaveMode.Append): Unit = {
+  override def write(tablename: EntityName, df: DataFrame, mode: SaveMode = SaveMode.Append): Boolean = {
     val props = new Properties()
     props.put("user", AdamConfig.jdbcUser)
     props.put("password", AdamConfig.jdbcPassword)
     df.write.mode(mode).jdbc(url, tablename, props)
+    true
   }
 
   /**
    *
    * @param tablename
    */
-  override def drop(tablename: EntityName): Unit = {
+  override def drop(tablename: EntityName): Boolean = {
     SparkStartup.sqlContext.read.format("jdbc").options(
       Map("url" -> url, "dbtable" -> tablename, "user" -> AdamConfig.jdbcUser, "password" -> AdamConfig.jdbcPassword)
     ).load()
+    true
   }
 }

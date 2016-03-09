@@ -2,7 +2,7 @@ package ch.unibas.dmi.dbis.adam.index.structures.va.marks
 
 import breeze.linalg.{max, min}
 import ch.unibas.dmi.dbis.adam.datatypes.feature.Feature._
-import ch.unibas.dmi.dbis.adam.index.IndexerTuple
+import ch.unibas.dmi.dbis.adam.index.IndexingTaskTuple
 import ch.unibas.dmi.dbis.adam.index.structures.va.VAIndex.Marks
 
 import scala.collection.IterableLike
@@ -20,7 +20,7 @@ private[va] object EquifrequentMarksGenerator extends MarksGenerator with Serial
    * @param maxMarks
    * @return
    */
-  private[va] def getMarks(samples : Array[IndexerTuple], maxMarks : Seq[Int]) : Marks = {
+  private[va] def getMarks(samples : Array[IndexingTaskTuple], maxMarks : Seq[Int]) : Marks = {
     val sampleSize = samples.length
 
     val min = getMin(samples.map(_.value))

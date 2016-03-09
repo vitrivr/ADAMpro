@@ -11,30 +11,32 @@ object AdamConfig{
   val config = ConfigFactory.load()
   config.checkValid(ConfigFactory.defaultReference(), "adamtwo")
 
-  //TODO: move to external config file
-  val hadoopUrl = "hdfs://127.0.0.1:9000" //default: 9000
+  val indexBase = config.getString("adamtwo.hadoopUrl")
+  val hadoopUrl = config.getString("adamtwo.hadoopUrl")
 
-  val dataBase = "/Users/gianiv01/tmp"
-  val indexBase = hadoopUrl
+  val dataPath = config.getString("adamtwo.dataPath")
 
-  val dataPath = dataBase + "/" + "data"
   val indexPath = "/Users/gianiv01/tmp/hdfs/adamtwo/index"
-  val catalogPath = dataBase + "/" + "catalog"
+  val catalogPath = config.getString("adamtwo.catalogPath")
   val indexMetaCatalogPath = catalogPath + "/" + "indexmeta"
-  val evaluationPath = dataBase + "/" + "evaluation"
 
-  val jdbcUrl = "jdbc:postgresql://127.0.0.1:5432/docker" //default: 5432
-  val jdbcUser = "docker"
-  val jdbcPassword = "docker"
+  val evaluationPath = config.getString("adamtwo.evaluationPath")
 
-  val cassandraUrl = "127.0.0.1"
-  val cassandraPort = "9042" //default: 9042
-  val cassandraUsername = "cassandra"
-  val cassandraPassword = "cassandra"
+  val jdbcUrl =  config.getString("adamtwo.jdbc.url")
+  val jdbcUser = config.getString("adamtwo.jdbc.user")
+  val jdbcPassword = config.getString("adamtwo.jdbc.password")
 
-  val grpcPort = 5890
+  val cassandraUrl = config.getString("adamtwo.cassandra.url")
+  val cassandraPort = config.getString("adamtwo.cassandra.port")
+  val cassandraUsername = config.getString("adamtwo.cassandra.user")
+  val cassandraPassword = config.getString("adamtwo.cassandra.password")
+  val cassandraKeyspace = "adamtwo"
 
-  val partitions = 4
+  val grpcPort = config.getInt("adamtwo.grpc.port")
 
   var evaluation = false
+
+  val maximumCacheSizeIndex = 10
+  val expireAfterAccess = 10 //in minutes
+
 }

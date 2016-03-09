@@ -19,6 +19,12 @@ service AdamSearch {
   rpc DoTimedProgressiveQuery(TimedQueryMessage) returns (QueryResponseInfoMessage) {}
 }
 
+
+message CreateEntityMessage {
+  string entity = 1;
+  map<string, string> fields = 2;
+}
+
 message EntityNameMessage {
   string entity = 1;
 }

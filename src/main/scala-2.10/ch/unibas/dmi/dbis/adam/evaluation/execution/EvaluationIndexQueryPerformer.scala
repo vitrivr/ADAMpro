@@ -68,7 +68,7 @@ class EvaluationIndexQueryPerformer {
       val (dbSize, vecSize, indextype, experimentN) = experiments.dequeue()
 
       val indexname = "data_" + dbSize + "_" + vecSize + "_" + indextype + "_0"
-      if (!Index.existsIndex(indexname)) {
+      if (!Index.exists(indexname)) {
         throw new IllegalStateException("Index not found.");
       }
 

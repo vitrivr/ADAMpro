@@ -1,11 +1,5 @@
 package ch.unibas.dmi.dbis.adam.util;
 
-/**
- * adamtwo
- * <p>
- * Ivan Giangreco
- * September 2015
- */
 import java.io.*;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
@@ -15,6 +9,10 @@ import java.util.stream.IntStream;
 import java.util.stream.StreamSupport;
 
 /**
+ * This class is a copy from the JDK 7 class java.util.BitSet. It provides a few additional methods.
+ *
+ *
+ *
  * This class implements a vector of bits that grows as needed. Each
  * component of the bit set has a {@code boolean} value. The
  * bits of a {@code BitSet} are indexed by nonnegative integers.

@@ -8,23 +8,31 @@ import scala.collection.mutable.ListBuffer
 
 
 /**
- * adamtwo
- *
- * Ivan Giangreco
- * September 2015
- */
+  * adamtwo
+  *
+  * Tracks the status of a progressively running query.
+  *
+  * Ivan Giangreco
+  * September 2015
+  */
 class ProgressiveQueryStatusTracker(queryID: String) {
   private val futures = ListBuffer[ScanFuture]()
   private var runningStatus = ProgressiveQueryStatus.RUNNING
   private var resultConfidence = 0.toFloat
   private var queryResults = Seq[Result]()
 
+  /**
+    * Register a scan future.
+    *
+    * @param future
+    */
   def register(future: ScanFuture): Unit = futures.synchronized(futures += future)
 
   /**
-   *
-   * @param future
-   */
+    * Notifies the tracker of its completion.
+    *
+    * @param future
+    */
   def notifyCompletion(future: ScanFuture, futureResults: Seq[Result]): Unit = {
     futures.synchronized({
       if (future.confidence > resultConfidence && runningStatus == ProgressiveQueryStatus.RUNNING) {
@@ -33,7 +41,8 @@ class ProgressiveQueryStatusTracker(queryID: String) {
       }
 
       if (!AdamConfig.evaluation) {
-        // in evaluation mode we want to keep all results and do not stop
+        // in evaluation mode we want to keep all results and do not stop, as to be able to measure how
+        // much time each index would run
         if (math.abs(resultConfidence - 1.0) < 0.000001) {
           stop(ProgressiveQueryStatus.FINISHED)
         }
@@ -41,16 +50,23 @@ class ProgressiveQueryStatusTracker(queryID: String) {
 
       futures -= future
 
-      if(futures.isEmpty){
+      if (futures.isEmpty) {
         stop(ProgressiveQueryStatus.FINISHED)
       }
     })
   }
 
+  /**
+    * Prematurely stops the progressive query.
+    */
   def stop(): Unit = stop(ProgressiveQueryStatus.PREMATURE_FINISHED)
 
+  /**
+    * Stops the progressive query with the new status.
+    * @param newStatus
+    */
   private def stop(newStatus: ProgressiveQueryStatus.Value): Unit = {
-    if (runningStatus == ProgressiveQueryStatus.FINISHED) {
+    if (runningStatus == ProgressiveQueryStatus.FINISHED) { //already finished
       return
     }
 
@@ -61,18 +77,31 @@ class ProgressiveQueryStatusTracker(queryID: String) {
     }
   }
 
+  /**
+    * Returns the most up-to-date results together with a confidence score.
+    * @return
+    */
   def results = (queryResults, resultConfidence)
 
+  /**
+    * Returns the current status of the progressive query.
+    * @return
+    */
   def status = futures.synchronized {
     runningStatus
   }
 
-  def numberOfFutures = futures.size
+  /**
+    * Returns the number of current queries running in parallel.
+    *
+    * @return
+    */
+  def length = futures.size
 }
 
 /**
- *
- */
+  *
+  */
 object ProgressiveQueryStatus extends Enumeration {
   val RUNNING = Value("running")
   val PREMATURE_FINISHED = Value("premature")

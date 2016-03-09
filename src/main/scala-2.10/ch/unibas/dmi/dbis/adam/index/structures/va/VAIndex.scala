@@ -27,7 +27,7 @@ import scala.collection.immutable.HashSet
 class VAIndex(val indexname : IndexName, val entityname : EntityName, protected val df: DataFrame, private[index] val metadata: VAIndexMetaData)
   extends Index[BitStringIndexTuple] with Serializable {
 
-  override val indextypename: IndexTypeName = metadata.signatureGenerator match {
+  override val indextype: IndexTypeName = metadata.signatureGenerator match {
     case fsg : FixedSignatureGenerator =>   IndexStructures.VAF
     case vsg : VariableSignatureGenerator => IndexStructures.VAV
   }

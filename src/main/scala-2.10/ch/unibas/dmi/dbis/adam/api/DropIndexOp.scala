@@ -6,10 +6,19 @@ import ch.unibas.dmi.dbis.adam.index.Index.IndexName
 /**
   * adamtwo
   *
+  * Drop operation. Drops an index.
+  *
+  *
   * Ivan Giangreco
   * March 2016
   */
 object DropIndexOp {
-  def apply(indexname: IndexName): Boolean = Index.dropIndex(indexname)
+  /**
+    * Drops an index.
+    *
+    * @param indexname
+    * @return true if index was dropped
+    */
+  def apply(indexname: IndexName): Boolean = Index.drop(indexname)
 }
 

@@ -7,7 +7,7 @@ import ch.unibas.dmi.dbis.adam.index.Index._
 import ch.unibas.dmi.dbis.adam.index.structures.IndexStructures
 import ch.unibas.dmi.dbis.adam.index.structures.va.marks.{EquidistantMarksGenerator, EquifrequentMarksGenerator, MarksGenerator}
 import ch.unibas.dmi.dbis.adam.index.structures.va.signature.FixedSignatureGenerator
-import ch.unibas.dmi.dbis.adam.index.{BitStringIndexTuple, IndexGenerator, IndexerTuple}
+import ch.unibas.dmi.dbis.adam.index.{BitStringIndexTuple, IndexGenerator, IndexingTaskTuple}
 import ch.unibas.dmi.dbis.adam.main.SparkStartup
 import ch.unibas.dmi.dbis.adam.query.distance.MinkowskiDistance
 import org.apache.spark.rdd.RDD
@@ -23,8 +23,8 @@ class VAFIndexer(maxMarks: Int = 64, marksGenerator: MarksGenerator, bitsPerDime
   /**
    *
    */
-  override def index(indexname : IndexName, entityname : EntityName, data: RDD[IndexerTuple]): VAIndex = {
-    val n = Entity.countEntity(entityname)
+  override def index(indexname : IndexName, entityname : EntityName, data: RDD[IndexingTaskTuple]): VAIndex = {
+    val n = Entity.countTuples(entityname)
     val fraction = ADAMSamplingUtils.computeFractionForSampleSize(trainingSize, n, false)
     val trainData = data.sample(false, fraction)
 
@@ -46,7 +46,7 @@ class VAFIndexer(maxMarks: Int = 64, marksGenerator: MarksGenerator, bitsPerDime
    * @param trainData
    * @return
    */
-  private def train(trainData : Array[IndexerTuple]) : VAIndexMetaData = {
+  private def train(trainData : Array[IndexingTaskTuple]) : VAIndexMetaData = {
     val dim = trainData.head.value.length
 
     val signatureGenerator =  new FixedSignatureGenerator(dim, bitsPerDimension)
@@ -73,7 +73,7 @@ object VAFIndexer {
    *
    * @param properties
    */
-  def apply(properties : Map[String, String] = Map[String, String](), distance : MinkowskiDistance, data: RDD[IndexerTuple]) : IndexGenerator = {
+  def apply(distance : MinkowskiDistance, properties : Map[String, String] = Map[String, String]()) : IndexGenerator = {
     val maxMarks = properties.getOrElse("maxMarks", "64").toInt
 
     val marksGeneratorDescription = properties.getOrElse("marksGenerator", "equifrequent")

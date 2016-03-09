@@ -24,6 +24,11 @@ case class FeatureVectorWrapper(value: FeatureVector) extends Serializable {
     this(new Feature.SparseFeatureVector(index.toArray, value.toArray, length))
   }
 
+  /**
+    * Returns a scala data type "vector".
+    *
+    * @return
+    */
   def getSeq() : Seq[VectorBase] = value.toDenseVector.toArray
 }
 

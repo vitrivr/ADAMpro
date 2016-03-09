@@ -19,11 +19,17 @@ import scala.concurrent.Future
  */
 abstract class ScanFuture(tracker : ProgressiveQueryStatusTracker){
   val future : Future[_]
-
   val confidence : Float
 }
 
-
+/**
+  * Scan future for indexes.
+  *
+  * @param indexname
+  * @param query
+  * @param onComplete
+  * @param tracker
+  */
 class IndexScanFuture(indexname : IndexName, query : NearestNeighbourQuery, onComplete: (ProgressiveQueryStatus.Value, Seq[Result], Float, Map[String, String]) => Unit, val tracker : ProgressiveQueryStatusTracker) extends ScanFuture(tracker) {
   tracker.register(this)
 
@@ -40,16 +46,23 @@ class IndexScanFuture(indexname : IndexName, query : NearestNeighbourQuery, onCo
       }
   })
 
-  lazy val confidence: Float = Index.retrieveIndexConfidence(indexname)
+  lazy val confidence: Float = Index.confidence(indexname)
 }
 
-
+/**
+  * Scan future for sequential scan.
+  *
+  * @param entityname
+  * @param query
+  * @param onComplete
+  * @param tracker
+  */
 class SequentialScanFuture(entityname : EntityName, query : NearestNeighbourQuery, onComplete: (ProgressiveQueryStatus.Value, Seq[Result], Float, Map[String, String]) => Unit, val tracker : ProgressiveQueryStatusTracker) extends ScanFuture(tracker) {
   tracker.register(this)
 
   val info =  Map[String,String]("type" -> "sequential", "relation" -> entityname, "qid" -> query.queryID.get)
 
-  val future = Future {NearestNeighbourQueryHandler.sequentialQuery(entityname, query, None)}
+  val future = Future {NearestNeighbourQueryHandler.sequential(entityname, query, None)}
   future.onSuccess({
     case res =>
       tracker.synchronized {

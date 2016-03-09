@@ -10,8 +10,35 @@ import org.apache.spark.sql.{DataFrame, SaveMode}
  * October 2015
  */
 trait MetadataStorage {
-  def create(entityname : EntityName, df: DataFrame) = write(entityname, df, SaveMode.Overwrite)
+  val idColumnName = "__ADAMTWO_TID"
+
+  /**
+    * Create entity in metadata storage.
+    * @param entityname
+    * @param fields
+    */
+  def create(entityname : EntityName, fields : Option[Map[String,String]])
+
+  /**
+    * Read data from metadata storage.
+    * @param tablename
+    * @return
+    */
   def read(tablename: EntityName): DataFrame
-  def write(tablename : EntityName, df: DataFrame, mode : SaveMode = SaveMode.Append): Unit
-  def drop(tablename :EntityName) : Unit
+
+  /**
+    * Write data to metadata storage.
+    * @param tablename
+    * @param data
+    * @param mode
+    * @return
+    */
+  def write(tablename : EntityName, data: DataFrame, mode : SaveMode = SaveMode.Append): Boolean
+
+  /**
+    * Drop data from the metadata storage.
+    * @param tablename
+    * @return
+    */
+  def drop(tablename :EntityName) : Boolean
 }

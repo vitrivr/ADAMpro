@@ -17,11 +17,23 @@ import scala.collection.immutable.HashSet
  * November 2015
  */
 object BooleanQueryHandler extends Logging {
-
+  /**
+    * Performs a Boolean query on the metadata.
+    *
+    * @param entityname
+    * @param query
+    * @return
+    */
   def metadataQuery(entityname: EntityName, query : BooleanQuery): Seq[Row] =
-    MetadataScanner(Entity.retrieveEntity(entityname), query)
+    MetadataScanner(Entity.load(entityname), query)
 
-
+  /**
+    * Performs a Boolean query on the metadata where the ID only is compared.
+    *
+    * @param entityname
+    * @param filter tuple ids to filter on
+    * @return
+    */
   def metadataQuery(entityname: EntityName, filter: HashSet[TupleID]): Seq[Row] =
-    MetadataScanner(Entity.retrieveEntity(entityname), filter)
+    MetadataScanner(Entity.load(entityname), filter)
 }

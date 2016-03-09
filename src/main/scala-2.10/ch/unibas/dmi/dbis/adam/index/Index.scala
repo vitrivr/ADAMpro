@@ -1,6 +1,8 @@
 package ch.unibas.dmi.dbis.adam.index
 
-import ch.unibas.dmi.dbis.adam.cache.RDDCache
+import java.util.concurrent.TimeUnit
+
+import ch.unibas.dmi.dbis.adam.config.AdamConfig
 import ch.unibas.dmi.dbis.adam.datatypes.feature.Feature._
 import ch.unibas.dmi.dbis.adam.datatypes.feature.FeatureVectorWrapper
 import ch.unibas.dmi.dbis.adam.exception.IndexNotExistingException
@@ -15,6 +17,7 @@ import ch.unibas.dmi.dbis.adam.storage.engine.CatalogOperator
 import ch.unibas.dmi.dbis.adam.entity.Entity
 import ch.unibas.dmi.dbis.adam.entity.Entity._
 import ch.unibas.dmi.dbis.adam.entity.Tuple._
+import com.google.common.cache.{CacheLoader, CacheBuilder}
 import org.apache.spark.rdd.RDD
 import org.apache.spark.sql.DataFrame
 import org.apache.spark.storage.StorageLevel
@@ -22,36 +25,43 @@ import org.apache.spark.storage.StorageLevel
 import scala.collection.immutable.HashSet
 
 /**
- * adamtwo
- *
- * Ivan Giangreco
- * August 2015
- */
-trait Index[A <: IndexTuple]{
-  val indextypename : IndexTypeName
+  * adamtwo
+  *
+  * Ivan Giangreco
+  * August 2015
+  */
+trait Index[A <: IndexTuple] {
+  val indexname: IndexName
+  val indextype: IndexTypeName
+  val entityname: EntityName
 
-  val indexname : IndexName
-  val entityname : EntityName
-  val confidence : Float
+  // Confidence towards the index. Confidence of 1 means very confident in index results (i.e., precise results).
+  val confidence: Float
 
-  protected val df : DataFrame
-  protected def rdd : RDD[A]
-  protected def rdd(filter : Option[HashSet[TupleID]]) : RDD[A] = if(filter.isDefined){ rdd.filter(t => filter.get.contains(t.tid)) } else { rdd }
 
-  private[index] def metadata : Serializable
+  protected val df: DataFrame
 
-  def scan(q : FeatureVector, options: Map[String, Any], k : Int, filter : Option[HashSet[TupleID]], queryID : Option[String] = None) : HashSet[TupleID] = {
+  protected def rdd: RDD[A]
+
+  //TODO: move filtering down to storage engine
+  protected def rdd(filter: Option[HashSet[TupleID]]): RDD[A] = if (filter.isDefined) {
+    rdd.filter(t => filter.get.contains(t.tid))
+  } else {
+    rdd
+  }
+
+  private[index] def metadata: Serializable
+
+  def scan(q: FeatureVector, options: Map[String, Any], k: Int, filter: Option[HashSet[TupleID]], queryID: Option[String] = None): HashSet[TupleID] = {
     SparkStartup.sc.setLocalProperty("spark.scheduler.pool", "index")
-    SparkStartup.sc.setJobGroup(queryID.getOrElse(""), indextypename.toString, true)
+    SparkStartup.sc.setJobGroup(queryID.getOrElse(""), indextype.toString, true)
 
     scan(rdd(filter), q, options, k)
   }
 
-  def scan(data : RDD[A], q: FeatureVector, options: Map[String, Any], k : Int): HashSet[TupleID]
+  def scan(data: RDD[A], q: FeatureVector, options: Map[String, Any], k: Int): HashSet[TupleID]
 }
 
-
-case class CacheableIndex(index : Index[_ <: IndexTuple])
 
 object Index {
   type IndexName = String
@@ -59,101 +69,105 @@ object Index {
 
   private val storage = SparkStartup.indexStorage
 
+
   /**
-   *
-   * @param entity
-   * @param indexgenerator
-   * @return
-   */
-  def createIndex(entity : Entity, indexgenerator : IndexGenerator) :  Index[_ <: IndexTuple] = {
+    * Creates an index that is unique and which folows the naming rules of indexes.
+    *
+    * @param entityname
+    * @param indextype
+    * @return
+    */
+  private def createIndexName(entityname: EntityName, indextype: IndexTypeName): String = {
+    val indexes = CatalogOperator.listIndexes(entityname).filter(_.startsWith(entityname + "_" + indextype.toString))
+
+    var indexname = ""
+
+    var i = indexes.length
+    do {
+      indexname = entityname + "_" + indextype.toString + "_" + i
+      i += 1
+    } while (indexes.contains(indexname))
+
+    indexname
+  }
+
+
+  /**
+    * Creates an index.
+    *
+    * @param entity
+    * @param indexgenerator generator to create index
+    * @return index
+    */
+  def createIndex(entity: Entity, indexgenerator: IndexGenerator): Index[_ <: IndexTuple] = {
     val indexname = createIndexName(entity.entityname, indexgenerator.indextypename)
-    val rdd: RDD[IndexerTuple] = entity.featuresRDD.map { x => IndexerTuple(x.getLong(0), x.getAs[FeatureVectorWrapper](1).value) }
+    val rdd: RDD[IndexingTaskTuple] = entity.rdd.map { x => IndexingTaskTuple(x.getLong(0), x.getAs[FeatureVectorWrapper](1).value) }
     val index = indexgenerator.index(indexname, entity.entityname, rdd)
     storage.write(indexname, index.df)
     CatalogOperator.createIndex(indexname, entity.entityname, indexgenerator.indextypename, index.metadata)
     index
   }
 
-  /**
-   *
-   * @param entityname
-   * @param indextype
-   * @return
-   */
-  private def createIndexName(entityname : EntityName, indextype : IndexTypeName) : String = {
-    val indexes = CatalogOperator.getIndexes(entityname)
-
-    var indexname = ""
-
-    var i = 0
-    do {
-     indexname =  entityname + "_" + indextype.toString + "_" + i
-      i += 1
-    } while(indexes.contains(indexname))
-
-    indexname
-  }
 
   /**
-   *
-   * @param indexname
-   * @return
-   */
-  def existsIndex(indexname : IndexName) : Boolean = {
-    CatalogOperator.existsIndex(indexname)
-  }
+    * Checks whether index exists.
+    *
+    * @param indexname
+    * @return
+    */
+  def exists(indexname: IndexName): Boolean = CatalogOperator.existsIndex(indexname)
 
   /**
-   *
-   * @param entityname
-   * @return
-   */
-  def getIndexnames(entityname : EntityName) : Seq[IndexName] = {
-    CatalogOperator.getIndexes(entityname)
-  }
+    * Lists names of all indexes for a given entity.
+    *
+    * @param entityname
+    * @return
+    */
+  def list(entityname: EntityName): Seq[IndexName] = CatalogOperator.listIndexes(entityname)
 
   /**
-   *
-   * @return
-   */
-  def getIndexnames() : Seq[IndexName] = {
-    CatalogOperator.getIndexes()
-  }
+    * Lists names of all indexes.
+    *
+    * @return
+    */
+  def list(): Seq[IndexName] = CatalogOperator.listIndexes()
 
   /**
-   *
-   * @param indexname
-   * @return
-   */
-  def retrieveIndexConfidence(indexname : IndexName) : Float = {
-    retrieveIndex(indexname).confidence
-  }
+    * Gets confidence score of index.
+    *
+    * @param indexname
+    * @return
+    */
+  def confidence(indexname: IndexName): Float = load(indexname, false).confidence
 
   /**
-   *
-   * @param indexname
-   * @return
-   */
-  def retrieveIndex(indexname : IndexName) :  Index[_ <: IndexTuple] = {
-    if(!existsIndex(indexname)){
+    * Loads index.
+    *
+    * @param indexname
+    * @param cache if cache is true, the index is added to the cache and read from there
+    * @return
+    */
+  def load(indexname: IndexName, cache: Boolean = true): Index[_ <: IndexTuple] = {
+    if (!exists(indexname)) {
       throw new IndexNotExistingException()
     }
 
-    if(RDDCache.containsIndex(indexname)){
-      RDDCache.getIndex(indexname)
+    if (cache) {
+      IndexLRUCache.get(indexname)
     } else {
-      loadCacheMissedIndex(indexname)
+      loadIndexMetaData(indexname)
     }
   }
 
   /**
-   *
-   * @param indexname
-   * @return
-   */
-  private def loadCacheMissedIndex(indexname : IndexName) : Index[_ <: IndexTuple] = {
+    * Loads the index metadata without loading the data itself yet.
+    *
+    * @param indexname
+    * @return
+    */
+  private def loadIndexMetaData(indexname: IndexName): Index[_ <: IndexTuple] = {
     val df = storage.read(indexname)
-    val entityname = CatalogOperator.getIndexEntity(indexname)
+    val entityname = CatalogOperator.getEntitynameFromIndex(indexname)
     val meta = CatalogOperator.getIndexMeta(indexname)
 
     val indextypename = CatalogOperator.getIndexTypeName(indexname)
@@ -168,45 +182,65 @@ object Index {
   }
 
   /**
-   *
-   * @param indexname
-   * @return
-   */
-  def getCacheable(indexname : IndexName) : CacheableIndex = {
-    val index = retrieveIndex(indexname)
-
-    index.rdd(None)
-      .setName(indexname)
-      .persist(StorageLevel.MEMORY_AND_DISK)
-
-    index.rdd(None).collect()
-
-    CacheableIndex(index)
-  }
-
-
-  /**
-   *
-   * @param indexname
-   * @return
-   */
-  def dropIndex(indexname : IndexName) : Boolean = {
+    * Drops an index.
+    *
+    * @param indexname
+    * @return true if index was dropped
+    */
+  def drop(indexname: IndexName): Boolean = {
     CatalogOperator.dropIndex(indexname)
     storage.drop(indexname)
-    true
   }
 
   /**
-   *
-   * @param entityname
-   * @return
-   */
-  def dropIndexesForTable(entityname: EntityName) : Unit = {
-    val indexes = CatalogOperator.dropIndexesForEntity(entityname)
+    * Drops all indexes for a given entity.
+    *
+    * @param entityname
+    * @return
+    */
+  def dropAll(entityname: EntityName): Boolean = {
+    val indexes = CatalogOperator.dropAllIndexes(entityname)
 
     indexes.foreach {
       index => storage.drop(index)
     }
+
+    true
   }
+
+
+  object IndexLRUCache {
+    private val maximumCacheSizeIndex = AdamConfig.maximumCacheSizeIndex
+    private val expireAfterAccess = AdamConfig.maximumCacheSizeIndex
+
+    private val indexCache = CacheBuilder.
+      newBuilder().
+      maximumSize(maximumCacheSizeIndex).
+      expireAfterAccess(expireAfterAccess, TimeUnit.MINUTES).
+      build(
+        new CacheLoader[IndexName, Index[_ <: IndexTuple]]() {
+          def load(indexname: IndexName): Index[_ <: IndexTuple] = {
+            val index = Index.loadIndexMetaData(indexname)
+            index.df.rdd.setName(indexname).persist(StorageLevel.MEMORY_AND_DISK)
+            index.df.rdd.collect()
+            index
+          }
+        }
+      )
+
+    /**
+      * Gets index from cache. If index is not yet in cache, it is loaded.
+      *
+      * @param indexname
+      */
+    def get(indexname: IndexName): Index[_ <: IndexTuple] = {
+      indexCache.get(indexname)
+    }
+  }
+
 }
+
+
+
+
 

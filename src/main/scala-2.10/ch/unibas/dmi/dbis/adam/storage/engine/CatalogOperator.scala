@@ -18,15 +18,15 @@ import scala.concurrent.duration._
 
 
 /**
- * adamtwo
- *
- * Ivan Giangreco
- * August 2015
- */
+  * adamtwo
+  *
+  * Ivan Giangreco
+  * August 2015
+  */
 object CatalogOperator {
-  private val MAX_WAITING_TIME : Duration = 5.seconds
+  private val MAX_WAITING_TIME: Duration = 5.seconds
 
-  private val db = Database.forURL("jdbc:h2:" +  (AdamConfig.catalogPath + "/" + "catalog"), driver="org.h2.Driver")
+  private val db = Database.forURL("jdbc:h2:" + (AdamConfig.catalogPath + "/" + "catalog"), driver = "org.h2.Driver")
 
   //generate catalog entities in the beginning if not already existent
   val entityList = Await.result(db.run(MTable.getTables), MAX_WAITING_TIME).toList.map(x => x.name.name)
@@ -40,11 +40,12 @@ object CatalogOperator {
 
 
   /**
-   *
-   * @param entityname
-   */
-  def createEntity(entityname : EntityName): Unit ={
-    if(existsEntity(entityname)){
+    * Creates entity in catalog.
+    *
+    * @param entityname
+    */
+  def createEntity(entityname: EntityName): Unit = {
+    if (existsEntity(entityname)) {
       throw new EntityExistingException()
     }
 
@@ -55,27 +56,32 @@ object CatalogOperator {
   }
 
   /**
-   *
-   * @param entityname
-   * @param ifExists
-   */
-  def dropEntity(entityname : EntityName, ifExists : Boolean = false) = {
-    if(!existsEntity(entityname)){
-      if(!ifExists){
+    * Drops entity from catalog.
+    *
+    * @param entityname
+    * @param ifExists
+    */
+  def dropEntity(entityname: EntityName, ifExists: Boolean = false): Boolean = {
+    if (!existsEntity(entityname)) {
+      if (!ifExists) {
         throw new EntityNotExistingException()
+      } else {
+        return false
       }
-    } else {
-      val query = entities.filter(_.entityname === entityname).delete
-      val count = Await.result(db.run(query), MAX_WAITING_TIME)
     }
+
+    val query = entities.filter(_.entityname === entityname).delete
+    val count = Await.result(db.run(query), MAX_WAITING_TIME)
+    true
   }
 
   /**
-   *
-   * @param entityname
-   * @return
-   */
-  def existsEntity(entityname : EntityName): Boolean ={
+    * Checks whether entity exists in catalog.
+    *
+    * @param entityname
+    * @return
+    */
+  def existsEntity(entityname: EntityName): Boolean = {
     val query = entities.filter(_.entityname === entityname).length.result
     val count = Await.result(db.run(query), MAX_WAITING_TIME)
 
@@ -83,20 +89,22 @@ object CatalogOperator {
   }
 
   /**
-   *
-   * @return
-   */
-  def listEntities() : List[EntityName] = {
+    * Lists all entities in catalog.
+    *
+    * @return name of entities
+    */
+  def listEntities(): List[EntityName] = {
     val query = entities.map(_.entityname).result
     Await.result(db.run(query), MAX_WAITING_TIME).toList
   }
 
   /**
-   *
-   * @param indexname
-   * @return
-   */
-  def existsIndex(indexname : IndexName): Boolean = {
+    * Checks whether index exists in catalog.
+    *
+    * @param indexname
+    * @return
+    */
+  def existsIndex(indexname: IndexName): Boolean = {
     val query = indexes.filter(_.indexname === indexname).length.result
     val count = Await.result(db.run(query), MAX_WAITING_TIME)
 
@@ -104,22 +112,23 @@ object CatalogOperator {
   }
 
   /**
-   *
-   * @param indexname
-   * @param entityname
-   * @param indexmeta
-   */
-  def createIndex(indexname : IndexName, entityname : EntityName, indextypename : IndexTypeName, indexmeta : Serializable): Unit ={
-    if(!existsEntity(entityname)){
+    * Creates index in catalog.
+    *
+    * @param indexname
+    * @param entityname
+    * @param indexmeta
+    */
+  def createIndex(indexname: IndexName, entityname: EntityName, indextypename: IndexTypeName, indexmeta: Serializable): Unit = {
+    if (!existsEntity(entityname)) {
       throw new EntityNotExistingException()
     }
 
-    if(existsIndex(indexname)){
+    if (existsIndex(indexname)) {
       throw new IndexExistingException()
     }
 
     val metaPath = AdamConfig.indexMetaCatalogPath + "/" + indexname + "/"
-    val metaFilePath =  metaPath + "_adam_metadata"
+    val metaFilePath = metaPath + "_adam_metadata"
 
     new File(metaPath).mkdirs()
 
@@ -134,12 +143,13 @@ object CatalogOperator {
   }
 
   /**
-   *
-   * @param indexname
-   * @return
-   */
-  def dropIndex(indexname : IndexName) : Unit = {
-    if(!existsIndex(indexname)){
+    * Drops index from catalog.
+    *
+    * @param indexname
+    * @return
+    */
+  def dropIndex(indexname: IndexName): Unit = {
+    if (!existsIndex(indexname)) {
       throw new IndexNotExistingException()
     }
 
@@ -151,16 +161,17 @@ object CatalogOperator {
   }
 
   /**
-   *
-   * @param entityname
-   * @return
-   */
-  def dropIndexesForEntity(entityname: EntityName) = {
-    if(!existsEntity(entityname)){
+    * Drops all indexes from catalog belonging to entity.
+    *
+    * @param entityname
+    * @return
+    */
+  def dropAllIndexes(entityname: EntityName) = {
+    if (!existsEntity(entityname)) {
       throw new EntityNotExistingException()
     }
 
-    val existingIndexes = getIndexes(entityname)
+    val existingIndexes = listIndexes(entityname)
 
     val query = indexes.filter(_.entityname === entityname).delete
     Await.result(db.run(query), MAX_WAITING_TIME)
@@ -169,40 +180,44 @@ object CatalogOperator {
   }
 
   /**
-   *
-   * @param entityname
-   */
-  def getIndexes(entityname : EntityName): Seq[IndexName] = {
+    * Lists all indexes in catalog for specific entity.
+    *
+    * @param entityname
+    */
+  def listIndexes(entityname: EntityName): Seq[IndexName] = {
     val query = indexes.filter(_.entityname === entityname).map(_.indexname).result
     Await.result(db.run(query), MAX_WAITING_TIME).toList
   }
 
 
   /**
-   *
-   * @param entityname
-   */
-  def getIndexesAndType(entityname : EntityName): Seq[(IndexName, IndexTypeName)] = {
+    * Lists all indexes in catalog together with type information for a specific entity.
+    *
+    * @param entityname
+    */
+  def listIndexesWithType(entityname: EntityName): Seq[(IndexName, IndexTypeName)] = {
     val query = indexes.filter(_.entityname === entityname).map(index => (index.indexname, index.indextypename)).result
     Await.result(db.run(query), MAX_WAITING_TIME).map(index => (index._1, IndexStructures.withName(index._2)))
   }
 
   /**
-   *
-   * @return
-   */
-  def getIndexes(): Seq[IndexName] = {
+    * Lists all indexes.
+    *
+    * @return
+    */
+  def listIndexes(): Seq[IndexName] = {
     val query = indexes.map(_.indexname).result
     Await.result(db.run(query), MAX_WAITING_TIME).toList
   }
 
 
   /**
-   *
-   * @param indexname
-   * @return
-   */
-  def getIndexMeta(indexname : IndexName) : Any = {
+    * Returns meta information to a specified index.
+    *
+    * @param indexname
+    * @return
+    */
+  def getIndexMeta(indexname: IndexName): Any = {
     val query = indexes.filter(_.indexname === indexname).map(_.indexmeta).result.head
     val path = Await.result(db.run(query), MAX_WAITING_TIME)
     val ois = new ObjectInputStream(new FileInputStream(path))
@@ -210,11 +225,12 @@ object CatalogOperator {
   }
 
   /**
-   *
-   * @param indexname
-   * @return
-   */
-  def getIndexTypeName(indexname : IndexName)  : IndexTypeName = {
+    * Returns type name of index
+    *
+    * @param indexname
+    * @return
+    */
+  def getIndexTypeName(indexname: IndexName): IndexTypeName = {
     val query: SqlAction[String, NoStream, Read] = indexes.filter(_.indexname === indexname).map(_.indextypename).result.head
     val result = Await.result(db.run(query), MAX_WAITING_TIME)
 
@@ -222,20 +238,13 @@ object CatalogOperator {
   }
 
   /**
-   *
-   * @param indexname
-   * @return
-   */
-  def getIndexEntity(indexname : IndexName) : EntityName = {
+    * Returns the name of the entity corresponding to the index name
+    *
+    * @param indexname
+    * @return
+    */
+  def getEntitynameFromIndex(indexname: IndexName): EntityName = {
     val query = indexes.filter(_.indexname === indexname).map(_.entityname).result.head
-    Await.result(db.run(query), MAX_WAITING_TIME)
-  }
-
-  /**
-   *
-   */
-  def dropAllIndexes() : Unit = {
-    val query: FixedSqlAction[Int, NoStream, Write] = indexes.delete
     Await.result(db.run(query), MAX_WAITING_TIME)
   }
 }

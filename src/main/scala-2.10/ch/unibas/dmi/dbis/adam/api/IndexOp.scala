@@ -8,42 +8,51 @@ import ch.unibas.dmi.dbis.adam.index.structures.ecp.ECPIndexer
 import ch.unibas.dmi.dbis.adam.index.structures.lsh.LSHIndexer
 import ch.unibas.dmi.dbis.adam.index.structures.sh.{SHIndexer, SHIndexer$}
 import ch.unibas.dmi.dbis.adam.index.structures.va.{VAVIndexer, VAFIndexer, VAVIndexer$, VAFIndexer$}
-import ch.unibas.dmi.dbis.adam.index.{Index, IndexGenerator, IndexerTuple}
+import ch.unibas.dmi.dbis.adam.index.{Index, IndexGenerator, IndexingTaskTuple}
 import ch.unibas.dmi.dbis.adam.query.distance.{DistanceFunction, MinkowskiDistance}
 import ch.unibas.dmi.dbis.adam.entity.Entity
 import ch.unibas.dmi.dbis.adam.entity.Entity._
 import org.apache.spark.rdd.RDD
 
 /**
- * adamtwo
- *
- * Ivan Giangreco
- * August 2015
- */
+  * adamtwo
+  *
+  * Index operation. Creates an index.
+  *
+  * Ivan Giangreco
+  * August 2015
+  */
 object IndexOp {
-  def apply(tablename : EntityName, indextype : String, distance : DistanceFunction, properties : Map[String, String]): Unit =
-    apply(tablename, IndexStructures.withName(indextype), distance, properties)
+  /**
+    * Creates an index.
+    *
+    * @param entityname
+    * @param indextype string representation of index type to use for indexing
+    * @param distance distance function to use
+    * @param properties further index specific properties
+    */
+  def apply(entityname: EntityName, indextype: String, distance: DistanceFunction, properties: Map[String, String]): Unit =
+    apply(entityname, IndexStructures.withName(indextype), distance, properties)
 
   /**
-   *
-   * @param tablename
-   * @param indextypename
-   * @param distance
-   * @param properties
-   */
-  def apply(tablename : EntityName, indextypename : IndexTypeName, distance : DistanceFunction, properties : Map[String, String]): Unit = {
-    val table = Entity.retrieveEntity(tablename)
+    * Creates an index.
+    *
+    * @param entityname
+    * @param indextypename index type to use for indexing
+    * @param distance distance function to use
+    * @param properties further index specific properties
+    */
+  def apply(entityname: EntityName, indextypename: IndexTypeName, distance: DistanceFunction, properties: Map[String, String]): Unit = {
+    val entity = Entity.load(entityname)
 
-    val data: RDD[IndexerTuple] = table.featuresRDD.map { x => IndexerTuple(x.getLong(0), x.getAs[FeatureVectorWrapper](1).value) }
-
-    val generator : IndexGenerator = indextypename match {
-      case IndexStructures.ECP => ECPIndexer(properties, distance, data)
-      case IndexStructures.LSH => LSHIndexer(properties, distance, data)
-      case IndexStructures.SH => SHIndexer(properties, data)
-      case IndexStructures.VAF => VAFIndexer(properties, distance.asInstanceOf[MinkowskiDistance], data)
-      case IndexStructures.VAV => VAVIndexer(properties, distance.asInstanceOf[MinkowskiDistance], data)
+    val generator: IndexGenerator = indextypename match {
+      case IndexStructures.ECP => ECPIndexer(distance)
+      case IndexStructures.LSH => LSHIndexer(distance, properties)
+      case IndexStructures.SH => SHIndexer(entity.getFeaturedata.first().getAs[FeatureVectorWrapper](1).value.length)
+      case IndexStructures.VAF => VAFIndexer(distance.asInstanceOf[MinkowskiDistance], properties)
+      case IndexStructures.VAV => VAVIndexer(entity.getFeaturedata.first().getAs[FeatureVectorWrapper](1).value.length, distance.asInstanceOf[MinkowskiDistance], properties)
     }
 
-    Index.createIndex(table, generator)
+    Index.createIndex(entity, generator)
   }
 }

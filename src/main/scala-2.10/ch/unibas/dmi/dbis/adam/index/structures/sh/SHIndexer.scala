@@ -30,8 +30,8 @@ class SHIndexer(nbits : Int, trainingSize : Int) extends IndexGenerator with Ser
    * @param data
    * @return
    */
-  override def index(indexname : IndexName, entityname : EntityName, data: RDD[IndexerTuple]): Index[_ <: IndexTuple] = {
-    val n = Entity.countEntity(entityname)
+  override def index(indexname : IndexName, entityname : EntityName, data: RDD[IndexingTaskTuple]): Index[_ <: IndexTuple] = {
+    val n = Entity.countTuples(entityname)
     val fraction = ADAMSamplingUtils.computeFractionForSampleSize(trainingSize, n, false)
     val trainData = data.sample(false, fraction)
 
@@ -52,7 +52,7 @@ class SHIndexer(nbits : Int, trainingSize : Int) extends IndexGenerator with Ser
    * @param trainData
    * @return
    */
-  private def train(trainData : Array[IndexerTuple]) : SHIndexMetaData = {
+  private def train(trainData : Array[IndexingTaskTuple]) : SHIndexMetaData = {
     val dTrainData = trainData.map(x => x.value.map(x => x.toDouble).toArray)
     val dataMatrix = DenseMatrix(dTrainData.toList : _*)
 
@@ -156,8 +156,8 @@ object SHIndexer {
    *
    * @param properties
    */
-  def apply(properties : Map[String, String] = Map[String, String](), data: RDD[IndexerTuple]) : IndexGenerator = {
-    val nbits = math.min(500, properties.getOrElse("nbits", (data.first.value.length * 2).toString).toInt)
+  def apply(dimensions : Int, properties : Map[String, String] = Map[String, String]()) : IndexGenerator = {
+    val nbits = math.min(500, properties.getOrElse("nbits", (dimensions * 2).toString).toInt)
     val trainingSize = properties.getOrElse("trainingSize", "500").toInt
 
     new SHIndexer(nbits, trainingSize)

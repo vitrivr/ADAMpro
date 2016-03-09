@@ -11,12 +11,13 @@ import ch.unibas.dmi.dbis.adam.main.SparkStartup
  * Ivan Giangreco
  * December 2015
  */
+@deprecated("Should be refactored, possibly no longer works correctly","2016-03")
 object ImportOp {
   case class ImportRow(id : Long, featureVectorWrapper: FeatureVectorWrapper)
 
   def apply(entityname: EntityName, path : String, createIfNotExists : Boolean = false): Boolean = {
     if(createIfNotExists && !Entity.existsEntity(entityname)){
-      Entity.createEntity(entityname)
+      Entity.create(entityname)
     } else if(!Entity.existsEntity(entityname)){
       return false
     }

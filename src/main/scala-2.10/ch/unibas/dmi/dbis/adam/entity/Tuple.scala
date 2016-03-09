@@ -11,11 +11,7 @@ import org.apache.spark.sql.Row
  * Ivan Giangreco
  * August 2015
  */
-
-case class Tuple(val tid: TupleID, val value: FeatureVector)
-
-case class WrappingTuple(id : TupleID, value : FeatureVectorWrapper)
-
+case class Tuple(val tid: TupleID, val feature: FeatureVector)
 
 object Tuple {
   type TupleID = Long
