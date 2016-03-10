@@ -6,4 +6,4 @@ package ch.unibas.dmi.dbis.adam.exception
  * Ivan Giangreco
  * August 2015
  */
-case class IndexNotExistingException  extends AdamTwoException("Index not existing.")
+case class EntityExistingExceptionGeneral  extends GeneralAdamException("Entity exists already.")

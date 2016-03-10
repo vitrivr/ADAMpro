@@ -6,6 +6,6 @@ package ch.unibas.dmi.dbis.adam.exception
  * Ivan Giangreco
  * August 2015
  */
-case class EntityCreationException  extends AdamTwoException()
+case class EntityCreationExceptionGeneral  extends GeneralAdamException()
 
 
