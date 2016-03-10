@@ -3,12 +3,14 @@ package org.apache.spark.sql.jdbc
 import org.apache.spark.sql.types.{DataType, MetadataBuilder, StringType}
 
 /**
- * adamtwo
- *
- * Ivan Giangreco
- * September 2015
- */
-case class AdamDialect(url : String) extends JdbcDialect {
+  * adamtwo
+  *
+  * Provides functionalities to read from an old ADAM database.
+  *
+  * Ivan Giangreco
+  * September 2015
+  */
+case class AdamDialect(url: String) extends JdbcDialect {
   override def canHandle(url: String): Boolean = url.equals(this.url)
 
 
@@ -26,7 +28,7 @@ case class AdamDialect(url : String) extends JdbcDialect {
 }
 
 object AdamDialectRegistrar {
-  def register(url : String){
+  def register(url: String) {
     JdbcDialects.registerDialect(new AdamDialect(url))
   }
 }
