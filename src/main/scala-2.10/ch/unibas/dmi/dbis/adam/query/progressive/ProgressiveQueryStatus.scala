@@ -2,7 +2,7 @@ package ch.unibas.dmi.dbis.adam.query.progressive
 
 import ch.unibas.dmi.dbis.adam.config.AdamConfig
 import ch.unibas.dmi.dbis.adam.main.SparkStartup
-import ch.unibas.dmi.dbis.adam.query.Result
+import org.apache.spark.sql.DataFrame
 
 import scala.collection.mutable.ListBuffer
 
@@ -19,7 +19,7 @@ class ProgressiveQueryStatusTracker(queryID: String) {
   private val futures = ListBuffer[ScanFuture]()
   private var runningStatus = ProgressiveQueryStatus.RUNNING
   private var resultConfidence = 0.toFloat
-  private var queryResults = Seq[Result]()
+  private var queryResults : DataFrame = _
 
   /**
     * Register a scan future.
@@ -33,7 +33,7 @@ class ProgressiveQueryStatusTracker(queryID: String) {
     *
     * @param future
     */
-  def notifyCompletion(future: ScanFuture, futureResults: Seq[Result]): Unit = {
+  def notifyCompletion(future: ScanFuture, futureResults: DataFrame): Unit = {
     futures.synchronized({
       if (future.confidence > resultConfidence && runningStatus == ProgressiveQueryStatus.RUNNING) {
         queryResults = futureResults
@@ -63,6 +63,7 @@ class ProgressiveQueryStatusTracker(queryID: String) {
 
   /**
     * Stops the progressive query with the new status.
+    *
     * @param newStatus
     */
   private def stop(newStatus: ProgressiveQueryStatus.Value): Unit = {
@@ -79,12 +80,14 @@ class ProgressiveQueryStatusTracker(queryID: String) {
 
   /**
     * Returns the most up-to-date results together with a confidence score.
+    *
     * @return
     */
   def results = (queryResults, resultConfidence)
 
   /**
     * Returns the current status of the progressive query.
+    *
     * @return
     */
   def status = futures.synchronized {

@@ -5,7 +5,7 @@ import java.util.concurrent.TimeUnit
 import ch.unibas.dmi.dbis.adam.config.AdamConfig
 import ch.unibas.dmi.dbis.adam.datatypes.feature.Feature._
 import ch.unibas.dmi.dbis.adam.datatypes.feature.FeatureVectorWrapper
-import ch.unibas.dmi.dbis.adam.exception.IndexNotExistingException
+import ch.unibas.dmi.dbis.adam.exception.IndexNotExistingExceptionGeneral
 import ch.unibas.dmi.dbis.adam.index.Index._
 import ch.unibas.dmi.dbis.adam.index.structures.IndexStructures
 import ch.unibas.dmi.dbis.adam.index.structures.ecp.ECPIndex
@@ -149,7 +149,7 @@ object Index {
     */
   def load(indexname: IndexName, cache: Boolean = true): Index[_ <: IndexTuple] = {
     if (!exists(indexname)) {
-      throw new IndexNotExistingException()
+      throw new IndexNotExistingExceptionGeneral()
     }
 
     if (cache) {

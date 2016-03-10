@@ -9,11 +9,11 @@ import ch.unibas.dmi.dbis.adam.datatypes.feature.Feature._
 import ch.unibas.dmi.dbis.adam.entity.Entity
 import ch.unibas.dmi.dbis.adam.evaluation.EvaluationConfig
 import ch.unibas.dmi.dbis.adam.main.SparkStartup
-import ch.unibas.dmi.dbis.adam.query.Result
 import ch.unibas.dmi.dbis.adam.query.distance.ManhattanDistance
 import ch.unibas.dmi.dbis.adam.query.handler.QueryHandler
 import ch.unibas.dmi.dbis.adam.query.progressive.ProgressiveQueryStatus
 import ch.unibas.dmi.dbis.adam.query.query.NearestNeighbourQuery
+import org.apache.spark.sql.DataFrame
 
 import scala.collection.mutable
 import scala.concurrent.duration.Duration
@@ -71,7 +71,7 @@ class EvaluationProgressiveQueryPerformer {
       val (dbSize, vecSize, experimentN) = experiments.dequeue()
 
       val entityname = "data_" + dbSize + "_" + vecSize
-      if (!Entity.existsEntity(entityname)) {
+      if (!Entity.exists(entityname)) {
         throw new IllegalStateException("Entity not found.");
       }
 
@@ -119,7 +119,7 @@ class EvaluationProgressiveQueryPerformer {
    * @param options
    * @return
    */
-  def onComplete(startTime: Long, dbSize: Int, vecSize: Int)(status: ProgressiveQueryStatus.Value, results: Seq[Result], confidence: Float, options: Map[String, String]) {
+  def onComplete(startTime: Long, dbSize: Int, vecSize: Int)(status: ProgressiveQueryStatus.Value, results: DataFrame, confidence: Float, options: Map[String, String]) {
     pw.write(
       options.getOrElse("qid", "") + "," +
         dbSize + "," +
@@ -127,7 +127,7 @@ class EvaluationProgressiveQueryPerformer {
         options.getOrElse("type", "") + "," +
         System.nanoTime() + "," +
         startTime + "," +
-        results.map(_.tid).mkString("{", ";", "}") +
+        results.map(_.getLong(0)).collect().mkString("{", ";", "}") +
         "\n")
     pw.flush()
   }

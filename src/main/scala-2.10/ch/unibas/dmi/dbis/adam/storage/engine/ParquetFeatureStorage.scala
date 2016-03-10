@@ -2,6 +2,7 @@ package ch.unibas.dmi.dbis.adam.storage.engine
 
 import java.lang
 
+import ch.unibas.dmi.dbis.adam.config.FieldNames
 import ch.unibas.dmi.dbis.adam.entity.Entity.EntityName
 import ch.unibas.dmi.dbis.adam.entity.Tuple.TupleID
 import ch.unibas.dmi.dbis.adam.storage.components.FeatureStorage
@@ -18,7 +19,7 @@ import scala.collection.Set
   * Ivan Giangreco
   * March 2016
   */
-class ParquetFeatureStorage extends FeatureStorage {
+object ParquetFeatureStorage extends FeatureStorage {
   //TODO: implement and use TIDFilter
   override def read(entityname: EntityName, filter: Option[Set[TupleID]]): DataFrame = ???
 
@@ -31,7 +32,7 @@ class ParquetFeatureStorage extends FeatureStorage {
   class TIDFilter(filter : Set[TupleID]) extends UnboundRecordFilter {
     override def bind(readers: lang.Iterable[ColumnReader]): RecordFilter = {
       ColumnRecordFilter.column(
-        idColumnName,
+        FieldNames.idColumnName,
         ColumnPredicates.applyFunctionToLong(new TIDPredicateFunction(filter))
       ).bind(readers)
     }

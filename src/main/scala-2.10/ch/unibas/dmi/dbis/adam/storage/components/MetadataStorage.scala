@@ -1,6 +1,7 @@
 package ch.unibas.dmi.dbis.adam.storage.components
 
 import ch.unibas.dmi.dbis.adam.entity.Entity._
+import org.apache.spark.sql.types.DataType
 import org.apache.spark.sql.{DataFrame, SaveMode}
 
 /**
@@ -14,13 +15,15 @@ trait MetadataStorage {
 
   /**
     * Create entity in metadata storage.
+    *
     * @param entityname
     * @param fields
     */
-  def create(entityname : EntityName, fields : Option[Map[String,String]])
+  def create(entityname : EntityName, fields : Map[String, DataType]) : Boolean
 
   /**
     * Read data from metadata storage.
+    *
     * @param tablename
     * @return
     */
@@ -28,6 +31,7 @@ trait MetadataStorage {
 
   /**
     * Write data to metadata storage.
+    *
     * @param tablename
     * @param data
     * @param mode
@@ -37,6 +41,7 @@ trait MetadataStorage {
 
   /**
     * Drop data from the metadata storage.
+    *
     * @param tablename
     * @return
     */

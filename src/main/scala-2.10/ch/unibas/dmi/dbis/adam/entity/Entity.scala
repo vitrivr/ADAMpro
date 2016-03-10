@@ -1,18 +1,17 @@
 package ch.unibas.dmi.dbis.adam.entity
 
+import ch.unibas.dmi.dbis.adam.config.FieldNames
 import ch.unibas.dmi.dbis.adam.entity.Entity._
-import ch.unibas.dmi.dbis.adam.exception.{EntityCreationException, EntityExistingException, EntityNotExistingException}
+import ch.unibas.dmi.dbis.adam.entity.FieldTypes.FieldType
+import ch.unibas.dmi.dbis.adam.exception.{EntityExistingExceptionGeneral, EntityNotExistingExceptionGeneral}
 import ch.unibas.dmi.dbis.adam.main.SparkStartup
 import ch.unibas.dmi.dbis.adam.storage.components.{FeatureStorage, MetadataStorage}
 import ch.unibas.dmi.dbis.adam.storage.engine.CatalogOperator
 import org.apache.spark.rdd.RDD
 import org.apache.spark.sql.types.{LongType, StructField, StructType}
-import org.apache.spark.sql.{Row, DataFrame, SaveMode}
+import org.apache.spark.sql.{DataFrame, Row, SaveMode}
 
 import scala.collection.immutable.HashSet
-import scala.concurrent.ExecutionContext.Implicits.global
-import scala.concurrent.duration.Duration
-import scala.concurrent.{Await, Future}
 
 /**
   * adamtwo
@@ -20,9 +19,14 @@ import scala.concurrent.{Await, Future}
   * Ivan Giangreco
   * October 2015
   */
-case class Entity(entityname: EntityName, featureStorage: FeatureStorage, metadataStorage: MetadataStorage) {
+//TODO: consider what to do if metadata is not filled, i.e. certain operations should not be done on the stack
+case class Entity(entityname: EntityName, featureStorage: FeatureStorage, metadataStorage: Option[MetadataStorage]) {
   private lazy val featureData = featureStorage.read(entityname)
-  private lazy val metaData = metadataStorage.read(entityname)
+  private lazy val metaData = if(metadataStorage.isDefined){
+    Option(metadataStorage.get.read(entityname))
+  } else {
+    None
+  }
 
   /**
     * Returns number of elements in the entity (only feature storage is considered).
@@ -37,7 +41,8 @@ case class Entity(entityname: EntityName, featureStorage: FeatureStorage, metada
     * @param k number of elements to show in preview
     * @return
     */
-  def show(k: Int) = featureData.join(metaData).take(k)
+  def show(k: Int) = rdd.take(k)
+
 
   /**
     *
@@ -48,11 +53,15 @@ case class Entity(entityname: EntityName, featureStorage: FeatureStorage, metada
     featureStorage.read(entityname, Option(filter)).rdd.map(r => r: Tuple)
   }
 
-  def rdd = featureData.join(metaData).rdd
+  def rdd = if(metaData.isDefined){
+    featureData.join(metaData.get).rdd
+  } else {
+    featureData.rdd
+  }
 
   def getFeaturedata: DataFrame = featureData
 
-  def getMetadata: DataFrame = metaData
+  def getMetadata: Option[DataFrame] = metaData
 }
 
 object Entity {
@@ -61,7 +70,7 @@ object Entity {
   private val featureStorage = SparkStartup.featureStorage
   private val metadataStorage = SparkStartup.metadataStorage
 
-  def existsEntity(entityname: EntityName): Boolean = CatalogOperator.existsEntity(entityname)
+  def exists(entityname: EntityName): Boolean = CatalogOperator.existsEntity(entityname)
 
   /**
     * Creates an entity.
@@ -71,21 +80,26 @@ object Entity {
     *               as key = name, value = SQL type
     * @return
     */
-  def create(entityname: EntityName, fields: Option[Map[String, String]] = None): Entity = {
-    if (existsEntity(entityname)) {
-      throw new EntityExistingException()
+  def create(entityname: EntityName, fields: Option[Map[String, FieldType]] = None): Entity = {
+    if (exists(entityname)) {
+      throw new EntityExistingExceptionGeneral()
     }
 
-    val future = Future {
-      featureStorage.create(entityname)
-      metadataStorage.create(entityname, fields)
+    featureStorage.create(entityname)
+
+    if(fields.isDefined) {
+       metadataStorage.create(entityname, fields.get.mapValues(_.datatype))
     }
 
-    future onFailure { case t => new EntityCreationException() }
-    future onSuccess { case t => CatalogOperator.createEntity(entityname) }
-    Await.ready(future, Duration.Inf)
+    fields.get.map{case(x,y) => y}
 
-    Entity(entityname, featureStorage, metadataStorage)
+    if(fields.isDefined){
+      CatalogOperator.createEntity(entityname, true)
+      Entity(entityname, featureStorage, Option(metadataStorage))
+    } else {
+      CatalogOperator.createEntity(entityname, false)
+      Entity(entityname, featureStorage, None)
+    }
   }
 
   /**
@@ -96,9 +110,9 @@ object Entity {
     * @return
     */
   def drop(entityname: EntityName, ifExists: Boolean = false): Boolean = {
-    if (!existsEntity(entityname)) {
+    if (!exists(entityname)) {
       if (!ifExists) {
-        throw new EntityNotExistingException()
+        throw new EntityNotExistingExceptionGeneral()
       } else {
         return false
       }
@@ -118,16 +132,16 @@ object Entity {
     * @return
     */
   def insertData(entityname: EntityName, insertion: DataFrame): Boolean = {
-    if (!existsEntity(entityname)) {
-      throw new EntityNotExistingException()
+    if (!exists(entityname)) {
+      throw new EntityNotExistingExceptionGeneral()
     }
 
     val rows = insertion.rdd.zipWithUniqueId.map { case (r: Row, id: Long) => Row.fromSeq(id +: r.toSeq) }
     val insertionWithPK = SparkStartup.sqlContext.createDataFrame(
-      rows, StructType(StructField(featureStorage.idColumnName, LongType, false) +: insertion.schema.fields))
+      rows, StructType(StructField(FieldNames.idColumnName, LongType, false) +: insertion.schema.fields))
 
-    featureStorage.write(entityname, insertionWithPK.select(featureStorage.idColumnName, featureStorage.featureColumnName), SaveMode.Append)
-    metadataStorage.write(entityname, insertionWithPK.drop(featureStorage.featureColumnName), SaveMode.Append)
+    featureStorage.write(entityname, insertionWithPK.select(FieldNames.idColumnName, FieldNames.featureColumnName), SaveMode.Append)
+    metadataStorage.write(entityname, insertionWithPK.drop(FieldNames.featureColumnName), SaveMode.Append)
   }
 
   /**
@@ -137,12 +151,17 @@ object Entity {
     * @return
     */
   def load(entityname: EntityName): Entity = {
-    if (!existsEntity(entityname)) {
-      throw new EntityNotExistingException()
+    if (!exists(entityname)) {
+      throw new EntityNotExistingExceptionGeneral()
     }
 
-    Entity(entityname, featureStorage, metadataStorage)
+    val entityMetadataStorage = if(CatalogOperator.hasEntityMetadata(entityname)){
+      Option(metadataStorage)
+    } else {
+      None
+    }
 
+    Entity(entityname, featureStorage, entityMetadataStorage)
   }
 
   /**
@@ -152,8 +171,8 @@ object Entity {
     * @return the number of tuples in the entity
     */
   def countTuples(entityname: EntityName): Int = {
-    if (!existsEntity(entityname)) {
-      throw new EntityNotExistingException()
+    if (!exists(entityname)) {
+      throw new EntityNotExistingExceptionGeneral()
     }
 
     featureStorage.count(entityname)

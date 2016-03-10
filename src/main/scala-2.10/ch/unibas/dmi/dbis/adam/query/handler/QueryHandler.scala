@@ -1,15 +1,16 @@
 package ch.unibas.dmi.dbis.adam.query.handler
 
+import ch.unibas.dmi.dbis.adam.config.FieldNames
 import ch.unibas.dmi.dbis.adam.entity.Entity._
 import ch.unibas.dmi.dbis.adam.entity.Tuple.TupleID
 import ch.unibas.dmi.dbis.adam.index.Index
 import ch.unibas.dmi.dbis.adam.index.Index._
-import ch.unibas.dmi.dbis.adam.query.Result
 import ch.unibas.dmi.dbis.adam.query.handler.QueryHints._
 import ch.unibas.dmi.dbis.adam.query.progressive._
 import ch.unibas.dmi.dbis.adam.query.query.{BooleanQuery, NearestNeighbourQuery}
 import ch.unibas.dmi.dbis.adam.storage.engine.CatalogOperator
 import org.apache.spark.Logging
+import org.apache.spark.sql.DataFrame
 
 import scala.collection.immutable.HashSet
 import scala.concurrent.duration.Duration
@@ -31,7 +32,7 @@ object QueryHandler extends Logging {
     * @param withMetadata whether or not to retrieve corresponding metadata
     * @return
     */
-  def query(entityname: EntityName, hint: Option[QueryHint], nnq: NearestNeighbourQuery, bq: Option[BooleanQuery], withMetadata: Boolean): Seq[Result] = {
+  def query(entityname: EntityName, hint: Option[QueryHint], nnq: NearestNeighbourQuery, bq: Option[BooleanQuery], withMetadata: Boolean): DataFrame = {
     val indexes: Map[IndexTypeName, Seq[IndexName]] = CatalogOperator.listIndexesWithType(entityname).groupBy(_._2).mapValues(_.map(_._1))
 
     var plan = choosePlan(entityname, indexes, hint)
@@ -51,7 +52,7 @@ object QueryHandler extends Logging {
     * @param hint
     * @return
     */
-  private def choosePlan(entityname: EntityName, indexes: Map[IndexTypeName, Seq[IndexName]], hint: Option[QueryHint]): Option[(NearestNeighbourQuery, Option[BooleanQuery], Boolean) => Seq[Result]] = {
+  private def choosePlan(entityname: EntityName, indexes: Map[IndexTypeName, Seq[IndexName]], hint: Option[QueryHint]): Option[(NearestNeighbourQuery, Option[BooleanQuery], Boolean) => DataFrame] = {
     if (!hint.isDefined) {
       return None
     }
@@ -94,8 +95,13 @@ object QueryHandler extends Logging {
     * @param withMetadata whether or not to retrieve corresponding metadata
     * @return
     */
-  def sequentialQuery(entityname: EntityName)(nnq: NearestNeighbourQuery, bq: Option[BooleanQuery], withMetadata: Boolean): Seq[Result] = {
-    var res = NearestNeighbourQueryHandler.sequential(entityname, nnq, getFilter(entityname, bq))
+  def sequentialQuery(entityname: EntityName)(nnq: NearestNeighbourQuery, bq: Option[BooleanQuery], withMetadata: Boolean): DataFrame = {
+    val filter = if (bq.isDefined) {
+      getFilter(entityname, bq.get)
+    } else {
+      None
+    }
+    var res = NearestNeighbourQueryHandler.sequential(entityname, nnq, filter)
     if (withMetadata) {
       res = joinWithMetadata(entityname, res)
     }
@@ -112,9 +118,14 @@ object QueryHandler extends Logging {
     * @param withMetadata whether or not to retrieve corresponding metadata
     * @return
     */
-  def indexQuery(indexname: IndexName)(nnq: NearestNeighbourQuery, bq: Option[BooleanQuery], withMetadata: Boolean): Seq[Result] = {
+  def indexQuery(indexname: IndexName)(nnq: NearestNeighbourQuery, bq: Option[BooleanQuery], withMetadata: Boolean): DataFrame = {
     val entityname = Index.load(indexname).entityname
-    var res = NearestNeighbourQueryHandler.indexQuery(indexname, nnq, getFilter(entityname, bq))
+    val filter = if (bq.isDefined) {
+      getFilter(entityname, bq.get)
+    } else {
+      None
+    }
+    var res = NearestNeighbourQueryHandler.indexQuery(indexname, nnq, filter)
     if (withMetadata) {
       res = joinWithMetadata(indexname, res)
     }
@@ -132,14 +143,20 @@ object QueryHandler extends Logging {
     * @param withMetadata whether or not to retrieve corresponding metadata
     * @return a tracker for the progressive query
     */
-  def progressiveQuery(entityname: EntityName)(nnq: NearestNeighbourQuery, bq: Option[BooleanQuery], onComplete: (ProgressiveQueryStatus.Value, Seq[Result], Float, Map[String, String]) => Unit, withMetadata: Boolean): ProgressiveQueryStatusTracker = {
+  def progressiveQuery(entityname: EntityName)(nnq: NearestNeighbourQuery, bq: Option[BooleanQuery], onComplete: (ProgressiveQueryStatus.Value, DataFrame, Float, Map[String, String]) => Unit, withMetadata: Boolean): ProgressiveQueryStatusTracker = {
     val onCompleteFunction = if (withMetadata) {
-      (pqs: ProgressiveQueryStatus.Value, res: Seq[Result], conf: Float, info: Map[String, String]) => onComplete(pqs, joinWithMetadata(entityname, res), conf, info)
+      (pqs: ProgressiveQueryStatus.Value, res: DataFrame, conf: Float, info: Map[String, String]) => onComplete(pqs, joinWithMetadata(entityname, res), conf, info)
     } else {
       onComplete
     }
 
-    NearestNeighbourQueryHandler.progressiveQuery(entityname, nnq, getFilter(entityname, bq), onCompleteFunction)
+    val filter = if (bq.isDefined) {
+      getFilter(entityname, bq.get)
+    } else {
+      None
+    }
+
+    NearestNeighbourQueryHandler.progressiveQuery(entityname, nnq, filter, onCompleteFunction)
   }
 
 
@@ -154,11 +171,18 @@ object QueryHandler extends Logging {
     * @param withMetadata whether or not to retrieve corresponding metadata
     * @return the results available together with a confidence score
     */
-  def timedProgressiveQuery(entityname: EntityName)(nnq: NearestNeighbourQuery, bq: Option[BooleanQuery], timelimit: Duration, withMetadata: Boolean): (Seq[Result], Float) = {
-    var (res, confidence) = NearestNeighbourQueryHandler.timedProgressiveQuery(entityname, nnq, getFilter(entityname, bq), timelimit)
+  def timedProgressiveQuery(entityname: EntityName)(nnq: NearestNeighbourQuery, bq: Option[BooleanQuery], timelimit: Duration, withMetadata: Boolean): (DataFrame, Float) = {
+    val filter = if (bq.isDefined) {
+      getFilter(entityname, bq.get)
+    } else {
+      None
+    }
+
+    var (res, confidence) = NearestNeighbourQueryHandler.timedProgressiveQuery(entityname, nnq, filter, timelimit)
     if (withMetadata) {
       res = joinWithMetadata(entityname, res)
     }
+
     (res, confidence)
   }
 
@@ -170,10 +194,11 @@ object QueryHandler extends Logging {
     * @param bq
     * @return
     */
-  private def getFilter(entityname: EntityName, bq: Option[BooleanQuery]): Option[HashSet[TupleID]] = {
-    if (bq.isDefined) {
-      val mdRes = BooleanQueryHandler.metadataQuery(entityname, bq.get)
-      Option(HashSet(mdRes.map(r => r.getLong(0)): _*))
+  private def getFilter(entityname: EntityName, bq: BooleanQuery): Option[HashSet[TupleID]] = {
+    val mdRes = BooleanQueryHandler.metadataQuery(entityname, bq)
+
+    if (mdRes.isDefined) {
+      Option(HashSet(mdRes.get.map(r => r.getLong(0)).collect(): _*))
     } else {
       None
     }
@@ -187,12 +212,13 @@ object QueryHandler extends Logging {
     * @param res
     * @return
     */
-  private def joinWithMetadata(entityname: EntityName, res: Seq[Result]): Seq[Result] = {
-    val metadata = BooleanQueryHandler.metadataQuery(entityname, HashSet(res.map(_.tid): _*)).map(r => r.getLong(0) -> r).toMap
+  private def joinWithMetadata(entityname: EntityName, res: DataFrame): DataFrame = {
+    val mdRes = BooleanQueryHandler.metadataQuery(entityname, HashSet(res.select("tid").collect().map(r => r.getLong(0)) : _*))
 
-    res.map(r => {
-      r.metadata = metadata.get(r.tid)
-      r
-    })
+    if (mdRes.isDefined){
+      mdRes.get.join(res, FieldNames.idColumnName) //with metadata
+    } else {
+     res //no metadata
+    }
   }
 }

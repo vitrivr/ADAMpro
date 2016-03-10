@@ -7,12 +7,14 @@ import ch.unibas.dmi.dbis.adam.entity.Entity.EntityName
 import ch.unibas.dmi.dbis.adam.entity.Tuple.TupleID
 import ch.unibas.dmi.dbis.adam.index.Index
 import ch.unibas.dmi.dbis.adam.index.Index.IndexName
+import ch.unibas.dmi.dbis.adam.main.SparkStartup
 import ch.unibas.dmi.dbis.adam.query.Result
 import ch.unibas.dmi.dbis.adam.query.progressive._
 import ch.unibas.dmi.dbis.adam.query.query.NearestNeighbourQuery
 import ch.unibas.dmi.dbis.adam.query.scanner.{FeatureScanner, IndexScanner}
 import ch.unibas.dmi.dbis.adam.storage.engine.CatalogOperator
 import org.apache.spark.Logging
+import org.apache.spark.sql.{Row, DataFrame}
 
 import scala.collection.immutable.HashSet
 import scala.collection.mutable.{Map => mMap}
@@ -37,7 +39,7 @@ object NearestNeighbourQueryHandler extends Logging {
     * @param filter
     * @return
     */
-  def sequential(entityname: EntityName, query: NearestNeighbourQuery, filter: Option[HashSet[TupleID]]): Seq[Result] = {
+  def sequential(entityname: EntityName, query: NearestNeighbourQuery, filter: Option[HashSet[TupleID]]): DataFrame = {
     FeatureScanner(Entity.load(entityname), query, filter)
   }
 
@@ -50,7 +52,7 @@ object NearestNeighbourQueryHandler extends Logging {
     * @return depending on whether query.indexOnly is set to true only the index tuples are scanned,
     *         otherwise also the true data is scanned for performing the query
     */
-  def indexQuery(indexname: IndexName, query: NearestNeighbourQuery, filter: Option[HashSet[TupleID]]): Seq[Result] = {
+  def indexQuery(indexname: IndexName, query: NearestNeighbourQuery, filter: Option[HashSet[TupleID]]): DataFrame = {
     if (query.indexOnly) {
       indexOnlyQuery(indexname, query, filter)
     } else {
@@ -67,7 +69,7 @@ object NearestNeighbourQueryHandler extends Logging {
     * @param filter
     * @return
     */
-  def indexQueryWithResults(indexname: IndexName, query: NearestNeighbourQuery, filter: Option[HashSet[TupleID]]): Seq[Result] = {
+  def indexQueryWithResults(indexname: IndexName, query: NearestNeighbourQuery, filter: Option[HashSet[TupleID]]): DataFrame = {
     val entityname = CatalogOperator.getEntitynameFromIndex(indexname)
 
     val future = Future {
@@ -89,8 +91,10 @@ object NearestNeighbourQueryHandler extends Logging {
     * @param filter
     * @return
     */
-  def indexOnlyQuery(indexname: IndexName, query: NearestNeighbourQuery, filter: Option[HashSet[TupleID]]): Seq[Result] = {
-    IndexScanner(Index.load(indexname), query, filter).map(Result(0, _, null)).toSeq
+  def indexOnlyQuery(indexname: IndexName, query: NearestNeighbourQuery, filter: Option[HashSet[TupleID]]): DataFrame = {
+    val result = IndexScanner(Index.load(indexname), query, filter).toSeq
+    val rdd = SparkStartup.sc.parallelize(result).map(res => Row(0, res))
+    SparkStartup.sqlContext.createDataFrame(rdd, Result.resultSchema)
   }
 
   /**
@@ -103,7 +107,7 @@ object NearestNeighbourQueryHandler extends Logging {
     * @param onComplete
     * @return
     */
-  def progressiveQuery(entityname: EntityName, query: NearestNeighbourQuery, filter: Option[HashSet[TupleID]], onComplete: (ProgressiveQueryStatus.Value, Seq[Result], Float, Map[String, String]) => Unit): ProgressiveQueryStatusTracker = {
+  def progressiveQuery(entityname: EntityName, query: NearestNeighbourQuery, filter: Option[HashSet[TupleID]], onComplete: (ProgressiveQueryStatus.Value, DataFrame, Float, Map[String, String]) => Unit): ProgressiveQueryStatusTracker = {
     val indexnames = Index.list(entityname)
 
     val options = mMap[String, String]()
@@ -131,7 +135,7 @@ object NearestNeighbourQueryHandler extends Logging {
     * @param filter
     * @return
     */
-  def timedProgressiveQuery(entityname: EntityName, query: NearestNeighbourQuery, filter: Option[HashSet[TupleID]], timelimit: Duration): (Seq[Result], Float) = {
+  def timedProgressiveQuery(entityname: EntityName, query: NearestNeighbourQuery, filter: Option[HashSet[TupleID]], timelimit: Duration): (DataFrame, Float) = {
     val indexnames = Index.list(entityname)
 
     val options = mMap[String, String]()

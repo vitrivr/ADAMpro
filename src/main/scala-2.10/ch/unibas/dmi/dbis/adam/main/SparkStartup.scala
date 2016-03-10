@@ -26,11 +26,13 @@ object SparkStartup {
     .set("spark.cassandra.connection.port", AdamConfig.cassandraPort)
     .set("spark.cassandra.auth.username", AdamConfig.cassandraUsername)
     .set("spark.cassandra.auth.password", AdamConfig.cassandraPassword)
+
     .registerKryoClasses(Array(classOf[BitString[_]], classOf[MinimalBitString], classOf[FeatureVectorWrapper]))
+
   val sc = new SparkContext(sparkConfig)
   sc.setLogLevel("INFO")
-  val sqlContext = new HiveContext(sc)
 
+  val sqlContext = new HiveContext(sc)
 
   val featureStorage : FeatureStorage = CassandraFeatureStorage
   val metadataStorage : MetadataStorage = PostgresMetadataStorage

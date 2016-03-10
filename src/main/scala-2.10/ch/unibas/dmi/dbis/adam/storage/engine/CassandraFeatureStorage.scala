@@ -1,6 +1,6 @@
 package ch.unibas.dmi.dbis.adam.storage.engine
 
-import ch.unibas.dmi.dbis.adam.config.AdamConfig
+import ch.unibas.dmi.dbis.adam.config.{FieldNames, AdamConfig}
 import ch.unibas.dmi.dbis.adam.datatypes.feature.FeatureVectorWrapper
 import ch.unibas.dmi.dbis.adam.entity.Entity.EntityName
 import ch.unibas.dmi.dbis.adam.entity.Tuple.TupleID
@@ -22,8 +22,11 @@ import org.apache.spark.sql.{DataFrame, Row, SaveMode}
 object CassandraFeatureStorage extends FeatureStorage with Serializable {
   private val defaultKeyspace = AdamConfig.cassandraKeyspace
 
-  val conn = CassandraConnector(SparkStartup.sparkConfig)
-  val adamtwoKeyspace = conn.withClusterDo(_.getMetadata).getKeyspace(defaultKeyspace)
+  private val idColumnName = FieldNames.idColumnName
+  private val featureColumnName = FieldNames.featureColumnName
+
+  private val conn = CassandraConnector(SparkStartup.sparkConfig)
+  private val adamtwoKeyspace = conn.withClusterDo(_.getMetadata).getKeyspace(defaultKeyspace)
 
   if (adamtwoKeyspace == null) {
     conn.withSessionDo { session =>

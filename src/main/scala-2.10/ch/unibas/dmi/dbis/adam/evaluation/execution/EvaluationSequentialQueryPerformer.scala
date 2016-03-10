@@ -8,9 +8,7 @@ import ch.unibas.dmi.dbis.adam.config.AdamConfig
 import ch.unibas.dmi.dbis.adam.datatypes.feature.Feature._
 import ch.unibas.dmi.dbis.adam.entity.Entity
 import ch.unibas.dmi.dbis.adam.evaluation.EvaluationConfig
-import ch.unibas.dmi.dbis.adam.query.Result
 import ch.unibas.dmi.dbis.adam.query.distance.ManhattanDistance
-import ch.unibas.dmi.dbis.adam.query.handler.QueryHandler
 import ch.unibas.dmi.dbis.adam.query.query.NearestNeighbourQuery
 
 import scala.collection.mutable
@@ -66,7 +64,7 @@ class EvaluationSequentialQueryPerformer {
       val (dbSize, vecSize, experimentN) = experiments.dequeue()
 
       val entityname = "data_" + dbSize + "_" + vecSize
-      if (!Entity.existsEntity(entityname)) {
+      if (!Entity.exists(entityname)) {
         throw new IllegalStateException("Entity not found.");
       }
 
@@ -75,7 +73,8 @@ class EvaluationSequentialQueryPerformer {
 
       val query = NearestNeighbourQuery(getRandomVector(vecSize): FeatureVector, ManhattanDistance, EvaluationConfig.k, false)
 
-      var results: Seq[Result] = Seq()
+      //TODO: add this back
+      /*var results: DataFrame = _
       val runningTime = time {
         results = QueryHandler.sequentialQuery(entityname)(query, None, false)
       }
@@ -85,9 +84,9 @@ class EvaluationSequentialQueryPerformer {
           dbSize + "," +
           vecSize + "," +
           runningTime + "," +
-          results.map(_.tid).mkString("{", ";", "}") +
+          results.map(_.getLong(0)).collect().mkString("{", ";", "}") +
           "\n")
-      pw.flush()
+      pw.flush()*/
 
       nextExperiment()
 

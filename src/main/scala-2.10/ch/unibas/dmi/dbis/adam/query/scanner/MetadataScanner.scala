@@ -1,10 +1,10 @@
 package ch.unibas.dmi.dbis.adam.query.scanner
 
+import ch.unibas.dmi.dbis.adam.config.FieldNames
 import ch.unibas.dmi.dbis.adam.entity.Entity
 import ch.unibas.dmi.dbis.adam.entity.Tuple._
-import ch.unibas.dmi.dbis.adam.main.SparkStartup
 import ch.unibas.dmi.dbis.adam.query.query.BooleanQuery
-import org.apache.spark.sql.Row
+import org.apache.spark.sql.DataFrame
 
 import scala.collection.immutable.HashSet
 
@@ -24,9 +24,13 @@ object MetadataScanner {
     * @param query
     * @return
     */
-  def apply(entity: Entity, query: BooleanQuery): Seq[Row] = {
-    var df = entity.getMetadata
-    df.filter(query.getWhereClause()).collect()
+  def apply(entity: Entity, query: BooleanQuery): Option[DataFrame] = {
+    if (entity.getMetadata.isDefined) {
+      val df = entity.getMetadata.get
+      Option(df.filter(query.getWhereClause()))
+    } else {
+      None
+    }
   }
 
   /**
@@ -36,8 +40,12 @@ object MetadataScanner {
     * @param filter tuple ids to filter on
     * @return
     */
-  def apply(entity: Entity, filter: HashSet[TupleID]): Seq[Row] = {
-    val df = entity.getMetadata
-    df.filter(df(SparkStartup.featureStorage.idColumnName) isin filter).collect()
+  def apply(entity: Entity, filter: HashSet[TupleID]): Option[DataFrame] = {
+    if (entity.getMetadata.isDefined) {
+      val df = entity.getMetadata.get
+      Option(df.filter(df(FieldNames.idColumnName) isin filter))
+    } else {
+      None
+    }
   }
 }

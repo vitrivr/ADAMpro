@@ -2,11 +2,11 @@ package ch.unibas.dmi.dbis.adam.api
 
 import ch.unibas.dmi.dbis.adam.entity.Entity._
 import ch.unibas.dmi.dbis.adam.index.Index._
-import ch.unibas.dmi.dbis.adam.query.Result
 import ch.unibas.dmi.dbis.adam.query.handler.QueryHandler
 import ch.unibas.dmi.dbis.adam.query.handler.QueryHints._
-import ch.unibas.dmi.dbis.adam.query.progressive.{ProgressiveQueryStatusTracker, ProgressiveQueryStatus}
+import ch.unibas.dmi.dbis.adam.query.progressive.{ProgressiveQueryStatus, ProgressiveQueryStatusTracker}
 import ch.unibas.dmi.dbis.adam.query.query.{BooleanQuery, NearestNeighbourQuery}
+import org.apache.spark.sql.DataFrame
 
 import scala.concurrent.duration.Duration
 
@@ -29,7 +29,7 @@ object QueryOp {
     * @param withMetadata whether or not to retrieve corresponding metadata
     * @return
     */
-  def apply(entityname: EntityName, hint: Option[QueryHint], nnq: NearestNeighbourQuery, bq: Option[BooleanQuery], withMetadata: Boolean): Seq[Result] =
+  def apply(entityname: EntityName, hint: Option[QueryHint], nnq: NearestNeighbourQuery, bq: Option[BooleanQuery], withMetadata: Boolean): DataFrame =
     QueryHandler.query(entityname, hint, nnq, bq, withMetadata)
 
   /**
@@ -41,7 +41,7 @@ object QueryOp {
     * @param withMetadata whether or not to retrieve corresponding metadata
     * @return
     */
-  def sequential(entityname: EntityName, nnq: NearestNeighbourQuery, bq: Option[BooleanQuery], withMetadata: Boolean): Seq[Result] =
+  def sequential(entityname: EntityName, nnq: NearestNeighbourQuery, bq: Option[BooleanQuery], withMetadata: Boolean): DataFrame =
     QueryHandler.sequentialQuery(entityname)(nnq, bq, withMetadata)
 
 
@@ -54,7 +54,7 @@ object QueryOp {
     * @param withMetadata whether or not to retrieve corresponding metadata
     * @return
     */
-  def index(indexname: IndexName, nnq: NearestNeighbourQuery, bq: Option[BooleanQuery], withMetadata: Boolean): Seq[Result] =
+  def index(indexname: IndexName, nnq: NearestNeighbourQuery, bq: Option[BooleanQuery], withMetadata: Boolean): DataFrame =
     QueryHandler.indexQuery(indexname)(nnq, bq, withMetadata)
 
 
@@ -69,7 +69,7 @@ object QueryOp {
     * @param withMetadata whether or not to retrieve corresponding metadata
     * @return a tracker for the progressive query
     */
-  def progressive(entityname: EntityName, nnq: NearestNeighbourQuery, bq: Option[BooleanQuery], onComplete: (ProgressiveQueryStatus.Value, Seq[Result], Float, Map[String, String]) => Unit, withMetadata: Boolean): ProgressiveQueryStatusTracker =
+  def progressive(entityname: EntityName, nnq: NearestNeighbourQuery, bq: Option[BooleanQuery], onComplete: (ProgressiveQueryStatus.Value, DataFrame, Float, Map[String, String]) => Unit, withMetadata: Boolean): ProgressiveQueryStatusTracker =
     QueryHandler.progressiveQuery(entityname)(nnq, bq, onComplete, withMetadata)
 
 
@@ -84,7 +84,7 @@ object QueryOp {
     * @param withMetadata whether or not to retrieve corresponding metadata
     * @return the results available together with a confidence score
     */
-  def timedProgressive(entityname: EntityName, nnq: NearestNeighbourQuery, bq: Option[BooleanQuery], timelimit: Duration, withMetadata: Boolean): (Seq[Result], Float) =
+  def timedProgressive(entityname: EntityName, nnq: NearestNeighbourQuery, bq: Option[BooleanQuery], timelimit: Duration, withMetadata: Boolean): (DataFrame, Float) =
     QueryHandler.timedProgressiveQuery(entityname)(nnq, bq, timelimit, withMetadata)
 
 }

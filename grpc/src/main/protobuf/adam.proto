@@ -3,7 +3,7 @@ syntax = "proto3";
 package ch.unibas.dmi.dbis.adam.http.grpc;
 
 service AdamDefinition {
-  rpc CreateEntity(EntityNameMessage) returns (AckMessage) {}
+  rpc CreateEntity(CreateEntityMessage) returns (AckMessage) {}
   rpc DropEntity(EntityNameMessage) returns (AckMessage) {}
   rpc Insert(InsertMessage) returns (AckMessage) {}
   rpc Index(IndexMessage) returns (AckMessage) {}
@@ -22,7 +22,15 @@ service AdamSearch {
 
 message CreateEntityMessage {
   string entity = 1;
-  map<string, string> fields = 2;
+  enum FieldType {
+    LONG = 0;
+    INT = 1;
+    FLOAT = 2;
+    DOUBLE = 3;
+    STRING = 4;
+    BOOLEAN = 5;
+  }
+  map<string, FieldType> fields = 2;
 }
 
 message EntityNameMessage {

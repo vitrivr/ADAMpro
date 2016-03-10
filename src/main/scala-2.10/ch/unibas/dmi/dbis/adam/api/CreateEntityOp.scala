@@ -2,6 +2,7 @@ package ch.unibas.dmi.dbis.adam.api
 
 import ch.unibas.dmi.dbis.adam.entity.Entity
 import ch.unibas.dmi.dbis.adam.entity.Entity._
+import ch.unibas.dmi.dbis.adam.entity.FieldTypes.FieldType
 
 /**
   * adamtwo
@@ -21,7 +22,7 @@ object CreateEntityOp {
     *               as key = name, value = SQL type
     * @return
     */
-  def apply(entityname: EntityName, fields: Option[Map[String, String]] = None): Entity = {
-    Entity.create(entityname)
+  def apply(entityname: EntityName, fields: Option[Map[String, FieldType]] = None): Entity = {
+    Entity.create(entityname, fields)
   }
 }

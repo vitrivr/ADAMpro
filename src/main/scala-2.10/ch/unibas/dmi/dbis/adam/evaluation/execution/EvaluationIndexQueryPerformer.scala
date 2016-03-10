@@ -8,9 +8,7 @@ import ch.unibas.dmi.dbis.adam.config.AdamConfig
 import ch.unibas.dmi.dbis.adam.datatypes.feature.Feature._
 import ch.unibas.dmi.dbis.adam.evaluation.EvaluationConfig
 import ch.unibas.dmi.dbis.adam.index.Index
-import ch.unibas.dmi.dbis.adam.query.Result
 import ch.unibas.dmi.dbis.adam.query.distance.ManhattanDistance
-import ch.unibas.dmi.dbis.adam.query.handler.QueryHandler
 import ch.unibas.dmi.dbis.adam.query.query.NearestNeighbourQuery
 
 import scala.collection.mutable
@@ -77,7 +75,8 @@ class EvaluationIndexQueryPerformer {
 
       val query = NearestNeighbourQuery(getRandomVector(vecSize): FeatureVector, ManhattanDistance, EvaluationConfig.k, false)
 
-      var results: Seq[Result] = Seq()
+      //TODO: add this back
+      /*var results: DataFrame = _
       val runningTime = time {
         results = QueryHandler.indexQuery(indexname)(query, None, false)
       }
@@ -88,9 +87,9 @@ class EvaluationIndexQueryPerformer {
           vecSize + "," +
           indexname + "," +
           runningTime + "," +
-          results.map(_.tid).mkString("{", ";", "}") +
+          results.map(_.getLong(0)).collect().mkString("{", ";", "}") +
           "\n")
-      pw.flush()
+      pw.flush()*/
 
       nextExperiment()
 

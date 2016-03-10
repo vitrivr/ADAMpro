@@ -6,7 +6,7 @@ import ch.unibas.dmi.dbis.adam.entity.Tuple._
 import ch.unibas.dmi.dbis.adam.query.query.BooleanQuery
 import ch.unibas.dmi.dbis.adam.query.scanner.MetadataScanner
 import org.apache.spark.Logging
-import org.apache.spark.sql.Row
+import org.apache.spark.sql.DataFrame
 
 import scala.collection.immutable.HashSet
 
@@ -24,7 +24,7 @@ object BooleanQueryHandler extends Logging {
     * @param query
     * @return
     */
-  def metadataQuery(entityname: EntityName, query : BooleanQuery): Seq[Row] =
+  def metadataQuery(entityname: EntityName, query : BooleanQuery): Option[DataFrame] =
     MetadataScanner(Entity.load(entityname), query)
 
   /**
@@ -34,6 +34,6 @@ object BooleanQueryHandler extends Logging {
     * @param filter tuple ids to filter on
     * @return
     */
-  def metadataQuery(entityname: EntityName, filter: HashSet[TupleID]): Seq[Row] =
+  def metadataQuery(entityname: EntityName, filter: HashSet[TupleID]): Option[DataFrame] =
     MetadataScanner(Entity.load(entityname), filter)
 }

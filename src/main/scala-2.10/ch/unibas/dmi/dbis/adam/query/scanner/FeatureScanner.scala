@@ -1,11 +1,12 @@
 package ch.unibas.dmi.dbis.adam.query.scanner
 
 import ch.unibas.dmi.dbis.adam.datatypes.feature.Feature._
-import ch.unibas.dmi.dbis.adam.entity.{Tuple, Entity}
 import ch.unibas.dmi.dbis.adam.entity.Tuple.TupleID
+import ch.unibas.dmi.dbis.adam.entity.{Entity, Tuple}
 import ch.unibas.dmi.dbis.adam.main.SparkStartup
 import ch.unibas.dmi.dbis.adam.query.Result
 import ch.unibas.dmi.dbis.adam.query.query.NearestNeighbourQuery
+import org.apache.spark.sql.{DataFrame, Row}
 
 import scala.collection.immutable.HashSet
 import scala.collection.mutable.ListBuffer
@@ -27,7 +28,7 @@ object FeatureScanner {
     * @param filter if filter is defined, we pre-filter for the features
     * @return
     */
-  def apply(entity: Entity, query: NearestNeighbourQuery, filter: Option[HashSet[TupleID]]): Seq[Result] = {
+  def apply(entity: Entity, query: NearestNeighbourQuery, filter: Option[HashSet[TupleID]]): DataFrame = {
     val data = if (filter.isDefined) {
       //scan based on tuples filtered in index
       SparkStartup.sc.setLocalProperty("spark.scheduler.pool", "feature")
@@ -47,10 +48,14 @@ object FeatureScanner {
     while (it.hasNext) {
       val tuple = it.next
       val f: FeatureVector = tuple.feature
-      ls += Result(query.distance(query.q, f), tuple.tid, null)
+      ls += Result(query.distance(query.q, f), tuple.tid)
     }
 
     //kNN
-    ls.sortBy(_.distance).take(query.k)
+    val result: ListBuffer[Result] = ls.sortBy(_.distance).take(query.k)
+
+    //to DF
+    val rdd = SparkStartup.sc.parallelize(result).map(res => Row(res.distance, res.tid))
+    SparkStartup.sqlContext.createDataFrame(rdd, Result.resultSchema)
   }
 }

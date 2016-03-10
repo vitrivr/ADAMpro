@@ -4,14 +4,14 @@ import java.io._
 
 import ch.unibas.dmi.dbis.adam.config.AdamConfig
 import ch.unibas.dmi.dbis.adam.entity.Entity.EntityName
-import ch.unibas.dmi.dbis.adam.exception.{EntityExistingException, EntityNotExistingException, IndexExistingException, IndexNotExistingException}
+import ch.unibas.dmi.dbis.adam.exception.{EntityExistingExceptionGeneral, EntityNotExistingExceptionGeneral, IndexExistingExceptionGeneral, IndexNotExistingExceptionGeneral}
 import ch.unibas.dmi.dbis.adam.index.Index.{IndexName, IndexTypeName}
 import ch.unibas.dmi.dbis.adam.index.structures.IndexStructures
 import org.apache.commons.io.FileUtils
-import slick.dbio.Effect.{Read, Write}
+import slick.dbio.Effect.Read
 import slick.driver.H2Driver.api._
 import slick.jdbc.meta.MTable
-import slick.profile.{FixedSqlAction, SqlAction}
+import slick.profile.SqlAction
 
 import scala.concurrent.Await
 import scala.concurrent.duration._
@@ -44,9 +44,9 @@ object CatalogOperator {
     *
     * @param entityname
     */
-  def createEntity(entityname: EntityName): Unit = {
+  def createEntity(entityname: EntityName, withMetadata : Boolean): Unit = {
     if (existsEntity(entityname)) {
-      throw new EntityExistingException()
+      throw new EntityExistingExceptionGeneral()
     }
 
     val setup = DBIO.seq(
@@ -64,7 +64,7 @@ object CatalogOperator {
   def dropEntity(entityname: EntityName, ifExists: Boolean = false): Boolean = {
     if (!existsEntity(entityname)) {
       if (!ifExists) {
-        throw new EntityNotExistingException()
+        throw new EntityNotExistingExceptionGeneral()
       } else {
         return false
       }
@@ -86,6 +86,17 @@ object CatalogOperator {
     val count = Await.result(db.run(query), MAX_WAITING_TIME)
 
     (count > 0)
+  }
+
+  /**
+    * Checks whether entity has metadata.
+    *
+    * @param entityname
+    * @return
+    */
+  def hasEntityMetadata(entityname : EntityName) : Boolean = {
+    val query = entities.filter(_.entityname === entityname).map(_.hasMeta).take(1).result
+    Await.result(db.run(query), MAX_WAITING_TIME).head
   }
 
   /**
@@ -120,11 +131,11 @@ object CatalogOperator {
     */
   def createIndex(indexname: IndexName, entityname: EntityName, indextypename: IndexTypeName, indexmeta: Serializable): Unit = {
     if (!existsEntity(entityname)) {
-      throw new EntityNotExistingException()
+      throw new EntityNotExistingExceptionGeneral()
     }
 
     if (existsIndex(indexname)) {
-      throw new IndexExistingException()
+      throw new IndexExistingExceptionGeneral()
     }
 
     val metaPath = AdamConfig.indexMetaCatalogPath + "/" + indexname + "/"
@@ -150,7 +161,7 @@ object CatalogOperator {
     */
   def dropIndex(indexname: IndexName): Unit = {
     if (!existsIndex(indexname)) {
-      throw new IndexNotExistingException()
+      throw new IndexNotExistingExceptionGeneral()
     }
 
     val metaPath = AdamConfig.indexMetaCatalogPath + "/" + indexname + "/"
@@ -168,7 +179,7 @@ object CatalogOperator {
     */
   def dropAllIndexes(entityname: EntityName) = {
     if (!existsEntity(entityname)) {
-      throw new EntityNotExistingException()
+      throw new EntityNotExistingExceptionGeneral()
     }
 
     val existingIndexes = listIndexes(entityname)

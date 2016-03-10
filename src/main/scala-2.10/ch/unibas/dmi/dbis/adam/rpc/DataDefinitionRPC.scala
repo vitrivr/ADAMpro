@@ -1,6 +1,10 @@
 package ch.unibas.dmi.dbis.adam.rpc
 
 import ch.unibas.dmi.dbis.adam.api._
+import ch.unibas.dmi.dbis.adam.config.FieldNames
+import ch.unibas.dmi.dbis.adam.entity.FieldTypes
+import ch.unibas.dmi.dbis.adam.entity.FieldTypes.FieldType
+import ch.unibas.dmi.dbis.adam.exception.GeneralAdamException
 import ch.unibas.dmi.dbis.adam.http.grpc.adam._
 import ch.unibas.dmi.dbis.adam.index.structures.IndexStructures
 import ch.unibas.dmi.dbis.adam.query.distance.NormBasedDistanceFunction
@@ -14,13 +18,39 @@ import scala.concurrent.Future
   * March 2016
   */
 class DataDefinitionRPC extends AdamDefinitionGrpc.AdamDefinition {
-  override def createEntity(request: EntityNameMessage): Future[AckMessage] = {
+  override def createEntity(request: CreateEntityMessage): Future[AckMessage] = {
     try {
-      CreateEntityOp(request.entity)
+      if(!request.fields.isEmpty){
+        CreateEntityOp(request.entity, Option(request.fields.mapValues(matchFields(_))))
+      } else {
+        if(request.fields.contains(FieldNames.idColumnName)
+          || request.fields.contains(FieldNames.featureColumnName)
+          || request.fields.contains(FieldNames.distanceColumnName)){
+          throw new GeneralAdamException("Field specification contains reserved name.")
+        }
+
+        CreateEntityOp(request.entity, None)
+      }
       Future.successful(AckMessage(code = AckMessage.Code.OK))
     } catch {
       case e: Exception => Future.successful(AckMessage(code = AckMessage.Code.ERROR, message = e.getMessage))
     }
+  }
+
+  /**
+    *
+    * @param ft
+    * @return
+    */
+  private def matchFields(ft : CreateEntityMessage.FieldType): FieldType = {
+    if(ft.isBoolean) return FieldTypes.BOOLEANTYPE
+    if(ft.isDouble) return FieldTypes.DOUBLETYPE
+    if(ft.isFloat) return FieldTypes.FLOATTYPE
+    if(ft.isInt) return FieldTypes.INTTYPE
+    if(ft.isLong) return FieldTypes.LONGTYPE
+    if(ft.isString) return FieldTypes.STRINGTYPE
+
+    return FieldTypes.UNRECOGNIZEDTYPE
   }
 
   override def count(request: EntityNameMessage): Future[AckMessage] = {

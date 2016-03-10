@@ -16,9 +16,9 @@ object ImportOp {
   case class ImportRow(id : Long, featureVectorWrapper: FeatureVectorWrapper)
 
   def apply(entityname: EntityName, path : String, createIfNotExists : Boolean = false): Boolean = {
-    if(createIfNotExists && !Entity.existsEntity(entityname)){
+    if(createIfNotExists && !Entity.exists(entityname)){
       Entity.create(entityname)
-    } else if(!Entity.existsEntity(entityname)){
+    } else if(!Entity.exists(entityname)){
       return false
     }
 

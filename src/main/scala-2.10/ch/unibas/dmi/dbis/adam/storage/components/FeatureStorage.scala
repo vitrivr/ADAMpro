@@ -1,5 +1,6 @@
 package ch.unibas.dmi.dbis.adam.storage.components
 
+import ch.unibas.dmi.dbis.adam.config.FieldNames
 import ch.unibas.dmi.dbis.adam.entity.Entity.EntityName
 import ch.unibas.dmi.dbis.adam.entity.Tuple.TupleID
 import ch.unibas.dmi.dbis.adam.main.SparkStartup
@@ -13,9 +14,6 @@ import org.apache.spark.sql.{Row, DataFrame, SaveMode}
   * August 2015
   */
 trait FeatureStorage {
-  val idColumnName = "__ADAMTWO_TID"
-  val featureColumnName = "features"
-
   /**
     * Create the entity in the feature storage.
     *
@@ -25,8 +23,8 @@ trait FeatureStorage {
   def create(entityname: EntityName): Boolean = {
     val featureSchema = StructType(
       List(
-        StructField(idColumnName, LongType, false),
-        StructField(featureColumnName, ArrayType(FloatType), false)
+        StructField(FieldNames.idColumnName, LongType, false),
+        StructField(FieldNames.featureColumnName, ArrayType(FloatType), false)
       )
     )
     val df = SparkStartup.sqlContext.createDataFrame(SparkStartup.sc.emptyRDD[Row], featureSchema)

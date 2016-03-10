@@ -5,12 +5,12 @@ import java.util.concurrent.TimeUnit
 import ch.unibas.dmi.dbis.adam.api.QueryOp
 import ch.unibas.dmi.dbis.adam.datatypes.feature.Feature._
 import ch.unibas.dmi.dbis.adam.http.grpc.adam._
-import ch.unibas.dmi.dbis.adam.query.Result
 import ch.unibas.dmi.dbis.adam.query.distance.NormBasedDistanceFunction
 import ch.unibas.dmi.dbis.adam.query.handler.QueryHints
 import ch.unibas.dmi.dbis.adam.query.progressive.ProgressiveQueryStatus
 import ch.unibas.dmi.dbis.adam.query.query.{BooleanQuery, NearestNeighbourQuery}
 import io.grpc.stub.StreamObserver
+import org.apache.spark.sql.DataFrame
 
 import scala.concurrent.Future
 import scala.concurrent.duration.Duration
@@ -46,8 +46,8 @@ class SearchRPC extends AdamSearchGrpc.AdamSearch {
 
         //TODO: metadata should be set via protobuf message
         //TODO: metadata output should be in json
-        val results = QueryOp(entity, hint, nnq, bq, true)
-          .map(result => QueryResponseMessage(result.tid, result.distance, result.metadata.get.mkString))
+        val results = QueryOp(entity, hint, nnq, bq, true).collect()
+          .map(result => QueryResponseMessage(result.getLong(1), result.getDouble(0), ""))
 
         Future.successful(QueryResponseListMessage(results))
       } catch {
@@ -82,7 +82,7 @@ class SearchRPC extends AdamSearchGrpc.AdamSearch {
       //TODO: metadata output should be in json
       val tpresults = QueryOp.timedProgressive(entity, nnq, bq, Duration(time, TimeUnit.MILLISECONDS), true)
 
-      val results = tpresults._1.map(result => QueryResponseMessage(result.tid, result.distance, result.metadata.get.mkString))
+      val results = tpresults._1.map(result => QueryResponseMessage(result.getLong(1), result.getDouble(0), "")).collect()
       val confidence = tpresults._2
 
       Future.successful(QueryResponseInfoMessage(confidence, Option(QueryResponseListMessage(results))))
@@ -115,7 +115,7 @@ class SearchRPC extends AdamSearchGrpc.AdamSearch {
 
       //TODO: metadata should be set via protobuf message
       //TODO: metadata output should be in json
-      val results = QueryOp.sequential(entity, nnq, bq, true).map(result => QueryResponseMessage(result.tid, result.distance, result.metadata.get.mkString))
+      val results = QueryOp.sequential(entity, nnq, bq, true).map(result => QueryResponseMessage(result.getLong(1), result.getDouble(0), "")).collect()
 
       Future.successful(QueryResponseListMessage(results))
     } catch {
@@ -147,7 +147,7 @@ class SearchRPC extends AdamSearchGrpc.AdamSearch {
 
       //TODO: metadata should be set via protobuf message
       //TODO: metadata output should be in json
-      val results = QueryOp.index(index, nnq, bq, true).map(result => QueryResponseMessage(result.tid, result.distance, result.metadata.get.mkString))
+      val results = QueryOp.index(index, nnq, bq, true).map(result => QueryResponseMessage(result.getLong(1), result.getDouble(0), "")).collect()
 
       Future.successful(QueryResponseListMessage(results))
     } catch {
@@ -178,8 +178,8 @@ class SearchRPC extends AdamSearchGrpc.AdamSearch {
       } else { None }
 
       val onComplete =
-        (status : ProgressiveQueryStatus.Value, results : Seq[Result], confidence : Float, info : Map[String, String]) => ({
-          val responseList = QueryResponseListMessage(results.map(result => QueryResponseMessage(result.tid, result.distance, result.metadata.get.mkString)))
+        (status : ProgressiveQueryStatus.Value, results : DataFrame, confidence : Float, info : Map[String, String]) => ({
+          val responseList = QueryResponseListMessage(results.map(result => QueryResponseMessage(result.getLong(1), result.getDouble(0), "")).collect())
           responseObserver.onNext(QueryResponseInfoMessage(confidence, Option(responseList)))
         })
     } catch {
