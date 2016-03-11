@@ -1,14 +1,17 @@
 package ch.unibas.dmi.dbis.adam.entity
 
 import java.sql.DriverManager
-import java.util.UUID
 
 import ch.unibas.dmi.dbis.adam.config.AdamConfig
 import ch.unibas.dmi.dbis.adam.entity.FieldTypes.FieldType
-import com.holdenkarau.spark.testing.SharedSparkContext
-import org.scalatest.{FeatureSpec, GivenWhenThen}
+import ch.unibas.dmi.dbis.adam.main.SparkStartup
+import org.scalatest.concurrent.{IntegrationPatience, Eventually}
+import org.scalatest.{Matchers, FeatureSpec, GivenWhenThen}
+import Matchers._
+
 
 import scala.collection.mutable.ListBuffer
+import scala.util.Random
 
 /**
   * adamtwo
@@ -16,7 +19,8 @@ import scala.collection.mutable.ListBuffer
   * Ivan Giangreco
   * March 2016
   */
-class EntityTestSuite extends FeatureSpec with GivenWhenThen with SharedSparkContext {
+class EntityTestSuite extends FeatureSpec with GivenWhenThen  with Eventually with IntegrationPatience {
+  SparkStartup
 
   def fixture =
     new {
@@ -26,41 +30,49 @@ class EntityTestSuite extends FeatureSpec with GivenWhenThen with SharedSparkCon
       }
     }
 
+  def getRandomName(len: Int = 10) = {
+    val sb = new StringBuilder(len)
+    val ab = "abcdefghijklmnopqrstuvwxyz"
+    for (i <- 0 until len) {
+      sb.append(ab(Random.nextInt(ab.length)))
+    }
+    sb.toString
+  }
 
   feature("data definition") {
     scenario("create an entity") {
-      Given("no entities have been created so far")
-      assert(Entity.list().isEmpty)
+      Given("a database with a few elements already")
+      val givenEntities = Entity.list()
 
       When("a new random entity (without any metadata) is created")
-      val entityname = UUID.randomUUID().toString.substring(0, 8)
+      val entityname = getRandomName()
       Entity.create(entityname)
 
       Then("the entity, and only the entity should exist")
-      val entities = Entity.list()
-      assert(entities.length == 1)
-      assert(entities.head == entityname)
+      val finalEntities = Entity.list()
+      eventually { finalEntities.size shouldBe givenEntities.size + 1 }
+      eventually { finalEntities.contains(entityname) }
     }
 
     scenario("drop an existing entity") {
       Given("there exists one entity")
-      val entityname = UUID.randomUUID().toString.substring(0, 8)
+      val entityname = getRandomName()
       Entity.create(entityname)
-      assert(Entity.list() == 1)
+      assert(Entity.list().contains(entityname))
 
       When("the enetity is dropped")
       Entity.drop(entityname)
 
       Then("no entity should exist")
-      assert(Entity.list().length == 0)
+      assert(!Entity.list().contains(entityname))
     }
 
     scenario("create an entity with metadata") {
-      Given("no entities have been created so far")
-      assert(Entity.list().isEmpty)
+      Given("a database with a few elements already")
+      val givenEntities = Entity.list()
 
       val fieldTemplate = Seq(
-        ("stringfield", FieldTypes.STRINGTYPE, "character varying"),
+        ("stringfield", FieldTypes.STRINGTYPE, "text"),
         ("floatfield", FieldTypes.FLOATTYPE, "real"),
         ("doublefield", FieldTypes.DOUBLETYPE, "double precision"),
         ("intfield", FieldTypes.INTTYPE, "integer"),
@@ -69,26 +81,33 @@ class EntityTestSuite extends FeatureSpec with GivenWhenThen with SharedSparkCon
       )
 
       When("a new random entity with metadata is created")
-      val entityname = UUID.randomUUID().toString.substring(0, 8)
+      val entityname = getRandomName()
       val fields: Map[String, FieldType] = fieldTemplate.map(ft => (ft._1, ft._2)).toMap
       Entity.create(entityname, Option(fields))
 
       Then("the entity, and only the entity should exist")
       val entities = Entity.list()
-      assert(entities.length == 1)
-      assert(entities.head == entityname)
+      val finalEntities = Entity.list()
+      assert( finalEntities.size == givenEntities.size + 1 )
+      assert( finalEntities.contains(entityname) )
 
       And("The metadata table should have been created")
       val connection = fixture.connection
-      val result = connection.createStatement().executeQuery("SELECT column_name, data_type FROM information_schema.columns WHERE table_schema = 'public' AND table_name = " + entityname)
+      val result = connection.createStatement().executeQuery("SELECT column_name, data_type FROM information_schema.columns WHERE table_schema = 'public' AND table_name = '" + entityname + "'")
 
       val lb = new ListBuffer[(String, String)]()
       while (result.next) {
         lb.+=((result.getString(1), result.getString(2)))
       }
 
+
       val dbNames = lb.toList.toMap
       val templateNames = fieldTemplate.map(ft => (ft._1, ft._3)).toMap
+
+      println(dbNames.keys.mkString(", "))
+      println(dbNames.values.mkString(", "))
+
+
 
       assert(dbNames.size == templateNames.size)
 
@@ -101,12 +120,12 @@ class EntityTestSuite extends FeatureSpec with GivenWhenThen with SharedSparkCon
 
     scenario("drop an entity with metadata") {
       Given("an entity with metadata")
-      val entityname = UUID.randomUUID().toString.substring(0, 8)
+      val entityname = getRandomName()
       val fields: Map[String, FieldType] = Map[String, FieldType](("stringfield" -> FieldTypes.STRINGTYPE))
       Entity.create(entityname, Option(fields))
 
       val connection = fixture.connection
-      val preResult = connection.createStatement().executeQuery("SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = " + entityname)
+      val preResult = connection.createStatement().executeQuery("SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = '" + entityname + "'")
       var tableCount = 0
       while (preResult.next) {
         tableCount += 1
@@ -116,7 +135,7 @@ class EntityTestSuite extends FeatureSpec with GivenWhenThen with SharedSparkCon
       Entity.drop(entityname)
 
       Then("the metadata entity is dropped as well")
-      val postResult = connection.createStatement().executeQuery("SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = " + entityname)
+      val postResult = connection.createStatement().executeQuery("SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = '" + entityname + "'")
       while (postResult.next) {
         tableCount -= 1
       }
@@ -125,11 +144,11 @@ class EntityTestSuite extends FeatureSpec with GivenWhenThen with SharedSparkCon
     }
   }
 
-
+  //TODO: add test
   /*feature("data manipulation") {
     scenario("insert data in an entity without metadata") {
       Given("an entity without metadata")
-      val entityname = UUID.randomUUID().toString.substring(0, 8)
+      val entityname =  getRandomName()
       Entity.create(entityname)
 
       When("data is inserted")
@@ -147,7 +166,7 @@ class EntityTestSuite extends FeatureSpec with GivenWhenThen with SharedSparkCon
 
     scenario("insert data in an entity with metadata") {
       Given("an entity without metadata")
-      val entityname = UUID.randomUUID().toString.substring(0, 8)
+      val entityname = getRandomName()
       Entity.create(entityname, Option(fields))
       val fieldTemplate = Seq(
         ("stringfield", FieldTypes.STRINGTYPE, "character varying"),
