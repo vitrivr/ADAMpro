@@ -23,7 +23,7 @@ object CassandraFeatureStorage extends FeatureStorage with Serializable {
   private val defaultKeyspace = AdamConfig.cassandraKeyspace
 
   private val idColumnName = FieldNames.idColumnName
-  private val featureColumnName = FieldNames.featureColumnName
+  private val featureColumnName = FieldNames.internFeatureColumnName
 
   private val conn = CassandraConnector(SparkStartup.sparkConfig)
   private val adamtwoKeyspace = conn.withClusterDo(_.getMetadata).getKeyspace(defaultKeyspace)

@@ -16,7 +16,7 @@ import org.apache.spark.{SparkConf, SparkContext}
  */
 object SparkStartup {
   val sparkConfig = new SparkConf().setAppName("ADAMtwo").setMaster("spark://localhost:7077")
-      .set("spark.serializer", "org.apache.spark.serializer.KryoSerializer")
+    .set("spark.serializer", "org.apache.spark.serializer.KryoSerializer")
     .set("spark.driver.maxResultSize", "12000m")
     .set("spark.kryoserializer.buffer.max", "2047m")
     .set("spark.kryoserializer.buffer", "2047")
@@ -26,8 +26,10 @@ object SparkStartup {
     .set("spark.cassandra.connection.port", AdamConfig.cassandraPort)
     .set("spark.cassandra.auth.username", AdamConfig.cassandraUsername)
     .set("spark.cassandra.auth.password", AdamConfig.cassandraPassword)
-
     .registerKryoClasses(Array(classOf[BitString[_]], classOf[MinimalBitString], classOf[FeatureVectorWrapper]))
+
+  val jf = new com.fasterxml.jackson.core.JsonFactory()
+  jf.requiresPropertyOrdering
 
   val sc = new SparkContext(sparkConfig)
   sc.setLogLevel("INFO")

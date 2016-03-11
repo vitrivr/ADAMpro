@@ -21,7 +21,7 @@ import scala.collection.immutable.HashSet
   */
 //TODO: consider what to do if metadata is not filled, i.e. certain operations should not be done on the stack
 case class Entity(entityname: EntityName, featureStorage: FeatureStorage, metadataStorage: Option[MetadataStorage]) {
-  private lazy val featureData = featureStorage.read(entityname)
+  private lazy val featureData = featureStorage.read(entityname).withColumnRenamed(FieldNames.featureColumnName, FieldNames.internFeatureColumnName)
   private lazy val metaData = if(metadataStorage.isDefined){
     Option(metadataStorage.get.read(entityname))
   } else {
@@ -128,7 +128,7 @@ object Entity {
     *
     * @param entityname
     * @param insertion data frame containing all columns (of both the feature storage and the metadata storage);
-    *                  note that you should name the feature column as specified in the feature storage class ("feature").
+    *                  note that you should name the feature column as ("feature").
     * @return
     */
   def insertData(entityname: EntityName, insertion: DataFrame): Boolean = {
@@ -140,8 +140,10 @@ object Entity {
     val insertionWithPK = SparkStartup.sqlContext.createDataFrame(
       rows, StructType(StructField(FieldNames.idColumnName, LongType, false) +: insertion.schema.fields))
 
-    featureStorage.write(entityname, insertionWithPK.select(FieldNames.idColumnName, FieldNames.featureColumnName), SaveMode.Append)
-    metadataStorage.write(entityname, insertionWithPK.drop(FieldNames.featureColumnName), SaveMode.Append)
+    insertion.withColumnRenamed(FieldNames.featureColumnName, FieldNames.internFeatureColumnName)
+
+    featureStorage.write(entityname, insertionWithPK.select(FieldNames.idColumnName, FieldNames.internFeatureColumnName), SaveMode.Append)
+    metadataStorage.write(entityname, insertionWithPK.drop(FieldNames.internFeatureColumnName), SaveMode.Append)
   }
 
   /**

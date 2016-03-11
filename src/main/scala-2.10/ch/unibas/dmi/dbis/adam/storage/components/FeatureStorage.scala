@@ -24,7 +24,7 @@ trait FeatureStorage {
     val featureSchema = StructType(
       List(
         StructField(FieldNames.idColumnName, LongType, false),
-        StructField(FieldNames.featureColumnName, ArrayType(FloatType), false)
+        StructField(FieldNames.internFeatureColumnName, ArrayType(FloatType), false)
       )
     )
     val df = SparkStartup.sqlContext.createDataFrame(SparkStartup.sc.emptyRDD[Row], featureSchema)

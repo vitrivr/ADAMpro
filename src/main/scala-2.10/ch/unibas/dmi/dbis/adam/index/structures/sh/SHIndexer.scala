@@ -74,8 +74,8 @@ class SHIndexer(nbits : Int, trainingSize : Int) extends IndexGenerator with Ser
     val projected = (dataMatrix.*(reorderEigv)).asInstanceOf[DenseMatrix[Double]]
 
     // fit uniform distribution
-    val minProj = breeze.linalg.min(projected(::, *)).toDenseVector
-    val maxProj = breeze.linalg.max(projected(::, *)).toDenseVector
+    val minProj = breeze.linalg.min(projected(::, *)).t.toDenseVector
+    val maxProj = breeze.linalg.max(projected(::, *)).t.toDenseVector
 
     // enumerate eigenfunctions
     val maxMode = computeShareOfBits(minProj, maxProj, nbits)

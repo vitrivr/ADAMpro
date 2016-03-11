@@ -11,13 +11,15 @@ version in PB.protobufConfig := "3.0.0-beta-2"
 
 libraryDependencies ++= Seq(
   "io.grpc" % "grpc-all" % "0.13.1",
-  "com.trueaccord.scalapb" %% "scalapb-runtime-grpc" % (PB.scalapbVersion in PB.protobufConfig).value
+  "com.trueaccord.scalapb" %% "scalapb-runtime-grpc" % (PB.scalapbVersion in PB.protobufConfig).value,
+  "com.fasterxml.jackson.core" % "jackson-core"          % "2.4.4"
 )
 
 //assembly
 assemblyShadeRules in assembly := Seq(
   ShadeRule.rename("io.netty.**" -> "shaded.io.netty.@1").inAll,
-  ShadeRule.rename("com.google.guava.**" -> "shaded.io.guava.@1").inAll
+  ShadeRule.rename("com.google.guava.**" -> "shaded.io.guava.@1").inAll,
+  ShadeRule.rename("com.fasterxml.**" -> "shaded.com.fasterxml.@1").inAll
 )
 
 assemblyOption in assembly :=

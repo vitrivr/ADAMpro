@@ -24,7 +24,7 @@ class DataDefinitionRPC extends AdamDefinitionGrpc.AdamDefinition {
         CreateEntityOp(request.entity, Option(request.fields.mapValues(matchFields(_))))
       } else {
         if(request.fields.contains(FieldNames.idColumnName)
-          || request.fields.contains(FieldNames.featureColumnName)
+          || request.fields.contains(FieldNames.internFeatureColumnName)
           || request.fields.contains(FieldNames.distanceColumnName)){
           throw new GeneralAdamException("Field specification contains reserved name.")
         }
