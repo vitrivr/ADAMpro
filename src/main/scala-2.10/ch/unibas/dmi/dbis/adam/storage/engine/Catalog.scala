@@ -10,13 +10,13 @@ import slick.lifted.ForeignKeyQuery
  * Ivan Giangreco
  * August 2015
  */
-private[engine] class EntitiesCatalog(tag: Tag) extends Table[(String, Boolean)](tag, "__ADAMTWO_ENTITIES") {
+private[engine] class EntitiesCatalog(tag: Tag) extends Table[(String, Boolean)](tag, "ADAMTWO_ENTITIES") {
   def entityname = column[String]("ENTITYNAME", O.PrimaryKey)
   def hasMeta = column[Boolean]("HASMETA")
   def * = (entityname, hasMeta)
 }
 
-private[engine] class IndexesCatalog(tag: Tag) extends Table[(String, String, String, String)](tag, "__ADAMTWO_INDEXES") {
+private[engine] class IndexesCatalog(tag: Tag) extends Table[(String, String, String, String)](tag, "ADAMTWO_INDEXES") {
   def indexname = column[String]("INDEXNAME", O.PrimaryKey)
   def entityname = column[String]("ENTITYNAME")
   def indextypename = column[String]("INDEXTYPENAME")
@@ -30,7 +30,7 @@ private[engine] class IndexesCatalog(tag: Tag) extends Table[(String, String, St
 
 private[engine] object Catalog {
   def apply() = List(
-    ("__ADAMTWO_ENTITIES", TableQuery[EntitiesCatalog]),
-    ("__ADAMTWO_INDEXES", TableQuery[IndexesCatalog])
+    ("ADAMTWO_ENTITIES", TableQuery[EntitiesCatalog]),
+    ("ADAMTWO_INDEXES", TableQuery[IndexesCatalog])
   )
 }
