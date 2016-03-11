@@ -4,6 +4,7 @@ import ch.unibas.dmi.dbis.adam.config.FieldNames
 import ch.unibas.dmi.dbis.adam.entity.Entity._
 import ch.unibas.dmi.dbis.adam.entity.FieldTypes.FieldType
 import ch.unibas.dmi.dbis.adam.exception.{EntityExistingExceptionGeneral, EntityNotExistingExceptionGeneral}
+import ch.unibas.dmi.dbis.adam.index.Index
 import ch.unibas.dmi.dbis.adam.main.SparkStartup
 import ch.unibas.dmi.dbis.adam.storage.components.{FeatureStorage, MetadataStorage}
 import ch.unibas.dmi.dbis.adam.storage.engine.CatalogOperator
@@ -116,9 +117,16 @@ object Entity {
       }
     }
 
-    val indexes = CatalogOperator.listIndexes(entityname)
 
-    featureStorage.drop(entityname) && metadataStorage.drop(entityname) && CatalogOperator.dropEntity(entityname, ifExists)
+    Index.dropAll(entityname)
+
+    featureStorage.drop(entityname)
+
+    if(CatalogOperator.hasEntityMetadata(entityname)){
+      metadataStorage.drop(entityname)
+    }
+
+    CatalogOperator.dropEntity(entityname, ifExists)
   }
 
   /**
@@ -141,7 +149,12 @@ object Entity {
     insertion.withColumnRenamed(FieldNames.featureColumnName, FieldNames.internFeatureColumnName)
 
     featureStorage.write(entityname, insertionWithPK.select(FieldNames.idColumnName, FieldNames.internFeatureColumnName), SaveMode.Append)
-    metadataStorage.write(entityname, insertionWithPK.drop(FieldNames.internFeatureColumnName), SaveMode.Append)
+
+    if( CatalogOperator.hasEntityMetadata(entityname)) {
+      metadataStorage.write(entityname, insertionWithPK.drop(FieldNames.internFeatureColumnName), SaveMode.Append)
+    }
+
+    true
   }
 
   /**
