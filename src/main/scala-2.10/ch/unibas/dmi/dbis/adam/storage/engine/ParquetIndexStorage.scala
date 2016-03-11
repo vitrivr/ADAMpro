@@ -19,8 +19,8 @@ import org.apache.spark.sql.{DataFrame, SaveMode}
 object ParquetIndexStorage extends IndexStorage {
   //TODO: refactor
   val hadoopConf = new Configuration()
+  //TODO: add authentication
   hadoopConf.set("fs.defaultFS", AdamConfig.hadoopUrl)
-
 
   if(!FileSystem.get(new Path("/").toUri, hadoopConf).exists(new Path(AdamConfig.indexPath))){
     FileSystem.get(new Path("/").toUri, hadoopConf).mkdirs(new Path(AdamConfig.indexPath))
