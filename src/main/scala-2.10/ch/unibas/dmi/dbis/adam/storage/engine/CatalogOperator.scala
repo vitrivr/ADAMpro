@@ -24,7 +24,7 @@ import scala.concurrent.duration._
   * August 2015
   */
 object CatalogOperator {
-  private val MAX_WAITING_TIME: Duration = 5.seconds
+  private val MAX_WAITING_TIME: Duration = 100.seconds
 
   private val db = Database.forURL("jdbc:h2:" + (AdamConfig.catalogPath + "/" + "catalog"), driver = "org.h2.Driver")
 
@@ -43,16 +43,20 @@ object CatalogOperator {
     * Creates entity in catalog.
     *
     * @param entityname
+    * @param withMetadata
+    * @return
     */
-  def createEntity(entityname: EntityName, withMetadata : Boolean): Unit = {
+  def createEntity(entityname: EntityName, withMetadata : Boolean = false): Boolean = {
     if (existsEntity(entityname)) {
       throw new EntityExistingExceptionGeneral()
     }
 
     val setup = DBIO.seq(
-      entities.+=(entityname)
+      entities.+=(entityname, withMetadata)
     )
-    db.run(setup)
+
+    Await.result(db.run(setup), MAX_WAITING_TIME)
+    true
   }
 
   /**
@@ -129,7 +133,7 @@ object CatalogOperator {
     * @param entityname
     * @param indexmeta
     */
-  def createIndex(indexname: IndexName, entityname: EntityName, indextypename: IndexTypeName, indexmeta: Serializable): Unit = {
+  def createIndex(indexname: IndexName, entityname: EntityName, indextypename: IndexTypeName, indexmeta: Serializable): Boolean = {
     if (!existsEntity(entityname)) {
       throw new EntityNotExistingExceptionGeneral()
     }
@@ -150,7 +154,9 @@ object CatalogOperator {
     val setup = DBIO.seq(
       indexes.+=((indexname, entityname, indextypename.toString, metaFilePath))
     )
-    db.run(setup)
+
+    Await.result(db.run(setup), MAX_WAITING_TIME)
+    true
   }
 
   /**
@@ -159,7 +165,7 @@ object CatalogOperator {
     * @param indexname
     * @return
     */
-  def dropIndex(indexname: IndexName): Unit = {
+  def dropIndex(indexname: IndexName): Boolean = {
     if (!existsIndex(indexname)) {
       throw new IndexNotExistingExceptionGeneral()
     }
@@ -169,15 +175,16 @@ object CatalogOperator {
 
     val query = indexes.filter(_.indexname === indexname).delete
     Await.result(db.run(query), MAX_WAITING_TIME)
+    true
   }
 
   /**
     * Drops all indexes from catalog belonging to entity.
     *
     * @param entityname
-    * @return
+    * @return names of indexes dropped
     */
-  def dropAllIndexes(entityname: EntityName) = {
+  def dropAllIndexes(entityname: EntityName) : Seq[IndexName] = {
     if (!existsEntity(entityname)) {
       throw new EntityNotExistingExceptionGeneral()
     }
