@@ -28,9 +28,6 @@ object SparkStartup {
     .set("spark.cassandra.auth.password", AdamConfig.cassandraPassword)
     .registerKryoClasses(Array(classOf[BitString[_]], classOf[MinimalBitString], classOf[FeatureVectorWrapper]))
 
-  val jf = new com.fasterxml.jackson.core.JsonFactory()
-  jf.requiresPropertyOrdering
-
   val sc = new SparkContext(sparkConfig)
   sc.setLogLevel("INFO")
 

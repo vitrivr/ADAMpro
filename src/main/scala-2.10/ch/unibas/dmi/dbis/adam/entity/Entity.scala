@@ -91,8 +91,6 @@ object Entity {
        metadataStorage.create(entityname, fields.get.mapValues(_.datatype))
     }
 
-    fields.get.map{case(x,y) => y}
-
     if(fields.isDefined){
       CatalogOperator.createEntity(entityname, true)
       Entity(entityname, featureStorage, Option(metadataStorage))
