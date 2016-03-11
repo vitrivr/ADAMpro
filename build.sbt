@@ -73,8 +73,7 @@ mainClass in assembly := Some("ch.unibas.dmi.dbis.adam.main.Startup")
 
 //test
 libraryDependencies ++= Seq(
-  "org.scalatest"          % "scalatest_2.10"            %  "3.0.0-M15",
-  "com.holdenkarau"        %% "spark-testing-base"       % "1.6.0_0.3.1"
+  "org.scalatest"          % "scalatest_2.10"            %  "3.0.0-M15"
 )
 
 parallelExecution in Test := false
