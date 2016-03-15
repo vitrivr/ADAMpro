@@ -22,7 +22,7 @@ trait FeatureStorage {
     */
   def create(entityname: EntityName): Boolean = {
     val featureSchema = StructType(
-      List(
+      Seq(
         StructField(FieldNames.idColumnName, LongType, false),
         StructField(FieldNames.internFeatureColumnName, ArrayType(FloatType), false)
       )

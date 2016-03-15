@@ -144,11 +144,11 @@ object Entity {
       throw new EntityNotExistingExceptionGeneral()
     }
 
-    val rows = insertion.rdd.zipWithUniqueId.map { case (r: Row, id: Long) => Row.fromSeq(id +: r.toSeq) }
-    val insertionWithPK = SparkStartup.sqlContext.createDataFrame(
+    val rows = insertion.rdd.zipWithUniqueId.map { case (r: Row, adamtwoid: Long) => Row.fromSeq(adamtwoid +: r.toSeq) }
+    val insertionWithPK = SparkStartup.sqlContext
+      .createDataFrame(
       rows, StructType(StructField(FieldNames.idColumnName, LongType, false) +: insertion.schema.fields))
-
-    insertion.withColumnRenamed(FieldNames.featureColumnName, FieldNames.internFeatureColumnName)
+      .withColumnRenamed(FieldNames.featureColumnName, FieldNames.internFeatureColumnName)
 
     featureStorage.write(entityname, insertionWithPK.select(FieldNames.idColumnName, FieldNames.internFeatureColumnName), SaveMode.Append)
 
