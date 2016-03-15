@@ -2,7 +2,7 @@ package ch.unibas.dmi.dbis.adam.entity
 
 import ch.unibas.dmi.dbis.adam.config.FieldNames
 import ch.unibas.dmi.dbis.adam.entity.Entity._
-import ch.unibas.dmi.dbis.adam.entity.FieldTypes.FieldType
+import ch.unibas.dmi.dbis.adam.entity.FieldTypes.{FieldType, INTTYPE}
 import ch.unibas.dmi.dbis.adam.exception.{EntityExistingExceptionGeneral, EntityNotExistingExceptionGeneral}
 import ch.unibas.dmi.dbis.adam.index.Index
 import ch.unibas.dmi.dbis.adam.main.SparkStartup
@@ -23,7 +23,7 @@ import scala.collection.immutable.HashSet
 //TODO: consider what to do if metadata is not filled, i.e. certain operations should not be done on the stack
 case class Entity(entityname: EntityName, featureStorage: FeatureStorage, metadataStorage: Option[MetadataStorage]) {
   private lazy val featureData = featureStorage.read(entityname).withColumnRenamed(FieldNames.featureColumnName, FieldNames.internFeatureColumnName)
-  private lazy val metaData = if(metadataStorage.isDefined){
+  private lazy val metaData = if (metadataStorage.isDefined) {
     Option(metadataStorage.get.read(entityname))
   } else {
     None
@@ -54,7 +54,7 @@ case class Entity(entityname: EntityName, featureStorage: FeatureStorage, metada
     featureStorage.read(entityname, Option(filter)).rdd.map(r => r: Tuple)
   }
 
-  def rdd = if(metaData.isDefined){
+  def rdd = if (metaData.isDefined) {
     featureData.join(metaData.get).rdd
   } else {
     featureData.rdd
@@ -88,11 +88,13 @@ object Entity {
 
     featureStorage.create(entityname)
 
-    if(fields.isDefined) {
-       metadataStorage.create(entityname, fields.get.mapValues(_.datatype))
+    if (fields.isDefined) {
+      //TODO: add optional information, e.g. PK to creation of metadata
+      val fieldsWithPK = fields.get + (FieldNames.idColumnName -> INTTYPE)
+      metadataStorage.create(entityname, fieldsWithPK.mapValues(_.datatype))
     }
 
-    if(fields.isDefined){
+    if (fields.isDefined) {
       CatalogOperator.createEntity(entityname, true)
       Entity(entityname, featureStorage, Option(metadataStorage))
     } else {
@@ -122,7 +124,7 @@ object Entity {
 
     featureStorage.drop(entityname)
 
-    if(CatalogOperator.hasEntityMetadata(entityname)){
+    if (CatalogOperator.hasEntityMetadata(entityname)) {
       metadataStorage.drop(entityname)
     }
 
@@ -150,7 +152,7 @@ object Entity {
 
     featureStorage.write(entityname, insertionWithPK.select(FieldNames.idColumnName, FieldNames.internFeatureColumnName), SaveMode.Append)
 
-    if( CatalogOperator.hasEntityMetadata(entityname)) {
+    if (CatalogOperator.hasEntityMetadata(entityname)) {
       metadataStorage.write(entityname, insertionWithPK.drop(FieldNames.internFeatureColumnName), SaveMode.Append)
     }
 
@@ -168,7 +170,7 @@ object Entity {
       throw new EntityNotExistingExceptionGeneral()
     }
 
-    val entityMetadataStorage = if(CatalogOperator.hasEntityMetadata(entityname)){
+    val entityMetadataStorage = if (CatalogOperator.hasEntityMetadata(entityname)) {
       Option(metadataStorage)
     } else {
       None

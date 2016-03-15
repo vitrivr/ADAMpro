@@ -1,8 +1,9 @@
 package ch.unibas.dmi.dbis.adam.storage.engine
 
+import java.sql.{Connection, DriverManager}
 import java.util.Properties
 
-import ch.unibas.dmi.dbis.adam.config.AdamConfig
+import ch.unibas.dmi.dbis.adam.config.{FieldNames, AdamConfig}
 import ch.unibas.dmi.dbis.adam.entity.Entity.EntityName
 import ch.unibas.dmi.dbis.adam.main.SparkStartup
 import ch.unibas.dmi.dbis.adam.storage.components.MetadataStorage
@@ -20,14 +21,26 @@ object PostgresMetadataStorage extends MetadataStorage {
   val url = AdamConfig.jdbcUrl
   AdamDialectRegistrar.register(url)
 
-  override def create(entityname: EntityName, fields: Map[String, DataType]): Boolean = {
+  /**
+    * Opens a connection to the PostgreSQL database.
+    *
+    * @return
+    */
+  private def openConnection(): Connection ={
+    Class.forName("org.postgresql.Driver").newInstance
+    DriverManager.getConnection(AdamConfig.jdbcUrl, AdamConfig.jdbcUser, AdamConfig.jdbcPassword)
+  }
+
+  override def create(tablename: EntityName, fields: Map[String, DataType]): Boolean = {
     val structFields = fields.map{
       case (name, fieldtype) => StructField(name, fieldtype)
     }.toSeq
 
     val df = SparkStartup.sqlContext.createDataFrame(SparkStartup.sc.emptyRDD[Row], StructType(structFields))
 
-    write(entityname, df, SaveMode.ErrorIfExists)
+    write(tablename, df, SaveMode.ErrorIfExists)
+
+    true
   }
 
   override def read(tablename: EntityName): DataFrame = {
