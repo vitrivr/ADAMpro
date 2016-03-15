@@ -63,7 +63,8 @@ object CassandraFeatureStorage extends FeatureStorage with Serializable {
     session.execute(createKeyspaceCql(name))
   }
 
-  case class InternalCassandraRowFormat(id: Long, feature: Seq[Float])
+  //note: the names of the row
+  case class InternalCassandraRowFormat(adamtwoid : Long, adamtwofeatures: Seq[Float])
 
   /**
    *
@@ -138,12 +139,15 @@ object CassandraFeatureStorage extends FeatureStorage with Serializable {
       }
     }
 
-    df.rdd.map(r => InternalCassandraRowFormat(r.getLong(0).toInt, r.getAs[FeatureVectorWrapper](1).getSeq())).saveToCassandra("adamtwo", entityname)
+    df.map(r => InternalCassandraRowFormat(
+      r.getAs[Long](FieldNames.idColumnName),
+      r.getAs[FeatureVectorWrapper](FieldNames.internFeatureColumnName).getSeq()))
+      .saveToCassandra(defaultKeyspace, entityname)
     true
   }
 
   override def count(entityname: EntityName): Int = {
-    SparkStartup.sc.cassandraTable("adamtwo", entityname).cassandraCount().toInt
+    SparkStartup.sc.cassandraTable(defaultKeyspace, entityname).cassandraCount().toInt
   }
 
   private def asWorkingVectorWrapper(value: Vector[Float]): FeatureVectorWrapper = {
