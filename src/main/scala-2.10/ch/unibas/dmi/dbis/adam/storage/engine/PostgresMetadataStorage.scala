@@ -40,6 +40,20 @@ object PostgresMetadataStorage extends MetadataStorage {
 
     write(tablename, df, SaveMode.ErrorIfExists)
 
+    //make id field unique
+    val idColumnName = FieldNames.idColumnName
+    val alterAddIdSql = s"""
+                   |ALTER TABLE $tablename
+                   | ADD UNIQUE ($idColumnName)
+                   |""".stripMargin
+
+    openConnection().createStatement().executeUpdate(alterAddIdSql)
+
+    //crate index over id field
+    val idColumnIndexSql = s"""CREATE INDEX ON $tablename ($idColumnName)""".stripMargin
+
+    openConnection().createStatement().executeUpdate(idColumnIndexSql)
+
     true
   }
 
