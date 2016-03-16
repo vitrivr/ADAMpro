@@ -33,7 +33,6 @@ object ParquetIndexStorage extends IndexStorage {
   }
 
   override def write(indexname: IndexName, df: DataFrame): Boolean = {
-    println(AdamConfig.indexBase + "/" + AdamConfig.indexPath + "/" + indexname + ".parquet")
     df.write.mode(SaveMode.Overwrite).parquet(AdamConfig.indexBase + "/" + AdamConfig.indexPath + "/" + indexname + ".parquet")
     true
   }
