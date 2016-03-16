@@ -1,4 +1,4 @@
-name := "adamtwo-client"
+name := "ADAMpro-client"
 
 libraryDependencies ++= Seq(
 )

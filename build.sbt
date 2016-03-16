@@ -1,6 +1,6 @@
 
 
-name := "adamtwo"
+name := "ADAMpro"
 
 lazy val commonSettings = Seq(
   organization := "ch.unibas.dmi.dbis",

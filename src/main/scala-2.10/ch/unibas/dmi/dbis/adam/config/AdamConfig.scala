@@ -9,30 +9,30 @@ import com.typesafe.config.ConfigFactory
   */
 object AdamConfig{
   val config = ConfigFactory.load()
-  config.checkValid(ConfigFactory.defaultReference(), "adamtwo")
+  config.checkValid(ConfigFactory.defaultReference(), "adampro")
 
-  val indexBase = config.getString("adamtwo.hadoopUrl")
-  val hadoopUrl = config.getString("adamtwo.hadoopUrl")
+  val indexBase = config.getString("adampro.hadoopUrl")
+  val hadoopUrl = config.getString("adampro.hadoopUrl")
 
-  val dataPath = config.getString("adamtwo.dataPath")
+  val dataPath = config.getString("adampro.dataPath")
 
-  val indexPath = config.getString("adamtwo.indexPath")
-  val catalogPath = config.getString("adamtwo.catalogPath")
+  val indexPath = config.getString("adampro.indexPath")
+  val catalogPath = config.getString("adampro.catalogPath")
   val indexMetaCatalogPath = catalogPath + "/" + "indexmeta"
 
-  val evaluationPath = config.getString("adamtwo.evaluationPath")
+  val evaluationPath = config.getString("adampro.evaluationPath")
 
-  val jdbcUrl =  config.getString("adamtwo.jdbc.url")
-  val jdbcUser = config.getString("adamtwo.jdbc.user")
-  val jdbcPassword = config.getString("adamtwo.jdbc.password")
+  val jdbcUrl =  config.getString("adampro.jdbc.url")
+  val jdbcUser = config.getString("adampro.jdbc.user")
+  val jdbcPassword = config.getString("adampro.jdbc.password")
 
-  val cassandraUrl = config.getString("adamtwo.cassandra.url")
-  val cassandraPort = config.getString("adamtwo.cassandra.port")
-  val cassandraUsername = config.getString("adamtwo.cassandra.user")
-  val cassandraPassword = config.getString("adamtwo.cassandra.password")
-  val cassandraKeyspace = "adamtwo"
+  val cassandraUrl = config.getString("adampro.cassandra.url")
+  val cassandraPort = config.getString("adampro.cassandra.port")
+  val cassandraUsername = config.getString("adampro.cassandra.user")
+  val cassandraPassword = config.getString("adampro.cassandra.password")
+  val cassandraKeyspace = "adampro"
 
-  val grpcPort = config.getInt("adamtwo.grpc.port")
+  val grpcPort = config.getInt("adampro.grpc.port")
 
   var evaluation = false
 

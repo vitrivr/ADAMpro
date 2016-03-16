@@ -15,7 +15,7 @@ import org.apache.spark.{SparkConf, SparkContext}
  * August 2015
  */
 object SparkStartup {
-  val sparkConfig = new SparkConf().setAppName("ADAMtwo").setMaster("spark://localhost:7077")
+  val sparkConfig = new SparkConf().setAppName("ADAMpro").setMaster("local[4]")
     .set("spark.serializer", "org.apache.spark.serializer.KryoSerializer")
     .set("spark.driver.maxResultSize", "12000m")
     .set("spark.kryoserializer.buffer.max", "2047m")
