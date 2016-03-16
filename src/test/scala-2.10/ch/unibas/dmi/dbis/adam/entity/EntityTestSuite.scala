@@ -146,7 +146,7 @@ class EntityTestSuite extends FeatureSpec with GivenWhenThen with Eventually wit
         tableCount -= 1
       }
 
-      assert(tableCount == 0)
+      assert(tableCount == 1)
     }
   }
 
