@@ -1,9 +1,9 @@
 package ch.unibas.dmi.dbis.adam.storage.engine
 
-import java.sql.{BatchUpdateException, Connection, DriverManager}
+import java.sql.{Connection, DriverManager}
 import java.util.Properties
 
-import ch.unibas.dmi.dbis.adam.config.{FieldNames, AdamConfig}
+import ch.unibas.dmi.dbis.adam.config.{AdamConfig, FieldNames}
 import ch.unibas.dmi.dbis.adam.entity.Entity.EntityName
 import ch.unibas.dmi.dbis.adam.main.SparkStartup
 import ch.unibas.dmi.dbis.adam.storage.components.MetadataStorage
@@ -72,9 +72,8 @@ object PostgresMetadataStorage extends MetadataStorage {
   }
 
   override def drop(tablename: EntityName): Boolean = {
-    SparkStartup.sqlContext.read.format("jdbc").options(
-      Map("url" -> url, "dbtable" -> tablename, "user" -> AdamConfig.jdbcUser, "password" -> AdamConfig.jdbcPassword)
-    ).load()
+    val dropTableSql = s"""DROP TABLE $tablename""".stripMargin
+    openConnection().createStatement().executeUpdate(dropTableSql)
     true
   }
 }
