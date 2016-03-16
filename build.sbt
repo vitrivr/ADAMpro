@@ -47,7 +47,6 @@ libraryDependencies ++= Seq(
   "com.typesafe.slick"     %%   "slick"                  % "3.1.0",
   "com.h2database"         %    "h2"                     % "1.4.188",
   "org.postgresql"         %    "postgresql"             % "9.4-1201-jdbc41",
-  "org.iq80.leveldb"       %    "leveldb"                % "0.7",
   "com.datastax.spark"     %%   "spark-cassandra-connector" % "1.6.0-M1",
   "com.google.guava"       %    "guava"                  % "19.0",
   "com.fasterxml.jackson.core" % "jackson-core"          % "2.4.4"
