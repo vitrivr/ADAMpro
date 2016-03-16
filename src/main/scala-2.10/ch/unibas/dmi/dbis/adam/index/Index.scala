@@ -43,15 +43,42 @@ trait Index[A <: IndexTuple] {
 
   protected def rdd: RDD[A]
 
+  /**
+    * Counts the number of elements in the index.
+    *
+    * @return
+    */
+  def count = df.count()
+
   //TODO: move filtering down to storage engine
+  /**
+    * Filters from the rdd with the given pre-filter (Boolean query).
+    * @param filter
+    * @return
+    */
   protected def rdd(filter: Option[HashSet[TupleID]]): RDD[A] = if (filter.isDefined) {
     rdd.filter(t => filter.get.contains(t.tid))
   } else {
     rdd
   }
 
+  /**
+    * Gets the metadata attached to the index.
+    *
+    * @return
+    */
   private[index] def metadata: Serializable
 
+  /**
+    * Scans the index.
+    *
+    * @param q query vector
+    * @param options options to be passed to the index reader
+    * @param k number of elements to retrieve (of the k nearest neighbor search), possibly more than k elements are returned
+    * @param filter optional pre-filter for Boolean query
+    * @param queryID optional query id
+    * @return a set of candidate tuple ids
+    */
   def scan(q: FeatureVector, options: Map[String, Any], k: Int, filter: Option[HashSet[TupleID]], queryID: Option[String] = None): HashSet[TupleID] = {
     SparkStartup.sc.setLocalProperty("spark.scheduler.pool", "index")
     SparkStartup.sc.setJobGroup(queryID.getOrElse(""), indextype.toString, true)
@@ -59,7 +86,16 @@ trait Index[A <: IndexTuple] {
     scan(rdd(filter), q, options, k)
   }
 
-  def scan(data: RDD[A], q: FeatureVector, options: Map[String, Any], k: Int): HashSet[TupleID]
+  /**
+    * Scans the index.
+    *
+    * @param data rdd to scan
+    * @param q query vector
+    * @param options options to be passed to the index reader
+    * @param k number of elements to retrieve (of the k nearest neighbor search), possibly more than k elements are returned
+    * @return a set of candidate tuple ids
+    */
+  protected def scan(data: RDD[A], q: FeatureVector, options: Map[String, Any], k: Int): HashSet[TupleID]
 }
 
 
