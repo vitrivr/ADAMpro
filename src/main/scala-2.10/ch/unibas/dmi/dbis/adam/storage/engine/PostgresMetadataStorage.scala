@@ -1,6 +1,6 @@
 package ch.unibas.dmi.dbis.adam.storage.engine
 
-import java.sql.{Connection, DriverManager}
+import java.sql.{BatchUpdateException, Connection, DriverManager}
 import java.util.Properties
 
 import ch.unibas.dmi.dbis.adam.config.{FieldNames, AdamConfig}
