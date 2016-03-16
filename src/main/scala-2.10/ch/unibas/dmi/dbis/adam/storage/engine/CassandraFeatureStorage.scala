@@ -1,6 +1,7 @@
 package ch.unibas.dmi.dbis.adam.storage.engine
 
-import ch.unibas.dmi.dbis.adam.config.{FieldNames, AdamConfig}
+import ch.unibas.dmi.dbis.adam.config.{AdamConfig, FieldNames}
+import ch.unibas.dmi.dbis.adam.datatypes.feature.Feature.VectorBase
 import ch.unibas.dmi.dbis.adam.datatypes.feature.FeatureVectorWrapper
 import ch.unibas.dmi.dbis.adam.entity.Entity.EntityName
 import ch.unibas.dmi.dbis.adam.entity.Tuple.TupleID
@@ -14,11 +15,11 @@ import org.apache.spark.sql.{DataFrame, Row, SaveMode}
 
 
 /**
- * adamtwo
- *
- * Ivan Giangreco
- * December 2015
- */
+  * adamtwo
+  *
+  * Ivan Giangreco
+  * December 2015
+  */
 object CassandraFeatureStorage extends FeatureStorage with Serializable {
   private val defaultKeyspace = AdamConfig.cassandraKeyspace
 
@@ -63,15 +64,12 @@ object CassandraFeatureStorage extends FeatureStorage with Serializable {
     session.execute(createKeyspaceCql(name))
   }
 
-  //note: the names of the row
-  case class InternalCassandraRowFormat(adamtwoid : Long, adamtwofeatures: Seq[Float])
-
   /**
-   *
-   * @param entityname
-   * @param filter
-   * @return
-   */
+    *
+    * @param entityname
+    * @param filter
+    * @return
+    */
   override def read(entityname: EntityName, filter: Option[scala.collection.Set[TupleID]]): DataFrame = {
     val rowRDD = if (filter.isDefined) {
       val subresults = filter.get.grouped(500).map(subfilter =>
@@ -101,9 +99,9 @@ object CassandraFeatureStorage extends FeatureStorage with Serializable {
   }
 
   /**
-   *
-   * @param entityname
-   */
+    *
+    * @param entityname
+    */
   override def drop(entityname: EntityName): Boolean = {
     conn.withSessionDo { session =>
       session.execute("use " + defaultKeyspace)
@@ -113,9 +111,9 @@ object CassandraFeatureStorage extends FeatureStorage with Serializable {
   }
 
   /**
-   *
-   * @param entityname
-   */
+    *
+    * @param entityname
+    */
   override def create(entityname: EntityName): Boolean = {
     conn.withSessionDo { session =>
       session.execute("use " + defaultKeyspace)
@@ -124,12 +122,14 @@ object CassandraFeatureStorage extends FeatureStorage with Serializable {
     true
   }
 
+  case class InternalCassandraRowFormat(adamtwoid: Long, adamtwofeatures: Seq[VectorBase])
+
   /**
-   *
-   * @param entityname
-   * @param df
-   * @param mode
-   */
+    *
+    * @param entityname
+    * @param df
+    * @param mode
+    */
   override def write(entityname: EntityName, df: DataFrame, mode: SaveMode): Boolean = {
     if (mode == SaveMode.Overwrite) {
       conn.withSessionDo { session =>
@@ -139,17 +139,29 @@ object CassandraFeatureStorage extends FeatureStorage with Serializable {
       }
     }
 
-    df.map(r => InternalCassandraRowFormat(
-      r.getAs[Long](FieldNames.idColumnName),
-      r.getAs[FeatureVectorWrapper](FieldNames.internFeatureColumnName).getSeq()))
-      .saveToCassandra(defaultKeyspace, entityname)
+    df.rdd.map(r =>
+      InternalCassandraRowFormat(r.getAs[Long](FieldNames.idColumnName),
+        r.getAs[FeatureVectorWrapper](FieldNames.internFeatureColumnName).getSeq())
+    ).saveToCassandra(defaultKeyspace, entityname,
+      SomeColumns(FieldNames.idColumnName as "adamtwoid", "adamtwofeatures" as FieldNames.internFeatureColumnName))
+
     true
   }
 
+  /**
+    *
+    * @param entityname
+    * @return
+    */
   override def count(entityname: EntityName): Int = {
     SparkStartup.sc.cassandraTable(defaultKeyspace, entityname).cassandraCount().toInt
   }
 
+  /**
+    *
+    * @param value
+    * @return
+    */
   private def asWorkingVectorWrapper(value: Vector[Float]): FeatureVectorWrapper = {
     new FeatureVectorWrapper(value.toSeq)
   }
