@@ -16,7 +16,7 @@ object AdamConfig{
 
   val dataPath = config.getString("adamtwo.dataPath")
 
-  val indexPath = "/Users/gianiv01/tmp/hdfs/adamtwo/index"
+  val indexPath = config.getString("adamtwo.indexPath")
   val catalogPath = config.getString("adamtwo.catalogPath")
   val indexMetaCatalogPath = catalogPath + "/" + "indexmeta"
 
