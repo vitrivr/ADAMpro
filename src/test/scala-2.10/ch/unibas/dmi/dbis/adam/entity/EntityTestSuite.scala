@@ -6,8 +6,8 @@ import ch.unibas.dmi.dbis.adam.config.{AdamConfig, FieldNames}
 import ch.unibas.dmi.dbis.adam.datatypes.feature.{FeatureVectorWrapper, FeatureVectorWrapperUDT}
 import ch.unibas.dmi.dbis.adam.entity.FieldTypes.FieldType
 import ch.unibas.dmi.dbis.adam.main.SparkStartup
-import org.apache.spark.sql.{types, Row}
 import org.apache.spark.sql.types._
+import org.apache.spark.sql.{Row, types}
 import org.scalatest.Matchers._
 import org.scalatest.concurrent.{Eventually, IntegrationPatience}
 import org.scalatest.{FeatureSpec, GivenWhenThen}
@@ -107,7 +107,7 @@ class EntityTestSuite extends FeatureSpec with GivenWhenThen with Eventually wit
       }
 
       val dbNames = lb.toList.toMap
-      val templateNames = fieldTemplate.map(ft => (ft._1, ft._3)).toMap + ("adamtwoid" -> "integer")
+      val templateNames = fieldTemplate.map(ft => (ft._1, ft._3)).toMap + (FieldNames.idColumnName -> "integer")
 
       assert(dbNames.size == templateNames.size)
 
@@ -208,20 +208,17 @@ class EntityTestSuite extends FeatureSpec with GivenWhenThen with Eventually wit
         StructField("doublefield", types.DoubleType, false),
         StructField("intfield", types.IntegerType, false),
         StructField("longfield", types.LongType, false),
-        StructField("booleanfield", types.BooleanType, false),
-        StructField("unusedfield", types.IntegerType, false)
+        StructField("booleanfield", types.BooleanType, false)
       ))
-
 
       val rdd = SparkStartup.sc.parallelize((0 until ntuples).map(id =>
         Row(new FeatureVectorWrapper(Seq.fill(ndims)(Random.nextFloat())),
           Random.nextString(stringLength),
-          Random.nextFloat(),
-          Random.nextDouble(),
-          Random.nextInt(maxInt),
-          Random.nextLong(),
-          Random.nextBoolean(),
-          Random.nextInt(10) + maxInt //unused field
+          math.abs(Random.nextFloat()),
+          math.abs(Random.nextDouble()),
+          math.abs(Random.nextInt(maxInt)),
+          math.abs(Random.nextLong()),
+          Random.nextBoolean()
           )))
 
       val data = SparkStartup.sqlContext.createDataFrame(rdd, schema)
@@ -235,21 +232,23 @@ class EntityTestSuite extends FeatureSpec with GivenWhenThen with Eventually wit
       val connection = fixture.connection
 
       val countResult = connection.createStatement().executeQuery("SELECT COUNT(*) AS count FROM " + entityname)
+      countResult.next() //go to first result
       val tableCount = countResult.getInt("count")
-
       assert(tableCount == ntuples)
+
 
       //filled fields should be filled
       val randomRowResult = connection.createStatement().executeQuery("SELECT * FROM " + entityname + " ORDER BY RANDOM() LIMIT 1")
+      randomRowResult.next() //go to first result
       assert(randomRowResult.getString("stringfield").length == stringLength)
       assert(randomRowResult.getFloat("floatField") >= 0)
       assert(randomRowResult.getDouble("doubleField") >= 0)
       assert(randomRowResult.getInt("intfield") < maxInt)
-      assert(randomRowResult.getLong("longfield") > 0)
+      assert(randomRowResult.getLong("longfield") >= 0)
       assert((randomRowResult.getBoolean("booleanfield")) || (!randomRowResult.getBoolean("booleanfield")))
 
       //unfilled fields should be unfilled
-      assert(randomRowResult.getString("stringfieldunfilled").length == 0)
+      assert(randomRowResult.getString("stringfieldunfilled") == null)
       assert(randomRowResult.getFloat("floatFieldunfilled") < 10e-8)
       assert(randomRowResult.getDouble("doubleFieldunfilled") < 10e-8)
       assert(randomRowResult.getInt("intfieldunfilled") == 0)
