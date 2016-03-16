@@ -58,6 +58,9 @@ class EntityTestSuite extends FeatureSpec with GivenWhenThen with Eventually wit
       eventually {
         finalEntities.contains(entityname)
       }
+
+      //clean up
+      Entity.drop(entityname)
     }
 
     scenario("drop an existing entity") {
@@ -115,6 +118,9 @@ class EntityTestSuite extends FeatureSpec with GivenWhenThen with Eventually wit
 
       And("The metadata table should contain the same columns (with the corresponding data type)")
       assert(keys.forall({ key => dbNames(key) == templateNames(key) }))
+
+      //clean up
+      Entity.drop(entityname)
     }
 
 
@@ -172,6 +178,9 @@ class EntityTestSuite extends FeatureSpec with GivenWhenThen with Eventually wit
 
       Then("the data is available without metadata")
       assert(Entity.countTuples(entityname) == ntuples)
+
+      //clean up
+      Entity.drop(entityname)
     }
 
     scenario("insert data in an entity with metadata") {
@@ -254,6 +263,9 @@ class EntityTestSuite extends FeatureSpec with GivenWhenThen with Eventually wit
       assert(randomRowResult.getInt("intfieldunfilled") == 0)
       assert(randomRowResult.getLong("longfieldunfilled") == 0)
       assert(randomRowResult.getBoolean("booleanfieldunfilled") == false)
+
+      //clean up
+      Entity.drop(entityname)
     }
   }
 }
