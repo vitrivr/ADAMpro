@@ -34,7 +34,13 @@ case class FeatureVectorWrapper(value: FeatureVector) extends Serializable {
 
 
 class FeatureVectorWrapperUDT extends UserDefinedType[FeatureVectorWrapper] {
-  override def sqlType: DataType = ByteType
+  override def sqlType: DataType = {
+    StructType(Seq(
+      StructField("type", ByteType, nullable = false),
+      StructField("size", IntegerType, nullable = true),
+      StructField("indices", ArrayType(IntegerType, containsNull = false), nullable = true),
+      StructField("values", ArrayType(FloatType, containsNull = false), nullable = true)))
+  }
   override def userClass: Class[FeatureVectorWrapper] = classOf[FeatureVectorWrapper]
   override def asNullable: FeatureVectorWrapperUDT = this
 
