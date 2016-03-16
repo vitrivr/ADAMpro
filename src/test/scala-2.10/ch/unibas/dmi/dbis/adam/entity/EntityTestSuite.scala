@@ -24,13 +24,11 @@ import scala.util.Random
 class EntityTestSuite extends FeatureSpec with GivenWhenThen with Eventually with IntegrationPatience {
   SparkStartup
 
-  def fixture =
-    new {
-      val connection = {
-        Class.forName("org.postgresql.Driver").newInstance
-        DriverManager.getConnection(AdamConfig.jdbcUrl, AdamConfig.jdbcUser, AdamConfig.jdbcPassword)
-      }
-    }
+  val connection = {
+    Class.forName("org.postgresql.Driver").newInstance
+    DriverManager.getConnection(AdamConfig.jdbcUrl, AdamConfig.jdbcUser, AdamConfig.jdbcPassword)
+  }
+
 
   def getRandomName(len: Int = 10) = {
     val sb = new StringBuilder(len)
@@ -101,7 +99,6 @@ class EntityTestSuite extends FeatureSpec with GivenWhenThen with Eventually wit
       assert(finalEntities.contains(entityname))
 
       And("The metadata table should have been created")
-      val connection = fixture.connection
       val result = connection.createStatement().executeQuery("SELECT column_name, data_type FROM information_schema.columns WHERE table_schema = 'public' AND table_name = '" + entityname + "'")
 
       val lb = new ListBuffer[(String, String)]()
@@ -130,7 +127,6 @@ class EntityTestSuite extends FeatureSpec with GivenWhenThen with Eventually wit
       val fields: Map[String, FieldType] = Map[String, FieldType](("stringfield" -> FieldTypes.STRINGTYPE))
       Entity.create(entityname, Option(fields))
 
-      val connection = fixture.connection
       val preResult = connection.createStatement().executeQuery("SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = '" + entityname + "'")
       var tableCount = 0
       while (preResult.next) {
@@ -237,8 +233,6 @@ class EntityTestSuite extends FeatureSpec with GivenWhenThen with Eventually wit
 
       Then("the data is available with metadata")
       assert(Entity.countTuples(entityname) == ntuples)
-
-      val connection = fixture.connection
 
       val countResult = connection.createStatement().executeQuery("SELECT COUNT(*) AS count FROM " + entityname)
       countResult.next() //go to first result
