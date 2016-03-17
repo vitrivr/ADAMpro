@@ -17,6 +17,6 @@ object Tuple {
   type TupleID = Long
 
   implicit def conv_row2tuple[T](value: Row): Tuple = {
-    Tuple(value.getLong(0), value.getAs[FeatureVectorWrapper](1).value)
+    Tuple(value.getLong(0), value.getAs[FeatureVectorWrapper](1).vector)
   }
 }

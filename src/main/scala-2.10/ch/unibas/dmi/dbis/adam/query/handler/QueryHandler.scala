@@ -125,6 +125,9 @@ object QueryHandler extends Logging {
     } else {
       None
     }
+
+    //TODO: here we should check that the distance function used for creating the index is the same as the one used in the query
+
     var res = NearestNeighbourQueryHandler.indexQuery(indexname, nnq, filter)
     if (withMetadata) {
       res = joinWithMetadata(indexname, res)

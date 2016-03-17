@@ -15,7 +15,7 @@ import org.apache.spark.sql.types._
  * October 2015
  */
 @SQLUserDefinedType(udt = classOf[FeatureVectorWrapperUDT])
-case class FeatureVectorWrapper(value: FeatureVector) extends Serializable {
+case class FeatureVectorWrapper(vector: FeatureVector) extends Serializable {
   def this(value : Seq[VectorBase]){
     this(new Feature.DenseFeatureVector(value.toArray))
   }
@@ -29,7 +29,7 @@ case class FeatureVectorWrapper(value: FeatureVector) extends Serializable {
     *
     * @return
     */
-  def getSeq() : Seq[VectorBase] = value.toDenseVector.toArray
+  def getSeq() : Seq[VectorBase] = vector.toDenseVector.toArray
 }
 
 
@@ -47,7 +47,7 @@ class FeatureVectorWrapperUDT extends UserDefinedType[FeatureVectorWrapper] {
   override def serialize(obj: Any): InternalRow = {
     val row = new GenericMutableRow(4)
 
-    obj.asInstanceOf[FeatureVectorWrapper].value match {
+    obj.asInstanceOf[FeatureVectorWrapper].vector match {
       case dwv: DenseFeatureVector =>
         row.setByte(0, DenseFeatureVectorType.num)
         row.update(3, new GenericArrayData(dwv.data.map(_.asInstanceOf[Any])))

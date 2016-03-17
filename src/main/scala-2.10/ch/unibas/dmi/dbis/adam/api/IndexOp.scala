@@ -48,9 +48,9 @@ object IndexOp {
     val generator: IndexGenerator = indextypename match {
       case IndexStructures.ECP => ECPIndexer(distance)
       case IndexStructures.LSH => LSHIndexer(distance, properties)
-      case IndexStructures.SH => SHIndexer(entity.getFeaturedata.first().getAs[FeatureVectorWrapper](1).value.length)
+      case IndexStructures.SH => SHIndexer(entity.getFeaturedata.first().getAs[FeatureVectorWrapper](1).vector.length)
       case IndexStructures.VAF => VAFIndexer(distance.asInstanceOf[MinkowskiDistance], properties)
-      case IndexStructures.VAV => VAVIndexer(entity.getFeaturedata.first().getAs[FeatureVectorWrapper](1).value.length, distance.asInstanceOf[MinkowskiDistance], properties)
+      case IndexStructures.VAV => VAVIndexer(entity.getFeaturedata.first().getAs[FeatureVectorWrapper](1).vector.length, distance.asInstanceOf[MinkowskiDistance], properties)
     }
 
     Index.createIndex(entity, generator)
