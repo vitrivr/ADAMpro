@@ -3,6 +3,7 @@ package ch.unibas.dmi.dbis.adam.query.scanner
 import ch.unibas.dmi.dbis.adam.config.FieldNames
 import ch.unibas.dmi.dbis.adam.entity.Entity
 import ch.unibas.dmi.dbis.adam.entity.Tuple._
+import ch.unibas.dmi.dbis.adam.main.SparkStartup
 import ch.unibas.dmi.dbis.adam.query.query.BooleanQuery
 import org.apache.spark.sql.DataFrame
 
@@ -26,7 +27,15 @@ object MetadataScanner {
     */
   def apply(entity: Entity, query: BooleanQuery): Option[DataFrame] = {
     if (entity.getMetadata.isDefined) {
-      val df = entity.getMetadata.get
+      var df = entity.getMetadata.get
+
+      //TODO: check join
+      for (i <- (0 to query.join.length)) {
+        val joinInfo = query.join(i)
+        val newDF =  SparkStartup.metadataStorage.read(joinInfo._1)
+        df = df.join(newDF, joinInfo._2)
+      }
+      
       Option(df.filter(query.getWhereClause()))
     } else {
       None
