@@ -25,8 +25,6 @@ assemblyShadeRules in assembly := Seq(
 assemblyOption in assembly :=
   (assemblyOption in assembly).value.copy(includeScala = false)
 
-assemblyOutputPath in assembly := baseDirectory.value / ".." / "lib" / "grpc-assembly-0.1-SNAPSHOT.jar"
-
 assemblyMergeStrategy in assembly := {
   case PathList("javax", "servlet", xs @ _*) => MergeStrategy.first
   case PathList(ps @ _*) if ps.last endsWith ".html" => MergeStrategy.first
