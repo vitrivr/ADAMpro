@@ -41,7 +41,7 @@ class SearchRPC extends AdamSearchGrpc.AdamSearch {
 
         val bq : Option[BooleanQuery] = if(!request.bq.isEmpty){
           val rbq = request.bq.get
-          Option(BooleanQuery(rbq.where, rbq.joins.map(x => (x.table, x.columns))))
+          Option(BooleanQuery(rbq.where, Option(rbq.joins.map(x => (x.table, x.columns)))))
         } else { None }
 
         //TODO: metadata should be set via protobuf message
@@ -75,7 +75,7 @@ class SearchRPC extends AdamSearchGrpc.AdamSearch {
 
       val bq : Option[BooleanQuery] = if(!request.bq.isEmpty){
         val rbq = request.bq.get
-        Option(BooleanQuery(rbq.where, rbq.joins.map(x => (x.table, x.columns))))
+        Option(BooleanQuery(rbq.where, Option(rbq.joins.map(x => (x.table, x.columns)))))
       } else { None }
 
       //TODO: metadata should be set via protobuf message
@@ -110,7 +110,7 @@ class SearchRPC extends AdamSearchGrpc.AdamSearch {
 
       val bq : Option[BooleanQuery] = if(!request.bq.isEmpty){
         val rbq = request.bq.get
-        Option(BooleanQuery(rbq.where, rbq.joins.map(x => (x.table, x.columns))))
+        Option(BooleanQuery(rbq.where, Option(rbq.joins.map(x => (x.table, x.columns)))))
       } else { None }
 
       //TODO: metadata should be set via protobuf message
@@ -142,7 +142,7 @@ class SearchRPC extends AdamSearchGrpc.AdamSearch {
 
       val bq : Option[BooleanQuery] = if(!request.bq.isEmpty){
         val rbq = request.bq.get
-        Option(BooleanQuery(rbq.where, rbq.joins.map(x => (x.table, x.columns))))
+        Option(BooleanQuery(rbq.where, Option(rbq.joins.map(x => (x.table, x.columns)))))
       } else { None }
 
       //TODO: metadata should be set via protobuf message
@@ -174,7 +174,7 @@ class SearchRPC extends AdamSearchGrpc.AdamSearch {
 
       val bq : Option[BooleanQuery] = if(!request.bq.isEmpty){
         val rbq = request.bq.get
-        Option(BooleanQuery(rbq.where, rbq.joins.map(x => (x.table, x.columns))))
+        Option(BooleanQuery(rbq.where, Option(rbq.joins.map(x => (x.table, x.columns)))))
       } else { None }
 
       val onComplete =

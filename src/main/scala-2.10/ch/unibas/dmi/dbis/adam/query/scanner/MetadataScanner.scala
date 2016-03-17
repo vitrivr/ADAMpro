@@ -30,12 +30,16 @@ object MetadataScanner {
       var df = entity.getMetadata.get
 
       //TODO: check join
-      for (i <- (0 to query.join.length)) {
-        val joinInfo = query.join(i)
-        val newDF =  SparkStartup.metadataStorage.read(joinInfo._1)
-        df = df.join(newDF, joinInfo._2)
+      if (query.join.isDefined) {
+        val joins = query.join.get
+
+        for (i <- (0 to joins.length)) {
+          val join = joins(i)
+          val newDF = SparkStartup.metadataStorage.read(join._1)
+          df = df.join(newDF, join._2)
+        }
       }
-      
+
       Option(df.filter(query.getWhereClause()))
     } else {
       None
