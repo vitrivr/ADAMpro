@@ -13,7 +13,7 @@ lazy val root = (project in file(".")).
   settings(commonSettings : _*)
 
 lazy val grpc = project.
-  settings(commonSettings: _*)
+  settings(commonSettings ++ Seq(assemblyOutputPath in assembly := baseDirectory.value / ".." / "lib" / "grpc-assembly-0.1-SNAPSHOT.jar") : _*)
 
 lazy val client = project.
   settings(commonSettings: _*)
@@ -78,3 +78,6 @@ libraryDependencies ++= Seq(
 parallelExecution in Test := false
 concurrentRestrictions in Global += Tags.limit(Tags.Test, 1)
 
+
+//custom commands
+addCommandAlias("proto", "; grpc/assembly")
