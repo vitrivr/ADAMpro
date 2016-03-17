@@ -4,7 +4,7 @@ import java.io._
 
 import ch.unibas.dmi.dbis.adam.config.AdamConfig
 import ch.unibas.dmi.dbis.adam.entity.Entity.EntityName
-import ch.unibas.dmi.dbis.adam.exception.{EntityExistingExceptionGeneral, EntityNotExistingExceptionGeneral, IndexExistingExceptionGeneral, IndexNotExistingExceptionGeneral}
+import ch.unibas.dmi.dbis.adam.exception.{EntityExistingException, EntityNotExistingException, IndexExistingException, IndexNotExistingException}
 import ch.unibas.dmi.dbis.adam.index.Index.{IndexName, IndexTypeName}
 import ch.unibas.dmi.dbis.adam.index.structures.IndexStructures
 import org.apache.commons.io.FileUtils
@@ -48,7 +48,7 @@ object CatalogOperator {
     */
   def createEntity(entityname: EntityName, withMetadata : Boolean = false): Boolean = {
     if (existsEntity(entityname)) {
-      throw new EntityExistingExceptionGeneral()
+      throw new EntityExistingException()
     }
 
     val setup = DBIO.seq(
@@ -68,7 +68,7 @@ object CatalogOperator {
   def dropEntity(entityname: EntityName, ifExists: Boolean = false): Boolean = {
     if (!existsEntity(entityname)) {
       if (!ifExists) {
-        throw new EntityNotExistingExceptionGeneral()
+        throw new EntityNotExistingException()
       } else {
         return false
       }
@@ -135,11 +135,11 @@ object CatalogOperator {
     */
   def createIndex(indexname: IndexName, entityname: EntityName, indextypename: IndexTypeName, indexmeta: Serializable): Boolean = {
     if (!existsEntity(entityname)) {
-      throw new EntityNotExistingExceptionGeneral()
+      throw new EntityNotExistingException()
     }
 
     if (existsIndex(indexname)) {
-      throw new IndexExistingExceptionGeneral()
+      throw new IndexExistingException()
     }
 
     val metaPath = AdamConfig.indexMetaCatalogPath + "/" + indexname + "/"
@@ -167,7 +167,7 @@ object CatalogOperator {
     */
   def dropIndex(indexname: IndexName): Boolean = {
     if (!existsIndex(indexname)) {
-      throw new IndexNotExistingExceptionGeneral()
+      throw new IndexNotExistingException()
     }
 
     val metaPath = AdamConfig.indexMetaCatalogPath + "/" + indexname + "/"
@@ -186,7 +186,7 @@ object CatalogOperator {
     */
   def dropAllIndexes(entityname: EntityName) : Seq[IndexName] = {
     if (!existsEntity(entityname)) {
-      throw new EntityNotExistingExceptionGeneral()
+      throw new EntityNotExistingException()
     }
 
     val existingIndexes = listIndexes(entityname)

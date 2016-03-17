@@ -3,7 +3,7 @@ package ch.unibas.dmi.dbis.adam.entity
 import ch.unibas.dmi.dbis.adam.config.FieldNames
 import ch.unibas.dmi.dbis.adam.entity.Entity._
 import ch.unibas.dmi.dbis.adam.entity.FieldTypes.{FieldType, INTTYPE}
-import ch.unibas.dmi.dbis.adam.exception.{EntityExistingExceptionGeneral, EntityNotExistingExceptionGeneral}
+import ch.unibas.dmi.dbis.adam.exception.{EntityExistingException, EntityNotExistingException}
 import ch.unibas.dmi.dbis.adam.index.Index
 import ch.unibas.dmi.dbis.adam.main.SparkStartup
 import ch.unibas.dmi.dbis.adam.storage.components.{FeatureStorage, MetadataStorage}
@@ -83,7 +83,7 @@ object Entity {
     */
   def create(entityname: EntityName, fields: Option[Map[String, FieldType]] = None): Entity = {
     if (exists(entityname)) {
-      throw new EntityExistingExceptionGeneral()
+      throw new EntityExistingException()
     }
 
     featureStorage.create(entityname)
@@ -113,7 +113,7 @@ object Entity {
   def drop(entityname: EntityName, ifExists: Boolean = false): Boolean = {
     if (!exists(entityname)) {
       if (!ifExists) {
-        throw new EntityNotExistingExceptionGeneral()
+        throw new EntityNotExistingException()
       } else {
         return false
       }
@@ -141,7 +141,7 @@ object Entity {
     */
   def insertData(entityname: EntityName, insertion: DataFrame): Boolean = {
     if (!exists(entityname)) {
-      throw new EntityNotExistingExceptionGeneral()
+      throw new EntityNotExistingException()
     }
 
     val rows = insertion.rdd.zipWithUniqueId.map { case (r: Row, adamtwoid: Long) => Row.fromSeq(adamtwoid +: r.toSeq) }
@@ -167,7 +167,7 @@ object Entity {
     */
   def load(entityname: EntityName): Entity = {
     if (!exists(entityname)) {
-      throw new EntityNotExistingExceptionGeneral()
+      throw new EntityNotExistingException()
     }
 
     val entityMetadataStorage = if (CatalogOperator.hasEntityMetadata(entityname)) {
@@ -187,7 +187,7 @@ object Entity {
     */
   def countTuples(entityname: EntityName): Int = {
     if (!exists(entityname)) {
-      throw new EntityNotExistingExceptionGeneral()
+      throw new EntityNotExistingException()
     }
 
     featureStorage.count(entityname)
