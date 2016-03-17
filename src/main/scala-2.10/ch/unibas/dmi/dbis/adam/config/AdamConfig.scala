@@ -11,6 +11,8 @@ object AdamConfig{
   val config = ConfigFactory.load()
   config.checkValid(ConfigFactory.defaultReference(), "adampro")
 
+
+
   val indexBase = config.getString("adampro.hadoopUrl")
   val hadoopUrl = config.getString("adampro.hadoopUrl")
 
@@ -39,4 +41,9 @@ object AdamConfig{
   val maximumCacheSizeIndex = 10
   val expireAfterAccess = 10 //in minutes
 
+  val master = if(config.hasPath("adampro.master")){
+    Option(config.getString("adampro.master"))
+  } else {
+    None
+  }
 }

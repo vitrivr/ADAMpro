@@ -15,9 +15,9 @@ import org.apache.spark.{SparkConf, SparkContext}
  * August 2015
  */
 object SparkStartup {
-  val sparkConfig = new SparkConf().setAppName("ADAMpro").setMaster("local[4]")
+  val sparkConfig = new SparkConf().setAppName("ADAMpro")
     .set("spark.serializer", "org.apache.spark.serializer.KryoSerializer")
-    .set("spark.driver.maxResultSize", "12000m")
+    .set("spark.driver.maxResultSize", "1000m")
     .set("spark.kryoserializer.buffer.max", "2047m")
     .set("spark.kryoserializer.buffer", "2047")
     .set("spark.akka.frameSize", "1024")
@@ -28,7 +28,12 @@ object SparkStartup {
     .set("spark.cassandra.auth.password", AdamConfig.cassandraPassword)
     .registerKryoClasses(Array(classOf[BitString[_]], classOf[MinimalBitString], classOf[FeatureVectorWrapper]))
 
+  if(AdamConfig.master.isDefined){
+   sparkConfig.setMaster(AdamConfig.master.get)
+  }
+
   val sc = new SparkContext(sparkConfig)
+
   sc.setLogLevel("INFO")
 
   val sqlContext = new HiveContext(sc)
