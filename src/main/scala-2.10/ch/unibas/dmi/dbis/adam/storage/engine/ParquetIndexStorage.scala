@@ -2,7 +2,7 @@ package ch.unibas.dmi.dbis.adam.storage.engine
 
 import java.io.File
 
-import ch.unibas.dmi.dbis.adam.config.AdamConfig
+import ch.unibas.dmi.dbis.adam.config.{FieldNames, AdamConfig}
 import ch.unibas.dmi.dbis.adam.entity.Tuple._
 import ch.unibas.dmi.dbis.adam.index.Index.IndexName
 import ch.unibas.dmi.dbis.adam.main.SparkStartup
@@ -35,7 +35,13 @@ trait GenericIndexStorage extends IndexStorage {
   override def read(indexname: IndexName, filter: Option[scala.collection.Set[TupleID]] = None): DataFrame = {
     //TODO: implement UnboundRecordFilter
     //see https://adambard.com/blog/parquet-protobufs-spark/ and http://zenfractal.com/2013/08/21/a-powerful-big-data-trio/
-    SparkStartup.sqlContext.read.parquet(AdamConfig.indexPath + "/" + indexname + ".parquet")
+    val df = SparkStartup.sqlContext.read.parquet(AdamConfig.indexPath + "/" + indexname + ".parquet")
+
+    if(filter.isDefined){
+      df.filter(df(FieldNames.idColumnName) isin filter)
+    } else {
+      df
+    }
   }
 
   override def write(indexname: IndexName, df: DataFrame): Boolean = {
