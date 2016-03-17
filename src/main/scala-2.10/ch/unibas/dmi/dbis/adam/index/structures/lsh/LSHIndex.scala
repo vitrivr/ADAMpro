@@ -2,15 +2,14 @@ package ch.unibas.dmi.dbis.adam.index.structures.lsh
 
 import ch.unibas.dmi.dbis.adam.datatypes.feature.Feature._
 import ch.unibas.dmi.dbis.adam.datatypes.feature.MovableFeature
+import ch.unibas.dmi.dbis.adam.entity.Entity._
+import ch.unibas.dmi.dbis.adam.entity.Tuple.TupleID
 import ch.unibas.dmi.dbis.adam.index.Index._
 import ch.unibas.dmi.dbis.adam.index.structures.IndexStructures
 import ch.unibas.dmi.dbis.adam.index.structures.lsh.results.LSHResultHandler
 import ch.unibas.dmi.dbis.adam.index.{BitStringIndexTuple, Index}
 import ch.unibas.dmi.dbis.adam.main.SparkStartup
-import ch.unibas.dmi.dbis.adam.entity.Entity._
-import ch.unibas.dmi.dbis.adam.entity.Tuple.TupleID
 import org.apache.spark.TaskContext
-import org.apache.spark.rdd.RDD
 import org.apache.spark.sql.DataFrame
 
 import scala.collection.immutable.HashSet
@@ -27,17 +26,16 @@ class LSHIndex(val indexname: IndexName, val entityname: EntityName, protected v
   override val indextype: IndexTypeName = IndexStructures.LSH
   override val confidence = 0.toFloat
 
-  override protected def rdd : RDD[BitStringIndexTuple] = df.map(r => r : BitStringIndexTuple)
-
-  override def scan(data : RDD[BitStringIndexTuple], q : FeatureVector, options : Map[String, Any], k : Int): HashSet[TupleID] = {
+  override def scan(data : DataFrame, q : FeatureVector, options : Map[String, Any], k : Int): HashSet[TupleID] = {
     val numOfQueries = options.getOrElse("numOfQ", "3").asInstanceOf[String].toInt
 
     import MovableFeature.conv_feature2MovableFeature
     val originalQuery = LSHUtils.hashFeature(q, metadata)
     val queries = (List.fill(numOfQueries)(LSHUtils.hashFeature(q.move(metadata.radius), metadata)) ::: List(originalQuery)).par
 
+    val rdd = df.map(r => r : BitStringIndexTuple)
 
-    val results = SparkStartup.sc.runJob(data, (context : TaskContext, tuplesIt : Iterator[BitStringIndexTuple]) => {
+    val results = SparkStartup.sc.runJob(rdd, (context : TaskContext, tuplesIt : Iterator[BitStringIndexTuple]) => {
       val localRh = new LSHResultHandler(k)
       while (tuplesIt.hasNext) {
         val tuple = tuplesIt.next()

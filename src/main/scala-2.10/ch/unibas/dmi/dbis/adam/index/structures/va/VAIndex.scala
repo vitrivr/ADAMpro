@@ -1,6 +1,8 @@
 package ch.unibas.dmi.dbis.adam.index.structures.va
 
 import ch.unibas.dmi.dbis.adam.datatypes.feature.Feature._
+import ch.unibas.dmi.dbis.adam.entity.Entity._
+import ch.unibas.dmi.dbis.adam.entity.Tuple._
 import ch.unibas.dmi.dbis.adam.index.Index._
 import ch.unibas.dmi.dbis.adam.index.structures.IndexStructures
 import ch.unibas.dmi.dbis.adam.index.structures.va.VAIndex.{Bounds, Marks}
@@ -10,10 +12,7 @@ import ch.unibas.dmi.dbis.adam.index.{BitStringIndexTuple, Index}
 import ch.unibas.dmi.dbis.adam.main.SparkStartup
 import ch.unibas.dmi.dbis.adam.query.distance.Distance._
 import ch.unibas.dmi.dbis.adam.query.distance.MinkowskiDistance
-import ch.unibas.dmi.dbis.adam.entity.Entity._
-import ch.unibas.dmi.dbis.adam.entity.Tuple._
 import org.apache.spark.TaskContext
-import org.apache.spark.rdd.RDD
 import org.apache.spark.sql.DataFrame
 
 import scala.collection.immutable.HashSet
@@ -33,13 +32,13 @@ class VAIndex(val indexname : IndexName, val entityname : EntityName, protected 
   }
   override val confidence = 1.toFloat
 
-  override protected def rdd : RDD[BitStringIndexTuple] = df.map(r => r : BitStringIndexTuple)
-
-  override def scan(data : RDD[BitStringIndexTuple], q : FeatureVector, options : Map[String, Any], k : Int): HashSet[TupleID] = {
+  override def scan(data : DataFrame, q : FeatureVector, options : Map[String, Any], k : Int): HashSet[TupleID] = {
     val distance = metadata.distance
     val (lbounds, ubounds) = computeBounds(q, metadata.marks, distance)
 
-    val results = SparkStartup.sc.runJob(data, (context : TaskContext, tuplesIt : Iterator[BitStringIndexTuple]) => {
+    val rdd = df.map(r => r : BitStringIndexTuple)
+
+    val results = SparkStartup.sc.runJob(rdd, (context : TaskContext, tuplesIt : Iterator[BitStringIndexTuple]) => {
       val localRh = new VAResultHandler(k, lbounds, ubounds, metadata.signatureGenerator)
       localRh.offerIndexTuple(tuplesIt)
       localRh.results.toSeq
