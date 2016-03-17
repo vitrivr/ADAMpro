@@ -21,15 +21,11 @@ object AdamConfig{
   }
   config.checkValid(ConfigFactory.defaultReference(), "adampro")
 
-
-
-
-  val indexBase = config.getString("adampro.hadoopUrl")
-  val hadoopUrl = config.getString("adampro.hadoopUrl")
-
-  val dataPath = config.getString("adampro.dataPath")
+  val basePath = config.getString("adampro.basePath")
+  val isBaseOnHadoop = basePath.startsWith("hdfs")
 
   val indexPath = config.getString("adampro.indexPath")
+
   val catalogPath = config.getString("adampro.catalogPath")
   val indexMetaCatalogPath = catalogPath + "/" + "indexmeta"
 
