@@ -112,8 +112,8 @@ stopDocker := {
   "./scripts/docker-stop.sh" !
 }
 
-lazy val runDockerADAM = taskKey[Unit]("Runs ADAMpro in docker container. Perform assembly first.")
-runDockerADAM := {
+lazy val runADAM = taskKey[Unit]("Runs ADAMpro in docker container.")
+runADAM := {
   //TODO: check that docker is running
   assembly.value
   "./scripts/docker-runADAM.sh" !
