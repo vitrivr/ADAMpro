@@ -8,8 +8,19 @@ import com.typesafe.config.ConfigFactory
   * August 2015
   */
 object AdamConfig{
-  val config = ConfigFactory.load()
+  val config = {
+    val defaultConfig = ConfigFactory.load()
+
+    if(!defaultConfig.hasPath("adampro")){
+      //this is somewhat a hack to have different configurations depending on whether we have an assembly-jar or we
+      //run the application "locally"
+      ConfigFactory.load("assembly.conf")
+    } else {
+      defaultConfig
+    }
+  }
   config.checkValid(ConfigFactory.defaultReference(), "adampro")
+
 
 
 
