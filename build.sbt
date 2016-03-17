@@ -81,3 +81,30 @@ concurrentRestrictions in Global += Tags.limit(Tags.Test, 1)
 
 //custom commands
 addCommandAlias("proto", "; grpc/assembly")
+
+lazy val setupDocker = taskKey[Unit]("Setup docker containers for ADAMpro to run.")
+setupDocker := {
+  "./scripts/docker-setup.sh" !
+}
+
+lazy val destroyDocker = taskKey[Unit]("Destroys docker containers for ADAMpro (careful: this command deletes the containers!).")
+destroyDocker := {
+  "./scripts/docker-destroy.sh" !
+}
+
+lazy val startDocker = taskKey[Unit]("Starts the docker containers for ADAMpro.")
+startDocker := {
+  "./scripts/docker-start.sh" !
+}
+
+lazy val stopDocker = taskKey[Unit]("Stops the docker containers for ADAMpro.")
+stopDocker := {
+  "./scripts/docker-stop.sh" !
+}
+
+lazy val runDockerADAM = taskKey[Unit]("Runs ADAMpro in docker container. Perform assembly first.")
+runDockerADAM := {
+  //TODO: check that docker is running
+  assembly.value
+  "./scripts/docker-runADAM.sh" !
+}
