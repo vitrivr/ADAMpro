@@ -1,4 +1,5 @@
-
+import sbt.Keys._
+import sbtassembly.AssemblyPlugin.autoImport._
 
 name := "ADAMpro"
 
@@ -10,7 +11,7 @@ lazy val commonSettings = Seq(
 
 //projects
 lazy val root = (project in file(".")).
-  settings(commonSettings : _*)
+  settings(commonSettings : _* )
 
 lazy val grpc = project.
   settings(commonSettings ++ Seq(assemblyOutputPath in assembly := baseDirectory.value / ".." / "lib" / "grpc-assembly-0.1-SNAPSHOT.jar") : _*)
@@ -38,10 +39,12 @@ resolvers ++= Seq(
 resolvers += Resolver.sonatypeRepo("snapshots")
 
 libraryDependencies ++= Seq(
-  "org.apache.spark"       %%   "spark-core"             % "1.6.1",
-  "org.apache.spark"       %%   "spark-sql"              % "1.6.1",
-  "org.apache.spark"       %%   "spark-hive"             % "1.6.1",
-  "org.apache.spark"       %%   "spark-mllib"            % "1.6.1",
+  "org.apache.spark"       %%   "spark-core"             % "1.6.0" % "provided" excludeAll(
+    ExclusionRule("org.apache.hadoop")
+    ),
+  "org.apache.spark"       %%   "spark-sql"              % "1.6.0" % "provided",
+  "org.apache.spark"       %%   "spark-hive"             % "1.6.0" % "provided",
+  "org.apache.spark"       %%   "spark-mllib"            % "1.6.0" % "provided",
   "org.scalanlp" 		       %%   "breeze" 				         % "0.11.2",
   "org.scalanlp" 		       %%   "breeze-natives" 	       % "0.11.2",
   "com.typesafe.slick"     %%   "slick"                  % "3.1.0",
@@ -49,10 +52,13 @@ libraryDependencies ++= Seq(
   "org.postgresql"         %    "postgresql"             % "9.4-1201-jdbc41",
   "com.datastax.spark"     %%   "spark-cassandra-connector" % "1.6.0-M1",
   "com.google.guava"       %    "guava"                  % "19.0",
-  "com.fasterxml.jackson.core" % "jackson-core"          % "2.4.4"
+  "com.fasterxml.jackson.core" % "jackson-core"          % "2.4.4",
+  "org.apache.hadoop"      %    "hadoop-client"          % "2.6.0" % "provided",
+  "org.apache.commons"     %    "commons-lang3"          % "3.4"
 )
 
 unmanagedBase <<= baseDirectory { base => base / "lib" }
+unmanagedResourceDirectories in Compile += baseDirectory.value / "conf"
 
 //assembly
 assemblyOption in assembly :=
@@ -60,6 +66,7 @@ assemblyOption in assembly :=
 
 val meta = """META.INF(.)*""".r
 assemblyMergeStrategy in assembly := {
+  case PathList("application.conf") => MergeStrategy.discard
   case PathList("javax", "servlet", xs @ _*) => MergeStrategy.last
   case PathList(ps @ _*) if ps.last endsWith ".html" => MergeStrategy.last
   case n if n.startsWith("reference.conf") => MergeStrategy.concat
@@ -69,6 +76,9 @@ assemblyMergeStrategy in assembly := {
 }
 
 mainClass in assembly := Some("ch.unibas.dmi.dbis.adam.main.Startup")
+
+test in assembly := {}
+
 
 //test
 libraryDependencies ++= Seq(
