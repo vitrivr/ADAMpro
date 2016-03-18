@@ -51,9 +51,8 @@ libraryDependencies ++= Seq(
   "com.h2database"         %    "h2"                     % "1.4.188",
   "org.postgresql"         %    "postgresql"             % "9.4.1208",
   "com.datastax.spark"     %%   "spark-cassandra-connector" % "1.6.0-M1",
-  "com.google.guava"       %    "guava"                  % "19.0",
   "com.fasterxml.jackson.core" % "jackson-core"          % "2.4.4",
-  "org.apache.hadoop"      %    "hadoop-client"          % "2.6.0" % "provided",
+  "org.apache.hadoop"      %    "hadoop-client"          % "2.6.4" % "provided",
   "org.apache.commons"     %    "commons-lang3"          % "3.4"
 )
 
