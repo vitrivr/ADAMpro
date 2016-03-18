@@ -2,7 +2,6 @@ package ch.unibas.dmi.dbis.adam.query.handler
 
 import java.util.concurrent.TimeUnit
 
-import ch.unibas.dmi.dbis.adam.config.FieldNames
 import ch.unibas.dmi.dbis.adam.entity.Entity
 import ch.unibas.dmi.dbis.adam.entity.Entity.EntityName
 import ch.unibas.dmi.dbis.adam.entity.Tuple.TupleID
@@ -41,7 +40,7 @@ object NearestNeighbourQueryHandler extends Logging {
     * @return
     */
   def sequential(entityname: EntityName, query: NearestNeighbourQuery, filter: Option[HashSet[TupleID]]): DataFrame = {
-    FeatureScanner(Entity.load(entityname), query, filter).orderBy(FieldNames.distanceColumnName)
+    FeatureScanner(Entity.load(entityname), query, filter)
   }
 
   /**
@@ -55,9 +54,9 @@ object NearestNeighbourQueryHandler extends Logging {
     */
   def indexQuery(indexname: IndexName, query: NearestNeighbourQuery, filter: Option[HashSet[TupleID]]): DataFrame = {
     if (query.indexOnly) {
-      indexOnlyQuery(indexname, query, filter).orderBy(FieldNames.distanceColumnName)
+      indexOnlyQuery(indexname, query, filter)
     } else {
-      indexQueryWithResults(indexname, query, filter).orderBy(FieldNames.distanceColumnName)
+      indexQueryWithResults(indexname, query, filter)
     }
   }
 
