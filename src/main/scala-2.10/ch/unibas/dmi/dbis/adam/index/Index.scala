@@ -2,7 +2,7 @@ package ch.unibas.dmi.dbis.adam.index
 
 import java.util.concurrent.TimeUnit
 
-import ch.unibas.dmi.dbis.adam.config.AdamConfig
+import ch.unibas.dmi.dbis.adam.config.{FieldNames, AdamConfig}
 import ch.unibas.dmi.dbis.adam.datatypes.feature.Feature._
 import ch.unibas.dmi.dbis.adam.datatypes.feature.FeatureVectorWrapper
 import ch.unibas.dmi.dbis.adam.exception.IndexNotExistingException
@@ -41,7 +41,6 @@ trait Index[A <: IndexTuple] {
 
   protected val df: DataFrame
 
-  protected def rdd: RDD[A]
 
   /**
     * Counts the number of elements in the index.
@@ -49,19 +48,6 @@ trait Index[A <: IndexTuple] {
     * @return
     */
   def count = df.count()
-
-  //TODO: move filtering down to storage engine
-  /**
-    * Filters from the rdd with the given pre-filter (Boolean query).
-    *
-    * @param filter
-    * @return
-    */
-  protected def rdd(filter: Option[HashSet[TupleID]]): RDD[A] = if (filter.isDefined) {
-    rdd.filter(t => filter.get.contains(t.tid))
-  } else {
-    rdd
-  }
 
   /**
     * Gets the metadata attached to the index.
@@ -84,7 +70,14 @@ trait Index[A <: IndexTuple] {
     SparkStartup.sc.setLocalProperty("spark.scheduler.pool", "index")
     SparkStartup.sc.setJobGroup(queryID.getOrElse(""), indextype.toString, true)
 
-    scan(rdd(filter), q, options, k)
+    val data = if (filter.isDefined) {
+      //TODO: move filtering down to storage engine
+      df.filter(df(FieldNames.idColumnName) isin filter.get)
+    } else {
+      df
+    }
+
+    scan(data,q, options, k)
   }
 
   /**
@@ -96,7 +89,7 @@ trait Index[A <: IndexTuple] {
     * @param k number of elements to retrieve (of the k nearest neighbor search), possibly more than k elements are returned
     * @return a set of candidate tuple ids
     */
-  protected def scan(data: RDD[A], q: FeatureVector, options: Map[String, Any], k: Int): HashSet[TupleID]
+  protected def scan(data: DataFrame, q: FeatureVector, options: Map[String, Any], k: Int): HashSet[TupleID]
 }
 
 
