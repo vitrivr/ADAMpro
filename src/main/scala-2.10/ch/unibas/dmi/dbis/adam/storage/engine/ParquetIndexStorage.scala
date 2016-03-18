@@ -38,7 +38,7 @@ trait GenericIndexStorage extends IndexStorage {
     val df = SparkStartup.sqlContext.read.parquet(AdamConfig.indexPath + "/" + indexname + ".parquet")
 
     if(filter.isDefined){
-      df.filter(df(FieldNames.idColumnName) isin filter)
+      df.filter(df(FieldNames.idColumnName) isin (filter.toSeq : _*))
     } else {
       df
     }

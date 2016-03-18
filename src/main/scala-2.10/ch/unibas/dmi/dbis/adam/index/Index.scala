@@ -72,7 +72,7 @@ trait Index[A <: IndexTuple] {
 
     val data = if (filter.isDefined) {
       //TODO: move filtering down to storage engine
-      df.filter(df(FieldNames.idColumnName) isin filter.get)
+      df.filter(df(FieldNames.idColumnName) isin (filter.get.toSeq : _*))
     } else {
       df
     }
