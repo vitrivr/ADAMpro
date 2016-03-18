@@ -41,7 +41,7 @@ object MetadataScanner {
         }
       }
 
-      Option(df.filter(query.getWhereClause()))
+      Option(df.filter(query.getWhereClause()).select(FieldNames.idColumnName))
     } else {
       throw NoMetadataAvailableException()
     }

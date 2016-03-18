@@ -202,9 +202,9 @@ object QueryHandler extends Logging {
     val mdRes = BooleanQueryHandler.metadataQuery(entityname, bq)
 
     if (mdRes.isDefined) {
-      Option(HashSet(mdRes.get.map(r => r.getLong(0)).collect(): _*))
+      Option(HashSet(mdRes.get.map(r => r.getAs[Long](FieldNames.idColumnName)).collect(): _*)) //with metadata
     } else {
-      None
+      None //no metadata
     }
   }
 

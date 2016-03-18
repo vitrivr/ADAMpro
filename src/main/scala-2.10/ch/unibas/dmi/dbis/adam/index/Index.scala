@@ -2,9 +2,12 @@ package ch.unibas.dmi.dbis.adam.index
 
 import java.util.concurrent.TimeUnit
 
-import ch.unibas.dmi.dbis.adam.config.{FieldNames, AdamConfig}
+import ch.unibas.dmi.dbis.adam.config.AdamConfig
 import ch.unibas.dmi.dbis.adam.datatypes.feature.Feature._
 import ch.unibas.dmi.dbis.adam.datatypes.feature.FeatureVectorWrapper
+import ch.unibas.dmi.dbis.adam.entity.Entity
+import ch.unibas.dmi.dbis.adam.entity.Entity._
+import ch.unibas.dmi.dbis.adam.entity.Tuple._
 import ch.unibas.dmi.dbis.adam.exception.IndexNotExistingException
 import ch.unibas.dmi.dbis.adam.index.Index._
 import ch.unibas.dmi.dbis.adam.index.structures.IndexStructures
@@ -14,10 +17,7 @@ import ch.unibas.dmi.dbis.adam.index.structures.sh.SHIndex
 import ch.unibas.dmi.dbis.adam.index.structures.va.VAIndex
 import ch.unibas.dmi.dbis.adam.main.SparkStartup
 import ch.unibas.dmi.dbis.adam.storage.engine.CatalogOperator
-import ch.unibas.dmi.dbis.adam.entity.Entity
-import ch.unibas.dmi.dbis.adam.entity.Entity._
-import ch.unibas.dmi.dbis.adam.entity.Tuple._
-import com.google.common.cache.{CacheLoader, CacheBuilder}
+import com.google.common.cache.{CacheBuilder, CacheLoader}
 import org.apache.spark.rdd.RDD
 import org.apache.spark.sql.DataFrame
 import org.apache.spark.storage.StorageLevel
@@ -72,7 +72,8 @@ trait Index[A <: IndexTuple] {
 
     val data = if (filter.isDefined) {
       //TODO: move filtering down to storage engine
-      df.filter(df(FieldNames.idColumnName) isin (filter.get.toSeq : _*))
+      //TODO: switch here from "tid" to Fieldnames
+      df.filter(df("tid") isin (filter.get.toSeq : _*))
     } else {
       df
     }

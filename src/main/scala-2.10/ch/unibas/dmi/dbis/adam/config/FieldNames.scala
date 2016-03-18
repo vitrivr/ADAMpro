@@ -8,8 +8,10 @@ package ch.unibas.dmi.dbis.adam.config
   */
 object FieldNames {
   val idColumnName = "adamproid"
-  val internFeatureColumnName = "adamprofeatures"
+  val internFeatureColumnName = "adamprofeature"
   val distanceColumnName = "adamprodistance"
 
   val featureColumnName = "feature"
+
+  val featureIndexColumnName = "adamproindexfeature"
 }

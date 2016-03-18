@@ -2,7 +2,7 @@ package ch.unibas.dmi.dbis.adam.entity
 
 import ch.unibas.dmi.dbis.adam.config.FieldNames
 import ch.unibas.dmi.dbis.adam.entity.Entity._
-import ch.unibas.dmi.dbis.adam.entity.FieldTypes.{FieldType, INTTYPE}
+import ch.unibas.dmi.dbis.adam.entity.FieldTypes.{FieldType, LONGTYPE}
 import ch.unibas.dmi.dbis.adam.exception.{EntityExistingException, EntityNotExistingException}
 import ch.unibas.dmi.dbis.adam.index.Index
 import ch.unibas.dmi.dbis.adam.main.SparkStartup
@@ -113,7 +113,7 @@ object Entity {
 
     if (fields.isDefined) {
       //TODO: add optional information, e.g. PK to creation of metadata
-      val fieldsWithPK = fields.get + (FieldNames.idColumnName -> INTTYPE)
+      val fieldsWithPK = fields.get + (FieldNames.idColumnName -> LONGTYPE)
       metadataStorage.create(entityname, fieldsWithPK.mapValues(_.datatype))
       CatalogOperator.createEntity(entityname, true)
       Entity(entityname, featureStorage, Option(metadataStorage))
