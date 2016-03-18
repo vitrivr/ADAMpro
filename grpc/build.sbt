@@ -18,7 +18,7 @@ libraryDependencies ++= Seq(
 //assembly
 assemblyShadeRules in assembly := Seq(
   ShadeRule.rename("io.netty.**" -> "shaded.io.netty.@1").inAll,
-  ShadeRule.rename("com.google.guava.**" -> "shaded.io.guava.@1").inAll,
+  ShadeRule.rename("com.google.**" -> "shaded.com.google.@1").inAll,
   ShadeRule.rename("com.fasterxml.**" -> "shaded.com.fasterxml.@1").inAll
 )
 
