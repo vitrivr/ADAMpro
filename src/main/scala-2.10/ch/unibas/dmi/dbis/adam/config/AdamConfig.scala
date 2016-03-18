@@ -45,6 +45,8 @@ object AdamConfig{
 
   var evaluation = false
 
+  val loglevel = config.getString("adampro.loglevel")
+
   val maximumCacheSizeIndex = 10
   val expireAfterAccess = 10 //in minutes
 

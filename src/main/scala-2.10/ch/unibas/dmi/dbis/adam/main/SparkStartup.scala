@@ -34,7 +34,7 @@ object SparkStartup {
 
   val sc = new SparkContext(sparkConfig)
 
-  sc.setLogLevel("INFO")
+  sc.setLogLevel(AdamConfig.loglevel)
 
   val sqlContext = new HiveContext(sc)
 
