@@ -54,9 +54,9 @@ object MetadataScanner {
     * @return
     */
   def apply(entity: Entity, filter: HashSet[TupleID]): Option[DataFrame] = {
-    if (entity.getMetadata.isDefined) {
+    if (entity.hasMetadata) {
       val df = entity.getMetadata.get
-      Option(df.filter(df(FieldNames.idColumnName) isin filter))
+      Option(df.filter(df(FieldNames.idColumnName) isin (filter.toSeq :_*)))
     } else {
       None
     }
