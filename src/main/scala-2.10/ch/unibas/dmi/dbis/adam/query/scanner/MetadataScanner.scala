@@ -3,6 +3,7 @@ package ch.unibas.dmi.dbis.adam.query.scanner
 import ch.unibas.dmi.dbis.adam.config.FieldNames
 import ch.unibas.dmi.dbis.adam.entity.Entity
 import ch.unibas.dmi.dbis.adam.entity.Tuple._
+import ch.unibas.dmi.dbis.adam.exception.NoMetadataAvailableException
 import ch.unibas.dmi.dbis.adam.main.SparkStartup
 import ch.unibas.dmi.dbis.adam.query.query.BooleanQuery
 import org.apache.spark.sql.DataFrame
@@ -42,7 +43,7 @@ object MetadataScanner {
 
       Option(df.filter(query.getWhereClause()))
     } else {
-      None
+      throw NoMetadataAvailableException()
     }
   }
 
@@ -58,7 +59,7 @@ object MetadataScanner {
       val df = entity.getMetadata.get
       Option(df.filter(df(FieldNames.idColumnName) isin (filter.toSeq :_*)))
     } else {
-      None
+      throw NoMetadataAvailableException()
     }
   }
 }
