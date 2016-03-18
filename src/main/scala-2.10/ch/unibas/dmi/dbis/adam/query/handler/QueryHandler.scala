@@ -131,7 +131,7 @@ object QueryHandler extends Logging {
 
     var res = NearestNeighbourQueryHandler.indexQuery(indexname, nnq, filter)
     if (withMetadata) {
-      res = joinWithMetadata(indexname, res)
+      res = joinWithMetadata(entityname, res)
     }
     res
   }
