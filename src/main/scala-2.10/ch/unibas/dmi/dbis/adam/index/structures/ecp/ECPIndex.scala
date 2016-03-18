@@ -30,7 +30,7 @@ class ECPIndex(val indexname: IndexName, val entityname: EntityName, protected v
       (l.tid, metadata.distance(q, l.value))
     }).sortBy(_._2).map(_._1)
 
-    val rdd = df.map(r => r : LongIndexTuple)
+    val rdd = data.map(r => r : LongIndexTuple)
 
     val results = SparkStartup.sc.runJob(rdd, (context : TaskContext, tuplesIt : Iterator[LongIndexTuple]) => {
       var results = ListBuffer[TupleID]()

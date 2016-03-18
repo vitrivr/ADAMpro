@@ -185,7 +185,6 @@ class QueryTestSuite extends AdamBaseTest {
       *
       */
     scenario("perform a vaf index query and a boolean query") {
-      //TODO: check why this test does not work
       Given("an entity and an index")
       val es = getGroundTruthEvaluationSet()
       val index = Index.createIndex(es.entity, VAFIndexer(es.distance))

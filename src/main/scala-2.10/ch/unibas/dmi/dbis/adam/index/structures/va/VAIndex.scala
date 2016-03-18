@@ -36,7 +36,7 @@ class VAIndex(val indexname : IndexName, val entityname : EntityName, protected 
     val distance = metadata.distance
     val (lbounds, ubounds) = computeBounds(q, metadata.marks, distance)
 
-    val rdd = df.map(r => r : BitStringIndexTuple)
+    val rdd = data.map(r => r : BitStringIndexTuple)
 
     val results = SparkStartup.sc.runJob(rdd, (context : TaskContext, tuplesIt : Iterator[BitStringIndexTuple]) => {
       val localRh = new VAResultHandler(k, lbounds, ubounds, metadata.signatureGenerator)

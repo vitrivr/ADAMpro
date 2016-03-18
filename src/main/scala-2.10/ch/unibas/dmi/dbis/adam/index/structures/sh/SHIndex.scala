@@ -34,7 +34,7 @@ class SHIndex(val indexname: IndexName, val entityname: EntityName, protected va
     val originalQuery = SHUtils.hashFeature(q, metadata)
     val queries = (List.fill(numOfQueries)(SHUtils.hashFeature(q.move(metadata.radius), metadata)) ::: List(originalQuery)).par
 
-    val rdd = df.map(r => r : BitStringIndexTuple)
+    val rdd = data.map(r => r : BitStringIndexTuple)
 
     val results = SparkStartup.sc.runJob(rdd, (context : TaskContext, tuplesIt : Iterator[BitStringIndexTuple]) => {
       val localRh = new LSHResultHandler(k)
