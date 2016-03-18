@@ -24,6 +24,9 @@ class IndexTestSuite extends AdamBaseTest {
   val ndims = 100
 
   feature("index creation") {
+    /**
+      *
+      */
     scenario("create and drop indexes") {
       Given("an entity without metadata and an index")
       val entityname = createSimpleEntity(ntuples, ndims)
@@ -42,6 +45,9 @@ class IndexTestSuite extends AdamBaseTest {
       Entity.drop(entityname)
     }
 
+    /**
+      *
+      */
     scenario("create and drop indexes by dropping entity") {
       Given("an entity without metadata and an index")
       val entityname = createSimpleEntity(ntuples, ndims)
@@ -57,7 +63,9 @@ class IndexTestSuite extends AdamBaseTest {
       assert(!Index.exists(index.indexname))
     }
 
-
+    /**
+      *
+      */
     scenario("create eCP index") {
       Given("an entity without metadata")
       val entityname = createSimpleEntity(ntuples, ndims)
@@ -76,7 +84,9 @@ class IndexTestSuite extends AdamBaseTest {
       Entity.drop(entityname)
     }
 
-
+    /**
+      *
+      */
     scenario("create LSH index") {
       Given("an entity without metadata")
       val entityname = createSimpleEntity(ntuples, ndims)
@@ -95,7 +105,9 @@ class IndexTestSuite extends AdamBaseTest {
       Entity.drop(entityname)
     }
 
-
+    /**
+      *
+      */
     scenario("create SH index") {
       Given("an entity without metadata")
       val entityname = createSimpleEntity(ntuples, ndims)
@@ -115,6 +127,9 @@ class IndexTestSuite extends AdamBaseTest {
     }
 
 
+    /**
+      *
+      */
     scenario("create VA-File (fixed) index") {
       Given("an entity without metadata")
       val entityname = createSimpleEntity(ntuples, ndims)
@@ -133,6 +148,10 @@ class IndexTestSuite extends AdamBaseTest {
       Entity.drop(entityname)
     }
 
+
+    /**
+      *
+      */
     scenario("create VA-File (variable) index") {
       Given("an entity without metadata")
       val entityname = createSimpleEntity(ntuples, ndims)

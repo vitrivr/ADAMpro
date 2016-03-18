@@ -4,7 +4,7 @@ import ch.unibas.dmi.dbis.adam.config.FieldNames
 import ch.unibas.dmi.dbis.adam.datatypes.feature.{FeatureVectorWrapper, FeatureVectorWrapperUDT}
 import ch.unibas.dmi.dbis.adam.entity.FieldTypes.FieldType
 import ch.unibas.dmi.dbis.adam.main.SparkStartup
-import ch.unibas.dmi.dbis.adam.test.{AdamBaseTest}
+import ch.unibas.dmi.dbis.adam.test.AdamBaseTest
 import org.apache.spark.sql.types._
 import org.apache.spark.sql.{Row, types}
 import org.scalatest.Matchers._
@@ -20,6 +20,9 @@ import scala.util.Random
   */
 class EntityTestSuite extends AdamBaseTest {
   feature("data definition") {
+    /**
+      *
+      */
     scenario("create an entity") {
       Given("a database with a few elements already")
       val givenEntities = Entity.list()
@@ -41,6 +44,9 @@ class EntityTestSuite extends AdamBaseTest {
       Entity.drop(entityname)
     }
 
+    /**
+      *
+      */
     scenario("drop an existing entity") {
       Given("there exists one entity")
       val entityname = getRandomName()
@@ -54,6 +60,9 @@ class EntityTestSuite extends AdamBaseTest {
       assert(!Entity.list().contains(entityname))
     }
 
+    /**
+      *
+      */
     scenario("create an entity with metadata") {
       Given("a database with a few elements already")
       val givenEntities = Entity.list()
@@ -79,7 +88,7 @@ class EntityTestSuite extends AdamBaseTest {
       assert(finalEntities.contains(entityname))
 
       And("The metadata table should have been created")
-      val result = connection.createStatement().executeQuery("SELECT column_name, data_type FROM information_schema.columns WHERE table_schema = 'public' AND table_name = '" + entityname + "'")
+      val result = getJDBCConnection.createStatement().executeQuery("SELECT column_name, data_type FROM information_schema.columns WHERE table_schema = 'public' AND table_name = '" + entityname + "'")
 
       val lb = new ListBuffer[(String, String)]()
       while (result.next) {
@@ -100,14 +109,16 @@ class EntityTestSuite extends AdamBaseTest {
       Entity.drop(entityname)
     }
 
-
+    /**
+      *
+      */
     scenario("drop an entity with metadata") {
       Given("an entity with metadata")
       val entityname = getRandomName()
       val fields: Map[String, FieldType] = Map[String, FieldType](("stringfield" -> FieldTypes.STRINGTYPE))
       Entity.create(entityname, Option(fields))
 
-      val preResult = connection.createStatement().executeQuery("SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = '" + entityname + "'")
+      val preResult = getJDBCConnection.createStatement().executeQuery("SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = '" + entityname + "'")
       var tableCount = 0
       while (preResult.next) {
         tableCount += 1
@@ -117,7 +128,7 @@ class EntityTestSuite extends AdamBaseTest {
       Entity.drop(entityname)
 
       Then("the metadata entity is dropped as well")
-      val postResult = connection.createStatement().executeQuery("SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = '" + entityname + "'")
+      val postResult = getJDBCConnection.createStatement().executeQuery("SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = '" + entityname + "'")
       while (postResult.next) {
         tableCount -= 1
       }
@@ -126,11 +137,12 @@ class EntityTestSuite extends AdamBaseTest {
     }
   }
 
-  case class WrappingTuple(featureVectorWrapper: FeatureVectorWrapper)
-
 
   feature("data manipulation") {
 
+    /**
+      *
+      */
     scenario("insert data in an entity without metadata") {
       Given("an entity without metadata")
       val entityname = getRandomName()
@@ -159,6 +171,10 @@ class EntityTestSuite extends AdamBaseTest {
       Entity.drop(entityname)
     }
 
+
+    /**
+      *
+      */
     scenario("insert data in an entity with metadata") {
       Given("an entity with metadata")
       val entityname = getRandomName()
@@ -185,7 +201,6 @@ class EntityTestSuite extends AdamBaseTest {
       val stringLength = 10
       val maxInt = 50000
 
-      When("data is inserted")
       val schema = StructType(Seq(
         StructField(FieldNames.featureColumnName, new FeatureVectorWrapperUDT, false),
         StructField("stringfield", types.StringType, false),
@@ -204,7 +219,7 @@ class EntityTestSuite extends AdamBaseTest {
           math.abs(Random.nextInt(maxInt)),
           math.abs(Random.nextLong()),
           Random.nextBoolean()
-          )))
+        )))
 
       val data = SparkStartup.sqlContext.createDataFrame(rdd, schema)
 
@@ -214,14 +229,14 @@ class EntityTestSuite extends AdamBaseTest {
       Then("the data is available with metadata")
       assert(Entity.countTuples(entityname) == ntuples)
 
-      val countResult = connection.createStatement().executeQuery("SELECT COUNT(*) AS count FROM " + entityname)
+      val countResult = getJDBCConnection.createStatement().executeQuery("SELECT COUNT(*) AS count FROM " + entityname)
       countResult.next() //go to first result
       val tableCount = countResult.getInt("count")
       assert(tableCount == ntuples)
 
 
       //filled fields should be filled
-      val randomRowResult = connection.createStatement().executeQuery("SELECT * FROM " + entityname + " ORDER BY RANDOM() LIMIT 1")
+      val randomRowResult = getJDBCConnection.createStatement().executeQuery("SELECT * FROM " + entityname + " ORDER BY RANDOM() LIMIT 1")
       randomRowResult.next() //go to first result
       assert(randomRowResult.getString("stringfield").length == stringLength)
       assert(randomRowResult.getFloat("floatField") >= 0)
@@ -237,6 +252,11 @@ class EntityTestSuite extends AdamBaseTest {
       assert(randomRowResult.getInt("intfieldunfilled") == 0)
       assert(randomRowResult.getLong("longfieldunfilled") == 0)
       assert(randomRowResult.getBoolean("booleanfieldunfilled") == false)
+
+      //index on adamtwo-id is created
+      val indexesResult = getJDBCConnection.createStatement().executeQuery( "SELECT DISTINCT t.relname, a.attname FROM pg_class t, pg_attribute a WHERE a.attrelid = t.oid and a.attname = '" + FieldNames.idColumnName + "' and t.relname = '" + entityname +"' and t.reltype > 0")
+      indexesResult.next()
+      assert(indexesResult.getString(2) == FieldNames.idColumnName)
 
       //clean up
       Entity.drop(entityname)
