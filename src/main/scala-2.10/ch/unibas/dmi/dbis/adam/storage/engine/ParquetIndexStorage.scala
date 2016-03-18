@@ -1,6 +1,7 @@
 package ch.unibas.dmi.dbis.adam.storage.engine
 
 import java.io.File
+import java.lang
 
 import ch.unibas.dmi.dbis.adam.config.{FieldNames, AdamConfig}
 import ch.unibas.dmi.dbis.adam.entity.Tuple._
@@ -9,7 +10,12 @@ import ch.unibas.dmi.dbis.adam.main.SparkStartup
 import ch.unibas.dmi.dbis.adam.storage.components.IndexStorage
 import org.apache.hadoop.conf.Configuration
 import org.apache.hadoop.fs.{FileSystem, Path}
+import org.apache.parquet.column.ColumnReader
+import org.apache.parquet.filter.ColumnPredicates.LongPredicateFunction
+import org.apache.parquet.filter.{ColumnPredicates, ColumnRecordFilter, RecordFilter, UnboundRecordFilter}
 import org.apache.spark.sql.{DataFrame, SaveMode}
+
+import scala.collection.Set
 
 
 /**
@@ -47,6 +53,20 @@ trait GenericIndexStorage extends IndexStorage {
   override def write(indexname: IndexName, df: DataFrame): Boolean = {
     df.write.mode(SaveMode.Overwrite).parquet(AdamConfig.indexPath + "/" + indexname + ".parquet")
     true
+  }
+
+
+  class TIDFilter(filter : Set[TupleID]) extends UnboundRecordFilter {
+    override def bind(readers: lang.Iterable[ColumnReader]): RecordFilter = {
+      ColumnRecordFilter.column(
+        FieldNames.idColumnName,
+        ColumnPredicates.applyFunctionToLong(new TIDPredicateFunction(filter))
+      ).bind(readers)
+    }
+
+    class TIDPredicateFunction(filter : Set[TupleID]) extends LongPredicateFunction {
+      override def functionToApply(input: TupleID): Boolean = filter.contains(input)
+    }
   }
 }
 

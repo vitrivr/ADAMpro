@@ -78,7 +78,6 @@ class IndexTestSuite extends AdamBaseTest {
       assert(Index.exists(index.indexname))
       assert(index.confidence <= 1)
       assert(index.count == entity.count)
-      //TODO: better checks of eCP index
 
       //clean up
       Entity.drop(entityname)
@@ -99,7 +98,6 @@ class IndexTestSuite extends AdamBaseTest {
       assert(Index.exists(index.indexname))
       assert(index.confidence <= 1)
       assert(index.count == entity.count)
-      //TODO: better checks of LSH index
 
       //clean up
       Entity.drop(entityname)
@@ -120,7 +118,6 @@ class IndexTestSuite extends AdamBaseTest {
       assert(Index.exists(index.indexname))
       assert(index.confidence <= 1)
       assert(index.count == entity.count)
-      //TODO: better checks of SH index
 
       //clean up
       Entity.drop(entityname)
@@ -142,7 +139,6 @@ class IndexTestSuite extends AdamBaseTest {
       assert(Index.exists(index.indexname))
       assert(index.confidence == 1)
       assert(index.count == entity.count)
-      //TODO: better checks of VA-File (fixed) index
 
       //clean up
       Entity.drop(entityname)
@@ -164,7 +160,6 @@ class IndexTestSuite extends AdamBaseTest {
       assert(Index.exists(index.indexname))
       assert(index.confidence == 1)
       assert(index.count == entity.count)
-      //TODO: better checks of VA-File (variable) index
 
       //clean up
       Entity.drop(entityname)

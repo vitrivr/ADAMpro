@@ -211,7 +211,7 @@ class QueryTestSuite extends AdamBaseTest {
     //TODO: add test join metadata
   }
 
-  feature("standard query") {
+  feature("progressive query") {
     //TODO: add tests for prog query (e.g., are at the end the correct results returned)
     //TODO: add test for timed prog query (e.g. does it adhere to time limit)
   }

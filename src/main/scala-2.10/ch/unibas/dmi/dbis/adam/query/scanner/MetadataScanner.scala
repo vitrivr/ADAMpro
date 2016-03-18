@@ -30,7 +30,6 @@ object MetadataScanner {
     if (entity.getMetadata.isDefined) {
       var df = entity.getMetadata.get
 
-      //TODO: check join
       if (query.join.isDefined) {
         val joins = query.join.get
 
