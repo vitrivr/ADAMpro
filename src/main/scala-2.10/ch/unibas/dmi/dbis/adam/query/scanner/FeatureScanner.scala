@@ -38,7 +38,7 @@ object FeatureScanner {
       //sequential scan
       SparkStartup.sc.setLocalProperty("spark.scheduler.pool", "slow")
       SparkStartup.sc.setJobGroup(query.queryID.getOrElse(""), entity.entityname, true)
-      entity.rdd.map(row => (row: Tuple)).collect()
+      entity.getFeaturedata.map(row => (row: Tuple)).collect()
     }
 
     val it = data.par.iterator
