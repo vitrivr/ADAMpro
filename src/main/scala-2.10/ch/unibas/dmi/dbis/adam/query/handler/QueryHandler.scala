@@ -102,6 +102,7 @@ object QueryHandler extends Logging {
       None
     }
     var res = NearestNeighbourQueryHandler.sequential(entityname, nnq, filter)
+
     if (withMetadata) {
       res = joinWithMetadata(entityname, res)
     }
@@ -216,7 +217,7 @@ object QueryHandler extends Logging {
     * @return
     */
   private def joinWithMetadata(entityname: EntityName, res: DataFrame): DataFrame = {
-    val mdRes = BooleanQueryHandler.metadataQuery(entityname, HashSet(res.select("tid").collect().map(r => r.getLong(0)) : _*))
+    val mdRes = BooleanQueryHandler.metadataQuery(entityname, HashSet(res.select(FieldNames.idColumnName).collect().map(r => r.getLong(0)) : _*))
 
     if (mdRes.isDefined){
       mdRes.get.join(res, FieldNames.idColumnName) //with metadata
