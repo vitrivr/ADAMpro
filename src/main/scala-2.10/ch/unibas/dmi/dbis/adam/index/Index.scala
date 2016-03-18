@@ -131,7 +131,7 @@ object Index {
     */
   def createIndex(entity: Entity, indexgenerator: IndexGenerator): Index[_ <: IndexTuple] = {
     val indexname = createIndexName(entity.entityname, indexgenerator.indextypename)
-    val rdd: RDD[IndexingTaskTuple] = entity.rdd.map { x => IndexingTaskTuple(x.getLong(0), x.getAs[FeatureVectorWrapper](1).vector) }
+    val rdd: RDD[IndexingTaskTuple] = entity.getFeaturedata.map { x => IndexingTaskTuple(x.getLong(0), x.getAs[FeatureVectorWrapper](1).vector) }
     val index = indexgenerator.index(indexname, entity.entityname, rdd)
     storage.write(indexname, index.df)
     CatalogOperator.createIndex(indexname, entity.entityname, indexgenerator.indextypename, index.metadata)
