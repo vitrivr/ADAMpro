@@ -39,17 +39,17 @@ resolvers ++= Seq(
 resolvers += Resolver.sonatypeRepo("snapshots")
 
 libraryDependencies ++= Seq(
-  "org.apache.spark"       %%   "spark-core"             % "1.6.0" % "provided" excludeAll(
+  "org.apache.spark"       %%   "spark-core"             % "1.6.1" % "provided" excludeAll(
     ExclusionRule("org.apache.hadoop")
     ),
-  "org.apache.spark"       %%   "spark-sql"              % "1.6.0" % "provided",
-  "org.apache.spark"       %%   "spark-hive"             % "1.6.0" % "provided",
-  "org.apache.spark"       %%   "spark-mllib"            % "1.6.0" % "provided",
+  "org.apache.spark"       %%   "spark-sql"              % "1.6.1" % "provided",
+  "org.apache.spark"       %%   "spark-hive"             % "1.6.1" % "provided",
+  "org.apache.spark"       %%   "spark-mllib"            % "1.6.1" % "provided",
   "org.scalanlp" 		       %%   "breeze" 				         % "0.11.2",
   "org.scalanlp" 		       %%   "breeze-natives" 	       % "0.11.2",
   "com.typesafe.slick"     %%   "slick"                  % "3.1.0",
   "com.h2database"         %    "h2"                     % "1.4.188",
-  "org.postgresql"         %    "postgresql"             % "9.4-1201-jdbc41",
+  "org.postgresql"         %    "postgresql"             % "9.4.1208",
   "com.datastax.spark"     %%   "spark-cassandra-connector" % "1.6.0-M1",
   "com.google.guava"       %    "guava"                  % "19.0",
   "com.fasterxml.jackson.core" % "jackson-core"          % "2.4.4",
