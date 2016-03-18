@@ -44,6 +44,27 @@ case class Entity(entityname: EntityName, featureStorage: FeatureStorage, metada
     */
   def show(k: Int) = rdd.take(k)
 
+  /**
+    * Inserts data into the entity.
+    *
+    * @param insertion
+    * @return
+    */
+  def insert(insertion: DataFrame): Boolean = {
+    val rows = insertion.rdd.zipWithUniqueId.map { case (r: Row, adamtwoid: Long) => Row.fromSeq(adamtwoid +: r.toSeq) }
+    val insertionWithPK = SparkStartup.sqlContext
+      .createDataFrame(
+        rows, StructType(StructField(FieldNames.idColumnName, LongType, false) +: insertion.schema.fields))
+      .withColumnRenamed(FieldNames.featureColumnName, FieldNames.internFeatureColumnName)
+
+    featureStorage.write(entityname, insertionWithPK.select(FieldNames.idColumnName, FieldNames.internFeatureColumnName), SaveMode.Append)
+
+    if (metadataStorage.isDefined) {
+      metadataStorage.get.write(entityname, insertionWithPK.drop(FieldNames.internFeatureColumnName), SaveMode.Append)
+    }
+
+    true
+  }
 
   /**
     *
@@ -61,6 +82,8 @@ case class Entity(entityname: EntityName, featureStorage: FeatureStorage, metada
   }
 
   def getFeaturedata: DataFrame = featureData
+
+  def hasMetadata: Boolean = metadataStorage.isDefined
 
   def getMetadata: Option[DataFrame] = metaData
 }
@@ -92,9 +115,6 @@ object Entity {
       //TODO: add optional information, e.g. PK to creation of metadata
       val fieldsWithPK = fields.get + (FieldNames.idColumnName -> INTTYPE)
       metadataStorage.create(entityname, fieldsWithPK.mapValues(_.datatype))
-    }
-
-    if (fields.isDefined) {
       CatalogOperator.createEntity(entityname, true)
       Entity(entityname, featureStorage, Option(metadataStorage))
     } else {
@@ -140,23 +160,7 @@ object Entity {
     * @return
     */
   def insertData(entityname: EntityName, insertion: DataFrame): Boolean = {
-    if (!exists(entityname)) {
-      throw new EntityNotExistingException()
-    }
-
-    val rows = insertion.rdd.zipWithUniqueId.map { case (r: Row, adamtwoid: Long) => Row.fromSeq(adamtwoid +: r.toSeq) }
-    val insertionWithPK = SparkStartup.sqlContext
-      .createDataFrame(
-      rows, StructType(StructField(FieldNames.idColumnName, LongType, false) +: insertion.schema.fields))
-      .withColumnRenamed(FieldNames.featureColumnName, FieldNames.internFeatureColumnName)
-
-    featureStorage.write(entityname, insertionWithPK.select(FieldNames.idColumnName, FieldNames.internFeatureColumnName), SaveMode.Append)
-
-    if (CatalogOperator.hasEntityMetadata(entityname)) {
-      metadataStorage.write(entityname, insertionWithPK.drop(FieldNames.internFeatureColumnName), SaveMode.Append)
-    }
-
-    true
+    load(entityname).insert(insertion)
   }
 
   /**
