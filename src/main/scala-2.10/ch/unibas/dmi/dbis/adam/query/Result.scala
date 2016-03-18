@@ -3,7 +3,7 @@ package ch.unibas.dmi.dbis.adam.query
 import ch.unibas.dmi.dbis.adam.config.FieldNames
 import ch.unibas.dmi.dbis.adam.entity.Tuple.TupleID
 import ch.unibas.dmi.dbis.adam.query.distance.Distance.Distance
-import org.apache.spark.sql.types.{DoubleType, LongType, StructField, StructType}
+import org.apache.spark.sql.types.{FloatType, LongType, StructField, StructType}
 
 /**
   * adamtwo
@@ -18,7 +18,7 @@ case class Result(distance: Distance, tid: TupleID) extends Ordered[Result] {
 
 object Result {
   val resultSchema = StructType(Seq(
-    StructField(FieldNames.distanceColumnName, DoubleType, true),
+    StructField(FieldNames.distanceColumnName, FloatType, true),
     StructField(FieldNames.idColumnName, LongType, true)
   )
   )
