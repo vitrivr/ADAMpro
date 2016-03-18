@@ -141,7 +141,7 @@ object CassandraFeatureStorage extends FeatureStorage with Serializable {
 
     df.rdd.map(r =>
       InternalCassandraRowFormat(r.getAs[Long](FieldNames.idColumnName),
-        r.getAs[FeatureVectorWrapper](FieldNames.internFeatureColumnName).getSeq())
+        r.getAs[FeatureVectorWrapper](FieldNames.internFeatureColumnName).toSeq())
     ).saveToCassandra(defaultKeyspace, entityname,
       SomeColumns(FieldNames.idColumnName as "id", FieldNames.internFeatureColumnName as "feature"))
 
