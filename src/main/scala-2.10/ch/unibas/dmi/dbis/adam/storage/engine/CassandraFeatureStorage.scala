@@ -122,7 +122,7 @@ object CassandraFeatureStorage extends FeatureStorage with Serializable {
     true
   }
 
-  case class InternalCassandraRowFormat(adamtwoid: Long, adamtwofeatures: Seq[VectorBase])
+  case class InternalCassandraRowFormat(id: Long, feature: Seq[VectorBase])
 
   /**
     *
@@ -143,7 +143,8 @@ object CassandraFeatureStorage extends FeatureStorage with Serializable {
       InternalCassandraRowFormat(r.getAs[Long](FieldNames.idColumnName),
         r.getAs[FeatureVectorWrapper](FieldNames.internFeatureColumnName).getSeq())
     ).saveToCassandra(defaultKeyspace, entityname,
-      SomeColumns(FieldNames.idColumnName as "adamtwoid", "adamtwofeatures" as FieldNames.internFeatureColumnName))
+      SomeColumns(FieldNames.idColumnName as "id", FieldNames.internFeatureColumnName as "feature"))
+
 
     true
   }
