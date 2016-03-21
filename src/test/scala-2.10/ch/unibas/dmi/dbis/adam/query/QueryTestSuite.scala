@@ -14,6 +14,7 @@ import ch.unibas.dmi.dbis.adam.query.handler.QueryHandler
 import ch.unibas.dmi.dbis.adam.query.progressive.ProgressiveQueryStatus
 import ch.unibas.dmi.dbis.adam.query.query.{BooleanQuery, NearestNeighbourQuery}
 import ch.unibas.dmi.dbis.adam.test.AdamBaseTest
+import org.apache.log4j.Logger
 import org.apache.spark.sql.DataFrame
 
 import scala.concurrent.duration.Duration
@@ -25,6 +26,8 @@ import scala.concurrent.duration.Duration
   * March 2016
   */
 class QueryTestSuite extends AdamBaseTest {
+  val log = Logger.getLogger(getClass.getName)
+
   feature("standard query") {
     /**
       *
@@ -71,7 +74,7 @@ class QueryTestSuite extends AdamBaseTest {
           assert(res._1 - gt._1 < EPSILON)
       }
 
-      println("score: " + getScore(es.nnResults.map(_._2), results.map(_._2)))
+      log.info("score: " + getScore(es.nnResults.map(_._2), results.map(_._2)))
 
       //clean up
       Entity.drop(es.entity.entityname)
@@ -98,7 +101,7 @@ class QueryTestSuite extends AdamBaseTest {
           assert(res._1 - gt._1 < EPSILON)
       }
 
-      println("score: " + getScore(es.nnResults.map(_._2), results.map(_._2)))
+      log.info("score: " + getScore(es.nnResults.map(_._2), results.map(_._2)))
 
       //clean up
       Entity.drop(es.entity.entityname)
@@ -126,7 +129,7 @@ class QueryTestSuite extends AdamBaseTest {
           assert(res._1 - gt._1 < EPSILON)
       }
 
-      println("score: " + getScore(es.nnResults.map(_._2), results.map(_._2)))
+      log.info("score: " + getScore(es.nnResults.map(_._2), results.map(_._2)))
 
       //clean up
       Entity.drop(es.entity.entityname)
