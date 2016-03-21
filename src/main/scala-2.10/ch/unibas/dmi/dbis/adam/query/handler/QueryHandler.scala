@@ -144,6 +144,11 @@ object QueryHandler extends Logging {
     * @param nnq          information for nearest neighbour query
     * @param bq           information for boolean query
     * @param onComplete   operation to perform as soon as one index returns results
+    *                     (the operation takes parameters:
+    *                     - status value
+    *                     - result (as DataFrame)
+    *                     - confidence score denoting how confident you can be in the results
+    *                     - further information (key-value)
     * @param withMetadata whether or not to retrieve corresponding metadata
     * @return a tracker for the progressive query
     */
