@@ -137,9 +137,6 @@ trait BitStringFactory {
   * UDT class for storing bit strings in Spark.
   */
 class BitStringUDT extends UserDefinedType[BitString[_]] {
-  //TODO: adjust for other bit string types, but note that we do not want to store the type every time with the bit string
-  //as this would need too much space and would work against efficient lookup
-
   override def sqlType: DataType = BinaryType
 
   override def userClass: Class[BitString[_]] = classOf[BitString[_]]
@@ -147,6 +144,8 @@ class BitStringUDT extends UserDefinedType[BitString[_]] {
   override def asNullable: BitStringUDT = this
 
   override def serialize(obj: Any): Array[Byte] = {
+    //possibly adjust for other bit string types, but note that we do not want to store the type every time with the bit string
+    //as this would need too much space and would work against efficient lookup
     obj.asInstanceOf[MinimalBitString].toByteArray
   }
 
