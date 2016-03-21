@@ -19,6 +19,9 @@ lazy val grpc = project.
 lazy val client = project.
   settings(commonSettings: _*)
 
+lazy val evaluation = project.
+  settings(commonSettings: _*)
+
 
 //build
 lazy val buildSettings = Seq(

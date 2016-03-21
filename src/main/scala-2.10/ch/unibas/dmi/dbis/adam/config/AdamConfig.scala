@@ -29,8 +29,6 @@ object AdamConfig{
   val catalogPath = config.getString("adampro.catalogPath")
   val indexMetaCatalogPath = catalogPath + "/" + "indexmeta"
 
-  val evaluationPath = config.getString("adampro.evaluationPath")
-
   val jdbcUrl =  config.getString("adampro.jdbc.url")
   val jdbcUser = config.getString("adampro.jdbc.user")
   val jdbcPassword = config.getString("adampro.jdbc.password")
