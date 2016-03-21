@@ -12,7 +12,6 @@ import ch.unibas.dmi.dbis.adam.storage.engine.CatalogOperator
 import org.apache.log4j.Logger
 import org.apache.spark.sql.DataFrame
 
-import scala.collection.immutable.HashSet
 import scala.concurrent.duration.Duration
 
 /**
@@ -230,12 +229,11 @@ object QueryHandler {
     * @param bq
     * @return
     */
-  //TODO: adjust return type?
-  private def getFilter(entityname: EntityName, bq: BooleanQuery): Option[HashSet[TupleID]] = {
+  private def getFilter(entityname: EntityName, bq: BooleanQuery): Option[Set[TupleID]] = {
     val mdRes = BooleanQueryHandler.metadataQuery(entityname, bq)
 
     if (mdRes.isDefined) {
-      Some(HashSet(mdRes.get.map(r => r.getAs[Long](FieldNames.idColumnName)).collect(): _*)) //with metadata
+      Some(mdRes.get.map(r => r.getAs[Long](FieldNames.idColumnName)).collect().toSet) //with metadata
     } else {
       None //no metadata
     }
@@ -250,7 +248,7 @@ object QueryHandler {
     * @return
     */
   private def joinWithMetadata(entityname: EntityName, res: DataFrame): DataFrame = {
-    val mdRes = BooleanQueryHandler.metadataQuery(entityname, HashSet(res.select(FieldNames.idColumnName).collect().map(r => r.getLong(0)) : _*))
+    val mdRes = BooleanQueryHandler.metadataQuery(entityname, res.select(FieldNames.idColumnName).collect().map(r => r.getLong(0)).toSet)
 
     if (mdRes.isDefined){
       mdRes.get.join(res, FieldNames.idColumnName) //with metadata

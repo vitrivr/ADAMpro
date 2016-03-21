@@ -2,7 +2,7 @@ package ch.unibas.dmi.dbis.adam.index
 
 import java.util.concurrent.TimeUnit
 
-import ch.unibas.dmi.dbis.adam.config.{FieldNames, AdamConfig}
+import ch.unibas.dmi.dbis.adam.config.{AdamConfig, FieldNames}
 import ch.unibas.dmi.dbis.adam.datatypes.feature.Feature._
 import ch.unibas.dmi.dbis.adam.datatypes.feature.FeatureVectorWrapper
 import ch.unibas.dmi.dbis.adam.entity.Entity
@@ -22,8 +22,6 @@ import org.apache.log4j.Logger
 import org.apache.spark.rdd.RDD
 import org.apache.spark.sql.DataFrame
 import org.apache.spark.storage.StorageLevel
-
-import scala.collection.immutable.HashSet
 
 /**
   * adamtwo
@@ -69,7 +67,7 @@ trait Index[A <: IndexTuple] {
     * @param queryID optional query id
     * @return a set of candidate tuple ids
     */
-  def scan(q: FeatureVector, options: Map[String, Any], k: Int, filter: Option[HashSet[TupleID]], queryID: Option[String] = None): HashSet[TupleID] = {
+  def scan(q: FeatureVector, options: Map[String, Any], k: Int, filter: Option[Set[TupleID]], queryID: Option[String] = None): Set[TupleID] = {
     log.debug("started scanning index")
     SparkStartup.sc.setLocalProperty("spark.scheduler.pool", "index")
     SparkStartup.sc.setJobGroup(queryID.getOrElse(""), indextype.toString, true)
@@ -93,7 +91,7 @@ trait Index[A <: IndexTuple] {
     * @param k number of elements to retrieve (of the k nearest neighbor search), possibly more than k elements are returned
     * @return a set of candidate tuple ids
     */
-  protected def scan(data: DataFrame, q: FeatureVector, options: Map[String, Any], k: Int): HashSet[TupleID]
+  protected def scan(data: DataFrame, q: FeatureVector, options: Map[String, Any], k: Int): Set[TupleID]
 }
 
 

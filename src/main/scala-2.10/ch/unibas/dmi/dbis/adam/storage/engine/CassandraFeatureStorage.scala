@@ -88,7 +88,7 @@ object CassandraFeatureStorage extends FeatureStorage with Serializable {
     * @param filter
     * @return
     */
-  override def read(entityname: EntityName, filter: Option[scala.collection.Set[TupleID]]): DataFrame = {
+  override def read(entityname: EntityName, filter: Option[Set[TupleID]]): DataFrame = {
     log.debug("cassandra read operation")
 
     val rowRDD = if (filter.isDefined) {

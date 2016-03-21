@@ -39,7 +39,7 @@ trait FeatureStorage {
     * @param filter
     * @return
     */
-  def read(entityname: EntityName, filter: Option[scala.collection.Set[TupleID]] = None): DataFrame
+  def read(entityname: EntityName, filter: Option[Set[TupleID]] = None): DataFrame
 
   /**
     * Count the number of tuples in the feature storage.

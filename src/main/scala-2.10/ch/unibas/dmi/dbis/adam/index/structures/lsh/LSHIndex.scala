@@ -12,8 +12,6 @@ import ch.unibas.dmi.dbis.adam.main.SparkStartup
 import org.apache.spark.TaskContext
 import org.apache.spark.sql.DataFrame
 
-import scala.collection.immutable.HashSet
-
 /**
  * adamtwo
  *
@@ -26,7 +24,7 @@ class LSHIndex(val indexname: IndexName, val entityname: EntityName, protected v
   override val indextype: IndexTypeName = IndexStructures.LSH
   override val confidence = 0.toFloat
 
-  override def scan(data : DataFrame, q : FeatureVector, options : Map[String, Any], k : Int): HashSet[TupleID] = {
+  override def scan(data : DataFrame, q : FeatureVector, options : Map[String, Any], k : Int): Set[TupleID] = {
     log.debug("scanning LSH index " + indexname)
 
     val numOfQueries = options.getOrElse("numOfQ", "3").asInstanceOf[String].toInt
@@ -60,9 +58,9 @@ class LSHIndex(val indexname: IndexName, val entityname: EntityName, protected v
 
     val globalResultHandler = new LSHResultHandler(k)
     globalResultHandler.offerResultElement(results.iterator)
-    val ids = globalResultHandler.results.map(x => x.tid).toList
+    val ids = globalResultHandler.results.map(x => x.tid)
 
-    HashSet(ids : _*)
+    ids.toSet
   }
 }
 

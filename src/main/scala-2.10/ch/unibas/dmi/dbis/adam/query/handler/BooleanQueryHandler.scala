@@ -8,8 +8,6 @@ import ch.unibas.dmi.dbis.adam.query.scanner.MetadataScanner
 import org.apache.log4j.Logger
 import org.apache.spark.sql.DataFrame
 
-import scala.collection.immutable.HashSet
-
 /**
  * adamtwo
  *
@@ -38,7 +36,7 @@ object BooleanQueryHandler {
     * @param filter tuple ids to filter on
     * @return
     */
-  def metadataQuery(entityname: EntityName, filter: HashSet[TupleID]): Option[DataFrame] = {
+  def metadataQuery(entityname: EntityName, filter: Set[TupleID]): Option[DataFrame] = {
     log.debug("retrieving metadata for " + entityname)
     MetadataScanner(Entity.load(entityname), filter)
   }

@@ -9,7 +9,6 @@ import ch.unibas.dmi.dbis.adam.query.query.NearestNeighbourQuery
 import org.apache.log4j.Logger
 import org.apache.spark.sql.{DataFrame, Row}
 
-import scala.collection.immutable.HashSet
 import scala.collection.mutable.ListBuffer
 
 /**
@@ -31,7 +30,7 @@ object FeatureScanner {
     * @param filter if filter is defined, we pre-filter for the features
     * @return
     */
-  def apply(entity: Entity, query: NearestNeighbourQuery, filter: Option[HashSet[TupleID]]): DataFrame = {
+  def apply(entity: Entity, query: NearestNeighbourQuery, filter: Option[Set[TupleID]]): DataFrame = {
     val data = if (filter.isDefined) {
       //scan based on tuples filtered in index
       log.debug("scan features with pre-filter")

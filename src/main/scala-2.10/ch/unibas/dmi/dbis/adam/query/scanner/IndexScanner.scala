@@ -5,8 +5,6 @@ import ch.unibas.dmi.dbis.adam.index.{Index, IndexTuple}
 import ch.unibas.dmi.dbis.adam.query.query.NearestNeighbourQuery
 import org.apache.log4j.Logger
 
-import scala.collection.immutable.HashSet
-
 
 /**
   * adamtwo
@@ -27,7 +25,7 @@ object IndexScanner {
     * @param filter pre-filter to use when scanning the index
     * @return
     */
-  def apply(index: Index[_ <: IndexTuple], query: NearestNeighbourQuery, filter: Option[HashSet[TupleID]]): HashSet[TupleID] = {
+  def apply(index: Index[_ <: IndexTuple], query: NearestNeighbourQuery, filter: Option[Set[TupleID]]): Set[TupleID] = {
     log.debug("scan index")
     index.scan(query.q, query.options, query.k, filter, query.queryID)
   }

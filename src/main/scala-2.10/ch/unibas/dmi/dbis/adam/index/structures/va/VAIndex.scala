@@ -15,8 +15,6 @@ import ch.unibas.dmi.dbis.adam.query.distance.MinkowskiDistance
 import org.apache.spark.TaskContext
 import org.apache.spark.sql.DataFrame
 
-import scala.collection.immutable.HashSet
-
 /**
  * adamtwo
  *
@@ -32,7 +30,7 @@ class VAIndex(val indexname : IndexName, val entityname : EntityName, protected 
   }
   override val confidence = 1.toFloat
 
-  override def scan(data : DataFrame, q : FeatureVector, options : Map[String, Any], k : Int): HashSet[TupleID] = {
+  override def scan(data : DataFrame, q : FeatureVector, options : Map[String, Any], k : Int): Set[TupleID] = {
     log.debug("scanning VA-File index " + indexname)
 
     val distance = metadata.distance
@@ -50,9 +48,9 @@ class VAIndex(val indexname : IndexName, val entityname : EntityName, protected 
 
     val globalResultHandler = new VAResultHandler(k)
     globalResultHandler.offerResultElement(results.iterator)
-    val ids = globalResultHandler.results.map(x => x.tid).toList
+    val ids = globalResultHandler.results.map(x => x.tid)
 
-    HashSet(ids : _*)
+    ids.toSet
   }
 
   /**

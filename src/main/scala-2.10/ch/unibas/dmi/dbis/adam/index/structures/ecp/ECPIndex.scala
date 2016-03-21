@@ -10,7 +10,6 @@ import ch.unibas.dmi.dbis.adam.main.SparkStartup
 import org.apache.spark.TaskContext
 import org.apache.spark.sql.DataFrame
 
-import scala.collection.immutable.HashSet
 import scala.collection.mutable.ListBuffer
 
 /**
@@ -25,7 +24,7 @@ class ECPIndex(val indexname: IndexName, val entityname: EntityName, protected v
   override val indextype: IndexTypeName = IndexStructures.ECP
   override val confidence = 0.toFloat
 
-  override def scan(data : DataFrame, q : FeatureVector, options : Map[String, Any], k : Int): HashSet[TupleID] = {
+  override def scan(data : DataFrame, q : FeatureVector, options : Map[String, Any], k : Int): Set[TupleID] = {
     log.debug("scanning eCP index " + indexname)
 
     val centroids = metadata.leaders.map(l => {
@@ -34,7 +33,7 @@ class ECPIndex(val indexname: IndexName, val entityname: EntityName, protected v
 
     val rdd = data.map(r => r : LongIndexTuple)
 
-    val results = SparkStartup.sc.runJob(rdd, (context : TaskContext, tuplesIt : Iterator[LongIndexTuple]) => {
+    val ids = SparkStartup.sc.runJob(rdd, (context : TaskContext, tuplesIt : Iterator[LongIndexTuple]) => {
       var results = ListBuffer[TupleID]()
       var i = 0
       while(i < centroids.length && results.length < k){
@@ -44,7 +43,7 @@ class ECPIndex(val indexname: IndexName, val entityname: EntityName, protected v
       results.toSeq
     }).flatten
 
-    HashSet(results.toList : _*)
+    ids.toSet
   }
 }
 

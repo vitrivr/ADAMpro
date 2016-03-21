@@ -16,7 +16,6 @@ import ch.unibas.dmi.dbis.adam.storage.engine.CatalogOperator
 import org.apache.log4j.Logger
 import org.apache.spark.sql.{DataFrame, Row}
 
-import scala.collection.immutable.HashSet
 import scala.collection.mutable.{Map => mMap}
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent._
@@ -40,7 +39,7 @@ object NearestNeighbourQueryHandler {
     * @param filter
     * @return
     */
-  def sequential(entityname: EntityName, query: NearestNeighbourQuery, filter: Option[HashSet[TupleID]]): DataFrame = {
+  def sequential(entityname: EntityName, query: NearestNeighbourQuery, filter: Option[Set[TupleID]]): DataFrame = {
     log.debug("performing sequential nearest neighbor scan")
     FeatureScanner(Entity.load(entityname), query, filter)
   }
@@ -54,7 +53,7 @@ object NearestNeighbourQueryHandler {
     * @return depending on whether query.indexOnly is set to true only the index tuples are scanned,
     *         otherwise also the true data is scanned for performing the query
     */
-  def indexQuery(indexname: IndexName, query: NearestNeighbourQuery, filter: Option[HashSet[TupleID]]): DataFrame = {
+  def indexQuery(indexname: IndexName, query: NearestNeighbourQuery, filter: Option[Set[TupleID]]): DataFrame = {
     log.debug("performing index-based nearest neighbor scan")
 
     if (query.indexOnly) {
@@ -75,7 +74,7 @@ object NearestNeighbourQueryHandler {
     * @param filter
     * @return
     */
-  def indexQueryWithResults(indexname: IndexName, query: NearestNeighbourQuery, filter: Option[HashSet[TupleID]]): DataFrame = {
+  def indexQueryWithResults(indexname: IndexName, query: NearestNeighbourQuery, filter: Option[Set[TupleID]]): DataFrame = {
     val entityname = CatalogOperator.getEntitynameFromIndex(indexname)
 
     val future = Future {
@@ -100,7 +99,7 @@ object NearestNeighbourQueryHandler {
     * @param filter
     * @return
     */
-  def indexOnlyQuery(indexname: IndexName, query: NearestNeighbourQuery, filter: Option[HashSet[TupleID]]): DataFrame = {
+  def indexOnlyQuery(indexname: IndexName, query: NearestNeighbourQuery, filter: Option[Set[TupleID]]): DataFrame = {
     log.debug("starting index scanner")
     val result = IndexScanner(Index.load(indexname), query, filter).toSeq
     val rdd = SparkStartup.sc.parallelize(result).map(res => Row(0, res))
@@ -117,7 +116,7 @@ object NearestNeighbourQueryHandler {
     * @param onComplete
     * @return
     */
-  def progressiveQuery(entityname: EntityName, query: NearestNeighbourQuery, filter: Option[HashSet[TupleID]], onComplete: (ProgressiveQueryStatus.Value, DataFrame, Float, Map[String, String]) => Unit): ProgressiveQueryStatusTracker = {
+  def progressiveQuery(entityname: EntityName, query: NearestNeighbourQuery, filter: Option[Set[TupleID]], onComplete: (ProgressiveQueryStatus.Value, DataFrame, Float, Map[String, String]) => Unit): ProgressiveQueryStatusTracker = {
     log.debug("starting progressive query scanner")
 
     val indexnames = Index.list(entityname)
@@ -147,7 +146,7 @@ object NearestNeighbourQueryHandler {
     * @param filter
     * @return
     */
-  def timedProgressiveQuery(entityname: EntityName, query: NearestNeighbourQuery, filter: Option[HashSet[TupleID]], timelimit: Duration): (DataFrame, Float) = {
+  def timedProgressiveQuery(entityname: EntityName, query: NearestNeighbourQuery, filter: Option[Set[TupleID]], timelimit: Duration): (DataFrame, Float) = {
     log.debug("starting timed progressive query scanner")
 
     val indexnames = Index.list(entityname)

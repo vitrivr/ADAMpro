@@ -3,7 +3,7 @@ package ch.unibas.dmi.dbis.adam.entity
 import ch.unibas.dmi.dbis.adam.config.FieldNames
 import ch.unibas.dmi.dbis.adam.entity.Entity._
 import ch.unibas.dmi.dbis.adam.entity.FieldTypes.{FieldType, LONGTYPE}
-import ch.unibas.dmi.dbis.adam.exception.{EntityNotProperlyDefinedException, EntityExistingException, EntityNotExistingException}
+import ch.unibas.dmi.dbis.adam.exception.{EntityExistingException, EntityNotExistingException, EntityNotProperlyDefinedException}
 import ch.unibas.dmi.dbis.adam.index.Index
 import ch.unibas.dmi.dbis.adam.main.SparkStartup
 import ch.unibas.dmi.dbis.adam.storage.components.{FeatureStorage, MetadataStorage}
@@ -12,8 +12,6 @@ import org.apache.log4j.Logger
 import org.apache.spark.rdd.RDD
 import org.apache.spark.sql.types.{LongType, StructField, StructType}
 import org.apache.spark.sql.{DataFrame, Row, SaveMode}
-
-import scala.collection.immutable.HashSet
 
 /**
   * adamtwo
@@ -76,7 +74,7 @@ case class Entity(entityname: EntityName, featureStorage: FeatureStorage, metada
     * @param filter
     * @return
     */
-  def filter(filter: HashSet[Long]): RDD[Tuple] = {
+  def filter(filter: Set[Long]): RDD[Tuple] = {
     featureStorage.read(entityname, Option(filter)).rdd.map(r => r: Tuple)
   }
 

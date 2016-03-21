@@ -12,8 +12,6 @@ import ch.unibas.dmi.dbis.adam.main.SparkStartup
 import org.apache.spark.TaskContext
 import org.apache.spark.sql.DataFrame
 
-import scala.collection.immutable.HashSet
-
 
 /**
  * adamtwo
@@ -27,7 +25,7 @@ class SHIndex(val indexname: IndexName, val entityname: EntityName, protected va
   override val indextype: IndexTypeName = IndexStructures.SH
   override val confidence = 0.toFloat
 
-  override def scan(data : DataFrame, q : FeatureVector, options : Map[String, Any], k : Int): HashSet[TupleID] = {
+  override def scan(data : DataFrame, q : FeatureVector, options : Map[String, Any], k : Int): Set[TupleID] = {
     log.debug("scanning SH index " + indexname)
 
     val numOfQueries = options.getOrElse("numOfQ", "3").asInstanceOf[String].toInt
@@ -61,8 +59,9 @@ class SHIndex(val indexname: IndexName, val entityname: EntityName, protected va
 
     val globalResultHandler = new LSHResultHandler(k)
     globalResultHandler.offerResultElement(results.iterator)
-    val ids = globalResultHandler.results.map(x => x.tid).toList
-    HashSet(ids : _*)
+    val ids = globalResultHandler.results.map(x => x.tid)
+
+    ids.toSet
   }
 }
 

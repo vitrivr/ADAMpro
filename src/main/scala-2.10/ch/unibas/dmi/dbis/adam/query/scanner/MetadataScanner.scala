@@ -8,8 +8,6 @@ import ch.unibas.dmi.dbis.adam.query.query.BooleanQuery
 import org.apache.log4j.Logger
 import org.apache.spark.sql.DataFrame
 
-import scala.collection.immutable.HashSet
-
 /**
   * adamtwo
   *
@@ -60,7 +58,7 @@ object MetadataScanner {
     * @param filter tuple ids to filter on
     * @return
     */
-  def apply(entity: Entity, filter: HashSet[TupleID]): Option[DataFrame] = {
+  def apply(entity: Entity, filter: Set[TupleID]): Option[DataFrame] = {
     if (entity.hasMetadata) {
       val df = entity.getMetadata.get
       Option(df.filter(df(FieldNames.idColumnName) isin (filter.toSeq :_*)))
