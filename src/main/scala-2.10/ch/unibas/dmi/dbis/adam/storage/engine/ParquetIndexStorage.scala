@@ -89,7 +89,7 @@ trait GenericIndexStorage extends IndexStorage {
   */
 class HadoopStorage extends GenericIndexStorage {
   val hadoopConf = new Configuration()
-  //TODO: add authentication
+
   hadoopConf.set("fs.defaultFS", AdamConfig.basePath)
 
   if (!FileSystem.get(new Path("/").toUri, hadoopConf).exists(new Path(AdamConfig.indexPath))) {
