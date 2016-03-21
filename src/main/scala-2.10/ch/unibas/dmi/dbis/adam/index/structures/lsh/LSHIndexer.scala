@@ -36,8 +36,8 @@ class LSHIndexer(hashFamily : String, numHashTables : Int, numHashes : Int, dist
 
     val indexdata = data.map(
       datum => {
-        val hash = LSHUtils.hashFeature(datum.value, indexMetaData)
-        BitStringIndexTuple(datum.tid, hash)
+        val hash = LSHUtils.hashFeature(datum.feature, indexMetaData)
+        BitStringIndexTuple(datum.id, hash)
       })
 
     import SparkStartup.sqlContext.implicits._
@@ -54,7 +54,7 @@ class LSHIndexer(hashFamily : String, numHashTables : Int, numHashes : Int, dist
 
     //data
     val radiuses = {
-        val res = for (a <- trainData; b <- trainData) yield distance(a.value, b.value)
+        val res = for (a <- trainData; b <- trainData) yield distance(a.feature, b.feature)
         if(res.isEmpty){
           Seq().iterator
         }  else {
@@ -64,7 +64,7 @@ class LSHIndexer(hashFamily : String, numHashTables : Int, numHashes : Int, dist
     val radius = radiuses.sum / radiuses.length
 
     //TODO: hashFamily move to apply; use currying?
-    val dims = trainData.head.value.size
+    val dims = trainData.head.feature.size
 
     val hashFamily = () => new EuclideanHashFunction(dims, radius.toFloat, 256)
 

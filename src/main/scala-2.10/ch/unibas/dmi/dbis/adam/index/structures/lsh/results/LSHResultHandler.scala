@@ -26,7 +26,7 @@ class LSHResultHandler(k: Int) extends Serializable {
    */
   def offerIndexTuple(tuple: BitStringIndexTuple, score : Int): Unit = {
     if(score >= min || queue.size < k){
-      ls += ResultElement(score, tuple.tid)
+      ls += ResultElement(score, tuple.id)
       queue.add(score)
       min = queue.peekLast()
     }

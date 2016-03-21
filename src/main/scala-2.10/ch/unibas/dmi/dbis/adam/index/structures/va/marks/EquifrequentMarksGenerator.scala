@@ -28,8 +28,8 @@ private[va] object EquifrequentMarksGenerator extends MarksGenerator with Serial
 
     val sampleSize = samples.length
 
-    val min = getMin(samples.map(_.value))
-    val max = getMax(samples.map(_.value))
+    val min = getMin(samples.map(_.feature))
+    val max = getMax(samples.map(_.feature))
 
     val dimensionality = min.length
 
@@ -38,7 +38,7 @@ private[va] object EquifrequentMarksGenerator extends MarksGenerator with Serial
     samples.foreach { sample =>
       var i = 0
       while (i < dimensionality){
-        result(i).add(sample.value(i))
+        result(i).add(sample.feature(i))
         i += 1
       }
     }

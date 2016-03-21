@@ -29,7 +29,7 @@ class ECPIndex(val indexname: IndexName, val entityname: EntityName, protected v
     log.debug("scanning eCP index " + indexname)
 
     val centroids = metadata.leaders.map(l => {
-      (l.tid, metadata.distance(q, l.value))
+      (l.id, metadata.distance(q, l.feature))
     }).sortBy(_._2).map(_._1)
 
     val rdd = data.map(r => r : LongIndexTuple)
@@ -38,7 +38,7 @@ class ECPIndex(val indexname: IndexName, val entityname: EntityName, protected v
       var results = ListBuffer[TupleID]()
       var i = 0
       while(i < centroids.length && results.length < k){
-        results ++= tuplesIt.filter(_.value == centroids(i)).map(_.tid).toSeq
+        results ++= tuplesIt.filter(_.value == centroids(i)).map(_.id).toSeq
         i += 1
       }
       results.toSeq

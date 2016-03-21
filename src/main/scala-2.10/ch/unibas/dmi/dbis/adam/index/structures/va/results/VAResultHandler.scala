@@ -31,7 +31,7 @@ private[va] class VAResultHandler(k: Int, lbounds: => Bounds = null, ubounds: =>
   def offerIndexTuple(it: Iterator[BitStringIndexTuple]): Unit = {
     while (it.hasNext) {
       val indexTuple = it.next()
-      val res = BoundedResultElement(indexTuple.tid, indexTuple.value)
+      val res = BoundedResultElement(indexTuple.id, indexTuple.value)
       if (res.lbound < max || queue.size < k) {
         ls.+=(res)
         queue.add(res.ubound)
@@ -45,7 +45,7 @@ private[va] class VAResultHandler(k: Int, lbounds: => Bounds = null, ubounds: =>
    *
    * @param indexTuple
    */
-  def offerIndexTuple(indexTuple: BitStringIndexTuple): Unit = offerResultElement(BoundedResultElement(indexTuple.tid, indexTuple.value))
+  def offerIndexTuple(indexTuple: BitStringIndexTuple): Unit = offerResultElement(BoundedResultElement(indexTuple.id, indexTuple.value))
 
 
   /**

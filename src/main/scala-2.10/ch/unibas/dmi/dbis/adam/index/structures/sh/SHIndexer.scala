@@ -44,8 +44,8 @@ class SHIndexer(nbits : Int, trainingSize : Int) extends IndexGenerator with Ser
 
     val indexdata = data.map(
       datum => {
-        val hash = SHUtils.hashFeature(datum.value, indexMetaData)
-        BitStringIndexTuple(datum.tid, hash)
+        val hash = SHUtils.hashFeature(datum.feature, indexMetaData)
+        BitStringIndexTuple(datum.id, hash)
       })
 
     import SparkStartup.sqlContext.implicits._
@@ -60,7 +60,7 @@ class SHIndexer(nbits : Int, trainingSize : Int) extends IndexGenerator with Ser
   private def train(trainData : Array[IndexingTaskTuple]) : SHIndexMetaData = {
     log.debug("SH started training")
 
-    val dTrainData = trainData.map(x => x.value.map(x => x.toDouble).toArray)
+    val dTrainData = trainData.map(x => x.feature.map(x => x.toDouble).toArray)
     val dataMatrix = DenseMatrix(dTrainData.toList : _*)
 
     val nfeatures =  dTrainData.head.length

@@ -2,7 +2,7 @@ package ch.unibas.dmi.dbis.adam.index
 
 import java.util.concurrent.TimeUnit
 
-import ch.unibas.dmi.dbis.adam.config.AdamConfig
+import ch.unibas.dmi.dbis.adam.config.{FieldNames, AdamConfig}
 import ch.unibas.dmi.dbis.adam.datatypes.feature.Feature._
 import ch.unibas.dmi.dbis.adam.datatypes.feature.FeatureVectorWrapper
 import ch.unibas.dmi.dbis.adam.entity.Entity
@@ -76,8 +76,7 @@ trait Index[A <: IndexTuple] {
 
     val data = if (filter.isDefined) {
       //TODO: move filtering down to storage engine
-      //TODO: switch here from "tid" to Fieldnames
-      df.filter(df("tid") isin (filter.get.toSeq : _*))
+      df.filter(df(FieldNames.idColumnName) isin (filter.get.toSeq : _*))
     } else {
       df
     }
@@ -138,7 +137,8 @@ object Index {
     val indexname = createIndexName(entity.entityname, indexgenerator.indextypename)
     val rdd: RDD[IndexingTaskTuple] = entity.getFeaturedata.map { x => IndexingTaskTuple(x.getLong(0), x.getAs[FeatureVectorWrapper](1).vector) }
     val index = indexgenerator.index(indexname, entity.entityname, rdd)
-    storage.write(indexname, index.df)
+    val df = index.df.withColumnRenamed("id", FieldNames.idColumnName).withColumnRenamed("value", FieldNames.featureIndexColumnName)
+    storage.write(indexname, df)
     CatalogOperator.createIndex(indexname, entity.entityname, indexgenerator.indextypename, index.metadata)
     index
   }

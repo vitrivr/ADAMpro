@@ -12,4 +12,4 @@ import ch.unibas.dmi.dbis.adam.entity.Tuple._
   * September 2015
   */
 @SerialVersionUID(100L)
-case class IndexingTaskTuple(tid: TupleID, value: FeatureVector) extends Serializable
+case class IndexingTaskTuple(id: TupleID, feature: FeatureVector) extends Serializable

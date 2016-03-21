@@ -43,10 +43,10 @@ class ECPIndexer(distance : DistanceFunction) extends IndexGenerator with Serial
 
     val indexdata = data.map(datum => {
         val minTID = broadcastLeaders.value.map({ l =>
-          (l.tid, distance.apply(datum.value, l.value))
+          (l.id, distance.apply(datum.feature, l.feature))
         }).minBy(_._2)._1
 
-        LongIndexTuple(datum.tid, minTID)
+        LongIndexTuple(datum.id, minTID)
       })
 
     import SparkStartup.sqlContext.implicits._

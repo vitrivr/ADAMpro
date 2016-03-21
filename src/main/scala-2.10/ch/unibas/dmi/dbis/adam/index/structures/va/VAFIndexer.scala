@@ -37,9 +37,9 @@ class VAFIndexer(maxMarks: Int = 64, marksGenerator: MarksGenerator, bitsPerDime
 
     val indexdata = data.map(
       datum => {
-        val cells = getCells(datum.value, indexMetaData.marks)
+        val cells = getCells(datum.feature, indexMetaData.marks)
         val signature = indexMetaData.signatureGenerator.toSignature(cells)
-        BitStringIndexTuple(datum.tid, signature)
+        BitStringIndexTuple(datum.id, signature)
       })
 
     import SparkStartup.sqlContext.implicits._
@@ -54,7 +54,7 @@ class VAFIndexer(maxMarks: Int = 64, marksGenerator: MarksGenerator, bitsPerDime
   private def train(trainData : Array[IndexingTaskTuple]) : VAIndexMetaData = {
     log.debug("VA-File (fixed) started training")
 
-    val dim = trainData.head.value.length
+    val dim = trainData.head.feature.length
 
     val signatureGenerator =  new FixedSignatureGenerator(dim, bitsPerDimension)
     val marks = marksGenerator.getMarks(trainData, maxMarks)
