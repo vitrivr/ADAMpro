@@ -1,7 +1,7 @@
 package ch.unibas.dmi.dbis.adam.storage.components
 
 import ch.unibas.dmi.dbis.adam.entity.Entity._
-import org.apache.spark.sql.types.DataType
+import ch.unibas.dmi.dbis.adam.entity.FieldDefinition
 import org.apache.spark.sql.{DataFrame, SaveMode}
 
 /**
@@ -11,15 +11,13 @@ import org.apache.spark.sql.{DataFrame, SaveMode}
  * October 2015
  */
 trait MetadataStorage {
-  val idColumnName = "__ADAMTWO_TID"
-
   /**
     * Create entity in metadata storage.
     *
     * @param entityname
     * @param fields
     */
-  def create(entityname : EntityName, fields : Map[String, DataType]) : Boolean
+  def create(entityname : EntityName, fields : Map[String, FieldDefinition]) : Boolean
 
   /**
     * Read data from metadata storage.

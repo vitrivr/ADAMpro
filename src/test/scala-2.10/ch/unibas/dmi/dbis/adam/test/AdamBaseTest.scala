@@ -4,8 +4,7 @@ import java.sql.DriverManager
 
 import ch.unibas.dmi.dbis.adam.config.{AdamConfig, FieldNames}
 import ch.unibas.dmi.dbis.adam.datatypes.feature.{FeatureVectorWrapper, FeatureVectorWrapperUDT}
-import ch.unibas.dmi.dbis.adam.entity.FieldTypes.FieldType
-import ch.unibas.dmi.dbis.adam.entity.{FieldTypes, Entity}
+import ch.unibas.dmi.dbis.adam.entity.{Entity, FieldDefinition, FieldTypes}
 import ch.unibas.dmi.dbis.adam.main.SparkStartup
 import ch.unibas.dmi.dbis.adam.query.distance.{ManhattanDistance, MinkowskiDistance}
 import org.apache.spark.sql.types.{StructField, StructType}
@@ -98,7 +97,7 @@ class AdamBaseTest extends FeatureSpec with GivenWhenThen with Eventually with I
       ("longfield", FieldTypes.LONGTYPE, "bigint"),
       ("booleanfield", FieldTypes.BOOLEANTYPE, "boolean")
     )
-    val fields: Map[String, FieldType] = fieldTemplate.map(ft => (ft._1, ft._2)).toMap
+    val fields = fieldTemplate.map(ft => (ft._1, FieldDefinition(ft._2))).toMap
 
     Entity.create(entityname, Some(fields))
 
@@ -179,7 +178,7 @@ class AdamBaseTest extends FeatureSpec with GivenWhenThen with Eventually with I
       ("longfield", FieldTypes.LONGTYPE, "bigint"),
       ("booleanfield", FieldTypes.BOOLEANTYPE, "boolean")
     )
-    val fields: Map[String, FieldType] = fieldTemplate.map(ft => (ft._1, ft._2)).toMap
+    val fields = fieldTemplate.map(ft => (ft._1, FieldDefinition(ft._2))).toMap
 
     val entity = Entity.create(getRandomName(), Some(fields))
 

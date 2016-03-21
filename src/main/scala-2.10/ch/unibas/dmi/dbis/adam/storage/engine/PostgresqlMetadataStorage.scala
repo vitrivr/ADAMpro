@@ -3,13 +3,14 @@ package ch.unibas.dmi.dbis.adam.storage.engine
 import java.sql.{Connection, DriverManager}
 import java.util.Properties
 
-import ch.unibas.dmi.dbis.adam.config.{AdamConfig, FieldNames}
+import ch.unibas.dmi.dbis.adam.config.AdamConfig
 import ch.unibas.dmi.dbis.adam.entity.Entity.EntityName
+import ch.unibas.dmi.dbis.adam.entity.FieldDefinition
 import ch.unibas.dmi.dbis.adam.main.SparkStartup
 import ch.unibas.dmi.dbis.adam.storage.components.MetadataStorage
 import org.apache.log4j.Logger
 import org.apache.spark.sql.jdbc.AdamDialectRegistrar
-import org.apache.spark.sql.types.{DataType, StructField, StructType}
+import org.apache.spark.sql.types.{StructField, StructType}
 import org.apache.spark.sql.{DataFrame, Row, SaveMode}
 
 /**
@@ -34,29 +35,38 @@ object PostgresqlMetadataStorage extends MetadataStorage {
     DriverManager.getConnection(AdamConfig.jdbcUrl, AdamConfig.jdbcUser, AdamConfig.jdbcPassword)
   }
 
-  override def create(tablename: EntityName, fields: Map[String, DataType]): Boolean = {
+  override def create(tablename: EntityName, fields: Map[String, FieldDefinition]): Boolean = {
     log.debug("postgresql create operation")
     val structFields = fields.map{
-      case (name, fieldtype) => StructField(name, fieldtype)
+      case (name, fieldtype) => StructField(name, fieldtype.fieldtype.datatype)
     }.toSeq
 
     val df = SparkStartup.sqlContext.createDataFrame(SparkStartup.sc.emptyRDD[Row], StructType(structFields))
 
     write(tablename, df, SaveMode.ErrorIfExists)
 
-    //make id field unique
-    val idColumnName = FieldNames.idColumnName
-    val alterAddIdSql = s"""
-                   |ALTER TABLE $tablename
-                   | ADD UNIQUE ($idColumnName)
-                   |""".stripMargin
+    //make fields unique
+    val uniqueStmt = fields.filter{case(name, definition) => definition.unique}.map {
+      case(name, definition) => s"""ALTER TABLE $tablename ADD UNIQUE ($name)""".stripMargin
+    }.mkString("; ")
 
-    openConnection().createStatement().executeUpdate(alterAddIdSql)
+    //add index to table
+    val indexedStmt = fields.filter{case(name, definition) => definition.indexed}.map {
+      case(name, definition) => s"""CREATE INDEX ON $tablename ($name)""".stripMargin
+    }.mkString("; ")
 
-    //crate index over id field
-    val idColumnIndexSql = s"""CREATE INDEX ON $tablename ($idColumnName)""".stripMargin
+    //add primary key
+    val pkfield = fields.filter{case(name, definition) => definition.pk}
+    assert(pkfield.size <= 1)
+    val pkStmt = pkfield.map {
+      case (name, definition) => s"""ALTER TABLE $tablename ADD PRIMARY KEY ($name)""".stripMargin
+    }.mkString("; ")
 
-    openConnection().createStatement().executeUpdate(idColumnIndexSql)
+    val connection = openConnection()
+
+    connection.createStatement().executeUpdate(uniqueStmt)
+    connection.createStatement().executeUpdate(indexedStmt)
+    connection.createStatement().executeUpdate(pkStmt)
 
     true
   }

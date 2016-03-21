@@ -2,7 +2,6 @@ package ch.unibas.dmi.dbis.adam.entity
 
 import ch.unibas.dmi.dbis.adam.config.FieldNames
 import ch.unibas.dmi.dbis.adam.datatypes.feature.{FeatureVectorWrapper, FeatureVectorWrapperUDT}
-import ch.unibas.dmi.dbis.adam.entity.FieldTypes.FieldType
 import ch.unibas.dmi.dbis.adam.main.SparkStartup
 import ch.unibas.dmi.dbis.adam.test.AdamBaseTest
 import org.apache.spark.sql.types._
@@ -78,7 +77,7 @@ class EntityTestSuite extends AdamBaseTest {
 
       When("a new random entity with metadata is created")
       val entityname = getRandomName()
-      val fields: Map[String, FieldType] = fieldTemplate.map(ft => (ft._1, ft._2)).toMap
+      val fields: Map[String, FieldDefinition] = fieldTemplate.map(ft => (ft._1, FieldDefinition(ft._2))).toMap
       Entity.create(entityname, Some(fields))
 
       Then("the entity, and only the entity should exist")
@@ -102,8 +101,13 @@ class EntityTestSuite extends AdamBaseTest {
 
       val keys = dbNames.keySet
 
-      And("The metadata table should contain the same columns (with the corresponding data type)")
+      And("the metadata table should contain the same columns (with the corresponding data type)")
       assert(keys.forall({ key => dbNames(key) == templateNames(key) }))
+
+      And("the index on the id field is created")
+      val indexesResult = getJDBCConnection.createStatement().executeQuery("SELECT t.relname AS table, i.relname AS index, a.attname AS column FROM pg_class t, pg_class i, pg_index ix, pg_attribute a WHERE t.oid = ix.indrelid AND i.oid = ix.indexrelid AND a.attrelid = t.oid AND a.attnum = ANY(ix.indkey) AND t.relkind = 'r' AND t.relname = '" + entityname + "' AND a.attname = '" + FieldNames.idColumnName + "'")
+      indexesResult.next()
+      assert(indexesResult.getString(3) == FieldNames.idColumnName)
 
       //clean up
       Entity.drop(entityname)
@@ -115,7 +119,7 @@ class EntityTestSuite extends AdamBaseTest {
     scenario("drop an entity with metadata") {
       Given("an entity with metadata")
       val entityname = getRandomName()
-      val fields: Map[String, FieldType] = Map[String, FieldType](("stringfield" -> FieldTypes.STRINGTYPE))
+      val fields = Map[String, FieldDefinition](("stringfield" -> FieldDefinition(FieldTypes.STRINGTYPE)))
       Entity.create(entityname, Option(fields))
 
       val preResult = getJDBCConnection.createStatement().executeQuery("SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = '" + entityname + "'")
@@ -134,6 +138,41 @@ class EntityTestSuite extends AdamBaseTest {
       }
 
       assert(tableCount == 1)
+    }
+
+
+    /**
+      *
+      */
+    scenario("create an entity with very specified metadata (indexed, unique, primary key)") {
+      Given("an entity with metadata")
+      val entityname = getRandomName()
+      val fields = Map[String, FieldDefinition](
+        ("pkfield" -> FieldDefinition(FieldTypes.INTTYPE, true)),
+        ("uniquefield" -> FieldDefinition(FieldTypes.INTTYPE, false, true)),
+        ("indexedfield" -> FieldDefinition(FieldTypes.INTTYPE, false, false, true))
+      )
+
+      When("the entity is created")
+      Entity.create(entityname, Option(fields))
+
+      Then("the PK should be correctly")
+      val pkResult = getJDBCConnection.createStatement().executeQuery(
+        "SELECT a.attname FROM pg_index i JOIN   pg_attribute a ON a.attrelid = i.indrelid AND a.attnum = ANY(i.indkey) WHERE  i.indrelid = '" + entityname + "'::regclass AND i.indisprimary;")
+      pkResult.next()
+      assert(pkResult.getString(1) == "pkfield")
+
+      And("the unique and indexed fields should be set correctly")
+      val indexesResult = getJDBCConnection.createStatement().executeQuery("SELECT t.relname AS table, i.relname AS index, a.attname AS column FROM pg_class t, pg_class i, pg_index ix, pg_attribute a WHERE t.oid = ix.indrelid AND i.oid = ix.indexrelid AND a.attrelid = t.oid AND a.attnum = ANY(ix.indkey) AND t.relkind = 'r' AND t.relname = '" + entityname + "'")
+      val indexesLb = ListBuffer.empty[String]
+      while(indexesResult.next()){
+        indexesLb += indexesResult.getString("column")
+      }
+      val indexes = indexesLb.toList
+      assert(indexes.contains("uniquefield"))
+      assert(indexes.contains("indexedfield"))
+
+      Entity.drop(entityname)
     }
   }
 
@@ -193,7 +232,7 @@ class EntityTestSuite extends AdamBaseTest {
         ("booleanfield", FieldTypes.BOOLEANTYPE, "boolean"),
         ("booleanfieldunfilled", FieldTypes.BOOLEANTYPE, "boolean")
       )
-      val fields: Map[String, FieldType] = fieldTemplate.map(ft => (ft._1, ft._2)).toMap
+      val fields = fieldTemplate.map(ft => (ft._1, FieldDefinition(ft._2))).toMap
       Entity.create(entityname, Option(fields))
 
       val ntuples = Random.nextInt(1000)
@@ -252,11 +291,6 @@ class EntityTestSuite extends AdamBaseTest {
       assert(randomRowResult.getInt("intfieldunfilled") == 0)
       assert(randomRowResult.getLong("longfieldunfilled") == 0)
       assert(randomRowResult.getBoolean("booleanfieldunfilled") == false)
-
-      //index on adamtwo-id is created
-      val indexesResult = getJDBCConnection.createStatement().executeQuery( "SELECT DISTINCT t.relname, a.attname FROM pg_class t, pg_attribute a WHERE a.attrelid = t.oid and a.attname = '" + FieldNames.idColumnName + "' and t.relname = '" + entityname +"' and t.reltype > 0")
-      indexesResult.next()
-      assert(indexesResult.getString(2) == FieldNames.idColumnName)
 
       //clean up
       Entity.drop(entityname)

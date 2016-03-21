@@ -3,7 +3,7 @@ package ch.unibas.dmi.dbis.adam.entity
 import ch.unibas.dmi.dbis.adam.config.FieldNames
 import ch.unibas.dmi.dbis.adam.entity.Entity._
 import ch.unibas.dmi.dbis.adam.entity.FieldTypes.{FieldType, LONGTYPE}
-import ch.unibas.dmi.dbis.adam.exception.{EntityExistingException, EntityNotExistingException}
+import ch.unibas.dmi.dbis.adam.exception.{EntityNotProperlyDefinedException, EntityExistingException, EntityNotExistingException}
 import ch.unibas.dmi.dbis.adam.index.Index
 import ch.unibas.dmi.dbis.adam.main.SparkStartup
 import ch.unibas.dmi.dbis.adam.storage.components.{FeatureStorage, MetadataStorage}
@@ -109,6 +109,16 @@ case class Entity(entityname: EntityName, featureStorage: FeatureStorage, metada
   def getMetadata: Option[DataFrame] = metaData
 }
 
+/**
+  * Field definition for creating new entity.
+  * @param fieldtype
+  * @param pk
+  * @param unique
+  * @param indexed
+  */
+case class FieldDefinition(fieldtype : FieldType, pk : Boolean = false, unique : Boolean = false, indexed : Boolean = false)
+
+
 object Entity {
   val log = Logger.getLogger(getClass.getName)
 
@@ -127,7 +137,7 @@ object Entity {
     *               as key = name, value = SQL type
     * @return
     */
-  def create(entityname: EntityName, fields: Option[Map[String, FieldType]] = None): Entity = {
+  def create(entityname: EntityName, fields: Option[Map[String, FieldDefinition]] = None): Entity = {
     if (exists(entityname)) {
       throw new EntityExistingException()
     }
@@ -135,9 +145,18 @@ object Entity {
     featureStorage.create(entityname)
 
     if (fields.isDefined) {
-      //TODO: add optional information, e.g. PK to creation of metadata
-      val fieldsWithPK = fields.get + (FieldNames.idColumnName -> LONGTYPE)
-      metadataStorage.create(entityname, fieldsWithPK.mapValues(_.datatype))
+      if(fields.get.contains(FieldNames.idColumnName)){
+        log.error("entity defined with field " + FieldNames.idColumnName + ", but name is reserved")
+        throw EntityNotProperlyDefinedException()
+      }
+
+      if(fields.get.count{case(name, definition) => definition.pk} > 1){
+        log.error("entity defined with more than one primary key")
+        throw EntityNotProperlyDefinedException()
+      }
+
+      val fieldsWithId = fields.get + (FieldNames.idColumnName -> FieldDefinition(LONGTYPE, false, true, true))
+      metadataStorage.create(entityname, fieldsWithId)
       CatalogOperator.createEntity(entityname, true)
       Entity(entityname, featureStorage, Option(metadataStorage))
     } else {

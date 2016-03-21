@@ -2,7 +2,7 @@ package ch.unibas.dmi.dbis.adam.rpc
 
 import ch.unibas.dmi.dbis.adam.api._
 import ch.unibas.dmi.dbis.adam.config.FieldNames
-import ch.unibas.dmi.dbis.adam.entity.FieldTypes
+import ch.unibas.dmi.dbis.adam.entity.{FieldDefinition, FieldTypes}
 import ch.unibas.dmi.dbis.adam.entity.FieldTypes.FieldType
 import ch.unibas.dmi.dbis.adam.exception.GeneralAdamException
 import ch.unibas.dmi.dbis.adam.http.grpc.adam._
@@ -26,7 +26,9 @@ class DataDefinitionRPC extends AdamDefinitionGrpc.AdamDefinition {
 
     try {
       if(!request.fields.isEmpty){
-        CreateEntityOp(request.entity, Option(request.fields.mapValues(matchFields(_))))
+        val entityname = request.entity
+        val fields = request.fields.mapValues(field => FieldDefinition(matchFields(field)))
+        CreateEntityOp(entityname, Option(fields))
       } else {
         if(request.fields.contains(FieldNames.idColumnName)
           || request.fields.contains(FieldNames.internFeatureColumnName)
