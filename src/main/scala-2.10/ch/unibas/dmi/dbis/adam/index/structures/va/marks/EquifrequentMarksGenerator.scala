@@ -13,7 +13,7 @@ import scala.collection.mutable.ListBuffer
  * 
  */
 private[va] object EquifrequentMarksGenerator extends MarksGenerator with Serializable {
-  val log = Logger.getLogger(getClass.getName)
+  @transient lazy val log = Logger.getLogger(getClass.getName)
 
   val distanceSamples = 500
 

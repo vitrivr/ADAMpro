@@ -32,7 +32,7 @@ import scala.collection.immutable.HashSet
   * August 2015
   */
 trait Index[A <: IndexTuple] {
-  val log = Logger.getLogger(getClass.getName)
+  @transient lazy val log = Logger.getLogger(getClass.getName)
 
   val indexname: IndexName
   val indextype: IndexTypeName

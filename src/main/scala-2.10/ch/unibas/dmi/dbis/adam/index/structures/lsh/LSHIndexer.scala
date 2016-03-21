@@ -14,7 +14,7 @@ import org.apache.spark.util.random.ADAMSamplingUtils
 
 
 class LSHIndexer(hashFamily : String, numHashTables : Int, numHashes : Int, distance : DistanceFunction, trainingSize : Int) extends IndexGenerator with Serializable {
-  val log = Logger.getLogger(getClass.getName)
+  @transient lazy val log = Logger.getLogger(getClass.getName)
 
   override val indextypename: IndexTypeName = IndexStructures.LSH
 

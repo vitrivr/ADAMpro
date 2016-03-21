@@ -1,7 +1,6 @@
 package ch.unibas.dmi.dbis.adam.datatypes.bitString
 
 import ch.unibas.dmi.dbis.adam.util.BitSet
-import org.apache.log4j.Logger
 
 /**
   * adamtwo
@@ -12,8 +11,6 @@ import org.apache.log4j.Logger
   * September 2015
   */
 class MinimalBitString(private val values: BitSet) extends BitString[MinimalBitString] with Serializable {
-  val log = Logger.getLogger(getClass.getName)
-
   override def intersectionCount(other: MinimalBitString): Int = values.intersectCount(other.values)
 
   override def getBitIndexes: Seq[Int] = values.getAll

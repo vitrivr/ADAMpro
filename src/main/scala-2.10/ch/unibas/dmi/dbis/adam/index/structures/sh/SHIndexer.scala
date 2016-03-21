@@ -23,7 +23,7 @@ import org.apache.spark.util.random.ADAMSamplingUtils
  * August 2015
  */
 class SHIndexer(nbits : Int, trainingSize : Int) extends IndexGenerator with Serializable {
-  val log = Logger.getLogger(getClass.getName)
+  @transient lazy val log = Logger.getLogger(getClass.getName)
 
   override val indextypename: IndexTypeName = IndexStructures.SH
 

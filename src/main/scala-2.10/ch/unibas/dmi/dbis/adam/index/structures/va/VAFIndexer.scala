@@ -19,7 +19,7 @@ import org.apache.spark.util.random.ADAMSamplingUtils
  *
  */
 class VAFIndexer(maxMarks: Int = 64, marksGenerator: MarksGenerator, bitsPerDimension : Int, trainingSize : Int, distance : MinkowskiDistance) extends IndexGenerator with Serializable {
-  val log = Logger.getLogger(getClass.getName)
+  @transient lazy val log = Logger.getLogger(getClass.getName)
 
   override val indextypename: IndexTypeName = IndexStructures.VAF
 

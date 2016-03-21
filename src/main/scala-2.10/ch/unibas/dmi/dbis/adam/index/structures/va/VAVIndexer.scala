@@ -22,7 +22,7 @@ import org.apache.spark.util.random.ADAMSamplingUtils
  * September 2015
  */
 class VAVIndexer (nbits : Int, marksGenerator: MarksGenerator, trainingSize : Int, distance : MinkowskiDistance) extends IndexGenerator with Serializable {
-  val log = Logger.getLogger(getClass.getName)
+  @transient lazy val log = Logger.getLogger(getClass.getName)
 
   override val indextypename: IndexTypeName = IndexStructures.VAV
 

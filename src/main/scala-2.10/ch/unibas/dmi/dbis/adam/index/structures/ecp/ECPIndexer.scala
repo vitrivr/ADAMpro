@@ -18,7 +18,7 @@ import org.apache.spark.util.random.ADAMSamplingUtils
  * October 2015
  */
 class ECPIndexer(distance : DistanceFunction) extends IndexGenerator with Serializable {
-  val log = Logger.getLogger(getClass.getName)
+  @transient lazy val log = Logger.getLogger(getClass.getName)
 
   override val indextypename: IndexTypeName = IndexStructures.ECP
 

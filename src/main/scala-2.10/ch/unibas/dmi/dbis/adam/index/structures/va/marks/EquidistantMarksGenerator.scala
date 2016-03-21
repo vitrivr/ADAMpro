@@ -13,7 +13,7 @@ import org.apache.log4j.Logger
  * August 2015
  */
 private[va] object EquidistantMarksGenerator extends MarksGenerator with Serializable {
-  val log = Logger.getLogger(getClass.getName)
+  @transient lazy val log = Logger.getLogger(getClass.getName)
 
   /**
    *
