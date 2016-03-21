@@ -21,7 +21,6 @@ import scala.collection.immutable.HashSet
   * Ivan Giangreco
   * October 2015
   */
-//TODO: consider what to do if metadata is not filled, i.e. certain operations should not be done on the stack
 case class Entity(entityname: EntityName, featureStorage: FeatureStorage, metadataStorage: Option[MetadataStorage]) {
   val log = Logger.getLogger(getClass.getName)
 
@@ -81,16 +80,32 @@ case class Entity(entityname: EntityName, featureStorage: FeatureStorage, metada
     featureStorage.read(entityname, Option(filter)).rdd.map(r => r: Tuple)
   }
 
+  /**
+    *
+    * @return
+    */
   def rdd = if (metaData.isDefined) {
     featureData.join(metaData.get).rdd
   } else {
     featureData.rdd
   }
 
+  /**
+    *
+    * @return
+    */
   def getFeaturedata: DataFrame = featureData
 
+  /**
+    *
+    * @return
+    */
   def hasMetadata: Boolean = metadataStorage.isDefined
 
+  /**
+    *
+    * @return
+    */
   def getMetadata: Option[DataFrame] = metaData
 }
 
