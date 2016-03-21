@@ -96,7 +96,7 @@ class EntityTestSuite extends AdamBaseTest {
       }
 
       val dbNames = lb.toList.toMap
-      val templateNames = fieldTemplate.map(ft => (ft._1, ft._3)).toMap + (FieldNames.idColumnName -> "integer")
+      val templateNames = fieldTemplate.map(ft => (ft._1, ft._3)).toMap + (FieldNames.idColumnName -> "bigint")
 
       assert(dbNames.size == templateNames.size)
 
