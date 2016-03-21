@@ -3,7 +3,6 @@ package ch.unibas.dmi.dbis.adam.query.scanner
 import ch.unibas.dmi.dbis.adam.config.FieldNames
 import ch.unibas.dmi.dbis.adam.entity.Entity
 import ch.unibas.dmi.dbis.adam.entity.Tuple._
-import ch.unibas.dmi.dbis.adam.exception.NoMetadataAvailableException
 import ch.unibas.dmi.dbis.adam.main.SparkStartup
 import ch.unibas.dmi.dbis.adam.query.query.BooleanQuery
 import org.apache.log4j.Logger
@@ -49,7 +48,8 @@ object MetadataScanner {
       log.debug("query metadata using where clause: " + where)
       Option(df.filter(where).select(FieldNames.idColumnName))
     } else {
-      throw NoMetadataAvailableException()
+      log.warn("asked for metadata, but entity " + entity + " has no metadata available")
+      None
     }
   }
 
@@ -65,7 +65,8 @@ object MetadataScanner {
       val df = entity.getMetadata.get
       Option(df.filter(df(FieldNames.idColumnName) isin (filter.toSeq :_*)))
     } else {
-      throw NoMetadataAvailableException()
+      log.warn("asked for metadata, but entity " + entity + " has no metadata available")
+      None
     }
   }
 }
