@@ -135,7 +135,7 @@ class AdamBaseTest extends FeatureSpec with GivenWhenThen with Eventually with I
 
   case class EvaluationSet(entity: Entity, fullData: DataFrame,
                            feature: FeatureVectorWrapper, distance: MinkowskiDistance,  k: Int,
-                           where: Map[String, String],
+                           where: Seq[(String, String)],
                            nnResults: Seq[(Double, Long)], nnbqResults : Seq[(Double, Long)])
 
   /**
@@ -205,7 +205,7 @@ class AdamBaseTest extends FeatureSpec with GivenWhenThen with Eventually with I
     val where = readResourceFile("groundtruth/bquery.tsv").map(line => {
       val splitted = line.split("\t")
       splitted(0) -> splitted(1)
-    }).toMap
+    })
 
 
     //100 nn results

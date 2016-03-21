@@ -19,7 +19,7 @@ abstract class Query(queryID: Option[String] = Some(java.util.UUID.randomUUID().
   * @param queryID
   */
 case class BooleanQuery(
-                         where: Map[String, String], //TODO: possibly switch map to seq
+                         where: Seq[(String, String)],
                          join: Option[Seq[(String, Seq[String])]] = None,
                          queryID: Option[String] = Some(java.util.UUID.randomUUID().toString))
   extends Query(queryID) {

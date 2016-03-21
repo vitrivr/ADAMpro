@@ -81,8 +81,13 @@ message NearestNeighbourQueryMessage {
 }
 
 message BooleanQueryMessage {
-  map<string, string> where = 1;
+  repeated WhereMessage where = 1;
   repeated JoinMessage joins = 2;
+
+  message WhereMessage {
+    string field = 1;
+    string value = 2;
+  }
 
   message JoinMessage {
     string table = 1;

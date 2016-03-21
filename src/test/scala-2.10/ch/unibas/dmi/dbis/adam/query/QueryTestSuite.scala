@@ -237,7 +237,7 @@ class QueryTestSuite extends AdamBaseTest {
         case (distance, tid) =>
           (tid * 100).toString
       }.mkString("(", ", ", ")")
-      val whereStmt = Seq("tid100" -> inStmt).toMap
+      val whereStmt = Seq("tid100" -> inStmt)
 
       val bq = BooleanQuery(whereStmt, Some(Seq((metadataname, Seq("tid")))))
       val results = QueryHandler.sequentialQuery(es.entity.entityname)(nnq, Option(bq), true)
