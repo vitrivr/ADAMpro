@@ -73,7 +73,6 @@ trait Index[A <: IndexTuple] {
     SparkStartup.sc.setJobGroup(queryID.getOrElse(""), indextype.toString, true)
 
     val data = if (filter.isDefined) {
-      //TODO: move filtering down to storage engine
       df.filter(df(FieldNames.idColumnName) isin (filter.get.toSeq : _*))
     } else {
       df
