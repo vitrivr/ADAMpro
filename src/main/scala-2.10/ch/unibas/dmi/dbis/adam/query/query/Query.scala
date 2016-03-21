@@ -23,7 +23,32 @@ case class BooleanQuery(
                          join: Option[Seq[(String, Seq[String])]] = None,
                          queryID: Option[String] = Some(java.util.UUID.randomUUID().toString))
   extends Query(queryID) {
-  def getWhereClause(): String = where.map(c => c._1 + " = " + c._2).mkString(" AND ")
+
+
+  /**
+    * List of SQL operators to keep in query (otherwise a '=' is added)
+    */
+  val sqlOperators = Seq("!=", "IN")
+
+
+  /**
+    * Builds a where clause.
+    *
+    * @return
+    */
+  def getWhereClause(): String = {
+    val regex = s"""^(${sqlOperators.mkString("|")}){0,1}(.*)""".r
+
+    where.map { case (field, value) =>
+      val regex(prefix,suffix) = value
+
+      //if a sqlOperator was found then keep the SQL operator, otherwise add a '='
+      (prefix, suffix) match {
+        case(null, s) => field + " =" + " " + value
+        case _ => field + " " + value
+      }
+    }.mkString("(", ") AND (", ")")
+  }
 }
 
 

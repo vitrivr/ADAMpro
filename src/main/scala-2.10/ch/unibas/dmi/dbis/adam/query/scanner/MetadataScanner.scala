@@ -33,7 +33,7 @@ object MetadataScanner {
       if (query.join.isDefined) {
         val joins = query.join.get
 
-        for (i <- (0 to joins.length)) {
+        for (i <- (0 until joins.length)) {
           val join = joins(i)
           val newDF = SparkStartup.metadataStorage.read(join._1)
           df = df.join(newDF, join._2)
