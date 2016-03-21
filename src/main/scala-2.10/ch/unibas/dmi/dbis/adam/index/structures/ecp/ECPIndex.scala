@@ -7,7 +7,6 @@ import ch.unibas.dmi.dbis.adam.index.Index.{IndexName, IndexTypeName}
 import ch.unibas.dmi.dbis.adam.index._
 import ch.unibas.dmi.dbis.adam.index.structures.IndexStructures
 import ch.unibas.dmi.dbis.adam.main.SparkStartup
-import org.apache.log4j.Logger
 import org.apache.spark.TaskContext
 import org.apache.spark.sql.DataFrame
 
@@ -22,7 +21,6 @@ import scala.collection.mutable.ListBuffer
  */
 class ECPIndex(val indexname: IndexName, val entityname: EntityName, protected val df: DataFrame, private[index] val metadata : ECPIndexMetaData)
   extends Index[LongIndexTuple] {
-  val log = Logger.getLogger(getClass.getName)
 
   override val indextype: IndexTypeName = IndexStructures.ECP
   override val confidence = 0.toFloat

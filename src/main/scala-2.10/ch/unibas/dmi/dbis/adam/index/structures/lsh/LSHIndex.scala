@@ -9,7 +9,6 @@ import ch.unibas.dmi.dbis.adam.index.structures.IndexStructures
 import ch.unibas.dmi.dbis.adam.index.structures.lsh.results.LSHResultHandler
 import ch.unibas.dmi.dbis.adam.index.{BitStringIndexTuple, Index}
 import ch.unibas.dmi.dbis.adam.main.SparkStartup
-import org.apache.log4j.Logger
 import org.apache.spark.TaskContext
 import org.apache.spark.sql.DataFrame
 
@@ -23,7 +22,6 @@ import scala.collection.immutable.HashSet
  */
 class LSHIndex(val indexname: IndexName, val entityname: EntityName, protected val df: DataFrame, private[index] val metadata: LSHIndexMetaData)
   extends Index[BitStringIndexTuple] {
-  val log = Logger.getLogger(getClass.getName)
 
   override val indextype: IndexTypeName = IndexStructures.LSH
   override val confidence = 0.toFloat

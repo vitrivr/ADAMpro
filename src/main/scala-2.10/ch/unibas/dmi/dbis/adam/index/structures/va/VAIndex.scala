@@ -12,7 +12,6 @@ import ch.unibas.dmi.dbis.adam.index.{BitStringIndexTuple, Index}
 import ch.unibas.dmi.dbis.adam.main.SparkStartup
 import ch.unibas.dmi.dbis.adam.query.distance.Distance._
 import ch.unibas.dmi.dbis.adam.query.distance.MinkowskiDistance
-import org.apache.log4j.Logger
 import org.apache.spark.TaskContext
 import org.apache.spark.sql.DataFrame
 
@@ -26,7 +25,6 @@ import scala.collection.immutable.HashSet
  */
 class VAIndex(val indexname : IndexName, val entityname : EntityName, protected val df: DataFrame, private[index] val metadata: VAIndexMetaData)
   extends Index[BitStringIndexTuple] with Serializable {
-  val log = Logger.getLogger(getClass.getName)
 
   override val indextype: IndexTypeName = metadata.signatureGenerator match {
     case fsg : FixedSignatureGenerator =>   IndexStructures.VAF
