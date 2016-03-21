@@ -9,6 +9,7 @@ import ch.unibas.dmi.dbis.adam.index.structures.IndexStructures
 import ch.unibas.dmi.dbis.adam.index.structures.lsh.results.LSHResultHandler
 import ch.unibas.dmi.dbis.adam.index.{BitStringIndexTuple, Index}
 import ch.unibas.dmi.dbis.adam.main.SparkStartup
+import org.apache.log4j.Logger
 import org.apache.spark.TaskContext
 import org.apache.spark.sql.DataFrame
 
@@ -23,11 +24,14 @@ import scala.collection.immutable.HashSet
  */
 class SHIndex(val indexname: IndexName, val entityname: EntityName, protected val df : DataFrame, private[index] val metadata: SHIndexMetaData)
   extends Index[BitStringIndexTuple] {
+  val log = Logger.getLogger(getClass.getName)
 
   override val indextype: IndexTypeName = IndexStructures.SH
   override val confidence = 0.toFloat
 
   override def scan(data : DataFrame, q : FeatureVector, options : Map[String, Any], k : Int): HashSet[TupleID] = {
+    log.debug("scanning SH index " + indexname)
+
     val numOfQueries = options.getOrElse("numOfQ", "3").asInstanceOf[String].toInt
 
     import MovableFeature.conv_feature2MovableFeature
@@ -54,6 +58,8 @@ class SHIndex(val indexname: IndexName, val entityname: EntityName, protected va
 
       localRh.results.toSeq
     }).flatten
+
+    log.debug("SH index sub-results sent to global result handler")
 
     val globalResultHandler = new LSHResultHandler(k)
     globalResultHandler.offerResultElement(results.iterator)

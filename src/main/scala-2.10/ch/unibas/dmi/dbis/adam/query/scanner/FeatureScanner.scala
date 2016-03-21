@@ -6,6 +6,7 @@ import ch.unibas.dmi.dbis.adam.entity.{Entity, Tuple}
 import ch.unibas.dmi.dbis.adam.main.SparkStartup
 import ch.unibas.dmi.dbis.adam.query.Result
 import ch.unibas.dmi.dbis.adam.query.query.NearestNeighbourQuery
+import org.apache.log4j.Logger
 import org.apache.spark.sql.{DataFrame, Row}
 
 import scala.collection.immutable.HashSet
@@ -20,6 +21,8 @@ import scala.collection.mutable.ListBuffer
   * August 2015
   */
 object FeatureScanner {
+  val log = Logger.getLogger(getClass.getName)
+
   /**
     * Scans the feature data based on a nearest neighbour query.
     *
@@ -31,11 +34,13 @@ object FeatureScanner {
   def apply(entity: Entity, query: NearestNeighbourQuery, filter: Option[HashSet[TupleID]]): DataFrame = {
     val data = if (filter.isDefined) {
       //scan based on tuples filtered in index
+      log.debug("scan features with pre-filter")
       SparkStartup.sc.setLocalProperty("spark.scheduler.pool", "feature")
       SparkStartup.sc.setJobGroup(query.queryID.getOrElse(""), entity.entityname, true)
       entity.filter(filter.get).collect()
     } else {
       //sequential scan
+      log.debug("scan features without pre-filter")
       SparkStartup.sc.setLocalProperty("spark.scheduler.pool", "slow")
       SparkStartup.sc.setJobGroup(query.queryID.getOrElse(""), entity.entityname, true)
       entity.getFeaturedata.map(row => (row: Tuple)).collect()

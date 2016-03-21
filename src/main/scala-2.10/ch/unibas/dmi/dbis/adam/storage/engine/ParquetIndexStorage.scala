@@ -3,13 +3,14 @@ package ch.unibas.dmi.dbis.adam.storage.engine
 import java.io.File
 import java.lang
 
-import ch.unibas.dmi.dbis.adam.config.{FieldNames, AdamConfig}
+import ch.unibas.dmi.dbis.adam.config.{AdamConfig, FieldNames}
 import ch.unibas.dmi.dbis.adam.entity.Tuple._
 import ch.unibas.dmi.dbis.adam.index.Index.IndexName
 import ch.unibas.dmi.dbis.adam.main.SparkStartup
 import ch.unibas.dmi.dbis.adam.storage.components.IndexStorage
 import org.apache.hadoop.conf.Configuration
 import org.apache.hadoop.fs.{FileSystem, Path}
+import org.apache.log4j.Logger
 import org.apache.parquet.column.ColumnReader
 import org.apache.parquet.filter.ColumnPredicates.LongPredicateFunction
 import org.apache.parquet.filter.{ColumnPredicates, ColumnRecordFilter, RecordFilter, UnboundRecordFilter}
@@ -25,15 +26,28 @@ import scala.collection.Set
   * August 2015
   */
 object ParquetIndexStorage extends IndexStorage {
+  val log = Logger.getLogger(getClass.getName)
+
   val storage = if (AdamConfig.isBaseOnHadoop) {
+    log.debug("storing index on Hadoop")
     new HadoopStorage()
   } else {
+    log.debug("storing index locally")
     new LocalStorage()
   }
 
-  override def read(indexName: IndexName, filter: Option[collection.Set[TupleID]]): DataFrame = storage.read(indexName, filter)
-  override def drop(indexName: IndexName): Boolean = storage.drop(indexName)
-  override def write(indexName: IndexName, index: DataFrame): Boolean = storage.write(indexName, index)
+  override def read(indexName: IndexName, filter: Option[collection.Set[TupleID]]): DataFrame = {
+    log.debug("reading index from harddisk")
+    storage.read(indexName, filter)
+  }
+  override def drop(indexName: IndexName): Boolean = {
+    log.debug("dropping index from harddisk")
+    storage.drop(indexName)
+  }
+  override def write(indexName: IndexName, index: DataFrame): Boolean = {
+    log.debug("writing index to harddisk")
+    storage.write(indexName, index)
+  }
 }
 
 

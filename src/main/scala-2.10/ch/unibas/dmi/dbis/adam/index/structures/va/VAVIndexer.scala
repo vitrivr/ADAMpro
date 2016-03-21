@@ -11,6 +11,7 @@ import ch.unibas.dmi.dbis.adam.index.structures.va.signature.VariableSignatureGe
 import ch.unibas.dmi.dbis.adam.index.{BitStringIndexTuple, IndexGenerator, IndexingTaskTuple}
 import ch.unibas.dmi.dbis.adam.main.SparkStartup
 import ch.unibas.dmi.dbis.adam.query.distance.MinkowskiDistance
+import org.apache.log4j.Logger
 import org.apache.spark.rdd.RDD
 import org.apache.spark.util.random.ADAMSamplingUtils
 
@@ -21,6 +22,8 @@ import org.apache.spark.util.random.ADAMSamplingUtils
  * September 2015
  */
 class VAVIndexer (nbits : Int, marksGenerator: MarksGenerator, trainingSize : Int, distance : MinkowskiDistance) extends IndexGenerator with Serializable {
+  val log = Logger.getLogger(getClass.getName)
+
   override val indextypename: IndexTypeName = IndexStructures.VAV
 
   /**
@@ -32,6 +35,8 @@ class VAVIndexer (nbits : Int, marksGenerator: MarksGenerator, trainingSize : In
     val trainData = data.sample(false, fraction)
 
     val indexMetaData = train(trainData.collect())
+
+    log.debug("VA-File (variable) indexing...")
 
     val indexdata = data.map(
       datum => {
@@ -50,6 +55,8 @@ class VAVIndexer (nbits : Int, marksGenerator: MarksGenerator, trainingSize : In
    * @return
    */
   private def train(trainData : Array[IndexingTaskTuple]) : VAIndexMetaData = {
+    log.debug("VA-File (variable) started training")
+
     //data
     val dTrainData = trainData.map(x => x.value.map(x => x.toDouble).toArray)
 
@@ -67,6 +74,8 @@ class VAVIndexer (nbits : Int, marksGenerator: MarksGenerator, trainingSize : In
 
     val signatureGenerator =  new VariableSignatureGenerator(modes)
     val marks = marksGenerator.getMarks(trainData, modes.map(x => 2 << (x - 1)))
+
+    log.debug("VA-File (fixed) finished training")
 
     VAIndexMetaData(marks, signatureGenerator, distance)
   }

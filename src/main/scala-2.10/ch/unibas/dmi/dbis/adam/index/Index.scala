@@ -18,6 +18,7 @@ import ch.unibas.dmi.dbis.adam.index.structures.va.VAIndex
 import ch.unibas.dmi.dbis.adam.main.SparkStartup
 import ch.unibas.dmi.dbis.adam.storage.engine.CatalogOperator
 import com.google.common.cache.{CacheBuilder, CacheLoader}
+import org.apache.log4j.Logger
 import org.apache.spark.rdd.RDD
 import org.apache.spark.sql.DataFrame
 import org.apache.spark.storage.StorageLevel
@@ -31,6 +32,8 @@ import scala.collection.immutable.HashSet
   * August 2015
   */
 trait Index[A <: IndexTuple] {
+  val log = Logger.getLogger(getClass.getName)
+
   val indexname: IndexName
   val indextype: IndexTypeName
   val entityname: EntityName
@@ -67,6 +70,7 @@ trait Index[A <: IndexTuple] {
     * @return a set of candidate tuple ids
     */
   def scan(q: FeatureVector, options: Map[String, Any], k: Int, filter: Option[HashSet[TupleID]], queryID: Option[String] = None): HashSet[TupleID] = {
+    log.debug("started scanning index")
     SparkStartup.sc.setLocalProperty("spark.scheduler.pool", "index")
     SparkStartup.sc.setJobGroup(queryID.getOrElse(""), indextype.toString, true)
 

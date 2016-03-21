@@ -2,6 +2,7 @@ package ch.unibas.dmi.dbis.adam.query.progressive
 
 import ch.unibas.dmi.dbis.adam.config.AdamConfig
 import ch.unibas.dmi.dbis.adam.main.SparkStartup
+import org.apache.log4j.Logger
 import org.apache.spark.sql.DataFrame
 
 import scala.collection.mutable.ListBuffer
@@ -16,6 +17,8 @@ import scala.collection.mutable.ListBuffer
   * September 2015
   */
 class ProgressiveQueryStatusTracker(queryID: String) {
+  val log = Logger.getLogger(getClass.getName)
+
   private val futures = ListBuffer[ScanFuture]()
   private var runningStatus = ProgressiveQueryStatus.RUNNING
   private var resultConfidence = 0.toFloat
@@ -26,7 +29,10 @@ class ProgressiveQueryStatusTracker(queryID: String) {
     *
     * @param future
     */
-  def register(future: ScanFuture): Unit = futures.synchronized(futures += future)
+  def register(future: ScanFuture): Unit = {
+    log.debug("registered new scan future")
+    futures.synchronized(futures += future)
+  }
 
   /**
     * Notifies the tracker of its completion.
@@ -34,6 +40,8 @@ class ProgressiveQueryStatusTracker(queryID: String) {
     * @param future
     */
   def notifyCompletion(future: ScanFuture, futureResults: DataFrame): Unit = {
+    log.debug("scanning completed")
+
     futures.synchronized({
       if (future.confidence > resultConfidence && runningStatus == ProgressiveQueryStatus.RUNNING) {
         queryResults = futureResults
@@ -44,6 +52,7 @@ class ProgressiveQueryStatusTracker(queryID: String) {
         // in evaluation mode we want to keep all results and do not stop, as to be able to measure how
         // much time each index would run
         if (math.abs(resultConfidence - 1.0) < 0.000001) {
+          log.debug("confident results retrieved")
           stop(ProgressiveQueryStatus.FINISHED)
         }
       }
@@ -59,7 +68,9 @@ class ProgressiveQueryStatusTracker(queryID: String) {
   /**
     * Prematurely stops the progressive query.
     */
-  def stop(): Unit = stop(ProgressiveQueryStatus.PREMATURE_FINISHED)
+  def stop(): Unit = {
+    stop(ProgressiveQueryStatus.PREMATURE_FINISHED)
+  }
 
   /**
     * Stops the progressive query with the new status.
@@ -68,10 +79,12 @@ class ProgressiveQueryStatusTracker(queryID: String) {
     */
   private def stop(newStatus: ProgressiveQueryStatus.Value): Unit = {
     if (runningStatus == ProgressiveQueryStatus.FINISHED) { //already finished
+      log.debug("requested stopping progresive query, but stopped already")
       return
     }
 
     futures.synchronized {
+      log.debug("stopping progressive query with status " + newStatus)
       SparkStartup.sc.cancelJobGroup(queryID)
       runningStatus = newStatus
       futures.clear()
@@ -83,7 +96,9 @@ class ProgressiveQueryStatusTracker(queryID: String) {
     *
     * @return
     */
-  def results = (queryResults, resultConfidence)
+  def results = {
+    (queryResults, resultConfidence)
+  }
 
   /**
     * Returns the current status of the progressive query.
@@ -99,7 +114,9 @@ class ProgressiveQueryStatusTracker(queryID: String) {
     *
     * @return
     */
-  def length = futures.size
+  def length = {
+    futures.size
+  }
 }
 
 /**

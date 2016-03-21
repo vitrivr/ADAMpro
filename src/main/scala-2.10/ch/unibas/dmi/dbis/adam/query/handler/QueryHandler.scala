@@ -9,7 +9,7 @@ import ch.unibas.dmi.dbis.adam.query.handler.QueryHints._
 import ch.unibas.dmi.dbis.adam.query.progressive._
 import ch.unibas.dmi.dbis.adam.query.query.{BooleanQuery, NearestNeighbourQuery}
 import ch.unibas.dmi.dbis.adam.storage.engine.CatalogOperator
-import org.apache.spark.Logging
+import org.apache.log4j.Logger
 import org.apache.spark.sql.DataFrame
 
 import scala.collection.immutable.HashSet
@@ -21,7 +21,9 @@ import scala.concurrent.duration.Duration
   * Ivan Giangreco
   * November 2015
   */
-object QueryHandler extends Logging {
+object QueryHandler {
+  val log = Logger.getLogger(getClass.getName)
+
   /**
     * Performs a standard query, built up by a nearest neighbour query and a boolean query.
     *
@@ -35,9 +37,11 @@ object QueryHandler extends Logging {
   def query(entityname: EntityName, hint: Option[QueryHint], nnq: NearestNeighbourQuery, bq: Option[BooleanQuery], withMetadata: Boolean): DataFrame = {
     val indexes: Map[IndexTypeName, Seq[IndexName]] = CatalogOperator.listIndexesWithType(entityname).groupBy(_._2).mapValues(_.map(_._1))
 
+    log.debug("try choosing plan based on hints")
     var plan = choosePlan(entityname, indexes, hint)
 
     if (!plan.isDefined) {
+      log.debug("no query plan chosen, go to fallback")
       plan = choosePlan(entityname, indexes, Option(QueryHints.FALLBACK_HINTS))
     }
 
@@ -54,11 +58,13 @@ object QueryHandler extends Logging {
     */
   private def choosePlan(entityname: EntityName, indexes: Map[IndexTypeName, Seq[IndexName]], hint: Option[QueryHint]): Option[(NearestNeighbourQuery, Option[BooleanQuery], Boolean) => DataFrame] = {
     if (!hint.isDefined) {
+      log.debug("no execution plan hint")
       return None
     }
 
     hint.get match {
       case iqh: IndexQueryHint => {
+        log.debug("index execution plan hint")
         //index scan
         val indexChoice = indexes.get(iqh.structureType)
 
@@ -68,8 +74,13 @@ object QueryHandler extends Logging {
           return None
         }
       }
-      case SEQUENTIAL_QUERY => return Option(sequentialQuery(entityname)) //sequential
+      case SEQUENTIAL_QUERY =>
+        log.debug("sequential execution plan hint")
+        return Option(sequentialQuery(entityname)) //sequential
+
       case cqh: CompoundQueryHint => {
+        log.debug("compound query hint, re-iterate sub-hints")
+
         //compound query hint
         val hints = cqh.hints
         var i = 0
@@ -96,14 +107,18 @@ object QueryHandler extends Logging {
     * @return
     */
   def sequentialQuery(entityname: EntityName)(nnq: NearestNeighbourQuery, bq: Option[BooleanQuery], withMetadata: Boolean): DataFrame = {
+    log.debug("sequential query gets filter")
     val filter = if (bq.isDefined) {
       getFilter(entityname, bq.get)
     } else {
       None
     }
+
+    log.debug("sequential query performs kNN query")
     var res = NearestNeighbourQueryHandler.sequential(entityname, nnq, filter)
 
     if (withMetadata) {
+      log.debug("join metadata to results of sequential query")
       res = joinWithMetadata(entityname, res)
     }
     res
@@ -121,6 +136,9 @@ object QueryHandler extends Logging {
     */
   def indexQuery(indexname: IndexName)(nnq: NearestNeighbourQuery, bq: Option[BooleanQuery], withMetadata: Boolean): DataFrame = {
     val entityname = Index.load(indexname).entityname
+
+
+    log.debug("index query gets filter")
     val filter = if (bq.isDefined) {
       getFilter(entityname, bq.get)
     } else {
@@ -129,8 +147,11 @@ object QueryHandler extends Logging {
 
     //TODO: here we should check that the distance function used for creating the index is the same as the one used in the query
 
+    log.debug("index query performs kNN query")
     var res = NearestNeighbourQueryHandler.indexQuery(indexname, nnq, filter)
+
     if (withMetadata) {
+      log.debug("join metadata to results of index query")
       res = joinWithMetadata(entityname, res)
     }
     res
@@ -154,17 +175,20 @@ object QueryHandler extends Logging {
     */
   def progressiveQuery(entityname: EntityName)(nnq: NearestNeighbourQuery, bq: Option[BooleanQuery], onComplete: (ProgressiveQueryStatus.Value, DataFrame, Float, Map[String, String]) => Unit, withMetadata: Boolean): ProgressiveQueryStatusTracker = {
     val onCompleteFunction = if (withMetadata) {
+      log.debug("join metadata to results of progressive query")
       (pqs: ProgressiveQueryStatus.Value, res: DataFrame, conf: Float, info: Map[String, String]) => onComplete(pqs, joinWithMetadata(entityname, res), conf, info)
     } else {
       onComplete
     }
 
+    log.debug("progressive query gets filter")
     val filter = if (bq.isDefined) {
       getFilter(entityname, bq.get)
     } else {
       None
     }
 
+    log.debug("progressive query performs kNN query")
     NearestNeighbourQueryHandler.progressiveQuery(entityname, nnq, filter, onCompleteFunction)
   }
 
@@ -181,14 +205,17 @@ object QueryHandler extends Logging {
     * @return the results available together with a confidence score
     */
   def timedProgressiveQuery(entityname: EntityName)(nnq: NearestNeighbourQuery, bq: Option[BooleanQuery], timelimit: Duration, withMetadata: Boolean): (DataFrame, Float) = {
+    log.debug("timed progressive query gets filter")
     val filter = if (bq.isDefined) {
       getFilter(entityname, bq.get)
     } else {
       None
     }
 
+    log.debug("timed progressive query performs kNN query")
     var (res, confidence) = NearestNeighbourQueryHandler.timedProgressiveQuery(entityname, nnq, filter, timelimit)
     if (withMetadata) {
+      log.debug("join metadata to results of timed progressive query")
       res = joinWithMetadata(entityname, res)
     }
 

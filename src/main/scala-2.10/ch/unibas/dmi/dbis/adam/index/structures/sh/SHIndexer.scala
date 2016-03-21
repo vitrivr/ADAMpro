@@ -11,6 +11,7 @@ import ch.unibas.dmi.dbis.adam.index._
 import ch.unibas.dmi.dbis.adam.index.structures.IndexStructures
 import ch.unibas.dmi.dbis.adam.main.SparkStartup
 import ch.unibas.dmi.dbis.adam.entity.Entity._
+import org.apache.log4j.Logger
 import org.apache.spark.rdd.RDD
 import org.apache.spark.util.random.ADAMSamplingUtils
 
@@ -22,6 +23,8 @@ import org.apache.spark.util.random.ADAMSamplingUtils
  * August 2015
  */
 class SHIndexer(nbits : Int, trainingSize : Int) extends IndexGenerator with Serializable {
+  val log = Logger.getLogger(getClass.getName)
+
   override val indextypename: IndexTypeName = IndexStructures.SH
 
 
@@ -36,6 +39,8 @@ class SHIndexer(nbits : Int, trainingSize : Int) extends IndexGenerator with Ser
     val trainData = data.sample(false, fraction)
 
     val indexMetaData = train(trainData.collect())
+
+    log.debug("SH indexing...")
 
     val indexdata = data.map(
       datum => {
@@ -53,6 +58,8 @@ class SHIndexer(nbits : Int, trainingSize : Int) extends IndexGenerator with Ser
    * @return
    */
   private def train(trainData : Array[IndexingTaskTuple]) : SHIndexMetaData = {
+    log.debug("SH started training")
+
     val dTrainData = trainData.map(x => x.value.map(x => x.toDouble).toArray)
     val dataMatrix = DenseMatrix(dTrainData.toList : _*)
 
@@ -86,6 +93,8 @@ class SHIndexer(nbits : Int, trainingSize : Int) extends IndexGenerator with Ser
     val min = breeze.linalg.min(dataMatrix(*, ::)).toDenseVector
     val max = breeze.linalg.max(dataMatrix(*, ::)).toDenseVector
     val radius = 0.1 * (max - min)
+
+    log.debug("SH finished training")
 
     SHIndexMetaData(feigv, minProj, maxProj, modes.toDenseMatrix, radius)
   }

@@ -8,11 +8,14 @@ import ch.unibas.dmi.dbis.adam.index.structures.IndexStructures
 import ch.unibas.dmi.dbis.adam.index.structures.lsh.hashfunction.{EuclideanHashFunction, Hasher}
 import ch.unibas.dmi.dbis.adam.main.SparkStartup
 import ch.unibas.dmi.dbis.adam.query.distance.DistanceFunction
+import org.apache.log4j.Logger
 import org.apache.spark.rdd.RDD
 import org.apache.spark.util.random.ADAMSamplingUtils
 
 
 class LSHIndexer(hashFamily : String, numHashTables : Int, numHashes : Int, distance : DistanceFunction, trainingSize : Int) extends IndexGenerator with Serializable {
+  val log = Logger.getLogger(getClass.getName)
+
   override val indextypename: IndexTypeName = IndexStructures.LSH
 
   /**
@@ -28,6 +31,8 @@ class LSHIndexer(hashFamily : String, numHashTables : Int, numHashes : Int, dist
     val trainData = data.sample(false, fraction)
 
     val indexMetaData = train(trainData.collect())
+
+    log.debug("LSH indexing...")
 
     val indexdata = data.map(
       datum => {
@@ -45,6 +50,8 @@ class LSHIndexer(hashFamily : String, numHashTables : Int, numHashes : Int, dist
    * @return
    */
   private def train(trainData : Array[IndexingTaskTuple]) : LSHIndexMetaData = {
+    log.debug("LSH started training")
+
     //data
     val radiuses = {
         val res = for (a <- trainData; b <- trainData) yield distance(a.value, b.value)
@@ -62,6 +69,8 @@ class LSHIndexer(hashFamily : String, numHashTables : Int, numHashes : Int, dist
     val hashFamily = () => new EuclideanHashFunction(dims, radius.toFloat, 256)
 
     val hashTables = (0 until numHashTables).map(i => new Hasher(hashFamily, numHashes))
+
+    log.debug("LSH finished training")
 
     LSHIndexMetaData(hashTables, radius.toFloat)
   }

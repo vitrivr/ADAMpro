@@ -10,6 +10,7 @@ import ch.unibas.dmi.dbis.adam.storage.components.FeatureStorage
 import com.datastax.driver.core.Session
 import com.datastax.spark.connector._
 import com.datastax.spark.connector.cql.CassandraConnector
+import org.apache.log4j.Logger
 import org.apache.spark.sql.types.{BinaryType, LongType, StructField, StructType}
 import org.apache.spark.sql.{DataFrame, Row, SaveMode}
 
@@ -21,6 +22,8 @@ import org.apache.spark.sql.{DataFrame, Row, SaveMode}
   * December 2015
   */
 object CassandraFeatureStorage extends FeatureStorage with Serializable {
+  val log = Logger.getLogger(getClass.getName)
+
   private val defaultKeyspace = AdamConfig.cassandraKeyspace
 
   private val idColumnName = FieldNames.idColumnName
@@ -64,6 +67,21 @@ object CassandraFeatureStorage extends FeatureStorage with Serializable {
     session.execute(createKeyspaceCql(name))
   }
 
+
+  /**
+    *
+    * @param entityname
+    */
+  override def create(entityname: EntityName): Boolean = {
+    log.debug("cassandra create operation")
+
+    conn.withSessionDo { session =>
+      session.execute("use " + defaultKeyspace)
+      session.execute(createTableCql(entityname))
+    }
+    true
+  }
+
   /**
     *
     * @param entityname
@@ -71,6 +89,8 @@ object CassandraFeatureStorage extends FeatureStorage with Serializable {
     * @return
     */
   override def read(entityname: EntityName, filter: Option[scala.collection.Set[TupleID]]): DataFrame = {
+    log.debug("cassandra read operation")
+
     val rowRDD = if (filter.isDefined) {
       val subresults = filter.get.grouped(500).map(subfilter =>
         SparkStartup.sc.cassandraTable(defaultKeyspace, entityname).where(idColumnName + " IN ?", subfilter).map(crow => Row(crow.getLong(0), asWorkingVectorWrapper(crow.getList[Float](1))))
@@ -103,21 +123,11 @@ object CassandraFeatureStorage extends FeatureStorage with Serializable {
     * @param entityname
     */
   override def drop(entityname: EntityName): Boolean = {
+    log.debug("cassandra drop operation")
+
     conn.withSessionDo { session =>
       session.execute("use " + defaultKeyspace)
       session.execute(dropTableCql(entityname))
-    }
-    true
-  }
-
-  /**
-    *
-    * @param entityname
-    */
-  override def create(entityname: EntityName): Boolean = {
-    conn.withSessionDo { session =>
-      session.execute("use " + defaultKeyspace)
-      session.execute(createTableCql(entityname))
     }
     true
   }
@@ -131,6 +141,8 @@ object CassandraFeatureStorage extends FeatureStorage with Serializable {
     * @param mode
     */
   override def write(entityname: EntityName, df: DataFrame, mode: SaveMode): Boolean = {
+    log.debug("cassandra write operation")
+
     if (mode == SaveMode.Overwrite) {
       conn.withSessionDo { session =>
         session.execute("use " + defaultKeyspace)
@@ -155,6 +167,8 @@ object CassandraFeatureStorage extends FeatureStorage with Serializable {
     * @return
     */
   override def count(entityname: EntityName): Int = {
+    log.debug("cassandra count operation")
+
     SparkStartup.sc.cassandraTable(defaultKeyspace, entityname).cassandraCount().toInt
   }
 

@@ -12,6 +12,7 @@ import ch.unibas.dmi.dbis.adam.index.{BitStringIndexTuple, Index}
 import ch.unibas.dmi.dbis.adam.main.SparkStartup
 import ch.unibas.dmi.dbis.adam.query.distance.Distance._
 import ch.unibas.dmi.dbis.adam.query.distance.MinkowskiDistance
+import org.apache.log4j.Logger
 import org.apache.spark.TaskContext
 import org.apache.spark.sql.DataFrame
 
@@ -25,6 +26,7 @@ import scala.collection.immutable.HashSet
  */
 class VAIndex(val indexname : IndexName, val entityname : EntityName, protected val df: DataFrame, private[index] val metadata: VAIndexMetaData)
   extends Index[BitStringIndexTuple] with Serializable {
+  val log = Logger.getLogger(getClass.getName)
 
   override val indextype: IndexTypeName = metadata.signatureGenerator match {
     case fsg : FixedSignatureGenerator =>   IndexStructures.VAF
@@ -33,6 +35,8 @@ class VAIndex(val indexname : IndexName, val entityname : EntityName, protected 
   override val confidence = 1.toFloat
 
   override def scan(data : DataFrame, q : FeatureVector, options : Map[String, Any], k : Int): HashSet[TupleID] = {
+    log.debug("scanning VA-File index " + indexname)
+
     val distance = metadata.distance
     val (lbounds, ubounds) = computeBounds(q, metadata.marks, distance)
 
@@ -43,6 +47,8 @@ class VAIndex(val indexname : IndexName, val entityname : EntityName, protected 
       localRh.offerIndexTuple(tuplesIt)
       localRh.results.toSeq
     }).flatten
+
+    log.debug("VA-File index sub-results sent to global result handler")
 
     val globalResultHandler = new VAResultHandler(k)
     globalResultHandler.offerResultElement(results.iterator)

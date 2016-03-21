@@ -8,6 +8,7 @@ import ch.unibas.dmi.dbis.adam.exception.{EntityExistingException, EntityNotExis
 import ch.unibas.dmi.dbis.adam.index.Index.{IndexName, IndexTypeName}
 import ch.unibas.dmi.dbis.adam.index.structures.IndexStructures
 import org.apache.commons.io.FileUtils
+import org.apache.log4j.Logger
 import slick.dbio.Effect.Read
 import slick.driver.H2Driver.api._
 import slick.jdbc.meta.MTable
@@ -24,6 +25,8 @@ import scala.concurrent.duration._
   * August 2015
   */
 object CatalogOperator {
+  val log = Logger.getLogger(getClass.getName)
+
   private val MAX_WAITING_TIME: Duration = 100.seconds
 
   private val db = Database.forURL("jdbc:h2:" + (AdamConfig.catalogPath + "/" + "catalog"), driver = "org.h2.Driver")
@@ -56,6 +59,8 @@ object CatalogOperator {
     )
 
     Await.result(db.run(setup), MAX_WAITING_TIME)
+
+    log.debug("created entity in catalog")
     true
   }
 
@@ -76,6 +81,9 @@ object CatalogOperator {
 
     val query = entities.filter(_.entityname === entityname).delete
     val count = Await.result(db.run(query), MAX_WAITING_TIME)
+
+    log.debug("dropped entity from catalog")
+
     true
   }
 
@@ -156,6 +164,8 @@ object CatalogOperator {
     )
 
     Await.result(db.run(setup), MAX_WAITING_TIME)
+    log.debug("created index in catalog")
+
     true
   }
 
@@ -175,6 +185,8 @@ object CatalogOperator {
 
     val query = indexes.filter(_.indexname === indexname).delete
     Await.result(db.run(query), MAX_WAITING_TIME)
+    log.debug("dropped index from catalog")
+
     true
   }
 

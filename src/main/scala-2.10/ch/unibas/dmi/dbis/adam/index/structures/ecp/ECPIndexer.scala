@@ -1,12 +1,13 @@
 package ch.unibas.dmi.dbis.adam.index.structures.ecp
 
 import ch.unibas.dmi.dbis.adam.entity.Entity
+import ch.unibas.dmi.dbis.adam.entity.Entity.EntityName
 import ch.unibas.dmi.dbis.adam.index.Index.{IndexName, IndexTypeName}
 import ch.unibas.dmi.dbis.adam.index._
 import ch.unibas.dmi.dbis.adam.index.structures.IndexStructures
 import ch.unibas.dmi.dbis.adam.main.SparkStartup
 import ch.unibas.dmi.dbis.adam.query.distance.DistanceFunction
-import ch.unibas.dmi.dbis.adam.entity.Entity.EntityName
+import org.apache.log4j.Logger
 import org.apache.spark.rdd.RDD
 import org.apache.spark.util.random.ADAMSamplingUtils
 
@@ -17,6 +18,8 @@ import org.apache.spark.util.random.ADAMSamplingUtils
  * October 2015
  */
 class ECPIndexer(distance : DistanceFunction) extends IndexGenerator with Serializable {
+  val log = Logger.getLogger(getClass.getName)
+
   override val indextypename: IndexTypeName = IndexStructures.ECP
 
   /**
@@ -34,6 +37,9 @@ class ECPIndexer(distance : DistanceFunction) extends IndexGenerator with Serial
 
     val leaders = data.sample(true, fraction).collect
     val broadcastLeaders = SparkStartup.sc.broadcast(leaders)
+    log.debug("eCP index leaders chosen and broadcasted")
+
+    log.debug("eCP indexing...")
 
     val indexdata = data.map(datum => {
         val minTID = broadcastLeaders.value.map({ l =>

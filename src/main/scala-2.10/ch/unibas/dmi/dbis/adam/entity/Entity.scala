@@ -8,6 +8,7 @@ import ch.unibas.dmi.dbis.adam.index.Index
 import ch.unibas.dmi.dbis.adam.main.SparkStartup
 import ch.unibas.dmi.dbis.adam.storage.components.{FeatureStorage, MetadataStorage}
 import ch.unibas.dmi.dbis.adam.storage.engine.CatalogOperator
+import org.apache.log4j.Logger
 import org.apache.spark.rdd.RDD
 import org.apache.spark.sql.types.{LongType, StructField, StructType}
 import org.apache.spark.sql.{DataFrame, Row, SaveMode}
@@ -22,6 +23,8 @@ import scala.collection.immutable.HashSet
   */
 //TODO: consider what to do if metadata is not filled, i.e. certain operations should not be done on the stack
 case class Entity(entityname: EntityName, featureStorage: FeatureStorage, metadataStorage: Option[MetadataStorage]) {
+  val log = Logger.getLogger(getClass.getName)
+
   private lazy val featureData = featureStorage.read(entityname).withColumnRenamed(FieldNames.featureColumnName, FieldNames.internFeatureColumnName)
   private lazy val metaData = if (metadataStorage.isDefined) {
     Option(metadataStorage.get.read(entityname))
@@ -51,6 +54,8 @@ case class Entity(entityname: EntityName, featureStorage: FeatureStorage, metada
     * @return
     */
   def insert(insertion: DataFrame): Boolean = {
+    log.debug("inserting data into entity")
+
     val rows = insertion.rdd.zipWithUniqueId.map { case (r: Row, adamtwoid: Long) => Row.fromSeq(adamtwoid +: r.toSeq) }
     val insertionWithPK = SparkStartup.sqlContext
       .createDataFrame(
@@ -60,6 +65,7 @@ case class Entity(entityname: EntityName, featureStorage: FeatureStorage, metada
     featureStorage.write(entityname, insertionWithPK.select(FieldNames.idColumnName, FieldNames.internFeatureColumnName), SaveMode.Append)
 
     if (metadataStorage.isDefined) {
+      log.debug("metadata storage is defined: inserting data also into metadata storage")
       metadataStorage.get.write(entityname, insertionWithPK.drop(FieldNames.internFeatureColumnName), SaveMode.Append)
     }
 
@@ -89,6 +95,8 @@ case class Entity(entityname: EntityName, featureStorage: FeatureStorage, metada
 }
 
 object Entity {
+  val log = Logger.getLogger(getClass.getName)
+
   type EntityName = String
 
   private val featureStorage = SparkStartup.featureStorage
@@ -138,7 +146,6 @@ object Entity {
         return false
       }
     }
-
 
     Index.dropAll(entityname)
 

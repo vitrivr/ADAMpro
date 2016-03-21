@@ -4,6 +4,7 @@ import breeze.linalg.{min, max}
 import ch.unibas.dmi.dbis.adam.datatypes.feature.Feature._
 import ch.unibas.dmi.dbis.adam.index.IndexingTaskTuple
 import ch.unibas.dmi.dbis.adam.index.structures.va.VAIndex.Marks
+import org.apache.log4j.Logger
 
 /**
  * adamtwo
@@ -12,6 +13,7 @@ import ch.unibas.dmi.dbis.adam.index.structures.va.VAIndex.Marks
  * August 2015
  */
 private[va] object EquidistantMarksGenerator extends MarksGenerator with Serializable {
+  val log = Logger.getLogger(getClass.getName)
 
   /**
    *
@@ -20,6 +22,7 @@ private[va] object EquidistantMarksGenerator extends MarksGenerator with Seriali
    * @return
    */
   private[va] def getMarks(samples : Array[IndexingTaskTuple], maxMarks : Seq[Int]) : Marks = {
+    log.debug("get equidistant marks for VA-File")
     val dimensionality = maxMarks.length
 
     val min = getMin(samples.map(_.value))

@@ -4,7 +4,8 @@ import ch.unibas.dmi.dbis.adam.config.AdamConfig
 import ch.unibas.dmi.dbis.adam.datatypes.bitString.{BitString, MinimalBitString}
 import ch.unibas.dmi.dbis.adam.datatypes.feature.FeatureVectorWrapper
 import ch.unibas.dmi.dbis.adam.storage.components.{FeatureStorage, IndexStorage, MetadataStorage}
-import ch.unibas.dmi.dbis.adam.storage.engine.{CassandraFeatureStorage, ParquetIndexStorage, PostgresMetadataStorage}
+import ch.unibas.dmi.dbis.adam.storage.engine.{CassandraFeatureStorage, ParquetIndexStorage, PostgresqlMetadataStorage}
+import org.apache.log4j.Logger
 import org.apache.spark.sql.hive.HiveContext
 import org.apache.spark.{SparkConf, SparkContext}
 
@@ -15,6 +16,10 @@ import org.apache.spark.{SparkConf, SparkContext}
  * August 2015
  */
 object SparkStartup {
+  val log = Logger.getLogger(getClass.getName)
+
+  log.debug("Spark starting up")
+
   val sparkConfig = new SparkConf().setAppName("ADAMpro")
     .set("spark.serializer", "org.apache.spark.serializer.KryoSerializer")
     .set("spark.driver.maxResultSize", "1000m")
@@ -39,6 +44,6 @@ object SparkStartup {
   val sqlContext = new HiveContext(sc)
 
   val featureStorage : FeatureStorage = CassandraFeatureStorage
-  val metadataStorage : MetadataStorage = PostgresMetadataStorage
+  val metadataStorage : MetadataStorage = PostgresqlMetadataStorage
   val indexStorage: IndexStorage = ParquetIndexStorage
 }

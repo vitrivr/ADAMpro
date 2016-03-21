@@ -3,6 +3,7 @@ package ch.unibas.dmi.dbis.adam.api
 import ch.unibas.dmi.dbis.adam.entity.Entity
 import ch.unibas.dmi.dbis.adam.entity.Entity._
 import ch.unibas.dmi.dbis.adam.entity.FieldTypes.FieldType
+import org.apache.log4j.Logger
 
 /**
   * adamtwo
@@ -14,6 +15,8 @@ import ch.unibas.dmi.dbis.adam.entity.FieldTypes.FieldType
   * August 2015
   */
 object CreateEntityOp {
+  val log = Logger.getLogger(getClass.getName)
+
   /**
     * Creates an entity.
     *
@@ -23,6 +26,7 @@ object CreateEntityOp {
     * @return
     */
   def apply(entityname: EntityName, fields: Option[Map[String, FieldType]] = None): Entity = {
+    log.debug("perform create entity operation")
     Entity.create(entityname, fields)
   }
 }

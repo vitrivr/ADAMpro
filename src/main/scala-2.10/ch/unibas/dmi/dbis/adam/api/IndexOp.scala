@@ -1,7 +1,9 @@
 package ch.unibas.dmi.dbis.adam.api
 
+import ch.unibas.dmi.dbis.adam.api.CountOp._
 import ch.unibas.dmi.dbis.adam.datatypes.feature.{FeatureVectorWrapper, Feature}
 import Feature.FeatureVector
+import ch.unibas.dmi.dbis.adam.entity.Entity.apply
 import ch.unibas.dmi.dbis.adam.index.Index.IndexTypeName
 import ch.unibas.dmi.dbis.adam.index.structures.IndexStructures
 import ch.unibas.dmi.dbis.adam.index.structures.ecp.ECPIndexer
@@ -12,6 +14,7 @@ import ch.unibas.dmi.dbis.adam.index.{Index, IndexGenerator, IndexingTaskTuple}
 import ch.unibas.dmi.dbis.adam.query.distance.{DistanceFunction, MinkowskiDistance}
 import ch.unibas.dmi.dbis.adam.entity.Entity
 import ch.unibas.dmi.dbis.adam.entity.Entity._
+import org.apache.log4j.Logger
 import org.apache.spark.rdd.RDD
 
 /**
@@ -23,6 +26,8 @@ import org.apache.spark.rdd.RDD
   * August 2015
   */
 object IndexOp {
+  val log = Logger.getLogger(getClass.getName)
+
   /**
     * Creates an index.
     *
@@ -31,8 +36,10 @@ object IndexOp {
     * @param distance distance function to use
     * @param properties further index specific properties
     */
-  def apply(entityname: EntityName, indextype: String, distance: DistanceFunction, properties: Map[String, String]): Unit =
+  def apply(entityname: EntityName, indextype: String, distance: DistanceFunction, properties: Map[String, String]): Unit = {
+    log.debug("perform create index operation")
     apply(entityname, IndexStructures.withName(indextype), distance, properties)
+  }
 
   /**
     * Creates an index.
@@ -43,6 +50,8 @@ object IndexOp {
     * @param properties further index specific properties
     */
   def apply(entityname: EntityName, indextypename: IndexTypeName, distance: DistanceFunction, properties: Map[String, String]): Unit = {
+    log.debug("perform create index operation")
+
     val entity = Entity.load(entityname)
 
     val generator: IndexGenerator = indextypename match {

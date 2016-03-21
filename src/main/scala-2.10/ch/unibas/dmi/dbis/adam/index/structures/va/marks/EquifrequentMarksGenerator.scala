@@ -4,6 +4,7 @@ import breeze.linalg.{max, min}
 import ch.unibas.dmi.dbis.adam.datatypes.feature.Feature._
 import ch.unibas.dmi.dbis.adam.index.IndexingTaskTuple
 import ch.unibas.dmi.dbis.adam.index.structures.va.VAIndex.Marks
+import org.apache.log4j.Logger
 
 import scala.collection.IterableLike
 import scala.collection.mutable.ListBuffer
@@ -12,6 +13,8 @@ import scala.collection.mutable.ListBuffer
  * 
  */
 private[va] object EquifrequentMarksGenerator extends MarksGenerator with Serializable {
+  val log = Logger.getLogger(getClass.getName)
+
   val distanceSamples = 500
 
   /**
@@ -21,6 +24,8 @@ private[va] object EquifrequentMarksGenerator extends MarksGenerator with Serial
    * @return
    */
   private[va] def getMarks(samples : Array[IndexingTaskTuple], maxMarks : Seq[Int]) : Marks = {
+    log.debug("get equifrequent marks for VA-File")
+
     val sampleSize = samples.length
 
     val min = getMin(samples.map(_.value))
