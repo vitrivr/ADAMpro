@@ -246,6 +246,6 @@ class AdamBaseTest extends FeatureSpec with GivenWhenThen with Eventually with I
     * @return
     */
   def getScore(groundtruth : Seq[Long], results : Seq[Long]): Double ={
-    groundtruth.intersect(results).length / groundtruth.size
+    groundtruth.intersect(results).length.toFloat / groundtruth.size.toFloat
   }
 }
