@@ -100,7 +100,7 @@ class AdamBaseTest extends FeatureSpec with GivenWhenThen with Eventually with I
     )
     val fields: Map[String, FieldType] = fieldTemplate.map(ft => (ft._1, ft._2)).toMap
 
-    Entity.create(entityname, Option(fields))
+    Entity.create(entityname, Some(fields))
 
     val stringLength = 10
     val maxInt = 50000
@@ -181,7 +181,7 @@ class AdamBaseTest extends FeatureSpec with GivenWhenThen with Eventually with I
     )
     val fields: Map[String, FieldType] = fieldTemplate.map(ft => (ft._1, ft._2)).toMap
 
-    val entity = Entity.create(getRandomName(), Option(fields))
+    val entity = Entity.create(getRandomName(), Some(fields))
 
     val schema = StructType(Seq(
       StructField("tid", types.LongType, false),

@@ -29,16 +29,16 @@ object QueryHints {
   val FALLBACK_HINTS : QueryHint = EXACT_QUERY
 
   def withName(s : String) : Option[QueryHint] = s match {
-    case "sequential" => Option(SEQUENTIAL_QUERY)
-    case "index" => Option(INDEX_QUERY)
-    case "inexact" => Option(INEXACT_QUERY)
-    case "ecp" => Option(ECP_INDEX_QUERY)
-    case "lsh" => Option(LSH_INDEX_QUERY)
-    case "sh" => Option(SH_INDEX_QUERY)
-    case "exact" => Option(EXACT_QUERY)
-    case "va" => Option(VA_INDEX_QUERY)
-    case "vaf" => Option(VAF_INDEX_QUERY)
-    case "vav" => Option(VAV_INDEX_QUERY)
+    case "sequential" => Some(SEQUENTIAL_QUERY)
+    case "index" => Some(INDEX_QUERY)
+    case "inexact" => Some(INEXACT_QUERY)
+    case "ecp" => Some(ECP_INDEX_QUERY)
+    case "lsh" => Some(LSH_INDEX_QUERY)
+    case "sh" => Some(SH_INDEX_QUERY)
+    case "exact" => Some(EXACT_QUERY)
+    case "va" => Some(VA_INDEX_QUERY)
+    case "vaf" => Some(VAF_INDEX_QUERY)
+    case "vav" => Some(VAV_INDEX_QUERY)
     case _ => None
   }
 }

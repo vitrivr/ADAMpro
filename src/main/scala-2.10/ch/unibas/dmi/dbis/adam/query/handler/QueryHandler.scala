@@ -42,7 +42,7 @@ object QueryHandler {
 
     if (!plan.isDefined) {
       log.debug("no query plan chosen, go to fallback")
-      plan = choosePlan(entityname, indexes, Option(QueryHints.FALLBACK_HINTS))
+      plan = choosePlan(entityname, indexes, Some(QueryHints.FALLBACK_HINTS))
     }
 
     plan.get(nnq, bq, withMetadata)
@@ -76,7 +76,7 @@ object QueryHandler {
       }
       case SEQUENTIAL_QUERY =>
         log.debug("sequential execution plan hint")
-        return Option(sequentialQuery(entityname)) //sequential
+        return Some(sequentialQuery(entityname)) //sequential
 
       case cqh: CompoundQueryHint => {
         log.debug("compound query hint, re-iterate sub-hints")
@@ -86,7 +86,7 @@ object QueryHandler {
         var i = 0
 
         while (i < hints.length) {
-          val plan = choosePlan(entityname, indexes, Option(hints(i)))
+          val plan = choosePlan(entityname, indexes, Some(hints(i)))
           if (plan.isDefined) return plan
         }
 
@@ -230,11 +230,12 @@ object QueryHandler {
     * @param bq
     * @return
     */
+  //TODO: adjust return type?
   private def getFilter(entityname: EntityName, bq: BooleanQuery): Option[HashSet[TupleID]] = {
     val mdRes = BooleanQueryHandler.metadataQuery(entityname, bq)
 
     if (mdRes.isDefined) {
-      Option(HashSet(mdRes.get.map(r => r.getAs[Long](FieldNames.idColumnName)).collect(): _*)) //with metadata
+      Some(HashSet(mdRes.get.map(r => r.getAs[Long](FieldNames.idColumnName)).collect(): _*)) //with metadata
     } else {
       None //no metadata
     }

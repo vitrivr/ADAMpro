@@ -79,7 +79,7 @@ class EntityTestSuite extends AdamBaseTest {
       When("a new random entity with metadata is created")
       val entityname = getRandomName()
       val fields: Map[String, FieldType] = fieldTemplate.map(ft => (ft._1, ft._2)).toMap
-      Entity.create(entityname, Option(fields))
+      Entity.create(entityname, Some(fields))
 
       Then("the entity, and only the entity should exist")
       val entities = Entity.list()

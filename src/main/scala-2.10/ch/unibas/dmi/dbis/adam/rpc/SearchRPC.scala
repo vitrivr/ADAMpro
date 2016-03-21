@@ -147,9 +147,9 @@ class SearchRPC extends AdamSearchGrpc.AdamSearch {
       val rnnq = request.nnq.get
       val nnq = NearestNeighbourQuery(rnnq.query, NormBasedDistanceFunction(rnnq.norm), rnnq.k, rnnq.indexOnly, rnnq.options)
 
-      val bq : Option[BooleanQuery] = if(!request.bq.isEmpty){
+      val bq : Option[BooleanQuery] = if(request.bq.isDefined){
         val rbq = request.bq.get
-        Option(BooleanQuery(rbq.where, Option(rbq.joins.map(x => (x.table, x.columns)))))
+        Some(BooleanQuery(rbq.where, Option(rbq.joins.map(x => (x.table, x.columns)))))
       } else { None }
 
       val onComplete =
@@ -184,9 +184,9 @@ class SearchRPC extends AdamSearchGrpc.AdamSearch {
       val rnnq = request.nnq.get
       val nnq = NearestNeighbourQuery(rnnq.query, NormBasedDistanceFunction(rnnq.norm), rnnq.k, rnnq.indexOnly, rnnq.options)
 
-      val bq : Option[BooleanQuery] = if(!request.bq.isEmpty){
+      val bq : Option[BooleanQuery] = if(request.bq.isDefined){
         val rbq = request.bq.get
-        Option(BooleanQuery(rbq.where, Option(rbq.joins.map(x => (x.table, x.columns)))))
+        Some(BooleanQuery(rbq.where, Option(rbq.joins.map(x => (x.table, x.columns)))))
       } else { None }
 
       //TODO: metadata should be set via protobuf message

@@ -27,7 +27,7 @@ case class Entity(entityname: EntityName, featureStorage: FeatureStorage, metada
 
   private lazy val featureData = featureStorage.read(entityname).withColumnRenamed(FieldNames.featureColumnName, FieldNames.internFeatureColumnName)
   private lazy val metaData = if (metadataStorage.isDefined) {
-    Option(metadataStorage.get.read(entityname))
+    Some(metadataStorage.get.read(entityname))
   } else {
     None
   }
