@@ -61,6 +61,8 @@ class SHIndex(val indexname: IndexName, val entityname: EntityName, protected va
     globalResultHandler.offerResultElement(results.iterator)
     val ids = globalResultHandler.results.map(x => x.tid)
 
+    log.debug("SH index returning " + ids.toSet + " tuples")
+
     ids.toSet
   }
 }

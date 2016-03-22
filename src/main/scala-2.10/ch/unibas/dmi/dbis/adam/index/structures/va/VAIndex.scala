@@ -50,6 +50,8 @@ class VAIndex(val indexname : IndexName, val entityname : EntityName, protected 
     globalResultHandler.offerResultElement(results.iterator)
     val ids = globalResultHandler.results.map(x => x.tid)
 
+    log.debug("VA-File returning " + ids.toSet + " tuples")
+
     ids.toSet
   }
 
