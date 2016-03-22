@@ -5,6 +5,7 @@ import java.util.concurrent.TimeUnit
 import ch.unibas.dmi.dbis.adam.config.FieldNames
 import ch.unibas.dmi.dbis.adam.entity.Entity
 import ch.unibas.dmi.dbis.adam.index.Index
+import ch.unibas.dmi.dbis.adam.index.structures.IndexTypes
 import ch.unibas.dmi.dbis.adam.index.structures.ecp.ECPIndexer
 import ch.unibas.dmi.dbis.adam.index.structures.lsh.LSHIndexer
 import ch.unibas.dmi.dbis.adam.index.structures.sh.SHIndexer
@@ -160,6 +161,32 @@ class QueryTestSuite extends AdamBaseTest {
       //clean up
       Entity.drop(es.entity.entityname)
     }
+
+    /**
+      *
+      */
+    scenario("perform a vaf index query without specifying index name") {
+      Given("an entity and an index")
+      val es = getGroundTruthEvaluationSet()
+      val index = Index.createIndex(es.entity, VAFIndexer(es.distance))
+
+      When("performing a kNN query")
+      val nnq = NearestNeighbourQuery(es.feature.vector, es.distance, es.k)
+      val results = QueryHandler.indexQuery(es.entity.entityname, IndexTypes.VAFINDEX)(nnq, None, true)
+        .map(r => (r.getAs[Float](FieldNames.distanceColumnName), r.getAs[Long]("tid"))).collect()
+        .sortBy(_._1).toSeq
+
+      Then("we should retrieve the k nearest neighbors")
+      results.zip(es.nnResults).foreach {
+        case (res, gt) =>
+          assert(res._2 == gt._2)
+          assert(res._1 - gt._1 < EPSILON)
+      }
+
+      //clean up
+      Entity.drop(es.entity.entityname)
+    }
+
 
 
     /**
