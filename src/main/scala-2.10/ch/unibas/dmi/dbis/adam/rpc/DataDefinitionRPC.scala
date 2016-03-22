@@ -133,4 +133,17 @@ class DataDefinitionRPC extends AdamDefinitionGrpc.AdamDefinition {
         Future.successful(AckMessage(code = AckMessage.Code.ERROR, message = e.getMessage))
     }
   }
+
+  override def randomData(request: RandomDataMessage): Future[AckMessage] = {
+    log.debug("rpc call for creating random data")
+
+    try {
+      RandomDataOp(request.entity, request.ntuples, request.ndims)
+      Future.successful(AckMessage(code = AckMessage.Code.OK))
+    } catch {
+      case e: Exception =>
+        log.debug("exception while rpc call for dropping index operation")
+        Future.successful(AckMessage(code = AckMessage.Code.ERROR, message = e.getMessage))
+    }
+  }
 }
