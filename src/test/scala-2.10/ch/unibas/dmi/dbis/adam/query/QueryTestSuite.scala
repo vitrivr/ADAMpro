@@ -269,7 +269,7 @@ class QueryTestSuite extends AdamBaseTest {
       //wait until table is fully created
       Thread.sleep(5000)
 
-      def processResults(status: ProgressiveQueryStatus.Value, df: DataFrame, confidence: Float, info: Map[String, String]) {
+      def processResults(status: ProgressiveQueryStatus.Value, df: DataFrame, confidence: Float, deliverer : String, info: Map[String, String]) {
         val results = df.map(r => (r.getAs[Float](FieldNames.distanceColumnName), r.getAs[Long]("tid"))).collect()
           .sortBy(_._1).toSeq
 
@@ -300,7 +300,7 @@ class QueryTestSuite extends AdamBaseTest {
 
       When("performing a kNN progressive query")
       val nnq = NearestNeighbourQuery(es.feature.vector, es.distance, es.k)
-      val (tpqRes, confidence) = QueryHandler.timedProgressiveQuery(es.entity.entityname)(nnq, None, timelimit, true)
+      val (tpqRes, confidence, deliverer) = QueryHandler.timedProgressiveQuery(es.entity.entityname)(nnq, None, timelimit, true)
 
       Then("we should have a match at least in the first element")
       val results = tpqRes.map(r => (r.getAs[Float](FieldNames.distanceColumnName), r.getAs[Long]("tid"))).collect()

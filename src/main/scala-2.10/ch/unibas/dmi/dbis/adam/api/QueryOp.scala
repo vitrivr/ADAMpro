@@ -94,7 +94,7 @@ object QueryOp {
     * @param withMetadata whether or not to retrieve corresponding metadata
     * @return a tracker for the progressive query
     */
-  def progressive(entityname: EntityName, nnq: NearestNeighbourQuery, bq: Option[BooleanQuery], onComplete: (ProgressiveQueryStatus.Value, DataFrame, Float, Map[String, String]) => Unit, withMetadata: Boolean): ProgressiveQueryStatusTracker = {
+  def progressive(entityname: EntityName, nnq: NearestNeighbourQuery, bq: Option[BooleanQuery], onComplete: (ProgressiveQueryStatus.Value, DataFrame, Float, String, Map[String, String]) => Unit, withMetadata: Boolean): ProgressiveQueryStatusTracker = {
     log.debug("perform progressive query operation")
     QueryHandler.progressiveQuery(entityname)(nnq, bq, onComplete, withMetadata)
   }

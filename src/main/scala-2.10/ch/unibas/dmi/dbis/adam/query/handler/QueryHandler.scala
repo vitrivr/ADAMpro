@@ -195,10 +195,10 @@ object QueryHandler {
     * @param withMetadata whether or not to retrieve corresponding metadata
     * @return a tracker for the progressive query
     */
-  def progressiveQuery(entityname: EntityName)(nnq: NearestNeighbourQuery, bq: Option[BooleanQuery], onComplete: (ProgressiveQueryStatus.Value, DataFrame, Float, Map[String, String]) => Unit, withMetadata: Boolean): ProgressiveQueryStatusTracker = {
+  def progressiveQuery(entityname: EntityName)(nnq: NearestNeighbourQuery, bq: Option[BooleanQuery], onComplete: (ProgressiveQueryStatus.Value, DataFrame, Float, String, Map[String, String]) => Unit, withMetadata: Boolean): ProgressiveQueryStatusTracker = {
     val onCompleteFunction = if (withMetadata) {
       log.debug("join metadata to results of progressive query")
-      (pqs: ProgressiveQueryStatus.Value, res: DataFrame, conf: Float, info: Map[String, String]) => onComplete(pqs, joinWithMetadata(entityname, res), conf, info)
+      (pqs: ProgressiveQueryStatus.Value, res: DataFrame, conf: Float, deliverer : String, info: Map[String, String]) => onComplete(pqs, joinWithMetadata(entityname, res), conf, deliverer, info)
     } else {
       onComplete
     }
