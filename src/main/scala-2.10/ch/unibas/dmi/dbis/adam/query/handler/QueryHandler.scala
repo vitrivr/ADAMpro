@@ -34,7 +34,7 @@ object QueryHandler {
     * @return
     */
   def query(entityname: EntityName, hint: Option[QueryHint], nnq: NearestNeighbourQuery, bq: Option[BooleanQuery], withMetadata: Boolean): DataFrame = {
-    val indexes: Map[IndexTypeName, Seq[IndexName]] = CatalogOperator.listIndexesWithType(entityname).groupBy(_._2).mapValues(_.map(_._1))
+    val indexes: Map[IndexTypeName, Seq[IndexName]] = CatalogOperator.listIndexes(entityname).groupBy(_._2).mapValues(_.map(_._1))
 
     log.debug("try choosing plan based on hints")
     var plan = choosePlan(entityname, indexes, hint)

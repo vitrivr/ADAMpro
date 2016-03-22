@@ -119,7 +119,7 @@ object NearestNeighbourQueryHandler {
   def progressiveQuery(entityname: EntityName, query: NearestNeighbourQuery, filter: Option[Set[TupleID]], onComplete: (ProgressiveQueryStatus.Value, DataFrame, Float, Map[String, String]) => Unit): ProgressiveQueryStatusTracker = {
     log.debug("starting progressive query scanner")
 
-    val indexnames = Index.list(entityname)
+    val indexnames = Index.list(entityname).map(_._1)
 
     val options = mMap[String, String]()
 
@@ -149,7 +149,7 @@ object NearestNeighbourQueryHandler {
   def timedProgressiveQuery(entityname: EntityName, query: NearestNeighbourQuery, filter: Option[Set[TupleID]], timelimit: Duration): (DataFrame, Float) = {
     log.debug("starting timed progressive query scanner")
 
-    val indexnames = Index.list(entityname)
+    val indexnames = Index.list(entityname).map(_._1)
 
     val options = mMap[String, String]()
 

@@ -160,7 +160,7 @@ object CatalogOperator {
     oos.close
 
     val setup = DBIO.seq(
-      indexes.+=((indexname, entityname, indextypename.toString, metaFilePath))
+      indexes.+=((indexname, entityname, indextypename.name, metaFilePath))
     )
 
     Await.result(db.run(setup), MAX_WAITING_TIME)
@@ -201,7 +201,7 @@ object CatalogOperator {
       throw new EntityNotExistingException()
     }
 
-    val existingIndexes = listIndexes(entityname)
+    val existingIndexes = listIndexes(entityname).map(_._1)
 
     val query = indexes.filter(_.entityname === entityname).delete
     Await.result(db.run(query), MAX_WAITING_TIME)
@@ -209,37 +209,27 @@ object CatalogOperator {
     existingIndexes
   }
 
-  /**
-    * Lists all indexes in catalog for specific entity.
+ /**
+    * Lists all indexes in catalog.
     *
-    * @param entityname
-    */
-  def listIndexes(entityname: EntityName): Seq[IndexName] = {
-    val query = indexes.filter(_.entityname === entityname).map(_.indexname).result
-    Await.result(db.run(query), MAX_WAITING_TIME).toList
-  }
-
-
-  /**
-    * Lists all indexes in catalog together with type information for a specific entity.
-    *
-    * @param entityname
-    */
-  def listIndexesWithType(entityname: EntityName): Seq[(IndexName, IndexTypeName)] = {
-    val query = indexes.filter(_.entityname === entityname).map(index => (index.indexname, index.indextypename)).result
-    Await.result(db.run(query), MAX_WAITING_TIME).map(index => (index._1, IndexTypes.withName(index._2).get))
-  }
-
-  /**
-    * Lists all indexes.
-    *
+    * @param entityname filter by entityname, set to null for not using filter
+    * @param indextypename filter by indextypename, set to null for not using filter
     * @return
     */
-  def listIndexes(): Seq[IndexName] = {
-    val query = indexes.map(_.indexname).result
-    Await.result(db.run(query), MAX_WAITING_TIME).toList
-  }
+  def listIndexes(entityname: EntityName = null, indextypename: IndexTypeName = null): Seq[(IndexName, IndexTypeName)] = {
+    var catalog : Query[IndexesCatalog, (String, String, String, String), Seq] = indexes
 
+    if(entityname != null){
+     catalog = catalog.filter(_.entityname === entityname)
+    }
+
+    if(indextypename != null){
+      catalog = catalog.filter(_.indextypename === indextypename.name)
+    }
+
+    val query = catalog.map(index => (index.indexname, index.indextypename)).result
+    Await.result(db.run(query), MAX_WAITING_TIME).map(index => (index._1, IndexTypes.withName(index._2).get))
+  }
 
   /**
     * Returns meta information to a specified index.
