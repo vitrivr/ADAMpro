@@ -68,6 +68,22 @@ object QueryOp {
 
 
   /**
+    * Performs an index-based query.
+    *
+    * @param entityname
+    * @param indextypename
+    * @param nnq          information for nearest neighbour query
+    * @param bq           information for boolean query
+    * @param withMetadata whether or not to retrieve corresponding metadata
+    * @return
+    */
+  def index(entityname: EntityName, indextypename : IndexTypeName, nnq: NearestNeighbourQuery, bq: Option[BooleanQuery], withMetadata: Boolean): DataFrame = {
+    log.debug("perform index query operation")
+    QueryHandler.indexQuery(entityname, indextypename)(nnq, bq, withMetadata)
+  }
+
+
+  /**
     * Performs a progressive query, i.e., all indexes and sequential search are started at the same time and results are returned as soon
     * as they are available. When a precise result is returned, the whole query is stopped.
     *

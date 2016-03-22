@@ -109,7 +109,7 @@ object Index {
     * @return
     */
   private def createIndexName(entityname: EntityName, indextype: IndexTypeName): String = {
-    val indexes = CatalogOperator.listIndexes(entityname).map(_._1).filter(_.startsWith(entityname + "_" + indextype.name))
+    val indexes = CatalogOperator.listIndexes(entityname, indextype).map(_._1)
 
     var indexname = ""
 

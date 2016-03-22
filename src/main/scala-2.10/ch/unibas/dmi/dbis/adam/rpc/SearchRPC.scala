@@ -5,6 +5,7 @@ import java.util.concurrent.TimeUnit
 import ch.unibas.dmi.dbis.adam.api.QueryOp
 import ch.unibas.dmi.dbis.adam.datatypes.feature.Feature._
 import ch.unibas.dmi.dbis.adam.http.grpc.adam._
+import ch.unibas.dmi.dbis.adam.index.structures.IndexTypes
 import ch.unibas.dmi.dbis.adam.query.distance.NormBasedDistanceFunction
 import ch.unibas.dmi.dbis.adam.query.handler.QueryHints
 import ch.unibas.dmi.dbis.adam.query.progressive.ProgressiveQueryStatus
@@ -93,13 +94,50 @@ class SearchRPC extends AdamSearchGrpc.AdamSearch {
     }
   }
 
-
   /**
     *
     * @param request
     * @return
     */
   override def doIndexQuery(request: SimpleIndexQueryMessage): Future[QueryResponseListMessage] = {
+    log.debug("rpc call for index query operation")
+
+    try {
+      val entity = request.entity
+
+      val indextype = IndexTypes.withIndextype(request.indextype)
+      if(indextype.isEmpty){
+        throw new Exception("No existing index type specified.")
+      }
+
+      if(request.nnq.isEmpty) {
+        throw new Exception("No kNN query specified.")
+      }
+
+      val rnnq = request.nnq.get
+      val nnq = NearestNeighbourQuery(rnnq.query, NormBasedDistanceFunction(rnnq.norm), rnnq.k, rnnq.indexOnly, rnnq.options)
+
+      val bq : Option[BooleanQuery] = if(!request.bq.isEmpty){
+        val rbq = request.bq.get
+        Option(BooleanQuery(rbq.where.map(bqm => (bqm.field, bqm.value)), Option(rbq.joins.map(x => (x.table, x.columns)))))
+      } else { None }
+
+      //TODO: metadata output should be in json
+      val results = QueryOp.index(entity, indextype.get, nnq, bq, true).map(result => QueryResponseMessage(result.getLong(1), result.getDouble(0), "")).collect()
+
+      Future.successful(QueryResponseListMessage(results))
+    } catch {
+      case e: Exception => Future.failed(e)
+    }
+  }
+
+
+  /**
+    *
+    * @param request
+    * @return
+    */
+  override def doSpecifiedIndexQuery(request: SimpleSpecifiedIndexQueryMessage): Future[QueryResponseListMessage] = {
     log.debug("rpc call for index query operation")
 
     try {

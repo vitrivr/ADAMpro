@@ -85,11 +85,11 @@ class DataDefinitionRPC extends AdamDefinitionGrpc.AdamDefinition {
 
     try {
       val indextypename = request.indextype match {
-        case IndexMessage.IndexType.ecp => IndexTypes.ECPINDEX
-        case IndexMessage.IndexType.sh => IndexTypes.SHINDEX
-        case IndexMessage.IndexType.lsh => IndexTypes.LSHINDEX
-        case IndexMessage.IndexType.vaf => IndexTypes.VAFINDEX
-        case IndexMessage.IndexType.vav => IndexTypes.VAVINDEX
+        case IndexType.ecp => IndexTypes.ECPINDEX
+        case IndexType.sh => IndexTypes.SHINDEX
+        case IndexType.lsh => IndexTypes.LSHINDEX
+        case IndexType.vaf => IndexTypes.VAFINDEX
+        case IndexType.vav => IndexTypes.VAVINDEX
         case _ => null
       }
 

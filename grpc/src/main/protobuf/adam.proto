@@ -14,6 +14,7 @@ service AdamDefinition {
 service AdamSearch {
   rpc DoStandardQuery(SimpleQueryMessage) returns (QueryResponseListMessage) {}
   rpc DoSequentialQuery(SimpleSequentialQueryMessage) returns (QueryResponseListMessage) {}
+  rpc DoSpecifiedIndexQuery(SimpleSpecifiedIndexQueryMessage) returns (QueryResponseListMessage) {}
   rpc DoIndexQuery(SimpleIndexQueryMessage) returns (QueryResponseListMessage) {}
   rpc DoProgressiveQuery(SimpleQueryMessage) returns (stream QueryResponseInfoMessage) {}
   rpc DoTimedProgressiveQuery(TimedQueryMessage) returns (QueryResponseInfoMessage) {}
@@ -58,15 +59,16 @@ message InsertMessage {
   map<string, string> metadata = 4;
 }
 
-message IndexMessage {
-  string entity = 1;
-  enum IndexType {
+enum IndexType {
     lsh = 0;
     sh = 1;
     ecp = 2;
     vaf = 3;
     vav = 4;
-  }
+}
+
+message IndexMessage {
+  string entity = 1;
   IndexType indextype = 2;
   int32 norm = 3;
   map<string, string> options = 4;
@@ -110,10 +112,17 @@ message SimpleSequentialQueryMessage {
   BooleanQueryMessage bq = 3;
 }
 
-message SimpleIndexQueryMessage {
+message SimpleSpecifiedIndexQueryMessage {
   string index = 1;
   NearestNeighbourQueryMessage nnq = 2;
   BooleanQueryMessage bq = 3;
+}
+
+message SimpleIndexQueryMessage {
+  string entity = 1;
+  IndexType indextype = 2;
+  NearestNeighbourQueryMessage nnq = 3;
+  BooleanQueryMessage bq = 4;
 }
 
 message TimedQueryMessage {

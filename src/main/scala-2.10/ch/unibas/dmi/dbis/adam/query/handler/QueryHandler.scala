@@ -3,6 +3,7 @@ package ch.unibas.dmi.dbis.adam.query.handler
 import ch.unibas.dmi.dbis.adam.config.FieldNames
 import ch.unibas.dmi.dbis.adam.entity.Entity._
 import ch.unibas.dmi.dbis.adam.entity.Tuple.TupleID
+import ch.unibas.dmi.dbis.adam.exception.IndexNotExistingException
 import ch.unibas.dmi.dbis.adam.index.Index
 import ch.unibas.dmi.dbis.adam.index.Index._
 import ch.unibas.dmi.dbis.adam.query.handler.QueryHints._
@@ -121,6 +122,28 @@ object QueryHandler {
       res = joinWithMetadata(entityname, res)
     }
     res
+  }
+
+
+  /**
+    * Performs a index-based query. Chooses the
+    *
+    * @param entityname name of the entity
+    * @param indextype  type of the index
+    * @param nnq
+    * @param bq
+    * @param withMetadata
+    * @return
+    */
+  def indexQuery(entityname: EntityName, indextype : IndexTypeName)(nnq: NearestNeighbourQuery, bq: Option[BooleanQuery], withMetadata: Boolean): DataFrame = {
+    val indexes = Index.list(entityname, indextype).map(_._1)
+
+    if(indexes.isEmpty){
+      log.error("requested index of type " + indextype + " but not index of this type was found")
+      throw new IndexNotExistingException()
+    }
+
+    indexQuery(indexes.head)(nnq, bq, withMetadata)
   }
 
 
