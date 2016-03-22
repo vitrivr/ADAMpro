@@ -23,6 +23,7 @@ class ProgressiveQueryStatusTracker(queryID: String) {
   private var runningStatus = ProgressiveQueryStatus.RUNNING
   private var resultConfidence = 0.toFloat
   private var queryResults : DataFrame = _
+  private var resultDeliverer : String = ""
 
   /**
     * Register a scan future.
@@ -45,6 +46,7 @@ class ProgressiveQueryStatusTracker(queryID: String) {
     futures.synchronized({
       if (future.confidence > resultConfidence && runningStatus == ProgressiveQueryStatus.RUNNING) {
         queryResults = futureResults
+        resultDeliverer = future.name
         resultConfidence = future.confidence
       }
 
@@ -97,7 +99,7 @@ class ProgressiveQueryStatusTracker(queryID: String) {
     * @return
     */
   def results = {
-    (queryResults, resultConfidence)
+    (queryResults, resultConfidence, resultDeliverer)
   }
 
   /**

@@ -146,7 +146,7 @@ object NearestNeighbourQueryHandler {
     * @param filter
     * @return
     */
-  def timedProgressiveQuery(entityname: EntityName, query: NearestNeighbourQuery, filter: Option[Set[TupleID]], timelimit: Duration): (DataFrame, Float) = {
+  def timedProgressiveQuery(entityname: EntityName, query: NearestNeighbourQuery, filter: Option[Set[TupleID]], timelimit: Duration): (DataFrame, Float, String) = {
     log.debug("starting timed progressive query scanner")
 
     val indexnames = Index.list(entityname).map(_._1)

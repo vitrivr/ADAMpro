@@ -167,6 +167,14 @@ object Index {
   def confidence(indexname: IndexName): Float = load(indexname, false).confidence
 
   /**
+    * Gets the type of the index.
+    *
+    * @param indexname
+    * @return
+    */
+  def indextype(indexname: IndexName): IndexTypeName = load(indexname, false).indextype
+
+  /**
     * Loads index.
     *
     * @param indexname

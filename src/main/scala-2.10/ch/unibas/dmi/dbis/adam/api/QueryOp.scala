@@ -110,7 +110,7 @@ object QueryOp {
     * @param withMetadata whether or not to retrieve corresponding metadata
     * @return the results available together with a confidence score
     */
-  def timedProgressive(entityname: EntityName, nnq: NearestNeighbourQuery, bq: Option[BooleanQuery], timelimit: Duration, withMetadata: Boolean): (DataFrame, Float) = {
+  def timedProgressive(entityname: EntityName, nnq: NearestNeighbourQuery, bq: Option[BooleanQuery], timelimit: Duration, withMetadata: Boolean): (DataFrame, Float, String) = {
     log.debug("perform timed progressive query operation")
     QueryHandler.timedProgressiveQuery(entityname)(nnq, bq, timelimit, withMetadata)
   }

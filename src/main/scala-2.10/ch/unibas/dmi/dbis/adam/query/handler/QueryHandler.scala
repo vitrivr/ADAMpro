@@ -226,7 +226,7 @@ object QueryHandler {
     * @param withMetadata whether or not to retrieve corresponding metadata
     * @return the results available together with a confidence score
     */
-  def timedProgressiveQuery(entityname: EntityName)(nnq: NearestNeighbourQuery, bq: Option[BooleanQuery], timelimit: Duration, withMetadata: Boolean): (DataFrame, Float) = {
+  def timedProgressiveQuery(entityname: EntityName)(nnq: NearestNeighbourQuery, bq: Option[BooleanQuery], timelimit: Duration, withMetadata: Boolean): (DataFrame, Float, String) = {
     log.debug("timed progressive query gets filter")
     val filter = if (bq.isDefined) {
       getFilter(entityname, bq.get)
@@ -235,13 +235,13 @@ object QueryHandler {
     }
 
     log.debug("timed progressive query performs kNN query")
-    var (res, confidence) = NearestNeighbourQueryHandler.timedProgressiveQuery(entityname, nnq, filter, timelimit)
+    var (res, confidence, deliverer) = NearestNeighbourQueryHandler.timedProgressiveQuery(entityname, nnq, filter, timelimit)
     if (withMetadata) {
       log.debug("join metadata to results of timed progressive query")
       res = joinWithMetadata(entityname, res)
     }
 
-    (res, confidence)
+    (res, confidence, deliverer)
   }
 
 

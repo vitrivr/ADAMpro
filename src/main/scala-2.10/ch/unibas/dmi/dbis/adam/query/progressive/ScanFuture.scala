@@ -5,7 +5,6 @@ import ch.unibas.dmi.dbis.adam.index.Index
 import ch.unibas.dmi.dbis.adam.index.Index.IndexName
 import ch.unibas.dmi.dbis.adam.query.handler.NearestNeighbourQueryHandler
 import ch.unibas.dmi.dbis.adam.query.query.NearestNeighbourQuery
-import ch.unibas.dmi.dbis.adam.query.Result
 import org.apache.spark.sql.DataFrame
 
 import scala.concurrent.ExecutionContext.Implicits.global
@@ -19,6 +18,7 @@ import scala.concurrent.Future
  * October 2015
  */
 abstract class ScanFuture(tracker : ProgressiveQueryStatusTracker){
+  val name : String
   val future : Future[_]
   val confidence : Float
 }
@@ -34,6 +34,7 @@ abstract class ScanFuture(tracker : ProgressiveQueryStatusTracker){
 class IndexScanFuture(indexname : IndexName, query : NearestNeighbourQuery, onComplete: (ProgressiveQueryStatus.Value, DataFrame, Float, Map[String, String]) => Unit, val tracker : ProgressiveQueryStatusTracker) extends ScanFuture(tracker) {
   tracker.register(this)
 
+  val name = Index.indextype(indexname).name
   val info =  Map[String,String]("type" -> ("index: " + indexname), "index" -> indexname, "qid" -> query.queryID.get)
 
   val future = Future {NearestNeighbourQueryHandler.indexQuery(indexname, query, None)}
@@ -61,6 +62,7 @@ class IndexScanFuture(indexname : IndexName, query : NearestNeighbourQuery, onCo
 class SequentialScanFuture(entityname : EntityName, query : NearestNeighbourQuery, onComplete: (ProgressiveQueryStatus.Value, DataFrame, Float, Map[String, String]) => Unit, val tracker : ProgressiveQueryStatusTracker) extends ScanFuture(tracker) {
   tracker.register(this)
 
+  val name = "sequential"
   val info =  Map[String,String]("type" -> "sequential", "relation" -> entityname, "qid" -> query.queryID.get)
 
   val future = Future {NearestNeighbourQueryHandler.sequential(entityname, query, None)}
