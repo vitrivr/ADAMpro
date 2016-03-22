@@ -6,7 +6,7 @@ import ch.unibas.dmi.dbis.adam.config.AdamConfig
 import ch.unibas.dmi.dbis.adam.entity.Entity.EntityName
 import ch.unibas.dmi.dbis.adam.exception.{EntityExistingException, EntityNotExistingException, IndexExistingException, IndexNotExistingException}
 import ch.unibas.dmi.dbis.adam.index.Index.{IndexName, IndexTypeName}
-import ch.unibas.dmi.dbis.adam.index.structures.IndexStructures
+import ch.unibas.dmi.dbis.adam.index.structures.IndexTypes
 import org.apache.commons.io.FileUtils
 import org.apache.log4j.Logger
 import slick.dbio.Effect.Read
@@ -227,7 +227,7 @@ object CatalogOperator {
     */
   def listIndexesWithType(entityname: EntityName): Seq[(IndexName, IndexTypeName)] = {
     val query = indexes.filter(_.entityname === entityname).map(index => (index.indexname, index.indextypename)).result
-    Await.result(db.run(query), MAX_WAITING_TIME).map(index => (index._1, IndexStructures.withName(index._2)))
+    Await.result(db.run(query), MAX_WAITING_TIME).map(index => (index._1, IndexTypes.withName(index._2).get))
   }
 
   /**
@@ -264,7 +264,7 @@ object CatalogOperator {
     val query: SqlAction[String, NoStream, Read] = indexes.filter(_.indexname === indexname).map(_.indextypename).result.head
     val result = Await.result(db.run(query), MAX_WAITING_TIME)
 
-    IndexStructures.withName(result)
+    IndexTypes.withName(result).get
   }
 
   /**

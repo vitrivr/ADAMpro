@@ -4,7 +4,7 @@ import ch.unibas.dmi.dbis.adam.entity.Entity
 import ch.unibas.dmi.dbis.adam.entity.Entity._
 import ch.unibas.dmi.dbis.adam.index.Index._
 import ch.unibas.dmi.dbis.adam.index._
-import ch.unibas.dmi.dbis.adam.index.structures.IndexStructures
+import ch.unibas.dmi.dbis.adam.index.structures.IndexTypes
 import ch.unibas.dmi.dbis.adam.index.structures.lsh.hashfunction.{EuclideanHashFunction, Hasher}
 import ch.unibas.dmi.dbis.adam.main.SparkStartup
 import ch.unibas.dmi.dbis.adam.query.distance.DistanceFunction
@@ -16,7 +16,7 @@ import org.apache.spark.util.random.ADAMSamplingUtils
 class LSHIndexer(hashFamily : String, numHashTables : Int, numHashes : Int, distance : DistanceFunction, trainingSize : Int) extends IndexGenerator with Serializable {
   @transient lazy val log = Logger.getLogger(getClass.getName)
 
-  override val indextypename: IndexTypeName = IndexStructures.LSH
+  override val indextypename: IndexTypeName = IndexTypes.LSHINDEX
 
   /**
    *

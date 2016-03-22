@@ -8,7 +8,7 @@ import ch.unibas.dmi.dbis.adam.datatypes.feature.Feature
 import ch.unibas.dmi.dbis.adam.entity.Entity
 import ch.unibas.dmi.dbis.adam.index.Index._
 import ch.unibas.dmi.dbis.adam.index._
-import ch.unibas.dmi.dbis.adam.index.structures.IndexStructures
+import ch.unibas.dmi.dbis.adam.index.structures.IndexTypes
 import ch.unibas.dmi.dbis.adam.main.SparkStartup
 import ch.unibas.dmi.dbis.adam.entity.Entity._
 import org.apache.log4j.Logger
@@ -25,7 +25,7 @@ import org.apache.spark.util.random.ADAMSamplingUtils
 class SHIndexer(nbits : Int, trainingSize : Int) extends IndexGenerator with Serializable {
   @transient lazy val log = Logger.getLogger(getClass.getName)
 
-  override val indextypename: IndexTypeName = IndexStructures.SH
+  override val indextypename: IndexTypeName = IndexTypes.SHINDEX
 
 
   /**

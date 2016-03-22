@@ -5,7 +5,7 @@ import ch.unibas.dmi.dbis.adam.datatypes.feature.{FeatureVectorWrapper, Feature}
 import Feature.FeatureVector
 import ch.unibas.dmi.dbis.adam.entity.Entity.apply
 import ch.unibas.dmi.dbis.adam.index.Index.IndexTypeName
-import ch.unibas.dmi.dbis.adam.index.structures.IndexStructures
+import ch.unibas.dmi.dbis.adam.index.structures.IndexTypes
 import ch.unibas.dmi.dbis.adam.index.structures.ecp.ECPIndexer
 import ch.unibas.dmi.dbis.adam.index.structures.lsh.LSHIndexer
 import ch.unibas.dmi.dbis.adam.index.structures.sh.{SHIndexer, SHIndexer$}
@@ -38,7 +38,7 @@ object IndexOp {
     */
   def apply(entityname: EntityName, indextype: String, distance: DistanceFunction, properties: Map[String, String]): Unit = {
     log.debug("perform create index operation")
-    apply(entityname, IndexStructures.withName(indextype), distance, properties)
+    apply(entityname, IndexTypes.withName(indextype).get, distance, properties)
   }
 
   /**
@@ -55,11 +55,11 @@ object IndexOp {
     val entity = Entity.load(entityname)
 
     val generator: IndexGenerator = indextypename match {
-      case IndexStructures.ECP => ECPIndexer(distance)
-      case IndexStructures.LSH => LSHIndexer(distance, properties)
-      case IndexStructures.SH => SHIndexer(entity.getFeaturedata.first().getAs[FeatureVectorWrapper](1).vector.length)
-      case IndexStructures.VAF => VAFIndexer(distance.asInstanceOf[MinkowskiDistance], properties)
-      case IndexStructures.VAV => VAVIndexer(entity.getFeaturedata.first().getAs[FeatureVectorWrapper](1).vector.length, distance.asInstanceOf[MinkowskiDistance], properties)
+      case IndexTypes.ECPINDEX => ECPIndexer(distance)
+      case IndexTypes.LSHINDEX => LSHIndexer(distance, properties)
+      case IndexTypes.SHINDEX => SHIndexer(entity.getFeaturedata.first().getAs[FeatureVectorWrapper](1).vector.length)
+      case IndexTypes.VAFINDEX => VAFIndexer(distance.asInstanceOf[MinkowskiDistance], properties)
+      case IndexTypes.VAVINDEX => VAVIndexer(entity.getFeaturedata.first().getAs[FeatureVectorWrapper](1).vector.length, distance.asInstanceOf[MinkowskiDistance], properties)
     }
 
     Index.createIndex(entity, generator)

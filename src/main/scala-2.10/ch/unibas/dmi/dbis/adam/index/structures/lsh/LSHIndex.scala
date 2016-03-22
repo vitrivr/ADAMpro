@@ -5,7 +5,7 @@ import ch.unibas.dmi.dbis.adam.datatypes.feature.MovableFeature
 import ch.unibas.dmi.dbis.adam.entity.Entity._
 import ch.unibas.dmi.dbis.adam.entity.Tuple.TupleID
 import ch.unibas.dmi.dbis.adam.index.Index._
-import ch.unibas.dmi.dbis.adam.index.structures.IndexStructures
+import ch.unibas.dmi.dbis.adam.index.structures.IndexTypes
 import ch.unibas.dmi.dbis.adam.index.structures.lsh.results.LSHResultHandler
 import ch.unibas.dmi.dbis.adam.index.{BitStringIndexTuple, Index}
 import ch.unibas.dmi.dbis.adam.main.SparkStartup
@@ -21,7 +21,7 @@ import org.apache.spark.sql.DataFrame
 class LSHIndex(val indexname: IndexName, val entityname: EntityName, protected val df: DataFrame, private[index] val metadata: LSHIndexMetaData)
   extends Index[BitStringIndexTuple] {
 
-  override val indextype: IndexTypeName = IndexStructures.LSH
+  override val indextype: IndexTypeName = IndexTypes.LSHINDEX
   override val confidence = 0.toFloat
 
   override def scan(data : DataFrame, q : FeatureVector, options : Map[String, Any], k : Int): Set[TupleID] = {

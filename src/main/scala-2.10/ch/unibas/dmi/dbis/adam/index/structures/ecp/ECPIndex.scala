@@ -5,7 +5,7 @@ import ch.unibas.dmi.dbis.adam.entity.Entity.EntityName
 import ch.unibas.dmi.dbis.adam.entity.Tuple.TupleID
 import ch.unibas.dmi.dbis.adam.index.Index.{IndexName, IndexTypeName}
 import ch.unibas.dmi.dbis.adam.index._
-import ch.unibas.dmi.dbis.adam.index.structures.IndexStructures
+import ch.unibas.dmi.dbis.adam.index.structures.IndexTypes
 import ch.unibas.dmi.dbis.adam.main.SparkStartup
 import org.apache.spark.TaskContext
 import org.apache.spark.sql.DataFrame
@@ -21,7 +21,7 @@ import scala.collection.mutable.ListBuffer
 class ECPIndex(val indexname: IndexName, val entityname: EntityName, protected val df: DataFrame, private[index] val metadata : ECPIndexMetaData)
   extends Index[LongIndexTuple] {
 
-  override val indextype: IndexTypeName = IndexStructures.ECP
+  override val indextype: IndexTypeName = IndexTypes.ECPINDEX
   override val confidence = 0.toFloat
 
   override def scan(data : DataFrame, q : FeatureVector, options : Map[String, Any], k : Int): Set[TupleID] = {

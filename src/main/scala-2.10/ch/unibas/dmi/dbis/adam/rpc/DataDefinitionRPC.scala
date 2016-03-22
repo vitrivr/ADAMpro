@@ -6,7 +6,7 @@ import ch.unibas.dmi.dbis.adam.entity.{FieldDefinition, FieldTypes}
 import ch.unibas.dmi.dbis.adam.entity.FieldTypes.FieldType
 import ch.unibas.dmi.dbis.adam.exception.GeneralAdamException
 import ch.unibas.dmi.dbis.adam.http.grpc.adam._
-import ch.unibas.dmi.dbis.adam.index.structures.IndexStructures
+import ch.unibas.dmi.dbis.adam.index.structures.IndexTypes
 import ch.unibas.dmi.dbis.adam.query.distance.NormBasedDistanceFunction
 import org.apache.log4j.Logger
 
@@ -85,11 +85,11 @@ class DataDefinitionRPC extends AdamDefinitionGrpc.AdamDefinition {
 
     try {
       val indextypename = request.indextype match {
-        case IndexMessage.IndexType.ecp => IndexStructures.ECP
-        case IndexMessage.IndexType.sh => IndexStructures.SH
-        case IndexMessage.IndexType.lsh => IndexStructures.LSH
-        case IndexMessage.IndexType.vaf => IndexStructures.VAF
-        case IndexMessage.IndexType.vav => IndexStructures.VAV
+        case IndexMessage.IndexType.ecp => IndexTypes.ECPINDEX
+        case IndexMessage.IndexType.sh => IndexTypes.SHINDEX
+        case IndexMessage.IndexType.lsh => IndexTypes.LSHINDEX
+        case IndexMessage.IndexType.vaf => IndexTypes.VAFINDEX
+        case IndexMessage.IndexType.vav => IndexTypes.VAVINDEX
         case _ => null
       }
 

@@ -49,10 +49,10 @@ class SearchRPC extends AdamSearchGrpc.AdamSearch {
           Option(BooleanQuery(rbq.where.map(bqm => (bqm.field, bqm.value)), Option(rbq.joins.map(x => (x.table, x.columns)))))
         } else { None }
 
-        //TODO: metadata should be set via protobuf message
         //TODO: metadata output should be in json
         val results = QueryOp(entity, hint, nnq, bq, true).collect()
           .map(result => QueryResponseMessage(result.getLong(1), result.getDouble(0), ""))
+
 
         Future.successful(QueryResponseListMessage(results))
       } catch {
@@ -84,7 +84,6 @@ class SearchRPC extends AdamSearchGrpc.AdamSearch {
         Option(BooleanQuery(rbq.where.map(bqm => (bqm.field, bqm.value)), Option(rbq.joins.map(x => (x.table, x.columns)))))
       } else { None }
 
-      //TODO: metadata should be set via protobuf message
       //TODO: metadata output should be in json
       val results = QueryOp.sequential(entity, nnq, bq, true).map(result => QueryResponseMessage(result.getLong(1), result.getDouble(0), "")).collect()
 
@@ -118,7 +117,6 @@ class SearchRPC extends AdamSearchGrpc.AdamSearch {
         Option(BooleanQuery(rbq.where.map(bqm => (bqm.field, bqm.value)), Option(rbq.joins.map(x => (x.table, x.columns)))))
       } else { None }
 
-      //TODO: metadata should be set via protobuf message
       //TODO: metadata output should be in json
       val results = QueryOp.index(index, nnq, bq, true).map(result => QueryResponseMessage(result.getLong(1), result.getDouble(0), "")).collect()
 
@@ -189,7 +187,6 @@ class SearchRPC extends AdamSearchGrpc.AdamSearch {
         Option(BooleanQuery(rbq.where.map(bqm => (bqm.field, bqm.value)), Option(rbq.joins.map(x => (x.table, x.columns)))))
       } else { None }
 
-      //TODO: metadata should be set via protobuf message
       //TODO: metadata output should be in json
       val tpresults = QueryOp.timedProgressive(entity, nnq, bq, Duration(time, TimeUnit.MILLISECONDS), true)
 

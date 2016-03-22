@@ -4,7 +4,7 @@ import ch.unibas.dmi.dbis.adam.datatypes.feature.Feature.{FeatureVector, VectorB
 import ch.unibas.dmi.dbis.adam.entity.Entity
 import ch.unibas.dmi.dbis.adam.entity.Entity._
 import ch.unibas.dmi.dbis.adam.index.Index._
-import ch.unibas.dmi.dbis.adam.index.structures.IndexStructures
+import ch.unibas.dmi.dbis.adam.index.structures.IndexTypes
 import ch.unibas.dmi.dbis.adam.index.structures.va.marks.{EquidistantMarksGenerator, EquifrequentMarksGenerator, MarksGenerator}
 import ch.unibas.dmi.dbis.adam.index.structures.va.signature.FixedSignatureGenerator
 import ch.unibas.dmi.dbis.adam.index.{BitStringIndexTuple, IndexGenerator, IndexingTaskTuple}
@@ -21,7 +21,7 @@ import org.apache.spark.util.random.ADAMSamplingUtils
 class VAFIndexer(maxMarks: Int = 64, marksGenerator: MarksGenerator, bitsPerDimension : Int, trainingSize : Int, distance : MinkowskiDistance) extends IndexGenerator with Serializable {
   @transient lazy val log = Logger.getLogger(getClass.getName)
 
-  override val indextypename: IndexTypeName = IndexStructures.VAF
+  override val indextypename: IndexTypeName = IndexTypes.VAFINDEX
 
   /**
    *

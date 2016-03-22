@@ -4,7 +4,7 @@ import ch.unibas.dmi.dbis.adam.datatypes.feature.Feature._
 import ch.unibas.dmi.dbis.adam.entity.Entity._
 import ch.unibas.dmi.dbis.adam.entity.Tuple._
 import ch.unibas.dmi.dbis.adam.index.Index._
-import ch.unibas.dmi.dbis.adam.index.structures.IndexStructures
+import ch.unibas.dmi.dbis.adam.index.structures.IndexTypes
 import ch.unibas.dmi.dbis.adam.index.structures.va.VAIndex.{Bounds, Marks}
 import ch.unibas.dmi.dbis.adam.index.structures.va.results.VAResultHandler
 import ch.unibas.dmi.dbis.adam.index.structures.va.signature.{FixedSignatureGenerator, VariableSignatureGenerator}
@@ -25,8 +25,8 @@ class VAIndex(val indexname : IndexName, val entityname : EntityName, protected 
   extends Index[BitStringIndexTuple] with Serializable {
 
   override val indextype: IndexTypeName = metadata.signatureGenerator match {
-    case fsg : FixedSignatureGenerator =>   IndexStructures.VAF
-    case vsg : VariableSignatureGenerator => IndexStructures.VAV
+    case fsg : FixedSignatureGenerator =>   IndexTypes.VAFINDEX
+    case vsg : VariableSignatureGenerator => IndexTypes.VAVINDEX
   }
   override val confidence = 1.toFloat
 

@@ -10,7 +10,7 @@ import ch.unibas.dmi.dbis.adam.entity.Entity._
 import ch.unibas.dmi.dbis.adam.entity.Tuple._
 import ch.unibas.dmi.dbis.adam.exception.IndexNotExistingException
 import ch.unibas.dmi.dbis.adam.index.Index._
-import ch.unibas.dmi.dbis.adam.index.structures.IndexStructures
+import ch.unibas.dmi.dbis.adam.index.structures.IndexTypes
 import ch.unibas.dmi.dbis.adam.index.structures.ecp.ECPIndex
 import ch.unibas.dmi.dbis.adam.index.structures.lsh.LSHIndex
 import ch.unibas.dmi.dbis.adam.index.structures.sh.SHIndex
@@ -70,7 +70,7 @@ trait Index[A <: IndexTuple] {
   def scan(q: FeatureVector, options: Map[String, Any], k: Int, filter: Option[Set[TupleID]], queryID: Option[String] = None): Set[TupleID] = {
     log.debug("started scanning index")
     SparkStartup.sc.setLocalProperty("spark.scheduler.pool", "index")
-    SparkStartup.sc.setJobGroup(queryID.getOrElse(""), indextype.toString, true)
+    SparkStartup.sc.setJobGroup(queryID.getOrElse(""), indextype.name, true)
 
     val data = if (filter.isDefined) {
       df.filter(df(FieldNames.idColumnName) isin (filter.get.toSeq : _*))
@@ -96,7 +96,7 @@ trait Index[A <: IndexTuple] {
 
 object Index {
   type IndexName = String
-  type IndexTypeName = IndexStructures.Value
+  type IndexTypeName = IndexTypes.IndexType
 
   private val storage = SparkStartup.indexStorage
 
@@ -109,13 +109,13 @@ object Index {
     * @return
     */
   private def createIndexName(entityname: EntityName, indextype: IndexTypeName): String = {
-    val indexes = CatalogOperator.listIndexes(entityname).filter(_.startsWith(entityname + "_" + indextype.toString))
+    val indexes = CatalogOperator.listIndexes(entityname).filter(_.startsWith(entityname + "_" + indextype.name))
 
     var indexname = ""
 
     var i = indexes.length
     do {
-      indexname = entityname + "_" + indextype.toString + "_" + i
+      indexname = entityname + "_" + indextype.name + "_" + i
       i += 1
     } while (indexes.contains(indexname))
 
@@ -205,11 +205,11 @@ object Index {
     val indextypename = CatalogOperator.getIndexTypeName(indexname)
 
     indextypename match {
-      case IndexStructures.ECP => ECPIndex(indexname, entityname, df, meta)
-      case IndexStructures.LSH => LSHIndex(indexname, entityname, df, meta)
-      case IndexStructures.SH => SHIndex(indexname, entityname, df, meta)
-      case IndexStructures.VAF => VAIndex(indexname, entityname, df, meta)
-      case IndexStructures.VAV => VAIndex(indexname, entityname, df, meta)
+      case IndexTypes.ECPINDEX => ECPIndex(indexname, entityname, df, meta)
+      case IndexTypes.LSHINDEX => LSHIndex(indexname, entityname, df, meta)
+      case IndexTypes.SHINDEX => SHIndex(indexname, entityname, df, meta)
+      case IndexTypes.VAFINDEX => VAIndex(indexname, entityname, df, meta)
+      case IndexTypes.VAVINDEX => VAIndex(indexname, entityname, df, meta)
     }
   }
 
