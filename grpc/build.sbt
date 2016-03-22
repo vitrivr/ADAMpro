@@ -2,6 +2,8 @@
 import com.trueaccord.scalapb.{ScalaPbPlugin => PB}
 import sbtassembly.AssemblyPlugin.autoImport._
 
+name := "ADAMpro-grpc"
+
 PB.protobufSettings
 
 PB.runProtoc in PB.protobufConfig := (args =>
