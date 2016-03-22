@@ -104,18 +104,21 @@ message SimpleQueryMessage {
   string hint = 2;
   NearestNeighbourQueryMessage nnq = 3;
   BooleanQueryMessage bq = 4;
+  bool withMetadata = 5;
 }
 
 message SimpleSequentialQueryMessage {
   string entity = 1;
   NearestNeighbourQueryMessage nnq = 2;
   BooleanQueryMessage bq = 3;
+  bool withMetadata = 4;
 }
 
 message SimpleSpecifiedIndexQueryMessage {
   string index = 1;
   NearestNeighbourQueryMessage nnq = 2;
   BooleanQueryMessage bq = 3;
+  bool withMetadata = 4;
 }
 
 message SimpleIndexQueryMessage {
@@ -123,6 +126,7 @@ message SimpleIndexQueryMessage {
   IndexType indextype = 2;
   NearestNeighbourQueryMessage nnq = 3;
   BooleanQueryMessage bq = 4;
+  bool withMetadata = 5;
 }
 
 message TimedQueryMessage {
@@ -130,16 +134,18 @@ message TimedQueryMessage {
   NearestNeighbourQueryMessage nnq = 2;
   BooleanQueryMessage bq = 3;
   int64 time = 4;
+  bool withMetadata = 5;
 }
 
 message QueryResponseInfoMessage {
   double confidence = 1;
-  QueryResponseListMessage queryResponseList = 2;
+  IndexType indextype = 2;
+  QueryResponseListMessage queryResponseList = 3;
 }
 
 message QueryResponseMessage {
   int64 id = 1;
-  double distance = 2;
+  float distance = 2;
   string metadata = 3;
 }
 

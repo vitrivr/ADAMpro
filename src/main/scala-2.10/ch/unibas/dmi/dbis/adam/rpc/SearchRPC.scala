@@ -3,6 +3,7 @@ package ch.unibas.dmi.dbis.adam.rpc
 import java.util.concurrent.TimeUnit
 
 import ch.unibas.dmi.dbis.adam.api.QueryOp
+import ch.unibas.dmi.dbis.adam.config.FieldNames
 import ch.unibas.dmi.dbis.adam.datatypes.feature.Feature._
 import ch.unibas.dmi.dbis.adam.http.grpc.adam._
 import ch.unibas.dmi.dbis.adam.index.structures.IndexTypes
@@ -12,7 +13,8 @@ import ch.unibas.dmi.dbis.adam.query.progressive.ProgressiveQueryStatus
 import ch.unibas.dmi.dbis.adam.query.query.{BooleanQuery, NearestNeighbourQuery}
 import io.grpc.stub.StreamObserver
 import org.apache.log4j.Logger
-import org.apache.spark.sql.DataFrame
+import org.apache.spark.sql.types._
+import org.apache.spark.sql.{DataFrame, Row}
 
 import scala.concurrent.Future
 import scala.concurrent.duration.Duration
@@ -28,6 +30,56 @@ class SearchRPC extends AdamSearchGrpc.AdamSearch {
 
   /**
     *
+    * @param option
+    * @return
+    */
+  private def prepareNearestNeighbourQuery(option: Option[NearestNeighbourQueryMessage]): NearestNeighbourQuery = {
+    if (option.isEmpty) {
+      throw new Exception("No kNN query specified.")
+    }
+
+    val nnq = option.get
+
+    NearestNeighbourQuery(nnq.query, NormBasedDistanceFunction(nnq.norm), nnq.k, nnq.indexOnly, nnq.options)
+  }
+
+  /**
+    *
+    * @param option
+    * @return
+    */
+  private def prepareBooleanQuery(option: Option[BooleanQueryMessage]): Option[BooleanQuery] = {
+    if (option.isDefined) {
+      val bq = option.get
+      Option(BooleanQuery(bq.where.map(bqm => (bqm.field, bqm.value)), Option(bq.joins.map(x => (x.table, x.columns)))))
+    } else {
+      None
+    }
+  }
+
+
+  /**
+    *
+    * @param df
+    * @return
+    */
+  private def prepareResults(df: DataFrame): QueryResponseListMessage = {
+    def toJSON(rowSchema: StructType)(row: Row): String = {
+      //TODO: switch to JSON
+      row.toString()
+    }
+
+    val responseMsgs = df.collect().map(row => QueryResponseMessage(
+      row.getAs[Long](FieldNames.idColumnName),
+      row.getAs[Float](FieldNames.distanceColumnName),
+      toJSON(df.schema)(row)
+    ))
+
+    QueryResponseListMessage(responseMsgs)
+  }
+
+  /**
+    *
     * @param request
     * @return
     */
@@ -35,30 +87,17 @@ class SearchRPC extends AdamSearchGrpc.AdamSearch {
     log.debug("rpc call for standard query operation")
 
     try {
-        val entity = request.entity
-        val hint = QueryHints.withName(request.hint)
+      val entity = request.entity
+      val hint = QueryHints.withName(request.hint)
+      val nnq = prepareNearestNeighbourQuery(request.nnq)
+      val bq = prepareBooleanQuery(request.bq)
+      val meta = request.withMetadata
 
-        if(!request.nnq.isDefined) {
-          throw new Exception("No kNN query specified.")
-        }
-
-        val rnnq = request.nnq.get
-        val nnq = NearestNeighbourQuery(rnnq.query, NormBasedDistanceFunction(rnnq.norm), rnnq.k, rnnq.indexOnly, rnnq.options)
-
-        val bq : Option[BooleanQuery] = if(!request.bq.isEmpty){
-          val rbq = request.bq.get
-          Option(BooleanQuery(rbq.where.map(bqm => (bqm.field, bqm.value)), Option(rbq.joins.map(x => (x.table, x.columns)))))
-        } else { None }
-
-        //TODO: metadata output should be in json
-        val results = QueryOp(entity, hint, nnq, bq, true).collect()
-          .map(result => QueryResponseMessage(result.getLong(1), result.getDouble(0), ""))
-
-
-        Future.successful(QueryResponseListMessage(results))
-      } catch {
-        case e: Exception => Future.failed(e)
-      }
+      val results = QueryOp(entity, hint, nnq, bq, meta)
+      Future.successful(prepareResults(results))
+    } catch {
+      case e: Exception => Future.failed(e)
+    }
   }
 
 
@@ -73,22 +112,12 @@ class SearchRPC extends AdamSearchGrpc.AdamSearch {
     try {
       val entity = request.entity
 
-      if(!request.nnq.isDefined) {
-        throw new Exception("No kNN query specified.")
-      }
+      val nnq = prepareNearestNeighbourQuery(request.nnq)
+      val bq = prepareBooleanQuery(request.bq)
+      val meta = request.withMetadata
 
-      val rnnq = request.nnq.get
-      val nnq = NearestNeighbourQuery(rnnq.query, NormBasedDistanceFunction(rnnq.norm), rnnq.k, rnnq.indexOnly, rnnq.options)
-
-      val bq : Option[BooleanQuery] = if(!request.bq.isEmpty){
-        val rbq = request.bq.get
-        Option(BooleanQuery(rbq.where.map(bqm => (bqm.field, bqm.value)), Option(rbq.joins.map(x => (x.table, x.columns)))))
-      } else { None }
-
-      //TODO: metadata output should be in json
-      val results = QueryOp.sequential(entity, nnq, bq, true).map(result => QueryResponseMessage(result.getLong(1), result.getDouble(0), "")).collect()
-
-      Future.successful(QueryResponseListMessage(results))
+      val results = QueryOp.sequential(entity, nnq, bq, meta)
+      Future.successful(prepareResults(results))
     } catch {
       case e: Exception => Future.failed(e)
     }
@@ -104,28 +133,16 @@ class SearchRPC extends AdamSearchGrpc.AdamSearch {
 
     try {
       val entity = request.entity
-
       val indextype = IndexTypes.withIndextype(request.indextype)
-      if(indextype.isEmpty){
+      if (indextype.isEmpty) {
         throw new Exception("No existing index type specified.")
       }
+      val nnq = prepareNearestNeighbourQuery(request.nnq)
+      val bq = prepareBooleanQuery(request.bq)
+      val meta = request.withMetadata
 
-      if(request.nnq.isEmpty) {
-        throw new Exception("No kNN query specified.")
-      }
-
-      val rnnq = request.nnq.get
-      val nnq = NearestNeighbourQuery(rnnq.query, NormBasedDistanceFunction(rnnq.norm), rnnq.k, rnnq.indexOnly, rnnq.options)
-
-      val bq : Option[BooleanQuery] = if(!request.bq.isEmpty){
-        val rbq = request.bq.get
-        Option(BooleanQuery(rbq.where.map(bqm => (bqm.field, bqm.value)), Option(rbq.joins.map(x => (x.table, x.columns)))))
-      } else { None }
-
-      //TODO: metadata output should be in json
-      val results = QueryOp.index(entity, indextype.get, nnq, bq, true).map(result => QueryResponseMessage(result.getLong(1), result.getDouble(0), "")).collect()
-
-      Future.successful(QueryResponseListMessage(results))
+      val results = QueryOp.index(entity, indextype.get, nnq, bq, meta)
+      Future.successful(prepareResults(results))
     } catch {
       case e: Exception => Future.failed(e)
     }
@@ -142,23 +159,12 @@ class SearchRPC extends AdamSearchGrpc.AdamSearch {
 
     try {
       val index = request.index
+      val nnq = prepareNearestNeighbourQuery(request.nnq)
+      val bq = prepareBooleanQuery(request.bq)
+      val meta = request.withMetadata
 
-      if(!request.nnq.isDefined) {
-        throw new Exception("No kNN query specified.")
-      }
-
-      val rnnq = request.nnq.get
-      val nnq = NearestNeighbourQuery(rnnq.query, NormBasedDistanceFunction(rnnq.norm), rnnq.k, rnnq.indexOnly, rnnq.options)
-
-      val bq : Option[BooleanQuery] = if(!request.bq.isEmpty){
-        val rbq = request.bq.get
-        Option(BooleanQuery(rbq.where.map(bqm => (bqm.field, bqm.value)), Option(rbq.joins.map(x => (x.table, x.columns)))))
-      } else { None }
-
-      //TODO: metadata output should be in json
-      val results = QueryOp.index(index, nnq, bq, true).map(result => QueryResponseMessage(result.getLong(1), result.getDouble(0), "")).collect()
-
-      Future.successful(QueryResponseListMessage(results))
+      val results = QueryOp.index(index, nnq, bq, meta)
+      Future.successful(prepareResults(results))
     } catch {
       case e: Exception => Future.failed(e)
     }
@@ -175,30 +181,21 @@ class SearchRPC extends AdamSearchGrpc.AdamSearch {
 
     try {
       val entity = request.entity
-
-      if(!request.nnq.isDefined) {
-        throw new Exception("No kNN query specified.")
-      }
-
-      val rnnq = request.nnq.get
-      val nnq = NearestNeighbourQuery(rnnq.query, NormBasedDistanceFunction(rnnq.norm), rnnq.k, rnnq.indexOnly, rnnq.options)
-
-      val bq : Option[BooleanQuery] = if(request.bq.isDefined){
-        val rbq = request.bq.get
-        Option(BooleanQuery(rbq.where.map(bqm => (bqm.field, bqm.value)), Option(rbq.joins.map(x => (x.table, x.columns)))))
-      } else { None }
+      val nnq = prepareNearestNeighbourQuery(request.nnq)
+      val bq = prepareBooleanQuery(request.bq)
+      val meta = request.withMetadata
 
       val onComplete =
-        (status : ProgressiveQueryStatus.Value, results : DataFrame, confidence : Float, info : Map[String, String]) => ({
-          val responseList = QueryResponseListMessage(results.map(result => QueryResponseMessage(result.getLong(1), result.getDouble(0), "")).collect())
-          responseObserver.onNext(QueryResponseInfoMessage(confidence, Option(responseList)))
+        (status: ProgressiveQueryStatus.Value, results: DataFrame, confidence: Float, deliverer : String, info: Map[String, String]) => ({
+          responseObserver.onNext(QueryResponseInfoMessage(confidence, IndexTypes.withName(info.getOrElse("type", "")).get.indextype, Option(prepareResults(results))))
         })
+
+
+      QueryOp.progressive(entity, nnq, bq, onComplete, meta)
     } catch {
       case e: Exception => Future.failed(e)
     }
   }
-
-
 
 
   /**
@@ -212,26 +209,12 @@ class SearchRPC extends AdamSearchGrpc.AdamSearch {
     try {
       val entity = request.entity
       val time = request.time
+      val nnq = prepareNearestNeighbourQuery(request.nnq)
+      val bq = prepareBooleanQuery(request.bq)
+      val meta = request.withMetadata
 
-      if(!request.nnq.isDefined) {
-        throw new Exception("No kNN query specified.")
-      }
-
-      val rnnq = request.nnq.get
-      val nnq = NearestNeighbourQuery(rnnq.query, NormBasedDistanceFunction(rnnq.norm), rnnq.k, rnnq.indexOnly, rnnq.options)
-
-      val bq : Option[BooleanQuery] = if(request.bq.isDefined){
-        val rbq = request.bq.get
-        Option(BooleanQuery(rbq.where.map(bqm => (bqm.field, bqm.value)), Option(rbq.joins.map(x => (x.table, x.columns)))))
-      } else { None }
-
-      //TODO: metadata output should be in json
-      val tpresults = QueryOp.timedProgressive(entity, nnq, bq, Duration(time, TimeUnit.MILLISECONDS), true)
-
-      val results = tpresults._1.map(result => QueryResponseMessage(result.getLong(1), result.getDouble(0), "")).collect()
-      val confidence = tpresults._2
-
-      Future.successful(QueryResponseInfoMessage(confidence, Option(QueryResponseListMessage(results))))
+      val (results, confidence, deliverer) = QueryOp.timedProgressive(entity, nnq, bq, Duration(time, TimeUnit.MILLISECONDS), meta)
+      Future.successful(QueryResponseInfoMessage(confidence, IndexTypes.withName(deliverer).get.indextype, Option(prepareResults(results))))
     } catch {
       case e: Exception => Future.failed(e)
     }
