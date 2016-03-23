@@ -3,9 +3,9 @@ package ch.unibas.dmi.dbis.adam.entity
 import ch.unibas.dmi.dbis.adam.config.FieldNames
 import ch.unibas.dmi.dbis.adam.datatypes.feature.{FeatureVectorWrapper, FeatureVectorWrapperUDT}
 import ch.unibas.dmi.dbis.adam.main.SparkStartup
-import ch.unibas.dmi.dbis.adam.test.AdamBaseTest
+import ch.unibas.dmi.dbis.adam.test.AdamTestBase
+import org.apache.spark.sql.Row
 import org.apache.spark.sql.types._
-import org.apache.spark.sql.{Row, types}
 import org.scalatest.Matchers._
 
 import scala.collection.mutable.ListBuffer
@@ -17,7 +17,7 @@ import scala.util.Random
   * Ivan Giangreco
   * March 2016
   */
-class EntityTestSuite extends AdamBaseTest {
+class EntityTestSuite extends AdamTestBase {
   feature("data definition") {
     /**
       *
@@ -30,7 +30,7 @@ class EntityTestSuite extends AdamBaseTest {
       val entityname = getRandomName()
       Entity.create(entityname)
 
-      Then("the entity, and only the entity should exist")
+      Then("one entity should be created")
       val finalEntities = Entity.list()
       eventually {
         finalEntities.size shouldBe givenEntities.size + 1
@@ -52,10 +52,10 @@ class EntityTestSuite extends AdamBaseTest {
       Entity.create(entityname)
       assert(Entity.list().contains(entityname))
 
-      When("the enetity is dropped")
+      When("the entity is dropped")
       Entity.drop(entityname)
 
-      Then("no entity should exist")
+      Then("the entity should no longer exist")
       assert(!Entity.list().contains(entityname))
     }
 
@@ -66,6 +66,7 @@ class EntityTestSuite extends AdamBaseTest {
       Given("a database with a few elements already")
       val givenEntities = Entity.list()
 
+      When("a new random entity with metadata is created")
       val fieldTemplate = Seq(
         ("stringfield", FieldTypes.STRINGTYPE, "text"),
         ("floatfield", FieldTypes.FLOATTYPE, "real"),
@@ -75,12 +76,10 @@ class EntityTestSuite extends AdamBaseTest {
         ("booleanfield", FieldTypes.BOOLEANTYPE, "boolean")
       )
 
-      When("a new random entity with metadata is created")
       val entityname = getRandomName()
-      val fields: Map[String, FieldDefinition] = fieldTemplate.map(ft => (ft._1, FieldDefinition(ft._2))).toMap
-      Entity.create(entityname, Some(fields))
+      Entity.create(entityname, Some(fieldTemplate.map(ft => (ft._1, FieldDefinition(ft._2))).toMap))
 
-      Then("the entity, and only the entity should exist")
+      Then("the entity should be created")
       val entities = Entity.list()
       val finalEntities = Entity.list()
       assert(finalEntities.size == givenEntities.size + 1)
@@ -99,10 +98,8 @@ class EntityTestSuite extends AdamBaseTest {
 
       assert(dbNames.size == templateNames.size)
 
-      val keys = dbNames.keySet
-
       And("the metadata table should contain the same columns (with the corresponding data type)")
-      assert(keys.forall({ key => dbNames(key) == templateNames(key) }))
+      assert(dbNames.keySet.forall({ key => dbNames(key) == templateNames(key) }))
 
       And("the index on the id field is created")
       val indexesResult = getJDBCConnection.createStatement().executeQuery("SELECT t.relname AS table, i.relname AS index, a.attname AS column FROM pg_class t, pg_class i, pg_index ix, pg_attribute a WHERE t.oid = ix.indrelid AND i.oid = ix.indexrelid AND a.attrelid = t.oid AND a.attnum = ANY(ix.indkey) AND t.relkind = 'r' AND t.relname = '" + entityname + "' AND a.attname = '" + FieldNames.idColumnName + "'")
@@ -240,15 +237,8 @@ class EntityTestSuite extends AdamBaseTest {
       val stringLength = 10
       val maxInt = 50000
 
-      val schema = StructType(Seq(
-        StructField(FieldNames.featureColumnName, new FeatureVectorWrapperUDT, false),
-        StructField("stringfield", types.StringType, false),
-        StructField("floatfield", types.FloatType, false),
-        StructField("doublefield", types.DoubleType, false),
-        StructField("intfield", types.IntegerType, false),
-        StructField("longfield", types.LongType, false),
-        StructField("booleanfield", types.BooleanType, false)
-      ))
+      val schema = StructType(fieldTemplate.filterNot(_._1.endsWith("unfilled"))
+        .map(field => StructField(field._1, field._2.datatype, false)).+:(StructField(FieldNames.featureColumnName, new FeatureVectorWrapperUDT, false)))
 
       val rdd = SparkStartup.sc.parallelize((0 until ntuples).map(id =>
         Row(new FeatureVectorWrapper(Seq.fill(ndims)(Random.nextFloat())),
@@ -268,13 +258,13 @@ class EntityTestSuite extends AdamBaseTest {
       Then("the data is available with metadata")
       assert(Entity.countTuples(entityname) == ntuples)
 
+      And("all tuples are inserted")
       val countResult = getJDBCConnection.createStatement().executeQuery("SELECT COUNT(*) AS count FROM " + entityname)
       countResult.next() //go to first result
       val tableCount = countResult.getInt("count")
       assert(tableCount == ntuples)
 
-
-      //filled fields should be filled
+      And("all filled fields should be filled")
       val randomRowResult = getJDBCConnection.createStatement().executeQuery("SELECT * FROM " + entityname + " ORDER BY RANDOM() LIMIT 1")
       randomRowResult.next() //go to first result
       assert(randomRowResult.getString("stringfield").length == stringLength)
@@ -284,7 +274,7 @@ class EntityTestSuite extends AdamBaseTest {
       assert(randomRowResult.getLong("longfield") >= 0)
       assert((randomRowResult.getBoolean("booleanfield")) || (!randomRowResult.getBoolean("booleanfield")))
 
-      //unfilled fields should be unfilled
+      And("all unfilled fields should be empty")
       assert(randomRowResult.getString("stringfieldunfilled") == null)
       assert(randomRowResult.getFloat("floatFieldunfilled") < 10e-8)
       assert(randomRowResult.getDouble("doubleFieldunfilled") < 10e-8)

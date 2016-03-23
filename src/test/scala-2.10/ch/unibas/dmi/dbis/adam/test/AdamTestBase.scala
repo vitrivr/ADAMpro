@@ -97,22 +97,15 @@ class AdamTestBase extends FeatureSpec with GivenWhenThen with Eventually with I
       ("longfield", FieldTypes.LONGTYPE, "bigint"),
       ("booleanfield", FieldTypes.BOOLEANTYPE, "boolean")
     )
-    val fields = fieldTemplate.map(ft => (ft._1, FieldDefinition(ft._2))).toMap
 
-    Entity.create(entityname, Some(fields))
+    Entity.create(entityname, Some(fieldTemplate.map(ft => (ft._1, FieldDefinition(ft._2))).toMap))
 
     val stringLength = 10
     val maxInt = 50000
 
-    val schema = StructType(Seq(
-      StructField(FieldNames.featureColumnName, new FeatureVectorWrapperUDT, false),
-      StructField("stringfield", types.StringType, false),
-      StructField("floatfield", types.FloatType, false),
-      StructField("doublefield", types.DoubleType, false),
-      StructField("intfield", types.IntegerType, false),
-      StructField("longfield", types.LongType, false),
-      StructField("booleanfield", types.BooleanType, false)
-    ))
+    val schema = StructType(fieldTemplate
+      .map(field => StructField(field._1, field._2.datatype, false)).+:(StructField(FieldNames.featureColumnName, new FeatureVectorWrapperUDT, false)))
+
 
     val rdd = SparkStartup.sc.parallelize((0 until ntuples).map(id =>
       Row(
@@ -132,11 +125,21 @@ class AdamTestBase extends FeatureSpec with GivenWhenThen with Eventually with I
     entityname
   }
 
-
+  /**
+    *
+    * @param entity
+    * @param fullData
+    * @param feature
+    * @param distance
+    * @param k
+    * @param where
+    * @param nnResults
+    * @param nnbqResults
+    */
   case class EvaluationSet(entity: Entity, fullData: DataFrame,
-                           feature: FeatureVectorWrapper, distance: MinkowskiDistance,  k: Int,
+                           feature: FeatureVectorWrapper, distance: MinkowskiDistance, k: Int,
                            where: Seq[(String, String)],
-                           nnResults: Seq[(Double, Long)], nnbqResults : Seq[(Double, Long)])
+                           nnResults: Seq[(Double, Long)], nnbqResults: Seq[(Double, Long)])
 
   /**
     * Reads the ground truth evaluation set composed of an entity and the kNN results.
@@ -144,30 +147,77 @@ class AdamTestBase extends FeatureSpec with GivenWhenThen with Eventually with I
     * @return
     */
   def getGroundTruthEvaluationSet(): EvaluationSet = {
-    //TODO: refactor
+    /**
+      *
+      * @param filename
+      * @param hasHeader
+      * @return
+      */
+    def readResourceFile(filename: String, hasHeader: Boolean = false): Seq[String] = {
+      val stream = getClass.getResourceAsStream("/" + filename)
+      val lines = scala.io.Source.fromInputStream(stream).getLines.toSeq
 
-    def readResourceFile(filename: String): Seq[String] = {
-      val gtstream = getClass.getResourceAsStream("/" + filename)
-      scala.io.Source.fromInputStream(gtstream).getLines.toSeq
+      if (hasHeader) {
+        lines.drop(1)
+      } else {
+        lines
+      }
     }
 
-    //data
-    val gtdata = readResourceFile("groundtruth/data.tsv").drop(1) //drop header
+    /**
+      *
+      * @param filename
+      * @return
+      */
+    def getData(filename: String): DataFrame = {
+      val rows = readResourceFile(filename, true)
+        .map(line => {
+          val splitted = line.split("\t")
+          val distance = splitted(0).toDouble
+          val id = splitted(1).toLong
+          val feature = new FeatureVectorWrapper(splitted(2).split(",").map(_.toFloat).toSeq)
+          val stringfield = splitted(3)
+          val floatfield = splitted(4).toFloat
+          val doublefield = splitted(5).toDouble
+          val intfield = splitted(6).toInt
+          val longfield = splitted(7).toLong
+          val booleanfield = splitted(8).toBoolean
 
-    val rows = gtdata.map(line => {
-      val splitted = line.split("\t")
-      val distance = splitted(0).toDouble
-      val id = splitted(1).toLong
-      val feature = new FeatureVectorWrapper(splitted(2).split(",").map(_.toFloat).toSeq)
-      val stringfield = splitted(3).toString
-      val floatfield = splitted(4).toFloat
-      val doublefield = splitted(5).toDouble
-      val intfield = splitted(6).toInt
-      val longfield = splitted(7).toLong
-      val booleanfield = splitted(8).toBoolean
+          Row(id, feature, stringfield, floatfield, doublefield, intfield, longfield, booleanfield, distance)
+        })
 
-      Row(id, feature, stringfield, floatfield, doublefield, intfield, longfield, booleanfield, distance)
-    })
+      val schema = StructType(Seq(
+        StructField("tid", types.LongType, false),
+        StructField(FieldNames.featureColumnName, new FeatureVectorWrapperUDT, false),
+        StructField("stringfield", types.StringType, false),
+        StructField("floatfield", types.FloatType, false),
+        StructField("doublefield", types.DoubleType, false),
+        StructField("intfield", types.IntegerType, false),
+        StructField("longfield", types.LongType, false),
+        StructField("booleanfield", types.BooleanType, false),
+        StructField("gtdistance", types.DoubleType, false)
+      ))
+
+      val rdd = SparkStartup.sc.parallelize(rows)
+     SparkStartup.sqlContext.createDataFrame(rdd, schema)
+    }
+
+    /**
+      *
+      * @param filename
+      * @return
+      */
+    def getResults(filename : String): Seq[(Double, Long)] ={
+      readResourceFile(filename).map(line => {
+        val splitted = line.split("\t")
+        val distance = splitted(0).toDouble
+        val id = splitted(1).toLong
+        (distance, id)
+      })
+    }
+
+    //prepare data
+    val data = getData("groundtruth/data.tsv")
 
     val fieldTemplate = Seq(
       ("tid", FieldTypes.LONGTYPE, "bigint"),
@@ -178,25 +228,7 @@ class AdamTestBase extends FeatureSpec with GivenWhenThen with Eventually with I
       ("longfield", FieldTypes.LONGTYPE, "bigint"),
       ("booleanfield", FieldTypes.BOOLEANTYPE, "boolean")
     )
-    val fields = fieldTemplate.map(ft => (ft._1, FieldDefinition(ft._2))).toMap
-
-    val entity = Entity.create(getRandomName(), Some(fields))
-
-    val schema = StructType(Seq(
-      StructField("tid", types.LongType, false),
-      StructField(FieldNames.featureColumnName, new FeatureVectorWrapperUDT, false),
-      StructField("stringfield", types.StringType, false),
-      StructField("floatfield", types.FloatType, false),
-      StructField("doublefield", types.DoubleType, false),
-      StructField("intfield", types.IntegerType, false),
-      StructField("longfield", types.LongType, false),
-      StructField("booleanfield", types.BooleanType, false),
-      StructField("gtdistance", types.DoubleType, false)
-    ))
-
-    val rdd = SparkStartup.sc.parallelize(rows)
-    val data = SparkStartup.sqlContext.createDataFrame(rdd, schema)
-
+    val entity = Entity.create(getRandomName(), Some(fieldTemplate.map(ft => (ft._1, FieldDefinition(ft._2))).toMap))
     entity.insert(data.drop("gtdistance"))
 
     //queries
@@ -209,20 +241,10 @@ class AdamTestBase extends FeatureSpec with GivenWhenThen with Eventually with I
 
 
     //100 nn results
-    val nnres = readResourceFile("groundtruth/100nn-results.tsv").map(line => {
-      val splitted = line.split("\t")
-      val distance = splitted(0).toDouble
-      val id = splitted(1).toLong
-      (distance, id)
-    })
+    val nnres = getResults("groundtruth/100nn-results.tsv")
 
     //100 nn results and bq
-    val nnbqres = readResourceFile("groundtruth/100nn-bq-results.tsv").map(line => {
-      val splitted = line.split("\t")
-      val distance = splitted(0).toDouble
-      val id = splitted(1).toLong
-      (distance, id)
-    })
+    val nnbqres = getResults("groundtruth/100nn-bq-results.tsv")
 
 
     EvaluationSet(entity, data, feature, ManhattanDistance, nnres.length, where, nnres, nnbqres)
@@ -244,7 +266,7 @@ class AdamTestBase extends FeatureSpec with GivenWhenThen with Eventually with I
     * @param results
     * @return
     */
-  def getScore(groundtruth : Seq[Long], results : Seq[Long]): Double ={
+  def getScore(groundtruth: Seq[Long], results: Seq[Long]): Double = {
     groundtruth.intersect(results).length.toFloat / groundtruth.size.toFloat
   }
 }

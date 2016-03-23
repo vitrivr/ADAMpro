@@ -14,7 +14,7 @@ import ch.unibas.dmi.dbis.adam.main.SparkStartup
 import ch.unibas.dmi.dbis.adam.query.handler.QueryHandler
 import ch.unibas.dmi.dbis.adam.query.progressive.ProgressiveQueryStatus
 import ch.unibas.dmi.dbis.adam.query.query.{BooleanQuery, NearestNeighbourQuery}
-import ch.unibas.dmi.dbis.adam.test.AdamBaseTest
+import ch.unibas.dmi.dbis.adam.test.AdamTestBase
 import org.apache.log4j.Logger
 import org.apache.spark.sql.DataFrame
 
@@ -26,7 +26,7 @@ import scala.concurrent.duration.Duration
   * Ivan Giangreco
   * March 2016
   */
-class QueryTestSuite extends AdamBaseTest {
+class QueryTestSuite extends AdamTestBase {
   val log = Logger.getLogger(getClass.getName)
 
   feature("standard query") {
@@ -188,7 +188,6 @@ class QueryTestSuite extends AdamBaseTest {
     }
 
 
-
     /**
       *
       */
@@ -319,6 +318,9 @@ class QueryTestSuite extends AdamBaseTest {
     }
 
 
+    /**
+      *
+      */
     scenario("perform a timed query") {
       Given("an entity")
       val es = getGroundTruthEvaluationSet()

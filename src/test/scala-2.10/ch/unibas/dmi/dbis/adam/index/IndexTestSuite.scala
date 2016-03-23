@@ -7,7 +7,7 @@ import ch.unibas.dmi.dbis.adam.index.structures.sh.SHIndexer
 import ch.unibas.dmi.dbis.adam.index.structures.va.{VAFIndexer, VAVIndexer}
 import ch.unibas.dmi.dbis.adam.main.SparkStartup
 import ch.unibas.dmi.dbis.adam.query.distance.EuclideanDistance
-import ch.unibas.dmi.dbis.adam.test.AdamBaseTest
+import ch.unibas.dmi.dbis.adam.test.AdamTestBase
 
 import scala.util.Random
 
@@ -17,7 +17,7 @@ import scala.util.Random
   * Ivan Giangreco
   * March 2016
   */
-class IndexTestSuite extends AdamBaseTest {
+class IndexTestSuite extends AdamTestBase {
   SparkStartup
 
   val ntuples = Random.nextInt(1000)
@@ -31,8 +31,11 @@ class IndexTestSuite extends AdamBaseTest {
       Given("an entity without metadata and an index")
       val entityname = createSimpleEntity(ntuples, ndims)
       val entity = Entity.load(entityname)
+
+      When("creating the index")
       val index = Index.createIndex(entity, ECPIndexer(EuclideanDistance))
 
+      Then("the index should be created")
       assert(Index.exists(index.indexname))
 
       When("dropping the index")
@@ -52,11 +55,14 @@ class IndexTestSuite extends AdamBaseTest {
       Given("an entity without metadata and an index")
       val entityname = createSimpleEntity(ntuples, ndims)
       val entity = Entity.load(entityname)
+
+      When("creating the index")
       val index = Index.createIndex(entity, ECPIndexer(EuclideanDistance))
 
+      Then("the index should be created")
       assert(Index.exists(index.indexname))
 
-      When("dropping the index")
+      When("dropping the entity")
       Entity.drop(entityname)
 
       Then("the index should be dropped")
@@ -76,7 +82,9 @@ class IndexTestSuite extends AdamBaseTest {
 
       Then("the index has been created")
       assert(Index.exists(index.indexname))
+      And("and the confidence is set properly")
       assert(index.confidence <= 1)
+      And("all elements are indexed")
       assert(index.count == entity.count)
 
       //clean up
@@ -96,7 +104,9 @@ class IndexTestSuite extends AdamBaseTest {
 
       Then("the index has been created")
       assert(Index.exists(index.indexname))
+      And("and the confidence is set properly")
       assert(index.confidence <= 1)
+      And("all elements are indexed")
       assert(index.count == entity.count)
 
       //clean up
@@ -116,7 +126,9 @@ class IndexTestSuite extends AdamBaseTest {
 
       Then("the index has been created")
       assert(Index.exists(index.indexname))
+      And("and the confidence is set properly")
       assert(index.confidence <= 1)
+      And("all elements are indexed")
       assert(index.count == entity.count)
 
       //clean up
@@ -137,7 +149,9 @@ class IndexTestSuite extends AdamBaseTest {
 
       Then("the index has been created")
       assert(Index.exists(index.indexname))
+      And("and the confidence is set properly")
       assert(index.confidence == 1)
+      And("all elements are indexed")
       assert(index.count == entity.count)
 
       //clean up
@@ -158,7 +172,9 @@ class IndexTestSuite extends AdamBaseTest {
 
       Then("the index has been created")
       assert(Index.exists(index.indexname))
+      And("and the confidence is set properly")
       assert(index.confidence == 1)
+      And("all elements are indexed")
       assert(index.count == entity.count)
 
       //clean up
