@@ -70,7 +70,7 @@ object QueryHandler {
 
         if (indexChoice.isDefined) {
           //TODO: use old measurements for choice rather than head
-          val index = indexChoice.get.map(indexname => Index.load(indexname, false)).filter(_.isQueryConform(nnq)).head
+          val index = indexChoice.get.map(indexname => Index.loadIndexMetaData(indexname)).filter(_.isQueryConform(nnq)).head
           return Option(indexQuery(index.indexname))
         } else {
           return None
@@ -159,7 +159,7 @@ object QueryHandler {
     * @return
     */
   def indexQuery(indexname: IndexName)(nnq: NearestNeighbourQuery, bq: Option[BooleanQuery], withMetadata: Boolean): DataFrame = {
-    val index = Index.load(indexname)
+    val index = Index.loadIndexMetaData(indexname)
     val entityname = index.entityname
 
     log.debug("index query gets filter")

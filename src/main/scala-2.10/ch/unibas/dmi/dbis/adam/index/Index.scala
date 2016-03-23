@@ -176,7 +176,7 @@ object Index {
     * @param indexname
     * @return
     */
-  def confidence(indexname: IndexName): Float = load(indexname, false).confidence
+  def confidence(indexname: IndexName): Float = loadIndexMetaData(indexname).confidence
 
   /**
     * Gets the type of the index.
@@ -184,7 +184,7 @@ object Index {
     * @param indexname
     * @return
     */
-  def indextype(indexname: IndexName): IndexTypeName = load(indexname, false).indextype
+  def indextype(indexname: IndexName): IndexTypeName = loadIndexMetaData(indexname).indextype
 
   /**
     * Loads index.
@@ -193,16 +193,12 @@ object Index {
     * @param cache if cache is true, the index is added to the cache and read from there
     * @return
     */
-  def load(indexname: IndexName, cache: Boolean = true): Index[_ <: IndexTuple] = {
+  def load(indexname: IndexName): Index[_ <: IndexTuple] = {
     if (!exists(indexname)) {
       throw new IndexNotExistingException()
     }
 
-    if (cache) {
-      IndexLRUCache.get(indexname)
-    } else {
-      loadIndexMetaData(indexname)
-    }
+    IndexLRUCache.get(indexname)
   }
 
   /**
@@ -211,7 +207,11 @@ object Index {
     * @param indexname
     * @return
     */
-  private def loadIndexMetaData(indexname: IndexName): Index[_ <: IndexTuple] = {
+  def loadIndexMetaData(indexname: IndexName): Index[_ <: IndexTuple] = {
+    if (!exists(indexname)) {
+      throw new IndexNotExistingException()
+    }
+
     val df = storage.read(indexname)
     val entityname = CatalogOperator.getEntitynameFromIndex(indexname)
     val meta = CatalogOperator.getIndexMeta(indexname)
