@@ -13,8 +13,7 @@ import ch.unibas.dmi.dbis.adam.query.progressive.ProgressiveQueryStatus
 import ch.unibas.dmi.dbis.adam.query.query.{BooleanQuery, NearestNeighbourQuery}
 import io.grpc.stub.StreamObserver
 import org.apache.log4j.Logger
-import org.apache.spark.sql.types._
-import org.apache.spark.sql.{DataFrame, Row}
+import org.apache.spark.sql.DataFrame
 
 import scala.concurrent.Future
 import scala.concurrent.duration.Duration
@@ -58,21 +57,35 @@ class SearchRPC extends AdamSearchGrpc.AdamSearch {
   }
 
 
+
   /**
     *
     * @param df
     * @return
     */
   private def prepareResults(df: DataFrame): QueryResponseListMessage = {
-    def toJSON(rowSchema: StructType)(row: Row): String = {
-      //TODO: switch to JSON
-      row.toString()
-    }
+    import org.apache.spark.sql.functions.{col, concat, concat_ws, lit}
 
-    val responseMsgs = df.collect().map(row => QueryResponseMessage(
+    val responseMsgs = df.select(
+      df(FieldNames.idColumnName),
+      df(FieldNames.distanceColumnName),
+      concat(
+        lit("{"),
+        concat_ws(",",df.dtypes.slice(2, df.dtypes.length).map(dt => {
+          val c = dt._1;
+          val t = dt._2;
+          concat(
+            lit("\"" + c + "\":" + (if (t == "StringType") "\""; else "")  ),
+            col(c),
+            lit(if(t=="StringType") "\""; else "")
+          )
+        }):_*),
+        lit("}")
+      ) as "metadata"
+    ).collect().map(row => QueryResponseMessage(
       row.getAs[Long](FieldNames.idColumnName),
       row.getAs[Float](FieldNames.distanceColumnName),
-      toJSON(df.schema)(row)
+      row.getAs[String]("metadata")
     ))
 
     QueryResponseListMessage(responseMsgs)
