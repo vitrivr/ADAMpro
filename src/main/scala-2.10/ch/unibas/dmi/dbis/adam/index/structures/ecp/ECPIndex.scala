@@ -7,6 +7,7 @@ import ch.unibas.dmi.dbis.adam.index.Index.{IndexName, IndexTypeName}
 import ch.unibas.dmi.dbis.adam.index._
 import ch.unibas.dmi.dbis.adam.index.structures.IndexTypes
 import ch.unibas.dmi.dbis.adam.main.SparkStartup
+import ch.unibas.dmi.dbis.adam.query.query.NearestNeighbourQuery
 import org.apache.spark.TaskContext
 import org.apache.spark.sql.DataFrame
 
@@ -47,6 +48,8 @@ class ECPIndex(val indexname: IndexName, val entityname: EntityName, protected v
 
     ids.toSet
   }
+
+  override def isQueryConform(nnq: NearestNeighbourQuery): Boolean = true
 }
 
 object ECPIndex {

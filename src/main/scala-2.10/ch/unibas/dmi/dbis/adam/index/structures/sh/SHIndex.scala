@@ -9,6 +9,8 @@ import ch.unibas.dmi.dbis.adam.index.structures.IndexTypes
 import ch.unibas.dmi.dbis.adam.index.structures.lsh.results.LSHResultHandler
 import ch.unibas.dmi.dbis.adam.index.{BitStringIndexTuple, Index}
 import ch.unibas.dmi.dbis.adam.main.SparkStartup
+import ch.unibas.dmi.dbis.adam.query.distance.MinkowskiDistance
+import ch.unibas.dmi.dbis.adam.query.query.NearestNeighbourQuery
 import org.apache.spark.TaskContext
 import org.apache.spark.sql.DataFrame
 
@@ -64,6 +66,15 @@ class SHIndex(val indexname: IndexName, val entityname: EntityName, protected va
     log.debug("SH index returning " + ids.toSet + " tuples")
 
     ids.toSet
+  }
+
+  override def isQueryConform(nnq: NearestNeighbourQuery): Boolean = {
+    //is this check correct?
+    if(nnq.distance.isInstanceOf[MinkowskiDistance]){
+      return true
+    }
+
+    false
   }
 }
 

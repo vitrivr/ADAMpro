@@ -9,6 +9,7 @@ import ch.unibas.dmi.dbis.adam.index.structures.IndexTypes
 import ch.unibas.dmi.dbis.adam.index.structures.lsh.results.LSHResultHandler
 import ch.unibas.dmi.dbis.adam.index.{BitStringIndexTuple, Index}
 import ch.unibas.dmi.dbis.adam.main.SparkStartup
+import ch.unibas.dmi.dbis.adam.query.query.NearestNeighbourQuery
 import org.apache.spark.TaskContext
 import org.apache.spark.sql.DataFrame
 
@@ -63,6 +64,14 @@ class LSHIndex(val indexname: IndexName, val entityname: EntityName, protected v
     log.debug("LSH index returning " + ids.toSet + " tuples")
 
     ids.toSet
+  }
+
+  override def isQueryConform(nnq: NearestNeighbourQuery): Boolean = {
+    if(nnq.distance.isInstanceOf[metadata.distance.type]){
+      return true
+    }
+
+    false
   }
 }
 

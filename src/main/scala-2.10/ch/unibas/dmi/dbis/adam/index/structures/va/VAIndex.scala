@@ -12,6 +12,7 @@ import ch.unibas.dmi.dbis.adam.index.{BitStringIndexTuple, Index}
 import ch.unibas.dmi.dbis.adam.main.SparkStartup
 import ch.unibas.dmi.dbis.adam.query.distance.Distance._
 import ch.unibas.dmi.dbis.adam.query.distance.MinkowskiDistance
+import ch.unibas.dmi.dbis.adam.query.query.NearestNeighbourQuery
 import org.apache.spark.TaskContext
 import org.apache.spark.sql.DataFrame
 
@@ -53,6 +54,14 @@ class VAIndex(val indexname : IndexName, val entityname : EntityName, protected 
     log.debug("VA-File returning " + ids.toSet + " tuples")
 
     ids.toSet
+  }
+
+  override def isQueryConform(nnq: NearestNeighbourQuery): Boolean = {
+    if(nnq.distance.isInstanceOf[MinkowskiDistance]){
+      return true
+    }
+
+    false
   }
 
   /**

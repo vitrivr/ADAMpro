@@ -16,6 +16,7 @@ import ch.unibas.dmi.dbis.adam.index.structures.lsh.LSHIndex
 import ch.unibas.dmi.dbis.adam.index.structures.sh.SHIndex
 import ch.unibas.dmi.dbis.adam.index.structures.va.VAIndex
 import ch.unibas.dmi.dbis.adam.main.SparkStartup
+import ch.unibas.dmi.dbis.adam.query.query.NearestNeighbourQuery
 import ch.unibas.dmi.dbis.adam.storage.engine.CatalogOperator
 import com.google.common.cache.{CacheBuilder, CacheLoader}
 import org.apache.log4j.Logger
@@ -36,12 +37,13 @@ trait Index[A <: IndexTuple] {
   val indextype: IndexTypeName
   val entityname: EntityName
 
-  // Confidence towards the index. Confidence of 1 means very confident in index results (i.e., precise results).
+  //confidence towards the index. Confidence of 1 means very confident in index results (i.e., precise results).
   val confidence: Float
 
-
+  /**
+    *
+    */
   protected val df: DataFrame
-
 
   /**
     * Counts the number of elements in the index.
@@ -56,6 +58,16 @@ trait Index[A <: IndexTuple] {
     * @return
     */
   private[index] def metadata: Serializable
+
+  /**
+    * Returns whether the index can be used with the given query.
+    * (Note that the returned value is only a recommendation, and the index can be 'forced' to be used with the given
+    * distance function, etc.)
+    *
+    * @param nnq
+    * @return true if index can be used for given query, false if not
+    */
+  def isQueryConform(nnq : NearestNeighbourQuery) : Boolean
 
   /**
     * Scans the index.

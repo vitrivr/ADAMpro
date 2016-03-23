@@ -38,11 +38,11 @@ object QueryHandler {
     val indexes: Map[IndexTypeName, Seq[IndexName]] = CatalogOperator.listIndexes(entityname).groupBy(_._2).mapValues(_.map(_._1))
 
     log.debug("try choosing plan based on hints")
-    var plan = choosePlan(entityname, indexes, hint)
+    var plan = choosePlan(entityname, indexes, hint, nnq)
 
     if (!plan.isDefined) {
       log.debug("no query plan chosen, go to fallback")
-      plan = choosePlan(entityname, indexes, Some(QueryHints.FALLBACK_HINTS))
+      plan = choosePlan(entityname, indexes, Some(QueryHints.FALLBACK_HINTS), nnq)
     }
 
     plan.get(nnq, bq, withMetadata)
@@ -56,7 +56,7 @@ object QueryHandler {
     * @param hint
     * @return
     */
-  private def choosePlan(entityname: EntityName, indexes: Map[IndexTypeName, Seq[IndexName]], hint: Option[QueryHint]): Option[(NearestNeighbourQuery, Option[BooleanQuery], Boolean) => DataFrame] = {
+  private def choosePlan(entityname: EntityName, indexes: Map[IndexTypeName, Seq[IndexName]], hint: Option[QueryHint], nnq : NearestNeighbourQuery): Option[(NearestNeighbourQuery, Option[BooleanQuery], Boolean) => DataFrame] = {
     if (!hint.isDefined) {
       log.debug("no execution plan hint")
       return None
@@ -69,7 +69,9 @@ object QueryHandler {
         val indexChoice = indexes.get(iqh.structureType)
 
         if (indexChoice.isDefined) {
-          return Option(indexQuery(indexChoice.get.head)) //TODO: use old measurements for choice rather than head
+          //TODO: use old measurements for choice rather than head
+          val index = indexChoice.get.map(indexname => Index.load(indexname, false)).filter(_.isQueryConform(nnq)).head
+          return Option(indexQuery(index.indexname))
         } else {
           return None
         }
@@ -86,7 +88,7 @@ object QueryHandler {
         var i = 0
 
         while (i < hints.length) {
-          val plan = choosePlan(entityname, indexes, Some(hints(i)))
+          val plan = choosePlan(entityname, indexes, Some(hints(i)), nnq)
           if (plan.isDefined) return plan
         }
 
@@ -157,8 +159,8 @@ object QueryHandler {
     * @return
     */
   def indexQuery(indexname: IndexName)(nnq: NearestNeighbourQuery, bq: Option[BooleanQuery], withMetadata: Boolean): DataFrame = {
-    val entityname = Index.load(indexname).entityname
-
+    val index = Index.load(indexname)
+    val entityname = index.entityname
 
     log.debug("index query gets filter")
     val filter = if (bq.isDefined) {
@@ -167,7 +169,9 @@ object QueryHandler {
       None
     }
 
-    //TODO: here we should check that the distance function used for creating the index is the same as the one used in the query
+    if(!index.isQueryConform(nnq)){
+      log.warn("index is not conform with kNN query")
+    }
 
     log.debug("index query performs kNN query")
     var res = NearestNeighbourQueryHandler.indexQuery(indexname, nnq, filter)
