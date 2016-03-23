@@ -90,10 +90,6 @@ libraryDependencies ++= Seq(
 parallelExecution in Test := false
 concurrentRestrictions in Global += Tags.limit(Tags.Test, 1)
 
-//jenkins support
-libraryDependencies += "org.apache.maven.plugins" % "maven-surefire-report-plugin" % "2.19.1"
-
-
 
 //custom commands
 addCommandAlias("proto", "; grpc/assembly")
