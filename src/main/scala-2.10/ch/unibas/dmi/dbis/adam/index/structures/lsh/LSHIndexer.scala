@@ -5,15 +5,15 @@ import ch.unibas.dmi.dbis.adam.entity.Entity._
 import ch.unibas.dmi.dbis.adam.index.Index._
 import ch.unibas.dmi.dbis.adam.index._
 import ch.unibas.dmi.dbis.adam.index.structures.IndexTypes
-import ch.unibas.dmi.dbis.adam.index.structures.lsh.hashfunction.{EuclideanHashFunction, Hasher}
+import ch.unibas.dmi.dbis.adam.index.structures.lsh.hashfunction.{EuclideanHashFunction, Hasher, ManhattanHashFunction}
 import ch.unibas.dmi.dbis.adam.main.SparkStartup
-import ch.unibas.dmi.dbis.adam.query.distance.DistanceFunction
+import ch.unibas.dmi.dbis.adam.query.distance.{DistanceFunction, EuclideanDistance, ManhattanDistance}
 import org.apache.log4j.Logger
 import org.apache.spark.rdd.RDD
 import org.apache.spark.util.random.ADAMSamplingUtils
 
 
-class LSHIndexer(hashFamily : String, numHashTables : Int, numHashes : Int, distance : DistanceFunction, trainingSize : Int) extends IndexGenerator with Serializable {
+class LSHIndexer(numHashTables : Int, numHashes : Int, distance : DistanceFunction, trainingSize : Int) extends IndexGenerator with Serializable {
   @transient lazy val log = Logger.getLogger(getClass.getName)
 
   override val indextypename: IndexTypeName = IndexTypes.LSHINDEX
@@ -53,6 +53,8 @@ class LSHIndexer(hashFamily : String, numHashTables : Int, numHashes : Int, dist
     log.debug("LSH started training")
 
     //data
+    val dims = trainData.head.feature.size
+
     val radiuses = {
         val res = for (a <- trainData; b <- trainData) yield distance(a.feature, b.feature)
         if(res.isEmpty){
@@ -63,16 +65,16 @@ class LSHIndexer(hashFamily : String, numHashTables : Int, numHashes : Int, dist
       }
     val radius = radiuses.sum / radiuses.length
 
-    //TODO: hashFamily move to apply; use currying?
-    val dims = trainData.head.feature.size
-
-    val hashFamily = () => new EuclideanHashFunction(dims, radius.toFloat, 256)
-
+    val hashFamily = distance match {
+      case ManhattanDistance => () => new ManhattanHashFunction(dims, radius.toFloat, 256)
+      case EuclideanDistance => () => new EuclideanHashFunction(dims, radius.toFloat, 256)
+      case _ => null
+    }
     val hashTables = (0 until numHashTables).map(i => new Hasher(hashFamily, numHashes))
 
     log.debug("LSH finished training")
 
-    LSHIndexMetaData(hashTables, radius.toFloat)
+    LSHIndexMetaData(hashTables, radius.toFloat, distance)
   }
 }
 
@@ -83,12 +85,6 @@ object LSHIndexer {
    * @param properties
    */
   def apply(distance : DistanceFunction, properties : Map[String, String] = Map[String, String]()) : IndexGenerator = {
-    val hashFamilyDescription = properties.getOrElse("hashFamily", "euclidean")
-    val hashFamily = hashFamilyDescription.toLowerCase match {
-      case "euclidean" => "euclidean" //TODO: check how to pass params
-      case _ => null
-    }
-
     val numHashTables = properties.getOrElse("numHashTables", "64").toInt
     val numHashes = properties.getOrElse("numHashes", "64").toInt
 
@@ -96,6 +92,6 @@ object LSHIndexer {
 
     val trainingSize = properties.getOrElse("trainingSize", "500").toInt
 
-    new LSHIndexer(hashFamily, numHashTables, numHashes, distance, trainingSize)
+    new LSHIndexer(numHashTables, numHashes, distance, trainingSize)
   }
 }
