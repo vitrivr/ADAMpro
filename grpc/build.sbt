@@ -4,6 +4,8 @@ import sbtassembly.AssemblyPlugin.autoImport._
 
 name := "ADAMpro-grpc"
 
+import com.trueaccord.scalapb.{ScalaPbPlugin => PB}
+
 PB.protobufSettings
 
 PB.runProtoc in PB.protobufConfig := (args =>
@@ -14,7 +16,8 @@ version in PB.protobufConfig := "3.0.0-beta-2"
 libraryDependencies ++= Seq(
   "io.grpc" % "grpc-all" % "0.13.1",
   "com.trueaccord.scalapb" %% "scalapb-runtime-grpc" % (PB.scalapbVersion in PB.protobufConfig).value,
-  "com.fasterxml.jackson.core" % "jackson-core"          % "2.4.4"
+  "com.fasterxml.jackson.core" % "jackson-core"          % "2.4.4",
+  "org.apache.parquet"     %    "parquet-protobuf"       % "1.8.1"
 )
 
 //assembly

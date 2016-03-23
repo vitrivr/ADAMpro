@@ -37,7 +37,8 @@ unmanagedResourceDirectories in Compile += baseDirectory.value / "conf"
 
 //libs
 resolvers ++= Seq(
-  "Sonatype Releases" at "https://oss.sonatype.org/content/repositories/releases/"
+  "Sonatype Releases" at "https://oss.sonatype.org/content/repositories/releases/",
+   "Twitter" at "http://maven.twttr.com/"
 )
 resolvers += Resolver.sonatypeRepo("snapshots")
 
