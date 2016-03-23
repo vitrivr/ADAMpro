@@ -1,6 +1,7 @@
 syntax = "proto3";
 
-package ch.unibas.dmi.dbis.adam.http.grpc;
+option java_package = "ch.unibas.dmi.dbis.adam.http";
+
 
 service AdamDefinition {
   rpc CreateEntity(CreateEntityMessage) returns (AckMessage) {}

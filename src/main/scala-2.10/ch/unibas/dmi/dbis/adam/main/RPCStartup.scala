@@ -1,7 +1,7 @@
 package ch.unibas.dmi.dbis.adam.main
 
 import ch.unibas.dmi.dbis.adam.config.AdamConfig
-import ch.unibas.dmi.dbis.adam.http.grpc.adam.{AdamDefinitionGrpc, AdamSearchGrpc}
+import ch.unibas.dmi.dbis.adam.http.grpc.{AdamDefinitionGrpc, AdamSearchGrpc}
 import ch.unibas.dmi.dbis.adam.rpc.{DataDefinitionRPC, SearchRPC}
 import io.grpc.Server
 import io.grpc.netty.NettyServerBuilder

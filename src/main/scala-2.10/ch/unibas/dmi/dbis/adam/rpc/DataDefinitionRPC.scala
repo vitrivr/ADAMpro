@@ -5,7 +5,8 @@ import ch.unibas.dmi.dbis.adam.config.FieldNames
 import ch.unibas.dmi.dbis.adam.entity.{FieldDefinition, FieldTypes}
 import ch.unibas.dmi.dbis.adam.entity.FieldTypes.FieldType
 import ch.unibas.dmi.dbis.adam.exception.GeneralAdamException
-import ch.unibas.dmi.dbis.adam.http.grpc.adam._
+import ch.unibas.dmi.dbis.adam.http.grpc._
+import ch.unibas.dmi.dbis.adam.http.grpc.{CreateEntityMessage, AckMessage}
 import ch.unibas.dmi.dbis.adam.index.structures.IndexTypes
 import ch.unibas.dmi.dbis.adam.query.distance.NormBasedDistanceFunction
 import org.apache.log4j.Logger
