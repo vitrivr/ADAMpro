@@ -14,7 +14,7 @@ import org.apache.spark.sql.DataFrame
  * Ivan Giangreco
  * November 2015
  */
-object BooleanQueryHandler {
+private[handler] object BooleanQueryHandler {
   val log = Logger.getLogger(getClass.getName)
 
   /**
