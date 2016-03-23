@@ -28,7 +28,7 @@ import scala.concurrent.duration.Duration
   * Ivan Giangreco
   * August 2015
   */
-private[handler] object NearestNeighbourQueryHandler {
+private[query] object NearestNeighbourQueryHandler {
   val log = Logger.getLogger(getClass.getName)
 
   /**
