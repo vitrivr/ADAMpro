@@ -53,11 +53,11 @@ trait FeatureStorage {
     * Write entity to the feature storage.
     *
     * @param entityname
-    * @param data
+    * @param df
     * @param mode
     * @return true on success
     */
-  def write(entityname: EntityName, data: DataFrame, mode: SaveMode = SaveMode.Append): Boolean
+  def write(entityname: EntityName, df: DataFrame, mode: SaveMode = SaveMode.Append): Boolean
 
   /**
     * Drop the entity from the feature storage

@@ -16,10 +16,10 @@ trait IndexStorage {
     * Create the entity in the index storage (when creating the index)
     *
     * @param entityname
-    * @param data
+    * @param df
     * @return
     */
-  def create(entityname: EntityName, data: DataFrame) = write(entityname, data)
+  def create(entityname: EntityName, df: DataFrame) = write(entityname, df)
 
   /**
     * Read index from the index storage.
