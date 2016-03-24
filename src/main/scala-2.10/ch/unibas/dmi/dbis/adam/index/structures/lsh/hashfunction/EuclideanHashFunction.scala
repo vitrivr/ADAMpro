@@ -6,21 +6,21 @@ import ch.unibas.dmi.dbis.adam.datatypes.feature.Feature.FeatureVector
 import scala.util.Random
 
 /**
- * adamtwo
- *
- * Ivan Giangreco
- * August 2015
- */
-@SerialVersionUID(100L)
+  * adamtwo
+  *
+  * Ivan Giangreco
+  * August 2015
+  */
+@SerialVersionUID(321943095809L)
 class EuclideanHashFunction(w: Float, offset: Float, proj: FeatureVector, m: Int) extends LSHashFunction with Serializable {
   /**
-   *
-   * @param d
-   * @param w
-   * @param m
-   */
+    *
+    * @param d
+    * @param w
+    * @param m
+    */
   def this(d: Int, w: Float, m: Int) {
-    this(w, w * Random.nextFloat(),  DenseVector(GaussianDistribution.getNext(d).map(_.toFloat).toArray), m: Int)
+    this(w, w * Random.nextFloat(), DenseVector(GaussianDistribution.getNext(d).map(_.toFloat).toArray), m: Int)
   }
 
 

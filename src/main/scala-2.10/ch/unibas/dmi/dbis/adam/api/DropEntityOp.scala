@@ -24,6 +24,6 @@ object DropEntityOp {
     */
   def apply(entityname: EntityName, ifExists: Boolean = false): Boolean = {
     log.debug("perform drop entity operation")
-    Entity.drop(entityname, ifExists)
+    Entity.drop(entityname, ifExists).isSuccess
   }
 }

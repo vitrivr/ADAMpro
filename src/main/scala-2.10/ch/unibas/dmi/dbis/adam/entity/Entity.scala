@@ -13,6 +13,8 @@ import org.apache.spark.rdd.RDD
 import org.apache.spark.sql.types.{LongType, StructField, StructType}
 import org.apache.spark.sql.{DataFrame, Row, SaveMode}
 
+import scala.util.{Failure, Success, Try}
+
 /**
   * adamtwo
   *
@@ -50,7 +52,7 @@ case class Entity(entityname: EntityName, featureStorage: FeatureStorage, metada
     * @param insertion
     * @return
     */
-  def insert(insertion: DataFrame): Boolean = {
+  def insert(insertion: DataFrame): Try[Void] = {
     log.debug("inserting data into entity")
 
     val rows = insertion.rdd.zipWithUniqueId.map { case (r: Row, adamtwoid: Long) => Row.fromSeq(adamtwoid +: r.toSeq) }
@@ -66,7 +68,7 @@ case class Entity(entityname: EntityName, featureStorage: FeatureStorage, metada
       metadataStorage.get.write(entityname, insertionWithPK.drop(FieldNames.internFeatureColumnName), SaveMode.Append)
     }
 
-    true
+    Success(null)
   }
 
   /**
@@ -109,6 +111,7 @@ case class Entity(entityname: EntityName, featureStorage: FeatureStorage, metada
 
 /**
   * Field definition for creating new entity.
+  *
   * @param fieldtype
   * @param pk
   * @param unique
@@ -135,9 +138,9 @@ object Entity {
     *               as key = name, value = SQL type
     * @return
     */
-  def create(entityname: EntityName, fields: Option[Map[String, FieldDefinition]] = None): Entity = {
+  def create(entityname: EntityName, fields: Option[Map[String, FieldDefinition]] = None): Try[Entity] = {
     if (exists(entityname)) {
-      throw new EntityExistingException()
+      return Failure(EntityExistingException())
     }
 
     featureStorage.create(entityname)
@@ -145,21 +148,21 @@ object Entity {
     if (fields.isDefined) {
       if(fields.get.contains(FieldNames.idColumnName)){
         log.error("entity defined with field " + FieldNames.idColumnName + ", but name is reserved")
-        throw EntityNotProperlyDefinedException()
+        Failure(EntityNotProperlyDefinedException())
       }
 
       if(fields.get.count{case(name, definition) => definition.pk} > 1){
         log.error("entity defined with more than one primary key")
-        throw EntityNotProperlyDefinedException()
+        Failure(EntityNotProperlyDefinedException())
       }
 
       val fieldsWithId = fields.get + (FieldNames.idColumnName -> FieldDefinition(LONGTYPE, false, true, true))
       metadataStorage.create(entityname, fieldsWithId)
       CatalogOperator.createEntity(entityname, true)
-      Entity(entityname, featureStorage, Option(metadataStorage))
+      Success(Entity(entityname, featureStorage, Option(metadataStorage)))
     } else {
       CatalogOperator.createEntity(entityname, false)
-      Entity(entityname, featureStorage, None)
+      Success(Entity(entityname, featureStorage, None))
     }
   }
 
@@ -170,12 +173,12 @@ object Entity {
     * @param ifExists
     * @return
     */
-  def drop(entityname: EntityName, ifExists: Boolean = false): Boolean = {
+  def drop(entityname: EntityName, ifExists: Boolean = false): Try[Null] = {
     if (!exists(entityname)) {
       if (!ifExists) {
-        throw new EntityNotExistingException()
+        Failure(EntityNotExistingException())
       } else {
-        return false
+        Success(null)
       }
     }
 
@@ -188,6 +191,7 @@ object Entity {
     }
 
     CatalogOperator.dropEntity(entityname, ifExists)
+    Success(null)
   }
 
   /**
@@ -198,8 +202,8 @@ object Entity {
     *                  note that you should name the feature column as ("feature").
     * @return
     */
-  def insertData(entityname: EntityName, insertion: DataFrame): Boolean = {
-    load(entityname).insert(insertion)
+  def insertData(entityname: EntityName, insertion: DataFrame): Try[Void] = {
+    load(entityname).get.insert(insertion)
   }
 
   /**
@@ -208,9 +212,9 @@ object Entity {
     * @param entityname
     * @return
     */
-  def load(entityname: EntityName): Entity = {
+  def load(entityname: EntityName): Try[Entity] = {
     if (!exists(entityname)) {
-      throw new EntityNotExistingException()
+      Failure(EntityNotExistingException())
     }
 
     val entityMetadataStorage = if (CatalogOperator.hasEntityMetadata(entityname)) {
@@ -219,7 +223,7 @@ object Entity {
       None
     }
 
-    Entity(entityname, featureStorage, entityMetadataStorage)
+    Success(Entity(entityname, featureStorage, entityMetadataStorage))
   }
 
   /**

@@ -11,7 +11,7 @@ import scala.util.Random
   * Ivan Giangreco
   * March 2016
   */
-@SerialVersionUID(100L)
+@SerialVersionUID(2394132198905L)
 class ManhattanHashFunction(w: Float, offset: Float, proj: FeatureVector, m: Int) extends LSHashFunction with Serializable {
   /**
     *

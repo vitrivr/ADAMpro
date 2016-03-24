@@ -24,6 +24,6 @@ object PreviewOp {
     */
   def apply(entityname: EntityName, k: Int = 100): Seq[String] = {
     log.debug("perform preview entity operation")
-    Entity.load(entityname).show(k).map(r => r.toString())
+    Entity.load(entityname).get.show(k).map(r => r.toString())
   }
 }

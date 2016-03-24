@@ -24,7 +24,7 @@ object DropIndexOp {
     */
   def apply(indexname: IndexName): Boolean = {
     log.debug("perform drop index operation")
-    Index.drop(indexname)
+    Index.drop(indexname).isSuccess
   }
 }
 

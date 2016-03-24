@@ -57,11 +57,11 @@ object IndexOp {
     val generator: IndexGenerator = indextypename match {
       case IndexTypes.ECPINDEX => ECPIndexer(distance)
       case IndexTypes.LSHINDEX => LSHIndexer(distance, properties)
-      case IndexTypes.SHINDEX => SHIndexer(entity.getFeaturedata.first().getAs[FeatureVectorWrapper](1).vector.length)
+      case IndexTypes.SHINDEX => SHIndexer(entity.get.getFeaturedata.first().getAs[FeatureVectorWrapper](1).vector.length)
       case IndexTypes.VAFINDEX => VAFIndexer(distance.asInstanceOf[MinkowskiDistance], properties)
-      case IndexTypes.VAVINDEX => VAVIndexer(entity.getFeaturedata.first().getAs[FeatureVectorWrapper](1).vector.length, distance.asInstanceOf[MinkowskiDistance], properties)
+      case IndexTypes.VAVINDEX => VAVIndexer(entity.get.getFeaturedata.first().getAs[FeatureVectorWrapper](1).vector.length, distance.asInstanceOf[MinkowskiDistance], properties)
     }
 
-    Index.createIndex(entity, generator)
+    Index.createIndex(entity.get, generator)
   }
 }

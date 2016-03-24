@@ -41,7 +41,7 @@ private[query] object NearestNeighbourQueryHandler {
     */
   def sequential(entityname: EntityName, query: NearestNeighbourQuery, filter: Option[Set[TupleID]]): DataFrame = {
     log.debug("performing sequential nearest neighbor scan")
-    FeatureScanner(Entity.load(entityname), query, filter)
+    FeatureScanner(Entity.load(entityname).get, query, filter)
   }
 
   /**
@@ -78,11 +78,11 @@ private[query] object NearestNeighbourQueryHandler {
     val entityname = CatalogOperator.getEntitynameFromIndex(indexname)
 
     val future = Future {
-      Entity.load(entityname)
+      Entity.load(entityname).get
     }
 
     log.debug("starting index scanner")
-    val tidList = IndexScanner(Index.load(indexname), query, filter)
+    val tidList = IndexScanner(Index.load(indexname).get, query, filter)
 
     val entity = Await.result[Entity](future, Duration(100, TimeUnit.SECONDS))
 
@@ -101,7 +101,7 @@ private[query] object NearestNeighbourQueryHandler {
     */
   def indexOnlyQuery(indexname: IndexName, query: NearestNeighbourQuery, filter: Option[Set[TupleID]]): DataFrame = {
     log.debug("starting index scanner")
-    val result = IndexScanner(Index.load(indexname), query, filter).toSeq
+    val result = IndexScanner(Index.load(indexname).get, query, filter).toSeq
     val rdd = SparkStartup.sc.parallelize(result).map(res => Row(0, res))
     SparkStartup.sqlContext.createDataFrame(rdd, Result.resultSchema)
   }

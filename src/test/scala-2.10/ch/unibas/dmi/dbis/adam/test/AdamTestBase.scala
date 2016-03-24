@@ -229,7 +229,8 @@ class AdamTestBase extends FeatureSpec with GivenWhenThen with Eventually with I
       ("booleanfield", FieldTypes.BOOLEANTYPE, "boolean")
     )
     val entity = Entity.create(getRandomName(), Some(fieldTemplate.map(ft => (ft._1, FieldDefinition(ft._2))).toMap))
-    entity.insert(data.drop("gtdistance"))
+    assert(entity.isSuccess)
+    entity.get.insert(data.drop("gtdistance"))
 
     //queries
     val feature = new FeatureVectorWrapper(readResourceFile("groundtruth/nnquery.txt").head.split(",").map(_.toFloat))
@@ -247,7 +248,7 @@ class AdamTestBase extends FeatureSpec with GivenWhenThen with Eventually with I
     val nnbqres = getResults("groundtruth/100nn-bq-results.tsv")
 
 
-    EvaluationSet(entity, data, feature, ManhattanDistance, nnres.length, where, nnres, nnbqres)
+    EvaluationSet(entity.get, data, feature, ManhattanDistance, nnres.length, where, nnres, nnbqres)
   }
 
 

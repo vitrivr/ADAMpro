@@ -24,6 +24,8 @@ import org.apache.spark.rdd.RDD
 import org.apache.spark.sql.DataFrame
 import org.apache.spark.storage.StorageLevel
 
+import scala.util.{Failure, Success, Try}
+
 /**
   * adamtwo
   *
@@ -142,14 +144,14 @@ object Index {
     * @param indexgenerator generator to create index
     * @return index
     */
-  def createIndex(entity: Entity, indexgenerator: IndexGenerator): Index[_ <: IndexTuple] = {
+  def createIndex(entity: Entity, indexgenerator: IndexGenerator): Try[Index[_ <: IndexTuple]] = {
     val indexname = createIndexName(entity.entityname, indexgenerator.indextypename)
     val rdd: RDD[IndexingTaskTuple] = entity.getFeaturedata.map { x => IndexingTaskTuple(x.getLong(0), x.getAs[FeatureVectorWrapper](1).vector) }
     val index = indexgenerator.index(indexname, entity.entityname, rdd)
     val df = index.df.withColumnRenamed("id", FieldNames.idColumnName).withColumnRenamed("value", FieldNames.featureIndexColumnName)
     storage.write(indexname, df)
     CatalogOperator.createIndex(indexname, entity.entityname, indexgenerator.indextypename, index.metadata)
-    index
+    Success(index)
   }
 
 
@@ -176,7 +178,7 @@ object Index {
     * @param indexname
     * @return
     */
-  def confidence(indexname: IndexName): Float = loadIndexMetaData(indexname).confidence
+  def confidence(indexname: IndexName): Float = loadIndexMetaData(indexname).get.confidence
 
   /**
     * Gets the type of the index.
@@ -184,16 +186,15 @@ object Index {
     * @param indexname
     * @return
     */
-  def indextype(indexname: IndexName): IndexTypeName = loadIndexMetaData(indexname).indextype
+  def indextype(indexname: IndexName): IndexTypeName = loadIndexMetaData(indexname).get.indextype
 
   /**
-    * Loads index.
+    * Loads index into cache.
     *
     * @param indexname
-    * @param cache if cache is true, the index is added to the cache and read from there
     * @return
     */
-  def load(indexname: IndexName): Index[_ <: IndexTuple] = {
+  def load(indexname: IndexName): Try[Index[_ <: IndexTuple]] = {
     if (!exists(indexname)) {
       throw new IndexNotExistingException()
     }
@@ -207,9 +208,9 @@ object Index {
     * @param indexname
     * @return
     */
-  def loadIndexMetaData(indexname: IndexName): Index[_ <: IndexTuple] = {
+  def loadIndexMetaData(indexname: IndexName): Try[Index[_ <: IndexTuple]] = {
     if (!exists(indexname)) {
-      throw new IndexNotExistingException()
+      Failure(IndexNotExistingException())
     }
 
     val df = storage.read(indexname)
@@ -218,13 +219,15 @@ object Index {
 
     val indextypename = CatalogOperator.getIndexTypeName(indexname)
 
-    indextypename match {
+    val index = indextypename match {
       case IndexTypes.ECPINDEX => ECPIndex(indexname, entityname, df, meta)
       case IndexTypes.LSHINDEX => LSHIndex(indexname, entityname, df, meta)
       case IndexTypes.SHINDEX => SHIndex(indexname, entityname, df, meta)
       case IndexTypes.VAFINDEX => VAIndex(indexname, entityname, df, meta)
       case IndexTypes.VAVINDEX => VAIndex(indexname, entityname, df, meta)
     }
+
+    Success(index)
   }
 
   /**
@@ -233,9 +236,10 @@ object Index {
     * @param indexname
     * @return true if index was dropped
     */
-  def drop(indexname: IndexName): Boolean = {
+  def drop(indexname: IndexName): Try[Void] = {
     CatalogOperator.dropIndex(indexname)
     storage.drop(indexname)
+    Success(null)
   }
 
   /**
@@ -244,14 +248,14 @@ object Index {
     * @param entityname
     * @return
     */
-  def dropAll(entityname: EntityName): Boolean = {
+  def dropAll(entityname: EntityName): Try[Void] = {
     val indexes = CatalogOperator.dropAllIndexes(entityname)
 
     indexes.foreach {
       index => storage.drop(index)
     }
 
-    true
+    Success(null)
   }
 
 
@@ -266,7 +270,7 @@ object Index {
       build(
         new CacheLoader[IndexName, Index[_ <: IndexTuple]]() {
           def load(indexname: IndexName): Index[_ <: IndexTuple] = {
-            val index = Index.loadIndexMetaData(indexname)
+            val index = Index.loadIndexMetaData(indexname).get
             index.df.rdd.setName(indexname).persist(StorageLevel.MEMORY_AND_DISK)
             index.df.rdd.collect()
             index
@@ -279,8 +283,14 @@ object Index {
       *
       * @param indexname
       */
-    def get(indexname: IndexName): Index[_ <: IndexTuple] = {
-      indexCache.get(indexname)
+    def get(indexname: IndexName): Try[Index[_ <: IndexTuple]] = {
+      try {
+        Success(indexCache.get(indexname))
+      } catch {
+        case e : Exception =>
+          log.error(e.getMessage)
+          Failure(e)
+      }
     }
   }
 

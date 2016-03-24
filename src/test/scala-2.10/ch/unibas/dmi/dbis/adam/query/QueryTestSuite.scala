@@ -62,10 +62,11 @@ class QueryTestSuite extends AdamTestBase with ScalaFutures {
       Given("an entity and an index")
       val es = getGroundTruthEvaluationSet()
       val index = Index.createIndex(es.entity, ECPIndexer(es.distance))
+      assert(index.isSuccess)
 
       When("performing a kNN query")
       val nnq = NearestNeighbourQuery(es.feature.vector, es.distance, es.k)
-      val results = QueryHandler.indexQuery(index.indexname)(nnq, None, true)
+      val results = QueryHandler.indexQuery(index.get.indexname)(nnq, None, true)
         .map(r => (r.getAs[Float](FieldNames.distanceColumnName), r.getAs[Long]("tid"))).collect()
         .sortBy(_._1).toSeq
 
@@ -89,10 +90,11 @@ class QueryTestSuite extends AdamTestBase with ScalaFutures {
       Given("an entity and an index")
       val es = getGroundTruthEvaluationSet()
       val index = Index.createIndex(es.entity, LSHIndexer(es.distance))
+      assert(index.isSuccess)
 
       When("performing a kNN query")
       val nnq = NearestNeighbourQuery(es.feature.vector, es.distance, es.k)
-      val results = QueryHandler.indexQuery(index.indexname)(nnq, None, true)
+      val results = QueryHandler.indexQuery(index.get.indexname)(nnq, None, true)
         .map(r => (r.getAs[Float](FieldNames.distanceColumnName), r.getAs[Long]("tid"))).collect()
         .sortBy(_._1).toSeq
 
@@ -117,10 +119,11 @@ class QueryTestSuite extends AdamTestBase with ScalaFutures {
       Given("an entity and an index")
       val es = getGroundTruthEvaluationSet()
       val index = Index.createIndex(es.entity, SHIndexer(es.feature.toSeq().size))
+      assert(index.isSuccess)
 
       When("performing a kNN query")
       val nnq = NearestNeighbourQuery(es.feature.vector, es.distance, es.k)
-      val results = QueryHandler.indexQuery(index.indexname)(nnq, None, true)
+      val results = QueryHandler.indexQuery(index.get.indexname)(nnq, None, true)
         .map(r => (r.getAs[Float](FieldNames.distanceColumnName), r.getAs[Long]("tid"))).collect()
         .sortBy(_._1).toSeq
 
@@ -145,10 +148,11 @@ class QueryTestSuite extends AdamTestBase with ScalaFutures {
       Given("an entity and an index")
       val es = getGroundTruthEvaluationSet()
       val index = Index.createIndex(es.entity, VAFIndexer(es.distance))
+      assert(index.isSuccess)
 
       When("performing a kNN query")
       val nnq = NearestNeighbourQuery(es.feature.vector, es.distance, es.k)
-      val results = QueryHandler.indexQuery(index.indexname)(nnq, None, true)
+      val results = QueryHandler.indexQuery(index.get.indexname)(nnq, None, true)
         .map(r => (r.getAs[Float](FieldNames.distanceColumnName), r.getAs[Long]("tid"))).collect()
         .sortBy(_._1).toSeq
 
@@ -196,10 +200,11 @@ class QueryTestSuite extends AdamTestBase with ScalaFutures {
       Given("an entity and an index")
       val es = getGroundTruthEvaluationSet()
       val index = Index.createIndex(es.entity, VAVIndexer(es.feature.toSeq().size, es.distance))
+      assert(index.isSuccess)
 
       When("performing a kNN query")
       val nnq = NearestNeighbourQuery(es.feature.vector, es.distance, es.k)
-      val results = QueryHandler.indexQuery(index.indexname)(nnq, None, true)
+      val results = QueryHandler.indexQuery(index.get.indexname)(nnq, None, true)
         .map(r => (r.getAs[Float](FieldNames.distanceColumnName), r.getAs[Long]("tid"))).collect()
         .sortBy(_._1).toSeq
 
@@ -222,11 +227,12 @@ class QueryTestSuite extends AdamTestBase with ScalaFutures {
       Given("an entity and an index")
       val es = getGroundTruthEvaluationSet()
       val index = Index.createIndex(es.entity, VAFIndexer(es.distance))
+      assert(index.isSuccess)
 
       When("performing a kNN query")
       val nnq = NearestNeighbourQuery(es.feature.vector, es.distance, es.k)
       val bq = BooleanQuery(es.where)
-      val results = QueryHandler.indexQuery(index.indexname)(nnq, Option(bq), true)
+      val results = QueryHandler.indexQuery(index.get.indexname)(nnq, Option(bq), true)
         .map(r => (r.getAs[Float](FieldNames.distanceColumnName), r.getAs[Long]("tid"))).collect()
         .sortBy(_._1).toSeq
 

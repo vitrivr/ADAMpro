@@ -26,7 +26,7 @@ private[query] object BooleanQueryHandler {
     */
   def metadataQuery(entityname: EntityName, query : BooleanQuery): Option[DataFrame] = {
     log.debug("performing metadata-based boolean query on " + entityname)
-    MetadataScanner(Entity.load(entityname), query)
+    MetadataScanner(Entity.load(entityname).get, query)
   }
 
   /**
@@ -38,6 +38,6 @@ private[query] object BooleanQueryHandler {
     */
   def metadataQuery(entityname: EntityName, filter: Set[TupleID]): Option[DataFrame] = {
     log.debug("retrieving metadata for " + entityname)
-    MetadataScanner(Entity.load(entityname), filter)
+    MetadataScanner(Entity.load(entityname).get, filter)
   }
 }
