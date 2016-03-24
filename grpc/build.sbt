@@ -13,6 +13,10 @@ PB.runProtoc in PB.protobufConfig := (args =>
 
 version in PB.protobufConfig := "3.0.0-beta-2"
 
+resolvers ++= Seq(
+  "Twitter" at "http://maven.twttr.com/"
+)
+
 libraryDependencies ++= Seq(
   "io.grpc" % "grpc-all" % "0.13.1",
   "com.trueaccord.scalapb" %% "scalapb-runtime-grpc" % (PB.scalapbVersion in PB.protobufConfig).value,
