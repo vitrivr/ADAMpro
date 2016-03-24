@@ -20,8 +20,7 @@ resolvers ++= Seq(
 libraryDependencies ++= Seq(
   "io.grpc" % "grpc-all" % "0.13.1",
   "com.trueaccord.scalapb" %% "scalapb-runtime-grpc" % (PB.scalapbVersion in PB.protobufConfig).value,
-  "com.fasterxml.jackson.core" % "jackson-core"          % "2.4.4",
-  "org.apache.parquet"     %    "parquet-protobuf"       % "1.8.1"
+  "com.fasterxml.jackson.core" % "jackson-core"          % "2.4.4"
 )
 
 //assembly
