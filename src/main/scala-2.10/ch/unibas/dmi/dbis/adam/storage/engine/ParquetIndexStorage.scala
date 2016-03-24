@@ -47,8 +47,6 @@ object ParquetIndexStorage extends IndexStorage {
 
 trait GenericIndexStorage extends IndexStorage {
   override def read(indexname: IndexName, filter: Option[scala.collection.Set[TupleID]] = None): DataFrame = {
-    //TODO: implement UnboundRecordFilter
-    //see https://adambard.com/blog/parquet-protobufs-spark/ and http://zenfractal.com/2013/08/21/a-powerful-big-data-trio/
     val df = SparkStartup.sqlContext.read.parquet(AdamConfig.indexPath + "/" + indexname + ".parquet")
 
     if(filter.isDefined){
