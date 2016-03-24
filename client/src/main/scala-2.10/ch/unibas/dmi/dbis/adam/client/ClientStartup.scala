@@ -1,6 +1,6 @@
 package ch.unibas.dmi.dbis.adam.client
 
-import ch.unibas.dmi.dbis.adam.http.grpc.adam.{AdamDefinitionGrpc, AdamSearchGrpc}
+import ch.unibas.dmi.dbis.adam.http.grpc.{AdamDefinitionGrpc, AdamSearchGrpc}
 import io.grpc.ManagedChannelBuilder
 
 /**

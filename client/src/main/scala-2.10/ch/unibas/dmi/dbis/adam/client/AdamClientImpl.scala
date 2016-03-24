@@ -2,9 +2,9 @@ package ch.unibas.dmi.dbis.adam.client
 
 import java.util.concurrent.TimeUnit
 
-import ch.unibas.dmi.dbis.adam.http.grpc.adam.AdamDefinitionGrpc.AdamDefinitionBlockingStub
-import ch.unibas.dmi.dbis.adam.http.grpc.adam.AdamSearchGrpc.{AdamSearchBlockingStub, AdamSearchStub}
-import ch.unibas.dmi.dbis.adam.http.grpc.adam.{EntityNameMessage, CreateEntityMessage}
+import ch.unibas.dmi.dbis.adam.http.grpc.AdamDefinitionGrpc.AdamDefinitionBlockingStub
+import ch.unibas.dmi.dbis.adam.http.grpc.AdamSearchGrpc.{AdamSearchBlockingStub, AdamSearchStub}
+import ch.unibas.dmi.dbis.adam.http.grpc.{EntityNameMessage, CreateEntityMessage}
 import io.grpc.ManagedChannel
 
 /**

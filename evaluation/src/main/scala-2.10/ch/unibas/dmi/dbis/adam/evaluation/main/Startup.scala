@@ -3,7 +3,7 @@ package ch.unibas.dmi.dbis.adam.evaluation.main
 import ch.unibas.dmi.dbis.adam.evaluation.client.EvaluationClient
 import ch.unibas.dmi.dbis.adam.evaluation.config.EvaluationConfig
 import ch.unibas.dmi.dbis.adam.evaluation.execution.{ProgressiveQueryExperiment, EntityCreator, Evaluator, SimpleQueryExperiment}
-import ch.unibas.dmi.dbis.adam.http.grpc.adam.{AdamDefinitionGrpc, AdamSearchGrpc}
+import ch.unibas.dmi.dbis.adam.http.grpc.{AdamSearchGrpc, AdamDefinitionGrpc}
 import io.grpc.ManagedChannelBuilder
 
 /**

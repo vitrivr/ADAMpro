@@ -11,17 +11,17 @@ import ch.unibas.dmi.dbis.adam.http._
   */
 object IndexTypes {
 
-  sealed abstract class IndexType(val name: String, val indextype: grpc.adam.IndexType)
+  sealed abstract class IndexType(val name: String, val indextype: grpc.IndexType)
 
-  case object ECPINDEX extends IndexType("ecp", grpc.adam.IndexType.ecp)
+  case object ECPINDEX extends IndexType("ecp", grpc.IndexType.ecp)
 
-  case object LSHINDEX extends IndexType("lsh", grpc.adam.IndexType.lsh)
+  case object LSHINDEX extends IndexType("lsh", grpc.IndexType.lsh)
 
-  case object SHINDEX extends IndexType("sh", grpc.adam.IndexType.sh)
+  case object SHINDEX extends IndexType("sh", grpc.IndexType.sh)
 
-  case object VAFINDEX extends IndexType("vaf", grpc.adam.IndexType.vaf)
+  case object VAFINDEX extends IndexType("vaf", grpc.IndexType.vaf)
 
-  case object VAVINDEX extends IndexType("vav", grpc.adam.IndexType.vav)
+  case object VAVINDEX extends IndexType("vav", grpc.IndexType.vav)
 
 
   /**
@@ -41,5 +41,5 @@ object IndexTypes {
     * @param indextype
     * @return
     */
-  def withIndextype(indextype: grpc.adam.IndexType) : Option[IndexType] = values.map(value => value.indextype -> value).toMap.get(indextype)
+  def withIndextype(indextype: grpc.IndexType) : Option[IndexType] = values.map(value => value.indextype -> value).toMap.get(indextype)
 }

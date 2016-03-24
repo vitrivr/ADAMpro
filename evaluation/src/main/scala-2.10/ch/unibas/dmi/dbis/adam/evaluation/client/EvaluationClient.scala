@@ -3,9 +3,12 @@ package ch.unibas.dmi.dbis.adam.evaluation.client
 import java.util.concurrent.TimeUnit
 
 import ch.unibas.dmi.dbis.adam.evaluation.config.IndexTypes
-import ch.unibas.dmi.dbis.adam.http.grpc.adam.AdamDefinitionGrpc.AdamDefinitionBlockingStub
-import ch.unibas.dmi.dbis.adam.http.grpc.adam.AdamSearchGrpc.{AdamSearchStub, AdamSearchBlockingStub}
-import ch.unibas.dmi.dbis.adam.http.grpc.adam._
+import ch.unibas.dmi.dbis.adam.http.grpc.AdamDefinitionGrpc.AdamDefinitionBlockingStub
+import ch.unibas.dmi.dbis.adam.http.grpc.AdamSearchGrpc.{AdamSearchStub, AdamSearchBlockingStub}
+import ch.unibas.dmi.dbis.adam.http.grpc.{AckMessage, CreateEntityMessage}
+import ch.unibas.dmi.dbis.adam.http.grpc.AdamDefinitionGrpc.AdamDefinitionBlockingStub
+import ch.unibas.dmi.dbis.adam.http.grpc.AdamSearchGrpc.AdamSearchBlockingStub
+import ch.unibas.dmi.dbis.adam.http.grpc._
 import io.grpc.ManagedChannel
 import io.grpc.stub.StreamObserver
 import org.apache.logging.log4j.LogManager
