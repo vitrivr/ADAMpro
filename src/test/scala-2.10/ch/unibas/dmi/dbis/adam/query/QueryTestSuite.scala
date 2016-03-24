@@ -17,6 +17,7 @@ import ch.unibas.dmi.dbis.adam.query.query.{BooleanQuery, NearestNeighbourQuery}
 import ch.unibas.dmi.dbis.adam.test.AdamTestBase
 import org.apache.log4j.Logger
 import org.apache.spark.sql.DataFrame
+import org.scalatest.concurrent.ScalaFutures
 
 import scala.concurrent.duration.Duration
 
@@ -26,7 +27,7 @@ import scala.concurrent.duration.Duration
   * Ivan Giangreco
   * March 2016
   */
-class QueryTestSuite extends AdamTestBase {
+class QueryTestSuite extends AdamTestBase with ScalaFutures {
   val log = Logger.getLogger(getClass.getName)
 
   feature("standard query") {
@@ -292,8 +293,8 @@ class QueryTestSuite extends AdamTestBase {
       Given("an entity")
       val es = getGroundTruthEvaluationSet()
 
-      //wait until table is fully created
-      Thread.sleep(5000)
+      Index.createIndex(es.entity, SHIndexer(es.feature.toSeq().size))
+      Index.createIndex(es.entity, VAFIndexer(es.distance))
 
       def processResults(status: ProgressiveQueryStatus.Value, df: DataFrame, confidence: Float, deliverer : String, info: Map[String, String]) {
         val results = df.map(r => (r.getAs[Float](FieldNames.distanceColumnName), r.getAs[Long]("tid"))).collect()
@@ -313,7 +314,13 @@ class QueryTestSuite extends AdamTestBase {
       val nnq = NearestNeighbourQuery(es.feature.vector, es.distance, es.k)
       val statusTracker = QueryHandler.progressiveQuery(es.entity.entityname)(nnq, None, processResults, true)
 
-      //clean up
+      whenReady(statusTracker) { result =>
+        Then("the confidence should be 1.0")
+        assert(result.confidence - 1.0 < EPSILON)
+        assert(result.results.count() >= es.k)
+      }
+
+        //clean up
       Entity.drop(es.entity.entityname)
     }
 

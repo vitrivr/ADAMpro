@@ -56,7 +56,7 @@ object QueryHandler {
     * @param hint
     * @return
     */
-  private def choosePlan(entityname: EntityName, indexes: Map[IndexTypeName, Seq[IndexName]], hint: Option[QueryHint], nnq : NearestNeighbourQuery): Option[(NearestNeighbourQuery, Option[BooleanQuery], Boolean) => DataFrame] = {
+  private def choosePlan(entityname: EntityName, indexes: Map[IndexTypeName, Seq[IndexName]], hint: Option[QueryHint], nnq: NearestNeighbourQuery): Option[(NearestNeighbourQuery, Option[BooleanQuery], Boolean) => DataFrame] = {
     if (!hint.isDefined) {
       log.debug("no execution plan hint")
       return None
@@ -137,10 +137,10 @@ object QueryHandler {
     * @param withMetadata
     * @return
     */
-  def indexQuery(entityname: EntityName, indextype : IndexTypeName)(nnq: NearestNeighbourQuery, bq: Option[BooleanQuery], withMetadata: Boolean): DataFrame = {
+  def indexQuery(entityname: EntityName, indextype: IndexTypeName)(nnq: NearestNeighbourQuery, bq: Option[BooleanQuery], withMetadata: Boolean): DataFrame = {
     val indexes = Index.list(entityname, indextype).map(_._1)
 
-    if(indexes.isEmpty){
+    if (indexes.isEmpty) {
       log.error("requested index of type " + indextype + " but not index of this type was found")
       throw new IndexNotExistingException()
     }
@@ -169,7 +169,7 @@ object QueryHandler {
       None
     }
 
-    if(!index.isQueryConform(nnq)){
+    if (!index.isQueryConform(nnq)) {
       log.warn("index is not conform with kNN query")
     }
 
@@ -199,10 +199,13 @@ object QueryHandler {
     * @param withMetadata whether or not to retrieve corresponding metadata
     * @return a tracker for the progressive query
     */
-  def progressiveQuery(entityname: EntityName)(nnq: NearestNeighbourQuery, bq: Option[BooleanQuery], onComplete: (ProgressiveQueryStatus.Value, DataFrame, Float, String, Map[String, String]) => Unit, withMetadata: Boolean): ProgressiveQueryStatusTracker = {
+  def progressiveQuery[U](entityname: EntityName)(
+    nnq: NearestNeighbourQuery, bq: Option[BooleanQuery], onComplete: (ProgressiveQueryStatus.Value, DataFrame, Float, String, Map[String, String]) => U,
+    withMetadata: Boolean)
+  : ProgressiveQueryStatusTracker = {
     val onCompleteFunction = if (withMetadata) {
       log.debug("join metadata to results of progressive query")
-      (pqs: ProgressiveQueryStatus.Value, res: DataFrame, conf: Float, deliverer : String, info: Map[String, String]) => onComplete(pqs, joinWithMetadata(entityname, res), conf, deliverer, info)
+      (pqs: ProgressiveQueryStatus.Value, res: DataFrame, conf: Float, deliverer: String, info: Map[String, String]) => onComplete(pqs, joinWithMetadata(entityname, res), conf, deliverer, info)
     } else {
       onComplete
     }
@@ -217,7 +220,6 @@ object QueryHandler {
     log.debug("progressive query performs kNN query")
     NearestNeighbourQueryHandler.progressiveQuery(entityname, nnq, filter, onCompleteFunction)
   }
-
 
   /**
     * Performs a timed progressive query, i.e., it performs the query for a maximum of the given time limit and returns then the best possible
@@ -239,13 +241,14 @@ object QueryHandler {
     }
 
     log.debug("timed progressive query performs kNN query")
-    var (res, confidence, deliverer) = NearestNeighbourQueryHandler.timedProgressiveQuery(entityname, nnq, filter, timelimit)
+    val results = NearestNeighbourQueryHandler.timedProgressiveQuery(entityname, nnq, filter, timelimit)
+    var df = results.results
     if (withMetadata) {
       log.debug("join metadata to results of timed progressive query")
-      res = joinWithMetadata(entityname, res)
+      df = joinWithMetadata(entityname, df)
     }
 
-    (res, confidence, deliverer)
+    (df, results.confidence, results.deliverer)
   }
 
 
@@ -277,10 +280,10 @@ object QueryHandler {
   private def joinWithMetadata(entityname: EntityName, res: DataFrame): DataFrame = {
     val mdRes = BooleanQueryHandler.metadataQuery(entityname, res.select(FieldNames.idColumnName).collect().map(r => r.getLong(0)).toSet)
 
-    if (mdRes.isDefined){
+    if (mdRes.isDefined) {
       mdRes.get.join(res, FieldNames.idColumnName) //with metadata
     } else {
-     res //no metadata
+      res //no metadata
     }
   }
 }

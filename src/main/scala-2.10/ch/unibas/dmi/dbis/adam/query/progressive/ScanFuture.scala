@@ -31,7 +31,7 @@ abstract class ScanFuture(tracker : ProgressiveQueryStatusTracker){
   * @param onComplete
   * @param tracker
   */
-class IndexScanFuture(indexname : IndexName, query : NearestNeighbourQuery, onComplete: (ProgressiveQueryStatus.Value, DataFrame, Float, String, Map[String, String]) => Unit, val tracker : ProgressiveQueryStatusTracker) extends ScanFuture(tracker) {
+class IndexScanFuture[U](indexname : IndexName, query : NearestNeighbourQuery, onComplete: (ProgressiveQueryStatus.Value, DataFrame, Float, String, Map[String, String]) => U, val tracker : ProgressiveQueryStatusTracker) extends ScanFuture(tracker) {
   tracker.register(this)
 
   val name = Index.indextype(indexname).name
@@ -59,7 +59,7 @@ class IndexScanFuture(indexname : IndexName, query : NearestNeighbourQuery, onCo
   * @param onComplete
   * @param tracker
   */
-class SequentialScanFuture(entityname : EntityName, query : NearestNeighbourQuery, onComplete: (ProgressiveQueryStatus.Value, DataFrame, Float, String, Map[String, String]) => Unit, val tracker : ProgressiveQueryStatusTracker) extends ScanFuture(tracker) {
+class SequentialScanFuture[U](entityname : EntityName, query : NearestNeighbourQuery, onComplete: (ProgressiveQueryStatus.Value, DataFrame, Float, String, Map[String, String]) => U, val tracker : ProgressiveQueryStatusTracker) extends ScanFuture(tracker) {
   tracker.register(this)
 
   val name = "sequential"

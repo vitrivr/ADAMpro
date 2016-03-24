@@ -6,6 +6,9 @@ import org.apache.log4j.Logger
 import org.apache.spark.sql.DataFrame
 
 import scala.collection.mutable.ListBuffer
+import scala.concurrent.duration.Duration
+import scala.concurrent.{CanAwait, ExecutionContext, Future}
+import scala.util.{Success, Try}
 
 
 /**
@@ -16,14 +19,20 @@ import scala.collection.mutable.ListBuffer
   * Ivan Giangreco
   * September 2015
   */
-class ProgressiveQueryStatusTracker(queryID: String) {
+case class ProgressiveQueryIntermediateResults(confidence: Float, results: DataFrame, deliverer: String) {
+  def this(future: ScanFuture, results: DataFrame) {
+    this(future.confidence, results, future.name)
+  }
+}
+
+
+class ProgressiveQueryStatusTracker(queryID: String) extends Future[ProgressiveQueryIntermediateResults] {
   val log = Logger.getLogger(getClass.getName)
 
   private val futures = ListBuffer[ScanFuture]()
-  private var runningStatus = ProgressiveQueryStatus.RUNNING
-  private var resultConfidence = 0.toFloat
-  private var queryResults : DataFrame = _
-  private var resultDeliverer : String = ""
+  private val runningStatusLock = new Object()
+  @volatile private var runningStatus = ProgressiveQueryStatus.RUNNING
+  private var intermediateResult = ProgressiveQueryIntermediateResults(0, null, "empty")
 
   /**
     * Register a scan future.
@@ -40,20 +49,18 @@ class ProgressiveQueryStatusTracker(queryID: String) {
     *
     * @param future
     */
-  def notifyCompletion(future: ScanFuture, futureResults: DataFrame): Unit = {
+  def notifyCompletion(future: ScanFuture, results: DataFrame): Unit = {
     log.debug("scanning completed")
 
     futures.synchronized({
-      if (future.confidence > resultConfidence && runningStatus == ProgressiveQueryStatus.RUNNING) {
-        queryResults = futureResults
-        resultDeliverer = future.name
-        resultConfidence = future.confidence
+      if (future.confidence > intermediateResult.confidence && runningStatus == ProgressiveQueryStatus.RUNNING) {
+        intermediateResult = new ProgressiveQueryIntermediateResults(future, results)
       }
 
       if (!AdamConfig.evaluation) {
         // in evaluation mode we want to keep all results and do not stop, as to be able to measure how
         // much time each index would run
-        if (math.abs(resultConfidence - 1.0) < 0.000001) {
+        if (math.abs(intermediateResult.confidence - 1.0) < 0.000001) {
           log.debug("confident results retrieved")
           stop(ProgressiveQueryStatus.FINISHED)
         }
@@ -80,7 +87,8 @@ class ProgressiveQueryStatusTracker(queryID: String) {
     * @param newStatus
     */
   private def stop(newStatus: ProgressiveQueryStatus.Value): Unit = {
-    if (runningStatus == ProgressiveQueryStatus.FINISHED) { //already finished
+    if (runningStatus == ProgressiveQueryStatus.FINISHED) {
+      //already finished
       log.debug("requested stopping progresive query, but stopped already")
       return
     }
@@ -88,8 +96,12 @@ class ProgressiveQueryStatusTracker(queryID: String) {
     futures.synchronized {
       log.debug("stopping progressive query with status " + newStatus)
       SparkStartup.sc.cancelJobGroup(queryID)
-      runningStatus = newStatus
       futures.clear()
+    }
+
+    runningStatusLock.synchronized {
+      runningStatus = newStatus
+      runningStatusLock.notifyAll()
     }
   }
 
@@ -98,9 +110,7 @@ class ProgressiveQueryStatusTracker(queryID: String) {
     *
     * @return
     */
-  def results = {
-    (queryResults, resultConfidence, resultDeliverer)
-  }
+  def results = intermediateResult
 
   /**
     * Returns the current status of the progressive query.
@@ -118,6 +128,42 @@ class ProgressiveQueryStatusTracker(queryID: String) {
     */
   def length = {
     futures.size
+  }
+
+
+  override def isCompleted: Boolean = (status != ProgressiveQueryStatus.RUNNING)
+
+  val observers = ListBuffer[(Try[ProgressiveQueryIntermediateResults]) => _]()
+  override def onComplete[U](func: (Try[ProgressiveQueryIntermediateResults]) => U)(implicit executor: ExecutionContext): Unit = {
+    observers.+=(func)
+  }
+
+  override def value: Option[Try[ProgressiveQueryIntermediateResults]] = {
+    if (isCompleted) {
+      return Some(Success(intermediateResult))
+    } else {
+      None
+    }
+  }
+
+  override def result(atMost: Duration)(implicit permit: CanAwait): ProgressiveQueryIntermediateResults = {
+    runningStatusLock.synchronized {
+      while (runningStatus == ProgressiveQueryStatus.RUNNING) {
+        runningStatusLock.wait(atMost.toMillis)
+      }
+    }
+
+    intermediateResult
+  }
+
+  override def ready(atMost: Duration)(implicit permit: CanAwait): ProgressiveQueryStatusTracker.this.type = {
+    runningStatusLock.synchronized {
+      while (runningStatus == ProgressiveQueryStatus.RUNNING) {
+        runningStatusLock.wait(atMost.toMillis)
+      }
+    }
+
+    this
   }
 }
 
