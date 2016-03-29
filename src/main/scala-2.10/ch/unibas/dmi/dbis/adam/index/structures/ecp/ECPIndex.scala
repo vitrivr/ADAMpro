@@ -44,7 +44,7 @@ class ECPIndex(val indexname: IndexName, val entityname: EntityName, protected v
       results.toSeq
     }).flatten
 
-    log.debug("eCP index returning " + ids.toSet + " tuples")
+    log.debug("eCP index returning " + ids.length + " tuples")
 
     ids.toSet
   }

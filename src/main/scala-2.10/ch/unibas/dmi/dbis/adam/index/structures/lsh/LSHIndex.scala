@@ -61,8 +61,7 @@ class LSHIndex(val indexname: IndexName, val entityname: EntityName, protected v
     globalResultHandler.offerResultElement(results.iterator)
     val ids = globalResultHandler.results.map(x => x.tid)
 
-    log.debug("LSH index returning " + ids.toSet + " tuples")
-
+    log.debug("LSH index returning " + ids.length + " tuples")
     ids.toSet
   }
 
