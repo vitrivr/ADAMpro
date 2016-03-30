@@ -3,10 +3,9 @@ package ch.unibas.dmi.dbis.adam.rpc
 import ch.unibas.dmi.dbis.adam.api._
 import ch.unibas.dmi.dbis.adam.config.FieldNames
 import ch.unibas.dmi.dbis.adam.entity.{FieldDefinition, FieldTypes}
-import ch.unibas.dmi.dbis.adam.entity.FieldTypes.FieldType
 import ch.unibas.dmi.dbis.adam.exception.GeneralAdamException
-import ch.unibas.dmi.dbis.adam.http.grpc._
-import ch.unibas.dmi.dbis.adam.http.grpc.{CreateEntityMessage, AckMessage}
+import ch.unibas.dmi.dbis.adam.http.grpc.CreateEntityMessage.FieldType
+import ch.unibas.dmi.dbis.adam.http.grpc.{AckMessage, CreateEntityMessage, _}
 import ch.unibas.dmi.dbis.adam.index.structures.IndexTypes
 import ch.unibas.dmi.dbis.adam.query.distance.NormBasedDistanceFunction
 import org.apache.log4j.Logger
@@ -52,16 +51,15 @@ class DataDefinitionRPC extends AdamDefinitionGrpc.AdamDefinition {
     * @param ft
     * @return
     */
-  private def matchFields(ft : CreateEntityMessage.FieldType): FieldType = {
-    if(ft.isBoolean) return FieldTypes.BOOLEANTYPE
-    if(ft.isDouble) return FieldTypes.DOUBLETYPE
-    if(ft.isFloat) return FieldTypes.FLOATTYPE
-    if(ft.isInt) return FieldTypes.INTTYPE
-    if(ft.isLong) return FieldTypes.LONGTYPE
-    if(ft.isString) return FieldTypes.STRINGTYPE
-
-    return FieldTypes.UNRECOGNIZEDTYPE
-  }
+  private def matchFields(ft : CreateEntityMessage.FieldType) = ft match {
+      case FieldType.BOOLEAN => FieldTypes.BOOLEANTYPE
+      case FieldType.DOUBLE => FieldTypes.DOUBLETYPE
+      case FieldType.FLOAT => FieldTypes.FLOATTYPE
+      case FieldType.INT => FieldTypes.INTTYPE
+      case FieldType.LONG => FieldTypes.LONGTYPE
+      case FieldType.STRING => FieldTypes.STRINGTYPE
+      case _ => FieldTypes.UNRECOGNIZEDTYPE
+    }
 
 
   override def count(request: EntityNameMessage): Future[AckMessage] = {
