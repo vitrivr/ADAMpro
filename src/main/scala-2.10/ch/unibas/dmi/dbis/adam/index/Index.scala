@@ -32,15 +32,23 @@ import scala.util.{Failure, Success, Try}
   * Ivan Giangreco
   * August 2015
   */
-trait Index[A <: IndexTuple] {
+trait Index {
   @transient lazy val log = Logger.getLogger(getClass.getName)
 
   val indexname: IndexName
   val indextype: IndexTypeName
   val entityname: EntityName
 
-  //confidence towards the index. Confidence of 1 means very confident in index results (i.e., precise results).
+
+  /**
+    * Confidence towards the index. Confidence of 1 means very confident in index results (i.e., precise results).
+    */
   val confidence: Float
+
+  /**
+    * Denotes whether the index leads to false negatives, i.e., elements are dropped although they shouldn't be.
+    */
+  val hasFalseNegatives : Boolean
 
   /**
     *
@@ -79,7 +87,7 @@ trait Index[A <: IndexTuple] {
     * @param k number of elements to retrieve (of the k nearest neighbor search), possibly more than k elements are returned
     * @param filter optional pre-filter for Boolean query
     * @param queryID optional query id
-    * @return a set of candidate tuple ids
+    * @return a set of candidate tuple ids (will be greater than k)
     */
   def scan(q: FeatureVector, options: Map[String, Any], k: Int, filter: Option[Set[TupleID]], queryID: Option[String] = None): Set[TupleID] = {
     log.debug("started scanning index")
@@ -102,7 +110,7 @@ trait Index[A <: IndexTuple] {
     * @param q query vector
     * @param options options to be passed to the index reader
     * @param k number of elements to retrieve (of the k nearest neighbor search), possibly more than k elements are returned
-    * @return a set of candidate tuple ids
+    * @return a set of candidate tuple ids (will be greater than k)
     */
   protected def scan(data: DataFrame, q: FeatureVector, options: Map[String, Any], k: Int): Set[TupleID]
 }
@@ -144,7 +152,7 @@ object Index {
     * @param indexgenerator generator to create index
     * @return index
     */
-  def createIndex(entity: Entity, indexgenerator: IndexGenerator): Try[Index[_ <: IndexTuple]] = {
+  def createIndex(entity: Entity, indexgenerator: IndexGenerator): Try[Index] = {
     val indexname = createIndexName(entity.entityname, indexgenerator.indextypename)
     val rdd: RDD[IndexingTaskTuple] = entity.getFeaturedata.map { x => IndexingTaskTuple(x.getLong(0), x.getAs[FeatureVectorWrapper](1).vector) }
     val index = indexgenerator.index(indexname, entity.entityname, rdd)
@@ -194,7 +202,7 @@ object Index {
     * @param indexname
     * @return
     */
-  def load(indexname: IndexName): Try[Index[_ <: IndexTuple]] = {
+  def load(indexname: IndexName): Try[Index] = {
     if (!exists(indexname)) {
       throw new IndexNotExistingException()
     }
@@ -208,7 +216,7 @@ object Index {
     * @param indexname
     * @return
     */
-  def loadIndexMetaData(indexname: IndexName): Try[Index[_ <: IndexTuple]] = {
+  def loadIndexMetaData(indexname: IndexName): Try[Index] = {
     if (!exists(indexname)) {
       Failure(IndexNotExistingException())
     }
@@ -268,8 +276,8 @@ object Index {
       maximumSize(maximumCacheSizeIndex).
       expireAfterAccess(expireAfterAccess, TimeUnit.MINUTES).
       build(
-        new CacheLoader[IndexName, Index[_ <: IndexTuple]]() {
-          def load(indexname: IndexName): Index[_ <: IndexTuple] = {
+        new CacheLoader[IndexName, Index]() {
+          def load(indexname: IndexName): Index = {
             val index = Index.loadIndexMetaData(indexname).get
             index.df.rdd.setName(indexname).persist(StorageLevel.MEMORY_AND_DISK)
             index.df.rdd.collect()
@@ -283,7 +291,7 @@ object Index {
       *
       * @param indexname
       */
-    def get(indexname: IndexName): Try[Index[_ <: IndexTuple]] = {
+    def get(indexname: IndexName): Try[Index] = {
       try {
         Success(indexCache.get(indexname))
       } catch {

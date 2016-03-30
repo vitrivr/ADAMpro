@@ -23,12 +23,14 @@ import org.apache.spark.sql.DataFrame
  * August 2015
  */
 class VAIndex(val indexname : IndexName, val entityname : EntityName, protected val df: DataFrame, private[index] val metadata: VAIndexMetaData)
-  extends Index[BitStringIndexTuple] with Serializable {
+  extends Index with Serializable {
 
   override val indextype: IndexTypeName = metadata.signatureGenerator match {
     case fsg : FixedSignatureGenerator =>   IndexTypes.VAFINDEX
     case vsg : VariableSignatureGenerator => IndexTypes.VAVINDEX
   }
+
+  override val hasFalseNegatives: Boolean = false
   override val confidence = 1.toFloat
 
   override def scan(data : DataFrame, q : FeatureVector, options : Map[String, Any], k : Int): Set[TupleID] = {

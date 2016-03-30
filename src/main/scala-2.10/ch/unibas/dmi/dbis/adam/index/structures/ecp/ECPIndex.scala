@@ -20,9 +20,11 @@ import scala.collection.mutable.ListBuffer
  * October 2015
  */
 class ECPIndex(val indexname: IndexName, val entityname: EntityName, protected val df: DataFrame, private[index] val metadata : ECPIndexMetaData)
-  extends Index[LongIndexTuple] {
+  extends Index {
 
   override val indextype: IndexTypeName = IndexTypes.ECPINDEX
+
+  override val hasFalseNegatives: Boolean = true
   override val confidence = 0.toFloat
 
   override def scan(data : DataFrame, q : FeatureVector, options : Map[String, Any], k : Int): Set[TupleID] = {

@@ -25,7 +25,7 @@ class LSHIndexer(numHashTables : Int, numHashes : Int, distance : DistanceFuncti
    * @param data
    * @return
    */
-  override def index(indexname : IndexName, entityname : EntityName, data: RDD[IndexingTaskTuple]): Index[_ <: IndexTuple] = {
+  override def index(indexname : IndexName, entityname : EntityName, data: RDD[IndexingTaskTuple]): Index = {
     val n = Entity.countTuples(entityname)
     val fraction = ADAMSamplingUtils.computeFractionForSampleSize(trainingSize, n, false)
     val trainData = data.sample(false, fraction)
