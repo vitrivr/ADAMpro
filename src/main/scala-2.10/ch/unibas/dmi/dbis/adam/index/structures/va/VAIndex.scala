@@ -2,7 +2,6 @@ package ch.unibas.dmi.dbis.adam.index.structures.va
 
 import ch.unibas.dmi.dbis.adam.datatypes.feature.Feature._
 import ch.unibas.dmi.dbis.adam.entity.Entity._
-import ch.unibas.dmi.dbis.adam.entity.Tuple._
 import ch.unibas.dmi.dbis.adam.index.Index._
 import ch.unibas.dmi.dbis.adam.index.structures.IndexTypes
 import ch.unibas.dmi.dbis.adam.index.structures.va.VAIndex.{Bounds, Marks}
@@ -10,6 +9,7 @@ import ch.unibas.dmi.dbis.adam.index.structures.va.results.VAResultHandler
 import ch.unibas.dmi.dbis.adam.index.structures.va.signature.{FixedSignatureGenerator, VariableSignatureGenerator}
 import ch.unibas.dmi.dbis.adam.index.{BitStringIndexTuple, Index}
 import ch.unibas.dmi.dbis.adam.main.SparkStartup
+import ch.unibas.dmi.dbis.adam.query.Result
 import ch.unibas.dmi.dbis.adam.query.distance.Distance._
 import ch.unibas.dmi.dbis.adam.query.distance.MinkowskiDistance
 import ch.unibas.dmi.dbis.adam.query.query.NearestNeighbourQuery
@@ -30,10 +30,10 @@ class VAIndex(val indexname : IndexName, val entityname : EntityName, protected 
     case vsg : VariableSignatureGenerator => IndexTypes.VAVINDEX
   }
 
-  override val hasFalseNegatives: Boolean = false
+  override val lossy : Boolean = false
   override val confidence = 1.toFloat
 
-  override def scan(data : DataFrame, q : FeatureVector, options : Map[String, Any], k : Int): Set[TupleID] = {
+  override def scan(data : DataFrame, q : FeatureVector, options : Map[String, Any], k : Int): Set[Result] = {
     log.debug("scanning VA-File index " + indexname)
 
     val distance = metadata.distance
@@ -51,11 +51,11 @@ class VAIndex(val indexname : IndexName, val entityname : EntityName, protected 
 
     val globalResultHandler = new VAResultHandler(k)
     globalResultHandler.offerResultElement(results.iterator)
-    val ids = globalResultHandler.results.map(x => x.tid)
+    val ids = globalResultHandler.results
 
     log.debug("VA-File returning " + ids.length + " tuples")
 
-    ids.toSet
+    ids.map(result => Result(result.ubound, result.tid)).toSet
   }
 
   override def isQueryConform(nnq: NearestNeighbourQuery): Boolean = {

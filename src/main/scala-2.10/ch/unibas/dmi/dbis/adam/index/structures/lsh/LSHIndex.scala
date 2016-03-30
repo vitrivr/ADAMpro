@@ -3,12 +3,12 @@ package ch.unibas.dmi.dbis.adam.index.structures.lsh
 import ch.unibas.dmi.dbis.adam.datatypes.feature.Feature._
 import ch.unibas.dmi.dbis.adam.datatypes.feature.MovableFeature
 import ch.unibas.dmi.dbis.adam.entity.Entity._
-import ch.unibas.dmi.dbis.adam.entity.Tuple.TupleID
 import ch.unibas.dmi.dbis.adam.index.Index._
 import ch.unibas.dmi.dbis.adam.index.structures.IndexTypes
 import ch.unibas.dmi.dbis.adam.index.structures.lsh.results.LSHResultHandler
 import ch.unibas.dmi.dbis.adam.index.{BitStringIndexTuple, Index}
 import ch.unibas.dmi.dbis.adam.main.SparkStartup
+import ch.unibas.dmi.dbis.adam.query.Result
 import ch.unibas.dmi.dbis.adam.query.query.NearestNeighbourQuery
 import org.apache.spark.TaskContext
 import org.apache.spark.sql.DataFrame
@@ -24,10 +24,10 @@ class LSHIndex(val indexname: IndexName, val entityname: EntityName, protected v
 
   override val indextype: IndexTypeName = IndexTypes.LSHINDEX
 
-  override val hasFalseNegatives: Boolean = true
+  override val lossy: Boolean = true
   override val confidence = 0.toFloat
 
-  override def scan(data : DataFrame, q : FeatureVector, options : Map[String, Any], k : Int): Set[TupleID] = {
+  override def scan(data : DataFrame, q : FeatureVector, options : Map[String, Any], k : Int): Set[Result] = {
     log.debug("scanning LSH index " + indexname)
 
     val numOfQueries = options.getOrElse("numOfQ", "3").asInstanceOf[String].toInt
@@ -37,6 +37,8 @@ class LSHIndex(val indexname: IndexName, val entityname: EntityName, protected v
     val queries = (List.fill(numOfQueries)(LSHUtils.hashFeature(q.move(metadata.radius), metadata)) ::: List(originalQuery)).par
 
     val rdd = data.map(r => r : BitStringIndexTuple)
+
+    val maxScore = originalQuery.intersectionCount(originalQuery) * numOfQueries
 
     val results = SparkStartup.sc.runJob(rdd, (context : TaskContext, tuplesIt : Iterator[BitStringIndexTuple]) => {
       val localRh = new LSHResultHandler(k)
@@ -61,10 +63,10 @@ class LSHIndex(val indexname: IndexName, val entityname: EntityName, protected v
 
     val globalResultHandler = new LSHResultHandler(k)
     globalResultHandler.offerResultElement(results.iterator)
-    val ids = globalResultHandler.results.map(x => x.tid)
+    val ids = globalResultHandler.results
 
     log.debug("LSH index returning " + ids.length + " tuples")
-    ids.toSet
+    ids.map(result => Result(result.score.toFloat / maxScore.toFloat, result.tid)).toSet
   }
 
   override def isQueryConform(nnq: NearestNeighbourQuery): Boolean = {

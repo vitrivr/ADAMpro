@@ -2,6 +2,7 @@ package ch.unibas.dmi.dbis.adam.query.scanner
 
 import ch.unibas.dmi.dbis.adam.entity.Tuple.TupleID
 import ch.unibas.dmi.dbis.adam.index.Index
+import ch.unibas.dmi.dbis.adam.query.Result
 import ch.unibas.dmi.dbis.adam.query.query.NearestNeighbourQuery
 import org.apache.log4j.Logger
 
@@ -25,7 +26,7 @@ object IndexScanner {
     * @param filter pre-filter to use when scanning the index
     * @return
     */
-  def apply(index: Index, query: NearestNeighbourQuery, filter: Option[Set[TupleID]]): Set[TupleID] = {
+  def apply(index: Index, query: NearestNeighbourQuery, filter: Option[Set[TupleID]]): Set[Result] = {
     log.debug("scan index")
     index.scan(query.q, query.options, query.k, filter, query.queryID)
   }

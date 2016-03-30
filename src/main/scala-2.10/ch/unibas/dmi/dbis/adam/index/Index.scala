@@ -16,6 +16,7 @@ import ch.unibas.dmi.dbis.adam.index.structures.lsh.LSHIndex
 import ch.unibas.dmi.dbis.adam.index.structures.sh.SHIndex
 import ch.unibas.dmi.dbis.adam.index.structures.va.VAIndex
 import ch.unibas.dmi.dbis.adam.main.SparkStartup
+import ch.unibas.dmi.dbis.adam.query.Result
 import ch.unibas.dmi.dbis.adam.query.query.NearestNeighbourQuery
 import ch.unibas.dmi.dbis.adam.storage.engine.CatalogOperator
 import com.google.common.cache.{CacheBuilder, CacheLoader}
@@ -48,7 +49,7 @@ trait Index {
   /**
     * Denotes whether the index leads to false negatives, i.e., elements are dropped although they shouldn't be.
     */
-  val hasFalseNegatives : Boolean
+  val lossy : Boolean
 
   /**
     *
@@ -87,9 +88,9 @@ trait Index {
     * @param k number of elements to retrieve (of the k nearest neighbor search), possibly more than k elements are returned
     * @param filter optional pre-filter for Boolean query
     * @param queryID optional query id
-    * @return a set of candidate tuple ids (will be greater than k)
+    * @return a set of candidate tuple ids, possibly together with a tentative score (the number of tuples will be greater than k)
     */
-  def scan(q: FeatureVector, options: Map[String, Any], k: Int, filter: Option[Set[TupleID]], queryID: Option[String] = None): Set[TupleID] = {
+  def scan(q: FeatureVector, options: Map[String, Any], k: Int, filter: Option[Set[TupleID]], queryID: Option[String] = None): Set[Result] = {
     log.debug("started scanning index")
     SparkStartup.sc.setLocalProperty("spark.scheduler.pool", "index")
     SparkStartup.sc.setJobGroup(queryID.getOrElse(""), indextype.name, true)
@@ -100,7 +101,7 @@ trait Index {
       df
     }
 
-    scan(data,q, options, k)
+    scan(data, q, options, k)
   }
 
   /**
@@ -110,9 +111,9 @@ trait Index {
     * @param q query vector
     * @param options options to be passed to the index reader
     * @param k number of elements to retrieve (of the k nearest neighbor search), possibly more than k elements are returned
-    * @return a set of candidate tuple ids (will be greater than k)
+    * @return a set of candidate tuple ids, possibly together with a tentative score (the number of tuples will be greater than k)
     */
-  protected def scan(data: DataFrame, q: FeatureVector, options: Map[String, Any], k: Int): Set[TupleID]
+  protected def scan(data: DataFrame, q: FeatureVector, options: Map[String, Any], k: Int): Set[Result]
 }
 
 

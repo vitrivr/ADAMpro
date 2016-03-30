@@ -87,7 +87,7 @@ private[query] object NearestNeighbourQueryHandler {
     val entity = Await.result[Entity](future, Duration(100, TimeUnit.SECONDS))
 
     log.debug("starting feature scanner")
-    FeatureScanner(entity, query, Some(tidList))
+    FeatureScanner(entity, query, Some(tidList.map(_.tid)))
   }
 
   /**
