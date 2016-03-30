@@ -1,4 +1,5 @@
 syntax = "proto3";
+//import "google/protobuf/any.proto";
 
 option java_package = "ch.unibas.dmi.dbis.adam.http";
 
@@ -20,6 +21,7 @@ service AdamSearch {
   rpc DoIndexQuery(SimpleIndexQueryMessage) returns (QueryResponseListMessage) {}
   rpc DoProgressiveQuery(SimpleQueryMessage) returns (stream QueryResponseInfoMessage) {}
   rpc DoTimedProgressiveQuery(TimedQueryMessage) returns (QueryResponseInfoMessage) {}
+  rpc DoChainedQuery(OperationQueryMessage) returns (QueryResponseListMessage) {}
 }
 
 
@@ -159,4 +161,30 @@ message QueryResponseMessage {
 
 message QueryResponseListMessage {
   repeated QueryResponseMessage responses = 1;
+}
+
+
+//experimental
+message OperationQueryMessage {
+  enum Operation {
+      UNION = 0;
+      INTERSECT = 1;
+      EXCEPT = 2;
+      JOIN = 3;
+    }
+   //google.protobuf.Any left = 1;
+   //Operation operation = 2;
+   //google.protobuf.Any right = 3;
+
+   oneof left {
+       SimpleSequentialQueryMessage lssqm = 2;
+       SimpleIndexQueryMessage lsiqm = 3;
+       OperationQueryMessage loqm = 4;
+     }
+   Operation operation = 1;
+   oneof right {
+       SimpleSequentialQueryMessage rssqm = 5;
+       SimpleIndexQueryMessage rsiqm = 6;
+       OperationQueryMessage roqm = 7;
+     }
 }

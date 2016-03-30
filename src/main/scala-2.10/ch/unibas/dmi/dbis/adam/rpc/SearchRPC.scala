@@ -15,7 +15,7 @@ import io.grpc.stub.StreamObserver
 import org.apache.log4j.Logger
 import org.apache.spark.sql.DataFrame
 
-import scala.concurrent.Future
+import scala.concurrent.{Await, Future}
 import scala.concurrent.duration.Duration
 
 /**
@@ -231,5 +231,50 @@ class SearchRPC extends AdamSearchGrpc.AdamSearch {
     } catch {
       case e: Exception => Future.failed(e)
     }
+  }
+
+  /**
+    *
+    * @param request
+    * @return
+    */
+  override def doChainedQuery(request: OperationQueryMessage): Future[QueryResponseListMessage] = {
+
+    val fleft = request.left match {
+      case OperationQueryMessage.Left.Loqm(x) => doChainedQuery(x)
+      case OperationQueryMessage.Left.Lsiqm(x) => doIndexQuery(x)
+      case OperationQueryMessage.Left.Lssqm(x) => doSequentialQuery(x)
+      case OperationQueryMessage.Left.Empty => null
+    }
+
+
+    val fright = request.right match {
+      case OperationQueryMessage.Right.Roqm(x) => doChainedQuery(x)
+      case OperationQueryMessage.Right.Rsiqm(x) => doIndexQuery(x)
+      case OperationQueryMessage.Right.Rssqm(x) => doSequentialQuery(x)
+      case OperationQueryMessage.Right.Empty => null
+    }
+
+
+    val f = for {
+      l <- fleft
+      r <- fright
+    } yield (l, r)
+
+
+    Await.ready(f, Duration.Inf)
+
+    val values = f.value.get.get
+
+    request.operation match {
+      case OperationQueryMessage.Operation.EXCEPT =>
+      case OperationQueryMessage.Operation.INTERSECT =>
+      case OperationQueryMessage.Operation.JOIN =>
+      case OperationQueryMessage.Operation.UNION =>
+      case _ =>
+    }
+
+
+
   }
 }
