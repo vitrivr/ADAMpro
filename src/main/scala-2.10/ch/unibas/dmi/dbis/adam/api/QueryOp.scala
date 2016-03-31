@@ -2,8 +2,8 @@ package ch.unibas.dmi.dbis.adam.api
 
 import ch.unibas.dmi.dbis.adam.entity.Entity._
 import ch.unibas.dmi.dbis.adam.index.Index._
-import ch.unibas.dmi.dbis.adam.query.handler.CompoundQueryHandler.Expression
-import ch.unibas.dmi.dbis.adam.query.handler.QueryHandler
+import ch.unibas.dmi.dbis.adam.query.handler.CompoundQueryHandler.{CompoundQueryHolder, Expression}
+import ch.unibas.dmi.dbis.adam.query.handler.{CompoundQueryHandler, QueryHandler}
 import ch.unibas.dmi.dbis.adam.query.handler.QueryHandler._
 import ch.unibas.dmi.dbis.adam.query.handler.QueryHints._
 import ch.unibas.dmi.dbis.adam.query.progressive.{ProgressiveQueryStatus, ProgressiveQueryStatusTracker}
@@ -127,4 +127,19 @@ object QueryOp {
   }
 
   def timedProgressive(q: TimedProgressiveQueryHolder): (DataFrame, Float, String) = timedProgressive(q.entityname, q.nnq, q.bq, q.timelimit, q.withMetadata)
+
+  /**
+    * Performs a query which uses index compounding for pre-filtering.
+    *
+    * @param entityname
+    * @param nnq
+    * @param expr
+    * @param withMetadata
+    * @return
+    */
+  def compoundQuery(entityname: EntityName, nnq: NearestNeighbourQuery, expr : Expression, withMetadata: Boolean): DataFrame = {
+    CompoundQueryHandler.indexQueryWithResults(entityname)(nnq, expr, withMetadata)
+  }
+
+  def compoundQuery(q : CompoundQueryHolder): DataFrame = q.eval()
 }

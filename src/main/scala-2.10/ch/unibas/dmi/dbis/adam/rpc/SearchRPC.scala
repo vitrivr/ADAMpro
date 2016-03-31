@@ -1,6 +1,6 @@
 package ch.unibas.dmi.dbis.adam.rpc
 
-import ch.unibas.dmi.dbis.adam.api.{CompoundQueryOp, QueryOp}
+import ch.unibas.dmi.dbis.adam.api.QueryOp
 import ch.unibas.dmi.dbis.adam.config.FieldNames
 import ch.unibas.dmi.dbis.adam.http.grpc._
 import ch.unibas.dmi.dbis.adam.index.structures.IndexTypes
@@ -125,11 +125,11 @@ class SearchRPC extends AdamSearchGrpc.AdamSearch {
     * @param request
     * @return
     */
-  override def doCompoundQuery(request: ExpressionQueryMessage): Future[QueryResponseListMessage] = {
+  override def doCompoundQuery(request: CompoundQueryMessage): Future[QueryResponseListMessage] = {
     log.debug("rpc call for chained query operation")
 
     try {
-      Future.successful(prepareResults(CompoundQueryOp(SearchRPCMethods.toExpr(request))))
+      Future.successful(prepareResults(QueryOp.compoundQuery(SearchRPCMethods.toQueryHolder(request))))
     } catch {
       case e: Exception => Future.failed(e)
     }

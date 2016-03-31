@@ -7,7 +7,7 @@ import ch.unibas.dmi.dbis.adam.datatypes.feature.Feature._
 import ch.unibas.dmi.dbis.adam.http.grpc._
 import ch.unibas.dmi.dbis.adam.index.structures.IndexTypes
 import ch.unibas.dmi.dbis.adam.query.distance.NormBasedDistanceFunction
-import ch.unibas.dmi.dbis.adam.query.handler.CompoundQueryHandler.Expression
+import ch.unibas.dmi.dbis.adam.query.handler.CompoundQueryHandler.{CompoundQueryHolder, Expression}
 import ch.unibas.dmi.dbis.adam.query.handler.QueryHandler._
 import ch.unibas.dmi.dbis.adam.query.handler.{CompoundQueryHandler, QueryHints}
 import ch.unibas.dmi.dbis.adam.query.progressive.ProgressiveQueryStatus
@@ -36,6 +36,8 @@ private[rpc] object SearchRPCMethods {
   implicit def toQueryHolder(request: TimedQueryMessage) = new TimedProgressiveQueryHolder(request.entity, prepareNNQ(request.nnq), prepareBQ(request.bq), Duration(request.time, TimeUnit.MILLISECONDS), request.withMetadata)
 
   implicit def toQueryHolder(request: SimpleQueryMessage, onComplete: (ProgressiveQueryStatus.Value, DataFrame, VectorBase, String, Map[String, String]) => Unit) = new ProgressiveQueryHolder(request.entity, prepareNNQ(request.nnq), prepareBQ(request.bq), onComplete, request.withMetadata)
+
+  implicit def toQueryHolder(request: CompoundQueryMessage) = new CompoundQueryHolder(request.entity, prepareNNQ(request.nnq), toExpr(request.indexFilterExpression.get), request.withMetadata)
 
   implicit def toExpr(request: ExpressionQueryMessage) : Expression = request.operation match {
     case ExpressionQueryMessage.Operation.UNION => CompoundQueryHandler.UnionExpression(request.left, request.right)

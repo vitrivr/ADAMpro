@@ -7,6 +7,7 @@ import ch.unibas.dmi.dbis.adam.config.FieldNames
 import ch.unibas.dmi.dbis.adam.index.structures.IndexTypes
 import ch.unibas.dmi.dbis.adam.main.SparkStartup
 import ch.unibas.dmi.dbis.adam.query.distance.EuclideanDistance
+import ch.unibas.dmi.dbis.adam.query.handler.CompoundQueryHandler
 import ch.unibas.dmi.dbis.adam.query.handler.CompoundQueryHandler.IntersectExpression
 import ch.unibas.dmi.dbis.adam.query.handler.QueryHandler.SpecifiedIndexQueryHolder
 import ch.unibas.dmi.dbis.adam.query.progressive.ProgressiveQueryStatus
@@ -379,7 +380,7 @@ class QueryTestSuite extends AdamTestBase with ScalaFutures {
       val shqh = SpecifiedIndexQueryHolder(shidx.get.indexname, nnq, None, true)
       val vhqh = SpecifiedIndexQueryHolder(vaidx.get.indexname, nnq, None, true)
 
-      val results = CompoundQueryOp.apply(new IntersectExpression(shqh, vhqh))
+      val results = CompoundQueryHandler.indexOnlyQuery(new IntersectExpression(shqh, vhqh))
         .map(r => (r.getAs[Long](FieldNames.idColumnName))).collect().sorted
 
       //results (note we truly compare the id-column here and not the metadata "tid"

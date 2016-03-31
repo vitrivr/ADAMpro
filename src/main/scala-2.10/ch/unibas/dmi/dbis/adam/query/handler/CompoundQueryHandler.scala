@@ -3,12 +3,17 @@ package ch.unibas.dmi.dbis.adam.query.handler
 import java.util.concurrent.TimeUnit
 
 import ch.unibas.dmi.dbis.adam.config.FieldNames
-import org.apache.spark.sql.DataFrame
-
-import scala.concurrent.duration.Duration
-import scala.concurrent.{Await, Future}
+import ch.unibas.dmi.dbis.adam.entity.Entity
+import ch.unibas.dmi.dbis.adam.entity.Entity._
+import ch.unibas.dmi.dbis.adam.main.SparkStartup
+import ch.unibas.dmi.dbis.adam.query.Result
+import ch.unibas.dmi.dbis.adam.query.query.NearestNeighbourQuery
+import ch.unibas.dmi.dbis.adam.query.scanner.FeatureScanner
+import org.apache.spark.sql.{Row, DataFrame}
 
 import scala.concurrent.ExecutionContext.Implicits.global
+import scala.concurrent.duration.Duration
+import scala.concurrent.{Await, Future}
 
 /**
   * adampro
@@ -18,10 +23,38 @@ import scala.concurrent.ExecutionContext.Implicits.global
   */
 object CompoundQueryHandler {
 
-  def apply(e : Expression, indexOnly: Boolean = false, withMetadata: Boolean) = {
-    //TODO: implement with metadata and indexOnly
+  /**
+    *
+    * @param entityname
+    * @param nnq
+    * @param expr
+    * @param withMetadata
+    * @return
+    */
+  def indexQueryWithResults(entityname: EntityName)(nnq: NearestNeighbourQuery, expr : Expression, withMetadata: Boolean) : DataFrame = {
+    val tidList = expr.eval().map(x => Result(0, x.getAs[Long](FieldNames.idColumnName))).collect().toSet
+    var res = FeatureScanner(Entity.load(entityname).get, nnq, Some(tidList.map(_.tid)))
 
-    e.eval()
+    if (withMetadata) {
+      log.debug("join metadata to results of timed progressive query")
+      res = QueryHandler.joinWithMetadata(entityname, res)
+    }
+
+    res
+  }
+
+  case class CompoundQueryHolder(entityname: EntityName, nnq: NearestNeighbourQuery, expr : Expression, withMetadata: Boolean) extends Expression {
+    override def eval() = indexQueryWithResults(entityname)(nnq, expr, withMetadata)
+  }
+
+  /**
+    *
+    * @param expr
+    * @return
+    */
+  def indexOnlyQuery(expr : Expression) = {
+    val rdd =  expr.eval().map(x => Row(0, x.getAs[Long](FieldNames.idColumnName)))
+    SparkStartup.sqlContext.createDataFrame(rdd, Result.resultSchema)
   }
 
   /**
@@ -49,6 +82,7 @@ object CompoundQueryHandler {
         leftResult <- lfut
         rightResult <- rfut
       } yield ({
+        //possibly return DF with type Result here and sum up distance field
         leftResult.unionAll(rightResult).dropDuplicates(Seq(FieldNames.idColumnName))
       })
 
@@ -74,6 +108,7 @@ object CompoundQueryHandler {
         leftResult <- lfut
         rightResult <- rfut
       } yield ({
+        //possibly return DF with type Result here and sum up distance field
         leftResult.intersect(rightResult)
       })
 
@@ -99,6 +134,7 @@ object CompoundQueryHandler {
         leftResult <- lfut
         rightResult <- rfut
       } yield ({
+        //possibly return DF with type Result here and sum up distance field
         leftResult.except(rightResult)
       })
 
