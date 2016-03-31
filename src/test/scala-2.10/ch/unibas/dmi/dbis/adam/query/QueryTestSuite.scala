@@ -4,16 +4,11 @@ import java.util.concurrent.TimeUnit
 
 import ch.unibas.dmi.dbis.adam.api.CompoundQueryOp.IntersectExpression
 import ch.unibas.dmi.dbis.adam.api.QueryOp.SpecifiedIndexQueryHolder
+import ch.unibas.dmi.dbis.adam.api._
 import ch.unibas.dmi.dbis.adam.config.FieldNames
-import ch.unibas.dmi.dbis.adam.entity.Entity
-import ch.unibas.dmi.dbis.adam.index.Index
 import ch.unibas.dmi.dbis.adam.index.structures.IndexTypes
-import ch.unibas.dmi.dbis.adam.index.structures.ecp.ECPIndexer
-import ch.unibas.dmi.dbis.adam.index.structures.lsh.LSHIndexer
-import ch.unibas.dmi.dbis.adam.index.structures.sh.SHIndexer
-import ch.unibas.dmi.dbis.adam.index.structures.va.{VAFIndexer, VAVIndexer}
 import ch.unibas.dmi.dbis.adam.main.SparkStartup
-import ch.unibas.dmi.dbis.adam.query.handler.QueryHandler
+import ch.unibas.dmi.dbis.adam.query.distance.EuclideanDistance
 import ch.unibas.dmi.dbis.adam.query.progressive.ProgressiveQueryStatus
 import ch.unibas.dmi.dbis.adam.query.query.{BooleanQuery, NearestNeighbourQuery}
 import ch.unibas.dmi.dbis.adam.test.AdamTestBase
@@ -42,8 +37,8 @@ class QueryTestSuite extends AdamTestBase with ScalaFutures {
 
       When("performing a kNN query")
       val nnq = NearestNeighbourQuery(es.feature.vector, es.distance, es.k)
-      val results = QueryHandler.sequentialQuery(es.entity.entityname)(nnq, None, true)
-        .map(r => (r.getAs[Float](FieldNames.distanceColumnName), r.getAs[Long]("tid"))).collect()
+      val results = QueryOp.sequential(es.entity.entityname, nnq, None, true)
+        .map(r => (r.getAs[Float](FieldNames.distanceColumnName), r.getAs[Long]("tid"))).collect() //get here TID of metadata
         .sortBy(_._1).toSeq
 
       Then("we should retrieve the k nearest neighbors")
@@ -54,7 +49,7 @@ class QueryTestSuite extends AdamTestBase with ScalaFutures {
       }
 
       //clean up
-      Entity.drop(es.entity.entityname)
+      DropEntityOp(es.entity.entityname)
     }
 
     /**
@@ -63,13 +58,13 @@ class QueryTestSuite extends AdamTestBase with ScalaFutures {
     scenario("perform a ecp index query") {
       Given("an entity and an index")
       val es = getGroundTruthEvaluationSet()
-      val index = Index.createIndex(es.entity, ECPIndexer(es.distance))
+      val index = IndexOp(es.entity.entityname, IndexTypes.ECPINDEX, EuclideanDistance)
       assert(index.isSuccess)
 
       When("performing a kNN query")
       val nnq = NearestNeighbourQuery(es.feature.vector, es.distance, es.k)
-      val results = QueryHandler.indexQuery(index.get.indexname)(nnq, None, true)
-        .map(r => (r.getAs[Float](FieldNames.distanceColumnName), r.getAs[Long]("tid"))).collect()
+      val results = QueryOp.index(index.get.indexname, nnq, None, true)
+        .map(r => (r.getAs[Float](FieldNames.distanceColumnName), r.getAs[Long]("tid"))).collect() //get here TID of metadata
         .sortBy(_._1).toSeq
 
       Then("we should have a match at least in the first element")
@@ -82,7 +77,7 @@ class QueryTestSuite extends AdamTestBase with ScalaFutures {
       log.info("score: " + getScore(es.nnResults.map(_._2), results.map(_._2)))
 
       //clean up
-      Entity.drop(es.entity.entityname)
+      DropEntityOp(es.entity.entityname)
     }
 
     /**
@@ -91,13 +86,13 @@ class QueryTestSuite extends AdamTestBase with ScalaFutures {
     scenario("perform a lsh index query") {
       Given("an entity and an index")
       val es = getGroundTruthEvaluationSet()
-      val index = Index.createIndex(es.entity, LSHIndexer(es.distance))
+      val index = IndexOp(es.entity.entityname, IndexTypes.LSHINDEX, EuclideanDistance)
       assert(index.isSuccess)
 
       When("performing a kNN query")
       val nnq = NearestNeighbourQuery(es.feature.vector, es.distance, es.k)
-      val results = QueryHandler.indexQuery(index.get.indexname)(nnq, None, true)
-        .map(r => (r.getAs[Float](FieldNames.distanceColumnName), r.getAs[Long]("tid"))).collect()
+      val results = QueryOp.index(index.get.indexname, nnq, None, true)
+        .map(r => (r.getAs[Float](FieldNames.distanceColumnName), r.getAs[Long]("tid"))).collect() //get here TID of metadata
         .sortBy(_._1).toSeq
 
       Then("we should have a match at least in the first element")
@@ -110,7 +105,7 @@ class QueryTestSuite extends AdamTestBase with ScalaFutures {
       log.info("score: " + getScore(es.nnResults.map(_._2), results.map(_._2)))
 
       //clean up
-      Entity.drop(es.entity.entityname)
+      DropEntityOp(es.entity.entityname)
     }
 
 
@@ -120,13 +115,13 @@ class QueryTestSuite extends AdamTestBase with ScalaFutures {
     scenario("perform a sh index query") {
       Given("an entity and an index")
       val es = getGroundTruthEvaluationSet()
-      val index = Index.createIndex(es.entity, SHIndexer(es.feature.toSeq().size))
+      val index = IndexOp(es.entity.entityname, IndexTypes.SHINDEX, EuclideanDistance)
       assert(index.isSuccess)
 
       When("performing a kNN query")
       val nnq = NearestNeighbourQuery(es.feature.vector, es.distance, es.k)
-      val results = QueryHandler.indexQuery(index.get.indexname)(nnq, None, true)
-        .map(r => (r.getAs[Float](FieldNames.distanceColumnName), r.getAs[Long]("tid"))).collect()
+      val results = QueryOp.index(index.get.indexname, nnq, None, true)
+        .map(r => (r.getAs[Float](FieldNames.distanceColumnName), r.getAs[Long]("tid"))).collect() //get here TID of metadata
         .sortBy(_._1).toSeq
 
       Then("we should have a match at least in the first element")
@@ -139,7 +134,7 @@ class QueryTestSuite extends AdamTestBase with ScalaFutures {
       log.info("score: " + getScore(es.nnResults.map(_._2), results.map(_._2)))
 
       //clean up
-      Entity.drop(es.entity.entityname)
+      DropEntityOp(es.entity.entityname)
     }
 
 
@@ -149,13 +144,13 @@ class QueryTestSuite extends AdamTestBase with ScalaFutures {
     scenario("perform a vaf index query") {
       Given("an entity and an index")
       val es = getGroundTruthEvaluationSet()
-      val index = Index.createIndex(es.entity, VAFIndexer(es.distance))
+      val index = IndexOp(es.entity.entityname, IndexTypes.VAFINDEX, EuclideanDistance)
       assert(index.isSuccess)
 
       When("performing a kNN query")
       val nnq = NearestNeighbourQuery(es.feature.vector, es.distance, es.k)
-      val results = QueryHandler.indexQuery(index.get.indexname)(nnq, None, true)
-        .map(r => (r.getAs[Float](FieldNames.distanceColumnName), r.getAs[Long]("tid"))).collect()
+      val results = QueryOp.index(index.get.indexname, nnq, None, true)
+        .map(r => (r.getAs[Float](FieldNames.distanceColumnName), r.getAs[Long]("tid"))).collect() //get here TID of metadata
         .sortBy(_._1).toSeq
 
       Then("we should retrieve the k nearest neighbors")
@@ -166,7 +161,7 @@ class QueryTestSuite extends AdamTestBase with ScalaFutures {
       }
 
       //clean up
-      Entity.drop(es.entity.entityname)
+      DropEntityOp(es.entity.entityname)
     }
 
     /**
@@ -175,12 +170,12 @@ class QueryTestSuite extends AdamTestBase with ScalaFutures {
     scenario("perform a vaf index query without specifying index name") {
       Given("an entity and an index")
       val es = getGroundTruthEvaluationSet()
-      val index = Index.createIndex(es.entity, VAFIndexer(es.distance))
+      val index = IndexOp(es.entity.entityname, IndexTypes.VAFINDEX, EuclideanDistance)
 
       When("performing a kNN query")
       val nnq = NearestNeighbourQuery(es.feature.vector, es.distance, es.k)
-      val results = QueryHandler.indexQuery(es.entity.entityname, IndexTypes.VAFINDEX)(nnq, None, true)
-        .map(r => (r.getAs[Float](FieldNames.distanceColumnName), r.getAs[Long]("tid"))).collect()
+      val results = QueryOp.index(es.entity.entityname, IndexTypes.VAFINDEX, nnq, None, true)
+        .map(r => (r.getAs[Float](FieldNames.distanceColumnName), r.getAs[Long]("tid"))).collect() //get here TID of metadata
         .sortBy(_._1).toSeq
 
       Then("we should retrieve the k nearest neighbors")
@@ -191,7 +186,7 @@ class QueryTestSuite extends AdamTestBase with ScalaFutures {
       }
 
       //clean up
-      Entity.drop(es.entity.entityname)
+      DropEntityOp(es.entity.entityname)
     }
 
 
@@ -201,13 +196,13 @@ class QueryTestSuite extends AdamTestBase with ScalaFutures {
     scenario("perform a vav index query") {
       Given("an entity and an index")
       val es = getGroundTruthEvaluationSet()
-      val index = Index.createIndex(es.entity, VAVIndexer(es.feature.toSeq().size, es.distance))
+      val index = IndexOp(es.entity.entityname, IndexTypes.VAVINDEX, EuclideanDistance)
       assert(index.isSuccess)
 
       When("performing a kNN query")
       val nnq = NearestNeighbourQuery(es.feature.vector, es.distance, es.k)
-      val results = QueryHandler.indexQuery(index.get.indexname)(nnq, None, true)
-        .map(r => (r.getAs[Float](FieldNames.distanceColumnName), r.getAs[Long]("tid"))).collect()
+      val results = QueryOp.index(index.get.indexname, nnq, None, true)
+        .map(r => (r.getAs[Float](FieldNames.distanceColumnName), r.getAs[Long]("tid"))).collect() //get here TID of metadata
         .sortBy(_._1).toSeq
 
       Then("we should retrieve the k nearest neighbors")
@@ -218,7 +213,7 @@ class QueryTestSuite extends AdamTestBase with ScalaFutures {
       }
 
       //clean up
-      Entity.drop(es.entity.entityname)
+      DropEntityOp(es.entity.entityname)
     }
 
 
@@ -228,14 +223,14 @@ class QueryTestSuite extends AdamTestBase with ScalaFutures {
     scenario("perform a vaf index query and a boolean query") {
       Given("an entity and an index")
       val es = getGroundTruthEvaluationSet()
-      val index = Index.createIndex(es.entity, VAFIndexer(es.distance))
+      val index = IndexOp(es.entity.entityname, IndexTypes.VAFINDEX, EuclideanDistance)
       assert(index.isSuccess)
 
       When("performing a kNN query")
       val nnq = NearestNeighbourQuery(es.feature.vector, es.distance, es.k)
       val bq = BooleanQuery(es.where)
-      val results = QueryHandler.indexQuery(index.get.indexname)(nnq, Option(bq), true)
-        .map(r => (r.getAs[Float](FieldNames.distanceColumnName), r.getAs[Long]("tid"))).collect()
+      val results = QueryOp.index(index.get.indexname, nnq, Option(bq), true)
+        .map(r => (r.getAs[Float](FieldNames.distanceColumnName), r.getAs[Long]("tid"))).collect() //get here TID of metadata
         .sortBy(_._1).toSeq
 
       Then("we should retrieve the k nearest neighbors")
@@ -246,7 +241,7 @@ class QueryTestSuite extends AdamTestBase with ScalaFutures {
       }
 
       //clean up
-      Entity.drop(es.entity.entityname)
+      DropEntityOp(es.entity.entityname)
     }
 
 
@@ -275,8 +270,8 @@ class QueryTestSuite extends AdamTestBase with ScalaFutures {
       val whereStmt = Seq("tid100" -> inStmt)
 
       val bq = BooleanQuery(whereStmt, Some(Seq((metadataname, Seq("tid")))))
-      val results = QueryHandler.sequentialQuery(es.entity.entityname)(nnq, Option(bq), true)
-        .map(r => (r.getAs[Float](FieldNames.distanceColumnName), r.getAs[Long]("tid"))).collect()
+      val results = QueryOp.sequential(es.entity.entityname, nnq, Option(bq), true)
+        .map(r => (r.getAs[Float](FieldNames.distanceColumnName), r.getAs[Long]("tid"))).collect() //get here TID of metadata
         .sortBy(_._1).toSeq
 
       Then("we should retrieve the k nearest neighbors")
@@ -287,7 +282,7 @@ class QueryTestSuite extends AdamTestBase with ScalaFutures {
       }
 
       //clean up
-      Entity.drop(es.entity.entityname)
+      DropEntityOp(es.entity.entityname)
       SparkStartup.metadataStorage.drop(metadataname)
     }
 
@@ -298,14 +293,14 @@ class QueryTestSuite extends AdamTestBase with ScalaFutures {
       *
       */
     scenario("perform a progressive query") {
-      Given("an entity")
+      Given("an entity and some indices")
       val es = getGroundTruthEvaluationSet()
 
-      Index.createIndex(es.entity, SHIndexer(es.feature.toSeq().size))
-      Index.createIndex(es.entity, VAFIndexer(es.distance))
+      IndexOp(es.entity.entityname, IndexTypes.SHINDEX, EuclideanDistance)
+      IndexOp(es.entity.entityname, IndexTypes.VAFINDEX, EuclideanDistance)
 
-      def processResults(status: ProgressiveQueryStatus.Value, df: DataFrame, confidence: Float, deliverer : String, info: Map[String, String]) {
-        val results = df.map(r => (r.getAs[Float](FieldNames.distanceColumnName), r.getAs[Long]("tid"))).collect()
+      def processResults(status: ProgressiveQueryStatus.Value, df: DataFrame, confidence: Float, deliverer: String, info: Map[String, String]) {
+        val results = df.map(r => (r.getAs[Float](FieldNames.distanceColumnName), r.getAs[Long]("tid"))).collect() //get here TID of metadata
           .sortBy(_._1).toSeq
 
         Then("eventually we should retrieve the k nearest neighbors")
@@ -320,7 +315,7 @@ class QueryTestSuite extends AdamTestBase with ScalaFutures {
 
       When("performing a kNN progressive query")
       val nnq = NearestNeighbourQuery(es.feature.vector, es.distance, es.k)
-      val statusTracker = QueryHandler.progressiveQuery(es.entity.entityname)(nnq, None, processResults, true)
+      val statusTracker = QueryOp.progressive(es.entity.entityname, nnq, None, processResults, true)
 
       whenReady(statusTracker) { result =>
         Then("the confidence should be 1.0")
@@ -328,8 +323,8 @@ class QueryTestSuite extends AdamTestBase with ScalaFutures {
         assert(result.results.count() >= es.k)
       }
 
-        //clean up
-      Entity.drop(es.entity.entityname)
+      //clean up
+      DropEntityOp(es.entity.entityname)
     }
 
 
@@ -337,17 +332,20 @@ class QueryTestSuite extends AdamTestBase with ScalaFutures {
       *
       */
     scenario("perform a timed query") {
-      Given("an entity")
+      Given("an entity and some indicies")
       val es = getGroundTruthEvaluationSet()
+
+      IndexOp(es.entity.entityname, IndexTypes.SHINDEX, EuclideanDistance)
+      IndexOp(es.entity.entityname, IndexTypes.VAFINDEX, EuclideanDistance)
 
       val timelimit = Duration(10, TimeUnit.SECONDS)
 
       When("performing a kNN progressive query")
       val nnq = NearestNeighbourQuery(es.feature.vector, es.distance, es.k)
-      val (tpqRes, confidence, deliverer) = QueryHandler.timedProgressiveQuery(es.entity.entityname)(nnq, None, timelimit, true)
+      val (tpqRes, confidence, deliverer) = QueryOp.timedProgressive(es.entity.entityname, nnq, None, timelimit, true)
 
       Then("we should have a match at least in the first element")
-      val results = tpqRes.map(r => (r.getAs[Float](FieldNames.distanceColumnName), r.getAs[Long]("tid"))).collect()
+      val results = tpqRes.map(r => (r.getAs[Float](FieldNames.distanceColumnName), r.getAs[Long]("tid"))).collect() //get here TID of metadata
         .sortBy(_._1).toSeq
 
       Seq(results.zip(es.nnResults).head).map {
@@ -357,7 +355,7 @@ class QueryTestSuite extends AdamTestBase with ScalaFutures {
       }
 
       //clean up
-      Entity.drop(es.entity.entityname)
+      DropEntityOp(es.entity.entityname)
     }
   }
 

@@ -1,10 +1,8 @@
 package ch.unibas.dmi.dbis.adam.index
 
+import ch.unibas.dmi.dbis.adam.api.{DropEntityOp, DropIndexOp, IndexOp}
 import ch.unibas.dmi.dbis.adam.entity.Entity
-import ch.unibas.dmi.dbis.adam.index.structures.ecp.ECPIndexer
-import ch.unibas.dmi.dbis.adam.index.structures.lsh.LSHIndexer
-import ch.unibas.dmi.dbis.adam.index.structures.sh.SHIndexer
-import ch.unibas.dmi.dbis.adam.index.structures.va.{VAFIndexer, VAVIndexer}
+import ch.unibas.dmi.dbis.adam.index.structures.IndexTypes
 import ch.unibas.dmi.dbis.adam.main.SparkStartup
 import ch.unibas.dmi.dbis.adam.query.distance.EuclideanDistance
 import ch.unibas.dmi.dbis.adam.test.AdamTestBase
@@ -34,20 +32,20 @@ class IndexTestSuite extends AdamTestBase {
       assert(entity.isSuccess)
 
       When("creating the index")
-      val index = Index.createIndex(entity.get, ECPIndexer(EuclideanDistance))
+      val index = IndexOp(entity.get.entityname, IndexTypes.ECPINDEX, EuclideanDistance)
       assert(index.isSuccess)
 
       Then("the index should be created")
       assert(Index.exists(index.get.indexname))
 
       When("dropping the index")
-      Index.drop(index.get.indexname)
+      DropIndexOp(index.get.indexname)
 
       Then("the index should be dropped")
       assert(!Index.exists(index.get.indexname))
 
       //clean up
-      Entity.drop(entityname)
+      DropEntityOp(entityname)
     }
 
     /**
@@ -60,14 +58,14 @@ class IndexTestSuite extends AdamTestBase {
       assert(entity.isSuccess)
 
       When("creating the index")
-      val index = Index.createIndex(entity.get, ECPIndexer(EuclideanDistance))
+      val index = IndexOp(entity.get.entityname, IndexTypes.ECPINDEX, EuclideanDistance)
       assert(index.isSuccess)
 
       Then("the index should be created")
       assert(Index.exists(index.get.indexname))
 
       When("dropping the entity")
-      Entity.drop(entityname)
+      DropEntityOp(entityname)
 
       Then("the index should be dropped")
       assert(!Index.exists(index.get.indexname))
@@ -83,7 +81,7 @@ class IndexTestSuite extends AdamTestBase {
       assert(entity.isSuccess)
 
       When("an eCP index is created")
-      val index = Index.createIndex(entity.get, ECPIndexer(EuclideanDistance))
+      val index = IndexOp(entity.get.entityname, IndexTypes.ECPINDEX, EuclideanDistance)
       assert(index.isSuccess)
 
       Then("the index has been created")
@@ -94,7 +92,7 @@ class IndexTestSuite extends AdamTestBase {
       assert(index.get.count == entity.get.count)
 
       //clean up
-      Entity.drop(entityname)
+      DropEntityOp(entityname)
     }
 
     /**
@@ -107,7 +105,7 @@ class IndexTestSuite extends AdamTestBase {
       assert(entity.isSuccess)
 
       When("an LSH index is created")
-      val index = Index.createIndex(entity.get, LSHIndexer(EuclideanDistance))
+      val index = IndexOp(entity.get.entityname, IndexTypes.LSHINDEX, EuclideanDistance)
       assert(index.isSuccess)
 
       Then("the index has been created")
@@ -118,7 +116,7 @@ class IndexTestSuite extends AdamTestBase {
       assert(index.get.count == entity.get.count)
 
       //clean up
-      Entity.drop(entityname)
+      DropEntityOp(entityname)
     }
 
     /**
@@ -131,7 +129,7 @@ class IndexTestSuite extends AdamTestBase {
       assert(entity.isSuccess)
 
       When("an SH index is created")
-      val index = Index.createIndex(entity.get, SHIndexer(ndims))
+      val index = IndexOp(entity.get.entityname, IndexTypes.SHINDEX, EuclideanDistance)
       assert(index.isSuccess)
 
       Then("the index has been created")
@@ -142,7 +140,7 @@ class IndexTestSuite extends AdamTestBase {
       assert(index.get.count == entity.get.count)
 
       //clean up
-      Entity.drop(entityname)
+      DropEntityOp(entityname)
     }
 
 
@@ -156,7 +154,7 @@ class IndexTestSuite extends AdamTestBase {
       assert(entity.isSuccess)
 
       When("an VA-File index is created")
-      val index = Index.createIndex(entity.get, VAFIndexer(EuclideanDistance))
+      val index = IndexOp(entity.get.entityname, IndexTypes.VAFINDEX, EuclideanDistance)
       assert(index.isSuccess)
 
       Then("the index has been created")
@@ -167,7 +165,7 @@ class IndexTestSuite extends AdamTestBase {
       assert(index.get.count == entity.get.count)
 
       //clean up
-      Entity.drop(entityname)
+      DropEntityOp(entityname)
     }
 
 
@@ -181,7 +179,7 @@ class IndexTestSuite extends AdamTestBase {
       assert(entity.isSuccess)
 
       When("an VA-File index is created")
-      val index = Index.createIndex(entity.get, VAVIndexer(ndims, EuclideanDistance))
+      val index = IndexOp(entity.get.entityname, IndexTypes.VAVINDEX, EuclideanDistance)
       assert(index.isSuccess)
 
       Then("the index has been created")
@@ -192,7 +190,7 @@ class IndexTestSuite extends AdamTestBase {
       assert(index.get.count == entity.get.count)
 
       //clean up
-      Entity.drop(entityname)
+      DropEntityOp(entityname)
     }
   }
 }
