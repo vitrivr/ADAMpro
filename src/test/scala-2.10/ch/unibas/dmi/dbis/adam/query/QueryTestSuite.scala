@@ -382,7 +382,7 @@ class QueryTestSuite extends AdamTestBase with ScalaFutures {
       val results = CompoundQueryOp.apply(new IntersectExpression(shqh, vhqh))
         .map(r => (r.getAs[Long](FieldNames.idColumnName))).collect().sorted
 
-      //results
+      //results (note we truly compare the id-column here and not the metadata "tid"
       val shres = shqh.eval().map(r => r.getAs[Long](FieldNames.idColumnName)).collect()
       val vhres = vhqh.eval().map(r => r.getAs[Long](FieldNames.idColumnName)).collect()
       
