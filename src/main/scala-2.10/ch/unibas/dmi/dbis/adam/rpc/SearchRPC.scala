@@ -1,7 +1,7 @@
 package ch.unibas.dmi.dbis.adam.rpc
 
+import ch.unibas.dmi.dbis.adam.api.{CompoundQueryOp, QueryOp}
 import ch.unibas.dmi.dbis.adam.config.FieldNames
-import ch.unibas.dmi.dbis.adam.datatypes.feature.Feature._
 import ch.unibas.dmi.dbis.adam.http.grpc._
 import ch.unibas.dmi.dbis.adam.index.structures.IndexTypes
 import ch.unibas.dmi.dbis.adam.query.progressive.ProgressiveQueryStatus
@@ -28,7 +28,7 @@ class SearchRPC extends AdamSearchGrpc.AdamSearch {
   override def doStandardQuery(request: SimpleQueryMessage): Future[QueryResponseListMessage] = {
     log.debug("rpc call for standard query operation")
     try {
-      Future.successful(prepareResults(SearchRPCMethods.runStandardQuery(request)))
+      Future.successful(prepareResults(QueryOp.apply(SearchRPCMethods.toQueryHolder(request))))
     } catch {
       case e: Exception => Future.failed(e)
     }
@@ -43,7 +43,7 @@ class SearchRPC extends AdamSearchGrpc.AdamSearch {
   override def doSequentialQuery(request: SimpleSequentialQueryMessage): Future[QueryResponseListMessage] = {
     log.debug("rpc call for sequential query operation")
     try {
-      Future.successful(prepareResults(SearchRPCMethods.runSequentialQuery(request)))
+      Future.successful(prepareResults(QueryOp.sequential(SearchRPCMethods.toQueryHolder(request))))
     } catch {
       case e: Exception => Future.failed(e)
     }
@@ -59,7 +59,7 @@ class SearchRPC extends AdamSearchGrpc.AdamSearch {
     log.debug("rpc call for index query operation")
 
     try {
-      Future.successful(prepareResults(SearchRPCMethods.runIndexQuery(request)))
+      Future.successful(prepareResults(QueryOp.index(SearchRPCMethods.toQueryHolder(request))))
     } catch {
       case e: Exception => Future.failed(e)
     }
@@ -75,7 +75,7 @@ class SearchRPC extends AdamSearchGrpc.AdamSearch {
     log.debug("rpc call for index query operation")
 
     try {
-      Future.successful(prepareResults(SearchRPCMethods.runSpecifiedIndexQuery(request)))
+      Future.successful(prepareResults(QueryOp.index(SearchRPCMethods.toQueryHolder(request))))
     } catch {
       case e: Exception => Future.failed(e)
     }
@@ -91,12 +91,12 @@ class SearchRPC extends AdamSearchGrpc.AdamSearch {
     log.debug("rpc call for progressive query operation")
 
     try {
-      val onComplete: (ProgressiveQueryStatus.Value, DataFrame, VectorBase, String, Map[String, String]) => Unit =
+      val onComplete =
         (status: ProgressiveQueryStatus.Value, results: DataFrame, confidence: Float, deliverer: String, info: Map[String, String]) => ({
           responseObserver.onNext(QueryResponseInfoMessage(confidence, IndexTypes.withName(info.getOrElse("type", "")).get.indextype, Option(prepareResults(results))))
         })
 
-      SearchRPCMethods.runProgressiveQuery(request, onComplete)
+      QueryOp.progressive(SearchRPCMethods.toQueryHolder(request, onComplete))
     } catch {
       case e: Exception => Future.failed(e)
     }
@@ -112,7 +112,7 @@ class SearchRPC extends AdamSearchGrpc.AdamSearch {
     log.debug("rpc call for timed progressive query operation")
 
     try {
-      val (results, confidence, deliverer) = SearchRPCMethods.runTimedProgressiveQuery(request)
+      val (results, confidence, deliverer) = QueryOp.timedProgressive(SearchRPCMethods.toQueryHolder(request))
       Future.successful(QueryResponseInfoMessage(confidence, IndexTypes.withName(deliverer).get.indextype, Option(prepareResults(results))))
     } catch {
       case e: Exception => Future.failed(e)
@@ -129,7 +129,7 @@ class SearchRPC extends AdamSearchGrpc.AdamSearch {
     log.debug("rpc call for chained query operation")
 
     try {
-      Future.successful(prepareResults(CompoundSearchRPCMethods.runCompoundQuery(request)))
+      Future.successful(prepareResults(CompoundQueryOp(SearchRPCMethods.toExpr(request))))
     } catch {
       case e: Exception => Future.failed(e)
     }

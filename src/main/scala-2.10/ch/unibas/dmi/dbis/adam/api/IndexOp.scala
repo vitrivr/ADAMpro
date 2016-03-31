@@ -17,6 +17,8 @@ import ch.unibas.dmi.dbis.adam.entity.Entity._
 import org.apache.log4j.Logger
 import org.apache.spark.rdd.RDD
 
+import scala.util.Try
+
 /**
   * adamtwo
   *
@@ -36,7 +38,7 @@ object IndexOp {
     * @param distance distance function to use
     * @param properties further index specific properties
     */
-  def apply(entityname: EntityName, indextype: String, distance: DistanceFunction, properties: Map[String, String]): Unit = {
+  def apply(entityname: EntityName, indextype: String, distance: DistanceFunction, properties: Map[String, String]): Try[Index] = {
     log.debug("perform create index operation")
     apply(entityname, IndexTypes.withName(indextype).get, distance, properties)
   }
@@ -49,7 +51,7 @@ object IndexOp {
     * @param distance distance function to use
     * @param properties further index specific properties
     */
-  def apply(entityname: EntityName, indextypename: IndexTypeName, distance: DistanceFunction, properties: Map[String, String]): Unit = {
+  def apply(entityname: EntityName, indextypename: IndexTypeName, distance: DistanceFunction, properties: Map[String, String] = Map()): Try[Index] = {
     log.debug("perform create index operation")
 
     val entity = Entity.load(entityname)
