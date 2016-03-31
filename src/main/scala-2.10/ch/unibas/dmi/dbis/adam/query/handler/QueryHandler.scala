@@ -260,12 +260,26 @@ object QueryHandler {
     * @return
     */
   private def getFilter(entityname: EntityName, bq: BooleanQuery): Option[Set[TupleID]] = {
-    val mdRes = BooleanQueryHandler.metadataQuery(entityname, bq)
+    var filter = Seq[TupleID]()
 
-    if (mdRes.isDefined) {
-      Some(mdRes.get.map(r => r.getAs[Long](FieldNames.idColumnName)).collect().toSet) //with metadata
+    val results = BooleanQueryHandler.metadataQuery(entityname, bq)
+    if (results.isDefined) {
+      filter ++= results.get.map(r => r.getAs[Long](FieldNames.idColumnName)).collect().toSet
+    }
+
+    val prefilter = bq.idFilter
+    if (prefilter.isDefined) {
+      if(filter.isEmpty){
+        filter = prefilter.get
+      } else {
+        filter = filter.intersect(prefilter.get)
+      }
+    }
+
+    if (!filter.isEmpty) {
+      Some(filter.toSet)
     } else {
-      None //no metadata
+      None
     }
   }
 

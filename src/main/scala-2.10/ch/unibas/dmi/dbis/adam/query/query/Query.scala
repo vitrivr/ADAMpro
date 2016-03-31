@@ -16,11 +16,13 @@ abstract class Query(queryID: Option[String] = Some(java.util.UUID.randomUUID().
   *
   * @param where
   * @param join Seq of (table, columns to join on)
+  * @param idFilter additional filter (is applied to results of where condition if it is set)
   * @param queryID
   */
 case class BooleanQuery(
                          where: Seq[(String, String)],
                          join: Option[Seq[(String, Seq[String])]] = None,
+                         idFilter : Option[Seq[Long]] = None,
                          queryID: Option[String] = Some(java.util.UUID.randomUUID().toString))
   extends Query(queryID) {
 

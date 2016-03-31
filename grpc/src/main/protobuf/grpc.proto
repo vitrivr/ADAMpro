@@ -1,5 +1,4 @@
 syntax = "proto3";
-//import "google/protobuf/any.proto";
 
 option java_package = "ch.unibas.dmi.dbis.adam.http";
 
@@ -21,7 +20,7 @@ service AdamSearch {
   rpc DoIndexQuery(SimpleIndexQueryMessage) returns (QueryResponseListMessage) {}
   rpc DoProgressiveQuery(SimpleQueryMessage) returns (stream QueryResponseInfoMessage) {}
   rpc DoTimedProgressiveQuery(TimedQueryMessage) returns (QueryResponseInfoMessage) {}
-  rpc DoChainedQuery(OperationQueryMessage) returns (QueryResponseListMessage) {}
+  rpc DoCompoundQuery(ExpressionQueryMessage) returns (QueryResponseListMessage) {}
 }
 
 
@@ -93,8 +92,9 @@ message NearestNeighbourQueryMessage {
 }
 
 message BooleanQueryMessage {
-  repeated WhereMessage where = 1;
-  repeated JoinMessage joins = 2;
+  repeated WhereMessage where = 2;
+  repeated JoinMessage joins = 3;
+  repeated int64 prefilter = 1;
 
   message WhereMessage {
     string field = 1;
@@ -106,8 +106,6 @@ message BooleanQueryMessage {
     repeated string columns = 2;
   }
 }
-
-
 
 message SimpleQueryMessage {
   string entity = 1;
@@ -163,15 +161,19 @@ message QueryResponseListMessage {
   repeated QueryResponseMessage responses = 1;
 }
 
+message CompoundQueryMessage {
+    ExpressionQueryMessage expression = 1;
+}
 
 //experimental
-message OperationQueryMessage {
+message ExpressionQueryMessage {
   enum Operation {
       UNION = 0;
       INTERSECT = 1;
       EXCEPT = 2;
-      JOIN = 3;
     }
+   //Any is not yet supported
+   //import "google/protobuf/any.proto";
    //google.protobuf.Any left = 1;
    //Operation operation = 2;
    //google.protobuf.Any right = 3;
@@ -179,12 +181,12 @@ message OperationQueryMessage {
    oneof left {
        SimpleSequentialQueryMessage lssqm = 2;
        SimpleIndexQueryMessage lsiqm = 3;
-       OperationQueryMessage loqm = 4;
+       ExpressionQueryMessage leqm = 4;
      }
    Operation operation = 1;
    oneof right {
        SimpleSequentialQueryMessage rssqm = 5;
        SimpleIndexQueryMessage rsiqm = 6;
-       OperationQueryMessage roqm = 7;
+       ExpressionQueryMessage reqm = 7;
      }
 }
