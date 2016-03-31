@@ -6,6 +6,7 @@ import ch.unibas.dmi.dbis.adam.entity.Tuple.TupleID
 import ch.unibas.dmi.dbis.adam.exception.IndexNotExistingException
 import ch.unibas.dmi.dbis.adam.index.Index
 import ch.unibas.dmi.dbis.adam.index.Index._
+import ch.unibas.dmi.dbis.adam.query.handler.CompoundQueryHandler.Expression
 import ch.unibas.dmi.dbis.adam.query.handler.QueryHints._
 import ch.unibas.dmi.dbis.adam.query.progressive._
 import ch.unibas.dmi.dbis.adam.query.query.{BooleanQuery, NearestNeighbourQuery}
@@ -126,9 +127,13 @@ object QueryHandler {
     res
   }
 
+  case class SequentialQueryHolder(entityname: EntityName, nnq: NearestNeighbourQuery, bq: Option[BooleanQuery], withMetadata: Boolean) extends Expression {
+    override def eval() = sequentialQuery(entityname)(nnq, bq, withMetadata)
+  }
+
 
   /**
-    * Performs a index-based query. Chooses the
+    * Performs a index-based query. Chooses the index of the entity based on the given type.
     *
     * @param entityname name of the entity
     * @param indextype  type of the index
@@ -146,6 +151,10 @@ object QueryHandler {
     }
 
     indexQuery(indexes.head)(nnq, bq, withMetadata)
+  }
+
+  case class IndexQueryHolder(entityname: EntityName, indextypename: IndexTypeName, nnq: NearestNeighbourQuery, bq: Option[BooleanQuery], withMetadata: Boolean) extends Expression {
+    override def eval() = indexQuery(entityname, indextypename)(nnq, bq, withMetadata)
   }
 
 
@@ -181,6 +190,10 @@ object QueryHandler {
       res = joinWithMetadata(entityname, res)
     }
     res
+  }
+
+  case class SpecifiedIndexQueryHolder(indexname: IndexName, nnq: NearestNeighbourQuery, bq: Option[BooleanQuery], withMetadata: Boolean) extends Expression {
+    override def eval() = indexQuery(indexname)(nnq, bq, withMetadata)
   }
 
   /**
@@ -221,6 +234,9 @@ object QueryHandler {
     NearestNeighbourQueryHandler.progressiveQuery(entityname, nnq, filter, onCompleteFunction)
   }
 
+  case class ProgressiveQueryHolder[U](entityname: EntityName, nnq: NearestNeighbourQuery, bq: Option[BooleanQuery], onComplete: (ProgressiveQueryStatus.Value, DataFrame, Float, String, Map[String, String]) => U, withMetadata: Boolean)
+
+
   /**
     * Performs a timed progressive query, i.e., it performs the query for a maximum of the given time limit and returns then the best possible
     * available results.
@@ -251,6 +267,7 @@ object QueryHandler {
     (df, results.confidence, results.deliverer)
   }
 
+  case class TimedProgressiveQueryHolder(entityname: EntityName, nnq: NearestNeighbourQuery, bq: Option[BooleanQuery], timelimit: Duration, withMetadata: Boolean)
 
   /**
     * Creates a filter that is applied on the nearest neighbour search based on the Boolean query.
@@ -269,7 +286,7 @@ object QueryHandler {
 
     val prefilter = bq.idFilter
     if (prefilter.isDefined) {
-      if(filter.isEmpty){
+      if (filter.isEmpty) {
         filter = prefilter.get
       } else {
         filter = filter.intersect(prefilter.get)
@@ -291,7 +308,7 @@ object QueryHandler {
     * @param res
     * @return
     */
-  private def joinWithMetadata(entityname: EntityName, res: DataFrame): DataFrame = {
+  private[handler] def joinWithMetadata(entityname: EntityName, res: DataFrame): DataFrame = {
     val mdRes = BooleanQueryHandler.metadataQuery(entityname, res.select(FieldNames.idColumnName).collect().map(r => r.getLong(0)).toSet)
 
     if (mdRes.isDefined) {

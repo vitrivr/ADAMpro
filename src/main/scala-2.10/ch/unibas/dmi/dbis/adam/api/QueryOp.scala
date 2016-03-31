@@ -1,9 +1,10 @@
 package ch.unibas.dmi.dbis.adam.api
 
-import ch.unibas.dmi.dbis.adam.api.CompoundQueryOp.Expression
 import ch.unibas.dmi.dbis.adam.entity.Entity._
 import ch.unibas.dmi.dbis.adam.index.Index._
+import ch.unibas.dmi.dbis.adam.query.handler.CompoundQueryHandler.Expression
 import ch.unibas.dmi.dbis.adam.query.handler.QueryHandler
+import ch.unibas.dmi.dbis.adam.query.handler.QueryHandler._
 import ch.unibas.dmi.dbis.adam.query.handler.QueryHints._
 import ch.unibas.dmi.dbis.adam.query.progressive.{ProgressiveQueryStatus, ProgressiveQueryStatusTracker}
 import ch.unibas.dmi.dbis.adam.query.query.{BooleanQuery, NearestNeighbourQuery}
@@ -56,10 +57,6 @@ object QueryOp {
     log.debug("perform sequential query operation")
     QueryHandler.sequentialQuery(entityname)(nnq, bq, withMetadata)
   }
-
-  case class SequentialQueryHolder(entityname: EntityName, nnq: NearestNeighbourQuery, bq: Option[BooleanQuery], withMetadata: Boolean) extends Expression {
-    override def eval() = sequential(entityname, nnq, bq, withMetadata)
-  }
   def sequential(q: SequentialQueryHolder): DataFrame = q.eval()
 
 
@@ -76,10 +73,6 @@ object QueryOp {
     log.debug("perform index query operation")
     QueryHandler.indexQuery(indexname)(nnq, bq, withMetadata)
   }
-
-  case class SpecifiedIndexQueryHolder(indexname: IndexName, nnq: NearestNeighbourQuery, bq: Option[BooleanQuery], withMetadata: Boolean) extends Expression {
-    override def eval() = index(indexname, nnq, bq, withMetadata)
-  }
   def index(q: SpecifiedIndexQueryHolder): DataFrame = q.eval()
 
   /**
@@ -95,10 +88,6 @@ object QueryOp {
   def index(entityname: EntityName, indextypename: IndexTypeName, nnq: NearestNeighbourQuery, bq: Option[BooleanQuery], withMetadata: Boolean): DataFrame = {
     log.debug("perform index query operation")
     QueryHandler.indexQuery(entityname, indextypename)(nnq, bq, withMetadata)
-  }
-
-  case class IndexQueryHolder(entityname: EntityName, indextypename: IndexTypeName, nnq: NearestNeighbourQuery, bq: Option[BooleanQuery], withMetadata: Boolean)  extends Expression {
-    override def eval() = index(entityname, indextypename, nnq, bq, withMetadata)
   }
   def index(q: IndexQueryHolder): DataFrame = q.eval()
 
@@ -118,8 +107,6 @@ object QueryOp {
     QueryHandler.progressiveQuery(entityname)(nnq, bq, onComplete, withMetadata)
   }
 
-  case class ProgressiveQueryHolder[U](entityname: EntityName, nnq: NearestNeighbourQuery, bq: Option[BooleanQuery], onComplete: (ProgressiveQueryStatus.Value, DataFrame, Float, String, Map[String, String]) => U, withMetadata: Boolean)
-
   def progressive(q: ProgressiveQueryHolder[_]) : ProgressiveQueryStatusTracker = progressive(q.entityname, q.nnq, q.bq, q.onComplete, q.withMetadata)
 
 
@@ -138,8 +125,6 @@ object QueryOp {
     log.debug("perform timed progressive query operation")
     QueryHandler.timedProgressiveQuery(entityname)(nnq, bq, timelimit, withMetadata)
   }
-
-  case class TimedProgressiveQueryHolder(entityname: EntityName, nnq: NearestNeighbourQuery, bq: Option[BooleanQuery], timelimit: Duration, withMetadata: Boolean)
 
   def timedProgressive(q: TimedProgressiveQueryHolder): (DataFrame, Float, String) = timedProgressive(q.entityname, q.nnq, q.bq, q.timelimit, q.withMetadata)
 }

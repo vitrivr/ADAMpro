@@ -2,13 +2,13 @@ package ch.unibas.dmi.dbis.adam.query
 
 import java.util.concurrent.TimeUnit
 
-import ch.unibas.dmi.dbis.adam.api.CompoundQueryOp.IntersectExpression
-import ch.unibas.dmi.dbis.adam.api.QueryOp.SpecifiedIndexQueryHolder
 import ch.unibas.dmi.dbis.adam.api._
 import ch.unibas.dmi.dbis.adam.config.FieldNames
 import ch.unibas.dmi.dbis.adam.index.structures.IndexTypes
 import ch.unibas.dmi.dbis.adam.main.SparkStartup
 import ch.unibas.dmi.dbis.adam.query.distance.EuclideanDistance
+import ch.unibas.dmi.dbis.adam.query.handler.CompoundQueryHandler.IntersectExpression
+import ch.unibas.dmi.dbis.adam.query.handler.QueryHandler.SpecifiedIndexQueryHolder
 import ch.unibas.dmi.dbis.adam.query.progressive.ProgressiveQueryStatus
 import ch.unibas.dmi.dbis.adam.query.query.{BooleanQuery, NearestNeighbourQuery}
 import ch.unibas.dmi.dbis.adam.test.AdamTestBase

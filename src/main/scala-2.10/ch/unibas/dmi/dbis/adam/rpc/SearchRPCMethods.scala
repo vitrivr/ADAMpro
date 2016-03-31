@@ -2,14 +2,14 @@ package ch.unibas.dmi.dbis.adam.rpc
 
 import java.util.concurrent.TimeUnit
 
-import ch.unibas.dmi.dbis.adam.api.CompoundQueryOp
-import ch.unibas.dmi.dbis.adam.api.CompoundQueryOp.Expression
 import ch.unibas.dmi.dbis.adam.api.QueryOp._
 import ch.unibas.dmi.dbis.adam.datatypes.feature.Feature._
 import ch.unibas.dmi.dbis.adam.http.grpc._
 import ch.unibas.dmi.dbis.adam.index.structures.IndexTypes
 import ch.unibas.dmi.dbis.adam.query.distance.NormBasedDistanceFunction
-import ch.unibas.dmi.dbis.adam.query.handler.QueryHints
+import ch.unibas.dmi.dbis.adam.query.handler.CompoundQueryHandler.Expression
+import ch.unibas.dmi.dbis.adam.query.handler.QueryHandler._
+import ch.unibas.dmi.dbis.adam.query.handler.{CompoundQueryHandler, QueryHints}
 import ch.unibas.dmi.dbis.adam.query.progressive.ProgressiveQueryStatus
 import ch.unibas.dmi.dbis.adam.query.query.{BooleanQuery, NearestNeighbourQuery}
 import org.apache.spark.sql.DataFrame
@@ -38,9 +38,9 @@ private[rpc] object SearchRPCMethods {
   implicit def toQueryHolder(request: SimpleQueryMessage, onComplete: (ProgressiveQueryStatus.Value, DataFrame, VectorBase, String, Map[String, String]) => Unit) = new ProgressiveQueryHolder(request.entity, prepareNNQ(request.nnq), prepareBQ(request.bq), onComplete, request.withMetadata)
 
   implicit def toExpr(request: ExpressionQueryMessage) : Expression = request.operation match {
-    case ExpressionQueryMessage.Operation.UNION => CompoundQueryOp.UnionExpression(request.left, request.right)
-    case ExpressionQueryMessage.Operation.INTERSECT => CompoundQueryOp.IntersectExpression(request.left, request.right)
-    case ExpressionQueryMessage.Operation.EXCEPT =>  CompoundQueryOp.ExceptExpression(request.left, request.right)
+    case ExpressionQueryMessage.Operation.UNION => CompoundQueryHandler.UnionExpression(request.left, request.right)
+    case ExpressionQueryMessage.Operation.INTERSECT => CompoundQueryHandler.IntersectExpression(request.left, request.right)
+    case ExpressionQueryMessage.Operation.EXCEPT =>  CompoundQueryHandler.ExceptExpression(request.left, request.right)
     case _ => null //TODO: do we need a pre-filter option?
   }
 
