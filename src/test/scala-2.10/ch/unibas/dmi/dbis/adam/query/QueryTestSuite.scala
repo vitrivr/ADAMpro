@@ -2,6 +2,8 @@ package ch.unibas.dmi.dbis.adam.query
 
 import java.util.concurrent.TimeUnit
 
+import ch.unibas.dmi.dbis.adam.api.CompoundQueryOp.IntersectExpression
+import ch.unibas.dmi.dbis.adam.api.QueryOp.SpecifiedIndexQueryHolder
 import ch.unibas.dmi.dbis.adam.config.FieldNames
 import ch.unibas.dmi.dbis.adam.entity.Entity
 import ch.unibas.dmi.dbis.adam.index.Index
@@ -357,5 +359,46 @@ class QueryTestSuite extends AdamTestBase with ScalaFutures {
       //clean up
       Entity.drop(es.entity.entityname)
     }
+  }
+
+
+
+  feature("compound query") {
+    /**
+      *
+      */
+    scenario("perform a compound query") {
+      Given("an entity and some indices")
+      val es = getGroundTruthEvaluationSet()
+
+      val shidx = IndexOp(es.entity.entityname, IndexTypes.SHINDEX, EuclideanDistance)
+      val vaidx = IndexOp(es.entity.entityname, IndexTypes.VAFINDEX, EuclideanDistance)
+
+      When("performing a kNN query of two indices and performing the intersect")
+      //nnq has numOfQ  = 0 to avoid that by the various randomized q's the results get different
+      val nnq = NearestNeighbourQuery(es.feature.vector, es.distance, es.k, false, Map("numOfQ" -> "0"))
+
+      val shqh = SpecifiedIndexQueryHolder(shidx.get.indexname, nnq, None, true)
+      val vhqh = SpecifiedIndexQueryHolder(vaidx.get.indexname, nnq, None, true)
+
+      val results = CompoundQueryOp.apply(new IntersectExpression(shqh, vhqh))
+        .map(r => (r.getAs[Long](FieldNames.idColumnName))).collect().sorted
+
+      //results
+      val shres = shqh.eval().map(r => r.getAs[Long](FieldNames.idColumnName)).collect()
+      val vhres = vhqh.eval().map(r => r.getAs[Long](FieldNames.idColumnName)).collect()
+      
+      Then("we should have a match in the aggregated list")
+      val gt = vhres.intersect(shres).sorted
+
+      results.zip(gt).map {
+        case (res, gt) =>
+          assert(res == gt)
+      }
+
+      //clean up
+      DropEntityOp(es.entity.entityname)
+    }
+
   }
 }
