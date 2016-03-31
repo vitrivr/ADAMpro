@@ -1,5 +1,6 @@
 package ch.unibas.dmi.dbis.adam.entity
 
+import ch.unibas.dmi.dbis.adam.api.{DropEntityOp, CreateEntityOp}
 import ch.unibas.dmi.dbis.adam.config.FieldNames
 import ch.unibas.dmi.dbis.adam.datatypes.feature.{FeatureVectorWrapper, FeatureVectorWrapperUDT}
 import ch.unibas.dmi.dbis.adam.main.SparkStartup
@@ -28,7 +29,7 @@ class EntityTestSuite extends AdamTestBase {
 
       When("a new random entity (without any metadata) is created")
       val entityname = getRandomName()
-      Entity.create(entityname)
+      CreateEntityOp(entityname)
 
       Then("one entity should be created")
       val finalEntities = Entity.list()
@@ -40,7 +41,7 @@ class EntityTestSuite extends AdamTestBase {
       }
 
       //clean up
-      Entity.drop(entityname)
+      DropEntityOp(entityname)
     }
 
     /**
@@ -49,11 +50,11 @@ class EntityTestSuite extends AdamTestBase {
     scenario("drop an existing entity") {
       Given("there exists one entity")
       val entityname = getRandomName()
-      Entity.create(entityname)
+      CreateEntityOp(entityname)
       assert(Entity.list().contains(entityname))
 
       When("the entity is dropped")
-      Entity.drop(entityname)
+      DropEntityOp(entityname)
 
       Then("the entity should no longer exist")
       assert(!Entity.list().contains(entityname))
@@ -77,7 +78,7 @@ class EntityTestSuite extends AdamTestBase {
       )
 
       val entityname = getRandomName()
-      Entity.create(entityname, Some(fieldTemplate.map(ft => (ft._1, FieldDefinition(ft._2))).toMap))
+      CreateEntityOp(entityname, Some(fieldTemplate.map(ft => (ft._1, FieldDefinition(ft._2))).toMap))
 
       Then("the entity should be created")
       val entities = Entity.list()
@@ -107,7 +108,7 @@ class EntityTestSuite extends AdamTestBase {
       assert(indexesResult.getString(3) == FieldNames.idColumnName)
 
       //clean up
-      Entity.drop(entityname)
+      DropEntityOp(entityname)
     }
 
     /**
@@ -117,7 +118,7 @@ class EntityTestSuite extends AdamTestBase {
       Given("an entity with metadata")
       val entityname = getRandomName()
       val fields = Map[String, FieldDefinition](("stringfield" -> FieldDefinition(FieldTypes.STRINGTYPE)))
-      Entity.create(entityname, Option(fields))
+      CreateEntityOp(entityname, Option(fields))
 
       val preResult = getJDBCConnection.createStatement().executeQuery("SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = '" + entityname + "'")
       var tableCount = 0
@@ -126,7 +127,7 @@ class EntityTestSuite extends AdamTestBase {
       }
 
       When("the entity is dropped")
-      Entity.drop(entityname)
+      DropEntityOp(entityname)
 
       Then("the metadata entity is dropped as well")
       val postResult = getJDBCConnection.createStatement().executeQuery("SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = '" + entityname + "'")
@@ -151,7 +152,7 @@ class EntityTestSuite extends AdamTestBase {
       )
 
       When("the entity is created")
-      Entity.create(entityname, Option(fields))
+      CreateEntityOp(entityname, Option(fields))
 
       Then("the PK should be correctly")
       val pkResult = getJDBCConnection.createStatement().executeQuery(
@@ -169,7 +170,7 @@ class EntityTestSuite extends AdamTestBase {
       assert(indexes.contains("uniquefield"))
       assert(indexes.contains("indexedfield"))
 
-      Entity.drop(entityname)
+      DropEntityOp(entityname)
     }
   }
 
@@ -182,7 +183,7 @@ class EntityTestSuite extends AdamTestBase {
     scenario("insert data in an entity without metadata") {
       Given("an entity without metadata")
       val entityname = getRandomName()
-      Entity.create(entityname)
+      CreateEntityOp(entityname)
 
       val ntuples = Random.nextInt(1000)
       val ndims = 100
@@ -204,7 +205,7 @@ class EntityTestSuite extends AdamTestBase {
       assert(Entity.countTuples(entityname) == ntuples)
 
       //clean up
-      Entity.drop(entityname)
+      DropEntityOp(entityname)
     }
 
 
@@ -230,7 +231,7 @@ class EntityTestSuite extends AdamTestBase {
         ("booleanfieldunfilled", FieldTypes.BOOLEANTYPE, "boolean")
       )
       val fields = fieldTemplate.map(ft => (ft._1, FieldDefinition(ft._2))).toMap
-      Entity.create(entityname, Option(fields))
+      CreateEntityOp(entityname, Option(fields))
 
       val ntuples = Random.nextInt(1000)
       val ndims = 100
@@ -283,7 +284,7 @@ class EntityTestSuite extends AdamTestBase {
       assert(randomRowResult.getBoolean("booleanfieldunfilled") == false)
 
       //clean up
-      Entity.drop(entityname)
+      DropEntityOp(entityname)
     }
   }
 }
