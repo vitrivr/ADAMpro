@@ -203,6 +203,7 @@ object Entity {
     * @return
     */
   def insertData(entityname: EntityName, insertion: DataFrame): Try[Void] = {
+    //TODO: possibly check for schema equality?
     load(entityname).get.insert(insertion)
   }
 
