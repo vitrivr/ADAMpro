@@ -258,13 +258,13 @@ object QueryHandler {
 
     log.debug("timed progressive query performs kNN query")
     val results = NearestNeighbourQueryHandler.timedProgressiveQuery(entityname, nnq, filter, timelimit)
-    var df = results.results
+    var res = results.results
     if (withMetadata) {
       log.debug("join metadata to results of timed progressive query")
-      df = joinWithMetadata(entityname, df)
+      res = joinWithMetadata(entityname, res)
     }
 
-    (df, results.confidence, results.deliverer)
+    (res, results.confidence, results.deliverer)
   }
 
   case class TimedProgressiveQueryHolder(entityname: EntityName, nnq: NearestNeighbourQuery, bq: Option[BooleanQuery], timelimit: Duration, withMetadata: Boolean)
