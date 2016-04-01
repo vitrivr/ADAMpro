@@ -160,7 +160,7 @@ message QueryResponseInfoMessage {
 message QueryResponseMessage {
   int64 id = 1;
   float distance = 2;
-  string metadata = 3;
+  map<string, string> metadata = 3;
 }
 
 message QueryResponseListMessage {

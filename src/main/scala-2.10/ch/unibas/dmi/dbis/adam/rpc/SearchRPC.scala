@@ -142,28 +142,24 @@ class SearchRPC extends AdamSearchGrpc.AdamSearch {
     * @return
     */
   private def prepareResults(df: DataFrame): QueryResponseListMessage = {
-    import org.apache.spark.sql.functions.{col, concat, concat_ws, lit}
+    import org.apache.spark.sql.functions.{array, col, lit, udf}
 
-    val responseMsgs = df.select(
-      df(FieldNames.idColumnName),
-      df(FieldNames.distanceColumnName),
-      concat(//creates JSON
-        lit("{"),
-        concat_ws(",", df.dtypes.slice(2, df.dtypes.length).map(dt => {
-          val c = dt._1;
-          val t = dt._2;
-          concat(
-            lit("\"" + c + "\":" + (if (t == "StringType") "\""; else "")),
-            col(c),
-            lit(if (t == "StringType") "\""; else "")
-          )
-        }): _*),
-        lit("}")
-      ) as "metadata"
-    ).collect().map(row => QueryResponseMessage(
+    val asMap = udf((keys: Seq[String], values: Seq[String]) =>
+      keys.zip(values).filter {
+        case (k, null) => false
+        case _ => true
+      }.toMap)
+
+    val cols = df.dtypes.slice(2, df.dtypes.length).map(_._1)
+
+    val keys = array(cols.map(lit): _*)
+    val values = array(cols.map(col): _*)
+
+    val responseMsgs = df.withColumn("metadata", asMap(keys, values))
+      .collect().map(row => QueryResponseMessage(
       row.getAs[Long](FieldNames.idColumnName),
       row.getAs[Float](FieldNames.distanceColumnName),
-      row.getAs[String]("metadata")
+      row.getMap[String, String](3).toMap
     ))
 
     QueryResponseListMessage(responseMsgs)
