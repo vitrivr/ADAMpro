@@ -40,7 +40,7 @@ class SHIndex(val indexname: IndexName, val entityname: EntityName, protected va
 
     val rdd = data.map(r => r : BitStringIndexTuple)
 
-    val maxScore = originalQuery.intersectionCount(originalQuery) * numOfQueries
+    val maxScore : Float = originalQuery.intersectionCount(originalQuery) * numOfQueries
 
     val results = SparkStartup.sc.runJob(rdd, (context : TaskContext, tuplesIt : Iterator[BitStringIndexTuple]) => {
       val localRh = new LSHResultHandler(k)
@@ -68,7 +68,7 @@ class SHIndex(val indexname: IndexName, val entityname: EntityName, protected va
     val ids = globalResultHandler.results
 
     log.debug("SH index returning " + ids.length + " tuples")
-    ids.map(result => Result(result.score.toFloat / maxScore.toFloat, result.tid)).toSet
+    ids.map(result => Result(result.score.toFloat / maxScore, result.tid)).toSet
   }
 
   override def isQueryConform(nnq: NearestNeighbourQuery): Boolean = {

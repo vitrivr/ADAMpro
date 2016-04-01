@@ -32,7 +32,7 @@ object CompoundQueryHandler {
     * @return
     */
   def indexQueryWithResults(entityname: EntityName)(nnq: NearestNeighbourQuery, expr : Expression, withMetadata: Boolean) : DataFrame = {
-    val tidList = expr.eval().map(x => Result(0, x.getAs[Long](FieldNames.idColumnName))).collect().toSet
+    val tidList = expr.eval().map(x => Result(0.toFloat, x.getAs[Long](FieldNames.idColumnName))).collect().toSet
     var res = FeatureScanner(Entity.load(entityname).get, nnq, Some(tidList.map(_.tid)))
 
     if (withMetadata) {
@@ -53,7 +53,7 @@ object CompoundQueryHandler {
     * @return
     */
   def indexOnlyQuery(expr : Expression) = {
-    val rdd =  expr.eval().map(x => Row(0, x.getAs[Long](FieldNames.idColumnName)))
+    val rdd =  expr.eval().map(x => Row(0.toFloat, x.getAs[Long](FieldNames.idColumnName)))
     SparkStartup.sqlContext.createDataFrame(rdd, Result.resultSchema)
   }
 
@@ -113,6 +113,7 @@ object CompoundQueryHandler {
       })
 
       Await.result(f, Duration(100, TimeUnit.SECONDS))
+
     }
   }
 
