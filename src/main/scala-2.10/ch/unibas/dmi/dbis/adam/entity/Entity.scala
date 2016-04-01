@@ -55,10 +55,10 @@ case class Entity(entityname: EntityName, featureStorage: FeatureStorage, metada
   def insert(insertion: DataFrame): Try[Void] = {
     log.debug("inserting data into entity")
 
-    val rows = insertion.rdd.zipWithUniqueId.map { case (r: Row, adamtwoid: Long) => Row.fromSeq(adamtwoid +: r.toSeq) }
+    val rdd = insertion.rdd.zipWithUniqueId.map { case (r: Row, adamtwoid: Long) => Row.fromSeq(adamtwoid +: r.toSeq) }
     val insertionWithPK = SparkStartup.sqlContext
       .createDataFrame(
-        rows, StructType(StructField(FieldNames.idColumnName, LongType, false) +: insertion.schema.fields))
+        rdd, StructType(StructField(FieldNames.idColumnName, LongType, false) +: insertion.schema.fields))
       .withColumnRenamed(FieldNames.featureColumnName, FieldNames.internFeatureColumnName)
 
     featureStorage.write(entityname, insertionWithPK.select(FieldNames.idColumnName, FieldNames.internFeatureColumnName), SaveMode.Append)
@@ -78,6 +78,16 @@ case class Entity(entityname: EntityName, featureStorage: FeatureStorage, metada
     */
   def filter(filter: Set[Long]): RDD[Tuple] = {
     featureStorage.read(entityname, Option(filter)).rdd.map(r => r: Tuple)
+  }
+
+  /**
+    *
+    * @return
+    */
+  def schema = if (metaData.isDefined) {
+    featureData.join(metaData.get).drop(FieldNames.idColumnName).schema
+  } else {
+    featureData.drop(FieldNames.idColumnName).schema
   }
 
   /**
@@ -203,8 +213,13 @@ object Entity {
     * @return
     */
   def insertData(entityname: EntityName, insertion: DataFrame): Try[Void] = {
-    //TODO: possibly check for schema equality?
-    load(entityname).get.insert(insertion)
+    val entity = load(entityname).get
+    val insertionSchema = insertion.schema
+    val entitySchema = entity.schema
+
+    //TODO: possibly compare schemas
+
+    entity.insert(insertion)
   }
 
   /**

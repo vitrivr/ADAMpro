@@ -6,7 +6,7 @@ option java_package = "ch.unibas.dmi.dbis.adam.http";
 service AdamDefinition {
   rpc CreateEntity(CreateEntityMessage) returns (AckMessage) {}
   rpc DropEntity(EntityNameMessage) returns (AckMessage) {}
-  rpc Insert(InsertMessage) returns (AckMessage) {}
+  rpc Insert(stream InsertMessage) returns (AckMessage) {}
   rpc Index(IndexMessage) returns (AckMessage) {}
   rpc DropIndex(IndexNameMessage) returns (AckMessage) {}
   rpc Count(EntityNameMessage) returns (AckMessage) {}
@@ -63,10 +63,16 @@ message AckMessage {
 //insert and update (if id exists already)
 message InsertMessage {
   string entity = 1;
-  int64 id = 2;
-  repeated float vector = 3 [packed=true];
-  map<string, string> metadata = 4;
+  repeated TupleInsertMessage tuples = 2;
+
+  message TupleInsertMessage {
+    //int64 id = 1;
+    repeated float vector = 2 [packed=true];
+    map<string, string> metadata = 3;
+  }
 }
+
+
 
 enum IndexType {
     lsh = 0;

@@ -2,13 +2,16 @@ package ch.unibas.dmi.dbis.adam.rpc
 
 import ch.unibas.dmi.dbis.adam.api._
 import ch.unibas.dmi.dbis.adam.config.FieldNames
-import ch.unibas.dmi.dbis.adam.entity.{FieldDefinition, FieldTypes}
+import ch.unibas.dmi.dbis.adam.entity.{Entity, FieldDefinition, FieldTypes}
 import ch.unibas.dmi.dbis.adam.exception.GeneralAdamException
 import ch.unibas.dmi.dbis.adam.http.grpc.CreateEntityMessage.FieldType
 import ch.unibas.dmi.dbis.adam.http.grpc.{AckMessage, CreateEntityMessage, _}
 import ch.unibas.dmi.dbis.adam.index.structures.IndexTypes
+import ch.unibas.dmi.dbis.adam.main.SparkStartup
 import ch.unibas.dmi.dbis.adam.query.distance.NormBasedDistanceFunction
+import io.grpc.stub.StreamObserver
 import org.apache.log4j.Logger
+import org.apache.spark.sql.Row
 
 import scala.concurrent.Future
 
@@ -76,7 +79,44 @@ class DataDefinitionRPC extends AdamDefinitionGrpc.AdamDefinition {
   }
 
 
-  override def insert(request: InsertMessage): Future[AckMessage] = ???
+  override def insert(responseObserver: StreamObserver[AckMessage]): StreamObserver[InsertMessage] = {
+    new StreamObserver[InsertMessage]() {
+      def onNext(insert: InsertMessage) {
+        val entity = Entity.load(insert.entity)
+
+        if(entity.isFailure){
+          return onError(new GeneralAdamException("cannot load entity"))
+        }
+
+        val schema = entity.get.schema
+
+
+        val rows = insert.tuples.map(tuple => {
+          val metadata = tuple.metadata
+          val data = schema.map(field => metadata.get(field.name).get).+:(tuple.vector)
+          Row(data : _*)
+        })
+
+        val rdd = SparkStartup.sc.parallelize(rows)
+        val df = SparkStartup.sqlContext.createDataFrame(rdd, entity.get.schema)
+
+        InsertOp(entity.get.entityname, df)
+
+        responseObserver.onNext(AckMessage(code = AckMessage.Code.OK))
+      }
+
+      def onError(t: Throwable) {
+        responseObserver.onNext(AckMessage(code = AckMessage.Code.ERROR))
+        log.error("error on insertion", t)
+        responseObserver.onError(t)
+      }
+
+      def onCompleted(): Unit = {
+        responseObserver.onCompleted()
+      }
+    }
+  }
+
 
 
   override def index(request: IndexMessage): Future[AckMessage] = {
