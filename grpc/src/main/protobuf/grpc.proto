@@ -20,7 +20,7 @@ service AdamSearch {
   rpc DoIndexQuery(SimpleIndexQueryMessage) returns (QueryResponseListMessage) {}
   rpc DoProgressiveQuery(SimpleQueryMessage) returns (stream QueryResponseInfoMessage) {}
   rpc DoTimedProgressiveQuery(TimedQueryMessage) returns (QueryResponseInfoMessage) {}
-  rpc DoCompoundQuery(ExpressionQueryMessage) returns (QueryResponseListMessage) {}
+  rpc DoCompoundQuery(CompoundQueryMessage) returns (QueryResponseListMessage) {}
 }
 
 
@@ -162,7 +162,10 @@ message QueryResponseListMessage {
 }
 
 message CompoundQueryMessage {
-    ExpressionQueryMessage expression = 1;
+  string entity = 1;
+  NearestNeighbourQueryMessage nnq = 2;
+  ExpressionQueryMessage indexFilterExpression = 3;
+  bool withMetadata = 4;
 }
 
 //experimental
