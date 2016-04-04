@@ -23,7 +23,7 @@ import scala.concurrent.{Await, Future}
   */
 object CompoundQueryHandler {
   case class CompoundQueryHolder(entityname: EntityName, nnq: NearestNeighbourQuery, expr : Expression, withMetadata: Boolean) extends Expression {
-    override def eval() = indexQueryWithResults(entityname)(nnq, expr, withMetadata)
+    override def eval() = indexQueryWithResults(entityname)(nnq, expr, withMetadata).map(r => Result(0.toFloat, r.getAs[Long](FieldNames.idColumnName))).collect()
   }
 
   /**
@@ -35,8 +35,8 @@ object CompoundQueryHandler {
     * @return
     */
   def indexQueryWithResults(entityname: EntityName)(nnq: NearestNeighbourQuery, expr : Expression, withMetadata: Boolean) : DataFrame = {
-    val tidList = expr.eval().map(x => Result(0.toFloat, x.getAs[Long](FieldNames.idColumnName))).collect().toSet
-    var res = FeatureScanner(Entity.load(entityname).get, nnq, Some(tidList.map(_.tid)))
+    val tidList = expr.eval()
+    var res = FeatureScanner(Entity.load(entityname).get, nnq, Some(tidList.map(_.tid).toSet))
 
     if (withMetadata) {
       log.debug("join metadata to results of compound query")
@@ -51,8 +51,8 @@ object CompoundQueryHandler {
     * @param expr
     * @return
     */
-  def indexOnlyQuery(expr : Expression) = {
-    val rdd =  expr.eval().map(x => Row(0.toFloat, x.getAs[Long](FieldNames.idColumnName)))
+  def indexOnlyQuery(expr : Expression) : DataFrame = {
+    val rdd =  SparkStartup.sc.parallelize(expr.eval().map(res => Row(res.distance, res.tid)))
     SparkStartup.sqlContext.createDataFrame(rdd, Result.resultSchema)
   }
 
@@ -60,7 +60,20 @@ object CompoundQueryHandler {
     *
     */
   abstract class Expression {
-    def eval(): DataFrame
+    /**
+      *
+      * @return
+      */
+    def eval(): Seq[Result]
+
+    /**
+      *
+      * @return
+      */
+    def evalToDF() = {
+      val rdd =  SparkStartup.sc.parallelize(eval().map(res => Row(res.distance, res.tid)))
+      SparkStartup.sqlContext.createDataFrame(rdd, Result.resultSchema)
+    }
   }
 
   /**
@@ -69,12 +82,12 @@ object CompoundQueryHandler {
     * @param r
     */
   case class UnionExpression(l: Expression, r: Expression) extends Expression {
-    override def eval(): DataFrame = {
+    override def eval(): Seq[Result] = {
       val lfut = Future {
-        l.eval().select(FieldNames.idColumnName)
+        l.eval()
       }
       val rfut = Future {
-        r.eval().select(FieldNames.idColumnName)
+        r.eval()
       }
 
       val f = for {
@@ -82,8 +95,9 @@ object CompoundQueryHandler {
         rightResult <- rfut
       } yield ({
         //possibly return DF with type Result here and sum up distance field
-        leftResult.unionAll(rightResult).dropDuplicates(Seq(FieldNames.idColumnName))
+        leftResult.map(_.tid).union(rightResult.map(_.tid)).map(id => new Result(0.toFloat, id))
       })
+
 
       Await.result(f, Duration(100, TimeUnit.SECONDS))
     }
@@ -95,12 +109,12 @@ object CompoundQueryHandler {
     * @param r
     */
   case class IntersectExpression(l: Expression, r: Expression) extends Expression {
-    override def eval(): DataFrame = {
+    override def eval(): Seq[Result] = {
       val lfut = Future {
-        l.eval().select(FieldNames.idColumnName)
+        l.eval()
       }
       val rfut = Future {
-        r.eval().select(FieldNames.idColumnName)
+        r.eval()
       }
 
       val f = for {
@@ -108,7 +122,7 @@ object CompoundQueryHandler {
         rightResult <- rfut
       } yield ({
         //possibly return DF with type Result here and sum up distance field
-        leftResult.intersect(rightResult)
+        leftResult.map(_.tid).intersect(rightResult.map(_.tid)).map(id => new Result(0.toFloat, id))
       })
 
       Await.result(f, Duration(100, TimeUnit.SECONDS))
@@ -122,12 +136,12 @@ object CompoundQueryHandler {
     * @param r
     */
   case class ExceptExpression(l: Expression, r: Expression) extends Expression {
-    override def eval(): DataFrame = {
+    override def eval(): Seq[Result] = {
       val lfut = Future {
-        l.eval().select(FieldNames.idColumnName)
+        l.eval()
       }
       val rfut = Future {
-        r.eval().select(FieldNames.idColumnName)
+        r.eval()
       }
 
       val f = for {
@@ -135,7 +149,7 @@ object CompoundQueryHandler {
         rightResult <- rfut
       } yield ({
         //possibly return DF with type Result here and sum up distance field
-        leftResult.except(rightResult)
+        leftResult.map(_.tid).filterNot(rightResult.map(_.tid).toSet).map(id => new Result(0.toFloat, id))
       })
 
       Await.result(f, Duration(100, TimeUnit.SECONDS))

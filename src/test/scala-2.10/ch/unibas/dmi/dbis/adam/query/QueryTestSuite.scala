@@ -384,8 +384,8 @@ class QueryTestSuite extends AdamTestBase with ScalaFutures {
         .map(r => (r.getAs[Long](FieldNames.idColumnName))).collect().sorted
 
       //results (note we truly compare the id-column here and not the metadata "tid"
-      val shres = shqh.eval().map(r => r.getAs[Long](FieldNames.idColumnName)).collect()
-      val vhres = vhqh.eval().map(r => r.getAs[Long](FieldNames.idColumnName)).collect()
+      val shres = shqh.evalToDF().map(r => r.getAs[Long](FieldNames.idColumnName)).collect()
+      val vhres = vhqh.evalToDF().map(r => r.getAs[Long](FieldNames.idColumnName)).collect()
       
       Then("we should have a match in the aggregated list")
       val gt = vhres.intersect(shres).sorted
