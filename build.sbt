@@ -81,6 +81,9 @@ mainClass in assembly := Some("ch.unibas.dmi.dbis.adam.main.Startup")
 
 test in assembly := {}
 
+//provided libraries should be included in "run"
+run in Compile <<= Defaults.runTask(fullClasspath in Compile, mainClass in (Compile, run), runner in (Compile, run))
+
 
 //test
 libraryDependencies ++= Seq(
