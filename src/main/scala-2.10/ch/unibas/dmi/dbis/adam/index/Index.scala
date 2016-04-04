@@ -23,7 +23,6 @@ import com.google.common.cache.{CacheBuilder, CacheLoader}
 import org.apache.log4j.Logger
 import org.apache.spark.rdd.RDD
 import org.apache.spark.sql.DataFrame
-import org.apache.spark.storage.StorageLevel
 
 import scala.util.{Failure, Success, Try}
 
@@ -203,12 +202,18 @@ object Index {
     * @param indexname
     * @return
     */
-  def load(indexname: IndexName): Try[Index] = {
+  def load(indexname: IndexName, cache : Boolean = false): Try[Index] = {
     if (!exists(indexname)) {
       throw new IndexNotExistingException()
     }
 
-    IndexLRUCache.get(indexname)
+    val index = IndexLRUCache.get(indexname)
+
+    if(cache){
+      index.get.df.rdd.setName(indexname).cache()
+    }
+
+    index
   }
 
   /**
@@ -280,8 +285,6 @@ object Index {
         new CacheLoader[IndexName, Index]() {
           def load(indexname: IndexName): Index = {
             val index = Index.loadIndexMetaData(indexname).get
-            index.df.rdd.setName(indexname).persist(StorageLevel.MEMORY_AND_DISK)
-            index.df.rdd.collect()
             index
           }
         }

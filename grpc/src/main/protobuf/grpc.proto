@@ -14,6 +14,8 @@ service AdamDefinition {
 }
 
 service AdamSearch {
+  rpc CacheIndex (IndexNameMessage) returns (AckMessage) {}
+  rpc CacheEntity (EntityNameMessage) returns (AckMessage) {}
   rpc DoStandardQuery(SimpleQueryMessage) returns (QueryResponseListMessage) {}
   rpc DoSequentialQuery(SimpleSequentialQueryMessage) returns (QueryResponseListMessage) {}
   rpc DoSpecifiedIndexQuery(SimpleSpecifiedIndexQueryMessage) returns (QueryResponseListMessage) {}

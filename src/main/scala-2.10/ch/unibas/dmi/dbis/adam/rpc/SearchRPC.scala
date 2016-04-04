@@ -3,6 +3,7 @@ package ch.unibas.dmi.dbis.adam.rpc
 import ch.unibas.dmi.dbis.adam.api.QueryOp
 import ch.unibas.dmi.dbis.adam.config.FieldNames
 import ch.unibas.dmi.dbis.adam.http.grpc._
+import ch.unibas.dmi.dbis.adam.index.Index
 import ch.unibas.dmi.dbis.adam.index.structures.IndexTypes
 import ch.unibas.dmi.dbis.adam.query.progressive.ProgressiveQueryStatus
 import io.grpc.stub.StreamObserver
@@ -19,6 +20,35 @@ import scala.concurrent.Future
   */
 class SearchRPC extends AdamSearchGrpc.AdamSearch {
   val log = Logger.getLogger(getClass.getName)
+
+
+  /**
+    *
+    * @param request
+    * @return
+    */
+  override def cacheIndex(request: IndexNameMessage): Future[AckMessage] = {
+    log.debug("rpc call to cache index")
+    try {
+      Index.load(request.index, true)
+      Future.successful(AckMessage(code = AckMessage.Code.OK))
+    } catch {
+      case e: Exception =>
+        log.debug("exception while rpc call for indexing operation")
+        Future.successful(AckMessage(code = AckMessage.Code.ERROR, message = e.getMessage))
+    }
+  }
+
+  /**
+    *
+    * @param request
+    * @return
+    */
+  override def cacheEntity(request: EntityNameMessage): Future[AckMessage] = {
+    log.debug("rpc call to cache entity")
+    log.error("caching entity not yet implemented")
+    Future.successful(AckMessage(code = AckMessage.Code.ERROR, message = "not implemented yet"))
+  }
 
   /**
     *
