@@ -27,7 +27,7 @@ object MetadataScanner {
     * @return
     */
   def apply(entity: Entity, query: BooleanQuery): Option[DataFrame] = {
-    if (entity.getMetadata.isDefined) {
+    if (entity.getMetadata.isDefined && query.where.isDefined) {
       var df = entity.getMetadata.get
 
       if (query.join.isDefined) {
@@ -61,7 +61,7 @@ object MetadataScanner {
   def apply(entity: Entity, filter: Set[TupleID]): Option[DataFrame] = {
     if (entity.hasMetadata) {
       val df = entity.getMetadata.get
-      Option(df.filter(df(FieldNames.idColumnName) isin (filter.toSeq :_*)))
+      Option(df.filter(df(FieldNames.idColumnName) isin (filter.toSeq: _*)))
     } else {
       log.warn("asked for metadata, but entity " + entity + " has no metadata available")
       None

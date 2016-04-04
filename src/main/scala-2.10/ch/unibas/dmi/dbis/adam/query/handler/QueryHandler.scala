@@ -6,7 +6,6 @@ import ch.unibas.dmi.dbis.adam.entity.Tuple.TupleID
 import ch.unibas.dmi.dbis.adam.exception.IndexNotExistingException
 import ch.unibas.dmi.dbis.adam.index.Index
 import ch.unibas.dmi.dbis.adam.index.Index._
-import ch.unibas.dmi.dbis.adam.query.Result
 import ch.unibas.dmi.dbis.adam.query.handler.CompoundQueryHandler.Expression
 import ch.unibas.dmi.dbis.adam.query.handler.QueryHints._
 import ch.unibas.dmi.dbis.adam.query.progressive._
@@ -129,7 +128,15 @@ object QueryHandler {
   }
 
   case class SequentialQueryHolder(entityname: EntityName, nnq: NearestNeighbourQuery, bq: Option[BooleanQuery], withMetadata: Boolean) extends Expression {
-    override def eval() = sequentialQuery(entityname)(nnq, bq, withMetadata).map(r => Result(0.toFloat, r.getAs[Long](FieldNames.idColumnName))).collect()
+    override def eval() = sequentialQuery(entityname)(nnq, bq, withMetadata)
+
+    override def eval(filter: Option[Set[TupleID]]): DataFrame = {
+      val abq = bq.getOrElse(BooleanQuery())
+      if(filter.isDefined) {
+        abq.append(filter.get)
+      }
+      sequentialQuery(entityname)(nnq, Option(abq) , withMetadata)
+    }
   }
 
 
@@ -155,7 +162,15 @@ object QueryHandler {
   }
 
   case class IndexQueryHolder(entityname: EntityName, indextypename: IndexTypeName, nnq: NearestNeighbourQuery, bq: Option[BooleanQuery], withMetadata: Boolean) extends Expression {
-    override def eval() = indexQuery(entityname, indextypename)(nnq, bq, withMetadata).map(r => Result(0.toFloat, r.getAs[Long](FieldNames.idColumnName))).collect()
+    override def eval() = indexQuery(entityname, indextypename)(nnq, bq, withMetadata)
+
+    override def eval(filter: Option[Set[TupleID]]): DataFrame = {
+      val abq = bq.getOrElse(BooleanQuery())
+      if(filter.isDefined){
+      abq.append(filter.get)
+      }
+      indexQuery(entityname, indextypename)(nnq, Option(abq) , withMetadata)
+    }
   }
 
 
@@ -194,7 +209,15 @@ object QueryHandler {
   }
 
   case class SpecifiedIndexQueryHolder(indexname: IndexName, nnq: NearestNeighbourQuery, bq: Option[BooleanQuery], withMetadata: Boolean) extends Expression {
-    override def eval() = indexQuery(indexname)(nnq, bq, withMetadata).map(r => Result(0.toFloat, r.getAs[Long](FieldNames.idColumnName))).collect()
+    override def eval() = indexQuery(indexname)(nnq, bq, withMetadata)
+
+    override def eval(filter: Option[Set[TupleID]]): DataFrame = {
+      val abq = bq.getOrElse(BooleanQuery())
+      if(filter.isDefined) {
+        abq.append(filter.get)
+      }
+      indexQuery(indexname)(nnq, Option(abq), withMetadata)
+    }
   }
 
   /**
@@ -278,14 +301,14 @@ object QueryHandler {
     * @return
     */
   private def getFilter(entityname: EntityName, bq: BooleanQuery): Option[Set[TupleID]] = {
-    var filter = Seq[TupleID]()
+    var filter = Set[TupleID]()
 
     val results = BooleanQueryHandler.metadataQuery(entityname, bq)
     if (results.isDefined) {
       filter ++= results.get.map(r => r.getAs[Long](FieldNames.idColumnName)).collect().toSet
     }
 
-    val prefilter = bq.idFilter
+    val prefilter = bq.tidFilter
     if (prefilter.isDefined) {
       if (filter.isEmpty) {
         filter = prefilter.get
@@ -295,7 +318,7 @@ object QueryHandler {
     }
 
     if (!filter.isEmpty) {
-      Some(filter.toSet)
+      Some(filter)
     } else {
       None
     }

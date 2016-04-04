@@ -1,13 +1,11 @@
 package ch.unibas.dmi.dbis.adam.api
 
-import ch.unibas.dmi.dbis.adam.config.FieldNames
 import ch.unibas.dmi.dbis.adam.entity.Entity._
 import ch.unibas.dmi.dbis.adam.index.Index._
-import ch.unibas.dmi.dbis.adam.query.Result
 import ch.unibas.dmi.dbis.adam.query.handler.CompoundQueryHandler.{CompoundQueryHolder, Expression}
-import ch.unibas.dmi.dbis.adam.query.handler.{CompoundQueryHandler, QueryHandler}
 import ch.unibas.dmi.dbis.adam.query.handler.QueryHandler._
 import ch.unibas.dmi.dbis.adam.query.handler.QueryHints._
+import ch.unibas.dmi.dbis.adam.query.handler.{CompoundQueryHandler, QueryHandler}
 import ch.unibas.dmi.dbis.adam.query.progressive.{ProgressiveQueryStatus, ProgressiveQueryStatusTracker}
 import ch.unibas.dmi.dbis.adam.query.query.{BooleanQuery, NearestNeighbourQuery}
 import org.apache.log4j.Logger
@@ -42,9 +40,9 @@ object QueryOp {
   }
 
   case class StandardQueryHolder(entityname: EntityName, hint: Option[QueryHint], nnq: NearestNeighbourQuery, bq: Option[BooleanQuery], withMetadata: Boolean) extends Expression {
-    override def eval() = apply(entityname, hint, nnq, bq, withMetadata).map(r => Result(0.toFloat, r.getAs[Long](FieldNames.idColumnName))).collect()
+    override def eval() = apply(entityname, hint, nnq, bq, withMetadata)
   }
-  def apply(q: StandardQueryHolder): DataFrame = q.evalToDF()
+  def apply(q: StandardQueryHolder): DataFrame = q.eval()
 
   /**
     * Performs a sequential query, i.e., without using any index structure.
@@ -59,7 +57,7 @@ object QueryOp {
     log.debug("perform sequential query operation")
     QueryHandler.sequentialQuery(entityname)(nnq, bq, withMetadata)
   }
-  def sequential(q: SequentialQueryHolder): DataFrame = q.evalToDF()
+  def sequential(q: SequentialQueryHolder): DataFrame = q.eval()
 
 
   /**
@@ -75,7 +73,7 @@ object QueryOp {
     log.debug("perform index query operation")
     QueryHandler.indexQuery(indexname)(nnq, bq, withMetadata)
   }
-  def index(q: SpecifiedIndexQueryHolder): DataFrame = q.evalToDF()
+  def index(q: SpecifiedIndexQueryHolder): DataFrame = q.eval()
 
   /**
     * Performs an index-based query.
@@ -91,7 +89,7 @@ object QueryOp {
     log.debug("perform index query operation")
     QueryHandler.indexQuery(entityname, indextypename)(nnq, bq, withMetadata)
   }
-  def index(q: IndexQueryHolder): DataFrame = q.evalToDF()
+  def index(q: IndexQueryHolder): DataFrame = q.eval()
 
   /**
     * Performs a progressive query, i.e., all indexes and sequential search are started at the same time and results are returned as soon
@@ -143,5 +141,5 @@ object QueryOp {
     CompoundQueryHandler.indexQueryWithResults(entityname)(nnq, expr, withMetadata)
   }
 
-  def compoundQuery(q : CompoundQueryHolder): DataFrame = q.evalToDF()
+  def compoundQuery(q : CompoundQueryHolder): DataFrame = q.eval()
 }
