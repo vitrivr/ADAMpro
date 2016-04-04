@@ -42,7 +42,7 @@ message EntityNameMessage {
 }
 
 message IndexNameMessage {
-  string entity = 1;
+  string index = 1;
 }
 
 message RandomDataMessage {

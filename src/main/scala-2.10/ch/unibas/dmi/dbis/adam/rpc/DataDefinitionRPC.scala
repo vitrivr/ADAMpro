@@ -164,7 +164,7 @@ class DataDefinitionRPC extends AdamDefinitionGrpc.AdamDefinition {
     log.debug("rpc call for dropping index operation")
 
     try {
-      DropIndexOp(request.entity)
+      DropIndexOp(request.index)
       Future.successful(AckMessage(code = AckMessage.Code.OK))
     } catch {
       case e: Exception =>
