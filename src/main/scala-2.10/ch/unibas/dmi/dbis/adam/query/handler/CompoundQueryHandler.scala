@@ -22,6 +22,9 @@ import scala.concurrent.{Await, Future}
   * March 2016
   */
 object CompoundQueryHandler {
+  case class CompoundQueryHolder(entityname: EntityName, nnq: NearestNeighbourQuery, expr : Expression, withMetadata: Boolean) extends Expression {
+    override def eval() = indexQueryWithResults(entityname)(nnq, expr, withMetadata)
+  }
 
   /**
     *
@@ -36,15 +39,11 @@ object CompoundQueryHandler {
     var res = FeatureScanner(Entity.load(entityname).get, nnq, Some(tidList.map(_.tid)))
 
     if (withMetadata) {
-      log.debug("join metadata to results of timed progressive query")
+      log.debug("join metadata to results of compound query")
       res = QueryHandler.joinWithMetadata(entityname, res)
     }
 
     res
-  }
-
-  case class CompoundQueryHolder(entityname: EntityName, nnq: NearestNeighbourQuery, expr : Expression, withMetadata: Boolean) extends Expression {
-    override def eval() = indexQueryWithResults(entityname)(nnq, expr, withMetadata)
   }
 
   /**

@@ -102,7 +102,7 @@ private[query] object NearestNeighbourQueryHandler {
   def indexOnlyQuery(indexname: IndexName, query: NearestNeighbourQuery, filter: Option[Set[TupleID]]): DataFrame = {
     log.debug("starting index scanner")
     val result = IndexScanner(Index.load(indexname).get, query, filter).toSeq
-    val rdd = SparkStartup.sc.parallelize(result).map(res => Row(0, res))
+    val rdd = SparkStartup.sc.parallelize(result).map(res => Row(0.toFloat, res))
     SparkStartup.sqlContext.createDataFrame(rdd, Result.resultSchema)
   }
 
