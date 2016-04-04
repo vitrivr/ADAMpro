@@ -83,7 +83,7 @@ private[rpc] object SearchRPCMethods {
   private def prepareBQ(option: Option[BooleanQueryMessage]): Option[BooleanQuery] = {
     if (option.isDefined) {
       val bq = option.get
-      Option(BooleanQuery(bq.where.map(bqm => (bqm.field, bqm.value)), Option(bq.joins.map(x => (x.table, x.columns))), Option(bq.prefilter)))
+      Option(BooleanQuery(Option(bq.where.map(bqm => (bqm.field, bqm.value))), Option(bq.joins.map(x => (x.table, x.columns))), Option(bq.prefilter.toSet)))
     } else {
       None
     }

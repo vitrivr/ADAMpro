@@ -1,6 +1,7 @@
 package ch.unibas.dmi.dbis.adam.query.query
 
 import ch.unibas.dmi.dbis.adam.datatypes.feature.Feature._
+import ch.unibas.dmi.dbis.adam.entity.Tuple._
 import ch.unibas.dmi.dbis.adam.query.distance.DistanceFunction
 
 /**
@@ -14,19 +15,18 @@ abstract class Query(queryID: Option[String] = Some(java.util.UUID.randomUUID().
 /**
   * Boolean query parameters.
   *
-  * @param where
-  * @param join Seq of (table, columns to join on)
-  * @param idFilter additional filter (is applied to results of where condition if it is set)
+  * @param where     a where 'clause' in form of (String, String), if the first string ends with '!=' or 'IN' the
+  *                  operator is used in the query, otherwise a '=' is added in between; AND-ing is assumed
+  * @param join      Seq of (table, columns to join on)
+  * @param tidFilter additional filter (is applied to results of where condition if it is set)
   * @param queryID
   */
 case class BooleanQuery(
-                         where: Seq[(String, String)],
+                         where: Option[Seq[(String, String)]] = None,
                          join: Option[Seq[(String, Seq[String])]] = None,
-                         idFilter : Option[Seq[Long]] = None,
+                         var tidFilter: Option[Set[TupleID]] = None,
                          queryID: Option[String] = Some(java.util.UUID.randomUUID().toString))
   extends Query(queryID) {
-
-
   /**
     * List of SQL operators to keep in query (otherwise a '=' is added)
     */
@@ -41,15 +41,23 @@ case class BooleanQuery(
   def buildWhereClause(): String = {
     val regex = s"""^(${sqlOperators.mkString("|")}){0,1}(.*)""".r
 
-    where.map { case (field, value) =>
-      val regex(prefix,suffix) = value
+    where.get.map { case (field, value) =>
+      val regex(prefix, suffix) = value
 
       //if a sqlOperator was found then keep the SQL operator, otherwise add a '='
       (prefix, suffix) match {
-        case(null, s) => field + " =" + " " + value
+        case (null, s) => field + " =" + " " + value
         case _ => field + " " + value
       }
     }.mkString("(", ") AND (", ")")
+  }
+
+  /**
+    *
+    * @param filter
+    */
+  def append(filter: Set[TupleID]): Unit = {
+    tidFilter = Option(tidFilter.getOrElse(Set()) ++ filter)
   }
 }
 

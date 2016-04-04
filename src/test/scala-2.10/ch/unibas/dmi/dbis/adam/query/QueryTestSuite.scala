@@ -268,7 +268,7 @@ class QueryTestSuite extends AdamTestBase with ScalaFutures {
         case (distance, tid) =>
           (tid * 100).toString
       }.mkString("(", ", ", ")")
-      val whereStmt = Seq("tid100" -> inStmt)
+      val whereStmt = Option(Seq("tid100" -> inStmt))
 
       val bq = BooleanQuery(whereStmt, Some(Seq((metadataname, Seq("tid")))))
       val results = QueryOp.sequential(es.entity.entityname, nnq, Option(bq), true)
@@ -366,7 +366,7 @@ class QueryTestSuite extends AdamTestBase with ScalaFutures {
     /**
       *
       */
-    scenario("perform a compound query") {
+    scenario("perform a compound query with various index types") {
       Given("an entity and some indices")
       val es = getGroundTruthEvaluationSet()
 
@@ -380,12 +380,13 @@ class QueryTestSuite extends AdamTestBase with ScalaFutures {
       val shqh = SpecifiedIndexQueryHolder(shidx.get.indexname, nnq, None, true)
       val vhqh = SpecifiedIndexQueryHolder(vaidx.get.indexname, nnq, None, true)
 
+
       val results = CompoundQueryHandler.indexOnlyQuery(new IntersectExpression(shqh, vhqh))
         .map(r => (r.getAs[Long](FieldNames.idColumnName))).collect().sorted
 
       //results (note we truly compare the id-column here and not the metadata "tid"
-      val shres = shqh.evalToDF().map(r => r.getAs[Long](FieldNames.idColumnName)).collect()
-      val vhres = vhqh.evalToDF().map(r => r.getAs[Long](FieldNames.idColumnName)).collect()
+      val shres = shqh.eval().map(r => r.getAs[Long](FieldNames.idColumnName)).collect()
+      val vhres = vhqh.eval().map(r => r.getAs[Long](FieldNames.idColumnName)).collect()
       
       Then("we should have a match in the aggregated list")
       val gt = vhres.intersect(shres).sorted

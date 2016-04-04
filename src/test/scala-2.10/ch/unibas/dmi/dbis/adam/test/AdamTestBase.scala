@@ -138,7 +138,7 @@ class AdamTestBase extends FeatureSpec with GivenWhenThen with Eventually with I
     */
   case class EvaluationSet(entity: Entity, fullData: DataFrame,
                            feature: FeatureVectorWrapper, distance: MinkowskiDistance, k: Int,
-                           where: Seq[(String, String)],
+                           where: Option[Seq[(String, String)]],
                            nnResults: Seq[(Double, Long)], nnbqResults: Seq[(Double, Long)])
 
   /**
@@ -248,7 +248,7 @@ class AdamTestBase extends FeatureSpec with GivenWhenThen with Eventually with I
     val nnbqres = getResults("groundtruth/100nn-bq-results.tsv")
 
 
-    EvaluationSet(entity.get, data, feature, ManhattanDistance, nnres.length, where, nnres, nnbqres)
+    EvaluationSet(entity.get, data, feature, ManhattanDistance, nnres.length, Option(where), nnres, nnbqres)
   }
 
 
