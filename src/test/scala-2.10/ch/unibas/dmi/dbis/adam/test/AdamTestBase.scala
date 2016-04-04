@@ -270,4 +270,18 @@ class AdamTestBase extends FeatureSpec with GivenWhenThen with Eventually with I
   def getScore(groundtruth: Seq[Long], results: Seq[Long]): Double = {
     groundtruth.intersect(results).length.toFloat / groundtruth.size.toFloat
   }
+
+  /**
+    *
+    * @param thunk
+    * @tparam T
+    * @return
+    */
+  def time[T](thunk: => T): T = {
+    val t1 = System.currentTimeMillis
+    val x = thunk
+    val t2 = System.currentTimeMillis
+    println((t2 - t1) + " msecs")
+    x
+  }
 }

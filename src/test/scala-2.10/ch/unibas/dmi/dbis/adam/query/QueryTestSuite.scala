@@ -8,7 +8,7 @@ import ch.unibas.dmi.dbis.adam.index.structures.IndexTypes
 import ch.unibas.dmi.dbis.adam.main.SparkStartup
 import ch.unibas.dmi.dbis.adam.query.distance.EuclideanDistance
 import ch.unibas.dmi.dbis.adam.query.handler.CompoundQueryHandler
-import ch.unibas.dmi.dbis.adam.query.handler.CompoundQueryHandler.IntersectExpression
+import ch.unibas.dmi.dbis.adam.query.handler.CompoundQueryHandler.{ExpressionEvaluationOrder, IntersectExpression}
 import ch.unibas.dmi.dbis.adam.query.handler.QueryHandler.SpecifiedIndexQueryHolder
 import ch.unibas.dmi.dbis.adam.query.progressive.ProgressiveQueryStatus
 import ch.unibas.dmi.dbis.adam.query.query.{BooleanQuery, NearestNeighbourQuery}
@@ -380,14 +380,15 @@ class QueryTestSuite extends AdamTestBase with ScalaFutures {
       val shqh = SpecifiedIndexQueryHolder(shidx.get.indexname, nnq, None, true)
       val vhqh = SpecifiedIndexQueryHolder(vaidx.get.indexname, nnq, None, true)
 
-
-      val results = CompoundQueryHandler.indexOnlyQuery(new IntersectExpression(shqh, vhqh))
-        .map(r => (r.getAs[Long](FieldNames.idColumnName))).collect().sorted
+      val results = time {
+        CompoundQueryHandler.indexOnlyQuery(new IntersectExpression(shqh, vhqh))
+          .map(r => (r.getAs[Long](FieldNames.idColumnName))).collect().sorted
+      }
 
       //results (note we truly compare the id-column here and not the metadata "tid"
       val shres = shqh.eval().map(r => r.getAs[Long](FieldNames.idColumnName)).collect()
       val vhres = vhqh.eval().map(r => r.getAs[Long](FieldNames.idColumnName)).collect()
-      
+
       Then("we should have a match in the aggregated list")
       val gt = vhres.intersect(shres).sorted
 
@@ -399,6 +400,46 @@ class QueryTestSuite extends AdamTestBase with ScalaFutures {
       //clean up
       DropEntityOp(es.entity.entityname)
     }
+
+
+    /**
+      *
+      */
+    scenario("perform a compound query with the same index type at different coarseness levels") {
+      Given("an entity and some indices")
+      val es = getGroundTruthEvaluationSet()
+
+      val vaidx1 = IndexOp(es.entity.entityname, IndexTypes.VAFINDEX, EuclideanDistance, Map("maxMarks" -> "4"))
+      val vaidx2 = IndexOp(es.entity.entityname, IndexTypes.VAFINDEX, EuclideanDistance)
+
+      When("performing a kNN query of two indices and performing the intersect")
+      //nnq has numOfQ  = 0 to avoid that by the various randomized q's the results get different
+      val nnq = NearestNeighbourQuery(es.feature.vector, es.distance, es.k, false, Map("numOfQ" -> "0"))
+
+      val va1qh = SpecifiedIndexQueryHolder(vaidx1.get.indexname, nnq, None, false)
+      val va2qh = SpecifiedIndexQueryHolder(vaidx2.get.indexname, nnq, None, false)
+
+      val results = time {
+        CompoundQueryHandler.indexOnlyQuery(new IntersectExpression(va1qh, va2qh, ExpressionEvaluationOrder.LeftFirst))
+          .map(r => (r.getAs[Long](FieldNames.idColumnName))).collect().sorted
+      }
+
+      //results (note we truly compare the id-column here and not the metadata "tid"
+      val vh1res = va1qh.eval().map(r => r.getAs[Long](FieldNames.idColumnName)).collect()
+      val vh2res = va2qh.eval().map(r => r.getAs[Long](FieldNames.idColumnName)).collect()
+
+      Then("we should have a match in the aggregated list")
+      val gt = vh1res.intersect(vh2res).sorted
+
+      results.zip(gt).map {
+        case (res, gt) =>
+          assert(res == gt)
+      }
+
+      //clean up
+      DropEntityOp(es.entity.entityname)
+    }
+
 
   }
 }
