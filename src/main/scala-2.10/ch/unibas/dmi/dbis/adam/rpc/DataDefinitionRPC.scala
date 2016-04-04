@@ -137,8 +137,8 @@ class DataDefinitionRPC extends AdamDefinitionGrpc.AdamDefinition {
       }
 
 
-      IndexOp(request.entity, indextypename, NormBasedDistanceFunction(request.norm),  request.options )
-      Future.successful(AckMessage(code = AckMessage.Code.OK))
+      val index = IndexOp(request.entity, indextypename, NormBasedDistanceFunction(request.norm),  request.options )
+      Future.successful(AckMessage(code = AckMessage.Code.OK, message = index.get.indexname))
     } catch {
       case e: Exception =>
         log.debug("exception while rpc call for indexing operation")
