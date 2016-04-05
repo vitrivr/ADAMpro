@@ -26,7 +26,7 @@ class FixedSizePriorityQueue[A](val maxSize: Int)(implicit val ordering: Orderin
         return true
       } else {
         val peek = queue.peek()
-        if (ordering.lt(peek, comparing)) {
+        if (ordering.lteq(peek, comparing)) {
           queue.poll()
           queue.add(inserting)
           return true
