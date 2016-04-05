@@ -43,14 +43,16 @@ class VAIndex(val indexname : IndexName, val entityname : EntityName, protected 
 
     val results = SparkStartup.sc.runJob(rdd, (context : TaskContext, tuplesIt : Iterator[BitStringIndexTuple]) => {
       val localRh = new VAResultHandler(k, lbounds, ubounds, metadata.signatureGenerator)
-      localRh.offerIndexTuple(tuplesIt)
+
+      tuplesIt.foreach(tuple => localRh.offer(tuple))
+
       localRh.results.toSeq
     }).flatten
 
     log.debug("VA-File index sub-results sent to global result handler")
 
     val globalResultHandler = new VAResultHandler(k)
-    globalResultHandler.offerResultElement(results.iterator)
+    results.foreach(result => globalResultHandler.offer(result))
     val ids = globalResultHandler.results
 
     log.debug("VA-File returning " + ids.length + " tuples")

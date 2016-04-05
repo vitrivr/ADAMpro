@@ -53,7 +53,7 @@ class LSHIndex(val indexname: IndexName, val entityname: EntityName, protected v
           i += 1
         }
 
-        localRh.offerIndexTuple(tuple, score)
+        localRh.offer(tuple, score)
       }
 
       localRh.results.toSeq
@@ -62,7 +62,7 @@ class LSHIndex(val indexname: IndexName, val entityname: EntityName, protected v
     log.debug("LSH index sub-results sent to global result handler")
 
     val globalResultHandler = new LSHResultHandler(k)
-    globalResultHandler.offerResultElement(results.iterator)
+    results.foreach(result => globalResultHandler.offer(result))
     val ids = globalResultHandler.results
 
     log.debug("LSH index returning " + ids.length + " tuples")

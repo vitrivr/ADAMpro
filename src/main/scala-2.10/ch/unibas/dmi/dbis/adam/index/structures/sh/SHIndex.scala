@@ -55,7 +55,7 @@ class SHIndex(val indexname: IndexName, val entityname: EntityName, protected va
           i += 1
         }
 
-        localRh.offerIndexTuple(tuple, score)
+        localRh.offer(tuple, score)
       }
 
       localRh.results.toSeq
@@ -64,7 +64,7 @@ class SHIndex(val indexname: IndexName, val entityname: EntityName, protected va
     log.debug("SH index sub-results sent to global result handler")
 
     val globalResultHandler = new LSHResultHandler(k)
-    globalResultHandler.offerResultElement(results.iterator)
+    results.foreach(result => globalResultHandler.offer(result))
     val ids = globalResultHandler.results
 
     log.debug("SH index returning " + ids.length + " tuples")
