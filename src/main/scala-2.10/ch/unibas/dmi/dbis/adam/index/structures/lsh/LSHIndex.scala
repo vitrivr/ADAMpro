@@ -5,7 +5,7 @@ import ch.unibas.dmi.dbis.adam.datatypes.feature.MovableFeature
 import ch.unibas.dmi.dbis.adam.entity.Entity._
 import ch.unibas.dmi.dbis.adam.index.Index._
 import ch.unibas.dmi.dbis.adam.index.structures.IndexTypes
-import ch.unibas.dmi.dbis.adam.index.structures.lsh.results.LSHResultHandler
+import ch.unibas.dmi.dbis.adam.index.utils.ResultHandler
 import ch.unibas.dmi.dbis.adam.index.{BitStringIndexTuple, Index}
 import ch.unibas.dmi.dbis.adam.main.SparkStartup
 import ch.unibas.dmi.dbis.adam.query.Result
@@ -42,7 +42,7 @@ class LSHIndex(val indexname: IndexName, val entityname: EntityName, protected v
     val maxScore : Float = originalQuery.intersectionCount(originalQuery) * numOfQueries
 
     val results = SparkStartup.sc.runJob(rdd, (context : TaskContext, tuplesIt : Iterator[BitStringIndexTuple]) => {
-      val localRh = new LSHResultHandler(k)
+      val localRh = new ResultHandler[Int](k)
 
       while (tuplesIt.hasNext) {
         val tuple = tuplesIt.next()
@@ -63,7 +63,7 @@ class LSHIndex(val indexname: IndexName, val entityname: EntityName, protected v
 
     log.debug("LSH index sub-results sent to global result handler")
 
-    val globalResultHandler = new LSHResultHandler(k)
+    val globalResultHandler = new ResultHandler[Int](k)
     results.foreach(result => globalResultHandler.offer(result))
     val ids = globalResultHandler.results
 

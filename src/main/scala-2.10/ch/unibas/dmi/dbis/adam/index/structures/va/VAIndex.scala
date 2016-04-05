@@ -46,17 +46,17 @@ class VAIndex(val indexname : IndexName, val entityname : EntityName, protected 
       tuplesIt.foreach(tuple => localRh.offer(tuple))
 
       localRh.results.toSeq
-    }).flatten.sortBy(_.lbound)
+    }).flatten.sortBy(_.score)
 
     log.debug("VA-File index sub-results sent to global result handler")
 
-    val globalResultHandler = new VAResultHandler(k)
+    val globalResultHandler: VAResultHandler = new VAResultHandler(k)
     results.foreach(result => globalResultHandler.offer(result))
     val ids = globalResultHandler.results
 
     log.debug("VA-File returning " + ids.length + " tuples")
 
-    ids.map(result => Result(result.ubound, result.tid)).toSet
+    ids.map(result => Result(result.score, result.tid)).toSet
   }
 
   override def isQueryConform(nnq: NearestNeighbourQuery): Boolean = {

@@ -5,10 +5,8 @@ import ch.unibas.dmi.dbis.adam.entity.Tuple.TupleID
 import ch.unibas.dmi.dbis.adam.index.BitStringIndexTuple
 import ch.unibas.dmi.dbis.adam.index.structures.va.VAIndex._
 import ch.unibas.dmi.dbis.adam.index.structures.va.signature.SignatureGenerator
-import ch.unibas.dmi.dbis.adam.index.utils.FixedSizePriorityQueue
+import ch.unibas.dmi.dbis.adam.index.utils.{ResultHandler, ResultElement}
 import ch.unibas.dmi.dbis.adam.query.distance.Distance.Distance
-
-import scala.collection.mutable.ListBuffer
 
 /**
   * adamtwo
@@ -16,33 +14,19 @@ import scala.collection.mutable.ListBuffer
   * Ivan Giangreco
   * August 2015
   */
-private[va] class VAResultHandler(k: Int, lbounds: => Bounds = null, ubounds: => Bounds = null, signatureGenerator: SignatureGenerator = null) extends Serializable {
-  @transient private var ls = ListBuffer[ResultElement]()
-  @transient private var queue = new FixedSizePriorityQueue[Float](k)(scala.math.Ordering.Float.reverse)
-
-  def iterator: Iterator[ResultElement] = results.iterator
-
-  def results = ls.sortBy(_.ubound)
+private[va] class VAResultHandler(k: Int, lbounds: => Bounds = null, ubounds: => Bounds = null, signatureGenerator: SignatureGenerator = null) extends ResultHandler[Float](k)(scala.math.Ordering.Float.reverse) {
 
   /**
     *
     * @param indexTuple
     */
-  def offer(indexTuple: BitStringIndexTuple): Unit = offer(BoundedResultElement(indexTuple.id, indexTuple.value))
+  def offer(indexTuple: BitStringIndexTuple): Unit = offer(new BoundedResultElement(indexTuple.id, indexTuple.value))
 
 
-  /**
-    *
-    * @param res
-    */
-  def offer(res: ResultElement): Unit = {
-    if (queue.offer(res.lbound, res.ubound)) {
-      ls.+=(res)
-    }
-  }
+  class BoundedResultElement(override val tid: TupleID, @transient bits: BitString[_]) extends ResultElement(0.toFloat, tid) {
+    override def compareScore = lbound
+    override def insertScore = ubound
 
-
-  private case class BoundedResultElement(val tid: TupleID, @transient bits: BitString[_]) extends ResultElement {
     val lbound: Distance = computeBounds(lbounds, bits)
     lazy val ubound: Distance = computeBounds(ubounds, bits)
 
@@ -66,11 +50,3 @@ private[va] class VAResultHandler(k: Int, lbounds: => Bounds = null, ubounds: =>
   }
 
 }
-
-trait ResultElement {
-  val tid: TupleID
-  val lbound: Distance
-  val ubound: Distance
-}
-
-
