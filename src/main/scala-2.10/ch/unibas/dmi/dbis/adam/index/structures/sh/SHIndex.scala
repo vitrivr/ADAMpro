@@ -41,9 +41,10 @@ class SHIndex(val indexname: IndexName, val entityname: EntityName, protected va
     val rdd = data.map(r => r : BitStringIndexTuple)
 
     val maxScore : Float = originalQuery.intersectionCount(originalQuery) * numOfQueries
-
+    
     val results = SparkStartup.sc.runJob(rdd, (context : TaskContext, tuplesIt : Iterator[BitStringIndexTuple]) => {
       val localRh = new LSHResultHandler(k)
+
       while (tuplesIt.hasNext) {
         val tuple = tuplesIt.next()
 
@@ -59,7 +60,7 @@ class SHIndex(val indexname: IndexName, val entityname: EntityName, protected va
       }
 
       localRh.results.toSeq
-    }).flatten
+    }).flatten.sortBy(- _.score)
 
     log.debug("SH index sub-results sent to global result handler")
 

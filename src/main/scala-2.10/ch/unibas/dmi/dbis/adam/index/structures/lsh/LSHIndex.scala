@@ -42,6 +42,7 @@ class LSHIndex(val indexname: IndexName, val entityname: EntityName, protected v
 
     val results = SparkStartup.sc.runJob(rdd, (context : TaskContext, tuplesIt : Iterator[BitStringIndexTuple]) => {
       val localRh = new LSHResultHandler(k)
+
       while (tuplesIt.hasNext) {
         val tuple = tuplesIt.next()
 
@@ -57,7 +58,7 @@ class LSHIndex(val indexname: IndexName, val entityname: EntityName, protected v
       }
 
       localRh.results.toSeq
-    }).flatten
+    }).flatten.sortBy(- _.score)
 
     log.debug("LSH index sub-results sent to global result handler")
 

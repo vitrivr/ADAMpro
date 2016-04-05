@@ -47,7 +47,7 @@ class VAIndex(val indexname : IndexName, val entityname : EntityName, protected 
       tuplesIt.foreach(tuple => localRh.offer(tuple))
 
       localRh.results.toSeq
-    }).flatten
+    }).flatten.sortBy(_.lbound)
 
     log.debug("VA-File index sub-results sent to global result handler")
 
