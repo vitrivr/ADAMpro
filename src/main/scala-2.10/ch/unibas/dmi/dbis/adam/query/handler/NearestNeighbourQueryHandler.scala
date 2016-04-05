@@ -31,6 +31,8 @@ import scala.concurrent.duration.Duration
 private[query] object NearestNeighbourQueryHandler {
   val log = Logger.getLogger(getClass.getName)
 
+  //TODO: possibly check in here for dimensionality of query and of data (should be equal)
+
   /**
     * Performs a sequential query, i.e., without using any index structure.
     *
