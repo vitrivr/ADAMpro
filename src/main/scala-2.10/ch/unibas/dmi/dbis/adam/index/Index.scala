@@ -17,6 +17,7 @@ import ch.unibas.dmi.dbis.adam.index.structures.sh.SHIndex
 import ch.unibas.dmi.dbis.adam.index.structures.va.VAIndex
 import ch.unibas.dmi.dbis.adam.main.SparkStartup
 import ch.unibas.dmi.dbis.adam.query.Result
+import ch.unibas.dmi.dbis.adam.query.distance.DistanceFunction
 import ch.unibas.dmi.dbis.adam.query.query.NearestNeighbourQuery
 import ch.unibas.dmi.dbis.adam.storage.engine.CatalogOperator
 import com.google.common.cache.{CacheBuilder, CacheLoader}
@@ -77,42 +78,44 @@ trait Index {
     * @param nnq
     * @return true if index can be used for given query, false if not
     */
-  def isQueryConform(nnq : NearestNeighbourQuery) : Boolean
+  def isQueryConform(nnq: NearestNeighbourQuery): Boolean
 
   /**
     * Scans the index.
     *
-    * @param q query vector
-    * @param options options to be passed to the index reader
-    * @param k number of elements to retrieve (of the k nearest neighbor search), possibly more than k elements are returned
-    * @param filter optional pre-filter for Boolean query
-    * @param queryID optional query id
+    * @param q        query vector
+    * @param distance distance funciton
+    * @param options  options to be passed to the index reader
+    * @param k        number of elements to retrieve (of the k nearest neighbor search), possibly more than k elements are returned
+    * @param filter   optional pre-filter for Boolean query
+    * @param queryID  optional query id
     * @return a set of candidate tuple ids, possibly together with a tentative score (the number of tuples will be greater than k)
     */
-  def scan(q: FeatureVector, options: Map[String, Any], k: Int, filter: Option[Set[TupleID]], queryID: Option[String] = None): Set[Result] = {
+  def scan(q: FeatureVector, distance: DistanceFunction, options: Map[String, Any], k: Int, filter: Option[Set[TupleID]], queryID: Option[String] = None): Set[Result] = {
     log.debug("started scanning index")
     SparkStartup.sc.setLocalProperty("spark.scheduler.pool", "index")
     SparkStartup.sc.setJobGroup(queryID.getOrElse(""), indextype.name, true)
 
     val data = if (filter.isDefined) {
-      df.filter(df(FieldNames.idColumnName) isin (filter.get.toSeq : _*))
+      df.filter(df(FieldNames.idColumnName) isin (filter.get.toSeq: _*))
     } else {
       df
     }
 
-    scan(data, q, options, k)
+    scan(data, q, distance, options, k)
   }
 
   /**
     * Scans the index.
     *
-    * @param data rdd to scan
-    * @param q query vector
-    * @param options options to be passed to the index reader
-    * @param k number of elements to retrieve (of the k nearest neighbor search), possibly more than k elements are returned
+    * @param data     rdd to scan
+    * @param q        query vector
+    * @param distance distance funciton
+    * @param options  options to be passed to the index reader
+    * @param k        number of elements to retrieve (of the k nearest neighbor search), possibly more than k elements are returned
     * @return a set of candidate tuple ids, possibly together with a tentative score (the number of tuples will be greater than k)
     */
-  protected def scan(data: DataFrame, q: FeatureVector, options: Map[String, Any], k: Int): Set[Result]
+  protected def scan(data: DataFrame, q: FeatureVector, distance: DistanceFunction, options: Map[String, Any], k: Int): Set[Result]
 }
 
 

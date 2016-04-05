@@ -11,7 +11,7 @@ import ch.unibas.dmi.dbis.adam.index.{BitStringIndexTuple, Index}
 import ch.unibas.dmi.dbis.adam.main.SparkStartup
 import ch.unibas.dmi.dbis.adam.query.Result
 import ch.unibas.dmi.dbis.adam.query.distance.Distance._
-import ch.unibas.dmi.dbis.adam.query.distance.MinkowskiDistance
+import ch.unibas.dmi.dbis.adam.query.distance.{DistanceFunction, MinkowskiDistance}
 import ch.unibas.dmi.dbis.adam.query.query.NearestNeighbourQuery
 import org.apache.spark.TaskContext
 import org.apache.spark.sql.DataFrame
@@ -33,11 +33,10 @@ class VAIndex(val indexname : IndexName, val entityname : EntityName, protected 
   override val lossy : Boolean = false
   override val confidence = 1.toFloat
 
-  override def scan(data : DataFrame, q : FeatureVector, options : Map[String, Any], k : Int): Set[Result] = {
+  override def scan(data : DataFrame, q : FeatureVector, distance : DistanceFunction, options : Map[String, Any], k : Int): Set[Result] = {
     log.debug("scanning VA-File index " + indexname)
 
-    val distance = metadata.distance
-    val (lbounds, ubounds) = computeBounds(q, metadata.marks, distance)
+    val (lbounds, ubounds) = computeBounds(q, metadata.marks, distance.asInstanceOf[MinkowskiDistance])
 
     val rdd = data.map(r => r : BitStringIndexTuple)
 

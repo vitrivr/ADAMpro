@@ -7,6 +7,7 @@ import ch.unibas.dmi.dbis.adam.index._
 import ch.unibas.dmi.dbis.adam.index.structures.IndexTypes
 import ch.unibas.dmi.dbis.adam.main.SparkStartup
 import ch.unibas.dmi.dbis.adam.query.Result
+import ch.unibas.dmi.dbis.adam.query.distance.DistanceFunction
 import ch.unibas.dmi.dbis.adam.query.query.NearestNeighbourQuery
 import org.apache.spark.TaskContext
 import org.apache.spark.sql.DataFrame
@@ -27,7 +28,7 @@ class ECPIndex(val indexname: IndexName, val entityname: EntityName, protected v
   override val lossy: Boolean = true
   override val confidence = 0.toFloat
 
-  override def scan(data : DataFrame, q : FeatureVector, options : Map[String, Any], k : Int): Set[Result] = {
+  override def scan(data : DataFrame, q : FeatureVector, distance : DistanceFunction, options : Map[String, Any], k : Int): Set[Result] = {
     log.debug("scanning eCP index " + indexname)
 
     val centroids = metadata.leaders.map(l => {
