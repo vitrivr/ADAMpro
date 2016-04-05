@@ -15,6 +15,8 @@ object IndexTypes {
 
   case object LSHINDEX extends IndexType("lsh", grpc.IndexType.lsh)
 
+  case object PQINDEX extends IndexType("pq", null)
+
   case object SHINDEX extends IndexType("sh", grpc.IndexType.sh)
 
   case object VAFINDEX extends IndexType("vaf", grpc.IndexType.vaf)
@@ -24,7 +26,7 @@ object IndexTypes {
   /**
     *
     */
-  val values = Seq(ECPINDEX, LSHINDEX, SHINDEX, VAFINDEX, VAVINDEX)
+  val values = Seq(ECPINDEX, LSHINDEX, PQINDEX, SHINDEX, VAFINDEX, VAVINDEX)
 
   /**
     *

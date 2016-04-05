@@ -13,6 +13,7 @@ import ch.unibas.dmi.dbis.adam.index.Index._
 import ch.unibas.dmi.dbis.adam.index.structures.IndexTypes
 import ch.unibas.dmi.dbis.adam.index.structures.ecp.ECPIndex
 import ch.unibas.dmi.dbis.adam.index.structures.lsh.LSHIndex
+import ch.unibas.dmi.dbis.adam.index.structures.pq.PQIndex
 import ch.unibas.dmi.dbis.adam.index.structures.sh.SHIndex
 import ch.unibas.dmi.dbis.adam.index.structures.va.VAIndex
 import ch.unibas.dmi.dbis.adam.main.SparkStartup
@@ -239,6 +240,7 @@ object Index {
     val index = indextypename match {
       case IndexTypes.ECPINDEX => ECPIndex(indexname, entityname, df, meta)
       case IndexTypes.LSHINDEX => LSHIndex(indexname, entityname, df, meta)
+      case IndexTypes.PQINDEX => PQIndex(indexname, entityname, df, meta)
       case IndexTypes.SHINDEX => SHIndex(indexname, entityname, df, meta)
       case IndexTypes.VAFINDEX => VAIndex(indexname, entityname, df, meta)
       case IndexTypes.VAVINDEX => VAIndex(indexname, entityname, df, meta)

@@ -8,6 +8,7 @@ import ch.unibas.dmi.dbis.adam.index.Index.IndexTypeName
 import ch.unibas.dmi.dbis.adam.index.structures.IndexTypes
 import ch.unibas.dmi.dbis.adam.index.structures.ecp.ECPIndexer
 import ch.unibas.dmi.dbis.adam.index.structures.lsh.LSHIndexer
+import ch.unibas.dmi.dbis.adam.index.structures.pq.PQIndexer
 import ch.unibas.dmi.dbis.adam.index.structures.sh.{SHIndexer, SHIndexer$}
 import ch.unibas.dmi.dbis.adam.index.structures.va.{VAVIndexer, VAFIndexer, VAVIndexer$, VAFIndexer$}
 import ch.unibas.dmi.dbis.adam.index.{Index, IndexGenerator, IndexingTaskTuple}
@@ -59,6 +60,7 @@ object IndexOp {
     val generator: IndexGenerator = indextypename match {
       case IndexTypes.ECPINDEX => ECPIndexer(distance)
       case IndexTypes.LSHINDEX => LSHIndexer(distance, properties)
+      case IndexTypes.PQINDEX => PQIndexer(properties)
       case IndexTypes.SHINDEX => SHIndexer(entity.get.getFeaturedata.first().getAs[FeatureVectorWrapper](1).vector.length)
       case IndexTypes.VAFINDEX => VAFIndexer(distance.asInstanceOf[MinkowskiDistance], properties)
       case IndexTypes.VAVINDEX => VAVIndexer(entity.get.getFeaturedata.first().getAs[FeatureVectorWrapper](1).vector.length, distance.asInstanceOf[MinkowskiDistance], properties)

@@ -109,6 +109,34 @@ class QueryTestSuite extends AdamTestBase with ScalaFutures {
       DropEntityOp(es.entity.entityname)
     }
 
+    /**
+      *
+      */
+    scenario("perform a pq index query") {
+      Given("an entity and an index")
+      val es = getGroundTruthEvaluationSet()
+      val index = IndexOp(es.entity.entityname, IndexTypes.PQINDEX, EuclideanDistance)
+      assert(index.isSuccess)
+
+      When("performing a kNN query")
+      val nnq = NearestNeighbourQuery(es.feature.vector, es.distance, es.k)
+      val results = QueryOp.index(index.get.indexname, nnq, None, true)
+        .map(r => (r.getAs[Float](FieldNames.distanceColumnName), r.getAs[Long]("tid"))).collect() //get here TID of metadata
+        .sortBy(_._1).toSeq
+
+      Then("we should have a match at least in the first element")
+      Seq(results.zip(es.nnResults).head).map {
+        case (res, gt) =>
+          assert(res._2 == gt._2)
+          assert(res._1 - gt._1 < EPSILON)
+      }
+
+      log.info("score: " + getScore(es.nnResults.map(_._2), results.map(_._2)))
+
+      //clean up
+      DropEntityOp(es.entity.entityname)
+    }
+
 
     /**
       *

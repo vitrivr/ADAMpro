@@ -122,6 +122,30 @@ class IndexTestSuite extends AdamTestBase {
     /**
       *
       */
+    scenario("create PQ index") {
+      Given("an entity without metadata")
+      val entityname = createSimpleEntity(ntuples, ndims)
+      val entity = Entity.load(entityname)
+      assert(entity.isSuccess)
+
+      When("an SH index is created")
+      val index = IndexOp(entity.get.entityname, IndexTypes.PQINDEX, EuclideanDistance)
+      assert(index.isSuccess)
+
+      Then("the index has been created")
+      assert(Index.exists(index.get.indexname))
+      And("and the confidence is set properly")
+      assert(index.get.confidence <= 1)
+      And("all elements are indexed")
+      assert(index.get.count == entity.get.count)
+
+      //clean up
+      DropEntityOp(entityname)
+    }
+
+    /**
+      *
+      */
     scenario("create SH index") {
       Given("an entity without metadata")
       val entityname = createSimpleEntity(ntuples, ndims)
