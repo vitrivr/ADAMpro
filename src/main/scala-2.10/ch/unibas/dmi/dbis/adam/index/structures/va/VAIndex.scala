@@ -5,7 +5,6 @@ import ch.unibas.dmi.dbis.adam.entity.Entity._
 import ch.unibas.dmi.dbis.adam.index.Index._
 import ch.unibas.dmi.dbis.adam.index.structures.IndexTypes
 import ch.unibas.dmi.dbis.adam.index.structures.va.VAIndex.{Bounds, Marks}
-import ch.unibas.dmi.dbis.adam.index.structures.va.results.VAResultHandler
 import ch.unibas.dmi.dbis.adam.index.structures.va.signature.{FixedSignatureGenerator, VariableSignatureGenerator}
 import ch.unibas.dmi.dbis.adam.index.{BitStringIndexTuple, Index}
 import ch.unibas.dmi.dbis.adam.main.SparkStartup
@@ -46,7 +45,7 @@ class VAIndex(val indexname : IndexName, val entityname : EntityName, protected 
       tuplesIt.foreach(tuple => localRh.offer(tuple))
 
       localRh.results.toSeq
-    }).flatten.sortBy(_.score)
+    }).flatten.sortBy(_.compareScore)
 
     log.debug("VA-File index sub-results sent to global result handler")
 

@@ -1,11 +1,11 @@
-package ch.unibas.dmi.dbis.adam.index.structures.va.results
+package ch.unibas.dmi.dbis.adam.index.structures.va
 
 import ch.unibas.dmi.dbis.adam.datatypes.bitString.BitString
 import ch.unibas.dmi.dbis.adam.entity.Tuple.TupleID
 import ch.unibas.dmi.dbis.adam.index.BitStringIndexTuple
 import ch.unibas.dmi.dbis.adam.index.structures.va.VAIndex._
 import ch.unibas.dmi.dbis.adam.index.structures.va.signature.SignatureGenerator
-import ch.unibas.dmi.dbis.adam.index.utils.{ResultHandler, ResultElement}
+import ch.unibas.dmi.dbis.adam.index.utils.{ResultElement, ResultHandler}
 import ch.unibas.dmi.dbis.adam.query.distance.Distance.Distance
 
 /**
