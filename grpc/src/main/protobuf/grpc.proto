@@ -77,11 +77,12 @@ message InsertMessage {
 
 
 enum IndexType {
-    lsh = 0;
-    sh = 1;
-    ecp = 2;
-    vaf = 3;
-    vav = 4;
+    ecp = 0;
+    lsh = 1;
+    pq = 2;
+    sh = 3;
+    vaf = 4;
+    vav = 5;
 }
 
 message IndexMessage {

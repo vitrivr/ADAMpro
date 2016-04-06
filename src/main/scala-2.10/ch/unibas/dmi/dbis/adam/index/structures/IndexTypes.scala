@@ -17,7 +17,7 @@ object IndexTypes {
 
   case object LSHINDEX extends IndexType("lsh", grpc.IndexType.lsh)
 
-  case object PQINDEX extends IndexType("pq", null)
+  case object PQINDEX extends IndexType("pq", grpc.IndexType.pq)
 
   case object SHINDEX extends IndexType("sh", grpc.IndexType.sh)
 
