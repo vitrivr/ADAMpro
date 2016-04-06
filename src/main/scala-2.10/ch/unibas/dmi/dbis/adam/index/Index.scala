@@ -8,7 +8,7 @@ import ch.unibas.dmi.dbis.adam.datatypes.feature.FeatureVectorWrapper
 import ch.unibas.dmi.dbis.adam.entity.Entity
 import ch.unibas.dmi.dbis.adam.entity.Entity._
 import ch.unibas.dmi.dbis.adam.entity.Tuple._
-import ch.unibas.dmi.dbis.adam.exception.IndexNotExistingException
+import ch.unibas.dmi.dbis.adam.exception.{GeneralAdamException, IndexNotExistingException}
 import ch.unibas.dmi.dbis.adam.index.Index._
 import ch.unibas.dmi.dbis.adam.index.structures.IndexTypes
 import ch.unibas.dmi.dbis.adam.index.structures.ecp.ECPIndex
@@ -126,6 +126,8 @@ object Index {
 
   private val storage = SparkStartup.indexStorage
 
+  private val MINIMUM_NUMBER_OF_TUPLE = 10
+
 
   /**
     * Creates an index that is unique and which folows the naming rules of indexes.
@@ -157,6 +159,11 @@ object Index {
     * @return index
     */
   def createIndex(entity: Entity, indexgenerator: IndexGenerator): Try[Index] = {
+    if(entity.count < MINIMUM_NUMBER_OF_TUPLE){
+      log.error("not enough tuples for creating index, needs at least " + MINIMUM_NUMBER_OF_TUPLE)
+      return Failure(new GeneralAdamException("not enough tuples for index"))
+    }
+
     val indexname = createIndexName(entity.entityname, indexgenerator.indextypename)
     val rdd: RDD[IndexingTaskTuple] = entity.getFeaturedata.map { x => IndexingTaskTuple(x.getLong(0), x.getAs[FeatureVectorWrapper](1).vector) }
     val index = indexgenerator.index(indexname, entity.entityname, rdd)
