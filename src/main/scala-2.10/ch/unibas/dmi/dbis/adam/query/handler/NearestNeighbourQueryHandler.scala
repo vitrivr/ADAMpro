@@ -5,6 +5,7 @@ import java.util.concurrent.TimeUnit
 import ch.unibas.dmi.dbis.adam.entity.Entity
 import ch.unibas.dmi.dbis.adam.entity.Entity.EntityName
 import ch.unibas.dmi.dbis.adam.entity.Tuple.TupleID
+import ch.unibas.dmi.dbis.adam.exception.QueryNotConformException
 import ch.unibas.dmi.dbis.adam.index.Index
 import ch.unibas.dmi.dbis.adam.index.Index.IndexName
 import ch.unibas.dmi.dbis.adam.main.SparkStartup
@@ -31,7 +32,10 @@ import scala.concurrent.duration.Duration
 private[query] object NearestNeighbourQueryHandler {
   val log = Logger.getLogger(getClass.getName)
 
-  //TODO: possibly check in here for dimensionality of query and of data (should be equal)
+  private def isQueryConform(entityname : EntityName, query : NearestNeighbourQuery): Boolean ={
+    val entity = Entity.load(entityname).get
+    entity.isQueryConform(query)
+  }
 
   /**
     * Performs a sequential query, i.e., without using any index structure.
@@ -43,6 +47,10 @@ private[query] object NearestNeighbourQueryHandler {
     */
   def sequential(entityname: EntityName, query: NearestNeighbourQuery, filter: Option[Set[TupleID]]): DataFrame = {
     log.debug("performing sequential nearest neighbor scan")
+    if(!isQueryConform(entityname, query)){
+      throw QueryNotConformException()
+    }
+
     FeatureScanner(Entity.load(entityname).get, query, filter)
   }
 
@@ -78,6 +86,9 @@ private[query] object NearestNeighbourQueryHandler {
     */
   def indexQueryWithResults(indexname: IndexName, query: NearestNeighbourQuery, filter: Option[Set[TupleID]]): DataFrame = {
     val entityname = CatalogOperator.getEntitynameFromIndex(indexname)
+    if(!isQueryConform(entityname, query)){
+      throw QueryNotConformException()
+    }
 
     val future = Future {
       Entity.load(entityname).get
@@ -102,6 +113,11 @@ private[query] object NearestNeighbourQueryHandler {
     * @return
     */
   def indexOnlyQuery(indexname: IndexName, query: NearestNeighbourQuery, filter: Option[Set[TupleID]]): DataFrame = {
+    val entityname = CatalogOperator.getEntitynameFromIndex(indexname)
+    if(!isQueryConform(entityname, query)){
+      throw QueryNotConformException()
+    }
+
     log.debug("starting index scanner")
     val result = IndexScanner(Index.load(indexname).get, query, filter).toSeq
     val rdd = SparkStartup.sc.parallelize(result).map(res => Row(0.toFloat, res))
@@ -120,6 +136,9 @@ private[query] object NearestNeighbourQueryHandler {
     */
   def progressiveQuery[U](entityname: EntityName, query: NearestNeighbourQuery, filter: Option[Set[TupleID]], onComplete: (ProgressiveQueryStatus.Value, DataFrame, Float, String, Map[String, String]) => U): ProgressiveQueryStatusTracker = {
     log.debug("starting progressive query scanner")
+    if(!isQueryConform(entityname, query)){
+      throw QueryNotConformException()
+    }
 
     val indexnames = Index.list(entityname).map(_._1)
 
@@ -150,6 +169,9 @@ private[query] object NearestNeighbourQueryHandler {
     */
   def timedProgressiveQuery(entityname: EntityName, query: NearestNeighbourQuery, filter: Option[Set[TupleID]], timelimit: Duration): ProgressiveQueryIntermediateResults = {
     log.debug("starting timed progressive query scanner")
+    if(!isQueryConform(entityname, query)){
+      throw QueryNotConformException()
+    }
 
     val indexnames = Index.list(entityname).map(_._1)
 

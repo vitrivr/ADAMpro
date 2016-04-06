@@ -41,6 +41,8 @@ object CatalogOperator {
   private val entities = TableQuery[EntitiesCatalog]
   private val indexes = TableQuery[IndexesCatalog]
 
+  private val DEFAULT_DIMENSIONALITY = -1
+
 
   /**
     * Creates entity in catalog.
@@ -49,13 +51,13 @@ object CatalogOperator {
     * @param withMetadata
     * @return
     */
-  def createEntity(entityname: EntityName, withMetadata : Boolean = false): Boolean = {
+  def createEntity(entityname: EntityName, withMetadata: Boolean = false): Boolean = {
     if (existsEntity(entityname)) {
       throw new EntityExistingException()
     }
 
     val setup = DBIO.seq(
-      entities.+=(entityname, withMetadata)
+      entities.+=(entityname, DEFAULT_DIMENSIONALITY, withMetadata)
     )
 
     Await.result(db.run(setup), MAX_WAITING_TIME)
@@ -101,12 +103,56 @@ object CatalogOperator {
   }
 
   /**
+    *
+    * @param entityname
+    * @return
+    */
+  def getDimensionality(entityname: EntityName): Option[Int] = {
+    val query = entities.filter(_.entityname === entityname).take(1).result
+    val entity = Await.result(db.run(query), MAX_WAITING_TIME).head
+
+    if(entity._2 != DEFAULT_DIMENSIONALITY){
+      Some(entity._2)
+    } else {
+      None
+    }
+  }
+
+  /**
+    *
+    * @param entityname
+    * @param dimensionality
+    * @return
+    */
+  def updateDimensionality(entityname: EntityName, dimensionality: Int): Boolean = {
+    val query = entities.filter(_.entityname === entityname).take(1).result
+    val entity = Await.result(db.run(query), MAX_WAITING_TIME).head
+
+    if (entity._2 != DEFAULT_DIMENSIONALITY && entity._2 != dimensionality) {
+      log.error("dimensionality has been set already and cannot be changed")
+      return false
+    } else if (entity._2 == dimensionality) {
+      return true
+    } else {
+
+      val setup = DBIO.seq(
+        entities.filter(_.entityname === entityname).update(entity._1, dimensionality, entity._3)
+      )
+
+      Await.result(db.run(setup), MAX_WAITING_TIME)
+
+      log.debug("updated entity in catalog")
+      true
+    }
+  }
+
+  /**
     * Checks whether entity has metadata.
     *
     * @param entityname
     * @return
     */
-  def hasEntityMetadata(entityname : EntityName) : Boolean = {
+  def hasEntityMetadata(entityname: EntityName): Boolean = {
     val query = entities.filter(_.entityname === entityname).map(_.hasMeta).take(1).result
     Await.result(db.run(query), MAX_WAITING_TIME).head
   }
@@ -196,7 +242,7 @@ object CatalogOperator {
     * @param entityname
     * @return names of indexes dropped
     */
-  def dropAllIndexes(entityname: EntityName) : Seq[IndexName] = {
+  def dropAllIndexes(entityname: EntityName): Seq[IndexName] = {
     if (!existsEntity(entityname)) {
       throw new EntityNotExistingException()
     }
@@ -209,21 +255,21 @@ object CatalogOperator {
     existingIndexes
   }
 
- /**
+  /**
     * Lists all indexes in catalog.
     *
-    * @param entityname filter by entityname, set to null for not using filter
+    * @param entityname    filter by entityname, set to null for not using filter
     * @param indextypename filter by indextypename, set to null for not using filter
     * @return
     */
   def listIndexes(entityname: EntityName = null, indextypename: IndexTypeName = null): Seq[(IndexName, IndexTypeName)] = {
-    var catalog : Query[IndexesCatalog, (String, String, String, String), Seq] = indexes
+    var catalog: Query[IndexesCatalog, (String, String, String, String), Seq] = indexes
 
-    if(entityname != null){
-     catalog = catalog.filter(_.entityname === entityname)
+    if (entityname != null) {
+      catalog = catalog.filter(_.entityname === entityname)
     }
 
-    if(indextypename != null){
+    if (indextypename != null) {
       catalog = catalog.filter(_.indextypename === indextypename.name)
     }
 

@@ -1,11 +1,13 @@
 package ch.unibas.dmi.dbis.adam.entity
 
 import ch.unibas.dmi.dbis.adam.config.FieldNames
+import ch.unibas.dmi.dbis.adam.datatypes.feature.FeatureVectorWrapper
 import ch.unibas.dmi.dbis.adam.entity.Entity._
 import ch.unibas.dmi.dbis.adam.entity.FieldTypes.{FieldType, LONGTYPE}
 import ch.unibas.dmi.dbis.adam.exception.{EntityExistingException, EntityNotExistingException, EntityNotProperlyDefinedException}
 import ch.unibas.dmi.dbis.adam.index.Index
 import ch.unibas.dmi.dbis.adam.main.SparkStartup
+import ch.unibas.dmi.dbis.adam.query.query.NearestNeighbourQuery
 import ch.unibas.dmi.dbis.adam.storage.components.{FeatureStorage, MetadataStorage}
 import ch.unibas.dmi.dbis.adam.storage.engine.CatalogOperator
 import org.apache.log4j.Logger
@@ -55,6 +57,15 @@ case class Entity(entityname: EntityName, featureStorage: FeatureStorage, metada
   def insert(insertion: DataFrame): Try[Void] = {
     log.debug("inserting data into entity")
 
+    val dataDimensionality = insertion.first.getAs[FeatureVectorWrapper](FieldNames.featureColumnName).vector.size
+
+    val entityDimensionality = CatalogOperator.getDimensionality(entityname)
+    if(entityDimensionality.isDefined && dataDimensionality != entityDimensionality){
+      log.warn("new data has not same dimensionality as existing data")
+    } else {
+      CatalogOperator.updateDimensionality(entityname, dataDimensionality)
+    }
+
     val rdd = insertion.rdd.zipWithUniqueId.map { case (r: Row, adamtwoid: Long) => Row.fromSeq(adamtwoid +: r.toSeq) }
     val insertionWithPK = SparkStartup.sqlContext
       .createDataFrame(
@@ -66,6 +77,10 @@ case class Entity(entityname: EntityName, featureStorage: FeatureStorage, metada
     if (metadataStorage.isDefined) {
       log.debug("metadata storage is defined: inserting data also into metadata storage")
       metadataStorage.get.write(entityname, insertionWithPK.drop(FieldNames.internFeatureColumnName), SaveMode.Append)
+    }
+
+    if(!CatalogOperator.listIndexes(entityname).isEmpty){
+      log.warn("new data inserted, but indexes are not updated; please re-create index")
     }
 
     Success(null)
@@ -117,6 +132,21 @@ case class Entity(entityname: EntityName, featureStorage: FeatureStorage, metada
     * @return
     */
   def getMetadata: Option[DataFrame] = metaData
+
+  /**
+    *
+    * @param query
+    * @return
+    */
+  def isQueryConform(query : NearestNeighbourQuery): Boolean ={
+    val entityDimensionality = CatalogOperator.getDimensionality(entityname)
+
+    if(entityDimensionality.isDefined && query.q.size != entityDimensionality.get){
+      return false
+    } else {
+      return true
+    }
+  }
 }
 
 /**
