@@ -44,6 +44,7 @@ private[rpc] object SearchRPCMethods {
       case ExpressionQueryMessage.OperationOrder.LEFTFIRST => ExpressionEvaluationOrder.LeftFirst
       case ExpressionQueryMessage.OperationOrder.RIGHTFIRST => ExpressionEvaluationOrder.RightFirst
       case ExpressionQueryMessage.OperationOrder.PARALLEL => ExpressionEvaluationOrder.Parallel
+      case _ => null
     }
 
     val operation = request.operation match {
