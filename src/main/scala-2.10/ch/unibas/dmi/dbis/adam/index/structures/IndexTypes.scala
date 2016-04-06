@@ -9,6 +9,8 @@ import ch.unibas.dmi.dbis.adam.http._
   * October 2015
   */
 object IndexTypes {
+  //TODO: clean other parts of code and integrate with this code as to have one single location where indexer, index, indextype, etc. is defined
+
   sealed abstract class IndexType(val name: String, val indextype: grpc.IndexType) extends Serializable
 
   case object ECPINDEX extends IndexType("ecp", grpc.IndexType.ecp)
