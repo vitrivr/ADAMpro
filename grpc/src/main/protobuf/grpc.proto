@@ -183,6 +183,13 @@ message ExpressionQueryMessage {
       INTERSECT = 1;
       EXCEPT = 2;
     }
+
+   enum OperationOrder {
+      LEFTFIRST = 0;
+      RIGHTFIRST = 1;
+      PARALLEL = 2;
+    }
+
    //Any is not yet supported
    //import "google/protobuf/any.proto";
    //google.protobuf.Any left = 1;
@@ -190,14 +197,17 @@ message ExpressionQueryMessage {
    //google.protobuf.Any right = 3;
 
    oneof left {
-       SimpleSequentialQueryMessage lssqm = 2;
-       SimpleIndexQueryMessage lsiqm = 3;
-       ExpressionQueryMessage leqm = 4;
+       SimpleSequentialQueryMessage lssqm = 3;
+       SimpleIndexQueryMessage lsiqm = 4;
+       ExpressionQueryMessage leqm = 5;
      }
+
    Operation operation = 1;
+   OperationOrder order = 2;
+
    oneof right {
-       SimpleSequentialQueryMessage rssqm = 5;
-       SimpleIndexQueryMessage rsiqm = 6;
-       ExpressionQueryMessage reqm = 7;
+       SimpleSequentialQueryMessage rssqm = 6;
+       SimpleIndexQueryMessage rsiqm = 7;
+       ExpressionQueryMessage reqm = 8;
      }
 }

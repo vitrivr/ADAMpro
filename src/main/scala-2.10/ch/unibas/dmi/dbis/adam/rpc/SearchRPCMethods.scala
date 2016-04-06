@@ -7,7 +7,7 @@ import ch.unibas.dmi.dbis.adam.datatypes.feature.Feature._
 import ch.unibas.dmi.dbis.adam.http.grpc._
 import ch.unibas.dmi.dbis.adam.index.structures.IndexTypes
 import ch.unibas.dmi.dbis.adam.query.distance.NormBasedDistanceFunction
-import ch.unibas.dmi.dbis.adam.query.handler.CompoundQueryHandler.{CompoundQueryHolder, Expression}
+import ch.unibas.dmi.dbis.adam.query.handler.CompoundQueryHandler.{ExpressionEvaluationOrder, CompoundQueryHolder, Expression}
 import ch.unibas.dmi.dbis.adam.query.handler.QueryHandler._
 import ch.unibas.dmi.dbis.adam.query.handler.{CompoundQueryHandler, QueryHints}
 import ch.unibas.dmi.dbis.adam.query.progressive.ProgressiveQueryStatus
@@ -39,11 +39,21 @@ private[rpc] object SearchRPCMethods {
 
   implicit def toQueryHolder(request: CompoundQueryMessage) = new CompoundQueryHolder(request.entity, prepareNNQ(request.nnq), toExpr(request.indexFilterExpression.get), request.withMetadata)
 
-  implicit def toExpr(request: ExpressionQueryMessage) : Expression = request.operation match {
-    case ExpressionQueryMessage.Operation.UNION => CompoundQueryHandler.UnionExpression(request.left, request.right)
-    case ExpressionQueryMessage.Operation.INTERSECT => CompoundQueryHandler.IntersectExpression(request.left, request.right)
-    case ExpressionQueryMessage.Operation.EXCEPT =>  CompoundQueryHandler.ExceptExpression(request.left, request.right)
-    case _ => null //TODO: do we need a pre-filter option?
+  implicit def toExpr(request: ExpressionQueryMessage) : Expression = {
+    val order = request.order match {
+      case ExpressionQueryMessage.OperationOrder.LEFTFIRST => ExpressionEvaluationOrder.LeftFirst
+      case ExpressionQueryMessage.OperationOrder.RIGHTFIRST => ExpressionEvaluationOrder.RightFirst
+      case ExpressionQueryMessage.OperationOrder.PARALLEL => ExpressionEvaluationOrder.Parallel
+    }
+
+    val operation = request.operation match {
+      case ExpressionQueryMessage.Operation.UNION => CompoundQueryHandler.UnionExpression(request.left, request.right)
+      case ExpressionQueryMessage.Operation.INTERSECT => CompoundQueryHandler.IntersectExpression(request.left, request.right, order)
+      case ExpressionQueryMessage.Operation.EXCEPT =>  CompoundQueryHandler.ExceptExpression(request.left, request.right, order)
+      case _ => null //TODO: do we need a pre-filter option?
+    }
+
+    operation
   }
 
   implicit def toExpr(expr: ExpressionQueryMessage.Left) : Expression = expr match {
