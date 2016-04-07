@@ -10,7 +10,7 @@ service AdamDefinition {
   rpc Index(IndexMessage) returns (AckMessage) {}
   rpc DropIndex(IndexNameMessage) returns (AckMessage) {}
   rpc Count(EntityNameMessage) returns (AckMessage) {}
-  rpc RandomData(RandomDataMessage) returns (AckMessage) {}
+  rpc PrepareForDemo(GenerateRandomEntityMessage) returns (AckMessage) {}
 }
 
 service AdamSearch {
@@ -47,7 +47,7 @@ message IndexNameMessage {
   string index = 1;
 }
 
-message RandomDataMessage {
+message GenerateRandomEntityMessage {
   string entity = 1;
   int32 ntuples = 2;
   int32 ndims = 3;

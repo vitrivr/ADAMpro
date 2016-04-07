@@ -8,7 +8,7 @@ import ch.unibas.dmi.dbis.adam.http.grpc.CreateEntityMessage.FieldType
 import ch.unibas.dmi.dbis.adam.http.grpc.{AckMessage, CreateEntityMessage, _}
 import ch.unibas.dmi.dbis.adam.index.structures.IndexTypes
 import ch.unibas.dmi.dbis.adam.main.SparkStartup
-import ch.unibas.dmi.dbis.adam.query.distance.NormBasedDistanceFunction
+import ch.unibas.dmi.dbis.adam.query.distance.{EuclideanDistance, NormBasedDistanceFunction}
 import io.grpc.stub.StreamObserver
 import org.apache.log4j.Logger
 import org.apache.spark.sql.Row
@@ -173,11 +173,12 @@ class DataDefinitionRPC extends AdamDefinitionGrpc.AdamDefinition {
     }
   }
 
-  override def randomData(request: RandomDataMessage): Future[AckMessage] = {
+  override def prepareForDemo(request: GenerateRandomEntityMessage): Future[AckMessage] = {
     log.debug("rpc call for creating random data")
 
     try {
       RandomDataOp(request.entity, request.ntuples, request.ndims)
+      IndexOp.generateAll(request.entity, EuclideanDistance)
       Future.successful(AckMessage(code = AckMessage.Code.OK))
     } catch {
       case e: Exception =>

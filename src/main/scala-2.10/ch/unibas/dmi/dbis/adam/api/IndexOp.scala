@@ -35,8 +35,8 @@ object IndexOp {
     * Creates an index.
     *
     * @param entityname
-    * @param indextype string representation of index type to use for indexing
-    * @param distance distance function to use
+    * @param indextype  string representation of index type to use for indexing
+    * @param distance   distance function to use
     * @param properties further index specific properties
     */
   def apply(entityname: EntityName, indextype: String, distance: DistanceFunction, properties: Map[String, String]): Try[Index] = {
@@ -49,8 +49,8 @@ object IndexOp {
     *
     * @param entityname
     * @param indextypename index type to use for indexing
-    * @param distance distance function to use
-    * @param properties further index specific properties
+    * @param distance      distance function to use
+    * @param properties    further index specific properties
     */
   def apply(entityname: EntityName, indextypename: IndexTypeName, distance: DistanceFunction, properties: Map[String, String] = Map()): Try[Index] = {
     log.debug("perform create index operation")
@@ -67,5 +67,19 @@ object IndexOp {
     }
 
     Index.createIndex(entity.get, generator)
+  }
+
+  /**
+    * Creates indexes of all available types.
+    *
+    * @param entityname
+    * @param distance   distance function to use
+    * @param properties further index specific properties
+    */
+  def generateAll(entityname: EntityName, distance: DistanceFunction, properties: Map[String, String] = Map()): Boolean = {
+    IndexTypes.values.foreach { indextypename =>
+      apply(entityname, indextypename, distance, properties)
+    }
+    true
   }
 }
