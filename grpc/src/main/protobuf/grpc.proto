@@ -173,8 +173,13 @@ message QueryResponseListMessage {
 message CompoundQueryMessage {
   string entity = 1;
   NearestNeighbourQueryMessage nnq = 2;
-  ExpressionQueryMessage indexFilterExpression = 3;
-  bool withMetadata = 4;
+  oneof indexFilterExpression {
+     SimpleSequentialQueryMessage ssqm = 3;
+     SimpleSpecifiedIndexQueryMessage ssiqm = 4;
+     SimpleIndexQueryMessage siqm = 5;
+     ExpressionQueryMessage eqm = 6;
+  }
+  bool withMetadata = 7;
 }
 
 //experimental
