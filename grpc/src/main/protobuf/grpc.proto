@@ -157,7 +157,7 @@ message TimedQueryMessage {
 message QueryResponseInfoMessage {
   string id = 1;
   double confidence = 2;
-  double time = 3;
+  int64 time = 3;
   IndexType indextype = 4;
   QueryResponseListMessage queryResponseList = 5;
 }
