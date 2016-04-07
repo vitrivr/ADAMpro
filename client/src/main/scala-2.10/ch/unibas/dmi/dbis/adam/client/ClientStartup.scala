@@ -1,7 +1,7 @@
 package ch.unibas.dmi.dbis.adam.client
 
-import ch.unibas.dmi.dbis.adam.http.grpc.{AdamDefinitionGrpc, AdamSearchGrpc}
-import io.grpc.ManagedChannelBuilder
+import ch.unibas.dmi.dbis.adam.client.grpc.RPCClient
+import ch.unibas.dmi.dbis.adam.client.web.{AdamController, WebServer}
 
 /**
   * adamtwo
@@ -9,24 +9,14 @@ import io.grpc.ManagedChannelBuilder
   * Ivan Giangreco
   * March 2016
   */
-object ClientStartup {
-  def main(args: Array[String]) {
-    val client = ClientStartup("localhost", 5890)
-    try {
-      println(client.createEntity("test"))
-    } finally {
-      client.shutdown()
-    }
-  }
+object ClientStartupMain {
+  val httpPort = 9099
 
-  def apply(host: String, port: Int): AdamClientImpl = {
-    val channel = ManagedChannelBuilder.forAddress(host, port).usePlaintext(true).asInstanceOf[ManagedChannelBuilder[_]].build()
+  val grpcHost = "localhost"
+  val grpcPort = 5890
 
-    new AdamClientImpl(
-      channel,
-      AdamDefinitionGrpc.blockingStub(channel),
-      AdamSearchGrpc.blockingStub(channel),
-      AdamSearchGrpc.stub(channel)
-    )
+  def main(args: Array[String]): Unit = {
+    val grpc = RPCClient(grpcHost, grpcPort)
+    val web = new WebServer(httpPort, new AdamController(grpc)).main(Array[String]())
   }
 }
