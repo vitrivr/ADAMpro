@@ -123,7 +123,7 @@ class SearchRPC extends AdamSearchGrpc.AdamSearch {
     try {
       val onComplete =
         (status: ProgressiveQueryStatus.Value, results: DataFrame, confidence: Float, deliverer: String, info: Map[String, String]) => ({
-          responseObserver.onNext(QueryResponseInfoMessage(confidence, IndexTypes.withName(info.getOrElse("type", "")).get.indextype, Option(prepareResults(results))))
+          responseObserver.onNext(QueryResponseInfoMessage(confidence = confidence, indextype = IndexTypes.withName(info.getOrElse("type", "")).get.indextype, queryResponseList = Option(prepareResults(results))))
         })
 
       QueryOp.progressive(SearchRPCMethods.toQueryHolder(request, onComplete))
@@ -143,7 +143,7 @@ class SearchRPC extends AdamSearchGrpc.AdamSearch {
 
     try {
       val (results, confidence, deliverer) = QueryOp.timedProgressive(SearchRPCMethods.toQueryHolder(request))
-      Future.successful(QueryResponseInfoMessage(confidence, IndexTypes.withName(deliverer).get.indextype, Option(prepareResults(results))))
+      Future.successful(QueryResponseInfoMessage(confidence = confidence, indextype = IndexTypes.withName(deliverer).get.indextype, queryResponseList = Option(prepareResults(results))))
     } catch {
       case e: Exception => Future.failed(e)
     }
@@ -155,11 +155,12 @@ class SearchRPC extends AdamSearchGrpc.AdamSearch {
     * @param request
     * @return
     */
-  override def doCompoundQuery(request: CompoundQueryMessage): Future[QueryResponseListMessage] = {
+  override def doCompoundQuery(request: CompoundQueryMessage): Future[CompoundQueryResponseListMessage] = {
     log.debug("rpc call for chained query operation")
 
     try {
-      Future.successful(prepareResults(QueryOp.compoundQuery(SearchRPCMethods.toQueryHolder(request))))
+      //TODO: possibly add intermediary responses
+      Future.successful(CompoundQueryResponseListMessage(finalResponse = Option(prepareResults(QueryOp.compoundQuery(SearchRPCMethods.toQueryHolder(request))))))
     } catch {
       case e: Exception => Future.failed(e)
     }

@@ -24,7 +24,7 @@ import scala.concurrent.{Await, Future}
   */
 object CompoundQueryHandler {
 
-  case class CompoundQueryHolder(entityname: EntityName, nnq: NearestNeighbourQuery, expr: Expression, withMetadata: Boolean) extends Expression {
+  case class CompoundQueryHolder(entityname: EntityName, nnq: NearestNeighbourQuery, expr: Expression, withMetadata: Boolean, eid : String = "") extends Expression(eid) {
     override def eval(): DataFrame = indexQueryWithResults(entityname)(nnq, expr, withMetadata)
   }
 
@@ -59,7 +59,7 @@ object CompoundQueryHandler {
   /**
     *
     */
-  abstract class Expression {
+  abstract class Expression(var id : String) {
     /**
       *
       * @return
@@ -94,7 +94,7 @@ object CompoundQueryHandler {
     * @param l
     * @param r
     */
-  case class UnionExpression(l: Expression, r: Expression) extends Expression {
+  case class UnionExpression(l: Expression, r: Expression, eid : String = "") extends Expression(eid) {
     override def eval(): DataFrame = {
       eval(None)
     }
@@ -139,7 +139,7 @@ object CompoundQueryHandler {
     * @param l
     * @param r
     */
-  case class IntersectExpression(l: Expression, r: Expression, order: ExpressionEvaluationOrder.Order = ExpressionEvaluationOrder.Parallel) extends Expression {
+  case class IntersectExpression(l: Expression, r: Expression, order: ExpressionEvaluationOrder.Order = ExpressionEvaluationOrder.Parallel, eid : String = "") extends Expression(eid) {
     override def eval(): DataFrame = {
       eval(None)
     }
@@ -210,7 +210,7 @@ object CompoundQueryHandler {
     * @param l
     * @param r
     */
-  case class ExceptExpression(l: Expression, r: Expression, order: ExpressionEvaluationOrder.Order = ExpressionEvaluationOrder.Parallel) extends Expression {
+  case class ExceptExpression(l: Expression, r: Expression, order: ExpressionEvaluationOrder.Order = ExpressionEvaluationOrder.Parallel, eid : String = "") extends Expression(eid) {
     override def eval(): DataFrame = {
       eval(None)
     }

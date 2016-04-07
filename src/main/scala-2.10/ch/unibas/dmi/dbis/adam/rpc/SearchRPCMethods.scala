@@ -7,7 +7,7 @@ import ch.unibas.dmi.dbis.adam.datatypes.feature.Feature._
 import ch.unibas.dmi.dbis.adam.http.grpc._
 import ch.unibas.dmi.dbis.adam.index.structures.IndexTypes
 import ch.unibas.dmi.dbis.adam.query.distance.NormBasedDistanceFunction
-import ch.unibas.dmi.dbis.adam.query.handler.CompoundQueryHandler.{ExpressionEvaluationOrder, CompoundQueryHolder, Expression}
+import ch.unibas.dmi.dbis.adam.query.handler.CompoundQueryHandler.{CompoundQueryHolder, Expression, ExpressionEvaluationOrder}
 import ch.unibas.dmi.dbis.adam.query.handler.QueryHandler._
 import ch.unibas.dmi.dbis.adam.query.handler.{CompoundQueryHandler, QueryHints}
 import ch.unibas.dmi.dbis.adam.query.progressive.ProgressiveQueryStatus
@@ -38,7 +38,7 @@ private[rpc] object SearchRPCMethods {
   implicit def toQueryHolder(request: SimpleQueryMessage, onComplete: (ProgressiveQueryStatus.Value, DataFrame, VectorBase, String, Map[String, String]) => Unit) = new ProgressiveQueryHolder(request.entity, prepareNNQ(request.nnq), prepareBQ(request.bq), onComplete, request.withMetadata)
 
   implicit def toQueryHolder(request: CompoundQueryMessage) = {
-    new CompoundQueryHolder(request.entity, prepareNNQ(request.nnq), toExpr(request.indexFilterExpression.get.submessage), request.withMetadata)
+    new CompoundQueryHolder(request.entity, prepareNNQ(request.nnq), toExpr(request.indexFilterExpression), request.withMetadata)
   }
 
   implicit def toExpr(request: ExpressionQueryMessage): Expression = {
@@ -50,21 +50,26 @@ private[rpc] object SearchRPCMethods {
     }
 
     val operation = request.operation match {
-      case ExpressionQueryMessage.Operation.UNION => CompoundQueryHandler.UnionExpression(request.left.get.submessage, request.right.get.submessage)
-      case ExpressionQueryMessage.Operation.INTERSECT => CompoundQueryHandler.IntersectExpression(request.left.get.submessage, request.right.get.submessage, order)
-      case ExpressionQueryMessage.Operation.EXCEPT => CompoundQueryHandler.ExceptExpression(request.left.get.submessage, request.right.get.submessage, order)
+      case ExpressionQueryMessage.Operation.UNION => CompoundQueryHandler.UnionExpression(request.left, request.right, request.id)
+      case ExpressionQueryMessage.Operation.INTERSECT => CompoundQueryHandler.IntersectExpression(request.left, request.right, order, request.id)
+      case ExpressionQueryMessage.Operation.EXCEPT => CompoundQueryHandler.ExceptExpression(request.left, request.right, order, request.id)
       case _ => null //TODO: do we need a pre-filter option?
     }
 
     operation
   }
 
-  implicit def toExpr(expr: SubExpressionQueryMessage.Submessage): Expression = expr match {
-    case SubExpressionQueryMessage.Submessage.Eqm(x) => toExpr(x)
-    case SubExpressionQueryMessage.Submessage.Ssiqm(x) => (x: SpecifiedIndexQueryHolder)
-    case SubExpressionQueryMessage.Submessage.Siqm(x) => (x: IndexQueryHolder)
-    case SubExpressionQueryMessage.Submessage.Ssqm(x) => (x: SequentialQueryHolder)
-    case _ => null
+  implicit def toExpr(seqm: Option[SubExpressionQueryMessage]): Expression = {
+    val expr = seqm.get.submessage match {
+      case SubExpressionQueryMessage.Submessage.Eqm(x) => toExpr(x)
+      case SubExpressionQueryMessage.Submessage.Ssiqm(x) => (x: SpecifiedIndexQueryHolder)
+      case SubExpressionQueryMessage.Submessage.Siqm(x) => (x: IndexQueryHolder)
+      case SubExpressionQueryMessage.Submessage.Ssqm(x) => (x: SequentialQueryHolder)
+      case _ => null
+    }
+
+    expr.id = seqm.get.id
+    expr
   }
 
   /**

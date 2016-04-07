@@ -22,7 +22,7 @@ service AdamSearch {
   rpc DoIndexQuery(SimpleIndexQueryMessage) returns (QueryResponseListMessage) {}
   rpc DoProgressiveQuery(SimpleQueryMessage) returns (stream QueryResponseInfoMessage) {}
   rpc DoTimedProgressiveQuery(TimedQueryMessage) returns (QueryResponseInfoMessage) {}
-  rpc DoCompoundQuery(CompoundQueryMessage) returns (QueryResponseListMessage) {}
+  rpc DoCompoundQuery(CompoundQueryMessage) returns (CompoundQueryResponseListMessage) {}
 }
 
 
@@ -155,9 +155,11 @@ message TimedQueryMessage {
 }
 
 message QueryResponseInfoMessage {
-  double confidence = 1;
-  IndexType indextype = 2;
-  QueryResponseListMessage queryResponseList = 3;
+  string id = 1;
+  double confidence = 2;
+  double time = 3;
+  IndexType indextype = 4;
+  QueryResponseListMessage queryResponseList = 5;
 }
 
 message QueryResponseMessage {
@@ -168,6 +170,11 @@ message QueryResponseMessage {
 
 message QueryResponseListMessage {
   repeated QueryResponseMessage responses = 1;
+}
+
+message CompoundQueryResponseListMessage {
+  repeated QueryResponseInfoMessage intermediaryResponses = 1;
+  QueryResponseListMessage finalResponse = 2;
 }
 
 message CompoundQueryMessage {
@@ -195,6 +202,7 @@ message ExpressionQueryMessage {
    Operation operation = 2;
    OperationOrder order = 3;
    SubExpressionQueryMessage right = 4;
+   string id = 5;
 }
 
 message SubExpressionQueryMessage {
@@ -209,4 +217,5 @@ message SubExpressionQueryMessage {
        SimpleIndexQueryMessage siqm = 3;
        ExpressionQueryMessage eqm = 4;
      }
+ string id = 5;
 }

@@ -39,7 +39,7 @@ object QueryOp {
     QueryHandler.query(entityname, hint, nnq, bq, withMetadata)
   }
 
-  case class StandardQueryHolder(entityname: EntityName, hint: Option[QueryHint], nnq: NearestNeighbourQuery, bq: Option[BooleanQuery], withMetadata: Boolean) extends Expression {
+  case class StandardQueryHolder(entityname: EntityName, hint: Option[QueryHint], nnq: NearestNeighbourQuery, bq: Option[BooleanQuery], withMetadata: Boolean, eid : String = "") extends Expression(eid) {
     override def eval() = apply(entityname, hint, nnq, bq, withMetadata)
   }
   def apply(q: StandardQueryHolder): DataFrame = q.eval()
