@@ -32,18 +32,18 @@ case class CompoundQueryRequest(operation: String, options: Map[String, String],
     * @return
     */
   private def cqm(): CompoundQueryMessage = {
-    val cqm = CompoundQueryMessage(entity, Option(nnq), true)
+    val sqm = SubExpressionQueryMessage()
 
     val node = targets.get.head
     if (node.operation == "aggregate") {
-      cqm.withEqm(node.eqm())
+      sqm.withEqm(node.eqm())
     } else if (node.options.get("indexname").isDefined) {
-      cqm.withSsiqm(node.ssiqm())
+      sqm.withSsiqm(node.ssiqm())
     } else {
-      cqm.withSiqm(node.siqm())
+      sqm.withSiqm(node.siqm())
     }
 
-    cqm
+    CompoundQueryMessage(entity, Option(nnq), Option(sqm), true)
   }
 
   /**
@@ -57,27 +57,21 @@ case class CompoundQueryRequest(operation: String, options: Map[String, String],
       case "except" => ExpressionQueryMessage.Operation.EXCEPT
     }
 
-    val eq = ExpressionQueryMessage(operation = op)
+    val lsqm = seqm(targets.get(0))
+    val rsqm = seqm(targets.get(1))
 
-    val left = targets.get(0)
-    if (left.operation == "aggregate") {
-      eq.withLeqm(left.eqm())
-    } else if (left.options.get("indexname").isDefined) {
-      eq.withLssiqm(left.ssiqm())
+    ExpressionQueryMessage(Option(lsqm), op, ExpressionQueryMessage.OperationOrder.PARALLEL, Option(rsqm))
+  }
+
+  private def seqm(cqr : CompoundQueryRequest) : SubExpressionQueryMessage = {
+    val sqm = SubExpressionQueryMessage()
+    if (cqr.operation == "aggregate") {
+      sqm.withEqm(cqr.eqm())
+    } else if (cqr.options.get("indexname").isDefined) {
+      sqm.withSsiqm(cqr.ssiqm())
     } else {
-      eq.withLsiqm(left.siqm())
+      sqm.withSiqm(cqr.siqm())
     }
-
-    val right = targets.get(1)
-    if (right.operation == "aggregate") {
-      eq.withReqm(right.eqm())
-    } else if (right.options.get("indexname").isDefined) {
-      eq.withRssiqm(right.ssiqm())
-    } else {
-      eq.withRsiqm(right.siqm())
-    }
-
-    eq
   }
 
   /**

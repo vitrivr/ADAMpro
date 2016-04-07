@@ -173,13 +173,8 @@ message QueryResponseListMessage {
 message CompoundQueryMessage {
   string entity = 1;
   NearestNeighbourQueryMessage nnq = 2;
-  oneof indexFilterExpression {
-     SimpleSequentialQueryMessage ssqm = 3;
-     SimpleSpecifiedIndexQueryMessage ssiqm = 4;
-     SimpleIndexQueryMessage siqm = 5;
-     ExpressionQueryMessage eqm = 6;
-  }
-  bool withMetadata = 7;
+  SubExpressionQueryMessage indexFilterExpression = 3;
+  bool withMetadata = 4;
 }
 
 //experimental
@@ -196,26 +191,22 @@ message ExpressionQueryMessage {
       PARALLEL = 2;
     }
 
+   SubExpressionQueryMessage left = 1;
+   Operation operation = 2;
+   OperationOrder order = 3;
+   SubExpressionQueryMessage right = 4;
+}
+
+message SubExpressionQueryMessage {
    //Any is not yet supported
    //import "google/protobuf/any.proto";
    //google.protobuf.Any left = 1;
    //Operation operation = 2;
    //google.protobuf.Any right = 3;
-
-   oneof left {
-       SimpleSequentialQueryMessage lssqm = 3;
-       SimpleSpecifiedIndexQueryMessage lssiqm = 4;
-       SimpleIndexQueryMessage lsiqm = 5;
-       ExpressionQueryMessage leqm = 6;
-     }
-
-   Operation operation = 1;
-   OperationOrder order = 2;
-
-   oneof right {
-       SimpleSequentialQueryMessage rssqm = 7;
-       SimpleSpecifiedIndexQueryMessage rssiqm = 8;
-       SimpleIndexQueryMessage rsiqm = 9;
-       ExpressionQueryMessage reqm = 10;
+ oneof submessage {
+       SimpleSequentialQueryMessage ssqm = 1;
+       SimpleSpecifiedIndexQueryMessage ssiqm = 2;
+       SimpleIndexQueryMessage siqm = 3;
+       ExpressionQueryMessage eqm = 4;
      }
 }
