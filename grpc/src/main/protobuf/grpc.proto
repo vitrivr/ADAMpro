@@ -199,16 +199,18 @@ message ExpressionQueryMessage {
 
    oneof left {
        SimpleSequentialQueryMessage lssqm = 3;
-       SimpleIndexQueryMessage lsiqm = 4;
-       ExpressionQueryMessage leqm = 5;
+       SimpleSpecifiedIndexQueryMessage lssiqm = 4;
+       SimpleIndexQueryMessage lsiqm = 5;
+       ExpressionQueryMessage leqm = 6;
      }
 
    Operation operation = 1;
    OperationOrder order = 2;
 
    oneof right {
-       SimpleSequentialQueryMessage rssqm = 6;
-       SimpleIndexQueryMessage rsiqm = 7;
-       ExpressionQueryMessage reqm = 8;
+       SimpleSequentialQueryMessage rssqm = 7;
+       SimpleSpecifiedIndexQueryMessage rssiqm = 8;
+       SimpleIndexQueryMessage rsiqm = 9;
+       ExpressionQueryMessage reqm = 10;
      }
 }

@@ -59,6 +59,7 @@ private[rpc] object SearchRPCMethods {
 
   implicit def toExpr(expr: ExpressionQueryMessage.Left) : Expression = expr match {
     case ExpressionQueryMessage.Left.Leqm(x) => toExpr(x)
+    case ExpressionQueryMessage.Left.Lssiqm(x) => (x : SpecifiedIndexQueryHolder)
     case ExpressionQueryMessage.Left.Lsiqm(x) => (x: IndexQueryHolder)
     case ExpressionQueryMessage.Left.Lssqm(x) => (x: SequentialQueryHolder)
     case _ => null
@@ -67,6 +68,7 @@ private[rpc] object SearchRPCMethods {
 
   implicit def toExpr(expr: ExpressionQueryMessage.Right) : Expression = expr match {
     case ExpressionQueryMessage.Right.Reqm(x) => toExpr(x)
+    case ExpressionQueryMessage.Right.Rssiqm(x) => (x : SpecifiedIndexQueryHolder)
     case ExpressionQueryMessage.Right.Rsiqm(x) => (x: IndexQueryHolder)
     case ExpressionQueryMessage.Right.Rssqm(x) => (x: SequentialQueryHolder)
     case _ => null
