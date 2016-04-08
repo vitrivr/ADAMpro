@@ -11,9 +11,10 @@
 </head>
 
 <body>
+<div id="progress" class="progress" style="margin-top:0px; display:none;">
+    <div class="indeterminate"></div>
+</div>
 <div class="container" style="width:90%">
-    <div class="alert alert-danger" role="alert" hidden="true" id="alert"></div>
-
     <div class="row" style="margin-top: 20px;">
 
         <div class="input-field col s1">
@@ -22,11 +23,11 @@
             </button>
         </div>
 
-        <div class="input-field col s2">
+        <div class="input-field col s1">
             <input type="text" class="form-control" id="entityname" placeholder="entity">
         </div>
 
-        <div class="input-field col s2">
+        <div class="input-field col s3">
             <input type="text" class="form-control" id="query" placeholder="query">
         </div>
 
@@ -74,7 +75,8 @@
         <!-- demo -->
 
         <div class="jtk-demo-canvas canvas-wide statemachine-demo jtk-surface jtk-surface-nopan" id="canvas">
-            <div class="w" id="box-start" style=" left: 20em; top: 20em;" data-adamtype="start">QUERY
+            <div class="w" id="box-start" style="left: 20em; top: 20em;" data-adamtype="start">QUERY
+                <div class="res"></div>
                 <div class="ep" action="start"></div>
             </div>
         </div>

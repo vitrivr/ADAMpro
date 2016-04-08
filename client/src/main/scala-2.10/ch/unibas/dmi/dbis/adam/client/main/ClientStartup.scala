@@ -9,7 +9,7 @@ import ch.unibas.dmi.dbis.adam.client.web.{AdamController, WebServer}
   * Ivan Giangreco
   * March 2016
   */
-object ClientStartupMain {
+object ClientStartup {
   val httpPort = 9099
 
   val grpcHost = "localhost"

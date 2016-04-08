@@ -8,11 +8,9 @@ import ch.unibas.dmi.dbis.adam.http.grpc._
   * Ivan Giangreco
   * April 2016
   */
-case class CompoundQueryRequest(operation: String, options: Map[String, String],
+case class CompoundQueryRequest(id: String, operation: String, options: Map[String, String],
                                 targets: Option[Seq[CompoundQueryRequest]]) //for UNION, INTERSECT and EXCEPT this field contains the sub-queries
 {
-  //TODO: clean and refactor code!
-
   /**
     *
     */
@@ -32,15 +30,20 @@ case class CompoundQueryRequest(operation: String, options: Map[String, String],
     * @return
     */
   private def cqm(): CompoundQueryMessage = {
-    val sqm = SubExpressionQueryMessage()
+    if (targets.get.isEmpty) {
+      return CompoundQueryMessage(entity, Option(nnq), None, true);
+    }
 
     val node = targets.get.head
+
+    var sqm = SubExpressionQueryMessage().withId(id)
+
     if (node.operation == "aggregate") {
-      sqm.withEqm(node.eqm())
+      sqm = sqm.withEqm(node.eqm())
     } else if (node.options.get("indexname").isDefined) {
-      sqm.withSsiqm(node.ssiqm())
+      sqm = sqm.withSsiqm(node.ssiqm())
     } else {
-      sqm.withSiqm(node.siqm())
+      sqm = sqm.withSiqm(node.siqm())
     }
 
     CompoundQueryMessage(entity, Option(nnq), Option(sqm), true)
@@ -60,18 +63,20 @@ case class CompoundQueryRequest(operation: String, options: Map[String, String],
     val lsqm = seqm(targets.get(0))
     val rsqm = seqm(targets.get(1))
 
-    ExpressionQueryMessage(Option(lsqm), op, ExpressionQueryMessage.OperationOrder.PARALLEL, Option(rsqm))
+    ExpressionQueryMessage(Option(lsqm), op, ExpressionQueryMessage.OperationOrder.PARALLEL, Option(rsqm), id)
   }
 
-  private def seqm(cqr : CompoundQueryRequest) : SubExpressionQueryMessage = {
-    val sqm = SubExpressionQueryMessage()
+  private def seqm(cqr: CompoundQueryRequest): SubExpressionQueryMessage = {
+    var sqm = SubExpressionQueryMessage().withId(cqr.id)
+
     if (cqr.operation == "aggregate") {
-      sqm.withEqm(cqr.eqm())
+      sqm = sqm.withEqm(cqr.eqm())
     } else if (cqr.options.get("indexname").isDefined) {
-      sqm.withSsiqm(cqr.ssiqm())
+      sqm = sqm.withSsiqm(cqr.ssiqm())
     } else {
-      sqm.withSiqm(cqr.siqm())
+      sqm = sqm.withSiqm(cqr.siqm())
     }
+    sqm
   }
 
   /**

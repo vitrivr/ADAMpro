@@ -20,15 +20,24 @@ class AdamController(rpcClient: RPCClient) extends Controller {
       "index.html")
   }
 
+  case class PreparationRequestReponse(code: Int, entityname: String = "", ntuples: Int = 0, ndims: Int = 0)
+
   post("/prepare") { request: PreparationRequest =>
-    log.info("prepare: " + request)
-    rpcClient.prepareDemo(request.entityname, 5000, 100)
-    response.ok.html("ok")
+    val ntuples = 5000
+    val res = rpcClient.prepareDemo(request.entityname, ntuples, request.query.split(",").size)
+
+    log.info("prepared data")
+
+    if (res) {
+      response.ok.json(PreparationRequestReponse(200, request.entityname, ntuples, request.query.split(",").size))
+    } else {
+      response.internalServerError.json(PreparationRequestReponse(500))
+    }
   }
 
   post("/query") { request: CompoundQueryRequest =>
     log.info("query: " + request)
-    rpcClient.compoundQuery(request)
-    response.ok.html("ok")
+    val res = rpcClient.compoundQuery(request)
+    response.ok.json(res)
   }
 }

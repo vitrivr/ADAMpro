@@ -6,4 +6,4 @@ package ch.unibas.dmi.dbis.adam.client.web
   * Ivan Giangreco
   * April 2016
   */
-case class PreparationRequest(entityname: String)
+case class PreparationRequest(entityname: String, query : String)
