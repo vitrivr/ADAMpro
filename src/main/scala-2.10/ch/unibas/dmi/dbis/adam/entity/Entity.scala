@@ -60,7 +60,7 @@ case class Entity(entityname: EntityName, featureStorage: FeatureStorage, metada
     val dataDimensionality = insertion.first.getAs[FeatureVectorWrapper](FieldNames.featureColumnName).vector.size
 
     val entityDimensionality = CatalogOperator.getDimensionality(entityname)
-    if(entityDimensionality.isDefined && dataDimensionality != entityDimensionality){
+    if(entityDimensionality.isDefined && dataDimensionality != entityDimensionality.get){
       log.warn("new data has not same dimensionality as existing data")
     } else {
       CatalogOperator.updateDimensionality(entityname, dataDimensionality)
