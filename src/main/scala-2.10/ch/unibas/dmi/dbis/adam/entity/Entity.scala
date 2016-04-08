@@ -180,6 +180,7 @@ object Entity {
     */
   def create(entityname: EntityName, fields: Option[Map[String, FieldDefinition]] = None): Try[Entity] = {
     if (exists(entityname)) {
+      log.error("entity " + entityname + " exists already")
       return Failure(EntityExistingException())
     }
 
