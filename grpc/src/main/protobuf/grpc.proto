@@ -173,7 +173,7 @@ message QueryResponseListMessage {
 }
 
 message CompoundQueryResponseListMessage {
-  repeated QueryResponseInfoMessage intermediaryResponses = 1;
+  repeated QueryResponseInfoMessage intermediateResponses = 1;
   QueryResponseListMessage finalResponse = 2;
 }
 
