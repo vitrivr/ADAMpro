@@ -40,7 +40,7 @@ class PQIndexer(nsq: Int, trainingSize: Int) extends IndexGenerator with Seriali
     val indexdata = data.map(
       datum => {
         val hash = datum.feature.toArray
-          .grouped(d / nsq).toSeq
+          .grouped(math.max(1, d / nsq)).toSeq
           .zipWithIndex
           .map{case(split,idx) => indexMetaData.models(idx).predict(Vectors.dense(split.map(_.toDouble))).toByte}
         ByteArrayIndexTuple(datum.id, hash)
@@ -63,7 +63,7 @@ class PQIndexer(nsq: Int, trainingSize: Int) extends IndexGenerator with Seriali
     val d = trainData.head.feature.size
 
     val rdds = trainData.map(_.feature).flatMap(t =>
-      t.toArray.grouped(d / nsq).toSeq.zipWithIndex)
+      t.toArray.grouped(math.max(1, d / nsq)).toSeq.zipWithIndex)
       .groupBy(_._2)
       .mapValues(vs => vs.map(_._1))
       .mapValues(vs => vs.map(v => Vectors.dense(v.map(_.toDouble))))

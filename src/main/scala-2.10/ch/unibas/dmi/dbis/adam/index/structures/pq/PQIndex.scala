@@ -26,7 +26,7 @@ class PQIndex(val indexname: IndexName, val entityname: EntityName, protected va
 
     //precompute distance
     val distances = q.toArray
-      .grouped(q.size / metadata.nsq).toSeq
+      .grouped(math.max(1, q.size / metadata.nsq)).toSeq
       .zipWithIndex
       .map { case (split, idx) => {
         val qsub = new FeatureVectorWrapper(split)
