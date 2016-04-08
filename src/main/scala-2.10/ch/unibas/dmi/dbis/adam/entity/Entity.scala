@@ -188,12 +188,12 @@ object Entity {
     if (fields.isDefined) {
       if(fields.get.contains(FieldNames.idColumnName)){
         log.error("entity defined with field " + FieldNames.idColumnName + ", but name is reserved")
-        Failure(EntityNotProperlyDefinedException())
+        return Failure(EntityNotProperlyDefinedException())
       }
 
       if(fields.get.count{case(name, definition) => definition.pk} > 1){
         log.error("entity defined with more than one primary key")
-        Failure(EntityNotProperlyDefinedException())
+        return Failure(EntityNotProperlyDefinedException())
       }
 
       val fieldsWithId = fields.get + (FieldNames.idColumnName -> FieldDefinition(LONGTYPE, false, true, true))
@@ -216,7 +216,7 @@ object Entity {
   def drop(entityname: EntityName, ifExists: Boolean = false): Try[Null] = {
     if (!exists(entityname)) {
       if (!ifExists) {
-        Failure(EntityNotExistingException())
+        return Failure(EntityNotExistingException())
       } else {
         Success(null)
       }
@@ -260,7 +260,7 @@ object Entity {
     */
   def load(entityname: EntityName): Try[Entity] = {
     if (!exists(entityname)) {
-      Failure(EntityNotExistingException())
+      return Failure(EntityNotExistingException())
     }
 
     val entityMetadataStorage = if (CatalogOperator.hasEntityMetadata(entityname)) {
