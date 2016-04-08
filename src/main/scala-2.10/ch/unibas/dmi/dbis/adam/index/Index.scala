@@ -159,8 +159,9 @@ object Index {
     * @return index
     */
   def createIndex(entity: Entity, indexgenerator: IndexGenerator): Try[Index] = {
-    if(entity.count < MINIMUM_NUMBER_OF_TUPLE){
-      log.error("not enough tuples for creating index, needs at least " + MINIMUM_NUMBER_OF_TUPLE)
+    val count = entity.count
+    if(count < MINIMUM_NUMBER_OF_TUPLE){
+      log.error("not enough tuples for creating index, needs at least " + MINIMUM_NUMBER_OF_TUPLE + " but has only " + count)
       return Failure(new GeneralAdamException("not enough tuples for index"))
     }
 
