@@ -23,6 +23,9 @@ class RPCStartup extends Thread {
 
     val server = new RPCServer(scala.concurrent.ExecutionContext.global)
     server.start()
+
+    log.debug("RPC server running")
+
     server.blockUntilShutdown()
   }
 }
