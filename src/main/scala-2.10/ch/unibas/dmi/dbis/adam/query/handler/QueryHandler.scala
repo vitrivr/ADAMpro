@@ -100,6 +100,16 @@ object QueryHandler {
   }
 
 
+  case class StandardQueryHolder(entityname: EntityName, hint: Option[QueryHint], nnq: NearestNeighbourQuery, bq: Option[BooleanQuery], withMetadata: Boolean, id : String = "") extends Expression(id) {
+    override protected def run(filter: Option[Set[TupleID]]): DataFrame = {
+      val abq = bq.getOrElse(BooleanQuery())
+      if (filter.isDefined) {
+        abq.append(filter.get)
+      }
+      query(entityname, hint, nnq, bq, withMetadata)
+    }
+  }
+
   /**
     * Performs a sequential query, i.e., without using any index structure.
     *
@@ -127,15 +137,13 @@ object QueryHandler {
     res
   }
 
-  case class SequentialQueryHolder(entityname: EntityName, nnq: NearestNeighbourQuery, bq: Option[BooleanQuery], withMetadata: Boolean, eid : String = "") extends Expression(eid) {
-    override def eval() = sequentialQuery(entityname)(nnq, bq, withMetadata)
-
-    override def eval(filter: Option[Set[TupleID]]): DataFrame = {
+  case class SequentialQueryHolder(entityname: EntityName, nnq: NearestNeighbourQuery, bq: Option[BooleanQuery], withMetadata: Boolean, id: String = "") extends Expression(id) {
+    override protected def run(filter: Option[Set[TupleID]]): DataFrame = {
       val abq = bq.getOrElse(BooleanQuery())
-      if(filter.isDefined) {
+      if (filter.isDefined) {
         abq.append(filter.get)
       }
-      sequentialQuery(entityname)(nnq, Option(abq) , withMetadata)
+      sequentialQuery(entityname)(nnq, Option(abq), withMetadata)
     }
   }
 
@@ -161,15 +169,13 @@ object QueryHandler {
     indexQuery(indexes.head)(nnq, bq, withMetadata)
   }
 
-  case class IndexQueryHolder(entityname: EntityName, indextypename: IndexTypeName, nnq: NearestNeighbourQuery, bq: Option[BooleanQuery], withMetadata: Boolean, eid : String = "") extends Expression(eid) {
-    override def eval() = indexQuery(entityname, indextypename)(nnq, bq, withMetadata)
-
-    override def eval(filter: Option[Set[TupleID]]): DataFrame = {
+  case class IndexQueryHolder(entityname: EntityName, indextypename: IndexTypeName, nnq: NearestNeighbourQuery, bq: Option[BooleanQuery], withMetadata: Boolean, id: String = "") extends Expression(id) {
+    override protected def run(filter: Option[Set[TupleID]]): DataFrame = {
       val abq = bq.getOrElse(BooleanQuery())
-      if(filter.isDefined){
-      abq.append(filter.get)
+      if (filter.isDefined) {
+        abq.append(filter.get)
       }
-      indexQuery(entityname, indextypename)(nnq, Option(abq) , withMetadata)
+      indexQuery(entityname, indextypename)(nnq, Option(abq), withMetadata)
     }
   }
 
@@ -208,12 +214,10 @@ object QueryHandler {
     res
   }
 
-  case class SpecifiedIndexQueryHolder(indexname: IndexName, nnq: NearestNeighbourQuery, bq: Option[BooleanQuery], withMetadata: Boolean, eid : String = "") extends Expression(eid) {
-    override def eval() = indexQuery(indexname)(nnq, bq, withMetadata)
-
-    override def eval(filter: Option[Set[TupleID]]): DataFrame = {
+  case class SpecifiedIndexQueryHolder(indexname: IndexName, nnq: NearestNeighbourQuery, bq: Option[BooleanQuery], withMetadata: Boolean, id: String = "") extends Expression(id) {
+    override protected def run(filter: Option[Set[TupleID]]): DataFrame = {
       val abq = bq.getOrElse(BooleanQuery())
-      if(filter.isDefined) {
+      if (filter.isDefined) {
         abq.append(filter.get)
       }
       indexQuery(indexname)(nnq, Option(abq), withMetadata)

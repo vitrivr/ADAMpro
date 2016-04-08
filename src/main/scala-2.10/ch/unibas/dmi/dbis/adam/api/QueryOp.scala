@@ -38,11 +38,7 @@ object QueryOp {
     log.debug("perform standard query operation")
     QueryHandler.query(entityname, hint, nnq, bq, withMetadata)
   }
-
-  case class StandardQueryHolder(entityname: EntityName, hint: Option[QueryHint], nnq: NearestNeighbourQuery, bq: Option[BooleanQuery], withMetadata: Boolean, eid : String = "") extends Expression(eid) {
-    override def eval() = apply(entityname, hint, nnq, bq, withMetadata)
-  }
-  def apply(q: StandardQueryHolder): DataFrame = q.eval()
+  def apply(q: StandardQueryHolder): DataFrame = q.evaluate()
 
   /**
     * Performs a sequential query, i.e., without using any index structure.
@@ -57,7 +53,7 @@ object QueryOp {
     log.debug("perform sequential query operation")
     QueryHandler.sequentialQuery(entityname)(nnq, bq, withMetadata)
   }
-  def sequential(q: SequentialQueryHolder): DataFrame = q.eval()
+  def sequential(q: SequentialQueryHolder): DataFrame = q.evaluate()
 
 
   /**
@@ -73,7 +69,7 @@ object QueryOp {
     log.debug("perform index query operation")
     QueryHandler.indexQuery(indexname)(nnq, bq, withMetadata)
   }
-  def index(q: SpecifiedIndexQueryHolder): DataFrame = q.eval()
+  def index(q: SpecifiedIndexQueryHolder): DataFrame = q.evaluate()
 
   /**
     * Performs an index-based query.
@@ -89,7 +85,7 @@ object QueryOp {
     log.debug("perform index query operation")
     QueryHandler.indexQuery(entityname, indextypename)(nnq, bq, withMetadata)
   }
-  def index(q: IndexQueryHolder): DataFrame = q.eval()
+  def index(q: IndexQueryHolder): DataFrame = q.evaluate()
 
   /**
     * Performs a progressive query, i.e., all indexes and sequential search are started at the same time and results are returned as soon
@@ -141,5 +137,5 @@ object QueryOp {
     CompoundQueryHandler.indexQueryWithResults(entityname)(nnq, expr, withMetadata)
   }
 
-  def compoundQuery(q : CompoundQueryHolder): DataFrame = q.eval()
+  def compoundQuery(q : CompoundQueryHolder): DataFrame = q.evaluate()
 }

@@ -409,13 +409,13 @@ class QueryTestSuite extends AdamTestBase with ScalaFutures {
       val vhqh = SpecifiedIndexQueryHolder(vaidx.get.indexname, nnq, None, true)
 
       val results = time {
-        CompoundQueryHandler.indexOnlyQuery(new IntersectExpression(shqh, vhqh))
+        CompoundQueryHandler.indexOnlyQuery()(new IntersectExpression(shqh, vhqh), false)
           .map(r => (r.getAs[Long](FieldNames.idColumnName))).collect().sorted
       }
 
       //results (note we truly compare the id-column here and not the metadata "tid"
-      val shres = shqh.eval().map(r => r.getAs[Long](FieldNames.idColumnName)).collect()
-      val vhres = vhqh.eval().map(r => r.getAs[Long](FieldNames.idColumnName)).collect()
+      val shres = shqh.evaluate().map(r => r.getAs[Long](FieldNames.idColumnName)).collect()
+      val vhres = vhqh.evaluate().map(r => r.getAs[Long](FieldNames.idColumnName)).collect()
 
       Then("we should have a match in the aggregated list")
       val gt = vhres.intersect(shres).sorted
@@ -448,13 +448,13 @@ class QueryTestSuite extends AdamTestBase with ScalaFutures {
       val va2qh = SpecifiedIndexQueryHolder(vaidx2.get.indexname, nnq, None, false)
 
       val results = time {
-        CompoundQueryHandler.indexOnlyQuery(new IntersectExpression(va1qh, va2qh, ExpressionEvaluationOrder.LeftFirst))
+        CompoundQueryHandler.indexOnlyQuery()(new IntersectExpression(va1qh, va2qh, ExpressionEvaluationOrder.LeftFirst), false)
           .map(r => (r.getAs[Long](FieldNames.idColumnName))).collect().sorted
       }
 
       //results (note we truly compare the id-column here and not the metadata "tid"
-      val vh1res = va1qh.eval().map(r => r.getAs[Long](FieldNames.idColumnName)).collect()
-      val vh2res = va2qh.eval().map(r => r.getAs[Long](FieldNames.idColumnName)).collect()
+      val vh1res = va1qh.evaluate().map(r => r.getAs[Long](FieldNames.idColumnName)).collect()
+      val vh2res = va2qh.evaluate().map(r => r.getAs[Long](FieldNames.idColumnName)).collect()
 
       Then("we should have a match in the aggregated list")
       val gt = vh1res.intersect(vh2res).sorted

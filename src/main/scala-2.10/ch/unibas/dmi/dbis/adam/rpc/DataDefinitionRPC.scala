@@ -177,12 +177,17 @@ class DataDefinitionRPC extends AdamDefinitionGrpc.AdamDefinition {
     log.debug("rpc call for creating random data")
 
     try {
-      RandomDataOp(request.entity, request.ntuples, request.ndims)
+      val res = RandomDataOp(request.entity, request.ntuples, request.ndims)
+      if(!res){
+        throw new GeneralAdamException()
+      }
+      log.info("genereated random data")
       IndexOp.generateAll(request.entity, EuclideanDistance)
+      log.info("genereated indices to random data")
       Future.successful(AckMessage(code = AckMessage.Code.OK))
     } catch {
       case e: Exception =>
-        log.debug("exception while rpc call for dropping index operation")
+        log.debug("exception while rpc call for creating random data")
         Future.successful(AckMessage(code = AckMessage.Code.ERROR, message = e.getMessage))
     }
   }

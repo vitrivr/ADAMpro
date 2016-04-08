@@ -11,7 +11,10 @@ import ch.unibas.dmi.dbis.adam.query.Result
 import ch.unibas.dmi.dbis.adam.query.query.NearestNeighbourQuery
 import ch.unibas.dmi.dbis.adam.query.scanner.FeatureScanner
 import org.apache.spark.sql.{DataFrame, Row}
+import org.scalatest
+import org.scalatest.run
 
+import scala.collection.mutable.ListBuffer
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.duration.Duration
 import scala.concurrent.{Await, Future}
@@ -24,8 +27,33 @@ import scala.concurrent.{Await, Future}
   */
 object CompoundQueryHandler {
 
-  case class CompoundQueryHolder(entityname: EntityName, nnq: NearestNeighbourQuery, expr: Expression, withMetadata: Boolean, eid : String = "") extends Expression(eid) {
-    override def eval(): DataFrame = indexQueryWithResults(entityname)(nnq, expr, withMetadata)
+  case class CompoundQueryHolder(entityname: EntityName, nnq: NearestNeighbourQuery, expr: Expression, indexOnly : Boolean = false, withMetadata: Boolean, id: String = "") extends Expression(id) {
+    var run = false
+
+    override protected def run(filter: Option[Set[TupleID]]): DataFrame = {
+      //TODO: catch here expr == null?
+      
+      val results = if(indexOnly){
+        indexOnlyQuery(entityname)(expr, withMetadata)
+      } else {
+        indexQueryWithResults(entityname)(nnq, expr, withMetadata)
+      }
+      run = true
+      results
+    }
+
+    /**
+      *
+      * @return
+      */
+    def provideRunInfo() : Seq[RunInfo] = {
+      if(!run){
+        log.warn("please run compound query before collecting run information")
+        return Seq()
+      } else {
+        expr.collectRunInfo(new ListBuffer()).toSeq
+      }
+    }
   }
 
   /**
@@ -37,7 +65,7 @@ object CompoundQueryHandler {
     * @return
     */
   def indexQueryWithResults(entityname: EntityName)(nnq: NearestNeighbourQuery, expr: Expression, withMetadata: Boolean): DataFrame = {
-    val tidFilter = expr.eval().map(x => Result(0.toFloat, x.getAs[Long](FieldNames.idColumnName))).map(_.tid).collect().toSet
+    val tidFilter = expr.evaluate().map(x => Result(0.toFloat, x.getAs[Long](FieldNames.idColumnName))).map(_.tid).collect().toSet
     var res = FeatureScanner(Entity.load(entityname).get, nnq, Some(tidFilter))
 
     if (withMetadata) {
@@ -53,31 +81,59 @@ object CompoundQueryHandler {
     * @param expr
     * @return
     */
-  def indexOnlyQuery(expr: Expression): DataFrame = expr.eval()
+  def indexOnlyQuery(entityname: EntityName = "")(expr: Expression, withMetadata: Boolean = false): DataFrame = {
+    val tidFilter = expr.evaluate().map(x => Result(0.toFloat, x.getAs[Long](FieldNames.idColumnName))).map(_.tid).collect().toSet
 
+    val rdd = SparkStartup.sc.parallelize(tidFilter.toSeq).map(res => Row(0.toFloat, res))
+    var res = SparkStartup.sqlContext.createDataFrame(rdd, Result.resultSchema)
+
+    if (withMetadata) {
+      log.debug("join metadata to results of compound query")
+      res = QueryHandler.joinWithMetadata(entityname, res)
+    }
+
+   res
+  }
+
+  case class RunInfo(id : String, time : Duration, results : DataFrame)
 
   /**
     *
     */
-  abstract class Expression(var id : String) {
-    /**
-      *
-      * @return
-      */
-    def eval(): DataFrame
+  abstract class Expression(id: String) {
+    private var time: Duration = null
+    private var results : DataFrame = null
 
     /**
       *
       * @param filter
       * @return
       */
-    def eval(filter: Option[Set[TupleID]]): DataFrame = {
-      val df = eval()
-      if(filter.isDefined){
-        df.filter(df(FieldNames.idColumnName) isin (filter.get.toSeq: _*))
-      } else {
-        df
-      }
+    def evaluate(filter: Option[Set[TupleID]] = None): DataFrame = {
+      val t1 = System.currentTimeMillis
+      results = run(filter)
+      val t2 = System.currentTimeMillis
+
+      time = Duration(t2 - t1, TimeUnit.MILLISECONDS)
+
+      results
+    }
+
+    /**
+      *
+      * @param filter
+      * @return
+      */
+    protected def run(filter: Option[Set[TupleID]]): DataFrame
+
+
+    /**
+      *
+      * @param info
+      * @return
+      */
+    private[handler] def collectRunInfo(info : ListBuffer[RunInfo]) = {
+      info += RunInfo(id, time, results)
     }
   }
 
@@ -94,12 +150,13 @@ object CompoundQueryHandler {
     * @param l
     * @param r
     */
-  case class UnionExpression(l: Expression, r: Expression, eid : String = "") extends Expression(eid) {
-    override def eval(): DataFrame = {
-      eval(None)
-    }
-
-    override def eval(filter: Option[Set[TupleID]]): DataFrame = {
+  case class UnionExpression(l: Expression, r: Expression, id: String = "") extends Expression(id) {
+    /**
+      *
+      * @param filter
+      * @return
+      */
+    override protected def run(filter: Option[Set[TupleID]]): DataFrame = {
       val results = parallelExec(filter)
 
       val rdd = SparkStartup.sc.parallelize(results.map(res => Row(res.distance, res.tid)))
@@ -111,8 +168,8 @@ object CompoundQueryHandler {
       * @return
       */
     private def parallelExec(filter: Option[Set[TupleID]]): Seq[Result] = {
-      val lfut = Future(l.eval(filter))
-      val rfut = Future(r.eval(filter))
+      val lfut = Future(l.evaluate(filter))
+      val rfut = Future(r.evaluate(filter))
 
       val f = for (leftResult <- lfut; rightResult <- rfut) yield ({
         aggregate(leftResult, rightResult)
@@ -132,6 +189,18 @@ object CompoundQueryHandler {
       val right = rightResult.map(r => r.getAs[Long](FieldNames.idColumnName)).collect()
       left.union(right).map(id => new Result(0.toFloat, id))
     }
+
+    /**
+      *
+      * @param info
+      * @return
+      */
+    override private[handler] def collectRunInfo(info : ListBuffer[RunInfo]) = {
+      super.collectRunInfo(info)
+      l.collectRunInfo(info)
+      r.collectRunInfo(info)
+      info
+    }
   }
 
   /**
@@ -139,12 +208,13 @@ object CompoundQueryHandler {
     * @param l
     * @param r
     */
-  case class IntersectExpression(l: Expression, r: Expression, order: ExpressionEvaluationOrder.Order = ExpressionEvaluationOrder.Parallel, eid : String = "") extends Expression(eid) {
-    override def eval(): DataFrame = {
-      eval(None)
-    }
-
-    override def eval(filter: Option[Set[TupleID]]): DataFrame = {
+  case class IntersectExpression(l: Expression, r: Expression, order: ExpressionEvaluationOrder.Order = ExpressionEvaluationOrder.Parallel, id: String = "") extends Expression(id) {
+    /**
+      *
+      * @param filter
+      * @return
+      */
+    override protected def run(filter: Option[Set[TupleID]]): DataFrame = {
       val results = order match {
         case ExpressionEvaluationOrder.LeftFirst => leftFirstExec(filter)
         case ExpressionEvaluationOrder.RightFirst => rightFirstExec(filter)
@@ -160,8 +230,8 @@ object CompoundQueryHandler {
       * @return
       */
     private def leftFirstExec(filter: Option[Set[TupleID]]): Seq[Result] = {
-      val leftResult = l.eval(filter)
-      val rightResult = r.eval(Option(leftResult.map(r => r.getAs[Long](FieldNames.idColumnName)).collect().toSet))
+      val leftResult = l.evaluate(filter)
+      val rightResult = r.evaluate(Option(leftResult.map(r => r.getAs[Long](FieldNames.idColumnName)).collect().toSet))
 
       aggregate(leftResult, rightResult)
     }
@@ -171,8 +241,8 @@ object CompoundQueryHandler {
       * @return
       */
     private def rightFirstExec(filter: Option[Set[TupleID]]): Seq[Result] = {
-      val rightResult = r.eval(filter)
-      val leftResult = l.eval(Option(rightResult.map(r => r.getAs[Long](FieldNames.idColumnName)).collect().toSet))
+      val rightResult = r.evaluate(filter)
+      val leftResult = l.evaluate(Option(rightResult.map(r => r.getAs[Long](FieldNames.idColumnName)).collect().toSet))
 
       aggregate(leftResult, rightResult)
     }
@@ -182,8 +252,8 @@ object CompoundQueryHandler {
       * @return
       */
     private def parallelExec(filter: Option[Set[TupleID]]): Seq[Result] = {
-      val lfut = Future(l.eval(filter))
-      val rfut = Future(r.eval(filter))
+      val lfut = Future(l.evaluate(filter))
+      val rfut = Future(r.evaluate(filter))
 
       val f = for (leftResult <- lfut; rightResult <- rfut) yield ({
         aggregate(leftResult, rightResult)
@@ -203,6 +273,18 @@ object CompoundQueryHandler {
       val right = rightResult.map(r => r.getAs[Long](FieldNames.idColumnName)).collect()
       left.intersect(right).map(id => new Result(0.toFloat, id))
     }
+
+    /**
+      *
+      * @param info
+      * @return
+      */
+    override private[handler] def collectRunInfo(info : ListBuffer[RunInfo]) = {
+      super.collectRunInfo(info)
+      l.collectRunInfo(info)
+      r.collectRunInfo(info)
+      info
+    }
   }
 
   /**
@@ -210,12 +292,13 @@ object CompoundQueryHandler {
     * @param l
     * @param r
     */
-  case class ExceptExpression(l: Expression, r: Expression, order: ExpressionEvaluationOrder.Order = ExpressionEvaluationOrder.Parallel, eid : String = "") extends Expression(eid) {
-    override def eval(): DataFrame = {
-      eval(None)
-    }
-
-    override def eval(filter: Option[Set[TupleID]]): DataFrame = {
+  case class ExceptExpression(l: Expression, r: Expression, order: ExpressionEvaluationOrder.Order = ExpressionEvaluationOrder.Parallel, id: String = "") extends Expression(id) {
+    /**
+      *
+      * @param filter
+      * @return
+      */
+    override protected def run(filter: Option[Set[TupleID]]): DataFrame = {
       val results = order match {
         case ExpressionEvaluationOrder.LeftFirst => leftFirstExec(filter)
         case ExpressionEvaluationOrder.RightFirst => rightFirstExec(filter)
@@ -231,8 +314,8 @@ object CompoundQueryHandler {
       * @return
       */
     private def leftFirstExec(filter: Option[Set[TupleID]]): Seq[Result] = {
-      val leftResult = l.eval(filter)
-      val rightResult = r.eval(Option(leftResult.map(r => r.getAs[Long](FieldNames.idColumnName)).collect().toSet))
+      val leftResult = l.evaluate(filter)
+      val rightResult = r.evaluate(Option(leftResult.map(r => r.getAs[Long](FieldNames.idColumnName)).collect().toSet))
 
       aggregate(leftResult, rightResult)
     }
@@ -242,8 +325,8 @@ object CompoundQueryHandler {
       * @return
       */
     private def rightFirstExec(filter: Option[Set[TupleID]]): Seq[Result] = {
-      val rightResult = r.eval(filter)
-      val leftResult = l.eval(Option(rightResult.map(r => r.getAs[Long](FieldNames.idColumnName)).collect().toSet))
+      val rightResult = r.evaluate(filter)
+      val leftResult = l.evaluate(Option(rightResult.map(r => r.getAs[Long](FieldNames.idColumnName)).collect().toSet))
 
       aggregate(leftResult, rightResult)
     }
@@ -253,8 +336,8 @@ object CompoundQueryHandler {
       * @return
       */
     private def parallelExec(filter: Option[Set[TupleID]]): Seq[Result] = {
-      val lfut = Future(l.eval(filter))
-      val rfut = Future(r.eval(filter))
+      val lfut = Future(l.evaluate(filter))
+      val rfut = Future(r.evaluate(filter))
 
       val f = for (leftResult <- lfut; rightResult <- rfut) yield ({
         aggregate(leftResult, rightResult)
@@ -273,6 +356,18 @@ object CompoundQueryHandler {
       val left = leftResult.map(r => r.getAs[Long](FieldNames.idColumnName)).collect()
       val right = rightResult.map(r => r.getAs[Long](FieldNames.idColumnName)).collect()
       (left.toSet -- right.toSet).map(id => new Result(0.toFloat, id)).toSeq
+    }
+
+    /**
+      *
+      * @param info
+      * @return
+      */
+    override private[handler] def collectRunInfo(info : ListBuffer[RunInfo]) = {
+      super.collectRunInfo(info)
+      l.collectRunInfo(info)
+      r.collectRunInfo(info)
+      info
     }
   }
 

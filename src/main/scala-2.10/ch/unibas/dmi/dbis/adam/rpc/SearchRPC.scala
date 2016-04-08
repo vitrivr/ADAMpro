@@ -159,8 +159,17 @@ class SearchRPC extends AdamSearchGrpc.AdamSearch {
     log.debug("rpc call for chained query operation")
 
     try {
-      //TODO: possibly add intermediary responses
-      Future.successful(CompoundQueryResponseListMessage(finalResponse = Option(prepareResults(QueryOp.compoundQuery(SearchRPCMethods.toQueryHolder(request))))))
+      val qh = SearchRPCMethods.toQueryHolder(request)
+
+      val results = QueryOp.compoundQuery(qh)
+      val intermediate = qh.provideRunInfo().map(res =>
+        QueryResponseInfoMessage(id = res.id, time = res.time.toMillis, queryResponseList = Option(prepareResults(res.results)))
+      )
+
+      Future.successful(CompoundQueryResponseListMessage(
+        intermediate,
+        Option(prepareResults(results)))
+      )
     } catch {
       case e: Exception => Future.failed(e)
     }
@@ -186,12 +195,21 @@ class SearchRPC extends AdamSearchGrpc.AdamSearch {
     val keys = array(cols.map(lit): _*)
     val values = array(cols.map(col): _*)
 
-    val responseMsgs = df.withColumn("metadata", asMap(keys, values))
-      .collect().map(row => QueryResponseMessage(
-      row.getAs[Long](FieldNames.idColumnName),
-      row.getAs[Float](FieldNames.distanceColumnName),
-      row.getMap[String, String](3).toMap
-    ))
+    val responseMsgs = if(!cols.isEmpty){
+      df.withColumn("metadata", asMap(keys, values))
+        .collect().map(row => QueryResponseMessage(
+        row.getAs[Long](FieldNames.idColumnName),
+        row.getAs[Float](FieldNames.distanceColumnName),
+        row.getMap[String, String](3).toMap
+      ))
+    } else {
+      df
+        .collect().map(row => QueryResponseMessage(
+        row.getAs[Long](FieldNames.idColumnName),
+        row.getAs[Float](FieldNames.distanceColumnName),
+        Map[String, String]()
+      ))
+    }
 
     QueryResponseListMessage(responseMsgs)
   }

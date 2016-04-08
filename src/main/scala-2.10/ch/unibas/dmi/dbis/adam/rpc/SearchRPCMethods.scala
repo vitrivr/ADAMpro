@@ -2,7 +2,6 @@ package ch.unibas.dmi.dbis.adam.rpc
 
 import java.util.concurrent.TimeUnit
 
-import ch.unibas.dmi.dbis.adam.api.QueryOp._
 import ch.unibas.dmi.dbis.adam.datatypes.feature.Feature._
 import ch.unibas.dmi.dbis.adam.http.grpc._
 import ch.unibas.dmi.dbis.adam.index.structures.IndexTypes
@@ -38,7 +37,7 @@ private[rpc] object SearchRPCMethods {
   implicit def toQueryHolder(request: SimpleQueryMessage, onComplete: (ProgressiveQueryStatus.Value, DataFrame, VectorBase, String, Map[String, String]) => Unit) = new ProgressiveQueryHolder(request.entity, prepareNNQ(request.nnq), prepareBQ(request.bq), onComplete, request.withMetadata)
 
   implicit def toQueryHolder(request: CompoundQueryMessage) = {
-    new CompoundQueryHolder(request.entity, prepareNNQ(request.nnq), toExpr(request.indexFilterExpression), request.withMetadata)
+    new CompoundQueryHolder(request.entity, prepareNNQ(request.nnq), toExpr(request.indexFilterExpression), false, request.withMetadata)
   }
 
   implicit def toExpr(request: ExpressionQueryMessage): Expression = {
@@ -60,15 +59,18 @@ private[rpc] object SearchRPCMethods {
   }
 
   implicit def toExpr(seqm: Option[SubExpressionQueryMessage]): Expression = {
+    if(seqm.isEmpty){
+      return null;
+    }
+
     val expr = seqm.get.submessage match {
       case SubExpressionQueryMessage.Submessage.Eqm(x) => toExpr(x)
-      case SubExpressionQueryMessage.Submessage.Ssiqm(x) => (x: SpecifiedIndexQueryHolder)
-      case SubExpressionQueryMessage.Submessage.Siqm(x) => (x: IndexQueryHolder)
-      case SubExpressionQueryMessage.Submessage.Ssqm(x) => (x: SequentialQueryHolder)
+      case SubExpressionQueryMessage.Submessage.Ssiqm(request) => new SpecifiedIndexQueryHolder(request.index, prepareNNQ(request.nnq), prepareBQ(request.bq), request.withMetadata, seqm.get.id)
+      case SubExpressionQueryMessage.Submessage.Siqm(request) => new IndexQueryHolder(request.entity, IndexTypes.withIndextype(request.indextype).get, prepareNNQ(request.nnq), prepareBQ(request.bq), request.withMetadata, seqm.get.id)
+      case SubExpressionQueryMessage.Submessage.Ssqm(request) => new SequentialQueryHolder(request.entity, prepareNNQ(request.nnq), prepareBQ(request.bq), request.withMetadata, seqm.get.id)
       case _ => null
     }
 
-    expr.id = seqm.get.id
     expr
   }
 
