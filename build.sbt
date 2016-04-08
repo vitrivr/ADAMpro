@@ -43,7 +43,8 @@ resolvers += Resolver.sonatypeRepo("snapshots")
 
 libraryDependencies ++= Seq(
   "org.apache.spark"       %%   "spark-core"             % "1.6.1" % "provided" excludeAll(
-    ExclusionRule("org.apache.hadoop")
+    ExclusionRule("org.apache.hadoop"),
+    ExclusionRule("org.slf4j")
     ),
   "org.apache.spark"       %%   "spark-sql"              % "1.6.1" % "provided",
   "org.apache.spark"       %%   "spark-hive"             % "1.6.1" % "provided",
@@ -56,7 +57,8 @@ libraryDependencies ++= Seq(
   "com.datastax.spark"     %%   "spark-cassandra-connector" % "1.6.0-M1",
   "com.fasterxml.jackson.core" % "jackson-core"          % "2.4.4",
   "org.apache.hadoop"      %    "hadoop-client"          % "2.6.4" % "provided",
-  "org.apache.commons"     %    "commons-lang3"          % "3.4"
+  "org.apache.commons"     %    "commons-lang3"          % "3.4",
+  "org.slf4j"              %    "slf4j-simple"           % "1.7.21"
 )
 
 unmanagedBase <<= baseDirectory { base => base / "lib" }
