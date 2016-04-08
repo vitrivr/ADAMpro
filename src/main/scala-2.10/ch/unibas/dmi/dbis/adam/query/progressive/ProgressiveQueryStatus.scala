@@ -19,6 +19,7 @@ import scala.util.{Success, Try}
   * Ivan Giangreco
   * September 2015
   */
+//TODO: add time
 case class ProgressiveQueryIntermediateResults(confidence: Float, results: DataFrame, deliverer: String) {
   def this(future: ScanFuture, results: DataFrame) {
     this(future.confidence, results, future.name)
