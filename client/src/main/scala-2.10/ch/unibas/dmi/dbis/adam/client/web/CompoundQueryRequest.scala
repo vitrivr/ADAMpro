@@ -36,7 +36,7 @@ case class CompoundQueryRequest(id: String, operation: String, options: Map[Stri
 
     val node = targets.get.head
 
-    var sqm = SubExpressionQueryMessage().withId(id)
+    var sqm = SubExpressionQueryMessage().withId(node.id)
 
     if (node.operation == "aggregate") {
       sqm = sqm.withEqm(node.eqm())
