@@ -63,7 +63,13 @@ case class CompoundQueryRequest(id: String, operation: String, options: Map[Stri
     val lsqm = seqm(targets.get(0))
     val rsqm = seqm(targets.get(1))
 
-    ExpressionQueryMessage(Option(lsqm), op, ExpressionQueryMessage.OperationOrder.PARALLEL, Option(rsqm), id)
+    val order = options.get("operationorder").get match {
+      case "parallel" => ExpressionQueryMessage.OperationOrder.PARALLEL
+      case "left" => ExpressionQueryMessage.OperationOrder.LEFTFIRST
+      case "right" => ExpressionQueryMessage.OperationOrder.RIGHTFIRST
+    }
+
+    ExpressionQueryMessage(Option(lsqm), op, order, Option(rsqm), id)
   }
 
   private def seqm(cqr: CompoundQueryRequest): SubExpressionQueryMessage = {

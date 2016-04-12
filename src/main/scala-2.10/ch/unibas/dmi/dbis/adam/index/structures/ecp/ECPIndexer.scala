@@ -12,27 +12,32 @@ import org.apache.spark.rdd.RDD
 import org.apache.spark.util.random.ADAMSamplingUtils
 
 /**
- * adamtwo
- *
- * Ivan Giangreco
- * October 2015
- */
-class ECPIndexer(distance : DistanceFunction) extends IndexGenerator with Serializable {
+  * adamtwo
+  *
+  * Ivan Giangreco
+  * October 2015
+  */
+class ECPIndexer(trainingSize: Int = -1, distance: DistanceFunction) extends IndexGenerator with Serializable {
   @transient lazy val log = Logger.getLogger(getClass.getName)
 
   override val indextypename: IndexTypeName = IndexTypes.ECPINDEX
 
   /**
-   *
-   * @param indexname
-   * @param entityname
-   * @param data
-   * @return
-   */
+    *
+    * @param indexname
+    * @param entityname
+    * @param data
+    * @return
+    */
   override def index(indexname: IndexName, entityname: EntityName, data: RDD[IndexingTaskTuple]): Index = {
     val n = Entity.countTuples(entityname)
-    val trainingSize = math.sqrt(n)
-    val fraction = ADAMSamplingUtils.computeFractionForSampleSize(trainingSize.toInt, n, false)
+    val ntuples = if (trainingSize == -1) {
+      math.sqrt(n)
+    } else {
+      trainingSize
+    }
+
+    val fraction = ADAMSamplingUtils.computeFractionForSampleSize(ntuples.toInt, n, false)
     val trainData = data.sample(false, fraction)
 
     val leaders = data.sample(true, fraction).collect
@@ -42,12 +47,12 @@ class ECPIndexer(distance : DistanceFunction) extends IndexGenerator with Serial
     log.debug("eCP indexing...")
 
     val indexdata = data.map(datum => {
-        val minTID = broadcastLeaders.value.map({ l =>
-          (l.id, distance.apply(datum.feature, l.feature))
-        }).minBy(_._2)._1
+      val minTID = broadcastLeaders.value.map({ l =>
+        (l.id, distance.apply(datum.feature, l.feature))
+      }).minBy(_._2)._1
 
-        LongIndexTuple(datum.id, minTID)
-      })
+      LongIndexTuple(datum.id, minTID)
+    })
 
     import SparkStartup.sqlContext.implicits._
     new ECPIndex(indexname, entityname, indexdata.toDF, ECPIndexMetaData(leaders.toArray.toSeq, distance))
@@ -55,5 +60,8 @@ class ECPIndexer(distance : DistanceFunction) extends IndexGenerator with Serial
 }
 
 object ECPIndexer {
-  def apply(distance : DistanceFunction) : IndexGenerator = new ECPIndexer(distance)
+  def apply(distance: DistanceFunction, properties : Map[String, String] = Map[String, String]()): IndexGenerator = {
+    val trainingSize = properties.getOrElse("trainingSize", "-1").toInt
+    new ECPIndexer(trainingSize, distance)
+  }
 }

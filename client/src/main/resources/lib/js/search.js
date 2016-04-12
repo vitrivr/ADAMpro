@@ -101,7 +101,7 @@ for (var i = 0; i < windows.length; i++) {
 $("#btnAddIndex").click(function(){
     var innerhtml = "";
     innerhtml += "<input type=\"text\" class=\"form-control\" name=\"indexname\" placeholder=\"indexname\">";
-    innerhtml += "<div class=\"input-field\"><select id=\"operationorder\" class=\"browser-default\"><option value=\"parallel\">parallel</option><option value=\"left\">left first</option><option value=\"right\">right first</option> </select></div>";
+    innerhtml += "<div class=\"input-field\"><select id=\"operationorder\" class=\"browser-default\"><option value=\"parallel\" selected=\"selected\">parallel</option><option value=\"left\">left first</option><option value=\"right\">right first</option> </select></div>";
 
     newNode(0, 0, innerhtml, $("#indextype option:selected").text(), $("#indextype").val());
 });

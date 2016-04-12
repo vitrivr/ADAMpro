@@ -58,7 +58,7 @@ object IndexOp {
     val entity = Entity.load(entityname)
 
     val generator: IndexGenerator = indextypename match {
-      case IndexTypes.ECPINDEX => ECPIndexer(distance)
+      case IndexTypes.ECPINDEX => ECPIndexer(distance, properties)
       case IndexTypes.LSHINDEX => LSHIndexer(distance, properties)
       case IndexTypes.PQINDEX => PQIndexer(properties)
       case IndexTypes.SHINDEX => SHIndexer(entity.get.getFeaturedata.first().getAs[FeatureVectorWrapper](1).vector.length, properties)
