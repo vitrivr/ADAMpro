@@ -167,7 +167,7 @@ object SHIndexer {
    */
   def apply(dimensions : Int, properties : Map[String, String] = Map[String, String]()) : IndexGenerator = {
     val nbits = math.min(500, properties.getOrElse("nbits", (dimensions * 2).toString).toInt)
-    val trainingSize = properties.getOrElse("trainingSize", "500").toInt
+    val trainingSize = properties.getOrElse("ntraining", "500").toInt
 
     new SHIndexer(nbits, trainingSize)
   }

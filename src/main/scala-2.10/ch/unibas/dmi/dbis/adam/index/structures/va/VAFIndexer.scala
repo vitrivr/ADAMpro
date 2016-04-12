@@ -83,18 +83,18 @@ object VAFIndexer {
    * @param properties
    */
   def apply(distance : MinkowskiDistance, properties : Map[String, String] = Map[String, String]()) : IndexGenerator = {
-    val maxMarks = properties.getOrElse("maxMarks", "64").toInt
+    val maxMarks = properties.getOrElse("nmarks", "64").toInt
 
-    val marksGeneratorDescription = properties.getOrElse("marksGenerator", "equifrequent")
+    val marksGeneratorDescription = properties.getOrElse("marktype", "equifrequent")
     val marksGenerator = marksGeneratorDescription.toLowerCase match {
       case "equifrequent" => EquifrequentMarksGenerator
       case "equidistant" => EquidistantMarksGenerator
     }
 
-    val signatureGeneratorDescription = properties.getOrElse("signatureGenerator", "fixed")
-    val fixedNumBitsPerDimension = properties.getOrElse("fixedNumBits", "8").toInt
+    val signatureGeneratorDescription = properties.getOrElse("signaturetype", "fixed")
+    val fixedNumBitsPerDimension = properties.getOrElse("signature-nbits-dim", "8").toInt
 
-    val trainingSize = properties.getOrElse("trainingSize", "5000").toInt
+    val trainingSize = properties.getOrElse("ntraining", "5000").toInt
 
 
     new VAFIndexer(maxMarks, marksGenerator, fixedNumBitsPerDimension, trainingSize, distance)

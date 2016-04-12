@@ -85,12 +85,12 @@ object LSHIndexer {
    * @param properties
    */
   def apply(distance : DistanceFunction, properties : Map[String, String] = Map[String, String]()) : IndexGenerator = {
-    val numHashTables = properties.getOrElse("numHashTables", "64").toInt
-    val numHashes = properties.getOrElse("numHashes", "64").toInt
+    val numHashTables = properties.getOrElse("nhashtables", "64").toInt
+    val numHashes = properties.getOrElse("nhashes", "64").toInt
 
     val norm = properties.getOrElse("norm", "2").toInt
 
-    val trainingSize = properties.getOrElse("trainingSize", "500").toInt
+    val trainingSize = properties.getOrElse("ntraining", "500").toInt
 
     new LSHIndexer(numHashTables, numHashes, distance, trainingSize)
   }

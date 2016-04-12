@@ -61,7 +61,7 @@ class ECPIndexer(trainingSize: Int = -1, distance: DistanceFunction) extends Ind
 
 object ECPIndexer {
   def apply(distance: DistanceFunction, properties : Map[String, String] = Map[String, String]()): IndexGenerator = {
-    val trainingSize = properties.getOrElse("trainingSize", "-1").toInt
+    val trainingSize = properties.getOrElse("ntraining", "-1").toInt
     new ECPIndexer(trainingSize, distance)
   }
 }

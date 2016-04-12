@@ -88,7 +88,7 @@ object PQIndexer {
     */
   def apply(properties : Map[String, String] = Map[String, String]()) : IndexGenerator = {
     val nsq = properties.getOrElse("nsq", "8").toInt
-    val trainingSize = properties.getOrElse("trainingSize", "500").toInt
+    val trainingSize = properties.getOrElse("ntraining", "500").toInt
 
     new PQIndexer(nsq, trainingSize)
   }
