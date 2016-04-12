@@ -4,11 +4,8 @@ import java.util.concurrent.TimeUnit
 
 import ch.unibas.dmi.dbis.adam.evaluation.config.IndexTypes
 import ch.unibas.dmi.dbis.adam.http.grpc.AdamDefinitionGrpc.AdamDefinitionBlockingStub
-import ch.unibas.dmi.dbis.adam.http.grpc.AdamSearchGrpc.{AdamSearchStub, AdamSearchBlockingStub}
-import ch.unibas.dmi.dbis.adam.http.grpc.{AckMessage, CreateEntityMessage}
-import ch.unibas.dmi.dbis.adam.http.grpc.AdamDefinitionGrpc.AdamDefinitionBlockingStub
-import ch.unibas.dmi.dbis.adam.http.grpc.AdamSearchGrpc.AdamSearchBlockingStub
-import ch.unibas.dmi.dbis.adam.http.grpc._
+import ch.unibas.dmi.dbis.adam.http.grpc.AdamSearchGrpc.{AdamSearchBlockingStub, AdamSearchStub}
+import ch.unibas.dmi.dbis.adam.http.grpc.{AckMessage, CreateEntityMessage, _}
 import io.grpc.ManagedChannel
 import io.grpc.stub.StreamObserver
 import org.apache.logging.log4j.LogManager
@@ -129,7 +126,7 @@ class EvaluationClient(channel: ManagedChannel, definer: AdamDefinitionBlockingS
     * @param vectorSize
     */
   def generateRandomData(entityname : String, collectionSize : Int, vectorSize : Int): Unit = {
-    definer.randomData(RandomDataMessage(entityname, collectionSize, vectorSize))
+    definer.prepareForDemo(GenerateRandomEntityMessage(entityname, collectionSize, vectorSize))
   }
 
 
