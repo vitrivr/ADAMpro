@@ -108,7 +108,7 @@ $("#btnAddIndex").click(function(){
 //add operation
 $("#btnAddOperation").click(function(){
     var innerhtml = "";
-    innerhtml += "<div class=\"input-field\"><select id=\"operationorder\" class=\"browser-default\"><option value=\"parallel\" selected=\"selected\">parallel</option><option value=\"left\">left first</option><option value=\"right\">right first</option> </select></div>";
+    innerhtml += "<div class=\"input-field\"><select name=\"operationorder\" class=\"browser-default\"><option value=\"parallel\" selected=\"selected\">parallel</option><option value=\"left\">left first</option><option value=\"right\">right first</option> </select></div>";
 
     newNode(0, 0, innerhtml, $("#indexoperation option:selected").text(), $("#indexoperation").val());
 });
@@ -175,7 +175,7 @@ var evaluate = function(id){
             result.options = {};
 
             result.options.indextype = type;
-            $("#" + id + " > .settings").children(":input").each(function() {
+            $("#" + id + " > .settings").find(":input").each(function() {
                 if($(this).val().length > 0){
                     result.options[$(this).attr('name')] =  $(this).val();
                 }
@@ -198,6 +198,11 @@ var evaluate = function(id){
             result.operation = "aggregate";
             result.options = {};
             result.options.aggregation = type;
+            $("#" + id + " > .settings").find(":input").each(function() {
+                if($(this).val().length > 0){
+                    result.options[$(this).attr('name')] =  $(this).val();
+                }
+            });
             result.targets = $.map(targets, function(val, i){return evaluate(val)});
 
             return result;
