@@ -8,13 +8,14 @@ import ch.unibas.dmi.dbis.adam.http.grpc._
   * Ivan Giangreco
   * April 2016
   */
-case class CompoundQueryRequest(id: String, operation: String, options: Map[String, String],
-                                targets: Option[Seq[CompoundQueryRequest]]) //for UNION, INTERSECT and EXCEPT this field contains the sub-queries
+case class CompoundQueryRequest(var id: String, var operation: String, var options: Map[String, String],
+                                var targets: Option[Seq[CompoundQueryRequest]]) //for UNION, INTERSECT and EXCEPT this field contains the sub-queries
 {
   /**
     *
     */
   def toRPCMessage(): CompoundQueryMessage = {
+    this.prepare()
     this.cqm()
   }
 
@@ -23,6 +24,25 @@ case class CompoundQueryRequest(id: String, operation: String, options: Map[Stri
   private def query = options.get("query").get.split(",").map(_.toFloat)
 
   private def nnq = NearestNeighbourQueryMessage(query, 2, 100, false, Map())
+
+  /**
+    *
+    */
+  private def prepare(): Unit = {
+    if (operation == "indexscan" && targets.isDefined && targets.get.length > 0) {
+      val from = CompoundQueryRequest(id, operation, options, None)
+      val to = targets.get.head
+
+      id = id + "-intersectfilter"
+      operation = "aggregate"
+      options = Map("aggregation" -> "intersect", "operationorder" -> "right")
+      targets = Option(Seq(from, to))
+    } else if(targets.isDefined) {
+      targets.get.foreach{t =>
+        t.prepare()
+      }
+    }
+  }
 
 
   /**
@@ -67,6 +87,7 @@ case class CompoundQueryRequest(id: String, operation: String, options: Map[Stri
       case "parallel" => ExpressionQueryMessage.OperationOrder.PARALLEL
       case "left" => ExpressionQueryMessage.OperationOrder.LEFTFIRST
       case "right" => ExpressionQueryMessage.OperationOrder.RIGHTFIRST
+      case _  => ExpressionQueryMessage.OperationOrder.PARALLEL
     }
 
     ExpressionQueryMessage(Option(lsqm), op, order, Option(rsqm), id)

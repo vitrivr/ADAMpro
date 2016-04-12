@@ -181,6 +181,12 @@ var evaluate = function(id){
                 }
             });
 
+            var targets = getTargets(id); //TODO: only one target allowed!
+
+            if(targets.length > 0){
+                result.targets = $.map(targets, function(val, i){return evaluate(val)});
+            }
+
             //TODO: possibly switch to "local" information
             result.options.entityname = $("#entityname").val();
             result.options.query = $("#query").val();
