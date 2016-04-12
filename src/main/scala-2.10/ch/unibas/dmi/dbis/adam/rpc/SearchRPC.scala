@@ -60,7 +60,10 @@ class SearchRPC extends AdamSearchGrpc.AdamSearch {
     try {
       Future.successful(prepareResults(QueryOp.apply(SearchRPCMethods.toQueryHolder(request))))
     } catch {
-      case e: Exception => Future.failed(e)
+      case e: Exception => {
+        log.error(e)
+        Future.failed(e)
+      }
     }
   }
 
@@ -75,7 +78,10 @@ class SearchRPC extends AdamSearchGrpc.AdamSearch {
     try {
       Future.successful(prepareResults(QueryOp.sequential(SearchRPCMethods.toQueryHolder(request))))
     } catch {
-      case e: Exception => Future.failed(e)
+      case e: Exception => {
+        log.error(e)
+        Future.failed(e)
+      }
     }
   }
 
@@ -91,7 +97,10 @@ class SearchRPC extends AdamSearchGrpc.AdamSearch {
     try {
       Future.successful(prepareResults(QueryOp.index(SearchRPCMethods.toQueryHolder(request))))
     } catch {
-      case e: Exception => Future.failed(e)
+      case e: Exception => {
+        log.error(e)
+        Future.failed(e)
+      }
     }
   }
 
@@ -107,7 +116,10 @@ class SearchRPC extends AdamSearchGrpc.AdamSearch {
     try {
       Future.successful(prepareResults(QueryOp.index(SearchRPCMethods.toQueryHolder(request))))
     } catch {
-      case e: Exception => Future.failed(e)
+      case e: Exception => {
+        log.error(e)
+        Future.failed(e)
+      }
     }
   }
 
@@ -128,7 +140,10 @@ class SearchRPC extends AdamSearchGrpc.AdamSearch {
 
       QueryOp.progressive(SearchRPCMethods.toQueryHolder(request, onComplete))
     } catch {
-      case e: Exception => Future.failed(e)
+      case e: Exception => {
+        log.error(e)
+        Future.failed(e)
+      }
     }
   }
 
@@ -145,7 +160,10 @@ class SearchRPC extends AdamSearchGrpc.AdamSearch {
       val (results, confidence, deliverer) = QueryOp.timedProgressive(SearchRPCMethods.toQueryHolder(request))
       Future.successful(QueryResponseInfoMessage(confidence = confidence, indextype = IndexTypes.withName(deliverer).get.indextype, queryResponseList = Option(prepareResults(results))))
     } catch {
-      case e: Exception => Future.failed(e)
+      case e: Exception => {
+        log.error(e)
+        Future.failed(e)
+      }
     }
   }
 
@@ -171,7 +189,10 @@ class SearchRPC extends AdamSearchGrpc.AdamSearch {
         Option(prepareResults(results)))
       )
     } catch {
-      case e: Exception => Future.failed(e)
+      case e: Exception => {
+        log.error(e)
+        Future.failed(e)
+      }
     }
   }
 
@@ -195,7 +216,7 @@ class SearchRPC extends AdamSearchGrpc.AdamSearch {
     val keys = array(cols.map(lit): _*)
     val values = array(cols.map(col): _*)
 
-    val responseMsgs = if(!cols.isEmpty){
+    val responseMsgs = if (!cols.isEmpty) {
       df.withColumn("metadata", asMap(keys, values))
         .collect().map(row => QueryResponseMessage(
         row.getAs[Long](FieldNames.idColumnName),
