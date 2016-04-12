@@ -37,7 +37,7 @@ private[rpc] object SearchRPCMethods {
   implicit def toQueryHolder(request: SimpleQueryMessage, onComplete: (ProgressiveQueryStatus.Value, DataFrame, VectorBase, String, Map[String, String]) => Unit) = new ProgressiveQueryHolder(request.entity, prepareNNQ(request.nnq), prepareBQ(request.bq), onComplete, request.withMetadata)
 
   implicit def toQueryHolder(request: CompoundQueryMessage) = {
-    new CompoundQueryHolder(request.entity, prepareNNQ(request.nnq), toExpr(request.indexFilterExpression), false, request.withMetadata)
+    new CompoundQueryHolder(request.entity, prepareNNQ(request.nnq), toExpr(request.indexFilterExpression), false, request.withMetadata, request.id)
   }
 
   implicit def toExpr(request: ExpressionQueryMessage): Expression = {

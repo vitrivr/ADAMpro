@@ -51,7 +51,8 @@ object CompoundQueryHandler {
         log.warn("please run compound query before collecting run information")
         return Seq()
       } else {
-        expr.collectRunInfo(new ListBuffer()).toSeq
+        val start = collectRunInfo(new ListBuffer())
+        expr.collectRunInfo(start).toSeq
       }
     }
   }
