@@ -101,14 +101,16 @@ for (var i = 0; i < windows.length; i++) {
 $("#btnAddIndex").click(function(){
     var innerhtml = "";
     innerhtml += "<input type=\"text\" class=\"form-control\" name=\"indexname\" placeholder=\"indexname\">";
-    innerhtml += "<div class=\"input-field\"><select id=\"operationorder\" class=\"browser-default\"><option value=\"parallel\" selected=\"selected\">parallel</option><option value=\"left\">left first</option><option value=\"right\">right first</option> </select></div>";
 
     newNode(0, 0, innerhtml, $("#indextype option:selected").text(), $("#indextype").val());
 });
 
 //add operation
 $("#btnAddOperation").click(function(){
-    newNode(0, 0, "", $("#indexoperation option:selected").text(), $("#indexoperation").val());
+    var innerhtml = "";
+    innerhtml += "<div class=\"input-field\"><select id=\"operationorder\" class=\"browser-default\"><option value=\"parallel\" selected=\"selected\">parallel</option><option value=\"left\">left first</option><option value=\"right\">right first</option> </select></div>";
+
+    newNode(0, 0, innerhtml, $("#indexoperation option:selected").text(), $("#indexoperation").val());
 });
 
 //submit operation
