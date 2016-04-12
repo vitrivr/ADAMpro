@@ -22,7 +22,7 @@ class AdamController(rpcClient: RPCClient) extends Controller {
 
   case class PreparationRequestReponse(code: Int, entityname: String = "", ntuples: Int = 0, ndims: Int = 0)
 
-  post("/prepare") { request: PreparationRequest =>
+  post("/add-entity") { request: PreparationRequest =>
     val res = rpcClient.prepareDemo(request.entityname, request.ntuples, request.ndims)
 
     log.info("prepared data")

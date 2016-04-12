@@ -11,7 +11,7 @@ $("#btnSubmit").click(function(){
     result.ntuples = $("#ntuples").val();
     result.ndims = $("#ndims").val();
 
-    $.ajax("/prepare", {
+    $.ajax("/add-entity", {
         data: JSON.stringify(result),
         contentType: 'application/json',
         type: 'POST',
