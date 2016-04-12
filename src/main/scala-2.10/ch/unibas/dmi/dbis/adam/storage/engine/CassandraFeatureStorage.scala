@@ -11,6 +11,7 @@ import com.datastax.driver.core.Session
 import com.datastax.spark.connector._
 import com.datastax.spark.connector.cql.CassandraConnector
 import org.apache.log4j.Logger
+import org.apache.spark.rdd.RDD
 import org.apache.spark.sql.types.{BinaryType, LongType, StructField, StructType}
 import org.apache.spark.sql.{DataFrame, Row, SaveMode}
 
@@ -91,18 +92,23 @@ object CassandraFeatureStorage extends FeatureStorage with Serializable {
   override def read(entityname: EntityName, filter: Option[Set[TupleID]]): DataFrame = {
     log.debug("cassandra read operation")
 
-    val rowRDD = if (filter.isDefined) {
+    val rowRDD: RDD[Row] = if (filter.isDefined) {
       val subresults = filter.get.grouped(500).map(subfilter =>
         SparkStartup.sc.cassandraTable(defaultKeyspace, entityname).where(idColumnName + " IN ?", subfilter).map(crow => Row(crow.getLong(0), asWorkingVectorWrapper(crow.getList[Float](1))))
       ).toSeq
 
-      var base = subresults(0)
+      if(!subresults.isEmpty) {
 
-      subresults.slice(1, subresults.length).foreach { sr =>
-        base = base.union(sr)
+        var base = subresults(0)
+
+        subresults.slice(1, subresults.length).foreach { sr =>
+          base = base.union(sr)
+        }
+
+        base
+      } else {
+        SparkStartup.sc.emptyRDD
       }
-
-      base
     } else {
       val cassandraScan = SparkStartup.sc.cassandraTable(defaultKeyspace, entityname)
       cassandraScan.map(crow => Row(crow.getLong(0), asWorkingVectorWrapper(crow.getList[Float](1))))
