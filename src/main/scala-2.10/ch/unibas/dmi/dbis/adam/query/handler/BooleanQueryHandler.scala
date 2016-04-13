@@ -1,12 +1,18 @@
 package ch.unibas.dmi.dbis.adam.query.handler
 
+import java.util.concurrent.TimeUnit
+
+import ch.unibas.dmi.dbis.adam.config.AdamConfig
 import ch.unibas.dmi.dbis.adam.entity.Entity
 import ch.unibas.dmi.dbis.adam.entity.Entity._
 import ch.unibas.dmi.dbis.adam.entity.Tuple._
 import ch.unibas.dmi.dbis.adam.query.query.BooleanQuery
 import ch.unibas.dmi.dbis.adam.query.scanner.MetadataScanner
+import com.google.common.cache.{CacheBuilder, CacheLoader}
 import org.apache.log4j.Logger
 import org.apache.spark.sql.DataFrame
+
+import scala.util.{Failure, Success, Try}
 
 /**
  * adamtwo
@@ -24,9 +30,9 @@ private[query] object BooleanQueryHandler {
     * @param query
     * @return
     */
-  def metadataQuery(entityname: EntityName, query : BooleanQuery): Option[DataFrame] = {
+  def metadataQuery(entityname: EntityName, query: BooleanQuery): Option[DataFrame] = {
     log.debug("performing metadata-based boolean query on " + entityname)
-    MetadataScanner(Entity.load(entityname).get, query)
+    BooleanQueryLRUCache.get(entityname, query).get
   }
 
   /**
@@ -40,4 +46,34 @@ private[query] object BooleanQueryHandler {
     log.debug("retrieving metadata for " + entityname)
     MetadataScanner(Entity.load(entityname).get, filter)
   }
+
+
+  object BooleanQueryLRUCache {
+    private val maximumCacheSizeIndex = AdamConfig.maximumCacheSizeBooleanQuery
+    private val expireAfterAccess = AdamConfig.expireAfterAccessBooleanQuery
+
+    private val bqCache = CacheBuilder.
+      newBuilder().
+      maximumSize(maximumCacheSizeIndex).
+      expireAfterAccess(expireAfterAccess, TimeUnit.MINUTES).
+      build(
+        new CacheLoader[(EntityName, BooleanQuery), Option[DataFrame]]() {
+          def load(query: (EntityName, BooleanQuery)): Option[DataFrame] = {
+            MetadataScanner(Entity.load(query._1).get, query._2)
+          }
+        }
+      )
+
+
+    def get(entityname: EntityName, bq : BooleanQuery): Try[Option[DataFrame]] = {
+      try {
+        Success(bqCache.get((entityname, bq)))
+      } catch {
+        case e : Exception =>
+          log.error(e.getMessage)
+          Failure(e)
+      }
+    }
+  }
+
 }

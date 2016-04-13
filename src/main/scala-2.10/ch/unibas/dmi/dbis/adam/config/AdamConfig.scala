@@ -46,7 +46,10 @@ object AdamConfig{
   val loglevel = config.getString("adampro.loglevel")
 
   val maximumCacheSizeIndex = 10
-  val expireAfterAccess = 10 //in minutes
+  val expireAfterAccessIndex = 10 //in minutes
+
+  val maximumCacheSizeBooleanQuery = 100
+  val expireAfterAccessBooleanQuery = 1 //in minutes
 
   val master = if(config.hasPath("adampro.master")){
     Option(config.getString("adampro.master"))

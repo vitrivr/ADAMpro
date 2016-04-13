@@ -59,6 +59,19 @@ case class BooleanQuery(
   def append(filter: Set[TupleID]): Unit = {
     tidFilter = Option(tidFilter.getOrElse(Set()) ++ filter)
   }
+
+  override def hashCode(): Int = {
+    where.hashCode() + join.hashCode() + tidFilter.hashCode()
+  }
+
+  override def equals(obj: scala.Any): Boolean = {
+    if(obj.isInstanceOf[BooleanQuery]){
+      val other = obj.asInstanceOf[BooleanQuery]
+      where.equals(other.where) && join.equals(other.join) && tidFilter.equals(other.tidFilter)
+    } else {
+      false
+    }
+  }
 }
 
 

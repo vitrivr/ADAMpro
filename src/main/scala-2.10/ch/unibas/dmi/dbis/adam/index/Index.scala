@@ -288,7 +288,7 @@ object Index {
 
   object IndexLRUCache {
     private val maximumCacheSizeIndex = AdamConfig.maximumCacheSizeIndex
-    private val expireAfterAccess = AdamConfig.expireAfterAccess
+    private val expireAfterAccess = AdamConfig.expireAfterAccessIndex
 
     private val indexCache = CacheBuilder.
       newBuilder().
