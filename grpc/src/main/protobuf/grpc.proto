@@ -182,7 +182,8 @@ message CompoundQueryMessage {
   NearestNeighbourQueryMessage nnq = 2;
   SubExpressionQueryMessage indexFilterExpression = 3;
   bool withMetadata = 4;
-  string id = 5;
+  bool withIntermediateResults = 5;
+  string id = 6;
 }
 
 //experimental

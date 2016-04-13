@@ -66,7 +66,7 @@ case class CompoundQueryRequest(var id: String, var operation: String, var optio
       sqm = sqm.withSiqm(node.siqm())
     }
 
-    CompoundQueryMessage(entity, Option(nnq), Option(sqm), true, id)
+    CompoundQueryMessage(entity, Option(nnq), Option(sqm), true, true, id)
   }
 
   /**

@@ -180,14 +180,20 @@ class SearchRPC extends AdamSearchGrpc.AdamSearch {
       val qh = SearchRPCMethods.toQueryHolder(request)
 
       val results = QueryOp.compoundQuery(qh)
-      val intermediate = qh.provideRunInfo().map(res =>
-        QueryResponseInfoMessage(id = res.id, time = res.time.toMillis, queryResponseList = Option(prepareResults(res.results)))
-      )
+
+      val intermediate = if (request.withIntermediateResults) {
+        qh.provideRunInfo().map(res =>
+          QueryResponseInfoMessage(id = res.id, time = res.time.toMillis, queryResponseList = Option(prepareResults(res.results)))
+        )
+      } else {
+        Seq()
+      }
 
       Future.successful(CompoundQueryResponseListMessage(
         intermediate,
         Option(prepareResults(results)))
       )
+
     } catch {
       case e: Exception => {
         log.error(e)
