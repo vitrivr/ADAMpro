@@ -75,7 +75,7 @@ class VAVIndexer (nbits : Int, marksGenerator: MarksGenerator, trainingSize : In
     val signatureGenerator =  new VariableSignatureGenerator(modes)
     val marks = marksGenerator.getMarks(trainData, modes.map(x => 2 << (x - 1)))
 
-    log.debug("VA-File (fixed) finished training")
+    log.debug("VA-File (variable) finished training")
 
     VAIndexMetaData(marks, signatureGenerator, distance)
   }
@@ -100,19 +100,14 @@ object VAVIndexer {
    * @param properties
    */
   def apply(dimensions : Int, distance : MinkowskiDistance, properties : Map[String, String] = Map[String, String]()) : IndexGenerator = {
-    val maxMarks = properties.getOrElse("nmarks", "64").toInt
-
     val marksGeneratorDescription = properties.getOrElse("marktype", "equifrequent")
     val marksGenerator = marksGeneratorDescription.toLowerCase match {
       case "equifrequent" => EquifrequentMarksGenerator
       case "equidistant" => EquidistantMarksGenerator
     }
 
-    val signatureGeneratorDescription = properties.getOrElse("signaturetype", "variable")
     val totalNumBits = properties.getOrElse("signature-nbits", (dimensions * 8).toString).toInt
-
     val trainingSize = properties.getOrElse("ntraining", "1000").toInt
-
 
     new VAVIndexer(totalNumBits, marksGenerator, trainingSize, distance)
   }
