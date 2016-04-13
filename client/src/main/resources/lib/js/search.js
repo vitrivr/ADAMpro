@@ -163,6 +163,11 @@ var evaluate = function(id){
             result.operation = "start";
             result.options = {};
             result.options.entityname = $("#entityname").val();
+
+            if($("#k").val().length > 0){
+                result.options.k = $("#k").val();
+            }
+
             result.options.query = $("#query").val();
             result.targets = $.map(targets, function(val, i){return evaluate(val)});
 
@@ -196,6 +201,9 @@ var evaluate = function(id){
             //TODO: possibly switch to "local" information
             result.options.entityname = $("#entityname").val();
             result.options.query = $("#query").val();
+            if($("#k").val().length > 0){
+                result.options.k = $("#k").val();
+            }
 
             return result;
             break;
