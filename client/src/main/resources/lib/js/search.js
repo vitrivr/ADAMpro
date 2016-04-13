@@ -133,7 +133,9 @@ $("#btnSubmit").click(function(){
         type: 'POST',
         success: function(data){
             $.each(data.intermediate_responses, function(idx, val){
-                $("#" + val.id + " > .res").html("execution time: " + val.time + "ms" + "<br/>" + "results: " + val.length);
+                if(val.id.length > 0){
+                    $("#" + val.id + " > .res").html("execution time: " + val.time + "ms" + "<br/>" + "results: " + val.length);
+                }
             });
             $("#progress").hide()
             $("#btnSubmit").removeClass('disabled');

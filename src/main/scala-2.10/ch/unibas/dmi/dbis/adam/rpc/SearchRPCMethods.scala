@@ -6,7 +6,7 @@ import ch.unibas.dmi.dbis.adam.datatypes.feature.Feature._
 import ch.unibas.dmi.dbis.adam.http.grpc._
 import ch.unibas.dmi.dbis.adam.index.structures.IndexTypes
 import ch.unibas.dmi.dbis.adam.query.distance.NormBasedDistanceFunction
-import ch.unibas.dmi.dbis.adam.query.handler.CompoundQueryHandler.{CompoundQueryHolder, Expression, ExpressionEvaluationOrder}
+import ch.unibas.dmi.dbis.adam.query.handler.CompoundQueryHandler.{EmptyExpression, CompoundQueryHolder, Expression, ExpressionEvaluationOrder}
 import ch.unibas.dmi.dbis.adam.query.handler.QueryHandler._
 import ch.unibas.dmi.dbis.adam.query.handler.{CompoundQueryHandler, QueryHints}
 import ch.unibas.dmi.dbis.adam.query.progressive.ProgressiveQueryStatus
@@ -37,7 +37,7 @@ private[rpc] object SearchRPCMethods {
   implicit def toQueryHolder(request: SimpleQueryMessage, onComplete: (ProgressiveQueryStatus.Value, DataFrame, VectorBase, String, Map[String, String]) => Unit) = new ProgressiveQueryHolder(request.entity, prepareNNQ(request.nnq), prepareBQ(request.bq), onComplete, request.withMetadata)
 
   implicit def toQueryHolder(request: CompoundQueryMessage) = {
-    new CompoundQueryHolder(request.entity, prepareNNQ(request.nnq), toExpr(request.indexFilterExpression), false, request.withMetadata, request.id)
+    new CompoundQueryHolder(request.entity, prepareNNQ(request.nnq), request.indexFilterExpression, false, request.withMetadata, request.id)
   }
 
   implicit def toExpr(request: ExpressionQueryMessage): Expression = {
@@ -60,7 +60,7 @@ private[rpc] object SearchRPCMethods {
 
   implicit def toExpr(seqm: Option[SubExpressionQueryMessage]): Expression = {
     if(seqm.isEmpty){
-      return null;
+      return EmptyExpression();
     }
 
     val expr = seqm.get.submessage match {
@@ -68,7 +68,7 @@ private[rpc] object SearchRPCMethods {
       case SubExpressionQueryMessage.Submessage.Ssiqm(request) => new SpecifiedIndexQueryHolder(request.index, prepareNNQ(request.nnq), prepareBQ(request.bq), request.withMetadata, seqm.get.id)
       case SubExpressionQueryMessage.Submessage.Siqm(request) => new IndexQueryHolder(request.entity, IndexTypes.withIndextype(request.indextype).get, prepareNNQ(request.nnq), prepareBQ(request.bq), request.withMetadata, seqm.get.id)
       case SubExpressionQueryMessage.Submessage.Ssqm(request) => new SequentialQueryHolder(request.entity, prepareNNQ(request.nnq), prepareBQ(request.bq), request.withMetadata, seqm.get.id)
-      case _ => null
+      case _ => EmptyExpression();
     }
 
     expr

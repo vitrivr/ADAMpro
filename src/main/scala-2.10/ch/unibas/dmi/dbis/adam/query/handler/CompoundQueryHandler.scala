@@ -146,6 +146,13 @@ object CompoundQueryHandler {
     val LeftFirst, RightFirst, Parallel = Value
   }
 
+  case class EmptyExpression(id : String = "") extends Expression(id){
+    override protected def run(filter: Option[Set[TupleID]]): DataFrame = {
+      val rdd = SparkStartup.sc.emptyRDD[Row]
+      SparkStartup.sqlContext.createDataFrame(rdd, Result.resultSchema)
+    }
+  }
+
   /**
     *
     * @param l

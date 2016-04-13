@@ -180,10 +180,11 @@ message CompoundQueryResponseListMessage {
 message CompoundQueryMessage {
   string entity = 1;
   NearestNeighbourQueryMessage nnq = 2;
-  SubExpressionQueryMessage indexFilterExpression = 3;
-  bool withMetadata = 4;
-  bool withIntermediateResults = 5;
-  string id = 6;
+  BooleanQueryMessage bq = 3;
+  SubExpressionQueryMessage indexFilterExpression = 4;
+  bool withMetadata = 5;
+  bool withIntermediateResults = 6;
+  string id = 7;
 }
 
 //experimental
