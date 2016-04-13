@@ -106,7 +106,7 @@ object VAVIndexer {
       case "equidistant" => EquidistantMarksGenerator
     }
 
-    val totalNumBits = properties.getOrElse("signature-nbits", (dimensions * 8).toString).toInt
+    val totalNumBits = properties.getOrElse("signature-nbits", (dimensions * 8).toInt.toString).toInt
     val trainingSize = properties.getOrElse("ntraining", "1000").toInt
 
     new VAVIndexer(totalNumBits, marksGenerator, trainingSize, distance)

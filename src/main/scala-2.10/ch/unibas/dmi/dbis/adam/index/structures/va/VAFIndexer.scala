@@ -91,7 +91,7 @@ object VAFIndexer {
       case "equidistant" => EquidistantMarksGenerator
     }
 
-    val fixedNumBitsPerDimension = properties.getOrElse("signature-nbits-dim", math.ceil(scala.math.log(maxMarks) / scala.math.log(2)).toString).toInt
+    val fixedNumBitsPerDimension = properties.getOrElse("signature-nbits-dim", math.ceil(scala.math.log(maxMarks) / scala.math.log(2)).toInt.toString).toInt
     val trainingSize = properties.getOrElse("ntraining", "5000").toInt
 
     new VAFIndexer(maxMarks, marksGenerator, fixedNumBitsPerDimension, trainingSize, distance)
