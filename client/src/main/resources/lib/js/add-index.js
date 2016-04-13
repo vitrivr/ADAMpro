@@ -13,7 +13,12 @@ $("#btnSubmit").click(function () {
 
     var result = {};
     result.entityname = $("#entityname").val();
-    result.norm = $("#norm").val();
+    if($("#norm").val()){
+        result.norm = $("#norm").val();
+    } else {
+        result.norm = $("#norm").attr("placeholder");
+    }
+
     result.indextype = $("#indextype").val();
     result.options = {};
 
