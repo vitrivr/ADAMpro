@@ -7,24 +7,34 @@ service AdamDefinition {
   rpc CreateEntity(CreateEntityMessage) returns (AckMessage) {}
   rpc DropEntity(EntityNameMessage) returns (AckMessage) {}
   rpc Insert(stream InsertMessage) returns (AckMessage) {}
+  //creates an index on the data
   rpc Index(IndexMessage) returns (AckMessage) {}
   rpc DropIndex(IndexNameMessage) returns (AckMessage) {}
   rpc Count(EntityNameMessage) returns (AckMessage) {}
+  //generates an entity with random data and with all available indexes (for demo purposes)
   rpc PrepareForDemo(GenerateRandomEntityMessage) returns (AckMessage) {}
 }
 
 service AdamSearch {
+  //caches an index explicitly (before performing a query to speed up retrieval time)
   rpc CacheIndex (IndexNameMessage) returns (AckMessage) {}
   rpc CacheEntity (EntityNameMessage) returns (AckMessage) {}
+  //performs a query on an entity with hints on which search method to use
+  //(if no hint is specified a fallback is used)
   rpc DoStandardQuery(SimpleQueryMessage) returns (QueryResponseListMessage) {}
+  //performs a sequential query
   rpc DoSequentialQuery(SimpleSequentialQueryMessage) returns (QueryResponseListMessage) {}
+  //performs a query with specified index name
   rpc DoSpecifiedIndexQuery(SimpleSpecifiedIndexQueryMessage) returns (QueryResponseListMessage) {}
+  //performs a query with specified entity name and index type
   rpc DoIndexQuery(SimpleIndexQueryMessage) returns (QueryResponseListMessage) {}
+  //performs a progressive query, note that the results are a stream
   rpc DoProgressiveQuery(SimpleQueryMessage) returns (stream QueryResponseInfoMessage) {}
+  //performs a timed progressive query which will stop after the specified running time
   rpc DoTimedProgressiveQuery(TimedQueryMessage) returns (QueryResponseInfoMessage) {}
+  //performs a compound query
   rpc DoCompoundQuery(CompoundQueryMessage) returns (CompoundQueryResponseListMessage) {}
 }
-
 
 message CreateEntityMessage {
   string entity = 1;
@@ -62,18 +72,15 @@ message AckMessage {
   string message = 2;
 }
 
-//insert and update (if id exists already)
 message InsertMessage {
   string entity = 1;
   repeated TupleInsertMessage tuples = 2;
 
   message TupleInsertMessage {
-    //int64 id = 1;
-    repeated float vector = 2 [packed=true];
-    map<string, string> metadata = 3;
+    repeated float vector = 1 [packed=true];
+    map<string, string> metadata = 2;
   }
 }
-
 
 
 enum IndexType {
@@ -89,6 +96,7 @@ message IndexMessage {
   string entity = 1;
   IndexType indextype = 2;
   int32 norm = 3;
+  //for possible options see each index structure
   map<string, string> options = 4;
 }
 
@@ -96,7 +104,9 @@ message NearestNeighbourQueryMessage {
   repeated float query = 1 [packed=true];
   int32 norm = 2;
   int32 k = 3;
+  //specifies whether only the candidates from the index search are returned and no exact distance computation is performed
   bool indexOnly = 4;
+  //for possible options see each index structure
   map<string, string> options = 5;
 }
 
@@ -106,6 +116,7 @@ message BooleanQueryMessage {
   repeated int64 prefilter = 1;
 
   message WhereMessage {
+    //if field ends on certain operators (e.g., != or IN), then the operation used in query is adapted, otherwise equality is used
     string field = 1;
     string value = 2;
   }
@@ -118,9 +129,12 @@ message BooleanQueryMessage {
 
 message SimpleQueryMessage {
   string entity = 1;
+  //for hints see  ch.unibas.dmi.dbis.adam.query.handler.QueryHints, possible values
+  //include "index", "inexact", "ecp", "lsh", "pq", "sh", "exact", "va", "vaf", "vav"
   string hint = 2;
   NearestNeighbourQueryMessage nnq = 3;
   BooleanQueryMessage bq = 4;
+  //specifies whether we should join the structured metadata to the results
   bool withMetadata = 5;
 }
 
@@ -128,6 +142,7 @@ message SimpleSequentialQueryMessage {
   string entity = 1;
   NearestNeighbourQueryMessage nnq = 2;
   BooleanQueryMessage bq = 3;
+  //specifies whether we should join the structured metadata to the results
   bool withMetadata = 4;
 }
 
@@ -135,6 +150,7 @@ message SimpleSpecifiedIndexQueryMessage {
   string index = 1;
   NearestNeighbourQueryMessage nnq = 2;
   BooleanQueryMessage bq = 3;
+  //specifies whether we should join the structured metadata to the results
   bool withMetadata = 4;
 }
 
@@ -143,6 +159,7 @@ message SimpleIndexQueryMessage {
   IndexType indextype = 2;
   NearestNeighbourQueryMessage nnq = 3;
   BooleanQueryMessage bq = 4;
+  //specifies whether we should join the structured metadata to the results
   bool withMetadata = 5;
 }
 
@@ -150,15 +167,20 @@ message TimedQueryMessage {
   string entity = 1;
   NearestNeighbourQueryMessage nnq = 2;
   BooleanQueryMessage bq = 3;
+  //maximum duration of query in ms
   int64 time = 4;
   bool withMetadata = 5;
 }
 
 message QueryResponseInfoMessage {
+  //id of result (given in the query)
   string id = 1;
+  //confidence in results (between 0 - 1)
   double confidence = 2;
+  //retrieval time
   int64 time = 3;
   IndexType indextype = 4;
+  //result list
   QueryResponseListMessage queryResponseList = 5;
 }
 
@@ -183,11 +205,12 @@ message CompoundQueryMessage {
   BooleanQueryMessage bq = 3;
   SubExpressionQueryMessage indexFilterExpression = 4;
   bool withMetadata = 5;
+  //specifies whether intermediate results should be returned (i.e. of all sub-expressions and not only the final result)
   bool withIntermediateResults = 6;
+  //if an id is specified, the id of the block is returned in the intermediate results
   string id = 7;
 }
 
-//experimental
 message ExpressionQueryMessage {
   enum Operation {
       UNION = 0;
@@ -220,5 +243,5 @@ message SubExpressionQueryMessage {
        SimpleIndexQueryMessage siqm = 3;
        ExpressionQueryMessage eqm = 4;
      }
- string id = 5;
+    string id = 5;
 }
