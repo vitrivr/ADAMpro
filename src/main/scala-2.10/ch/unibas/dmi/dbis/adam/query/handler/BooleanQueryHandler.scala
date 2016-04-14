@@ -22,7 +22,6 @@ import scala.util.{Failure, Success, Try}
  */
 private[query] object BooleanQueryHandler {
   val log = Logger.getLogger(getClass.getName)
-
   /**
     * Performs a Boolean query on the metadata.
     *
@@ -30,10 +29,22 @@ private[query] object BooleanQueryHandler {
     * @param query
     * @return
     */
-  def metadataQuery(entityname: EntityName, query: BooleanQuery): Option[DataFrame] = {
+  def getIds(entityname: EntityName, query: BooleanQuery): Option[DataFrame] = {
     log.debug("performing metadata-based boolean query on " + entityname)
     BooleanQueryLRUCache.get(entityname, query).get
   }
+
+
+  /**
+    * Returns all metadata tuples from the given entity.
+    *
+    * @param entityname
+    * @return
+    */
+  def getData(entityname: EntityName, query : Option[BooleanQuery] = None) : Option[DataFrame] = {
+    MetadataScanner(Entity.load(entityname).get, query)
+  }
+
 
   /**
     * Performs a Boolean query on the metadata where the ID only is compared.
@@ -42,7 +53,7 @@ private[query] object BooleanQueryHandler {
     * @param filter tuple ids to filter on
     * @return
     */
-  def metadataQuery(entityname: EntityName, filter: Set[TupleID]): Option[DataFrame] = {
+  def getData(entityname: EntityName, filter: Set[TupleID]): Option[DataFrame] = {
     log.debug("retrieving metadata for " + entityname)
     MetadataScanner(Entity.load(entityname).get, filter)
   }
@@ -59,7 +70,13 @@ private[query] object BooleanQueryHandler {
       build(
         new CacheLoader[(EntityName, BooleanQuery), Option[DataFrame]]() {
           def load(query: (EntityName, BooleanQuery)): Option[DataFrame] = {
-            MetadataScanner(Entity.load(query._1).get, query._2)
+            val df = MetadataScanner.apply(Entity.load(query._1).get, Option(query._2))
+
+            if(df.isDefined){
+              df.get.cache()
+            }
+
+            return df
           }
         }
       )

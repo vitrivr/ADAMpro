@@ -28,11 +28,11 @@ private[rpc] object SearchRPCMethods {
 
   implicit def toQueryHolder(request: SimpleQueryMessage) = {
 
-    StandardQueryHolder(request.entity, QueryHints.withName(request.hint), prepareNNQ(request.nnq), prepareBQ(request.bq), request.withMetadata, prepareQI(request.queryid), prepareCO(request.readFromCache, request.putInCache))
+    StandardQueryHolder(request.entity, QueryHints.withName(request.hint), Option(prepareNNQ(request.nnq)), prepareBQ(request.bq), request.withMetadata, prepareQI(request.queryid), prepareCO(request.readFromCache, request.putInCache))
   }
 
   implicit def toQueryHolder(request: SimpleSequentialQueryMessage) = {
-    new SequentialQueryHolder(request.entity, prepareNNQ(request.nnq), prepareBQ(request.bq), request.withMetadata)
+    new SequentialQueryHolder(request.entity, prepareNNQ(request.nnq), prepareBQ(request.bq), request.withMetadata, prepareQI(request.queryid), prepareCO(request.readFromCache, request.putInCache))
   }
 
   implicit def toQueryHolder(request: SimpleIndexQueryMessage) = {
@@ -51,6 +51,10 @@ private[rpc] object SearchRPCMethods {
 
   implicit def toQueryHolder(request: CompoundQueryMessage) = {
     new CompoundQueryHolder(request.entity, prepareNNQ(request.nnq), request.indexFilterExpression, false, request.withMetadata, prepareQI(request.queryid))
+  }
+
+  implicit def toQueryHolder(request: SimpleBooleanQueryMessage) = {
+    new BooleanQueryHolder(request.entity, prepareBQ(request.bq), prepareQI(request.queryid), prepareCO(request.readFromCache, request.putInCache))
   }
 
   implicit def toExpr(request: ExpressionQueryMessage): QueryExpression = {

@@ -24,10 +24,43 @@ object MetadataScanner {
     *
     * @param entity
     * @param query
-    * @return
+    * @return the ids of the tuples which match the query
     */
-  def apply(entity: Entity, query: BooleanQuery): Option[DataFrame] = {
-    if (entity.getMetadata.isDefined && query.where.isDefined) {
+  def ids(entity: Entity, query: Option[BooleanQuery]): Option[DataFrame] = {
+    val res = apply(entity, query)
+
+    if(res.isDefined){
+      Option(res.get.select(FieldNames.idColumnName))
+    } else {
+      None
+    }
+  }
+
+  /**
+    * Performs a Boolean query on the metadata.
+    *
+    * @param entity
+    * @param query
+    * @return the ids of the tuples which match the query
+    */
+  def apply(entity: Entity, query: Option[BooleanQuery]): Option[DataFrame] = {
+    if(query.isDefined){
+      retrieve(entity, query.get)
+    } else {
+      retrieveAll(entity)
+    }
+  }
+
+
+  /**
+    * Performs a Boolean query on the metadata.
+    *
+    * @param entity
+    * @param query
+    * @return the ids of the tuples which match the query
+    */
+  private def retrieve(entity: Entity, query: BooleanQuery): Option[DataFrame] = {
+    if (entity.hasMetadata && query.where.isDefined) {
       var df = entity.getMetadata.get
 
       if (query.join.isDefined) {
@@ -44,7 +77,24 @@ object MetadataScanner {
 
       val where = query.buildWhereClause()
       log.debug("query metadata using where clause: " + where)
-      Option(df.filter(where).select(FieldNames.idColumnName))
+      Option(df.filter(where))
+    } else {
+      log.warn("asked for metadata, but entity " + entity + " has no metadata available")
+      None
+    }
+  }
+
+
+  /**
+    * Returns all metadata tuples from the given entity.
+    *
+    * @param entity
+    * @return
+    */
+  private def retrieveAll(entity: Entity): Option[DataFrame] = {
+    if (entity.hasMetadata) {
+      val df = entity.getMetadata.get
+      Option(df)
     } else {
       log.warn("asked for metadata, but entity " + entity + " has no metadata available")
       None

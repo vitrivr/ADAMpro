@@ -8,6 +8,8 @@ import ch.unibas.dmi.dbis.adam.entity.Tuple.TupleID
 import ch.unibas.dmi.dbis.adam.exception.{QueryNotCachedException, IndexNotExistingException}
 import ch.unibas.dmi.dbis.adam.index.Index
 import ch.unibas.dmi.dbis.adam.index.Index._
+import ch.unibas.dmi.dbis.adam.main.SparkStartup
+import ch.unibas.dmi.dbis.adam.query.Result
 import ch.unibas.dmi.dbis.adam.query.datastructures.{QueryCacheOptions, QueryLRUCache, QueryExpression, RunDetails}
 import ch.unibas.dmi.dbis.adam.query.handler.QueryHints._
 import ch.unibas.dmi.dbis.adam.query.progressive._
@@ -15,7 +17,7 @@ import ch.unibas.dmi.dbis.adam.query.query.{BooleanQuery, NearestNeighbourQuery}
 import ch.unibas.dmi.dbis.adam.storage.engine.CatalogOperator
 import com.google.common.cache.{CacheLoader, CacheBuilder}
 import org.apache.log4j.Logger
-import org.apache.spark.sql.DataFrame
+import org.apache.spark.sql.{Row, DataFrame}
 
 import scala.collection.mutable.ListBuffer
 import scala.concurrent.duration.Duration
@@ -42,11 +44,22 @@ object QueryHandler {
     * @param cache        caching options
     * @return
     */
-  def query(entityname: EntityName, hint: Option[QueryHint], nnq: NearestNeighbourQuery, bq: Option[BooleanQuery], withMetadata: Boolean, id: Option[String] = None, cache: Option[QueryCacheOptions] = Some(QueryCacheOptions())): DataFrame = {
+  def query(entityname: EntityName, hint: Option[QueryHint], nnq: Option[NearestNeighbourQuery], bq: Option[BooleanQuery], withMetadata: Boolean, id: Option[String] = None, cache: Option[QueryCacheOptions] = Some(QueryCacheOptions())): DataFrame = {
     if (id.isDefined && cache.isDefined && cache.get.useCached) {
       val cached = getFromQueryCache(id)
       if (cached.isSuccess) {
         return cached.get
+      }
+    }
+
+    if (nnq.isEmpty) {
+      val res = BooleanQueryHandler.getData(entityname, bq)
+
+      if (res.isDefined) {
+        return res.get
+      } else {
+        val rdd = SparkStartup.sc.emptyRDD[Row]
+        return SparkStartup.sqlContext.createDataFrame(rdd, Result.resultSchema)
       }
     }
 
@@ -60,7 +73,7 @@ object QueryHandler {
       plan = choosePlan(entityname, indexes, Some(QueryHints.FALLBACK_HINTS), nnq)
     }
 
-    val res = plan.get(nnq, bq, withMetadata, id, cache)
+    val res = plan.get(nnq.get, bq, withMetadata, id, cache)
 
     if (id.isDefined && cache.isDefined && cache.get.putInCache) {
       QueryLRUCache.put(id.get, res)
@@ -77,9 +90,14 @@ object QueryHandler {
     * @param hint
     * @return
     */
-  private def choosePlan(entityname: EntityName, indexes: Map[IndexTypeName, Seq[IndexName]], hint: Option[QueryHint], nnq: NearestNeighbourQuery): Option[(NearestNeighbourQuery, Option[BooleanQuery], Boolean, Option[String], Option[QueryCacheOptions]) => DataFrame] = {
+  private def choosePlan(entityname: EntityName, indexes: Map[IndexTypeName, Seq[IndexName]], hint: Option[QueryHint], nnq: Option[NearestNeighbourQuery]): Option[(NearestNeighbourQuery, Option[BooleanQuery], Boolean, Option[String], Option[QueryCacheOptions]) => DataFrame] = {
     if (!hint.isDefined) {
       log.debug("no execution plan hint")
+      return None
+    }
+
+    if (!nnq.isDefined) {
+      log.debug("nnq is not defined")
       return None
     }
 
@@ -91,7 +109,7 @@ object QueryHandler {
 
         if (indexChoice.isDefined) {
           //TODO: use old measurements for choice rather than head
-          val index = indexChoice.get.map(indexname => Index.loadIndexMetaData(indexname).get).filter(_.isQueryConform(nnq)).head
+          val index = indexChoice.get.map(indexname => Index.loadIndexMetaData(indexname).get).filter(_.isQueryConform(nnq.get)).head
           return Option(specifiedIndexQuery(index.indexname))
         } else {
           return None
@@ -120,7 +138,7 @@ object QueryHandler {
   }
 
 
-  case class StandardQueryHolder(entityname: EntityName, hint: Option[QueryHint], nnq: NearestNeighbourQuery, bq: Option[BooleanQuery], withMetadata: Boolean, id: Option[String] = None, cache: Option[QueryCacheOptions] = Some(QueryCacheOptions())) extends QueryExpression(id) {
+  case class StandardQueryHolder(entityname: EntityName, hint: Option[QueryHint], nnq: Option[NearestNeighbourQuery], bq: Option[BooleanQuery], withMetadata: Boolean, id: Option[String] = None, cache: Option[QueryCacheOptions] = Some(QueryCacheOptions())) extends QueryExpression(id) {
     override protected def run(filter: Option[Set[TupleID]]): DataFrame = {
       val abq = bq.getOrElse(BooleanQuery())
       if (filter.isDefined) {
@@ -428,6 +446,36 @@ object QueryHandler {
   }
 
   /**
+    * Performs a Boolean query on the structured metadata.
+    *
+    * @param entityname
+    * @param bq information for boolean query, if not specified all data is returned
+    * @param id
+    * @param cache
+    */
+  def booleanQuery(entityname: EntityName)(bq: Option[BooleanQuery], id: Option[String] = None, cache: Option[QueryCacheOptions] = Some(QueryCacheOptions())): DataFrame = {
+    val res = BooleanQueryHandler.getData(entityname, bq)
+
+    if (res.isDefined) {
+      return res.get
+    } else {
+      val rdd = SparkStartup.sc.emptyRDD[Row]
+      return SparkStartup.sqlContext.createDataFrame(rdd, Result.resultSchema)
+    }
+  }
+
+  case class BooleanQueryHolder(entityname: EntityName, bq: Option[BooleanQuery], id: Option[String] = None, cache: Option[QueryCacheOptions] = Some(QueryCacheOptions())) extends QueryExpression(id) {
+    override protected def run(filter: Option[Set[TupleID]]): DataFrame = {
+      val abq = bq.getOrElse(BooleanQuery())
+      if (filter.isDefined) {
+        abq.append(filter.get)
+      }
+      booleanQuery(entityname)(Option(abq), id, cache)
+    }
+  }
+
+
+  /**
     * Creates a filter that is applied on the nearest neighbour search based on the Boolean query.
     *
     * @param entityname
@@ -437,7 +485,7 @@ object QueryHandler {
   private def getFilter(entityname: EntityName, bq: BooleanQuery): Option[Set[TupleID]] = {
     var filter = Set[TupleID]()
 
-    val results = BooleanQueryHandler.metadataQuery(entityname, bq)
+    val results = BooleanQueryHandler.getIds(entityname, bq)
     if (results.isDefined) {
       filter ++= results.get.map(r => r.getAs[Long](FieldNames.idColumnName)).collect().toSet
     }
@@ -467,7 +515,7 @@ object QueryHandler {
     * @return
     */
   private[handler] def joinWithMetadata(entityname: EntityName, res: DataFrame): DataFrame = {
-    val mdRes = BooleanQueryHandler.metadataQuery(entityname, res.select(FieldNames.idColumnName).collect().map(r => r.getLong(0)).toSet)
+    val mdRes = BooleanQueryHandler.getData(entityname, res.select(FieldNames.idColumnName).collect().map(r => r.getLong(0)).toSet)
 
     if (mdRes.isDefined) {
       mdRes.get.join(res, FieldNames.idColumnName) //with metadata

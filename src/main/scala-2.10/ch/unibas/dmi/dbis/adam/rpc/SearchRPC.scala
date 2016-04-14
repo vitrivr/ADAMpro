@@ -209,6 +209,23 @@ class SearchRPC extends AdamSearchGrpc.AdamSearch {
     }
   }
 
+  override def doBooleanQuery(request: SimpleBooleanQueryMessage): Future[QueryResponseInfoMessage] = {
+    log.debug("rpc call for Boolean query operation")
+
+    try {
+      val bq = SearchRPCMethods.toQueryHolder(request)
+
+      val results = QueryOp.booleanQuery(bq)
+
+      Future.successful(prepareResults(request.queryid, 0.0, 0, "metadata", results))
+    } catch {
+      case e: Exception => {
+        log.error(e)
+        Future.failed(e)
+      }
+    }
+  }
+
 
   /**
     *

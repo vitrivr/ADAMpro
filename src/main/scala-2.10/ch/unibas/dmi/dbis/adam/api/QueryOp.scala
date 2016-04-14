@@ -34,7 +34,7 @@ object QueryOp {
     * @param withMetadata whether or not to retrieve corresponding metadata
     * @return
     */
-  def apply(entityname: EntityName, hint: Option[QueryHint], nnq: NearestNeighbourQuery, bq: Option[BooleanQuery], withMetadata: Boolean): DataFrame = {
+  def apply(entityname: EntityName, hint: Option[QueryHint], nnq: Option[NearestNeighbourQuery], bq: Option[BooleanQuery], withMetadata: Boolean): DataFrame = {
     log.debug("perform standard query operation")
     QueryHandler.query(entityname, hint, nnq, bq, withMetadata)
   }
@@ -138,4 +138,16 @@ object QueryOp {
   }
 
   def compoundQuery(q : CompoundQueryHolder): DataFrame = q.evaluate()
+
+  /**
+    * Performs a boolean query.
+    *
+    * @param entityname
+    * @param bq
+    */
+  def booleanQuery(entityname: EntityName, bq: Option[BooleanQuery]): Unit ={
+    QueryHandler.booleanQuery(entityname )(bq)
+  }
+
+  def booleanQuery(q : BooleanQueryHolder): DataFrame = q.evaluate()
 }

@@ -20,7 +20,6 @@ object Result {
   val resultSchema = StructType(Seq(
     StructField(FieldNames.distanceColumnName, FloatType, true),
     StructField(FieldNames.idColumnName, LongType, true)
-  )
-  )
+  ))
 }
 

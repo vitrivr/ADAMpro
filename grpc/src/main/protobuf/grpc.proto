@@ -40,6 +40,8 @@ service AdamSearch {
   rpc DoTimedProgressiveQuery(TimedQueryMessage) returns (QueryResponseInfoMessage) {}
   //performs a compound query
   rpc DoCompoundQuery(CompoundQueryMessage) returns (CompoundQueryResponseInfoMessage) {}
+  //performs a boolean query
+  rpc DoBooleanQuery(SimpleBooleanQueryMessage) returns (QueryResponseInfoMessage) {}
   //return cached results
   rpc GetCachedResults(CachedResultsMessage) returns (QueryResponseInfoMessage) {}
 }
@@ -130,6 +132,15 @@ message SimpleQueryMessage {
   bool withMetadata = 6;
   bool readFromCache = 7;
   bool putInCache = 8;
+}
+
+message SimpleBooleanQueryMessage {
+  string queryid = 1;
+  string entity = 2;
+  BooleanQueryMessage bq = 3;
+  //specifies whether we should join the structured metadata to the results
+  bool readFromCache = 4;
+  bool putInCache = 5;
 }
 
 message SimpleSequentialQueryMessage {
