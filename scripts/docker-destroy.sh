@@ -1,5 +1,9 @@
 #!/bin/sh
 
+####################
+# removes all docker containers for ADAMpro. when starting containers again, the data is no longer available.
+####################
+
 eval "$(docker-machine env default)"
 
 docker stop postgresql
