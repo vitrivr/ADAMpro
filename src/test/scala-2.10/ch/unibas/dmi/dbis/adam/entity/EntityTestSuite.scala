@@ -1,10 +1,10 @@
 package ch.unibas.dmi.dbis.adam.entity
 
+import ch.unibas.dmi.dbis.adam.AdamTestBase
 import ch.unibas.dmi.dbis.adam.api.{DropEntityOp, CreateEntityOp}
 import ch.unibas.dmi.dbis.adam.config.FieldNames
 import ch.unibas.dmi.dbis.adam.datatypes.feature.{FeatureVectorWrapper, FeatureVectorWrapperUDT}
 import ch.unibas.dmi.dbis.adam.main.SparkStartup
-import ch.unibas.dmi.dbis.adam.test.AdamTestBase
 import org.apache.spark.sql.Row
 import org.apache.spark.sql.types._
 import org.scalatest.Matchers._

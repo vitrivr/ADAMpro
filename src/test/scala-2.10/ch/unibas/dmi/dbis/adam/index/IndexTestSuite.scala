@@ -1,11 +1,11 @@
 package ch.unibas.dmi.dbis.adam.index
 
+import ch.unibas.dmi.dbis.adam.AdamTestBase
 import ch.unibas.dmi.dbis.adam.api.{DropEntityOp, DropIndexOp, IndexOp}
 import ch.unibas.dmi.dbis.adam.entity.Entity
 import ch.unibas.dmi.dbis.adam.index.structures.IndexTypes
 import ch.unibas.dmi.dbis.adam.main.SparkStartup
 import ch.unibas.dmi.dbis.adam.query.distance.EuclideanDistance
-import ch.unibas.dmi.dbis.adam.test.AdamTestBase
 
 import scala.util.Random
 

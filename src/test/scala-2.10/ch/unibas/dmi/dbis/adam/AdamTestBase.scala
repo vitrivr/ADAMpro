@@ -1,4 +1,4 @@
-package ch.unibas.dmi.dbis.adam.test
+package ch.unibas.dmi.dbis.adam
 
 import java.sql.DriverManager
 

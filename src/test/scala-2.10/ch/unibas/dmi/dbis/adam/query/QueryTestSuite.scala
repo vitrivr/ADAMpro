@@ -2,6 +2,7 @@ package ch.unibas.dmi.dbis.adam.query
 
 import java.util.concurrent.TimeUnit
 
+import ch.unibas.dmi.dbis.adam.AdamTestBase
 import ch.unibas.dmi.dbis.adam.api._
 import ch.unibas.dmi.dbis.adam.config.FieldNames
 import ch.unibas.dmi.dbis.adam.index.structures.IndexTypes
@@ -12,7 +13,6 @@ import ch.unibas.dmi.dbis.adam.query.handler.CompoundQueryHandler
 import ch.unibas.dmi.dbis.adam.query.handler.QueryHandler.SpecifiedIndexQueryHolder
 import ch.unibas.dmi.dbis.adam.query.progressive.ProgressiveQueryStatus
 import ch.unibas.dmi.dbis.adam.query.query.{BooleanQuery, NearestNeighbourQuery}
-import ch.unibas.dmi.dbis.adam.test.AdamTestBase
 import org.apache.log4j.Logger
 import org.apache.spark.sql.DataFrame
 import org.scalatest.concurrent.ScalaFutures
@@ -308,6 +308,42 @@ class QueryTestSuite extends AdamTestBase with ScalaFutures {
         case (res, gt) =>
           assert(res._2 == gt._2)
           assert(res._1 - gt._1 < EPSILON)
+      }
+
+      //clean up
+      DropEntityOp(es.entity.entityname)
+      SparkStartup.metadataStorage.drop(metadataname)
+    }
+
+    scenario("perform a simple Boolean query (without NN)") {
+      Given("an entity and a joinable table")
+      val es = getGroundTruthEvaluationSet()
+
+      val df = es.fullData
+
+      val metadataname = es.entity.entityname + "_metadata"
+
+      val metadata = df.withColumn("tid100", df("tid") * 100).select("tid", "tid100")
+
+      SparkStartup.metadataStorage.write(metadataname, metadata)
+
+      When("performing a boolean query on the joined metadata")
+      val inStmt = "IN " + es.nnbqResults.map {
+        case (distance, tid) =>
+          (tid * 100).toString
+      }.mkString("(", ", ", ")")
+      val whereStmt = Option(Seq("tid100" -> inStmt))
+
+      val bq = BooleanQuery(whereStmt, Some(Seq((metadataname, Seq("tid")))))
+
+      val results = QueryOp.booleanQuery(es.entity.entityname, Option(bq))
+        .map(r => r.getAs[Long]("tid")).collect() //get here TID of metadata
+        .sorted.toSeq
+
+      Then("we should retrieve the metadata")
+      results.zip(es.nnbqResults.map(_._2).sorted).foreach {
+        case (res, gt) =>
+          assert(res == gt)
       }
 
       //clean up
