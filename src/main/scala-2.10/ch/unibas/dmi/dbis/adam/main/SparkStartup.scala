@@ -41,6 +41,7 @@ object SparkStartup {
 
   sc.setLogLevel(AdamConfig.loglevel)
 
+  //TODO: possibly switch to a jobserver (https://github.com/spark-jobserver/spark-jobserver), pass sqlcontext around
   val sqlContext = new HiveContext(sc)
 
   val featureStorage : FeatureStorage = CassandraFeatureStorage
