@@ -46,7 +46,7 @@ class QueryTestSuite extends AdamTestBase with ScalaFutures {
       results.zip(es.nnResults).foreach {
         case (res, gt) =>
           assert(res._2 == gt._2)
-          assert(res._1 - gt._1 < EPSILON)
+          assert(math.abs(res._1 - gt._1) < EPSILON)
       }
 
       //clean up
@@ -72,7 +72,7 @@ class QueryTestSuite extends AdamTestBase with ScalaFutures {
       Seq(results.zip(es.nnResults).head).map {
         case (res, gt) =>
           assert(res._2 == gt._2)
-          assert(res._1 - gt._1 < EPSILON)
+          assert(math.abs(res._1 - gt._1) < EPSILON)
       }
 
       log.info("score: " + getScore(es.nnResults.map(_._2), results.map(_._2)))
@@ -100,7 +100,7 @@ class QueryTestSuite extends AdamTestBase with ScalaFutures {
       Seq(results.zip(es.nnResults).head).map {
         case (res, gt) =>
           assert(res._2 == gt._2)
-          assert(res._1 - gt._1 < EPSILON)
+          assert(math.abs(res._1 - gt._1) < EPSILON)
       }
 
       log.info("score: " + getScore(es.nnResults.map(_._2), results.map(_._2)))
@@ -128,7 +128,7 @@ class QueryTestSuite extends AdamTestBase with ScalaFutures {
       Seq(results.zip(es.nnResults).head).map {
         case (res, gt) =>
           assert(res._2 == gt._2)
-          assert(res._1 - gt._1 < EPSILON)
+          assert(math.abs(res._1 - gt._1) < EPSILON)
       }
 
       log.info("score: " + getScore(es.nnResults.map(_._2), results.map(_._2)))
@@ -157,7 +157,7 @@ class QueryTestSuite extends AdamTestBase with ScalaFutures {
       Seq(results.zip(es.nnResults).head).map {
         case (res, gt) =>
           assert(res._2 == gt._2)
-          assert(res._1 - gt._1 < EPSILON)
+          assert(math.abs(res._1 - gt._1) < EPSILON)
       }
 
       log.info("score: " + getScore(es.nnResults.map(_._2), results.map(_._2)))
@@ -186,7 +186,7 @@ class QueryTestSuite extends AdamTestBase with ScalaFutures {
       results.zip(es.nnResults).foreach {
         case (res, gt) =>
           assert(res._2 == gt._2)
-          assert(res._1 - gt._1 < EPSILON)
+          assert(math.abs(res._1 - gt._1) < EPSILON)
       }
 
       //clean up
@@ -211,7 +211,7 @@ class QueryTestSuite extends AdamTestBase with ScalaFutures {
       results.zip(es.nnResults).foreach {
         case (res, gt) =>
           assert(res._2 == gt._2)
-          assert(res._1 - gt._1 < EPSILON)
+          assert(math.abs(res._1 - gt._1) < EPSILON)
       }
 
       //clean up
@@ -238,7 +238,7 @@ class QueryTestSuite extends AdamTestBase with ScalaFutures {
       results.zip(es.nnResults).foreach {
         case (res, gt) =>
           assert(res._2 == gt._2)
-          assert(res._1 - gt._1 < EPSILON)
+          assert(math.abs(res._1 - gt._1) < EPSILON)
       }
 
       //clean up
@@ -266,7 +266,7 @@ class QueryTestSuite extends AdamTestBase with ScalaFutures {
       results.zip(es.nnbqResults).foreach {
         case (res, gt) =>
           assert(res._2 == gt._2)
-          assert(res._1 - gt._1 < EPSILON)
+          assert(math.abs(res._1 - gt._1) < EPSILON)
       }
 
       //clean up
@@ -307,7 +307,7 @@ class QueryTestSuite extends AdamTestBase with ScalaFutures {
       results.zip(es.nnbqResults).foreach {
         case (res, gt) =>
           assert(res._2 == gt._2)
-          assert(res._1 - gt._1 < EPSILON)
+          assert(math.abs(res._1 - gt._1) < EPSILON)
       }
 
       //clean up
@@ -369,11 +369,12 @@ class QueryTestSuite extends AdamTestBase with ScalaFutures {
           .sortBy(_._1).toSeq
 
         Then("eventually we should retrieve the k nearest neighbors")
-        if (confidence - 1.0 < EPSILON) {
+        if (math.abs(confidence - 1.0) < EPSILON) {
+
           results.zip(es.nnResults).foreach {
             case (res, gt) =>
               assert(res._2 == gt._2)
-              assert(res._1 - gt._1 < EPSILON)
+              assert(math.abs(res._1 - gt._1) < EPSILON)
           }
         }
       }
@@ -384,7 +385,7 @@ class QueryTestSuite extends AdamTestBase with ScalaFutures {
 
       whenReady(statusTracker) { result =>
         Then("the confidence should be 1.0")
-        assert(result.confidence - 1.0 < EPSILON)
+        assert(math.abs(result.confidence - 1.0) < EPSILON)
         assert(result.results.count() >= es.k)
       }
 
@@ -416,7 +417,7 @@ class QueryTestSuite extends AdamTestBase with ScalaFutures {
       Seq(results.zip(es.nnResults).head).map {
         case (res, gt) =>
           assert(res._2 == gt._2)
-          assert(res._1 - gt._1 < EPSILON)
+          assert(math.abs(res._1 - gt._1) < EPSILON)
       }
 
       //clean up
