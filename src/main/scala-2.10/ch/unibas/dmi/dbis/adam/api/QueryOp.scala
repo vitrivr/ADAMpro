@@ -145,7 +145,7 @@ object QueryOp {
     * @param entityname
     * @param bq
     */
-  def booleanQuery(entityname: EntityName, bq: Option[BooleanQuery]): Unit ={
+  def booleanQuery(entityname: EntityName, bq: Option[BooleanQuery]): DataFrame ={
     QueryHandler.booleanQuery(entityname )(bq)
   }
 
