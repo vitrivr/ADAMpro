@@ -14,7 +14,7 @@ import ch.unibas.dmi.dbis.adam.http.grpc.{CompoundQueryResponseListMessage, Quer
   */
 case class CompoundQueryResponse(intermediateResponses : Seq[QueryResponseInfo]) {
   def this(msg : CompoundQueryResponseListMessage){
-    this(msg.intermediateResponses.map(ir => new QueryResponseInfo(ir)))
+    this(msg.responses.map(ir => new QueryResponseInfo(ir)))
   }
 }
 

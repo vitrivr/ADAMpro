@@ -195,8 +195,7 @@ message QueryResponseListMessage {
 }
 
 message CompoundQueryResponseListMessage {
-  repeated QueryResponseInfoMessage intermediateResponses = 1;
-  QueryResponseListMessage finalResponse = 2;
+  repeated QueryResponseInfoMessage responses = 1;
 }
 
 message CompoundQueryMessage {

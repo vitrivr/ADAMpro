@@ -31,8 +31,6 @@ object CompoundQueryHandler {
     var run = false
 
     override protected def run(filter: Option[Set[TupleID]]): DataFrame = {
-      //TODO: catch here expr == null?
-      
       val results = if(indexOnly){
         indexOnlyQuery(entityname)(expr, withMetadata)
       } else {
@@ -54,6 +52,15 @@ object CompoundQueryHandler {
         val start = collectRunInfo(new ListBuffer())
         expr.collectRunInfo(start).toSeq
       }
+    }
+
+    /**
+      *
+      * @param info
+      * @return
+      */
+    override private[adam] def collectRunInfo(info : ListBuffer[RunInfo]) = {
+      super.collectRunInfo(info)
     }
   }
 

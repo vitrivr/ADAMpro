@@ -10,6 +10,7 @@ import io.grpc.stub.StreamObserver
 import org.apache.log4j.Logger
 import org.apache.spark.sql.DataFrame
 
+import scala.collection.mutable.ListBuffer
 import scala.concurrent.Future
 
 /**
@@ -179,20 +180,21 @@ class SearchRPC extends AdamSearchGrpc.AdamSearch {
     try {
       val qh = SearchRPCMethods.toQueryHolder(request)
 
-      val results = QueryOp.compoundQuery(qh)
+      val finalResults = QueryOp.compoundQuery(qh)
 
-      val intermediate = if (request.withIntermediateResults) {
-        qh.provideRunInfo().map(res =>
-          QueryResponseInfoMessage(id = res.id, time = res.time.toMillis, queryResponseList = Option(prepareResults(res.results)))
-        )
+      val resultInfos = if (request.withIntermediateResults) {
+        qh.provideRunInfo()
       } else {
-        Seq()
+        qh.collectRunInfo(new ListBuffer()).toSeq
       }
 
-      Future.successful(CompoundQueryResponseListMessage(
-        intermediate,
-        Option(prepareResults(results)))
+      val results = resultInfos.map(res =>
+        QueryResponseInfoMessage(id = res.id, time = res.time.toMillis, queryResponseList = Option(prepareResults(res.results)))
       )
+
+      Future.successful(CompoundQueryResponseListMessage(
+        results
+      ))
 
     } catch {
       case e: Exception => {
