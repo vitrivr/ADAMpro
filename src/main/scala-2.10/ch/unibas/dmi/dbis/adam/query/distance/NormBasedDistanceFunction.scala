@@ -14,8 +14,8 @@ import ch.unibas.dmi.dbis.adam.query.distance.Distance.Distance
  */
 object NormBasedDistanceFunction {
   def apply(n : Double) = n match {
-    case x if (n - 1) < 0.00001 => ManhattanDistance
-    case x if (n - 2) < 0.00001 => EuclideanDistance
+    case x if math.abs(n - 1) < 0.00001 => ManhattanDistance
+    case x if math.abs(n - 2) < 0.00001 => EuclideanDistance
     case n => new MinkowskiDistance(n)
   }
 }
