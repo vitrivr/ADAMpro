@@ -74,9 +74,9 @@ class EvaluationClient(channel: ManagedChannel, definer: AdamDefinitionBlockingS
     * @return
     */
   def sequentialQuery(entityname: String, q: Seq[Float], k: Int) = {
-    val norm = 1
-    searcherBlocking.doSequentialQuery(SimpleSequentialQueryMessage(entityname, Option(NearestNeighbourQueryMessage(q, norm, k, false))))
-      .responses.map(resp => (resp.id, resp.distance))
+    val distance = DistanceMessage(DistanceMessage.DistanceType.minkowski, Map("norm" -> "1"))
+    searcherBlocking.doSequentialQuery(SimpleSequentialQueryMessage("", entityname, Some(NearestNeighbourQueryMessage(q, Some(distance), k, false))))
+            .results.map(resp => (resp.id, resp.distance))
   }
 
   /**
@@ -85,9 +85,9 @@ class EvaluationClient(channel: ManagedChannel, definer: AdamDefinitionBlockingS
     * @return
     */
   def indexQuery(entityname: String, indextype: IndexTypes.IndexType, q: Seq[Float], k: Int) = {
-    val norm = 1
-    searcherBlocking.doIndexQuery(SimpleIndexQueryMessage(entityname, indextype.indextype, Option(NearestNeighbourQueryMessage(q, norm, k, false))))
-      .responses.map(resp => (resp.id, resp.distance))
+    val distance = DistanceMessage(DistanceMessage.DistanceType.minkowski, Map("norm" -> "1"))
+    searcherBlocking.doIndexQuery(SimpleIndexQueryMessage("", entityname, indextype.indextype, Some(NearestNeighbourQueryMessage(q, Some(distance), k, false))))
+      .results.map(resp => (resp.id, resp.distance))
   }
 
   /**
@@ -96,15 +96,13 @@ class EvaluationClient(channel: ManagedChannel, definer: AdamDefinitionBlockingS
     * @return
     */
   def progressiveQuery(entityname: String, q: Seq[Float], k: Int, completed : (Double, Seq[(Long, Float)], IndexTypes.IndexType) => Unit) = {
-    val norm = 1
-
     val observer = new StreamObserver[QueryResponseInfoMessage] {
       def onNext(response: QueryResponseInfoMessage) {
         val confidence = response.confidence
-        val results = response.queryResponseList.get.responses.map(resp => (resp.id, resp.distance))
-        val indextype = response.indextype
+        val results = response.results.map(resp => (resp.id, resp.distance))
+        val source = response.source
 
-        completed(confidence, results, IndexTypes.withIndextype(indextype).get)
+        completed(confidence, results, IndexTypes.withName(source).get)
       }
 
       def onError(t: Throwable): Unit = {
@@ -116,7 +114,10 @@ class EvaluationClient(channel: ManagedChannel, definer: AdamDefinitionBlockingS
       }
     }
 
-    searcher.doProgressiveQuery(SimpleQueryMessage(entityname, "", Option(NearestNeighbourQueryMessage(q, norm, k, false))), observer)
+    val distance = DistanceMessage(DistanceMessage.DistanceType.minkowski, Map("norm" -> "1"))
+
+
+    searcher.doProgressiveQuery(SimpleQueryMessage("", entityname, "", Some(NearestNeighbourQueryMessage(q, Some(distance), k, false))), observer)
   }
 
   /**

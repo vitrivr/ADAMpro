@@ -23,7 +23,7 @@ case class CompoundQueryRequest(var id: String, var operation: String, var optio
 
   private def query = options.get("query").get.split(",").map(_.toFloat)
 
-  private def nnq = NearestNeighbourQueryMessage(query, 2, options.get("k").getOrElse("100").toInt, false, Map())
+  private def nnq = NearestNeighbourQueryMessage(query, Some(DistanceMessage(DistanceMessage.DistanceType.minkowski, Map("norm" -> "1"))), options.get("k").getOrElse("100").toInt, false, Map())
 
   /**
     *
@@ -51,13 +51,13 @@ case class CompoundQueryRequest(var id: String, var operation: String, var optio
     */
   private def cqm(): CompoundQueryMessage = {
     if (targets.get.isEmpty) {
-      val sqm = SubExpressionQueryMessage().withSsqm(SimpleSequentialQueryMessage(entity, Option(nnq), None, true))
-      return CompoundQueryMessage(entity, Option(nnq), None, Option(sqm), true, true, id);
+      val sqm = SubExpressionQueryMessage().withSsqm(SimpleSequentialQueryMessage(id, entity, Option(nnq), None, true))
+      return CompoundQueryMessage(id, entity, Option(nnq), None, Option(sqm), true, true);
     }
 
     val node = targets.get.head
 
-    var sqm = SubExpressionQueryMessage().withId(node.id)
+    var sqm = SubExpressionQueryMessage().withQueryid(node.id)
 
     if (node.operation == "aggregate") {
       sqm = sqm.withEqm(node.eqm())
@@ -67,7 +67,7 @@ case class CompoundQueryRequest(var id: String, var operation: String, var optio
       sqm = sqm.withSiqm(node.siqm())
     }
 
-    CompoundQueryMessage(entity, Option(nnq), None, Option(sqm), true, true, id)
+    CompoundQueryMessage(id, entity, Option(nnq), None, Option(sqm), true, true)
   }
 
   /**
@@ -91,11 +91,11 @@ case class CompoundQueryRequest(var id: String, var operation: String, var optio
       case _  => ExpressionQueryMessage.OperationOrder.PARALLEL
     }
 
-    ExpressionQueryMessage(Option(lsqm), op, order, Option(rsqm), id)
+    ExpressionQueryMessage(id, Option(lsqm), op, order, Option(rsqm))
   }
 
   private def seqm(cqr: CompoundQueryRequest): SubExpressionQueryMessage = {
-    var sqm = SubExpressionQueryMessage().withId(cqr.id)
+    var sqm = SubExpressionQueryMessage().withQueryid(cqr.id)
 
     if (cqr.operation == "aggregate") {
       sqm = sqm.withEqm(cqr.eqm())
@@ -113,7 +113,7 @@ case class CompoundQueryRequest(var id: String, var operation: String, var optio
     */
   private def ssiqm(): SimpleSpecifiedIndexQueryMessage = {
     val indexname = options.get("indexname").get
-    SimpleSpecifiedIndexQueryMessage(indexname, Option(nnq), None, false)
+    SimpleSpecifiedIndexQueryMessage(id, indexname, Option(nnq), None, false)
   }
 
 
@@ -130,7 +130,7 @@ case class CompoundQueryRequest(var id: String, var operation: String, var optio
       case "vaf" => IndexType.vaf
       case "vav" => IndexType.vav
     }
-    SimpleIndexQueryMessage(entity, indextype, Option(nnq), None, false)
+    SimpleIndexQueryMessage(id, entity, indextype, Option(nnq), None, false)
   }
 }
 

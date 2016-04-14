@@ -2,10 +2,10 @@ package ch.unibas.dmi.dbis.adam.api
 
 import ch.unibas.dmi.dbis.adam.entity.Entity._
 import ch.unibas.dmi.dbis.adam.index.Index._
-import ch.unibas.dmi.dbis.adam.query.handler.CompoundQueryHandler.{CompoundQueryHolder, Expression}
+import ch.unibas.dmi.dbis.adam.query.datastructures.QueryExpression
+import ch.unibas.dmi.dbis.adam.query.handler.QueryHandler
 import ch.unibas.dmi.dbis.adam.query.handler.QueryHandler._
 import ch.unibas.dmi.dbis.adam.query.handler.QueryHints._
-import ch.unibas.dmi.dbis.adam.query.handler.{CompoundQueryHandler, QueryHandler}
 import ch.unibas.dmi.dbis.adam.query.progressive.{ProgressiveQueryStatus, ProgressiveQueryStatusTracker}
 import ch.unibas.dmi.dbis.adam.query.query.{BooleanQuery, NearestNeighbourQuery}
 import org.apache.log4j.Logger
@@ -67,7 +67,7 @@ object QueryOp {
     */
   def index(indexname: IndexName, nnq: NearestNeighbourQuery, bq: Option[BooleanQuery], withMetadata: Boolean): DataFrame = {
     log.debug("perform index query operation")
-    QueryHandler.indexQuery(indexname)(nnq, bq, withMetadata)
+    QueryHandler.specifiedIndexQuery(indexname)(nnq, bq, withMetadata)
   }
   def index(q: SpecifiedIndexQueryHolder): DataFrame = q.evaluate()
 
@@ -133,8 +133,8 @@ object QueryOp {
     * @param withMetadata
     * @return
     */
-  def compoundQuery(entityname: EntityName, nnq: NearestNeighbourQuery, expr : Expression, withMetadata: Boolean): DataFrame = {
-    CompoundQueryHandler.indexQueryWithResults(entityname)(nnq, expr, withMetadata)
+  def compoundQuery(entityname: EntityName, nnq: NearestNeighbourQuery, expr : QueryExpression, withMetadata: Boolean): DataFrame = {
+    QueryHandler.compoundQuery(entityname)(nnq, expr, false, withMetadata)
   }
 
   def compoundQuery(q : CompoundQueryHolder): DataFrame = q.evaluate()

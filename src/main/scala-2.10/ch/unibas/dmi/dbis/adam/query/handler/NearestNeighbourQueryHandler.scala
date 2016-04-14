@@ -191,11 +191,11 @@ private[query] object NearestNeighbourQueryHandler {
 
     //index scans
     val indexScanFutures = indexnames.par.map { indexname =>
-      val isf = new IndexScanFuture(indexname, query, (status, result, confidence, deliverer, info) => (), tracker)
+      val isf = new IndexScanFuture(indexname, query, (status, result, confidence, source, info) => (), tracker)
     }
 
     //sequential scan
-    val ssf = new SequentialScanFuture(entityname, query, (status, result, confidence, deliverer, info) => (), tracker)
+    val ssf = new SequentialScanFuture(entityname, query, (status, result, confidence, source, info) => (), tracker)
 
     Await.result(timerFuture, timelimit)
     tracker.stop()

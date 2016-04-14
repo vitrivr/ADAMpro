@@ -6,9 +6,9 @@ import ch.unibas.dmi.dbis.adam.api._
 import ch.unibas.dmi.dbis.adam.config.FieldNames
 import ch.unibas.dmi.dbis.adam.index.structures.IndexTypes
 import ch.unibas.dmi.dbis.adam.main.SparkStartup
+import ch.unibas.dmi.dbis.adam.query.datastructures.CompoundQueryExpressions.{ExpressionEvaluationOrder, IntersectExpression}
 import ch.unibas.dmi.dbis.adam.query.distance.EuclideanDistance
 import ch.unibas.dmi.dbis.adam.query.handler.CompoundQueryHandler
-import ch.unibas.dmi.dbis.adam.query.handler.CompoundQueryHandler.{ExpressionEvaluationOrder, IntersectExpression}
 import ch.unibas.dmi.dbis.adam.query.handler.QueryHandler.SpecifiedIndexQueryHolder
 import ch.unibas.dmi.dbis.adam.query.progressive.ProgressiveQueryStatus
 import ch.unibas.dmi.dbis.adam.query.query.{BooleanQuery, NearestNeighbourQuery}
@@ -328,7 +328,7 @@ class QueryTestSuite extends AdamTestBase with ScalaFutures {
       IndexOp(es.entity.entityname, IndexTypes.SHINDEX, EuclideanDistance)
       IndexOp(es.entity.entityname, IndexTypes.VAFINDEX, EuclideanDistance)
 
-      def processResults(status: ProgressiveQueryStatus.Value, df: DataFrame, confidence: Float, deliverer: String, info: Map[String, String]) {
+      def processResults(status: ProgressiveQueryStatus.Value, df: DataFrame, confidence: Float, source: String, info: Map[String, String]) {
         val results = df.map(r => (r.getAs[Float](FieldNames.distanceColumnName), r.getAs[Long]("tid"))).collect() //get here TID of metadata
           .sortBy(_._1).toSeq
 
@@ -371,7 +371,7 @@ class QueryTestSuite extends AdamTestBase with ScalaFutures {
 
       When("performing a kNN progressive query")
       val nnq = NearestNeighbourQuery(es.feature.vector, es.distance, es.k)
-      val (tpqRes, confidence, deliverer) = QueryOp.timedProgressive(es.entity.entityname, nnq, None, timelimit, true)
+      val (tpqRes, confidence, source) = QueryOp.timedProgressive(es.entity.entityname, nnq, None, timelimit, true)
 
       Then("we should have a match at least in the first element")
       val results = tpqRes.map(r => (r.getAs[Float](FieldNames.distanceColumnName), r.getAs[Long]("tid"))).collect() //get here TID of metadata

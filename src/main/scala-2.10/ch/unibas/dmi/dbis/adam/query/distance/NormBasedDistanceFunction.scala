@@ -13,10 +13,10 @@ import ch.unibas.dmi.dbis.adam.query.distance.Distance.Distance
  * August 2015
  */
 object NormBasedDistanceFunction {
-  def apply(n : Int) = n match {
-    case 1 => ManhattanDistance
-    case 2 => EuclideanDistance
-    case n : Int => new MinkowskiDistance(n)
+  def apply(n : Double) = n match {
+    case x if (n - 1) < 0.00001 => ManhattanDistance
+    case x if (n - 2) < 0.00001 => EuclideanDistance
+    case n => new MinkowskiDistance(n)
   }
 }
 

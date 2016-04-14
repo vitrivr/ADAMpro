@@ -2,9 +2,10 @@ package ch.unibas.dmi.dbis.adam.rpc
 
 import ch.unibas.dmi.dbis.adam.api.QueryOp
 import ch.unibas.dmi.dbis.adam.config.FieldNames
+import ch.unibas.dmi.dbis.adam.exception.QueryNotCachedException
 import ch.unibas.dmi.dbis.adam.http.grpc._
 import ch.unibas.dmi.dbis.adam.index.Index
-import ch.unibas.dmi.dbis.adam.index.structures.IndexTypes
+import ch.unibas.dmi.dbis.adam.query.handler.QueryHandler
 import ch.unibas.dmi.dbis.adam.query.progressive.ProgressiveQueryStatus
 import io.grpc.stub.StreamObserver
 import org.apache.log4j.Logger
@@ -56,10 +57,11 @@ class SearchRPC extends AdamSearchGrpc.AdamSearch {
     * @param request
     * @return
     */
-  override def doStandardQuery(request: SimpleQueryMessage): Future[QueryResponseListMessage] = {
+  override def doStandardQuery(request: SimpleQueryMessage): Future[QueryResponseInfoMessage] = {
     log.debug("rpc call for standard query operation")
     try {
-      Future.successful(prepareResults(QueryOp.apply(SearchRPCMethods.toQueryHolder(request))))
+      val df = QueryOp.apply(SearchRPCMethods.toQueryHolder(request))
+      Future.successful(prepareResults(request.queryid, 0.0, 0, "", df))
     } catch {
       case e: Exception => {
         log.error(e)
@@ -74,10 +76,11 @@ class SearchRPC extends AdamSearchGrpc.AdamSearch {
     * @param request
     * @return
     */
-  override def doSequentialQuery(request: SimpleSequentialQueryMessage): Future[QueryResponseListMessage] = {
+  override def doSequentialQuery(request: SimpleSequentialQueryMessage): Future[QueryResponseInfoMessage] = {
     log.debug("rpc call for sequential query operation")
     try {
-      Future.successful(prepareResults(QueryOp.sequential(SearchRPCMethods.toQueryHolder(request))))
+      val df = QueryOp.sequential(SearchRPCMethods.toQueryHolder(request))
+      Future.successful(prepareResults(request.queryid, 0.0, 0, "", df))
     } catch {
       case e: Exception => {
         log.error(e)
@@ -92,11 +95,12 @@ class SearchRPC extends AdamSearchGrpc.AdamSearch {
     * @param request
     * @return
     */
-  override def doIndexQuery(request: SimpleIndexQueryMessage): Future[QueryResponseListMessage] = {
+  override def doIndexQuery(request: SimpleIndexQueryMessage): Future[QueryResponseInfoMessage] = {
     log.debug("rpc call for index query operation")
 
     try {
-      Future.successful(prepareResults(QueryOp.index(SearchRPCMethods.toQueryHolder(request))))
+      val df = QueryOp.index(SearchRPCMethods.toQueryHolder(request))
+      Future.successful(prepareResults(request.queryid, 0.0, 0, "", df))
     } catch {
       case e: Exception => {
         log.error(e)
@@ -111,11 +115,12 @@ class SearchRPC extends AdamSearchGrpc.AdamSearch {
     * @param request
     * @return
     */
-  override def doSpecifiedIndexQuery(request: SimpleSpecifiedIndexQueryMessage): Future[QueryResponseListMessage] = {
+  override def doSpecifiedIndexQuery(request: SimpleSpecifiedIndexQueryMessage): Future[QueryResponseInfoMessage] = {
     log.debug("rpc call for index query operation")
 
     try {
-      Future.successful(prepareResults(QueryOp.index(SearchRPCMethods.toQueryHolder(request))))
+      val df = QueryOp.index(SearchRPCMethods.toQueryHolder(request))
+      Future.successful(prepareResults(request.queryid, 0.0, 0, "", df))
     } catch {
       case e: Exception => {
         log.error(e)
@@ -135,8 +140,8 @@ class SearchRPC extends AdamSearchGrpc.AdamSearch {
 
     try {
       val onComplete =
-        (status: ProgressiveQueryStatus.Value, results: DataFrame, confidence: Float, deliverer: String, info: Map[String, String]) => ({
-          responseObserver.onNext(QueryResponseInfoMessage(confidence = confidence, indextype = IndexTypes.withName(info.getOrElse("type", "")).get.indextype, queryResponseList = Option(prepareResults(results))))
+        (status: ProgressiveQueryStatus.Value, df: DataFrame, confidence: Float, source: String, info: Map[String, String]) => ({
+          responseObserver.onNext(prepareResults(request.queryid, confidence, 0, source, df))
         })
 
       QueryOp.progressive(SearchRPCMethods.toQueryHolder(request, onComplete))
@@ -158,8 +163,8 @@ class SearchRPC extends AdamSearchGrpc.AdamSearch {
     log.debug("rpc call for timed progressive query operation")
 
     try {
-      val (results, confidence, deliverer) = QueryOp.timedProgressive(SearchRPCMethods.toQueryHolder(request))
-      Future.successful(QueryResponseInfoMessage(confidence = confidence, indextype = IndexTypes.withName(deliverer).get.indextype, queryResponseList = Option(prepareResults(results))))
+      val (df, confidence, source) = QueryOp.timedProgressive(SearchRPCMethods.toQueryHolder(request))
+      Future.successful(prepareResults(request.queryid, confidence, 0, source, df))
     } catch {
       case e: Exception => {
         log.error(e)
@@ -174,7 +179,7 @@ class SearchRPC extends AdamSearchGrpc.AdamSearch {
     * @param request
     * @return
     */
-  override def doCompoundQuery(request: CompoundQueryMessage): Future[CompoundQueryResponseListMessage] = {
+  override def doCompoundQuery(request: CompoundQueryMessage): Future[CompoundQueryResponseInfoMessage] = {
     log.debug("rpc call for chained query operation")
 
     try {
@@ -185,14 +190,14 @@ class SearchRPC extends AdamSearchGrpc.AdamSearch {
       val resultInfos = if (request.withIntermediateResults) {
         qh.provideRunInfo()
       } else {
-        qh.collectRunInfo(new ListBuffer()).toSeq
+        qh.getRunDetails(new ListBuffer()).toSeq
       }
 
       val results = resultInfos.map(res =>
-        QueryResponseInfoMessage(id = res.id, time = res.time.toMillis, queryResponseList = Option(prepareResults(res.results)))
+          prepareResults(res.id, 0.0, res.time.toMillis, res.source, res.results)
       )
 
-      Future.successful(CompoundQueryResponseListMessage(
+      Future.successful(CompoundQueryResponseInfoMessage(
         results
       ))
 
@@ -207,10 +212,31 @@ class SearchRPC extends AdamSearchGrpc.AdamSearch {
 
   /**
     *
+    * @param request
+    * @return
+    */
+  override def getCachedResults(request: CachedResultsMessage): Future[QueryResponseInfoMessage] = {
+    log.debug("rpc call for cached query results")
+
+    val cached = QueryHandler.getFromQueryCache(Option(request.queryid))
+
+    if(cached.isSuccess){
+      Future.successful(prepareResults(request.queryid, 0.0, 0, "cache", cached.get))
+    } else {
+      Future.failed(QueryNotCachedException())
+    }
+  }
+
+  /**
+    *
+    * @param queryid
+    * @param confidence
+    * @param time
+    * @param source
     * @param df
     * @return
     */
-  private def prepareResults(df: DataFrame): QueryResponseListMessage = {
+  private def prepareResults(queryid : String, confidence : Double, time : Long, source : String, df : DataFrame): QueryResponseInfoMessage = {
     import org.apache.spark.sql.functions.{array, col, lit, udf}
 
     val asMap = udf((keys: Seq[String], values: Seq[String]) =>
@@ -224,22 +250,22 @@ class SearchRPC extends AdamSearchGrpc.AdamSearch {
     val keys = array(cols.map(lit): _*)
     val values = array(cols.map(col): _*)
 
-    val responseMsgs = if (!cols.isEmpty) {
+    val results = if (!cols.isEmpty) {
       df.withColumn("metadata", asMap(keys, values))
-        .collect().map(row => QueryResponseMessage(
+        .collect().map(row => QueryResultMessage(
         row.getAs[Long](FieldNames.idColumnName),
         row.getAs[Float](FieldNames.distanceColumnName),
         row.getMap[String, String](3).toMap
       ))
     } else {
       df
-        .collect().map(row => QueryResponseMessage(
+        .collect().map(row => QueryResultMessage(
         row.getAs[Long](FieldNames.idColumnName),
         row.getAs[Float](FieldNames.distanceColumnName),
         Map[String, String]()
       ))
     }
 
-    QueryResponseListMessage(responseMsgs)
+    QueryResponseInfoMessage(queryid, confidence, time, source, results)
   }
 }

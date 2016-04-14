@@ -51,6 +51,9 @@ object AdamConfig{
   val maximumCacheSizeBooleanQuery = 100
   val expireAfterAccessBooleanQuery = 1 //in minutes
 
+  val maximumCacheSizeQueryResults = 100
+  val expireAfterAccessQueryResults = 30 //in minutes
+
   val master = if(config.hasPath("adampro.master")){
     Option(config.getString("adampro.master"))
   } else {

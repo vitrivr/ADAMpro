@@ -3,6 +3,12 @@ syntax = "proto3";
 option java_package = "ch.unibas.dmi.dbis.adam.http";
 
 
+
+
+
+//****  SERVICES ****//
+
+
 service AdamDefinition {
   rpc CreateEntity(CreateEntityMessage) returns (AckMessage) {}
   rpc DropEntity(EntityNameMessage) returns (AckMessage) {}
@@ -21,20 +27,44 @@ service AdamSearch {
   rpc CacheEntity (EntityNameMessage) returns (AckMessage) {}
   //performs a query on an entity with hints on which search method to use
   //(if no hint is specified a fallback is used)
-  rpc DoStandardQuery(SimpleQueryMessage) returns (QueryResponseListMessage) {}
+  rpc DoStandardQuery(SimpleQueryMessage) returns (QueryResponseInfoMessage) {}
   //performs a sequential query
-  rpc DoSequentialQuery(SimpleSequentialQueryMessage) returns (QueryResponseListMessage) {}
+  rpc DoSequentialQuery(SimpleSequentialQueryMessage) returns (QueryResponseInfoMessage) {}
   //performs a query with specified index name
-  rpc DoSpecifiedIndexQuery(SimpleSpecifiedIndexQueryMessage) returns (QueryResponseListMessage) {}
+  rpc DoSpecifiedIndexQuery(SimpleSpecifiedIndexQueryMessage) returns (QueryResponseInfoMessage) {}
   //performs a query with specified entity name and index type
-  rpc DoIndexQuery(SimpleIndexQueryMessage) returns (QueryResponseListMessage) {}
+  rpc DoIndexQuery(SimpleIndexQueryMessage) returns (QueryResponseInfoMessage) {}
   //performs a progressive query, note that the results are a stream
   rpc DoProgressiveQuery(SimpleQueryMessage) returns (stream QueryResponseInfoMessage) {}
   //performs a timed progressive query which will stop after the specified running time
   rpc DoTimedProgressiveQuery(TimedQueryMessage) returns (QueryResponseInfoMessage) {}
   //performs a compound query
-  rpc DoCompoundQuery(CompoundQueryMessage) returns (CompoundQueryResponseListMessage) {}
+  rpc DoCompoundQuery(CompoundQueryMessage) returns (CompoundQueryResponseInfoMessage) {}
+  //return cached results
+  rpc GetCachedResults(CachedResultsMessage) returns (QueryResponseInfoMessage) {}
 }
+
+
+
+
+
+//****  GLOBAL ENUMS ****//
+
+enum IndexType {
+    ecp = 0;
+    lsh = 1;
+    pq = 2;
+    sh = 3;
+    vaf = 4;
+    vav = 5;
+}
+
+
+
+
+
+
+//****  DATA DEFINITION REQUESTS ****//
 
 message CreateEntityMessage {
   string entity = 1;
@@ -63,15 +93,6 @@ message GenerateRandomEntityMessage {
   int32 ndims = 3;
 }
 
-message AckMessage {
-  enum Code {
-    OK = 0;
-    ERROR = 1;
-  }
-  Code code = 1;
-  string message = 2;
-}
-
 message InsertMessage {
   string entity = 1;
   repeated TupleInsertMessage tuples = 2;
@@ -82,16 +103,6 @@ message InsertMessage {
   }
 }
 
-
-enum IndexType {
-    ecp = 0;
-    lsh = 1;
-    pq = 2;
-    sh = 3;
-    vaf = 4;
-    vav = 5;
-}
-
 message IndexMessage {
   string entity = 1;
   IndexType indextype = 2;
@@ -100,14 +111,135 @@ message IndexMessage {
   map<string, string> options = 4;
 }
 
+
+
+
+
+
+//****  QUERY REQUESTS ****//
+
+message SimpleQueryMessage {
+  string queryid = 1;
+  string entity = 2;
+  //for hints see  ch.unibas.dmi.dbis.adam.query.handler.QueryHints, possible values
+  //include "index", "inexact", "ecp", "lsh", "pq", "sh", "exact", "va", "vaf", "vav"
+  string hint = 3;
+  NearestNeighbourQueryMessage nnq = 4;
+  BooleanQueryMessage bq = 5;
+  //specifies whether we should join the structured metadata to the results
+  bool withMetadata = 6;
+  bool readFromCache = 7;
+  bool putInCache = 8;
+}
+
+message SimpleSequentialQueryMessage {
+  string queryid = 1;
+  string entity = 2;
+  NearestNeighbourQueryMessage nnq = 3;
+  BooleanQueryMessage bq = 4;
+  //specifies whether we should join the structured metadata to the results
+  bool withMetadata = 5;
+  bool readFromCache = 6;
+  bool putInCache = 7;
+}
+
+message SimpleSpecifiedIndexQueryMessage {
+  string queryid = 1;
+  string index = 2;
+  NearestNeighbourQueryMessage nnq = 3;
+  BooleanQueryMessage bq = 4;
+  //specifies whether we should join the structured metadata to the results
+  bool withMetadata = 5;
+  bool readFromCache = 6;
+  bool putInCache = 7;
+}
+
+message SimpleIndexQueryMessage {
+  string queryid = 1;
+  string entity = 2;
+  IndexType indextype = 3;
+  NearestNeighbourQueryMessage nnq = 4;
+  BooleanQueryMessage bq = 5;
+  //specifies whether we should join the structured metadata to the results
+  bool withMetadata = 6;
+  bool readFromCache = 7;
+  bool putInCache = 8;
+}
+
+message TimedQueryMessage {
+  string queryid = 1;
+  string entity = 2;
+  NearestNeighbourQueryMessage nnq = 3;
+  BooleanQueryMessage bq = 4;
+  //maximum duration of query in ms
+  int64 time = 5;
+  bool withMetadata = 6;
+}
+
+message CompoundQueryMessage {
+  //if an id is specified, the id of the block is returned in the intermediate results
+  string queryid = 1;
+  string entity = 2;
+  NearestNeighbourQueryMessage nnq = 3;
+  BooleanQueryMessage bq = 4;
+  SubExpressionQueryMessage indexFilterExpression = 5;
+  bool withMetadata = 6;
+  //specifies whether intermediate results should be returned (i.e. of all sub-expressions and not only the final result)
+  bool withIntermediateResults = 7;
+}
+
+message ExpressionQueryMessage {
+  string queryid = 1;
+  enum Operation {
+      UNION = 0;
+      INTERSECT = 1;
+      EXCEPT = 2;
+    }
+
+   enum OperationOrder {
+      LEFTFIRST = 0;
+      RIGHTFIRST = 1;
+      PARALLEL = 2;
+    }
+
+   SubExpressionQueryMessage left = 2;
+   Operation operation = 3;
+   OperationOrder order = 4;
+   SubExpressionQueryMessage right = 5;
+
+}
+
+message SubExpressionQueryMessage {
+    string queryid = 1;
+   //Any is not yet supported
+   //import "google/protobuf/any.proto";
+   //google.protobuf.Any left = 1;
+   //Operation operation = 2;
+   //google.protobuf.Any right = 3;
+    oneof submessage {
+       SimpleSequentialQueryMessage ssqm = 2;
+       SimpleSpecifiedIndexQueryMessage ssiqm = 3;
+       SimpleIndexQueryMessage siqm = 4;
+       ExpressionQueryMessage eqm = 5;
+     }
+}
+
 message NearestNeighbourQueryMessage {
   repeated float query = 1 [packed=true];
-  int32 norm = 2;
+  DistanceMessage distance = 2;
   int32 k = 3;
   //specifies whether only the candidates from the index search are returned and no exact distance computation is performed
   bool indexOnly = 4;
   //for possible options see each index structure
   map<string, string> options = 5;
+}
+
+message DistanceMessage {
+  enum DistanceType {
+    minkowski = 0; //add option 'norm'
+  }
+  DistanceType distancetype = 1;
+  map<string, string> options = 2;
 }
 
 message BooleanQueryMessage {
@@ -127,120 +259,43 @@ message BooleanQueryMessage {
   }
 }
 
-message SimpleQueryMessage {
-  string entity = 1;
-  //for hints see  ch.unibas.dmi.dbis.adam.query.handler.QueryHints, possible values
-  //include "index", "inexact", "ecp", "lsh", "pq", "sh", "exact", "va", "vaf", "vav"
-  string hint = 2;
-  NearestNeighbourQueryMessage nnq = 3;
-  BooleanQueryMessage bq = 4;
-  //specifies whether we should join the structured metadata to the results
-  bool withMetadata = 5;
+message CachedResultsMessage {
+  string queryid = 1;
 }
 
-message SimpleSequentialQueryMessage {
-  string entity = 1;
-  NearestNeighbourQueryMessage nnq = 2;
-  BooleanQueryMessage bq = 3;
-  //specifies whether we should join the structured metadata to the results
-  bool withMetadata = 4;
+
+
+
+
+//****  RESPONSES ****//
+
+message AckMessage {
+  enum Code {
+    OK = 0;
+    ERROR = 1;
+  }
+  Code code = 1;
+  string message = 2;
 }
 
-message SimpleSpecifiedIndexQueryMessage {
-  string index = 1;
-  NearestNeighbourQueryMessage nnq = 2;
-  BooleanQueryMessage bq = 3;
-  //specifies whether we should join the structured metadata to the results
-  bool withMetadata = 4;
-}
-
-message SimpleIndexQueryMessage {
-  string entity = 1;
-  IndexType indextype = 2;
-  NearestNeighbourQueryMessage nnq = 3;
-  BooleanQueryMessage bq = 4;
-  //specifies whether we should join the structured metadata to the results
-  bool withMetadata = 5;
-}
-
-message TimedQueryMessage {
-  string entity = 1;
-  NearestNeighbourQueryMessage nnq = 2;
-  BooleanQueryMessage bq = 3;
-  //maximum duration of query in ms
-  int64 time = 4;
-  bool withMetadata = 5;
+message CompoundQueryResponseInfoMessage {
+  repeated QueryResponseInfoMessage responses = 1;
 }
 
 message QueryResponseInfoMessage {
   //id of result (given in the query)
-  string id = 1;
+  string queryid = 1;
   //confidence in results (between 0 - 1)
   double confidence = 2;
   //retrieval time
   int64 time = 3;
-  IndexType indextype = 4;
+  string source = 4;
   //result list
-  QueryResponseListMessage queryResponseList = 5;
+  repeated QueryResultMessage results = 5;
 }
 
-message QueryResponseMessage {
+message QueryResultMessage {
   int64 id = 1;
   float distance = 2;
   map<string, string> metadata = 3;
-}
-
-message QueryResponseListMessage {
-  repeated QueryResponseMessage responses = 1;
-}
-
-message CompoundQueryResponseListMessage {
-  repeated QueryResponseInfoMessage responses = 1;
-}
-
-message CompoundQueryMessage {
-  string entity = 1;
-  NearestNeighbourQueryMessage nnq = 2;
-  BooleanQueryMessage bq = 3;
-  SubExpressionQueryMessage indexFilterExpression = 4;
-  bool withMetadata = 5;
-  //specifies whether intermediate results should be returned (i.e. of all sub-expressions and not only the final result)
-  bool withIntermediateResults = 6;
-  //if an id is specified, the id of the block is returned in the intermediate results
-  string id = 7;
-}
-
-message ExpressionQueryMessage {
-  enum Operation {
-      UNION = 0;
-      INTERSECT = 1;
-      EXCEPT = 2;
-    }
-
-   enum OperationOrder {
-      LEFTFIRST = 0;
-      RIGHTFIRST = 1;
-      PARALLEL = 2;
-    }
-
-   SubExpressionQueryMessage left = 1;
-   Operation operation = 2;
-   OperationOrder order = 3;
-   SubExpressionQueryMessage right = 4;
-   string id = 5;
-}
-
-message SubExpressionQueryMessage {
-   //Any is not yet supported
-   //import "google/protobuf/any.proto";
-   //google.protobuf.Any left = 1;
-   //Operation operation = 2;
-   //google.protobuf.Any right = 3;
- oneof submessage {
-       SimpleSequentialQueryMessage ssqm = 1;
-       SimpleSpecifiedIndexQueryMessage ssiqm = 2;
-       SimpleIndexQueryMessage siqm = 3;
-       ExpressionQueryMessage eqm = 4;
-     }
-    string id = 5;
 }
