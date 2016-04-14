@@ -13,17 +13,17 @@ object QueryHints {
   sealed abstract class QueryHint
   sealed abstract class SimpleQueryHint extends QueryHint
   sealed abstract class IndexQueryHint(val structureType : IndexTypeName) extends SimpleQueryHint
-  sealed abstract class CompoundQueryHint(val hints : Seq[SimpleQueryHint]) extends QueryHint
+  sealed abstract class ComplexQueryHint(val hints : Seq[SimpleQueryHint]) extends QueryHint
 
   case object SEQUENTIAL_QUERY extends SimpleQueryHint
-  case object INDEX_QUERY extends CompoundQueryHint(Seq(VAF_INDEX_QUERY, VAV_INDEX_QUERY, PQ_INDEX_QUERY, ECP_INDEX_QUERY, SH_INDEX_QUERY, LSH_INDEX_QUERY))
-  case object INEXACT_QUERY extends CompoundQueryHint(Seq(PQ_INDEX_QUERY, ECP_INDEX_QUERY, SH_INDEX_QUERY, LSH_INDEX_QUERY))
+  case object INDEX_QUERY extends ComplexQueryHint(Seq(VAF_INDEX_QUERY, VAV_INDEX_QUERY, PQ_INDEX_QUERY, ECP_INDEX_QUERY, SH_INDEX_QUERY, LSH_INDEX_QUERY))
+  case object INEXACT_QUERY extends ComplexQueryHint(Seq(PQ_INDEX_QUERY, ECP_INDEX_QUERY, SH_INDEX_QUERY, LSH_INDEX_QUERY))
   case object ECP_INDEX_QUERY extends IndexQueryHint(ECPINDEX)
   case object LSH_INDEX_QUERY extends IndexQueryHint(LSHINDEX)
   case object PQ_INDEX_QUERY extends IndexQueryHint(PQINDEX)
   case object SH_INDEX_QUERY extends IndexQueryHint(SHINDEX)
-  case object EXACT_QUERY extends CompoundQueryHint(Seq(VAF_INDEX_QUERY, VAV_INDEX_QUERY, SEQUENTIAL_QUERY))
-  case object VA_INDEX_QUERY extends CompoundQueryHint(Seq(VAF_INDEX_QUERY, VAV_INDEX_QUERY))
+  case object EXACT_QUERY extends ComplexQueryHint(Seq(VAF_INDEX_QUERY, VAV_INDEX_QUERY, SEQUENTIAL_QUERY))
+  case object VA_INDEX_QUERY extends ComplexQueryHint(Seq(VAF_INDEX_QUERY, VAV_INDEX_QUERY))
   case object VAF_INDEX_QUERY extends IndexQueryHint(VAFINDEX)
   case object VAV_INDEX_QUERY extends IndexQueryHint(VAVINDEX)
 

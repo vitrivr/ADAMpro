@@ -81,10 +81,10 @@ object QueryHandler {
         log.debug("sequential execution plan hint")
         return Some(sequentialQuery(entityname)) //sequential
 
-      case cqh: CompoundQueryHint => {
+      case cqh: ComplexQueryHint => {
         log.debug("compound query hint, re-iterate sub-hints")
 
-        //compound query hint
+        //complex query hint
         val hints = cqh.hints
         var i = 0
 
