@@ -4,7 +4,7 @@ import ch.unibas.dmi.dbis.adam.config.FieldNames
 import ch.unibas.dmi.dbis.adam.datatypes.feature.FeatureVectorWrapper
 import ch.unibas.dmi.dbis.adam.entity.Entity._
 import ch.unibas.dmi.dbis.adam.entity.FieldTypes.FieldType
-import ch.unibas.dmi.dbis.adam.main.{AdamContext, SparkStartup}
+import ch.unibas.dmi.dbis.adam.main.AdamContext
 import ch.unibas.dmi.dbis.adam.query.query.NearestNeighbourQuery
 import ch.unibas.dmi.dbis.adam.storage.components.{FeatureStorage, MetadataStorage}
 import ch.unibas.dmi.dbis.adam.storage.engine.CatalogOperator
@@ -59,7 +59,7 @@ case class Entity(entityname: EntityName, featureStorage: FeatureStorage, metada
     * @param insertion
     * @return
     */
-  def insert(insertion: DataFrame): Try[Void] = {
+  def insert(insertion: DataFrame)(implicit ac: AdamContext): Try[Void] = {
     log.debug("inserting data into entity")
 
     val dataDimensionality = insertion.first.getAs[FeatureVectorWrapper](FieldNames.featureColumnName).vector.size
@@ -72,8 +72,7 @@ case class Entity(entityname: EntityName, featureStorage: FeatureStorage, metada
     }
 
     val rdd = insertion.rdd.zipWithUniqueId.map { case (r: Row, adamtwoid: Long) => Row.fromSeq(adamtwoid +: r.toSeq) }
-    import SparkStartup.Implicits._
-    val insertionWithPK = sqlContext
+    val insertionWithPK = ac.sqlContext
       .createDataFrame(
         rdd, StructType(StructField(FieldNames.idColumnName, LongType, false) +: insertion.schema.fields))
       .withColumnRenamed(FieldNames.featureColumnName, FieldNames.internFeatureColumnName)

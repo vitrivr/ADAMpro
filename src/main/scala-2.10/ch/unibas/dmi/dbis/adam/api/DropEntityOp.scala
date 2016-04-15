@@ -2,6 +2,7 @@ package ch.unibas.dmi.dbis.adam.api
 
 import ch.unibas.dmi.dbis.adam.entity.Entity._
 import ch.unibas.dmi.dbis.adam.entity.EntityHandler
+import ch.unibas.dmi.dbis.adam.main.AdamContext
 import org.apache.log4j.Logger
 
 /**
@@ -22,7 +23,7 @@ object DropEntityOp {
     * @param ifExists
     * @return
     */
-  def apply(entityname: EntityName, ifExists: Boolean = false): Boolean = {
+  def apply(entityname: EntityName, ifExists: Boolean = false)(implicit ac: AdamContext): Boolean = {
     log.debug("perform drop entity operation")
     EntityHandler.drop(entityname, ifExists).isSuccess
   }

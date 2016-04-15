@@ -34,7 +34,7 @@ object EntityHandler {
     *               as key = name, value = SQL type
     * @return
     */
-  def create(entityname: EntityName, fields: Option[Map[String, FieldDefinition]] = None): Try[Entity] = {
+  def create(entityname: EntityName, fields: Option[Map[String, FieldDefinition]] = None)(implicit ac: AdamContext): Try[Entity] = {
     if (exists(entityname)) {
       log.error("entity " + entityname + " exists already")
       return Failure(EntityExistingException())
@@ -57,11 +57,9 @@ object EntityHandler {
       val fieldsWithId = fields.get + (FieldNames.idColumnName -> FieldDefinition(LONGTYPE, false, true, true))
       metadataStorage.create(entityname, fieldsWithId)
       CatalogOperator.createEntity(entityname, true)
-      import SparkStartup.Implicits._
       Success(Entity(entityname, featureStorage, Option(metadataStorage)))
     } else {
       CatalogOperator.createEntity(entityname, false)
-      import SparkStartup.Implicits._
       Success(Entity(entityname, featureStorage, None))
     }
   }
@@ -73,7 +71,7 @@ object EntityHandler {
     * @param ifExists
     * @return
     */
-  def drop(entityname: EntityName, ifExists: Boolean = false): Try[Null] = {
+  def drop(entityname: EntityName, ifExists: Boolean = false)(implicit ac: AdamContext): Try[Null] = {
     if (!exists(entityname)) {
       if (!ifExists) {
         return Failure(EntityNotExistingException())
@@ -104,8 +102,8 @@ object EntityHandler {
     */
   def insertData(entityname: EntityName, insertion: DataFrame)(implicit ac: AdamContext): Try[Void] = {
     val entity = load(entityname).get
-    val insertionSchema = insertion.schema
-    val entitySchema = entity.schema
+    //val insertionSchema = insertion.schema
+    //val entitySchema = entity.schema
 
     //TODO: possibly compare schemas
 

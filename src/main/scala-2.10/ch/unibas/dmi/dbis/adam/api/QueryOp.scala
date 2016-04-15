@@ -104,8 +104,6 @@ object QueryOp {
     QueryHandler.progressiveQuery(entityname)(nnq, bq, onComplete, withMetadata)
   }
 
-  def progressive(q: ProgressiveQueryHolder[_])(implicit ac : AdamContext) : ProgressiveQueryStatusTracker = progressive(q.entityname, q.nnq, q.bq, q.onComplete, q.withMetadata)
-
 
   /**
     * Performs a timed progressive query, i.e., it performs the query for a maximum of the given time limit and returns then the best possible
@@ -122,8 +120,6 @@ object QueryOp {
     log.debug("perform timed progressive query operation")
     QueryHandler.timedProgressiveQuery(entityname)(nnq, bq, timelimit, withMetadata)
   }
-
-  def timedProgressive(q: TimedProgressiveQueryHolder)(implicit ac : AdamContext): (DataFrame, Float, String) = timedProgressive(q.entityname, q.nnq, q.bq, q.timelimit, q.withMetadata)
 
   /**
     * Performs a query which uses index compounding for pre-filtering.

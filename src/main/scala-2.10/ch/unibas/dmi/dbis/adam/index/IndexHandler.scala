@@ -62,7 +62,7 @@ object IndexHandler {
     * @param indexgenerator generator to create index
     * @return index
     */
-  def createIndex(entity: Entity, indexgenerator: IndexGenerator): Try[Index] = {
+  def createIndex(entity: Entity, indexgenerator: IndexGenerator)(implicit ac: AdamContext): Try[Index] = {
     val count = entity.count
     if (count < MINIMUM_NUMBER_OF_TUPLE) {
       log.error("not enough tuples for creating index, needs at least " + MINIMUM_NUMBER_OF_TUPLE + " but has only " + count)
@@ -173,7 +173,7 @@ object IndexHandler {
     * @param indexname
     * @return true if index was dropped
     */
-  def drop(indexname: IndexName): Try[Void] = {
+  def drop(indexname: IndexName)(implicit ac: AdamContext): Try[Void] = {
     CatalogOperator.dropIndex(indexname)
     storage.drop(indexname)
     Success(null)
@@ -185,7 +185,7 @@ object IndexHandler {
     * @param entityname
     * @return
     */
-  def dropAll(entityname: EntityName): Try[Void] = {
+  def dropAll(entityname: EntityName)(implicit ac: AdamContext): Try[Void] = {
     val indexes = CatalogOperator.dropAllIndexes(entityname)
 
     indexes.foreach {
