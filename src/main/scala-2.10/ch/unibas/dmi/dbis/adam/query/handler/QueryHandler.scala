@@ -1,6 +1,7 @@
 package ch.unibas.dmi.dbis.adam.query.handler
 
 import ch.unibas.dmi.dbis.adam.config.FieldNames
+import ch.unibas.dmi.dbis.adam.datatypes.feature.Feature._
 import ch.unibas.dmi.dbis.adam.entity.Entity._
 import ch.unibas.dmi.dbis.adam.entity.Tuple.TupleID
 import ch.unibas.dmi.dbis.adam.exception.IndexNotExistingException
@@ -9,6 +10,7 @@ import ch.unibas.dmi.dbis.adam.index.IndexHandler
 import ch.unibas.dmi.dbis.adam.main.{AdamContext, SparkStartup}
 import ch.unibas.dmi.dbis.adam.query.Result
 import ch.unibas.dmi.dbis.adam.query.datastructures.{QueryCacheOptions, QueryExpression, QueryLRUCache, RunDetails}
+import ch.unibas.dmi.dbis.adam.query.distance.DistanceFunction
 import ch.unibas.dmi.dbis.adam.query.handler.QueryHints._
 import ch.unibas.dmi.dbis.adam.query.progressive._
 import ch.unibas.dmi.dbis.adam.query.query.{BooleanQuery, NearestNeighbourQuery}
@@ -136,13 +138,26 @@ object QueryHandler {
   }
 
 
-  case class StandardQueryHolder(entityname: EntityName, hint: Option[QueryHint], nnq: Option[NearestNeighbourQuery], bq: Option[BooleanQuery], withMetadata: Boolean, id: Option[String] = None, cache: Option[QueryCacheOptions] = Some(QueryCacheOptions()))(implicit ac : AdamContext) extends QueryExpression(id) {
+  case class StandardQueryHolder(entityname: EntityName, hint: Option[QueryHint], nnq: Option[NearestNeighbourQuery], bq: Option[BooleanQuery], id: Option[String] = None, cache: Option[QueryCacheOptions] = Some(QueryCacheOptions()))(implicit ac : AdamContext) extends QueryExpression(id) {
     override protected def run(filter: Option[Set[TupleID]]): DataFrame = {
-      val abq = bq.getOrElse(BooleanQuery())
-      if (filter.isDefined) {
-        abq.append(filter.get)
+      val abq = if(bq.isDefined){
+        val tmp = bq.get
+
+        if (filter.isDefined) {
+          tmp.append(filter.get)
+        }
+
+        Option(tmp)
+      } else {
+        None
       }
-      query(entityname, hint, nnq, Option(abq), withMetadata, id, cache)
+
+      val annq = if(nnq.isDefined){
+        Option(NearestNeighbourQuery(nnq.get.q, nnq.get.distance, nnq.get.k, true, nnq.get.options, nnq.get.queryID))
+      } else {
+        None
+      }
+      query(entityname, hint, annq, abq, false, id, cache)
     }
   }
 
@@ -186,13 +201,14 @@ object QueryHandler {
     res
   }
 
-  case class SequentialQueryHolder(entityname: EntityName, nnq: NearestNeighbourQuery, bq: Option[BooleanQuery], withMetadata: Boolean, id: Option[String] = None, cache: Option[QueryCacheOptions] = Some(QueryCacheOptions()))(implicit ac : AdamContext) extends QueryExpression(id) {
+  case class SequentialQueryHolder(entityname: EntityName, nnq: NearestNeighbourQuery, bq: Option[BooleanQuery], id: Option[String] = None, cache: Option[QueryCacheOptions] = Some(QueryCacheOptions()))(implicit ac : AdamContext) extends QueryExpression(id) {
     override protected def run(filter: Option[Set[TupleID]]): DataFrame = {
       val abq = bq.getOrElse(BooleanQuery())
       if (filter.isDefined) {
         abq.append(filter.get)
       }
-      sequentialQuery(entityname)(nnq, Option(abq), withMetadata, id, cache)
+      val annq = NearestNeighbourQuery(nnq.q, nnq.distance, nnq.k, true, nnq.options, nnq.queryID)
+      sequentialQuery(entityname)(annq, Option(abq), false, id, cache)
     }
   }
 
@@ -231,13 +247,14 @@ object QueryHandler {
     res
   }
 
-  case class IndexQueryHolder(entityname: EntityName, indextypename: IndexTypeName, nnq: NearestNeighbourQuery, bq: Option[BooleanQuery], withMetadata: Boolean, id: Option[String] = None, cache: Option[QueryCacheOptions] = Some(QueryCacheOptions()))(implicit ac : AdamContext) extends QueryExpression(id) {
+  case class IndexQueryHolder(entityname: EntityName, indextypename: IndexTypeName, nnq: NearestNeighbourQuery, bq: Option[BooleanQuery], id: Option[String] = None, cache: Option[QueryCacheOptions] = Some(QueryCacheOptions()))(implicit ac : AdamContext) extends QueryExpression(id) {
     override protected def run(filter: Option[Set[TupleID]]): DataFrame = {
       val abq = bq.getOrElse(BooleanQuery())
       if (filter.isDefined) {
         abq.append(filter.get)
       }
-      indexQuery(entityname, indextypename)(nnq, Option(abq), withMetadata, id, cache)
+      val annq = NearestNeighbourQuery(nnq.q, nnq.distance, nnq.k, true, nnq.options, nnq.queryID)
+      indexQuery(entityname, indextypename)(annq, Option(abq), false, id, cache)
     }
   }
 
@@ -288,13 +305,14 @@ object QueryHandler {
     res
   }
 
-  case class SpecifiedIndexQueryHolder(indexname: IndexName, nnq: NearestNeighbourQuery, bq: Option[BooleanQuery], withMetadata: Boolean, id: Option[String] = None, cache: Option[QueryCacheOptions] = Some(QueryCacheOptions()))(implicit ac : AdamContext) extends QueryExpression(id) {
+  case class SpecifiedIndexQueryHolder(indexname: IndexName, nnq: NearestNeighbourQuery, bq: Option[BooleanQuery], id: Option[String] = None, cache: Option[QueryCacheOptions] = Some(QueryCacheOptions()))(implicit ac : AdamContext) extends QueryExpression(id) {
     override protected def run(filter: Option[Set[TupleID]]): DataFrame = {
       val abq = bq.getOrElse(BooleanQuery())
       if (filter.isDefined) {
         abq.append(filter.get)
       }
-      specifiedIndexQuery(indexname)(nnq, Option(abq), withMetadata, id, cache)
+      val annq = NearestNeighbourQuery(nnq.q, nnq.distance, nnq.k, true, nnq.options, nnq.queryID)
+      specifiedIndexQuery(indexname)(annq, Option(abq), false, id, cache)
     }
   }
 
@@ -338,9 +356,6 @@ object QueryHandler {
     NearestNeighbourQueryHandler.progressiveQuery(entityname, nnq, filter, onCompleteFunction)
   }
 
-  case class ProgressiveQueryHolder[U](entityname: EntityName, nnq: NearestNeighbourQuery, bq: Option[BooleanQuery], onComplete: (ProgressiveQueryStatus.Value, DataFrame, Float, String, Map[String, String]) => U, withMetadata: Boolean, id: Option[String] = None, cache: Option[QueryCacheOptions] = Some(QueryCacheOptions()))
-
-
   /**
     * Performs a timed progressive query, i.e., it performs the query for a maximum of the given time limit and returns then the best possible
     * available results.
@@ -372,9 +387,6 @@ object QueryHandler {
 
     (res, results.confidence, results.source)
   }
-
-  case class TimedProgressiveQueryHolder(entityname: EntityName, nnq: NearestNeighbourQuery, bq: Option[BooleanQuery], timelimit: Duration, withMetadata: Boolean, id: Option[String] = None, cache: Option[QueryCacheOptions] = Some(QueryCacheOptions()))(implicit ac : AdamContext)
-
 
   /**
     * Performs a compound query.

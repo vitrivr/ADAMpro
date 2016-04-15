@@ -1,5 +1,7 @@
 package ch.unibas.dmi.dbis.adam.rpc
 
+import java.util.concurrent.TimeUnit
+
 import ch.unibas.dmi.dbis.adam.api.QueryOp
 import ch.unibas.dmi.dbis.adam.config.FieldNames
 import ch.unibas.dmi.dbis.adam.exception.QueryNotCachedException
@@ -14,6 +16,7 @@ import org.apache.spark.sql.DataFrame
 
 import scala.collection.mutable.ListBuffer
 import scala.concurrent.Future
+import scala.concurrent.duration.Duration
 
 /**
   * adamtwo
@@ -145,7 +148,7 @@ class SearchRPC(implicit ac : AdamContext) extends AdamSearchGrpc.AdamSearch {
           responseObserver.onNext(prepareResults(request.queryid, confidence, 0, source, df))
         })
 
-      QueryOp.progressive(SearchRPCMethods.toQueryHolder(request, onComplete))
+        QueryOp.progressive(request.entity, SearchRPCMethods.prepareNNQ(request.nnq), SearchRPCMethods.prepareBQ(request.bq), onComplete, request.withMetadata)
     } catch {
       case e: Exception => {
         log.error(e)
@@ -164,7 +167,8 @@ class SearchRPC(implicit ac : AdamContext) extends AdamSearchGrpc.AdamSearch {
     log.debug("rpc call for timed progressive query operation")
 
     try {
-      val (df, confidence, source) = QueryOp.timedProgressive(SearchRPCMethods.toQueryHolder(request))
+
+        val (df, confidence, source) = QueryOp.timedProgressive(request.entity, SearchRPCMethods.prepareNNQ(request.nnq), SearchRPCMethods.prepareBQ(request.bq), Duration(request.time, TimeUnit.MILLISECONDS), request.withMetadata)
       Future.successful(prepareResults(request.queryid, confidence, 0, source, df))
     } catch {
       case e: Exception => {
