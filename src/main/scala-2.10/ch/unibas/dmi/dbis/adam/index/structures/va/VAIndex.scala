@@ -56,7 +56,7 @@ class VAIndex(val indexname: IndexName, val entityname: EntityName, private[inde
       bound
     })
 
-    val ids = df
+    val results = df
       .withColumn("lbound", distUDF(lbounds)(df(FieldNames.featureIndexColumnName)))
       .withColumn("ubound", distUDF(ubounds)(df(FieldNames.featureIndexColumnName)))
         .mapPartitions(p => {
@@ -70,10 +70,14 @@ class VAIndex(val indexname: IndexName, val entityname: EntityName, private[inde
           localRh.results.iterator
         }).collect()
 
+    val globalResultHandler = new VAResultHandler(k)
+    results.sortBy(_.upper).foreach(result => globalResultHandler.offer(result))
+
+    val ids = globalResultHandler.results
 
     log.debug("VA-File returning " + ids.length + " tuples")
 
-    ids.map(result => Result(result.score, result.tid)).toSet
+    ids.map(result => Result(result.lower, result.tid)).toSet
   }
 
   override def isQueryConform(nnq: NearestNeighbourQuery): Boolean = {
