@@ -50,7 +50,7 @@ trait GenericIndexStorage extends IndexStorage {
     val df = ac.sqlContext.read.parquet(AdamConfig.indexPath + "/" + indexname + ".parquet")
 
     if(filter.isDefined){
-      df.filter(df(FieldNames.idColumnName) isin (filter.toSeq : _*))
+      df.filter(df(FieldNames.idColumnName) isin (filter.get.toSeq : _*))
     } else {
       df
     }
