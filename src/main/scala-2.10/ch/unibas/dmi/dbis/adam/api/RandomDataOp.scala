@@ -20,7 +20,7 @@ object RandomDataOp {
   def apply(entityname: EntityName, collectionSize: Int, vectorSize: Int): Boolean = {
     val limit = 10000
 
-    if(CreateEntityOp(entityname).isFailure){
+    if (CreateEntityOp(entityname).isFailure) {
       return false
     }
 
@@ -28,14 +28,12 @@ object RandomDataOp {
       StructField(FieldNames.featureColumnName, new FeatureVectorWrapperUDT, false)
     ))
 
-    val rdd = sc.parallelize(
-      (0 until collectionSize).sliding(limit, limit)
-        .flatMap( it => it.toSeq.map( idx => Row(new FeatureVectorWrapper(Seq.fill(vectorSize)(Random.nextFloat()))))).toSeq
-    )
-
-    val data = sqlContext.createDataFrame(rdd, schema)
-
-    InsertOp(entityname, data)
+    import SparkStartup.Implicits._
+    (0 until collectionSize).sliding(limit, limit).map { seq =>
+      val rdd = ac.sc.parallelize(seq.map(idx => Row(new FeatureVectorWrapper(Seq.fill(vectorSize)(Random.nextFloat())))))
+      val data = sqlContext.createDataFrame(rdd, schema)
+      InsertOp(entityname, data)
+    }
 
     true
   }
