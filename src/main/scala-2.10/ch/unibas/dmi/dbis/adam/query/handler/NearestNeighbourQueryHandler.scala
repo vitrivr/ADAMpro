@@ -120,7 +120,7 @@ private[query] object NearestNeighbourQueryHandler {
 
     log.debug("starting index scanner")
     val result = IndexScanner(IndexHandler.load(indexname).get, query, filter).toSeq
-    val rdd = ac.sc.parallelize(result).map(res => Row(0.toFloat, res))
+    val rdd = ac.sc.parallelize(result).map(res => Row(res.distance, res.tid))
     ac.sqlContext.createDataFrame(rdd, Result.resultSchema)
   }
 

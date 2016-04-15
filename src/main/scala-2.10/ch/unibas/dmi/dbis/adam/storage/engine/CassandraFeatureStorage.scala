@@ -73,7 +73,7 @@ object CassandraFeatureStorage extends FeatureStorage with Serializable {
     *
     * @param entityname
     */
-  override def create(entityname: EntityName): Boolean = {
+  override def create(entityname: EntityName)(implicit ac: AdamContext): Boolean = {
     log.debug("cassandra create operation")
 
     conn.withSessionDo { session =>
@@ -128,7 +128,7 @@ object CassandraFeatureStorage extends FeatureStorage with Serializable {
     *
     * @param entityname
     */
-  override def drop(entityname: EntityName): Boolean = {
+  override def drop(entityname: EntityName)(implicit ac: AdamContext): Boolean = {
     log.debug("cassandra drop operation")
 
     conn.withSessionDo { session =>
@@ -146,7 +146,7 @@ object CassandraFeatureStorage extends FeatureStorage with Serializable {
     * @param df
     * @param mode
     */
-  override def write(entityname: EntityName, df: DataFrame, mode: SaveMode): Boolean = {
+  override def write(entityname: EntityName, df: DataFrame, mode: SaveMode)(implicit ac: AdamContext): Boolean = {
     log.debug("cassandra write operation")
 
     if (mode == SaveMode.Overwrite) {
@@ -172,7 +172,7 @@ object CassandraFeatureStorage extends FeatureStorage with Serializable {
     * @param entityname
     * @return
     */
-  override def count(entityname: EntityName): Int = {
+  override def count(entityname: EntityName)(implicit ac: AdamContext): Int = {
     log.debug("cassandra count operation")
 
     import SparkStartup.Implicits._

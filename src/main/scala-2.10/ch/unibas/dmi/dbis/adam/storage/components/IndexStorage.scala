@@ -20,7 +20,7 @@ trait IndexStorage {
     * @param df
     * @return
     */
-  def create(entityname: EntityName, df: DataFrame) = write(entityname, df)
+  def create(entityname: EntityName, df: DataFrame)(implicit ac: AdamContext) = write(entityname, df)
 
   /**
     * Read index from the index storage.
@@ -38,7 +38,7 @@ trait IndexStorage {
     * @param index
     * @return true on success
     */
-  def write(indexName: IndexName, index: DataFrame): Boolean
+  def write(indexName: IndexName, index: DataFrame)(implicit ac: AdamContext): Boolean
 
   /**
     * Drop the index from the index storage.
@@ -46,5 +46,5 @@ trait IndexStorage {
     * @param indexName
     * @return true on success
     */
-  def drop(indexName: IndexName): Boolean
+  def drop(indexName: IndexName)(implicit ac: AdamContext): Boolean
 }

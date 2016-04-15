@@ -445,8 +445,8 @@ class QueryTestSuite extends AdamTestBase with ScalaFutures {
       //nnq has numOfQ  = 0 to avoid that by the various randomized q's the results get different
       val nnq = NearestNeighbourQuery(es.feature.vector, es.distance, es.k, false, Map("numOfQ" -> "0"))
 
-      val shqh = SpecifiedIndexQueryHolder(shidx.get.indexname, nnq, None, true)
-      val vhqh = SpecifiedIndexQueryHolder(vaidx.get.indexname, nnq, None, true)
+      val shqh = SpecifiedIndexQueryHolder(shidx.get.indexname, nnq, None)
+      val vhqh = SpecifiedIndexQueryHolder(vaidx.get.indexname, nnq, None)
 
       val results = time {
         CompoundQueryHandler.indexOnlyQuery()(new IntersectExpression(shqh, vhqh), false)
@@ -484,8 +484,8 @@ class QueryTestSuite extends AdamTestBase with ScalaFutures {
       //nnq has numOfQ  = 0 to avoid that by the various randomized q's the results get different
       val nnq = NearestNeighbourQuery(es.feature.vector, es.distance, es.k, false, Map("numOfQ" -> "0"))
 
-      val va1qh = SpecifiedIndexQueryHolder(vaidx1.get.indexname, nnq, None, false)
-      val va2qh = SpecifiedIndexQueryHolder(vaidx2.get.indexname, nnq, None, false)
+      val va1qh = SpecifiedIndexQueryHolder(vaidx1.get.indexname, nnq, None)
+      val va2qh = SpecifiedIndexQueryHolder(vaidx2.get.indexname, nnq, None)
 
       val results = time {
         CompoundQueryHandler.indexOnlyQuery()(new IntersectExpression(va1qh, va2qh, ExpressionEvaluationOrder.LeftFirst), false)

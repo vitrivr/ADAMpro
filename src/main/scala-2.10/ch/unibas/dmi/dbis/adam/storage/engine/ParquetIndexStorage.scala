@@ -34,11 +34,11 @@ object ParquetIndexStorage extends IndexStorage {
     log.debug("reading index from harddisk")
     storage.read(indexName, filter)
   }
-  override def drop(indexName: IndexName): Boolean = {
+  override def drop(indexName: IndexName)(implicit ac: AdamContext): Boolean = {
     log.debug("dropping index from harddisk")
     storage.drop(indexName)
   }
-  override def write(indexName: IndexName, index: DataFrame): Boolean = {
+  override def write(indexName: IndexName, index: DataFrame)(implicit ac: AdamContext): Boolean = {
     log.debug("writing index to harddisk")
     storage.write(indexName, index)
   }
@@ -56,7 +56,7 @@ trait GenericIndexStorage extends IndexStorage {
     }
   }
 
-  override def write(indexname: IndexName, df: DataFrame): Boolean = {
+  override def write(indexname: IndexName, df: DataFrame)(implicit ac: AdamContext): Boolean = {
     df.write.mode(SaveMode.Overwrite).parquet(AdamConfig.indexPath + "/" + indexname + ".parquet")
     true
   }
@@ -74,7 +74,7 @@ class HadoopStorage extends GenericIndexStorage {
     FileSystem.get(new Path("/").toUri, hadoopConf).mkdirs(new Path(AdamConfig.indexPath))
   }
 
-  override def drop(indexname: IndexName): Boolean = {
+  override def drop(indexname: IndexName)(implicit ac: AdamContext): Boolean = {
     val path = AdamConfig.indexPath + "/" + indexname + ".parquet"
     val hadoopConf = new Configuration()
     hadoopConf.set("fs.defaultFS", AdamConfig.basePath)
@@ -96,7 +96,7 @@ class LocalStorage extends GenericIndexStorage {
   }
 
 
-  override def drop(indexname: IndexName): Boolean = {
+  override def drop(indexname: IndexName)(implicit ac: AdamContext): Boolean = {
     new File(AdamConfig.indexPath + "/" + indexname + ".parquet").delete()
     true
   }
