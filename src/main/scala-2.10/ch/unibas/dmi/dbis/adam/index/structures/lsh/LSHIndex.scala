@@ -1,17 +1,17 @@
 package ch.unibas.dmi.dbis.adam.index.structures.lsh
 
+import ch.unibas.dmi.dbis.adam.config.FieldNames
+import ch.unibas.dmi.dbis.adam.datatypes.bitString.BitString
 import ch.unibas.dmi.dbis.adam.datatypes.feature.Feature._
 import ch.unibas.dmi.dbis.adam.datatypes.feature.MovableFeature
 import ch.unibas.dmi.dbis.adam.entity.Entity._
+import ch.unibas.dmi.dbis.adam.index.Index
 import ch.unibas.dmi.dbis.adam.index.Index.{IndexName, IndexTypeName}
 import ch.unibas.dmi.dbis.adam.index.structures.IndexTypes
-import ch.unibas.dmi.dbis.adam.index.utils.ResultHandler
-import ch.unibas.dmi.dbis.adam.index.{BitStringIndexTuple, Index}
 import ch.unibas.dmi.dbis.adam.main.AdamContext
 import ch.unibas.dmi.dbis.adam.query.Result
 import ch.unibas.dmi.dbis.adam.query.distance.DistanceFunction
 import ch.unibas.dmi.dbis.adam.query.query.NearestNeighbourQuery
-import org.apache.spark.TaskContext
 import org.apache.spark.sql.DataFrame
 
 /**
@@ -37,38 +37,29 @@ class LSHIndex(val indexname: IndexName, val entityname: EntityName, private[ind
     val originalQuery = LSHUtils.hashFeature(q, metadata)
     val queries = ac.sc.broadcast(List.fill(numOfQueries)(LSHUtils.hashFeature(q.move(metadata.radius), metadata)) ::: List(originalQuery))
 
-    val rdd = data.map(r => r : BitStringIndexTuple)
-
     val maxScore : Float = originalQuery.intersectionCount(originalQuery) * numOfQueries
 
-    val results = ac.sc.runJob(rdd, (context : TaskContext, tuplesIt : Iterator[BitStringIndexTuple]) => {
-      val localRh = new ResultHandler[Int](k)
-
-      while (tuplesIt.hasNext) {
-        val tuple = tuplesIt.next()
-
-        var i = 0
-        var score = 0
-        while (i < queries.value.length) {
-          val query = queries.value(i)
-          score += tuple.value.intersectionCount(query)
-          i += 1
-        }
-
-        localRh.offer(tuple, score)
+    import org.apache.spark.sql.functions.udf
+    val distUDF = udf((c: BitString[_]) => {
+      var i = 0
+      var score = 0
+      while (i < queries.value.length) {
+        val query = queries.value(i)
+        score += c.intersectionCount(query)
+        i += 1
       }
 
-      localRh.results.toSeq
-    }).flatten.sortBy(- _.score)
+      score
+    })
 
-    log.debug("LSH index sub-results sent to global result handler")
+    val ids = data
+      .withColumn(FieldNames.distanceColumnName, distUDF(df(FieldNames.featureIndexColumnName)))
+        .rdd.takeOrdered(k)(Ordering.by(r => r.getAs[Int](FieldNames.distanceColumnName)))
+        .map(result => Result(result.getAs[Int](FieldNames.distanceColumnName).toFloat / maxScore, result.getAs[Long](FieldNames.idColumnName)))
 
-    val globalResultHandler = new ResultHandler[Int](k)
-    results.foreach(result => globalResultHandler.offer(result))
-    val ids = globalResultHandler.results
 
     log.debug("LSH index returning " + ids.length + " tuples")
-    ids.map(result => Result(result.score.toFloat / maxScore, result.tid)).toSet
+    ids.toSet
   }
 
   override def isQueryConform(nnq: NearestNeighbourQuery): Boolean = {

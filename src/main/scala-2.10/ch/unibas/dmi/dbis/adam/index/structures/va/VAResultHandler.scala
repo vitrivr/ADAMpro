@@ -1,12 +1,11 @@
 package ch.unibas.dmi.dbis.adam.index.structures.va
 
-import ch.unibas.dmi.dbis.adam.datatypes.bitString.BitString
-import ch.unibas.dmi.dbis.adam.entity.Tuple.TupleID
-import ch.unibas.dmi.dbis.adam.index.BitStringIndexTuple
-import ch.unibas.dmi.dbis.adam.index.structures.va.VAIndex._
-import ch.unibas.dmi.dbis.adam.index.structures.va.signature.SignatureGenerator
-import ch.unibas.dmi.dbis.adam.index.utils.{ResultElement, ResultHandler}
-import ch.unibas.dmi.dbis.adam.query.distance.Distance.Distance
+import ch.unibas.dmi.dbis.adam.config.FieldNames
+import ch.unibas.dmi.dbis.adam.index.utils.ResultElement
+import it.unimi.dsi.fastutil.floats.{FloatComparators, FloatHeapPriorityQueue}
+import org.apache.spark.sql.Row
+
+import scala.collection.mutable.ListBuffer
 
 /**
   * adamtwo
@@ -14,39 +13,42 @@ import ch.unibas.dmi.dbis.adam.query.distance.Distance.Distance
   * Ivan Giangreco
   * August 2015
   */
-private[va] class VAResultHandler(k: Int, lbounds: => Bounds = null, ubounds: => Bounds = null, signatureGenerator: SignatureGenerator = null) extends ResultHandler[Float](k)(scala.math.Ordering.Float.reverse) {
+private[va] class VAResultHandler(k: Int) {
+  val queue =  new FloatHeapPriorityQueue(FloatComparators.OPPOSITE_COMPARATOR)
+  var elementsLeft = k
+  @transient protected var ls = ListBuffer[ResultElement[Float]]()
 
   /**
     *
-    * @param indexTuple
+    * @param r
     */
-  def offer(indexTuple: BitStringIndexTuple): Unit = offer(new BoundedResultElement(indexTuple.id, indexTuple.value))
+  def offer(r: Row): Unit = {
+    var result = false
 
-
-  class BoundedResultElement(override val tid: TupleID, @transient bits: BitString[_]) extends ResultElement(0.toFloat, tid) {
-    override def compareScore = lbound
-    override def insertScore = ubound
-
-    val lbound: Distance = computeBounds(lbounds, bits)
-    lazy val ubound: Distance = computeBounds(ubounds, bits)
-
-    /**
-      *
-      * @param bounds
-      * @param signature
-      * @return
-      */
-    @inline private def computeBounds(bounds: => Bounds, signature: BitString[_]): Distance = {
-      val cells = signatureGenerator.toCells(signature)
-
-      var sum: Float = 0
-      var idx = 0
-      while (idx < cells.length) {
-        sum += bounds(idx)(cells(idx))
-        idx += 1
+    queue.synchronized {
+      if (elementsLeft > 0) {
+        val upper = r.getAs[Float]("ubound")
+        queue.enqueue(upper)
+        elementsLeft -= 1
+        result = true
+      } else {
+        val peek = queue.firstFloat()
+        val lower = r.getAs[Float]("lbound")
+        if (peek > lower) {
+          queue.dequeueFloat()
+          queue.enqueue(r.getAs[Float]("ubound"))
+          result = true
+        } else {
+          result = false
+        }
       }
-      sum
     }
+
+    if (result) {
+      ls += new ResultElement(0.toFloat, r.getAs[Long](FieldNames.idColumnName))
+    }
+
   }
 
+  def results = ls.toSeq
 }

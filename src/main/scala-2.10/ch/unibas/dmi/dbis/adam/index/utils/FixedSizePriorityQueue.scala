@@ -9,8 +9,8 @@ import java.util.PriorityQueue
   * April 2016
   */
 class FixedSizePriorityQueue[A](val maxSize: Int)(implicit val ordering: Ordering[A]) {
-  private val queue = new PriorityQueue[A](maxSize, ordering)
-  private var elementsLeft = maxSize
+  private[index] val queue = new PriorityQueue[A](maxSize, ordering)
+  private[index] var elementsLeft = maxSize
 
   /**
     *

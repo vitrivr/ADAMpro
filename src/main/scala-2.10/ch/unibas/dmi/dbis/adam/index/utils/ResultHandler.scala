@@ -12,8 +12,8 @@ import scala.collection.mutable.ListBuffer
   * September 2015
   */
 class ResultHandler[A](k: Int)(implicit val ordering: Ordering[A]) extends Serializable {
-  @transient var ls = ListBuffer[ResultElement[A]]()
-  @transient var queue = new FixedSizePriorityQueue[A](k)(ordering)
+  @transient protected var ls = ListBuffer[ResultElement[A]]()
+  @transient protected var queue = new FixedSizePriorityQueue[A](k)(ordering)
 
   def iterator: Iterator[ResultElement[A]] = results.iterator
 

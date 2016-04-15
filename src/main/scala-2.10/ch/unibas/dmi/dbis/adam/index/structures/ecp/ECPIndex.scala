@@ -1,5 +1,6 @@
 package ch.unibas.dmi.dbis.adam.index.structures.ecp
 
+import ch.unibas.dmi.dbis.adam.config.FieldNames
 import ch.unibas.dmi.dbis.adam.datatypes.feature.Feature.FeatureVector
 import ch.unibas.dmi.dbis.adam.entity.Entity.EntityName
 import ch.unibas.dmi.dbis.adam.index.Index.{IndexName, IndexTypeName}
@@ -9,7 +10,6 @@ import ch.unibas.dmi.dbis.adam.main.AdamContext
 import ch.unibas.dmi.dbis.adam.query.Result
 import ch.unibas.dmi.dbis.adam.query.distance.DistanceFunction
 import ch.unibas.dmi.dbis.adam.query.query.NearestNeighbourQuery
-import org.apache.spark.TaskContext
 import org.apache.spark.sql.DataFrame
 
 import scala.collection.mutable.ListBuffer
@@ -35,17 +35,15 @@ class ECPIndex(val indexname: IndexName, val entityname: EntityName, private[ind
       (l.id, metadata.distance(q, l.feature))
     }).sortBy(_._2))
 
-    val rdd = data.map(r => r: LongIndexTuple)
 
-    val ids = ac.sc.runJob(rdd, (context: TaskContext, tuplesIt: Iterator[LongIndexTuple]) => {
-      var results = ListBuffer[Result]()
-      var i = 0
-      while (i < centroids.value.length && results.length < k) {
-        results ++= tuplesIt.filter(_.value == centroids.value(i)._1).map(tuple => Result(centroids.value(i)._2, tuple.id)).toSeq
-        i += 1
-      }
-      results.toSeq
-    }).flatten
+    var results = ListBuffer[Result]()
+    var i = 0
+    while (i < centroids.value.length && results.length < k) {
+      results ++= data.filter(data(FieldNames.featureIndexColumnName) === centroids.value(i)._1).collect()
+        .map(tuple => Result(centroids.value(i)._2, tuple.getAs[Long](FieldNames.idColumnName)))
+      i += 1
+    }
+    val ids = results.toSeq
 
     log.debug("eCP index returning " + ids.length + " tuples")
 

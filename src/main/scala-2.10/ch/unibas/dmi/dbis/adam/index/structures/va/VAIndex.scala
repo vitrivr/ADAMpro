@@ -1,18 +1,20 @@
 package ch.unibas.dmi.dbis.adam.index.structures.va
 
+import ch.unibas.dmi.dbis.adam.config.FieldNames
+import ch.unibas.dmi.dbis.adam.datatypes.bitString.BitString
 import ch.unibas.dmi.dbis.adam.datatypes.feature.Feature._
 import ch.unibas.dmi.dbis.adam.entity.Entity._
+import ch.unibas.dmi.dbis.adam.index.Index
 import ch.unibas.dmi.dbis.adam.index.Index.{IndexName, IndexTypeName}
 import ch.unibas.dmi.dbis.adam.index.structures.IndexTypes
 import ch.unibas.dmi.dbis.adam.index.structures.va.VAIndex.{Bounds, Marks}
 import ch.unibas.dmi.dbis.adam.index.structures.va.signature.{FixedSignatureGenerator, VariableSignatureGenerator}
-import ch.unibas.dmi.dbis.adam.index.{BitStringIndexTuple, Index}
 import ch.unibas.dmi.dbis.adam.main.AdamContext
 import ch.unibas.dmi.dbis.adam.query.Result
 import ch.unibas.dmi.dbis.adam.query.distance.Distance._
 import ch.unibas.dmi.dbis.adam.query.distance.{DistanceFunction, MinkowskiDistance}
 import ch.unibas.dmi.dbis.adam.query.query.NearestNeighbourQuery
-import org.apache.spark.TaskContext
+import org.apache.spark.broadcast.Broadcast
 import org.apache.spark.sql.DataFrame
 
 /**
@@ -35,23 +37,39 @@ class VAIndex(val indexname: IndexName, val entityname: EntityName, private[inde
   override def scan(data: DataFrame, q: FeatureVector, distance: DistanceFunction, options: Map[String, Any], k: Int): Set[Result] = {
     log.debug("scanning VA-File index " + indexname)
 
-    val bounds = ac.sc.broadcast(computeBounds(q, metadata.marks, distance.asInstanceOf[MinkowskiDistance]))
+    val bounds = computeBounds(q, metadata.marks, distance.asInstanceOf[MinkowskiDistance])
+    val lbounds = ac.sc.broadcast(bounds._1)
+    val ubounds = ac.sc.broadcast(bounds._2)
 
-    val rdd = data.map(r => r: BitStringIndexTuple)
+    import org.apache.spark.sql.functions.udf
+    val distUDF = (bounds : Broadcast[Bounds]) => udf((c: BitString[_]) => {
+      val cells = metadata.signatureGenerator.toCells(c)
 
-    val results = ac.sc.runJob(rdd, (context: TaskContext, tuplesIt: Iterator[BitStringIndexTuple]) => {
-      val localRh = new VAResultHandler(k, bounds.value._1, bounds.value._2, metadata.signatureGenerator)
+      var bound : Float = 0
 
-      tuplesIt.foreach(tuple => localRh.offer(tuple))
+      var idx = 0
+      while (idx < cells.length) {
+        bound += bounds.value(idx)(cells(idx))
+        idx += 1
+      }
 
-      localRh.results.toSeq
-    }).flatten.sortBy(_.compareScore)
+      bound
+    })
 
-    log.debug("VA-File index sub-results sent to global result handler")
+    val ids = df
+      .withColumn("lbound", distUDF(lbounds)(df(FieldNames.featureIndexColumnName)))
+      .withColumn("ubound", distUDF(ubounds)(df(FieldNames.featureIndexColumnName)))
+        .mapPartitions(p => {
+          val localRh = new VAResultHandler(k)
 
-    val globalResultHandler: VAResultHandler = new VAResultHandler(k)
-    results.foreach(result => globalResultHandler.offer(result))
-    val ids = globalResultHandler.results
+          while(p.hasNext){
+            val current = p.next()
+            localRh.offer(current)
+          }
+
+          localRh.results.iterator
+        }).collect()
+
 
     log.debug("VA-File returning " + ids.length + " tuples")
 

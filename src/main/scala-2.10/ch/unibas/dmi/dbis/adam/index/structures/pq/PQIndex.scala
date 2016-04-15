@@ -1,11 +1,12 @@
 package ch.unibas.dmi.dbis.adam.index.structures.pq
 
+import ch.unibas.dmi.dbis.adam.config.FieldNames
 import ch.unibas.dmi.dbis.adam.datatypes.feature.Feature.FeatureVector
 import ch.unibas.dmi.dbis.adam.datatypes.feature.FeatureVectorWrapper
 import ch.unibas.dmi.dbis.adam.entity.Entity._
+import ch.unibas.dmi.dbis.adam.index.Index
 import ch.unibas.dmi.dbis.adam.index.Index.{IndexName, IndexTypeName}
 import ch.unibas.dmi.dbis.adam.index.structures.IndexTypes
-import ch.unibas.dmi.dbis.adam.index.{ByteArrayIndexTuple, Index}
 import ch.unibas.dmi.dbis.adam.main.AdamContext
 import ch.unibas.dmi.dbis.adam.query.Result
 import ch.unibas.dmi.dbis.adam.query.distance.{DistanceFunction, MinkowskiDistance}
@@ -38,12 +39,21 @@ class PQIndex(val indexname: IndexName, val entityname: EntityName, private[inde
       }.toIndexedSeq)
 
 
-    val rdd = data.map(r => r: ByteArrayIndexTuple)
+    import org.apache.spark.sql.functions.udf
+    val distUDF = udf((c: Seq[Byte]) => {
+      var i : Int = 0
+      var sum : Float = 0
+      while(i < c.length){
+        sum += distances.value(i)(c(i))
+        i += 1
+      }
+      sum
+    })
 
-    val ids = rdd.map{tuple =>
-      val sum = tuple.value.zipWithIndex.map { case (value, idx) => distances.value(idx)(value) }.sum
-      Result(sum, tuple.id)
-    }.takeOrdered(k)
+    val ids = df
+      .withColumn(FieldNames.distanceColumnName, distUDF(df(FieldNames.featureIndexColumnName)))
+      .map(r => Result(r.getAs[Float](FieldNames.distanceColumnName), r.getAs[Long](FieldNames.idColumnName)))
+      .takeOrdered(k)
 
     log.debug("PQ index returning " + ids.length + " tuples")
 
