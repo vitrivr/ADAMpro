@@ -1,6 +1,6 @@
 package ch.unibas.dmi.dbis.adam.index.structures.va.marks
 
-import breeze.linalg.{min, max}
+import breeze.linalg.{max, min}
 import ch.unibas.dmi.dbis.adam.datatypes.feature.Feature._
 import ch.unibas.dmi.dbis.adam.index.IndexingTaskTuple
 import ch.unibas.dmi.dbis.adam.index.structures.va.VAIndex.Marks

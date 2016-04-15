@@ -21,7 +21,7 @@ class RPCStartup extends Thread {
   override def run() : Unit = {
     log.debug("RPC server starting up")
 
-    val server = new RPCServer(scala.concurrent.ExecutionContext.global)
+    val server = new RPCServer(scala.concurrent.ExecutionContext.global)(SparkStartup.Implicits.ac)
     server.start()
 
     log.debug("RPC server running")
@@ -30,7 +30,7 @@ class RPCStartup extends Thread {
   }
 }
 
-class RPCServer(executionContext: ExecutionContext) { self =>
+class RPCServer(executionContext: ExecutionContext)(implicit ac : AdamContext) { self =>
   private var server: Server = null
 
   private val port = AdamConfig.grpcPort

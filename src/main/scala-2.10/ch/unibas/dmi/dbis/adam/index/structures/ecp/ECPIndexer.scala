@@ -1,11 +1,11 @@
 package ch.unibas.dmi.dbis.adam.index.structures.ecp
 
-import ch.unibas.dmi.dbis.adam.entity.Entity
 import ch.unibas.dmi.dbis.adam.entity.Entity.EntityName
+import ch.unibas.dmi.dbis.adam.entity.EntityHandler
 import ch.unibas.dmi.dbis.adam.index.Index.{IndexName, IndexTypeName}
 import ch.unibas.dmi.dbis.adam.index._
 import ch.unibas.dmi.dbis.adam.index.structures.IndexTypes
-import ch.unibas.dmi.dbis.adam.main.SparkStartup
+import ch.unibas.dmi.dbis.adam.main.{AdamContext, SparkStartup}
 import ch.unibas.dmi.dbis.adam.query.distance.DistanceFunction
 import org.apache.log4j.Logger
 import org.apache.spark.rdd.RDD
@@ -17,7 +17,7 @@ import org.apache.spark.util.random.ADAMSamplingUtils
   * Ivan Giangreco
   * October 2015
   */
-class ECPIndexer(trainingSize: Int = -1, distance: DistanceFunction) extends IndexGenerator with Serializable {
+class ECPIndexer(trainingSize: Int = -1, distance: DistanceFunction)(@transient implicit val ac : AdamContext) extends IndexGenerator with Serializable {
   @transient lazy val log = Logger.getLogger(getClass.getName)
 
   override val indextypename: IndexTypeName = IndexTypes.ECPINDEX
@@ -30,7 +30,7 @@ class ECPIndexer(trainingSize: Int = -1, distance: DistanceFunction) extends Ind
     * @return
     */
   override def index(indexname: IndexName, entityname: EntityName, data: RDD[IndexingTaskTuple]): Index = {
-    val n = Entity.countTuples(entityname)
+    val n = EntityHandler.countTuples(entityname)
     val ntuples = if (trainingSize == -1) {
       math.sqrt(n)
     } else {
@@ -38,29 +38,27 @@ class ECPIndexer(trainingSize: Int = -1, distance: DistanceFunction) extends Ind
     }
 
     val fraction = ADAMSamplingUtils.computeFractionForSampleSize(ntuples.toInt, n, false)
-    val trainData = data.sample(false, fraction)
 
-    val leaders = data.sample(true, fraction).collect
-    val broadcastLeaders = SparkStartup.sc.broadcast(leaders)
+    val leaders = ac.sc.broadcast(data.sample(true, fraction).collect)
     log.debug("eCP index leaders chosen and broadcasted")
 
     log.debug("eCP indexing...")
 
     val indexdata = data.map(datum => {
-      val minTID = broadcastLeaders.value.map({ l =>
+      val minTID = leaders.value.map({ l =>
         (l.id, distance.apply(datum.feature, l.feature))
       }).minBy(_._2)._1
 
       LongIndexTuple(datum.id, minTID)
     })
 
-    import SparkStartup.sqlContext.implicits._
-    new ECPIndex(indexname, entityname, indexdata.toDF, ECPIndexMetaData(leaders.toArray.toSeq, distance))
+    import SparkStartup.Implicits.sqlContext.implicits._
+    new ECPIndex(indexname, entityname, indexdata.toDF, ECPIndexMetaData(leaders.value.toArray.toSeq, distance))
   }
 }
 
 object ECPIndexer {
-  def apply(distance: DistanceFunction, properties : Map[String, String] = Map[String, String]()): IndexGenerator = {
+  def apply(distance: DistanceFunction, properties : Map[String, String] = Map[String, String]())(implicit ac : AdamContext): IndexGenerator = {
     val trainingSize = properties.getOrElse("ntraining", "-1").toInt
     new ECPIndexer(trainingSize, distance)
   }

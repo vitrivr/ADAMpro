@@ -37,12 +37,14 @@ object SparkStartup {
    sparkConfig.setMaster(AdamConfig.master.get)
   }
 
-  val sc = new SparkContext(sparkConfig)
+  object Implicits extends AdamContext {
+    implicit val ac = this
 
-  sc.setLogLevel(AdamConfig.loglevel)
-
-  //TODO: possibly switch to a jobserver (https://github.com/spark-jobserver/spark-jobserver), pass sqlcontext around
-  val sqlContext = new HiveContext(sc)
+    @transient implicit lazy val sc = new SparkContext(sparkConfig)
+    sc.setLogLevel(AdamConfig.loglevel)
+    //TODO: possibly switch to a jobserver (https://github.com/spark-jobserver/spark-jobserver), pass sqlcontext around
+    @transient implicit lazy val sqlContext = new HiveContext(sc)
+  }
 
   val featureStorage : FeatureStorage = CassandraFeatureStorage
   val metadataStorage : MetadataStorage = PostgresqlMetadataStorage

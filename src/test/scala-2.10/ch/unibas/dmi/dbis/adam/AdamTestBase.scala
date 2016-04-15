@@ -4,7 +4,7 @@ import java.sql.DriverManager
 
 import ch.unibas.dmi.dbis.adam.config.{AdamConfig, FieldNames}
 import ch.unibas.dmi.dbis.adam.datatypes.feature.{FeatureVectorWrapper, FeatureVectorWrapperUDT}
-import ch.unibas.dmi.dbis.adam.entity.{Entity, FieldDefinition, FieldTypes}
+import ch.unibas.dmi.dbis.adam.entity.{EntityHandler, Entity, FieldDefinition, FieldTypes}
 import ch.unibas.dmi.dbis.adam.main.SparkStartup
 import ch.unibas.dmi.dbis.adam.query.distance.{ManhattanDistance, MinkowskiDistance}
 import org.apache.spark.sql.types.{StructField, StructType}
@@ -13,6 +13,9 @@ import org.scalatest.concurrent.{Eventually, IntegrationPatience}
 import org.scalatest.{FeatureSpec, GivenWhenThen}
 
 import scala.util.Random
+
+import SparkStartup.Implicits._
+
 
 /**
   * adampro
@@ -62,19 +65,19 @@ class AdamTestBase extends FeatureSpec with GivenWhenThen with Eventually with I
     */
   def createSimpleEntity(ntuples: Int, ndims: Int): String = {
     val entityname = getRandomName()
-    Entity.create(entityname)
+    EntityHandler.create(entityname)
 
     val schema = StructType(Seq(
       StructField(FieldNames.featureColumnName, new FeatureVectorWrapperUDT, false)
     ))
 
-    val rdd = SparkStartup.sc.parallelize((0 until ntuples).map(id =>
+    val rdd = ac.sc.parallelize((0 until ntuples).map(id =>
       Row(new FeatureVectorWrapper(Seq.fill(ndims)(Random.nextFloat())))
     ))
 
-    val data = SparkStartup.sqlContext.createDataFrame(rdd, schema)
+    val data = ac.sqlContext.createDataFrame(rdd, schema)
 
-    Entity.insertData(entityname, data)
+    EntityHandler.insertData(entityname, data)
 
     entityname
   }
@@ -98,7 +101,7 @@ class AdamTestBase extends FeatureSpec with GivenWhenThen with Eventually with I
       ("booleanfield", FieldTypes.BOOLEANTYPE, "boolean")
     )
 
-    Entity.create(entityname, Some(fieldTemplate.map(ft => (ft._1, FieldDefinition(ft._2))).toMap))
+    EntityHandler.create(entityname, Some(fieldTemplate.map(ft => (ft._1, FieldDefinition(ft._2))).toMap))
 
     val stringLength = 10
     val maxInt = 50000
@@ -107,7 +110,7 @@ class AdamTestBase extends FeatureSpec with GivenWhenThen with Eventually with I
       .map(field => StructField(field._1, field._2.datatype, false)).+:(StructField(FieldNames.featureColumnName, new FeatureVectorWrapperUDT, false)))
 
 
-    val rdd = SparkStartup.sc.parallelize((0 until ntuples).map(id =>
+    val rdd = ac.sc.parallelize((0 until ntuples).map(id =>
       Row(
         getRandomFeatureVector(ndims),
         Random.nextString(stringLength),
@@ -118,9 +121,9 @@ class AdamTestBase extends FeatureSpec with GivenWhenThen with Eventually with I
         Random.nextBoolean()
       )))
 
-    val data = SparkStartup.sqlContext.createDataFrame(rdd, schema)
+    val data = ac.sqlContext.createDataFrame(rdd, schema)
 
-    Entity.insertData(entityname, data)
+    EntityHandler.insertData(entityname, data)
 
     entityname
   }
@@ -198,8 +201,8 @@ class AdamTestBase extends FeatureSpec with GivenWhenThen with Eventually with I
         StructField("gtdistance", types.DoubleType, false)
       ))
 
-      val rdd = SparkStartup.sc.parallelize(rows)
-     SparkStartup.sqlContext.createDataFrame(rdd, schema)
+      val rdd = ac.sc.parallelize(rows)
+      ac.sqlContext.createDataFrame(rdd, schema)
     }
 
     /**
@@ -207,7 +210,7 @@ class AdamTestBase extends FeatureSpec with GivenWhenThen with Eventually with I
       * @param filename
       * @return
       */
-    def getResults(filename : String): Seq[(Double, Long)] ={
+    def getResults(filename: String): Seq[(Double, Long)] = {
       readResourceFile(filename).map(line => {
         val splitted = line.split("\t")
         val distance = splitted(0).toDouble
@@ -228,7 +231,7 @@ class AdamTestBase extends FeatureSpec with GivenWhenThen with Eventually with I
       ("longfield", FieldTypes.LONGTYPE, "bigint"),
       ("booleanfield", FieldTypes.BOOLEANTYPE, "boolean")
     )
-    val entity = Entity.create(getRandomName(), Some(fieldTemplate.map(ft => (ft._1, FieldDefinition(ft._2))).toMap))
+    val entity = EntityHandler.create(getRandomName(), Some(fieldTemplate.map(ft => (ft._1, FieldDefinition(ft._2))).toMap))
     assert(entity.isSuccess)
     entity.get.insert(data.drop("gtdistance"))
 

@@ -1,14 +1,14 @@
 package ch.unibas.dmi.dbis.adam.index.structures.va
 
 import ch.unibas.dmi.dbis.adam.datatypes.feature.Feature.{FeatureVector, VectorBase}
-import ch.unibas.dmi.dbis.adam.entity.Entity
 import ch.unibas.dmi.dbis.adam.entity.Entity._
-import ch.unibas.dmi.dbis.adam.index.Index._
+import ch.unibas.dmi.dbis.adam.entity.EntityHandler
+import ch.unibas.dmi.dbis.adam.index.Index.{IndexName, IndexTypeName}
 import ch.unibas.dmi.dbis.adam.index.structures.IndexTypes
 import ch.unibas.dmi.dbis.adam.index.structures.va.marks.{EquidistantMarksGenerator, EquifrequentMarksGenerator, MarksGenerator}
 import ch.unibas.dmi.dbis.adam.index.structures.va.signature.FixedSignatureGenerator
-import ch.unibas.dmi.dbis.adam.index.{BitStringIndexTuple, IndexGenerator, IndexingTaskTuple}
-import ch.unibas.dmi.dbis.adam.main.SparkStartup
+import ch.unibas.dmi.dbis.adam.index.{BitStringIndexTuple, Index, IndexGenerator, IndexingTaskTuple}
+import ch.unibas.dmi.dbis.adam.main.{AdamContext, SparkStartup}
 import ch.unibas.dmi.dbis.adam.query.distance.MinkowskiDistance
 import org.apache.log4j.Logger
 import org.apache.spark.rdd.RDD
@@ -18,7 +18,7 @@ import org.apache.spark.util.random.ADAMSamplingUtils
 /**
  *
  */
-class VAFIndexer(maxMarks: Int = 64, marksGenerator: MarksGenerator, bitsPerDimension : Int, trainingSize : Int, distance : MinkowskiDistance) extends IndexGenerator with Serializable {
+class VAFIndexer(maxMarks: Int = 64, marksGenerator: MarksGenerator, bitsPerDimension : Int, trainingSize : Int, distance : MinkowskiDistance)(@transient implicit val ac : AdamContext) extends IndexGenerator with Serializable {
   @transient lazy val log = Logger.getLogger(getClass.getName)
 
   override val indextypename: IndexTypeName = IndexTypes.VAFINDEX
@@ -26,8 +26,8 @@ class VAFIndexer(maxMarks: Int = 64, marksGenerator: MarksGenerator, bitsPerDime
   /**
    *
    */
-  override def index(indexname : IndexName, entityname : EntityName, data: RDD[IndexingTaskTuple]): VAIndex = {
-    val n = Entity.countTuples(entityname)
+  override def index(indexname : IndexName, entityname : EntityName, data: RDD[IndexingTaskTuple]): Index = {
+    val n = EntityHandler.countTuples(entityname)
     val fraction = ADAMSamplingUtils.computeFractionForSampleSize(trainingSize, n, false)
     val trainData = data.sample(false, fraction)
 
@@ -42,7 +42,7 @@ class VAFIndexer(maxMarks: Int = 64, marksGenerator: MarksGenerator, bitsPerDime
         BitStringIndexTuple(datum.id, signature)
       })
 
-    import SparkStartup.sqlContext.implicits._
+    import SparkStartup.Implicits.sqlContext.implicits._
     new VAIndex(indexname, entityname, indexdata.toDF, indexMetaData)
   }
 
@@ -82,7 +82,7 @@ object VAFIndexer {
    *
    * @param properties
    */
-  def apply(distance : MinkowskiDistance, properties : Map[String, String] = Map[String, String]()) : IndexGenerator = {
+  def apply(distance : MinkowskiDistance, properties : Map[String, String] = Map[String, String]())(implicit ac : AdamContext) : IndexGenerator = {
     val maxMarks = properties.getOrElse("nmarks", "64").toInt
 
     val marksGeneratorDescription = properties.getOrElse("marktype", "equifrequent")

@@ -3,9 +3,10 @@ package ch.unibas.dmi.dbis.adam.query.handler
 import java.util.concurrent.TimeUnit
 
 import ch.unibas.dmi.dbis.adam.config.AdamConfig
-import ch.unibas.dmi.dbis.adam.entity.Entity
 import ch.unibas.dmi.dbis.adam.entity.Entity._
+import ch.unibas.dmi.dbis.adam.entity.EntityHandler
 import ch.unibas.dmi.dbis.adam.entity.Tuple._
+import ch.unibas.dmi.dbis.adam.main.{SparkStartup, AdamContext}
 import ch.unibas.dmi.dbis.adam.query.query.BooleanQuery
 import ch.unibas.dmi.dbis.adam.query.scanner.MetadataScanner
 import com.google.common.cache.{CacheBuilder, CacheLoader}
@@ -29,7 +30,7 @@ private[query] object BooleanQueryHandler {
     * @param query
     * @return
     */
-  def getIds(entityname: EntityName, query: BooleanQuery): Option[DataFrame] = {
+  def getIds(entityname: EntityName, query: BooleanQuery)(implicit ac: AdamContext): Option[DataFrame] = {
     log.debug("performing metadata-based boolean query on " + entityname)
     BooleanQueryLRUCache.get(entityname, query).get
   }
@@ -41,8 +42,8 @@ private[query] object BooleanQueryHandler {
     * @param entityname
     * @return
     */
-  def getData(entityname: EntityName, query : Option[BooleanQuery] = None) : Option[DataFrame] = {
-    MetadataScanner(Entity.load(entityname).get, query)
+  def getData(entityname: EntityName, query : Option[BooleanQuery] = None)(implicit ac: AdamContext) : Option[DataFrame] = {
+    MetadataScanner(EntityHandler.load(entityname).get, query)
   }
 
 
@@ -53,24 +54,25 @@ private[query] object BooleanQueryHandler {
     * @param filter tuple ids to filter on
     * @return
     */
-  def getData(entityname: EntityName, filter: Set[TupleID]): Option[DataFrame] = {
+  def getData(entityname: EntityName, filter: Set[TupleID])(implicit ac: AdamContext): Option[DataFrame] = {
     log.debug("retrieving metadata for " + entityname)
-    MetadataScanner(Entity.load(entityname).get, filter)
+    MetadataScanner(EntityHandler.load(entityname).get, filter)
   }
 
 
   object BooleanQueryLRUCache {
-    private val maximumCacheSizeIndex = AdamConfig.maximumCacheSizeBooleanQuery
+    private val maximumCacheSize = AdamConfig.maximumCacheSizeBooleanQuery
     private val expireAfterAccess = AdamConfig.expireAfterAccessBooleanQuery
 
     private val bqCache = CacheBuilder.
       newBuilder().
-      maximumSize(maximumCacheSizeIndex).
+      maximumSize(maximumCacheSize).
       expireAfterAccess(expireAfterAccess, TimeUnit.MINUTES).
       build(
         new CacheLoader[(EntityName, BooleanQuery), Option[DataFrame]]() {
           def load(query: (EntityName, BooleanQuery)): Option[DataFrame] = {
-            val df = MetadataScanner.apply(Entity.load(query._1).get, Option(query._2))
+            import SparkStartup.Implicits._
+            val df = MetadataScanner.apply(EntityHandler.load(query._1).get, Option(query._2))
 
             if(df.isDefined){
               df.get.cache()

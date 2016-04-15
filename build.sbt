@@ -59,6 +59,8 @@ libraryDependencies ++= Seq(
   "org.apache.commons"     %    "commons-lang3"          % "3.4",
   "org.slf4j"              %     "slf4j-log4j12"         % "1.7.21"
 )
+libraryDependencies += "it.unimi.dsi" % "fastutil" % "7.0.12"
+
 
 unmanagedBase <<= baseDirectory { base => base / "lib" }
 unmanagedResourceDirectories in Compile += baseDirectory.value / "conf"

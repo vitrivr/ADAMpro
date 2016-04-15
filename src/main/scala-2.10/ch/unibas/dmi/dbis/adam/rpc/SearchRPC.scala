@@ -4,7 +4,8 @@ import ch.unibas.dmi.dbis.adam.api.QueryOp
 import ch.unibas.dmi.dbis.adam.config.FieldNames
 import ch.unibas.dmi.dbis.adam.exception.QueryNotCachedException
 import ch.unibas.dmi.dbis.adam.http.grpc._
-import ch.unibas.dmi.dbis.adam.index.Index
+import ch.unibas.dmi.dbis.adam.index.IndexHandler
+import ch.unibas.dmi.dbis.adam.main.AdamContext
 import ch.unibas.dmi.dbis.adam.query.handler.QueryHandler
 import ch.unibas.dmi.dbis.adam.query.progressive.ProgressiveQueryStatus
 import io.grpc.stub.StreamObserver
@@ -20,7 +21,7 @@ import scala.concurrent.Future
   * Ivan Giangreco
   * March 2016
   */
-class SearchRPC extends AdamSearchGrpc.AdamSearch {
+class SearchRPC(implicit ac : AdamContext) extends AdamSearchGrpc.AdamSearch {
   val log = Logger.getLogger(getClass.getName)
 
 
@@ -32,7 +33,7 @@ class SearchRPC extends AdamSearchGrpc.AdamSearch {
   override def cacheIndex(request: IndexNameMessage): Future[AckMessage] = {
     log.debug("rpc call to cache index")
     try {
-      Index.load(request.index, true)
+      IndexHandler.load(request.index, true)
       Future.successful(AckMessage(code = AckMessage.Code.OK))
     } catch {
       case e: Exception =>

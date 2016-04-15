@@ -6,6 +6,7 @@ import ch.unibas.dmi.dbis.adam.datatypes.feature.Feature._
 import ch.unibas.dmi.dbis.adam.http.grpc.DistanceMessage.DistanceType
 import ch.unibas.dmi.dbis.adam.http.grpc._
 import ch.unibas.dmi.dbis.adam.index.structures.IndexTypes
+import ch.unibas.dmi.dbis.adam.main.AdamContext
 import ch.unibas.dmi.dbis.adam.query.datastructures.CompoundQueryExpressions._
 import ch.unibas.dmi.dbis.adam.query.datastructures.{QueryCacheOptions, QueryExpression}
 import ch.unibas.dmi.dbis.adam.query.distance.{DistanceFunction, NormBasedDistanceFunction}
@@ -26,38 +27,37 @@ import scala.concurrent.duration.Duration
 private[rpc] object SearchRPCMethods {
   /* implicits */
 
-  implicit def toQueryHolder(request: SimpleQueryMessage) = {
-
+  implicit def toQueryHolder(request: SimpleQueryMessage)(implicit ac : AdamContext) = {
     StandardQueryHolder(request.entity, QueryHints.withName(request.hint), Option(prepareNNQ(request.nnq)), prepareBQ(request.bq), request.withMetadata, prepareQI(request.queryid), prepareCO(request.readFromCache, request.putInCache))
   }
 
-  implicit def toQueryHolder(request: SimpleSequentialQueryMessage) = {
+  implicit def toQueryHolder(request: SimpleSequentialQueryMessage)(implicit ac : AdamContext) = {
     new SequentialQueryHolder(request.entity, prepareNNQ(request.nnq), prepareBQ(request.bq), request.withMetadata, prepareQI(request.queryid), prepareCO(request.readFromCache, request.putInCache))
   }
 
-  implicit def toQueryHolder(request: SimpleIndexQueryMessage) = {
+  implicit def toQueryHolder(request: SimpleIndexQueryMessage)(implicit ac : AdamContext) = {
     new IndexQueryHolder(request.entity, IndexTypes.withIndextype(request.indextype).get, prepareNNQ(request.nnq), prepareBQ(request.bq), request.withMetadata, prepareQI(request.queryid), prepareCO(request.readFromCache, request.putInCache))
   }
 
-  implicit def toQueryHolder(request: SimpleSpecifiedIndexQueryMessage) = {
+  implicit def toQueryHolder(request: SimpleSpecifiedIndexQueryMessage)(implicit ac : AdamContext) = {
     new SpecifiedIndexQueryHolder(request.index, prepareNNQ(request.nnq), prepareBQ(request.bq), request.withMetadata, prepareQI(request.queryid), prepareCO(request.readFromCache, request.putInCache))
   }
 
-  implicit def toQueryHolder(request: TimedQueryMessage) = {
+  implicit def toQueryHolder(request: TimedQueryMessage)(implicit ac : AdamContext) = {
     new TimedProgressiveQueryHolder(request.entity, prepareNNQ(request.nnq), prepareBQ(request.bq), Duration(request.time, TimeUnit.MILLISECONDS), request.withMetadata, prepareQI(request.queryid))
   }
 
   implicit def toQueryHolder(request: SimpleQueryMessage, onComplete: (ProgressiveQueryStatus.Value, DataFrame, VectorBase, String, Map[String, String]) => Unit) = new ProgressiveQueryHolder(request.entity, prepareNNQ(request.nnq), prepareBQ(request.bq), onComplete, request.withMetadata, prepareQI(request.queryid))
 
-  implicit def toQueryHolder(request: CompoundQueryMessage) = {
+  implicit def toQueryHolder(request: CompoundQueryMessage)(implicit ac : AdamContext) = {
     new CompoundQueryHolder(request.entity, prepareNNQ(request.nnq), request.indexFilterExpression, false, request.withMetadata, prepareQI(request.queryid))
   }
 
-  implicit def toQueryHolder(request: SimpleBooleanQueryMessage) = {
+  implicit def toQueryHolder(request: SimpleBooleanQueryMessage)(implicit ac : AdamContext) = {
     new BooleanQueryHolder(request.entity, prepareBQ(request.bq), prepareQI(request.queryid), prepareCO(request.readFromCache, request.putInCache))
   }
 
-  implicit def toExpr(request: ExpressionQueryMessage): QueryExpression = {
+  implicit def toExpr(request: ExpressionQueryMessage)(implicit ac : AdamContext): QueryExpression = {
     val order = request.order match {
       case ExpressionQueryMessage.OperationOrder.LEFTFIRST => ExpressionEvaluationOrder.LeftFirst
       case ExpressionQueryMessage.OperationOrder.RIGHTFIRST => ExpressionEvaluationOrder.RightFirst
@@ -77,7 +77,7 @@ private[rpc] object SearchRPCMethods {
     operation
   }
 
-  implicit def toExpr(seqm: Option[SubExpressionQueryMessage]): QueryExpression = {
+  implicit def toExpr(seqm: Option[SubExpressionQueryMessage])(implicit ac : AdamContext): QueryExpression = {
     if(seqm.isEmpty){
       return EmptyQueryExpression();
     }

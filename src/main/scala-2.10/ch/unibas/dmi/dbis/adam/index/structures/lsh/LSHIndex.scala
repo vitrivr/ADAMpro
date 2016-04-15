@@ -3,11 +3,11 @@ package ch.unibas.dmi.dbis.adam.index.structures.lsh
 import ch.unibas.dmi.dbis.adam.datatypes.feature.Feature._
 import ch.unibas.dmi.dbis.adam.datatypes.feature.MovableFeature
 import ch.unibas.dmi.dbis.adam.entity.Entity._
-import ch.unibas.dmi.dbis.adam.index.Index._
+import ch.unibas.dmi.dbis.adam.index.Index.{IndexName, IndexTypeName}
 import ch.unibas.dmi.dbis.adam.index.structures.IndexTypes
 import ch.unibas.dmi.dbis.adam.index.utils.ResultHandler
 import ch.unibas.dmi.dbis.adam.index.{BitStringIndexTuple, Index}
-import ch.unibas.dmi.dbis.adam.main.SparkStartup
+import ch.unibas.dmi.dbis.adam.main.AdamContext
 import ch.unibas.dmi.dbis.adam.query.Result
 import ch.unibas.dmi.dbis.adam.query.distance.DistanceFunction
 import ch.unibas.dmi.dbis.adam.query.query.NearestNeighbourQuery
@@ -20,7 +20,7 @@ import org.apache.spark.sql.DataFrame
  * Ivan Giangreco
  * August 2015
  */
-class LSHIndex(val indexname: IndexName, val entityname: EntityName, protected val df: DataFrame, private[index] val metadata: LSHIndexMetaData)
+class LSHIndex(val indexname: IndexName, val entityname: EntityName, private[index]  val df: DataFrame, private[index] val metadata: LSHIndexMetaData)(@transient implicit val ac : AdamContext)
   extends Index {
 
   override val indextype: IndexTypeName = IndexTypes.LSHINDEX
@@ -35,13 +35,13 @@ class LSHIndex(val indexname: IndexName, val entityname: EntityName, protected v
 
     import MovableFeature.conv_feature2MovableFeature
     val originalQuery = LSHUtils.hashFeature(q, metadata)
-    val queries = (List.fill(numOfQueries)(LSHUtils.hashFeature(q.move(metadata.radius), metadata)) ::: List(originalQuery)).par
+    val queries = ac.sc.broadcast(List.fill(numOfQueries)(LSHUtils.hashFeature(q.move(metadata.radius), metadata)) ::: List(originalQuery))
 
     val rdd = data.map(r => r : BitStringIndexTuple)
 
     val maxScore : Float = originalQuery.intersectionCount(originalQuery) * numOfQueries
 
-    val results = SparkStartup.sc.runJob(rdd, (context : TaskContext, tuplesIt : Iterator[BitStringIndexTuple]) => {
+    val results = ac.sc.runJob(rdd, (context : TaskContext, tuplesIt : Iterator[BitStringIndexTuple]) => {
       val localRh = new ResultHandler[Int](k)
 
       while (tuplesIt.hasNext) {
@@ -49,8 +49,8 @@ class LSHIndex(val indexname: IndexName, val entityname: EntityName, protected v
 
         var i = 0
         var score = 0
-        while (i < queries.length) {
-          val query = queries(i)
+        while (i < queries.value.length) {
+          val query = queries.value(i)
           score += tuple.value.intersectionCount(query)
           i += 1
         }
@@ -81,7 +81,7 @@ class LSHIndex(val indexname: IndexName, val entityname: EntityName, protected v
 }
 
 object LSHIndex {
-  def apply(indexname: IndexName, entityname: EntityName, data: DataFrame, meta: Any): LSHIndex = {
+  def apply(indexname: IndexName, entityname: EntityName, data: DataFrame, meta: Any)(implicit ac : AdamContext): LSHIndex = {
     val indexMetaData = meta.asInstanceOf[LSHIndexMetaData]
     new LSHIndex(indexname, entityname, data, indexMetaData)
   }

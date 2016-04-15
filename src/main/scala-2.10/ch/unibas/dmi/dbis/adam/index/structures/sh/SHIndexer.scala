@@ -2,15 +2,13 @@ package ch.unibas.dmi.dbis.adam.index.structures.sh
 
 import breeze.linalg.{Matrix, Vector, _}
 import ch.unibas.dmi.dbis.adam.datatypes.feature.Feature
-import Feature.{VectorBase, _}
-import ch.unibas.dmi.dbis.adam.datatypes.bitString.BitString
-import ch.unibas.dmi.dbis.adam.datatypes.feature.Feature
-import ch.unibas.dmi.dbis.adam.entity.Entity
-import ch.unibas.dmi.dbis.adam.index.Index._
+import ch.unibas.dmi.dbis.adam.datatypes.feature.Feature.{VectorBase, _}
+import ch.unibas.dmi.dbis.adam.entity.{EntityHandler, Entity}
+import ch.unibas.dmi.dbis.adam.entity.Entity._
+import ch.unibas.dmi.dbis.adam.index.Index.{IndexName, IndexTypeName}
 import ch.unibas.dmi.dbis.adam.index._
 import ch.unibas.dmi.dbis.adam.index.structures.IndexTypes
-import ch.unibas.dmi.dbis.adam.main.SparkStartup
-import ch.unibas.dmi.dbis.adam.entity.Entity._
+import ch.unibas.dmi.dbis.adam.main.{AdamContext, SparkStartup}
 import org.apache.log4j.Logger
 import org.apache.spark.rdd.RDD
 import org.apache.spark.util.random.ADAMSamplingUtils
@@ -22,7 +20,7 @@ import org.apache.spark.util.random.ADAMSamplingUtils
  * Ivan Giangreco
  * August 2015
  */
-class SHIndexer(nbits : Int, trainingSize : Int) extends IndexGenerator with Serializable {
+class SHIndexer(nbits : Int, trainingSize : Int)(@transient implicit val ac : AdamContext) extends IndexGenerator with Serializable {
   @transient lazy val log = Logger.getLogger(getClass.getName)
 
   override val indextypename: IndexTypeName = IndexTypes.SHINDEX
@@ -34,7 +32,7 @@ class SHIndexer(nbits : Int, trainingSize : Int) extends IndexGenerator with Ser
    * @return
    */
   override def index(indexname : IndexName, entityname : EntityName, data: RDD[IndexingTaskTuple]): Index = {
-    val n = Entity.countTuples(entityname)
+    val n = EntityHandler.countTuples(entityname)
     val fraction = ADAMSamplingUtils.computeFractionForSampleSize(trainingSize, n, false)
     val trainData = data.sample(false, fraction)
 
@@ -48,7 +46,7 @@ class SHIndexer(nbits : Int, trainingSize : Int) extends IndexGenerator with Ser
         BitStringIndexTuple(datum.id, hash)
       })
 
-    import SparkStartup.sqlContext.implicits._
+    import SparkStartup.Implicits.sqlContext.implicits._
     new SHIndex(indexname, entityname, indexdata.toDF, indexMetaData)
   }
 
@@ -165,7 +163,7 @@ object SHIndexer {
    *
    * @param properties
    */
-  def apply(dimensions : Int, properties : Map[String, String] = Map[String, String]()) : IndexGenerator = {
+  def apply(dimensions : Int, properties : Map[String, String] = Map[String, String]())(implicit ac : AdamContext) : IndexGenerator = {
     val nbits = math.min(500, properties.getOrElse("nbits", (dimensions * 2).toString).toInt)
     val trainingSize = properties.getOrElse("ntraining", "500").toInt
 

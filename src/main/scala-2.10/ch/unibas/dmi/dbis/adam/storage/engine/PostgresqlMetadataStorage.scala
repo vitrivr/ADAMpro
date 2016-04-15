@@ -14,11 +14,11 @@ import org.apache.spark.sql.types.{StructField, StructType}
 import org.apache.spark.sql.{DataFrame, Row, SaveMode}
 
 /**
- * adamtwo
- *
- * Ivan Giangreco
- * October 2015
- */
+  * adamtwo
+  *
+  * Ivan Giangreco
+  * October 2015
+  */
 object PostgresqlMetadataStorage extends MetadataStorage {
   val log = Logger.getLogger(getClass.getName)
 
@@ -30,33 +30,34 @@ object PostgresqlMetadataStorage extends MetadataStorage {
     *
     * @return
     */
-  private def openConnection(): Connection ={
+  private def openConnection(): Connection = {
     Class.forName("org.postgresql.Driver").newInstance
     DriverManager.getConnection(AdamConfig.jdbcUrl, AdamConfig.jdbcUser, AdamConfig.jdbcPassword)
   }
 
   override def create(tablename: EntityName, fields: Map[String, FieldDefinition]): Boolean = {
     log.debug("postgresql create operation")
-    val structFields = fields.map{
+    val structFields = fields.map {
       case (name, fieldtype) => StructField(name, fieldtype.fieldtype.datatype)
     }.toSeq
 
-    val df = SparkStartup.sqlContext.createDataFrame(SparkStartup.sc.emptyRDD[Row], StructType(structFields))
+    import SparkStartup.Implicits._
+    val df = sqlContext.createDataFrame(sc.emptyRDD[Row], StructType(structFields))
 
     write(tablename, df, SaveMode.ErrorIfExists)
 
     //make fields unique
-    val uniqueStmt = fields.filter{case(name, definition) => definition.unique}.map {
-      case(name, definition) => s"""ALTER TABLE $tablename ADD UNIQUE ($name)""".stripMargin
+    val uniqueStmt = fields.filter { case (name, definition) => definition.unique }.map {
+      case (name, definition) => s"""ALTER TABLE $tablename ADD UNIQUE ($name)""".stripMargin
     }.mkString("; ")
 
     //add index to table
-    val indexedStmt = fields.filter{case(name, definition) => definition.indexed}.map {
-      case(name, definition) => s"""CREATE INDEX ON $tablename ($name)""".stripMargin
+    val indexedStmt = fields.filter { case (name, definition) => definition.indexed }.map {
+      case (name, definition) => s"""CREATE INDEX ON $tablename ($name)""".stripMargin
     }.mkString("; ")
 
     //add primary key
-    val pkfield = fields.filter{case(name, definition) => definition.pk}
+    val pkfield = fields.filter { case (name, definition) => definition.pk }
     assert(pkfield.size <= 1)
     val pkStmt = pkfield.map {
       case (name, definition) => s"""ALTER TABLE $tablename ADD PRIMARY KEY ($name)""".stripMargin
@@ -74,7 +75,8 @@ object PostgresqlMetadataStorage extends MetadataStorage {
   override def read(tablename: EntityName): DataFrame = {
     log.debug("postgresql count operation")
 
-    SparkStartup.sqlContext.read.format("jdbc").options(
+    import SparkStartup.Implicits._
+    sqlContext.read.format("jdbc").options(
       Map("url" -> url, "dbtable" -> tablename, "user" -> AdamConfig.jdbcUser, "password" -> AdamConfig.jdbcPassword)
     ).load()
   }

@@ -2,7 +2,7 @@ package ch.unibas.dmi.dbis.adam.index.structures.sh
 
 import breeze.linalg._
 import ch.unibas.dmi.dbis.adam.datatypes.feature.Feature
-import Feature._
+import ch.unibas.dmi.dbis.adam.datatypes.feature.Feature._
 
 /**
  * adamtwo

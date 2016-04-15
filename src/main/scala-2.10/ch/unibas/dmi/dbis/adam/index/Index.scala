@@ -1,32 +1,17 @@
 package ch.unibas.dmi.dbis.adam.index
 
-import java.util.concurrent.TimeUnit
-
-import ch.unibas.dmi.dbis.adam.config.{AdamConfig, FieldNames}
+import ch.unibas.dmi.dbis.adam.config.FieldNames
 import ch.unibas.dmi.dbis.adam.datatypes.feature.Feature._
-import ch.unibas.dmi.dbis.adam.datatypes.feature.FeatureVectorWrapper
-import ch.unibas.dmi.dbis.adam.entity.Entity
 import ch.unibas.dmi.dbis.adam.entity.Entity._
 import ch.unibas.dmi.dbis.adam.entity.Tuple._
-import ch.unibas.dmi.dbis.adam.exception.{GeneralAdamException, IndexNotExistingException}
-import ch.unibas.dmi.dbis.adam.index.Index._
+import ch.unibas.dmi.dbis.adam.index.Index.{IndexName, IndexTypeName}
 import ch.unibas.dmi.dbis.adam.index.structures.IndexTypes
-import ch.unibas.dmi.dbis.adam.index.structures.ecp.ECPIndex
-import ch.unibas.dmi.dbis.adam.index.structures.lsh.LSHIndex
-import ch.unibas.dmi.dbis.adam.index.structures.pq.PQIndex
-import ch.unibas.dmi.dbis.adam.index.structures.sh.SHIndex
-import ch.unibas.dmi.dbis.adam.index.structures.va.VAIndex
-import ch.unibas.dmi.dbis.adam.main.SparkStartup
+import ch.unibas.dmi.dbis.adam.main.AdamContext
 import ch.unibas.dmi.dbis.adam.query.Result
 import ch.unibas.dmi.dbis.adam.query.distance.DistanceFunction
 import ch.unibas.dmi.dbis.adam.query.query.NearestNeighbourQuery
-import ch.unibas.dmi.dbis.adam.storage.engine.CatalogOperator
-import com.google.common.cache.{CacheBuilder, CacheLoader}
 import org.apache.log4j.Logger
-import org.apache.spark.rdd.RDD
 import org.apache.spark.sql.DataFrame
-
-import scala.util.{Failure, Success, Try}
 
 /**
   * adamtwo
@@ -37,25 +22,25 @@ import scala.util.{Failure, Success, Try}
 trait Index {
   @transient lazy val log = Logger.getLogger(getClass.getName)
 
-  val indexname: IndexName
-  val indextype: IndexTypeName
-  val entityname: EntityName
+  def indexname: IndexName
+  def indextype: IndexTypeName
+  def entityname: EntityName
 
 
   /**
     * Confidence towards the index. Confidence of 1 means very confident in index results (i.e., precise results).
     */
-  val confidence: Float
+  def confidence: Float
 
   /**
     * Denotes whether the index leads to false negatives, i.e., elements are dropped although they shouldn't be.
     */
-  val lossy : Boolean
+  def lossy: Boolean
 
   /**
     *
     */
-  protected val df: DataFrame
+  private[index] def df: DataFrame
 
   /**
     * Counts the number of elements in the index.
@@ -92,10 +77,11 @@ trait Index {
     * @param queryID  optional query id
     * @return a set of candidate tuple ids, possibly together with a tentative score (the number of tuples will be greater than k)
     */
-  def scan(q: FeatureVector, distance: DistanceFunction, options: Map[String, Any], k: Int, filter: Option[Set[TupleID]], queryID: Option[String] = None): Set[Result] = {
+  def scan(q: FeatureVector, distance: DistanceFunction, options: Map[String, Any], k: Int, filter: Option[Set[TupleID]], queryID: Option[String] = None)(implicit ac : AdamContext): Set[Result] = {
     log.debug("started scanning index")
-    SparkStartup.sc.setLocalProperty("spark.scheduler.pool", "index")
-    SparkStartup.sc.setJobGroup(queryID.getOrElse(""), indextype.name, true)
+
+    ac.sc.setLocalProperty("spark.scheduler.pool", "index")
+    ac.sc.setJobGroup(queryID.getOrElse(""), indextype.name, true)
 
     val data = if (filter.isDefined) {
       df.filter(df(FieldNames.idColumnName) isin (filter.get.toSeq: _*))
@@ -119,209 +105,9 @@ trait Index {
   protected def scan(data: DataFrame, q: FeatureVector, distance: DistanceFunction, options: Map[String, Any], k: Int): Set[Result]
 }
 
-
 object Index {
   type IndexName = String
   type IndexTypeName = IndexTypes.IndexType
-
-  private val storage = SparkStartup.indexStorage
-
-  private val MINIMUM_NUMBER_OF_TUPLE = 10
-
-
-  /**
-    * Creates an index that is unique and which folows the naming rules of indexes.
-    *
-    * @param entityname
-    * @param indextype
-    * @return
-    */
-  private def createIndexName(entityname: EntityName, indextype: IndexTypeName): String = {
-    val indexes = CatalogOperator.listIndexes(entityname, indextype).map(_._1)
-
-    var indexname = ""
-
-    var i = indexes.length
-    do {
-      indexname = entityname + "_" + indextype.name + "_" + i
-      i += 1
-    } while (indexes.contains(indexname))
-
-    indexname
-  }
-
-
-  /**
-    * Creates an index.
-    *
-    * @param entity
-    * @param indexgenerator generator to create index
-    * @return index
-    */
-  def createIndex(entity: Entity, indexgenerator: IndexGenerator): Try[Index] = {
-    val count = entity.count
-    if(count < MINIMUM_NUMBER_OF_TUPLE){
-      log.error("not enough tuples for creating index, needs at least " + MINIMUM_NUMBER_OF_TUPLE + " but has only " + count)
-      return Failure(new GeneralAdamException("not enough tuples for index"))
-    }
-
-    val indexname = createIndexName(entity.entityname, indexgenerator.indextypename)
-    val rdd: RDD[IndexingTaskTuple] = entity.getFeaturedata.map { x => IndexingTaskTuple(x.getLong(0), x.getAs[FeatureVectorWrapper](1).vector) }
-    val index = indexgenerator.index(indexname, entity.entityname, rdd)
-    val df = index.df.withColumnRenamed("id", FieldNames.idColumnName).withColumnRenamed("value", FieldNames.featureIndexColumnName)
-    storage.write(indexname, df)
-    CatalogOperator.createIndex(indexname, entity.entityname, indexgenerator.indextypename, index.metadata)
-    Success(index)
-  }
-
-
-  /**
-    * Checks whether index exists.
-    *
-    * @param indexname
-    * @return
-    */
-  def exists(indexname: IndexName): Boolean = CatalogOperator.existsIndex(indexname)
-
-  /**
-    * Lists indexes.
-    *
-    * @param entityname
-    * @param indextypename
-    * @return
-    */
-  def list(entityname: EntityName = null, indextypename: IndexTypeName = null): Seq[(IndexName, IndexTypeName)] = CatalogOperator.listIndexes(entityname, indextypename)
-
-  /**
-    * Gets confidence score of index.
-    *
-    * @param indexname
-    * @return
-    */
-  def confidence(indexname: IndexName): Float = loadIndexMetaData(indexname).get.confidence
-
-  /**
-    * Gets the type of the index.
-    *
-    * @param indexname
-    * @return
-    */
-  def indextype(indexname: IndexName): IndexTypeName = loadIndexMetaData(indexname).get.indextype
-
-  /**
-    * Loads index into cache.
-    *
-    * @param indexname
-    * @return
-    */
-  def load(indexname: IndexName, cache : Boolean = false): Try[Index] = {
-    if (!exists(indexname)) {
-      throw new IndexNotExistingException()
-    }
-
-    val index = IndexLRUCache.get(indexname)
-
-    if(cache){
-      index.get.df.rdd.setName(indexname).cache()
-    }
-
-    index
-  }
-
-  /**
-    * Loads the index metadata without loading the data itself yet.
-    *
-    * @param indexname
-    * @return
-    */
-  def loadIndexMetaData(indexname: IndexName): Try[Index] = {
-    if (!exists(indexname)) {
-      Failure(IndexNotExistingException())
-    }
-
-    val df = storage.read(indexname)
-    val entityname = CatalogOperator.getEntitynameFromIndex(indexname)
-    val meta = CatalogOperator.getIndexMeta(indexname)
-
-    val indextypename = CatalogOperator.getIndexTypeName(indexname)
-
-    val index = indextypename match {
-      case IndexTypes.ECPINDEX => ECPIndex(indexname, entityname, df, meta)
-      case IndexTypes.LSHINDEX => LSHIndex(indexname, entityname, df, meta)
-      case IndexTypes.PQINDEX => PQIndex(indexname, entityname, df, meta)
-      case IndexTypes.SHINDEX => SHIndex(indexname, entityname, df, meta)
-      case IndexTypes.VAFINDEX => VAIndex(indexname, entityname, df, meta)
-      case IndexTypes.VAVINDEX => VAIndex(indexname, entityname, df, meta)
-    }
-
-    Success(index)
-  }
-
-  /**
-    * Drops an index.
-    *
-    * @param indexname
-    * @return true if index was dropped
-    */
-  def drop(indexname: IndexName): Try[Void] = {
-    CatalogOperator.dropIndex(indexname)
-    storage.drop(indexname)
-    Success(null)
-  }
-
-  /**
-    * Drops all indexes for a given entity.
-    *
-    * @param entityname
-    * @return
-    */
-  def dropAll(entityname: EntityName): Try[Void] = {
-    val indexes = CatalogOperator.dropAllIndexes(entityname)
-
-    indexes.foreach {
-      index => storage.drop(index)
-    }
-
-    Success(null)
-  }
-
-
-  object IndexLRUCache {
-    private val maximumCacheSizeIndex = AdamConfig.maximumCacheSizeIndex
-    private val expireAfterAccess = AdamConfig.expireAfterAccessIndex
-
-    private val indexCache = CacheBuilder.
-      newBuilder().
-      maximumSize(maximumCacheSizeIndex).
-      expireAfterAccess(expireAfterAccess, TimeUnit.MINUTES).
-      build(
-        new CacheLoader[IndexName, Index]() {
-          def load(indexname: IndexName): Index = {
-            val index = Index.loadIndexMetaData(indexname).get
-            index
-          }
-        }
-      )
-
-    /**
-      * Gets index from cache. If index is not yet in cache, it is loaded.
-      *
-      * @param indexname
-      */
-    def get(indexname: IndexName): Try[Index] = {
-      try {
-        Success(indexCache.get(indexname))
-      } catch {
-        case e : Exception =>
-          log.error(e.getMessage)
-          Failure(e)
-      }
-    }
-  }
-
 }
-
-
-
 
 

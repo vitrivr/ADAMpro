@@ -1,7 +1,7 @@
 package ch.unibas.dmi.dbis.adam.datatypes.feature
 
 import breeze.linalg.{DenseVector, SparseVector}
-import ch.unibas.dmi.dbis.adam.datatypes.feature.Feature.{VectorBase, DenseFeatureVector, FeatureVector, SparseFeatureVector}
+import ch.unibas.dmi.dbis.adam.datatypes.feature.Feature.{DenseFeatureVector, FeatureVector, SparseFeatureVector, VectorBase}
 import ch.unibas.dmi.dbis.adam.datatypes.feature.FeatureVectorTypes.{DenseFeatureVectorType, SparseFeatureVectorType}
 import org.apache.spark.sql.catalyst.InternalRow
 import org.apache.spark.sql.catalyst.expressions.GenericMutableRow

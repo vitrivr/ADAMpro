@@ -19,17 +19,12 @@ import scala.util.{Failure, Success, Try}
 private[query] object QueryLRUCache {
   val log = Logger.getLogger(getClass.getName)
 
-  /**
-    *
-    * @param useCached
-    * @param putInCache
-    */
-  private val maximumCacheSizeIndex = AdamConfig.maximumCacheSizeQueryResults
+  private val maximumCacheSize = AdamConfig.maximumCacheSizeQueryResults
   private val expireAfterAccess = AdamConfig.expireAfterAccessQueryResults
 
   private val queryCache = CacheBuilder.
     newBuilder().
-    maximumSize(maximumCacheSizeIndex).
+    maximumSize(maximumCacheSize).
     expireAfterAccess(expireAfterAccess, TimeUnit.MINUTES).
     build(
       new CacheLoader[String, DataFrame]() {

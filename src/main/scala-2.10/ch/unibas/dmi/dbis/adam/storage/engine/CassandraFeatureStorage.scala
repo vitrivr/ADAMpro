@@ -5,7 +5,7 @@ import ch.unibas.dmi.dbis.adam.datatypes.feature.Feature.VectorBase
 import ch.unibas.dmi.dbis.adam.datatypes.feature.FeatureVectorWrapper
 import ch.unibas.dmi.dbis.adam.entity.Entity.EntityName
 import ch.unibas.dmi.dbis.adam.entity.Tuple.TupleID
-import ch.unibas.dmi.dbis.adam.main.SparkStartup
+import ch.unibas.dmi.dbis.adam.main.{AdamContext, SparkStartup}
 import ch.unibas.dmi.dbis.adam.storage.components.FeatureStorage
 import com.datastax.driver.core.Session
 import com.datastax.spark.connector._
@@ -89,12 +89,12 @@ object CassandraFeatureStorage extends FeatureStorage with Serializable {
     * @param filter
     * @return
     */
-  override def read(entityname: EntityName, filter: Option[Set[TupleID]]): DataFrame = {
+  override def read(entityname: EntityName, filter: Option[Set[TupleID]])(implicit ac : AdamContext): DataFrame = {
     log.debug("cassandra read operation")
 
     val rowRDD: RDD[Row] = if (filter.isDefined) {
       val subresults = filter.get.grouped(500).map(subfilter =>
-        SparkStartup.sc.cassandraTable(defaultKeyspace, entityname).where(idColumnName + " IN ?", subfilter).map(crow => Row(crow.getLong(0), asWorkingVectorWrapper(crow.getList[Float](1))))
+        ac.sc.cassandraTable(defaultKeyspace, entityname).where(idColumnName + " IN ?", subfilter).map(crow => Row(crow.getLong(0), asWorkingVectorWrapper(crow.getList[Float](1))))
       ).toSeq
 
       if(!subresults.isEmpty) {
@@ -107,10 +107,10 @@ object CassandraFeatureStorage extends FeatureStorage with Serializable {
 
         base
       } else {
-        SparkStartup.sc.emptyRDD
+        ac.sc.emptyRDD
       }
     } else {
-      val cassandraScan = SparkStartup.sc.cassandraTable(defaultKeyspace, entityname)
+      val cassandraScan = ac.sc.cassandraTable(defaultKeyspace, entityname)
       cassandraScan.map(crow => Row(crow.getLong(0), asWorkingVectorWrapper(crow.getList[Float](1))))
     }
 
@@ -121,7 +121,7 @@ object CassandraFeatureStorage extends FeatureStorage with Serializable {
         StructField(featureColumnName, BinaryType, false)
       )
     )
-    SparkStartup.sqlContext.createDataFrame(rowRDD, schema)
+    ac.sqlContext.createDataFrame(rowRDD, schema)
   }
 
   /**
@@ -175,7 +175,8 @@ object CassandraFeatureStorage extends FeatureStorage with Serializable {
   override def count(entityname: EntityName): Int = {
     log.debug("cassandra count operation")
 
-    SparkStartup.sc.cassandraTable(defaultKeyspace, entityname).cassandraCount().toInt
+    import SparkStartup.Implicits._
+    sc.cassandraTable(defaultKeyspace, entityname).cassandraCount().toInt
   }
 
   /**

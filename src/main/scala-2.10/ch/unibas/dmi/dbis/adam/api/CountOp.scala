@@ -1,7 +1,8 @@
 package ch.unibas.dmi.dbis.adam.api
 
-import ch.unibas.dmi.dbis.adam.entity.Entity
 import ch.unibas.dmi.dbis.adam.entity.Entity._
+import ch.unibas.dmi.dbis.adam.entity.EntityHandler
+import ch.unibas.dmi.dbis.adam.main.SparkStartup
 import org.apache.log4j.Logger
 
 /**
@@ -24,6 +25,7 @@ object CountOp {
     */
   def apply(entityname: EntityName): Long = {
     log.debug("perform count operation")
-    Entity.countTuples(entityname)
+    import SparkStartup.Implicits._
+    EntityHandler.countTuples(entityname)
   }
 }

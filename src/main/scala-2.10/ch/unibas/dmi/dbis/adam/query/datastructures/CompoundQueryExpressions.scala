@@ -4,16 +4,14 @@ import java.util.concurrent.TimeUnit
 
 import ch.unibas.dmi.dbis.adam.config.FieldNames
 import ch.unibas.dmi.dbis.adam.entity.Tuple._
-import ch.unibas.dmi.dbis.adam.main.SparkStartup
+import ch.unibas.dmi.dbis.adam.main.{AdamContext, SparkStartup}
 import ch.unibas.dmi.dbis.adam.query.Result
-import org.apache.spark.sql.{Row, DataFrame}
-import spire.syntax.order
+import org.apache.spark.sql.{DataFrame, Row}
 
 import scala.collection.mutable.ListBuffer
+import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.duration.Duration
 import scala.concurrent.{Await, Future}
-
-import scala.concurrent.ExecutionContext.Implicits.global
 
 /**
   * adampro
@@ -32,8 +30,9 @@ object CompoundQueryExpressions {
 
   case class EmptyQueryExpression(id : Option[String] = None) extends QueryExpression(id){
     override protected def run(filter: Option[Set[TupleID]]): DataFrame = {
-      val rdd = SparkStartup.sc.emptyRDD[Row]
-      SparkStartup.sqlContext.createDataFrame(rdd, Result.resultSchema)
+      import SparkStartup.Implicits._
+      val rdd = sc.emptyRDD[Row]
+      sqlContext.createDataFrame(rdd, Result.resultSchema)
     }
   }
 
@@ -42,7 +41,7 @@ object CompoundQueryExpressions {
     * @param l
     * @param r
     */
-  case class UnionExpression(l: QueryExpression, r: QueryExpression, id : Option[String] = None) extends QueryExpression(id) {
+  case class UnionExpression(l: QueryExpression, r: QueryExpression, id : Option[String] = None)(implicit ac : AdamContext) extends QueryExpression(id) {
     /**
       *
       * @param filter
@@ -51,8 +50,8 @@ object CompoundQueryExpressions {
     override protected def run(filter: Option[Set[TupleID]]): DataFrame = {
       val results = parallelExec(filter)
 
-      val rdd = SparkStartup.sc.parallelize(results.map(res => Row(res.distance, res.tid)))
-      SparkStartup.sqlContext.createDataFrame(rdd, Result.resultSchema)
+      val rdd = ac.sc.parallelize(results.map(res => Row(res.distance, res.tid)))
+      ac.sqlContext.createDataFrame(rdd, Result.resultSchema)
     }
 
     /**
@@ -100,7 +99,7 @@ object CompoundQueryExpressions {
     * @param l
     * @param r
     */
-  case class IntersectExpression(l: QueryExpression, r: QueryExpression, order: ExpressionEvaluationOrder.Order = ExpressionEvaluationOrder.Parallel, id : Option[String] = None) extends QueryExpression(id) {
+  case class IntersectExpression(l: QueryExpression, r: QueryExpression, order: ExpressionEvaluationOrder.Order = ExpressionEvaluationOrder.Parallel, id : Option[String] = None)(implicit ac : AdamContext) extends QueryExpression(id) {
     /**
       *
       * @param filter
@@ -113,8 +112,8 @@ object CompoundQueryExpressions {
         case ExpressionEvaluationOrder.Parallel => parallelExec(filter)
       }
 
-      val rdd = SparkStartup.sc.parallelize(results.map(res => Row(res.distance, res.tid)))
-      SparkStartup.sqlContext.createDataFrame(rdd, Result.resultSchema)
+      val rdd = ac.sc.parallelize(results.map(res => Row(res.distance, res.tid)))
+      ac.sqlContext.createDataFrame(rdd, Result.resultSchema)
     }
 
     /**
@@ -184,7 +183,7 @@ object CompoundQueryExpressions {
     * @param l
     * @param r
     */
-  case class ExceptExpression(l: QueryExpression, r: QueryExpression, order: ExpressionEvaluationOrder.Order = ExpressionEvaluationOrder.Parallel, id : Option[String] = None) extends QueryExpression(id) {
+  case class ExceptExpression(l: QueryExpression, r: QueryExpression, order: ExpressionEvaluationOrder.Order = ExpressionEvaluationOrder.Parallel, id : Option[String] = None)(implicit ac : AdamContext) extends QueryExpression(id) {
     /**
       *
       * @param filter
@@ -197,8 +196,8 @@ object CompoundQueryExpressions {
         case ExpressionEvaluationOrder.Parallel => parallelExec(filter)
       }
 
-      val rdd = SparkStartup.sc.parallelize(results.map(res => Row(res.distance, res.tid)))
-      SparkStartup.sqlContext.createDataFrame(rdd, Result.resultSchema)
+      val rdd = ac.sc.parallelize(results.map(res => Row(res.distance, res.tid)))
+      ac.sqlContext.createDataFrame(rdd, Result.resultSchema)
     }
 
     /**

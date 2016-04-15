@@ -3,9 +3,10 @@ package ch.unibas.dmi.dbis.adam.index.structures.pq
 import ch.unibas.dmi.dbis.adam.datatypes.feature.Feature.FeatureVector
 import ch.unibas.dmi.dbis.adam.datatypes.feature.FeatureVectorWrapper
 import ch.unibas.dmi.dbis.adam.entity.Entity._
-import ch.unibas.dmi.dbis.adam.index.Index._
+import ch.unibas.dmi.dbis.adam.index.Index.{IndexName, IndexTypeName}
 import ch.unibas.dmi.dbis.adam.index.structures.IndexTypes
 import ch.unibas.dmi.dbis.adam.index.{ByteArrayIndexTuple, Index}
+import ch.unibas.dmi.dbis.adam.main.AdamContext
 import ch.unibas.dmi.dbis.adam.query.Result
 import ch.unibas.dmi.dbis.adam.query.distance.{DistanceFunction, MinkowskiDistance}
 import ch.unibas.dmi.dbis.adam.query.query.NearestNeighbourQuery
@@ -17,7 +18,7 @@ import org.apache.spark.sql.DataFrame
   * Ivan Giangreco
   * April 2016
   */
-class PQIndex(val indexname: IndexName, val entityname: EntityName, protected val df: DataFrame, private[index] val metadata: PQIndexMetaData)
+class PQIndex(val indexname: IndexName, val entityname: EntityName, private[index]  val df: DataFrame, private[index] val metadata: PQIndexMetaData)(@transient implicit val ac : AdamContext)
   extends Index {
   override val indextype: IndexTypeName = IndexTypes.PQINDEX
 
@@ -25,7 +26,7 @@ class PQIndex(val indexname: IndexName, val entityname: EntityName, protected va
     log.debug("scanning PQ index " + indexname)
 
     //precompute distance
-    val distances = q.toArray
+    val distances = ac.sc.broadcast(q.toArray
       .grouped(math.max(1, q.size / metadata.nsq)).toSeq
       .zipWithIndex
       .map { case (split, idx) => {
@@ -34,13 +35,13 @@ class PQIndex(val indexname: IndexName, val entityname: EntityName, protected va
           distance(new FeatureVectorWrapper(center.toArray.map(_.toFloat)).vector, qsub.vector)
         }).toIndexedSeq
       }
-      }.toIndexedSeq
+      }.toIndexedSeq)
 
 
     val rdd = data.map(r => r: ByteArrayIndexTuple)
 
     val ids = rdd.map{tuple =>
-      val sum = tuple.value.zipWithIndex.map { case (value, idx) => distances(idx)(value) }.sum
+      val sum = tuple.value.zipWithIndex.map { case (value, idx) => distances.value(idx)(value) }.sum
       Result(sum, tuple.id)
     }.takeOrdered(k)
 
@@ -64,7 +65,7 @@ class PQIndex(val indexname: IndexName, val entityname: EntityName, protected va
 
 
 object PQIndex {
-  def apply(indexname: IndexName, entityname: EntityName, data: DataFrame, meta: Any): PQIndex = {
+  def apply(indexname: IndexName, entityname: EntityName, data: DataFrame, meta: Any)(implicit ac : AdamContext): PQIndex = {
     val indexMetaData = meta.asInstanceOf[PQIndexMetaData]
     new PQIndex(indexname, entityname, data, indexMetaData)
   }

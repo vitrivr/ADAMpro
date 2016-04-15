@@ -1,19 +1,19 @@
 package ch.unibas.dmi.dbis.adam.index.structures.lsh
 
-import ch.unibas.dmi.dbis.adam.entity.Entity
 import ch.unibas.dmi.dbis.adam.entity.Entity._
-import ch.unibas.dmi.dbis.adam.index.Index._
+import ch.unibas.dmi.dbis.adam.entity.EntityHandler
+import ch.unibas.dmi.dbis.adam.index.Index.{IndexName, IndexTypeName}
 import ch.unibas.dmi.dbis.adam.index._
 import ch.unibas.dmi.dbis.adam.index.structures.IndexTypes
 import ch.unibas.dmi.dbis.adam.index.structures.lsh.hashfunction.{EuclideanHashFunction, Hasher, ManhattanHashFunction}
-import ch.unibas.dmi.dbis.adam.main.SparkStartup
+import ch.unibas.dmi.dbis.adam.main.{AdamContext, SparkStartup}
 import ch.unibas.dmi.dbis.adam.query.distance.{DistanceFunction, EuclideanDistance, ManhattanDistance}
 import org.apache.log4j.Logger
 import org.apache.spark.rdd.RDD
 import org.apache.spark.util.random.ADAMSamplingUtils
 
 
-class LSHIndexer(numHashTables : Int, numHashes : Int, distance : DistanceFunction, trainingSize : Int) extends IndexGenerator with Serializable {
+class LSHIndexer(numHashTables : Int, numHashes : Int, distance : DistanceFunction, trainingSize : Int)(@transient implicit val ac : AdamContext) extends IndexGenerator with Serializable {
   @transient lazy val log = Logger.getLogger(getClass.getName)
 
   override val indextypename: IndexTypeName = IndexTypes.LSHINDEX
@@ -26,7 +26,7 @@ class LSHIndexer(numHashTables : Int, numHashes : Int, distance : DistanceFuncti
    * @return
    */
   override def index(indexname : IndexName, entityname : EntityName, data: RDD[IndexingTaskTuple]): Index = {
-    val n = Entity.countTuples(entityname)
+    val n = EntityHandler.countTuples(entityname)
     val fraction = ADAMSamplingUtils.computeFractionForSampleSize(trainingSize, n, false)
     val trainData = data.sample(false, fraction)
 
@@ -40,7 +40,7 @@ class LSHIndexer(numHashTables : Int, numHashes : Int, distance : DistanceFuncti
         BitStringIndexTuple(datum.id, hash)
       })
 
-    import SparkStartup.sqlContext.implicits._
+    import SparkStartup.Implicits.sqlContext.implicits._
     new LSHIndex(indexname, entityname, indexdata.toDF, indexMetaData)
   }
 
@@ -84,7 +84,7 @@ object LSHIndexer {
    *
    * @param properties
    */
-  def apply(distance : DistanceFunction, properties : Map[String, String] = Map[String, String]()) : IndexGenerator = {
+  def apply(distance : DistanceFunction, properties : Map[String, String] = Map[String, String]())(implicit ac : AdamContext) : IndexGenerator = {
     val numHashTables = properties.getOrElse("nhashtables", "64").toInt
     val numHashes = properties.getOrElse("nhashes", "64").toInt
 

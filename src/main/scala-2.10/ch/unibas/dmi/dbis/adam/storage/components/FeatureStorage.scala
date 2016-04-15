@@ -3,9 +3,9 @@ package ch.unibas.dmi.dbis.adam.storage.components
 import ch.unibas.dmi.dbis.adam.config.FieldNames
 import ch.unibas.dmi.dbis.adam.entity.Entity.EntityName
 import ch.unibas.dmi.dbis.adam.entity.Tuple.TupleID
-import ch.unibas.dmi.dbis.adam.main.SparkStartup
+import ch.unibas.dmi.dbis.adam.main.{AdamContext, SparkStartup}
 import org.apache.spark.sql.types._
-import org.apache.spark.sql.{Row, DataFrame, SaveMode}
+import org.apache.spark.sql.{DataFrame, Row, SaveMode}
 
 /**
   * adamtwo
@@ -27,7 +27,8 @@ trait FeatureStorage {
         StructField(FieldNames.internFeatureColumnName, ArrayType(FloatType), false)
       )
     )
-    val df = SparkStartup.sqlContext.createDataFrame(SparkStartup.sc.emptyRDD[Row], featureSchema)
+    import SparkStartup.Implicits._
+    val df = sqlContext.createDataFrame(sc.emptyRDD[Row], featureSchema)
 
     write(entityname, df, SaveMode.Overwrite)
   }
@@ -39,7 +40,7 @@ trait FeatureStorage {
     * @param filter
     * @return
     */
-  def read(entityname: EntityName, filter: Option[Set[TupleID]] = None): DataFrame
+  def read(entityname: EntityName, filter: Option[Set[TupleID]] = None)(implicit ac : AdamContext): DataFrame
 
   /**
     * Count the number of tuples in the feature storage.

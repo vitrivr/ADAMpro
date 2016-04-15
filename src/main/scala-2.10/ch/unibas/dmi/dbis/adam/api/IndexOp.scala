@@ -1,22 +1,19 @@
 package ch.unibas.dmi.dbis.adam.api
 
-import ch.unibas.dmi.dbis.adam.api.CountOp._
-import ch.unibas.dmi.dbis.adam.datatypes.feature.{FeatureVectorWrapper, Feature}
-import Feature.FeatureVector
-import ch.unibas.dmi.dbis.adam.entity.Entity.apply
+import ch.unibas.dmi.dbis.adam.datatypes.feature.FeatureVectorWrapper
+import ch.unibas.dmi.dbis.adam.entity.Entity._
+import ch.unibas.dmi.dbis.adam.entity.EntityHandler
 import ch.unibas.dmi.dbis.adam.index.Index.IndexTypeName
 import ch.unibas.dmi.dbis.adam.index.structures.IndexTypes
 import ch.unibas.dmi.dbis.adam.index.structures.ecp.ECPIndexer
 import ch.unibas.dmi.dbis.adam.index.structures.lsh.LSHIndexer
 import ch.unibas.dmi.dbis.adam.index.structures.pq.PQIndexer
-import ch.unibas.dmi.dbis.adam.index.structures.sh.{SHIndexer, SHIndexer$}
-import ch.unibas.dmi.dbis.adam.index.structures.va.{VAVIndexer, VAFIndexer, VAVIndexer$, VAFIndexer$}
-import ch.unibas.dmi.dbis.adam.index.{Index, IndexGenerator, IndexingTaskTuple}
+import ch.unibas.dmi.dbis.adam.index.structures.sh.SHIndexer
+import ch.unibas.dmi.dbis.adam.index.structures.va.{VAFIndexer, VAVIndexer}
+import ch.unibas.dmi.dbis.adam.index.{Index, IndexGenerator, IndexHandler}
+import ch.unibas.dmi.dbis.adam.main.AdamContext
 import ch.unibas.dmi.dbis.adam.query.distance.{DistanceFunction, MinkowskiDistance}
-import ch.unibas.dmi.dbis.adam.entity.Entity
-import ch.unibas.dmi.dbis.adam.entity.Entity._
 import org.apache.log4j.Logger
-import org.apache.spark.rdd.RDD
 
 import scala.util.Try
 
@@ -39,7 +36,7 @@ object IndexOp {
     * @param distance   distance function to use
     * @param properties further index specific properties
     */
-  def apply(entityname: EntityName, indextype: String, distance: DistanceFunction, properties: Map[String, String]): Try[Index] = {
+  def apply(entityname: EntityName, indextype: String, distance: DistanceFunction, properties: Map[String, String])(implicit ac : AdamContext): Try[Index] = {
     log.debug("perform create index operation")
     apply(entityname, IndexTypes.withName(indextype).get, distance, properties)
   }
@@ -52,10 +49,10 @@ object IndexOp {
     * @param distance      distance function to use
     * @param properties    further index specific properties
     */
-  def apply(entityname: EntityName, indextypename: IndexTypeName, distance: DistanceFunction, properties: Map[String, String] = Map()): Try[Index] = {
+  def apply(entityname: EntityName, indextypename: IndexTypeName, distance: DistanceFunction, properties: Map[String, String] = Map())(implicit ac : AdamContext): Try[Index] = {
     log.debug("perform create index operation")
 
-    val entity = Entity.load(entityname)
+    val entity = EntityHandler.load(entityname)
 
     val generator: IndexGenerator = indextypename match {
       case IndexTypes.ECPINDEX => ECPIndexer(distance, properties)
@@ -66,7 +63,7 @@ object IndexOp {
       case IndexTypes.VAVINDEX => VAVIndexer(entity.get.getFeaturedata.first().getAs[FeatureVectorWrapper](1).vector.length, distance.asInstanceOf[MinkowskiDistance], properties)
     }
 
-    Index.createIndex(entity.get, generator)
+    IndexHandler.createIndex(entity.get, generator)
   }
 
   /**
@@ -76,7 +73,7 @@ object IndexOp {
     * @param distance   distance function to use
     * @param properties further index specific properties
     */
-  def generateAll(entityname: EntityName, distance: DistanceFunction, properties: Map[String, String] = Map()): Boolean = {
+  def generateAll(entityname: EntityName, distance: DistanceFunction, properties: Map[String, String] = Map())(implicit ac : AdamContext): Boolean = {
     IndexTypes.values.foreach { indextypename =>
       apply(entityname, indextypename, distance, properties)
     }

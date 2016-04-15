@@ -3,10 +3,8 @@ package ch.unibas.dmi.dbis.adam.entity
 import ch.unibas.dmi.dbis.adam.config.FieldNames
 import ch.unibas.dmi.dbis.adam.datatypes.feature.FeatureVectorWrapper
 import ch.unibas.dmi.dbis.adam.entity.Entity._
-import ch.unibas.dmi.dbis.adam.entity.FieldTypes.{FieldType, LONGTYPE}
-import ch.unibas.dmi.dbis.adam.exception.{EntityExistingException, EntityNotExistingException, EntityNotProperlyDefinedException}
-import ch.unibas.dmi.dbis.adam.index.Index
-import ch.unibas.dmi.dbis.adam.main.SparkStartup
+import ch.unibas.dmi.dbis.adam.entity.FieldTypes.FieldType
+import ch.unibas.dmi.dbis.adam.main.{AdamContext, SparkStartup}
 import ch.unibas.dmi.dbis.adam.query.query.NearestNeighbourQuery
 import ch.unibas.dmi.dbis.adam.storage.components.{FeatureStorage, MetadataStorage}
 import ch.unibas.dmi.dbis.adam.storage.engine.CatalogOperator
@@ -15,7 +13,7 @@ import org.apache.spark.rdd.RDD
 import org.apache.spark.sql.types.{LongType, StructField, StructType}
 import org.apache.spark.sql.{DataFrame, Row, SaveMode}
 
-import scala.util.{Failure, Success, Try}
+import scala.util.{Success, Try}
 
 /**
   * adamtwo
@@ -23,7 +21,7 @@ import scala.util.{Failure, Success, Try}
   * Ivan Giangreco
   * October 2015
   */
-case class Entity(entityname: EntityName, featureStorage: FeatureStorage, metadataStorage: Option[MetadataStorage]) {
+case class Entity(entityname: EntityName, featureStorage: FeatureStorage, metadataStorage: Option[MetadataStorage])(implicit ac : AdamContext) {
   val log = Logger.getLogger(getClass.getName)
 
   private lazy val featureData = featureStorage.read(entityname).withColumnRenamed(FieldNames.featureColumnName, FieldNames.internFeatureColumnName)
@@ -38,7 +36,14 @@ case class Entity(entityname: EntityName, featureStorage: FeatureStorage, metada
     *
     * @return
     */
-  def count = featureStorage.count(entityname)
+  def count : Int = {
+    if (tupleCount == -1) {
+      tupleCount = featureStorage.count(entityname)
+    }
+
+    tupleCount
+  }
+  private var tupleCount = -1
 
   /**
     * Gives preview of entity.
@@ -67,7 +72,8 @@ case class Entity(entityname: EntityName, featureStorage: FeatureStorage, metada
     }
 
     val rdd = insertion.rdd.zipWithUniqueId.map { case (r: Row, adamtwoid: Long) => Row.fromSeq(adamtwoid +: r.toSeq) }
-    val insertionWithPK = SparkStartup.sqlContext
+    import SparkStartup.Implicits._
+    val insertionWithPK = sqlContext
       .createDataFrame(
         rdd, StructType(StructField(FieldNames.idColumnName, LongType, false) +: insertion.schema.fields))
       .withColumnRenamed(FieldNames.featureColumnName, FieldNames.internFeatureColumnName)
@@ -82,6 +88,9 @@ case class Entity(entityname: EntityName, featureStorage: FeatureStorage, metada
     if(!CatalogOperator.listIndexes(entityname).isEmpty){
       log.warn("new data inserted, but indexes are not updated; please re-create index")
     }
+
+    //reset count
+    tupleCount = -1
 
     Success(null)
   }
@@ -161,136 +170,5 @@ case class FieldDefinition(fieldtype : FieldType, pk : Boolean = false, unique :
 
 
 object Entity {
-  val log = Logger.getLogger(getClass.getName)
-
   type EntityName = String
-
-  private val featureStorage = SparkStartup.featureStorage
-  private val metadataStorage = SparkStartup.metadataStorage
-
-  def exists(entityname: EntityName): Boolean = CatalogOperator.existsEntity(entityname)
-
-  /**
-    * Creates an entity.
-    *
-    * @param entityname
-    * @param fields if fields is specified, in the metadata storage a table is created with these names, specify fields
-    *               as key = name, value = SQL type
-    * @return
-    */
-  def create(entityname: EntityName, fields: Option[Map[String, FieldDefinition]] = None): Try[Entity] = {
-    if (exists(entityname)) {
-      log.error("entity " + entityname + " exists already")
-      return Failure(EntityExistingException())
-    }
-
-    featureStorage.create(entityname)
-
-    if (fields.isDefined) {
-      if(fields.get.contains(FieldNames.idColumnName)){
-        log.error("entity defined with field " + FieldNames.idColumnName + ", but name is reserved")
-        return Failure(EntityNotProperlyDefinedException())
-      }
-
-      if(fields.get.count{case(name, definition) => definition.pk} > 1){
-        log.error("entity defined with more than one primary key")
-        return Failure(EntityNotProperlyDefinedException())
-      }
-
-      val fieldsWithId = fields.get + (FieldNames.idColumnName -> FieldDefinition(LONGTYPE, false, true, true))
-      metadataStorage.create(entityname, fieldsWithId)
-      CatalogOperator.createEntity(entityname, true)
-      Success(Entity(entityname, featureStorage, Option(metadataStorage)))
-    } else {
-      CatalogOperator.createEntity(entityname, false)
-      Success(Entity(entityname, featureStorage, None))
-    }
-  }
-
-  /**
-    * Drops an entity.
-    *
-    * @param entityname
-    * @param ifExists
-    * @return
-    */
-  def drop(entityname: EntityName, ifExists: Boolean = false): Try[Null] = {
-    if (!exists(entityname)) {
-      if (!ifExists) {
-        return Failure(EntityNotExistingException())
-      } else {
-        Success(null)
-      }
-    }
-
-    Index.dropAll(entityname)
-
-    featureStorage.drop(entityname)
-
-    if (CatalogOperator.hasEntityMetadata(entityname)) {
-      metadataStorage.drop(entityname)
-    }
-
-    CatalogOperator.dropEntity(entityname, ifExists)
-    Success(null)
-  }
-
-  /**
-    * Inserts data into an entity.
-    *
-    * @param entityname
-    * @param insertion data frame containing all columns (of both the feature storage and the metadata storage);
-    *                  note that you should name the feature column as ("feature").
-    * @return
-    */
-  def insertData(entityname: EntityName, insertion: DataFrame): Try[Void] = {
-    val entity = load(entityname).get
-    val insertionSchema = insertion.schema
-    val entitySchema = entity.schema
-
-    //TODO: possibly compare schemas
-
-    entity.insert(insertion)
-  }
-
-  /**
-    * Loads an entity.
-    *
-    * @param entityname
-    * @return
-    */
-  def load(entityname: EntityName): Try[Entity] = {
-    if (!exists(entityname)) {
-      return Failure(EntityNotExistingException())
-    }
-
-    val entityMetadataStorage = if (CatalogOperator.hasEntityMetadata(entityname)) {
-      Option(metadataStorage)
-    } else {
-      None
-    }
-
-    Success(Entity(entityname, featureStorage, entityMetadataStorage))
-  }
-
-  /**
-    * Returns number of tuples in entity (only feature storage is considered).
-    *
-    * @param entityname
-    * @return the number of tuples in the entity
-    */
-  def countTuples(entityname: EntityName): Int = {
-    if (!exists(entityname)) {
-      throw new EntityNotExistingException()
-    }
-
-    featureStorage.count(entityname)
-  }
-
-  /**
-    * Lists names of all entities.
-    *
-    * @return name of entities
-    */
-  def list(): List[EntityName] = CatalogOperator.listEntities()
 }

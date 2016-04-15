@@ -2,12 +2,12 @@ package ch.unibas.dmi.dbis.adam.rpc
 
 import ch.unibas.dmi.dbis.adam.api._
 import ch.unibas.dmi.dbis.adam.config.FieldNames
-import ch.unibas.dmi.dbis.adam.entity.{Entity, FieldDefinition, FieldTypes}
+import ch.unibas.dmi.dbis.adam.entity.{EntityHandler, FieldDefinition, FieldTypes}
 import ch.unibas.dmi.dbis.adam.exception.GeneralAdamException
 import ch.unibas.dmi.dbis.adam.http.grpc.CreateEntityMessage.FieldType
 import ch.unibas.dmi.dbis.adam.http.grpc.{AckMessage, CreateEntityMessage, _}
 import ch.unibas.dmi.dbis.adam.index.structures.IndexTypes
-import ch.unibas.dmi.dbis.adam.main.SparkStartup
+import ch.unibas.dmi.dbis.adam.main.AdamContext
 import ch.unibas.dmi.dbis.adam.query.distance.{EuclideanDistance, NormBasedDistanceFunction}
 import io.grpc.stub.StreamObserver
 import org.apache.log4j.Logger
@@ -21,7 +21,7 @@ import scala.concurrent.Future
   * Ivan Giangreco
   * March 2016
   */
-class DataDefinitionRPC extends AdamDefinitionGrpc.AdamDefinition {
+class DataDefinitionRPC(implicit ac: AdamContext) extends AdamDefinitionGrpc.AdamDefinition {
   val log = Logger.getLogger(getClass.getName)
 
   override def createEntity(request: CreateEntityMessage): Future[AckMessage] = {
@@ -82,7 +82,7 @@ class DataDefinitionRPC extends AdamDefinitionGrpc.AdamDefinition {
   override def insert(responseObserver: StreamObserver[AckMessage]): StreamObserver[InsertMessage] = {
     new StreamObserver[InsertMessage]() {
       def onNext(insert: InsertMessage) {
-        val entity = Entity.load(insert.entity)
+        val entity = EntityHandler.load(insert.entity)
 
         if(entity.isFailure){
           return onError(new GeneralAdamException("cannot load entity"))
@@ -97,8 +97,8 @@ class DataDefinitionRPC extends AdamDefinitionGrpc.AdamDefinition {
           Row(data : _*)
         })
 
-        val rdd = SparkStartup.sc.parallelize(rows)
-        val df = SparkStartup.sqlContext.createDataFrame(rdd, entity.get.schema)
+        val rdd = ac.sc.parallelize(rows)
+        val df = ac.sqlContext.createDataFrame(rdd, entity.get.schema)
 
         InsertOp(entity.get.entityname, df)
 
@@ -135,7 +135,6 @@ class DataDefinitionRPC extends AdamDefinitionGrpc.AdamDefinition {
       if(indextypename == null){
         throw new Exception("no index type name given.")
       }
-
 
       val index = IndexOp(request.entity, indextypename, NormBasedDistanceFunction(request.norm),  request.options )
       Future.successful(AckMessage(code = AckMessage.Code.OK, message = index.get.indexname))

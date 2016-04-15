@@ -4,6 +4,7 @@ import ch.unibas.dmi.dbis.adam.config.FieldNames
 import ch.unibas.dmi.dbis.adam.datatypes.feature.{FeatureVectorWrapper, FeatureVectorWrapperUDT}
 import ch.unibas.dmi.dbis.adam.entity.Entity.EntityName
 import ch.unibas.dmi.dbis.adam.main.SparkStartup
+import ch.unibas.dmi.dbis.adam.main.SparkStartup.Implicits._
 import org.apache.spark.sql.Row
 import org.apache.spark.sql.types.{StructField, StructType}
 
@@ -27,12 +28,12 @@ object RandomDataOp {
       StructField(FieldNames.featureColumnName, new FeatureVectorWrapperUDT, false)
     ))
 
-    val rdd = SparkStartup.sc.parallelize(
+    val rdd = sc.parallelize(
       (0 until collectionSize).sliding(limit, limit)
         .flatMap( it => it.toSeq.map( idx => Row(new FeatureVectorWrapper(Seq.fill(vectorSize)(Random.nextFloat()))))).toSeq
     )
 
-    val data = SparkStartup.sqlContext.createDataFrame(rdd, schema)
+    val data = sqlContext.createDataFrame(rdd, schema)
 
     InsertOp(entityname, data)
 

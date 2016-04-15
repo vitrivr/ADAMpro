@@ -1,8 +1,9 @@
 package ch.unibas.dmi.dbis.adam.query.progressive
 
 import ch.unibas.dmi.dbis.adam.entity.Entity.EntityName
-import ch.unibas.dmi.dbis.adam.index.Index
 import ch.unibas.dmi.dbis.adam.index.Index.IndexName
+import ch.unibas.dmi.dbis.adam.index.IndexHandler
+import ch.unibas.dmi.dbis.adam.main.AdamContext
 import ch.unibas.dmi.dbis.adam.query.handler.NearestNeighbourQueryHandler
 import ch.unibas.dmi.dbis.adam.query.query.NearestNeighbourQuery
 import org.apache.spark.sql.DataFrame
@@ -31,10 +32,10 @@ abstract class ScanFuture(tracker : ProgressiveQueryStatusTracker){
   * @param onComplete
   * @param tracker
   */
-class IndexScanFuture[U](indexname : IndexName, query : NearestNeighbourQuery, onComplete: (ProgressiveQueryStatus.Value, DataFrame, Float, String, Map[String, String]) => U, val tracker : ProgressiveQueryStatusTracker) extends ScanFuture(tracker) {
+class IndexScanFuture[U](indexname : IndexName, query : NearestNeighbourQuery, onComplete: (ProgressiveQueryStatus.Value, DataFrame, Float, String, Map[String, String]) => U, val tracker : ProgressiveQueryStatusTracker)(implicit ac : AdamContext) extends ScanFuture(tracker) {
   tracker.register(this)
 
-  val name = Index.indextype(indexname).name
+  val name = IndexHandler.indextype(indexname).name
   val info =  Map[String,String]("type" -> ("index: " + indexname), "index" -> indexname, "qid" -> query.queryID.get)
 
   val future = Future {NearestNeighbourQueryHandler.indexQuery(indexname, query, None)}
@@ -48,7 +49,7 @@ class IndexScanFuture[U](indexname : IndexName, query : NearestNeighbourQuery, o
       }
   })
 
-  lazy val confidence: Float = Index.confidence(indexname)
+  lazy val confidence: Float = IndexHandler.confidence(indexname)
 }
 
 /**
@@ -59,7 +60,7 @@ class IndexScanFuture[U](indexname : IndexName, query : NearestNeighbourQuery, o
   * @param onComplete
   * @param tracker
   */
-class SequentialScanFuture[U](entityname : EntityName, query : NearestNeighbourQuery, onComplete: (ProgressiveQueryStatus.Value, DataFrame, Float, String, Map[String, String]) => U, val tracker : ProgressiveQueryStatusTracker) extends ScanFuture(tracker) {
+class SequentialScanFuture[U](entityname : EntityName, query : NearestNeighbourQuery, onComplete: (ProgressiveQueryStatus.Value, DataFrame, Float, String, Map[String, String]) => U, val tracker : ProgressiveQueryStatusTracker)(implicit ac : AdamContext) extends ScanFuture(tracker) {
   tracker.register(this)
 
   val name = "sequential"

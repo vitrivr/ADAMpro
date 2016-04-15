@@ -2,12 +2,15 @@ package ch.unibas.dmi.dbis.adam.index
 
 import ch.unibas.dmi.dbis.adam.AdamTestBase
 import ch.unibas.dmi.dbis.adam.api.{DropEntityOp, DropIndexOp, IndexOp}
-import ch.unibas.dmi.dbis.adam.entity.Entity
+import ch.unibas.dmi.dbis.adam.entity.EntityHandler
 import ch.unibas.dmi.dbis.adam.index.structures.IndexTypes
 import ch.unibas.dmi.dbis.adam.main.SparkStartup
 import ch.unibas.dmi.dbis.adam.query.distance.EuclideanDistance
 
 import scala.util.Random
+
+import SparkStartup.Implicits._
+
 
 /**
   * adamtwo
@@ -28,7 +31,7 @@ class IndexTestSuite extends AdamTestBase {
     scenario("create and drop indexes") {
       Given("an entity without metadata and an index")
       val entityname = createSimpleEntity(ntuples, ndims)
-      val entity = Entity.load(entityname)
+      val entity = EntityHandler.load(entityname)
       assert(entity.isSuccess)
 
       When("creating the index")
@@ -36,13 +39,13 @@ class IndexTestSuite extends AdamTestBase {
       assert(index.isSuccess)
 
       Then("the index should be created")
-      assert(Index.exists(index.get.indexname))
+      assert(IndexHandler.exists(index.get.indexname))
 
       When("dropping the index")
       DropIndexOp(index.get.indexname)
 
       Then("the index should be dropped")
-      assert(!Index.exists(index.get.indexname))
+      assert(!IndexHandler.exists(index.get.indexname))
 
       //clean up
       DropEntityOp(entityname)
@@ -54,7 +57,7 @@ class IndexTestSuite extends AdamTestBase {
     scenario("create and drop indexes by dropping entity") {
       Given("an entity without metadata and an index")
       val entityname = createSimpleEntity(ntuples, ndims)
-      val entity = Entity.load(entityname)
+      val entity = EntityHandler.load(entityname)
       assert(entity.isSuccess)
 
       When("creating the index")
@@ -62,13 +65,13 @@ class IndexTestSuite extends AdamTestBase {
       assert(index.isSuccess)
 
       Then("the index should be created")
-      assert(Index.exists(index.get.indexname))
+      assert(IndexHandler.exists(index.get.indexname))
 
       When("dropping the entity")
       DropEntityOp(entityname)
 
       Then("the index should be dropped")
-      assert(!Index.exists(index.get.indexname))
+      assert(!IndexHandler.exists(index.get.indexname))
     }
 
     /**
@@ -77,7 +80,7 @@ class IndexTestSuite extends AdamTestBase {
     scenario("create eCP index") {
       Given("an entity without metadata")
       val entityname = createSimpleEntity(ntuples, ndims)
-      val entity = Entity.load(entityname)
+      val entity = EntityHandler.load(entityname)
       assert(entity.isSuccess)
 
       When("an eCP index is created")
@@ -85,7 +88,7 @@ class IndexTestSuite extends AdamTestBase {
       assert(index.isSuccess)
 
       Then("the index has been created")
-      assert(Index.exists(index.get.indexname))
+      assert(IndexHandler.exists(index.get.indexname))
       And("and the confidence is set properly")
       assert(index.get.confidence <= 1)
       And("all elements are indexed")
@@ -101,7 +104,7 @@ class IndexTestSuite extends AdamTestBase {
     scenario("create LSH index") {
       Given("an entity without metadata")
       val entityname = createSimpleEntity(ntuples, ndims)
-      val entity = Entity.load(entityname)
+      val entity = EntityHandler.load(entityname)
       assert(entity.isSuccess)
 
       When("an LSH index is created")
@@ -109,7 +112,7 @@ class IndexTestSuite extends AdamTestBase {
       assert(index.isSuccess)
 
       Then("the index has been created")
-      assert(Index.exists(index.get.indexname))
+      assert(IndexHandler.exists(index.get.indexname))
       And("and the confidence is set properly")
       assert(index.get.confidence <= 1)
       And("all elements are indexed")
@@ -125,7 +128,7 @@ class IndexTestSuite extends AdamTestBase {
     scenario("create PQ index") {
       Given("an entity without metadata")
       val entityname = createSimpleEntity(ntuples, ndims)
-      val entity = Entity.load(entityname)
+      val entity = EntityHandler.load(entityname)
       assert(entity.isSuccess)
 
       When("an SH index is created")
@@ -133,7 +136,7 @@ class IndexTestSuite extends AdamTestBase {
       assert(index.isSuccess)
 
       Then("the index has been created")
-      assert(Index.exists(index.get.indexname))
+      assert(IndexHandler.exists(index.get.indexname))
       And("and the confidence is set properly")
       assert(index.get.confidence <= 1)
       And("all elements are indexed")
@@ -149,7 +152,7 @@ class IndexTestSuite extends AdamTestBase {
     scenario("create SH index") {
       Given("an entity without metadata")
       val entityname = createSimpleEntity(ntuples, ndims)
-      val entity = Entity.load(entityname)
+      val entity = EntityHandler.load(entityname)
       assert(entity.isSuccess)
 
       When("an SH index is created")
@@ -157,7 +160,7 @@ class IndexTestSuite extends AdamTestBase {
       assert(index.isSuccess)
 
       Then("the index has been created")
-      assert(Index.exists(index.get.indexname))
+      assert(IndexHandler.exists(index.get.indexname))
       And("and the confidence is set properly")
       assert(index.get.confidence <= 1)
       And("all elements are indexed")
@@ -174,7 +177,7 @@ class IndexTestSuite extends AdamTestBase {
     scenario("create VA-File (fixed) index") {
       Given("an entity without metadata")
       val entityname = createSimpleEntity(ntuples, ndims)
-      val entity = Entity.load(entityname)
+      val entity = EntityHandler.load(entityname)
       assert(entity.isSuccess)
 
       When("an VA-File index is created")
@@ -182,7 +185,7 @@ class IndexTestSuite extends AdamTestBase {
       assert(index.isSuccess)
 
       Then("the index has been created")
-      assert(Index.exists(index.get.indexname))
+      assert(IndexHandler.exists(index.get.indexname))
       And("and the confidence is set properly")
       assert(index.get.confidence == 1)
       And("all elements are indexed")
@@ -199,7 +202,7 @@ class IndexTestSuite extends AdamTestBase {
     scenario("create VA-File (variable) index") {
       Given("an entity without metadata")
       val entityname = createSimpleEntity(ntuples, ndims)
-      val entity = Entity.load(entityname)
+      val entity = EntityHandler.load(entityname)
       assert(entity.isSuccess)
 
       When("an VA-File index is created")
@@ -207,7 +210,7 @@ class IndexTestSuite extends AdamTestBase {
       assert(index.isSuccess)
 
       Then("the index has been created")
-      assert(Index.exists(index.get.indexname))
+      assert(IndexHandler.exists(index.get.indexname))
       And("and the confidence is set properly")
       assert(index.get.confidence == 1)
       And("all elements are indexed")

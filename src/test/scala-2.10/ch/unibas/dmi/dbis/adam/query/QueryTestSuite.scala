@@ -19,6 +19,9 @@ import org.scalatest.concurrent.ScalaFutures
 
 import scala.concurrent.duration.Duration
 
+import SparkStartup.Implicits._
+
+
 /**
   * adampro
   *

@@ -1,7 +1,8 @@
 package ch.unibas.dmi.dbis.adam.api
 
 import ch.unibas.dmi.dbis.adam.entity.Entity._
-import ch.unibas.dmi.dbis.adam.index.Index._
+import ch.unibas.dmi.dbis.adam.index.Index.{IndexName, IndexTypeName}
+import ch.unibas.dmi.dbis.adam.main.AdamContext
 import ch.unibas.dmi.dbis.adam.query.datastructures.QueryExpression
 import ch.unibas.dmi.dbis.adam.query.handler.QueryHandler
 import ch.unibas.dmi.dbis.adam.query.handler.QueryHandler._
@@ -34,11 +35,11 @@ object QueryOp {
     * @param withMetadata whether or not to retrieve corresponding metadata
     * @return
     */
-  def apply(entityname: EntityName, hint: Option[QueryHint], nnq: Option[NearestNeighbourQuery], bq: Option[BooleanQuery], withMetadata: Boolean): DataFrame = {
+  def apply(entityname: EntityName, hint: Option[QueryHint], nnq: Option[NearestNeighbourQuery], bq: Option[BooleanQuery], withMetadata: Boolean)(implicit ac : AdamContext): DataFrame = {
     log.debug("perform standard query operation")
     QueryHandler.query(entityname, hint, nnq, bq, withMetadata)
   }
-  def apply(q: StandardQueryHolder): DataFrame = q.evaluate()
+  def apply(q: StandardQueryHolder)(implicit ac : AdamContext): DataFrame = q.evaluate()
 
   /**
     * Performs a sequential query, i.e., without using any index structure.
@@ -49,11 +50,11 @@ object QueryOp {
     * @param withMetadata whether or not to retrieve corresponding metadata
     * @return
     */
-  def sequential(entityname: EntityName, nnq: NearestNeighbourQuery, bq: Option[BooleanQuery], withMetadata: Boolean): DataFrame = {
+  def sequential(entityname: EntityName, nnq: NearestNeighbourQuery, bq: Option[BooleanQuery], withMetadata: Boolean)(implicit ac : AdamContext): DataFrame = {
     log.debug("perform sequential query operation")
     QueryHandler.sequentialQuery(entityname)(nnq, bq, withMetadata)
   }
-  def sequential(q: SequentialQueryHolder): DataFrame = q.evaluate()
+  def sequential(q: SequentialQueryHolder)(implicit ac : AdamContext): DataFrame = q.evaluate()
 
 
   /**
@@ -65,11 +66,11 @@ object QueryOp {
     * @param withMetadata whether or not to retrieve corresponding metadata
     * @return
     */
-  def index(indexname: IndexName, nnq: NearestNeighbourQuery, bq: Option[BooleanQuery], withMetadata: Boolean): DataFrame = {
+  def index(indexname: IndexName, nnq: NearestNeighbourQuery, bq: Option[BooleanQuery], withMetadata: Boolean)(implicit ac : AdamContext): DataFrame = {
     log.debug("perform index query operation")
     QueryHandler.specifiedIndexQuery(indexname)(nnq, bq, withMetadata)
   }
-  def index(q: SpecifiedIndexQueryHolder): DataFrame = q.evaluate()
+  def index(q: SpecifiedIndexQueryHolder)(implicit ac : AdamContext): DataFrame = q.evaluate()
 
   /**
     * Performs an index-based query.
@@ -81,11 +82,11 @@ object QueryOp {
     * @param withMetadata whether or not to retrieve corresponding metadata
     * @return
     */
-  def index(entityname: EntityName, indextypename: IndexTypeName, nnq: NearestNeighbourQuery, bq: Option[BooleanQuery], withMetadata: Boolean): DataFrame = {
+  def index(entityname: EntityName, indextypename: IndexTypeName, nnq: NearestNeighbourQuery, bq: Option[BooleanQuery], withMetadata: Boolean)(implicit ac : AdamContext): DataFrame = {
     log.debug("perform index query operation")
     QueryHandler.indexQuery(entityname, indextypename)(nnq, bq, withMetadata)
   }
-  def index(q: IndexQueryHolder): DataFrame = q.evaluate()
+  def index(q: IndexQueryHolder)(implicit ac : AdamContext): DataFrame = q.evaluate()
 
   /**
     * Performs a progressive query, i.e., all indexes and sequential search are started at the same time and results are returned as soon
@@ -98,12 +99,12 @@ object QueryOp {
     * @param withMetadata whether or not to retrieve corresponding metadata
     * @return a tracker for the progressive query
     */
-  def progressive[U](entityname: EntityName, nnq: NearestNeighbourQuery, bq: Option[BooleanQuery], onComplete: (ProgressiveQueryStatus.Value, DataFrame, Float, String, Map[String, String]) => U, withMetadata: Boolean): ProgressiveQueryStatusTracker = {
+  def progressive[U](entityname: EntityName, nnq: NearestNeighbourQuery, bq: Option[BooleanQuery], onComplete: (ProgressiveQueryStatus.Value, DataFrame, Float, String, Map[String, String]) => U, withMetadata: Boolean)(implicit ac : AdamContext): ProgressiveQueryStatusTracker = {
     log.debug("perform progressive query operation")
     QueryHandler.progressiveQuery(entityname)(nnq, bq, onComplete, withMetadata)
   }
 
-  def progressive(q: ProgressiveQueryHolder[_]) : ProgressiveQueryStatusTracker = progressive(q.entityname, q.nnq, q.bq, q.onComplete, q.withMetadata)
+  def progressive(q: ProgressiveQueryHolder[_])(implicit ac : AdamContext) : ProgressiveQueryStatusTracker = progressive(q.entityname, q.nnq, q.bq, q.onComplete, q.withMetadata)
 
 
   /**
@@ -117,12 +118,12 @@ object QueryOp {
     * @param withMetadata whether or not to retrieve corresponding metadata
     * @return the results available together with a confidence score
     */
-  def timedProgressive(entityname: EntityName, nnq: NearestNeighbourQuery, bq: Option[BooleanQuery], timelimit: Duration, withMetadata: Boolean): (DataFrame, Float, String) = {
+  def timedProgressive(entityname: EntityName, nnq: NearestNeighbourQuery, bq: Option[BooleanQuery], timelimit: Duration, withMetadata: Boolean)(implicit ac : AdamContext): (DataFrame, Float, String) = {
     log.debug("perform timed progressive query operation")
     QueryHandler.timedProgressiveQuery(entityname)(nnq, bq, timelimit, withMetadata)
   }
 
-  def timedProgressive(q: TimedProgressiveQueryHolder): (DataFrame, Float, String) = timedProgressive(q.entityname, q.nnq, q.bq, q.timelimit, q.withMetadata)
+  def timedProgressive(q: TimedProgressiveQueryHolder)(implicit ac : AdamContext): (DataFrame, Float, String) = timedProgressive(q.entityname, q.nnq, q.bq, q.timelimit, q.withMetadata)
 
   /**
     * Performs a query which uses index compounding for pre-filtering.
@@ -133,11 +134,11 @@ object QueryOp {
     * @param withMetadata
     * @return
     */
-  def compoundQuery(entityname: EntityName, nnq: NearestNeighbourQuery, expr : QueryExpression, withMetadata: Boolean): DataFrame = {
+  def compoundQuery(entityname: EntityName, nnq: NearestNeighbourQuery, expr : QueryExpression, withMetadata: Boolean)(implicit ac : AdamContext): DataFrame = {
     QueryHandler.compoundQuery(entityname)(nnq, expr, false, withMetadata)
   }
 
-  def compoundQuery(q : CompoundQueryHolder): DataFrame = q.evaluate()
+  def compoundQuery(q : CompoundQueryHolder)(implicit ac : AdamContext): DataFrame = q.evaluate()
 
   /**
     * Performs a boolean query.
@@ -145,7 +146,7 @@ object QueryOp {
     * @param entityname
     * @param bq
     */
-  def booleanQuery(entityname: EntityName, bq: Option[BooleanQuery]): DataFrame ={
+  def booleanQuery(entityname: EntityName, bq: Option[BooleanQuery])(implicit ac : AdamContext): DataFrame ={
     QueryHandler.booleanQuery(entityname )(bq)
   }
 

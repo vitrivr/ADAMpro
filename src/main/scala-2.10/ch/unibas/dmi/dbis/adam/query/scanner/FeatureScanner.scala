@@ -3,7 +3,7 @@ package ch.unibas.dmi.dbis.adam.query.scanner
 import ch.unibas.dmi.dbis.adam.datatypes.feature.Feature._
 import ch.unibas.dmi.dbis.adam.entity.Tuple.TupleID
 import ch.unibas.dmi.dbis.adam.entity.{Entity, Tuple}
-import ch.unibas.dmi.dbis.adam.main.SparkStartup
+import ch.unibas.dmi.dbis.adam.main.AdamContext
 import ch.unibas.dmi.dbis.adam.query.Result
 import ch.unibas.dmi.dbis.adam.query.query.NearestNeighbourQuery
 import org.apache.log4j.Logger
@@ -30,18 +30,18 @@ object FeatureScanner {
     * @param filter if filter is defined, we pre-filter for the features
     * @return
     */
-  def apply(entity: Entity, query: NearestNeighbourQuery, filter: Option[Set[TupleID]]): DataFrame = {
+  def apply(entity: Entity, query: NearestNeighbourQuery, filter: Option[Set[TupleID]])(implicit ac : AdamContext): DataFrame = {
     val data = if (filter.isDefined) {
       //scan based on tuples filtered in index
       log.debug("scan features with pre-filter")
-      SparkStartup.sc.setLocalProperty("spark.scheduler.pool", "feature")
-      SparkStartup.sc.setJobGroup(query.queryID.getOrElse(""), entity.entityname, true)
+      ac.sc.setLocalProperty("spark.scheduler.pool", "feature")
+      ac.sc.setJobGroup(query.queryID.getOrElse(""), entity.entityname, true)
       entity.filter(filter.get).collect()
     } else {
       //sequential scan
       log.debug("scan features without pre-filter")
-      SparkStartup.sc.setLocalProperty("spark.scheduler.pool", "slow")
-      SparkStartup.sc.setJobGroup(query.queryID.getOrElse(""), entity.entityname, true)
+      ac.sc.setLocalProperty("spark.scheduler.pool", "slow")
+      ac.sc.setJobGroup(query.queryID.getOrElse(""), entity.entityname, true)
       entity.getFeaturedata.map(row => (row: Tuple)).collect()
     }
 
@@ -59,7 +59,7 @@ object FeatureScanner {
     val result: ListBuffer[Result] = ls.sortBy(_.distance).take(query.k)
 
     //to DF
-    val rdd = SparkStartup.sc.parallelize(result).map(res => Row(res.distance, res.tid))
-    SparkStartup.sqlContext.createDataFrame(rdd, Result.resultSchema)
+    val rdd = ac.sc.parallelize(result).map(res => Row(res.distance, res.tid))
+    ac.sqlContext.createDataFrame(rdd, Result.resultSchema)
   }
 }

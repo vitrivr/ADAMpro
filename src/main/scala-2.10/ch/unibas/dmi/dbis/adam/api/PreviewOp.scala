@@ -1,7 +1,8 @@
 package ch.unibas.dmi.dbis.adam.api
 
-import ch.unibas.dmi.dbis.adam.entity.Entity
 import ch.unibas.dmi.dbis.adam.entity.Entity.EntityName
+import ch.unibas.dmi.dbis.adam.entity.EntityHandler
+import ch.unibas.dmi.dbis.adam.main.AdamContext
 import org.apache.log4j.Logger
 
 /**
@@ -22,8 +23,8 @@ object PreviewOp {
     * @param k number of elements to show in preview
     * @return
     */
-  def apply(entityname: EntityName, k: Int = 100): Seq[String] = {
+  def apply(entityname: EntityName, k: Int = 100)(implicit ac: AdamContext): Seq[String] = {
     log.debug("perform preview entity operation")
-    Entity.load(entityname).get.show(k).map(r => r.toString())
+    EntityHandler.load(entityname).get.show(k).map(r => r.toString())
   }
 }

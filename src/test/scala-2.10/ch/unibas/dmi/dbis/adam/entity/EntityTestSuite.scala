@@ -1,7 +1,7 @@
 package ch.unibas.dmi.dbis.adam.entity
 
 import ch.unibas.dmi.dbis.adam.AdamTestBase
-import ch.unibas.dmi.dbis.adam.api.{DropEntityOp, CreateEntityOp}
+import ch.unibas.dmi.dbis.adam.api.{CreateEntityOp, DropEntityOp}
 import ch.unibas.dmi.dbis.adam.config.FieldNames
 import ch.unibas.dmi.dbis.adam.datatypes.feature.{FeatureVectorWrapper, FeatureVectorWrapperUDT}
 import ch.unibas.dmi.dbis.adam.main.SparkStartup
@@ -11,6 +11,8 @@ import org.scalatest.Matchers._
 
 import scala.collection.mutable.ListBuffer
 import scala.util.Random
+
+import SparkStartup.Implicits._
 
 /**
   * adamtwo
@@ -25,14 +27,14 @@ class EntityTestSuite extends AdamTestBase {
       */
     scenario("create an entity") {
       Given("a database with a few elements already")
-      val givenEntities = Entity.list()
+      val givenEntities = EntityHandler.list()
 
       When("a new random entity (without any metadata) is created")
       val entityname = getRandomName()
       CreateEntityOp(entityname)
 
       Then("one entity should be created")
-      val finalEntities = Entity.list()
+      val finalEntities = EntityHandler.list()
       eventually {
         finalEntities.size shouldBe givenEntities.size + 1
       }
@@ -51,13 +53,13 @@ class EntityTestSuite extends AdamTestBase {
       Given("there exists one entity")
       val entityname = getRandomName()
       CreateEntityOp(entityname)
-      assert(Entity.list().contains(entityname))
+      assert(EntityHandler.list().contains(entityname))
 
       When("the entity is dropped")
       DropEntityOp(entityname)
 
       Then("the entity should no longer exist")
-      assert(!Entity.list().contains(entityname))
+      assert(!EntityHandler.list().contains(entityname))
     }
 
     /**
@@ -65,7 +67,7 @@ class EntityTestSuite extends AdamTestBase {
       */
     scenario("create an entity with metadata") {
       Given("a database with a few elements already")
-      val givenEntities = Entity.list()
+      val givenEntities = EntityHandler.list()
 
       When("a new random entity with metadata is created")
       val fieldTemplate = Seq(
@@ -81,8 +83,8 @@ class EntityTestSuite extends AdamTestBase {
       CreateEntityOp(entityname, Some(fieldTemplate.map(ft => (ft._1, FieldDefinition(ft._2))).toMap))
 
       Then("the entity should be created")
-      val entities = Entity.list()
-      val finalEntities = Entity.list()
+      val entities = EntityHandler.list()
+      val finalEntities = EntityHandler.list()
       assert(finalEntities.size == givenEntities.size + 1)
       assert(finalEntities.contains(entityname))
 
@@ -192,17 +194,17 @@ class EntityTestSuite extends AdamTestBase {
         StructField(FieldNames.featureColumnName, new FeatureVectorWrapperUDT, false)
       ))
 
-      val rdd = SparkStartup.sc.parallelize((0 until ntuples).map(id =>
+      val rdd = ac.sc.parallelize((0 until ntuples).map(id =>
         Row(new FeatureVectorWrapper(Seq.fill(ndims)(Random.nextFloat())))
       ))
 
-      val data = SparkStartup.sqlContext.createDataFrame(rdd, schema)
+      val data = ac.sqlContext.createDataFrame(rdd, schema)
 
       When("data without metadata is inserted")
-      Entity.insertData(entityname, data)
+      EntityHandler.insertData(entityname, data)
 
       Then("the data is available without metadata")
-      assert(Entity.countTuples(entityname) == ntuples)
+      assert(EntityHandler.countTuples(entityname) == ntuples)
 
       //clean up
       DropEntityOp(entityname)
@@ -241,7 +243,7 @@ class EntityTestSuite extends AdamTestBase {
       val schema = StructType(fieldTemplate.filterNot(_._1.endsWith("unfilled"))
         .map(field => StructField(field._1, field._2.datatype, false)).+:(StructField(FieldNames.featureColumnName, new FeatureVectorWrapperUDT, false)))
 
-      val rdd = SparkStartup.sc.parallelize((0 until ntuples).map(id =>
+      val rdd = ac.sc.parallelize((0 until ntuples).map(id =>
         Row(new FeatureVectorWrapper(Seq.fill(ndims)(Random.nextFloat())),
           Random.nextString(stringLength),
           math.abs(Random.nextFloat()),
@@ -251,13 +253,13 @@ class EntityTestSuite extends AdamTestBase {
           Random.nextBoolean()
         )))
 
-      val data = SparkStartup.sqlContext.createDataFrame(rdd, schema)
+      val data = ac.sqlContext.createDataFrame(rdd, schema)
 
       When("data with metadata is inserted")
-      Entity.insertData(entityname, data)
+      EntityHandler.insertData(entityname, data)
 
       Then("the data is available with metadata")
-      assert(Entity.countTuples(entityname) == ntuples)
+      assert(EntityHandler.countTuples(entityname) == ntuples)
 
       And("all tuples are inserted")
       val countResult = getJDBCConnection.createStatement().executeQuery("SELECT COUNT(*) AS count FROM " + entityname)

@@ -1,7 +1,7 @@
 package ch.unibas.dmi.dbis.adam.api
 
-import ch.unibas.dmi.dbis.adam.entity.{FieldDefinition, Entity}
 import ch.unibas.dmi.dbis.adam.entity.Entity._
+import ch.unibas.dmi.dbis.adam.entity.{EntityHandler, Entity, FieldDefinition}
 import org.apache.log4j.Logger
 
 import scala.util.Try
@@ -28,6 +28,6 @@ object CreateEntityOp {
     */
   def apply(entityname: EntityName, fields: Option[Map[String, FieldDefinition]] = None): Try[Entity] = {
     log.debug("perform create entity operation")
-    Entity.create(entityname, fields)
+    EntityHandler.create(entityname, fields)
   }
 }

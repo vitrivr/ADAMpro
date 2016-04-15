@@ -1,7 +1,7 @@
 package ch.unibas.dmi.dbis.adam.query.progressive
 
 import ch.unibas.dmi.dbis.adam.config.AdamConfig
-import ch.unibas.dmi.dbis.adam.main.SparkStartup
+import ch.unibas.dmi.dbis.adam.main.AdamContext
 import org.apache.log4j.Logger
 import org.apache.spark.sql.DataFrame
 
@@ -27,7 +27,7 @@ case class ProgressiveQueryIntermediateResults(confidence: Float, results: DataF
 }
 
 
-class ProgressiveQueryStatusTracker(queryID: String) extends Future[ProgressiveQueryIntermediateResults] {
+class ProgressiveQueryStatusTracker(queryID: String)(implicit ac : AdamContext) extends Future[ProgressiveQueryIntermediateResults] {
   val log = Logger.getLogger(getClass.getName)
 
   private val futures = ListBuffer[ScanFuture]()
@@ -96,7 +96,7 @@ class ProgressiveQueryStatusTracker(queryID: String) extends Future[ProgressiveQ
 
     futures.synchronized {
       log.debug("stopping progressive query with status " + newStatus)
-      SparkStartup.sc.cancelJobGroup(queryID)
+      ac.sc.cancelJobGroup(queryID)
       futures.clear()
     }
 

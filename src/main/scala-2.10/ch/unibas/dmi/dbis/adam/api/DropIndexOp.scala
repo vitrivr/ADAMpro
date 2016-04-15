@@ -1,7 +1,7 @@
 package ch.unibas.dmi.dbis.adam.api
 
-import ch.unibas.dmi.dbis.adam.index.Index
 import ch.unibas.dmi.dbis.adam.index.Index.IndexName
+import ch.unibas.dmi.dbis.adam.index.IndexHandler
 import org.apache.log4j.Logger
 
 /**
@@ -24,7 +24,7 @@ object DropIndexOp {
     */
   def apply(indexname: IndexName): Boolean = {
     log.debug("perform drop index operation")
-    Index.drop(indexname).isSuccess
+    IndexHandler.drop(indexname).isSuccess
   }
 }
 
