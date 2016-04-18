@@ -28,6 +28,8 @@ class SearchRPC(implicit ac : AdamContext) extends AdamSearchGrpc.AdamSearch {
   val log = Logger.getLogger(getClass.getName)
 
 
+  //TODO: possibly start new 'lightweight' AdamContext with each new query
+
   /**
     *
     * @param request
