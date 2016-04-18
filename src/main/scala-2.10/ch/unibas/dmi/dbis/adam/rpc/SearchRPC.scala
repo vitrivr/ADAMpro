@@ -165,10 +165,8 @@ class SearchRPC(implicit ac : AdamContext) extends AdamSearchGrpc.AdamSearch {
     */
   override def doTimedProgressiveQuery(request: TimedQueryMessage): Future[QueryResponseInfoMessage] = {
     log.debug("rpc call for timed progressive query operation")
-
     try {
-
-        val (df, confidence, source) = QueryOp.timedProgressive(request.entity, SearchRPCMethods.prepareNNQ(request.nnq), SearchRPCMethods.prepareBQ(request.bq), Duration(request.time, TimeUnit.MILLISECONDS), request.withMetadata)
+      val (df, confidence, source) = QueryOp.timedProgressive(request.entity, SearchRPCMethods.prepareNNQ(request.nnq), SearchRPCMethods.prepareBQ(request.bq), Duration(request.time, TimeUnit.MILLISECONDS), request.withMetadata)
       Future.successful(prepareResults(request.queryid, confidence, 0, source, df))
     } catch {
       case e: Exception => {
