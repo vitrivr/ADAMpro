@@ -318,6 +318,9 @@ class QueryTestSuite extends AdamTestBase with ScalaFutures {
       SparkStartup.metadataStorage.drop(metadataname)
     }
 
+    /**
+      * 
+      */
     scenario("perform a simple Boolean query (without NN)") {
       Given("an entity and a joinable table")
       val es = getGroundTruthEvaluationSet()
