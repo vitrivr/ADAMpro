@@ -163,15 +163,8 @@ private[query] object NearestNeighbourQueryHandler {
     */
   def timedProgressiveQuery(entityname: EntityName, query: NearestNeighbourQuery, filter: Option[Set[TupleID]], timelimit: Duration)(implicit ac : AdamContext): ProgressiveQueryIntermediateResults = {
     log.debug("starting timed progressive query scanner")
-    if(!isQueryConform(entityname, query)){
-      throw QueryNotConformException()
-    }
 
-    val indexnames = IndexHandler.list(entityname).map(_._1)
-
-    val options = mMap[String, String]()
-
-    val tracker = new ProgressiveQueryStatusTracker(query.queryID.get)
+    val tracker = progressiveQuery(entityname, query, filter, (status, result, confidence, source, info) => ())
 
     val timerFuture = Future {
       val sleepTime = Duration(500.toLong, "millis")
@@ -182,15 +175,7 @@ private[query] object NearestNeighbourQueryHandler {
         Thread.sleep(sleepTime.toMillis)
       }
     }
-
-    //index scans
-    val indexScanFutures = indexnames.par.map { indexname =>
-      val isf = new IndexScanFuture(indexname, query, (status, result, confidence, source, info) => (), tracker)
-    }
-
-    //sequential scan
-    val ssf = new SequentialScanFuture(entityname, query, (status, result, confidence, source, info) => (), tracker)
-
+    
     Await.result(timerFuture, timelimit)
     tracker.stop()
     log.debug("timed progressive query stopped")
