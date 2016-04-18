@@ -19,6 +19,7 @@ service AdamDefinition {
   rpc Count(EntityNameMessage) returns (AckMessage) {}
   //generates an entity with random data and with all available indexes (for demo purposes)
   rpc PrepareForDemo(GenerateRandomEntityMessage) returns (AckMessage) {}
+  rpc ListEntities(Empty) returns (EntitiesMessage) {}
 }
 
 service AdamSearch {
@@ -49,8 +50,7 @@ service AdamSearch {
 
 
 
-
-//****  GLOBAL ENUMS ****//
+//****  GLOBALS ****//
 
 enum IndexType {
     ecp = 0;
@@ -59,6 +59,9 @@ enum IndexType {
     sh = 3;
     vaf = 4;
     vav = 5;
+}
+
+message Empty {
 }
 
 
@@ -112,6 +115,16 @@ message IndexMessage {
   //for possible options see each index structure
   map<string, string> options = 4;
 }
+
+
+
+
+
+
+//****  METADATA REQUESTS ****//
+
+message EntitiesMessage {
+  repeated string entities = 1;
 
 
 

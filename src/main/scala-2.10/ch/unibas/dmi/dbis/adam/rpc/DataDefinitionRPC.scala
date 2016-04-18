@@ -190,4 +190,8 @@ class DataDefinitionRPC(implicit ac: AdamContext) extends AdamDefinitionGrpc.Ada
         Future.successful(AckMessage(code = AckMessage.Code.ERROR, message = e.getMessage))
     }
   }
+
+  override def listEntities(request: Empty): Future[EntitiesMessage] = {
+    Future.successful(EntitiesMessage(ListEntitiesOp()))
+  }
 }

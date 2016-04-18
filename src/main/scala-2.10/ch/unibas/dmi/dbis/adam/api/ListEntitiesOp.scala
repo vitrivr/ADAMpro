@@ -11,7 +11,7 @@ import org.apache.log4j.Logger
   * Ivan Giangreco
   * August 2015
   */
-object ListEntityOp {
+object ListEntitiesOp {
   val log = Logger.getLogger(getClass.getName)
 
   /**
