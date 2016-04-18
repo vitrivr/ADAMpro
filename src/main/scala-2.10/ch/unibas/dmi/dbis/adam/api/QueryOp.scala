@@ -7,7 +7,7 @@ import ch.unibas.dmi.dbis.adam.query.datastructures.QueryExpression
 import ch.unibas.dmi.dbis.adam.query.handler.QueryHandler
 import ch.unibas.dmi.dbis.adam.query.handler.QueryHandler._
 import ch.unibas.dmi.dbis.adam.query.handler.QueryHints._
-import ch.unibas.dmi.dbis.adam.query.progressive.{ProgressiveQueryStatus, ProgressiveQueryStatusTracker}
+import ch.unibas.dmi.dbis.adam.query.progressive.{ProgressivePathChooser, ProgressiveQueryStatus, ProgressiveQueryStatusTracker}
 import ch.unibas.dmi.dbis.adam.query.query.{BooleanQuery, NearestNeighbourQuery}
 import org.apache.log4j.Logger
 import org.apache.spark.sql.DataFrame
@@ -99,9 +99,9 @@ object QueryOp {
     * @param withMetadata whether or not to retrieve corresponding metadata
     * @return a tracker for the progressive query
     */
-  def progressive[U](entityname: EntityName, nnq: NearestNeighbourQuery, bq: Option[BooleanQuery], onComplete: (ProgressiveQueryStatus.Value, DataFrame, Float, String, Map[String, String]) => U, withMetadata: Boolean)(implicit ac : AdamContext): ProgressiveQueryStatusTracker = {
+  def progressive[U](entityname: EntityName, nnq: NearestNeighbourQuery, bq: Option[BooleanQuery], paths : ProgressivePathChooser, onComplete: (ProgressiveQueryStatus.Value, DataFrame, Float, String, Map[String, String]) => U, withMetadata: Boolean)(implicit ac : AdamContext): ProgressiveQueryStatusTracker = {
     log.debug("perform progressive query operation")
-    QueryHandler.progressiveQuery(entityname)(nnq, bq, onComplete, withMetadata)
+    QueryHandler.progressiveQuery(entityname)(nnq, bq, paths, onComplete, withMetadata)
   }
 
 
@@ -116,9 +116,9 @@ object QueryOp {
     * @param withMetadata whether or not to retrieve corresponding metadata
     * @return the results available together with a confidence score
     */
-  def timedProgressive(entityname: EntityName, nnq: NearestNeighbourQuery, bq: Option[BooleanQuery], timelimit: Duration, withMetadata: Boolean)(implicit ac : AdamContext): (DataFrame, Float, String) = {
+  def timedProgressive(entityname: EntityName, nnq: NearestNeighbourQuery, bq: Option[BooleanQuery], paths : ProgressivePathChooser, timelimit: Duration, withMetadata: Boolean)(implicit ac : AdamContext): (DataFrame, Float, String) = {
     log.debug("perform timed progressive query operation")
-    QueryHandler.timedProgressiveQuery(entityname)(nnq, bq, timelimit, withMetadata)
+    QueryHandler.timedProgressiveQuery(entityname)(nnq, bq, paths, timelimit, withMetadata)
   }
 
   /**

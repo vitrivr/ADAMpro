@@ -11,7 +11,7 @@ import ch.unibas.dmi.dbis.adam.query.datastructures.CompoundQueryExpressions.{Ex
 import ch.unibas.dmi.dbis.adam.query.distance.EuclideanDistance
 import ch.unibas.dmi.dbis.adam.query.handler.CompoundQueryHandler
 import ch.unibas.dmi.dbis.adam.query.handler.QueryHandler.SpecifiedIndexQueryHolder
-import ch.unibas.dmi.dbis.adam.query.progressive.ProgressiveQueryStatus
+import ch.unibas.dmi.dbis.adam.query.progressive.{AllProgressivePathChooser, ProgressiveQueryStatus}
 import ch.unibas.dmi.dbis.adam.query.query.{BooleanQuery, NearestNeighbourQuery}
 import org.apache.log4j.Logger
 import org.apache.spark.sql.DataFrame
@@ -387,7 +387,7 @@ class QueryTestSuite extends AdamTestBase with ScalaFutures {
 
       When("performing a kNN progressive query")
       val nnq = NearestNeighbourQuery(es.feature.vector, es.distance, es.k)
-      val statusTracker = QueryOp.progressive(es.entity.entityname, nnq, None, processResults, true)
+      val statusTracker = QueryOp.progressive(es.entity.entityname, nnq, None, new AllProgressivePathChooser(), processResults, true)
 
       whenReady(statusTracker) { result =>
         Then("the confidence should be 1.0")
@@ -414,7 +414,7 @@ class QueryTestSuite extends AdamTestBase with ScalaFutures {
 
       When("performing a kNN progressive query")
       val nnq = NearestNeighbourQuery(es.feature.vector, es.distance, es.k)
-      val (tpqRes, confidence, source) = QueryOp.timedProgressive(es.entity.entityname, nnq, None, timelimit, true)
+      val (tpqRes, confidence, source) = QueryOp.timedProgressive(es.entity.entityname, nnq, None, new AllProgressivePathChooser(), timelimit, true)
 
       Then("we should have a match at least in the first element")
       val results = tpqRes.map(r => (r.getAs[Float](FieldNames.distanceColumnName), r.getAs[Long]("tid"))).collect() //get here TID of metadata
