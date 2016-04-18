@@ -186,5 +186,5 @@ case class FieldDefinition(fieldtype: FieldType, pk: Boolean = false, unique: Bo
 
 
 object Entity {
-  type EntityName = String
+  type EntityName = EntityNameHolder
 }

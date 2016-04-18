@@ -77,7 +77,7 @@ object PostgresqlMetadataStorage extends MetadataStorage {
 
     import SparkStartup.Implicits._
     sqlContext.read.format("jdbc").options(
-      Map("url" -> url, "dbtable" -> tablename, "user" -> AdamConfig.jdbcUser, "password" -> AdamConfig.jdbcPassword)
+      Map("url" -> url, "dbtable" -> tablename.toString(), "user" -> AdamConfig.jdbcUser, "password" -> AdamConfig.jdbcPassword)
     ).load()
   }
 

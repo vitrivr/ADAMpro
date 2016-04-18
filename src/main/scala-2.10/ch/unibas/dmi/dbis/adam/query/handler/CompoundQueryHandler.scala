@@ -28,7 +28,7 @@ private[query] object CompoundQueryHandler {
     * @param withMetadata
     * @return
     */
-  def indexQueryWithResults(entityname: EntityName)(nnq: NearestNeighbourQuery, expr: QueryExpression, withMetadata: Boolean)(implicit ac : AdamContext): DataFrame = {
+  def indexQueryWithResults(entityname: EntityName)(nnq: NearestNeighbourQuery, expr: QueryExpression, withMetadata: Boolean)(implicit ac: AdamContext): DataFrame = {
     val tidFilter = expr.evaluate().map(x => Result(0.toFloat, x.getAs[Long](FieldNames.idColumnName))).map(_.tid).collect().toSet
     var res = FeatureScanner(EntityHandler.load(entityname).get, nnq, Some(tidFilter))
 
@@ -42,10 +42,13 @@ private[query] object CompoundQueryHandler {
 
   /**
     *
+    * @param entityname
     * @param expr
+    * @param withMetadata
+    * @param ac
     * @return
     */
-  def indexOnlyQuery(entityname: EntityName = "")(expr: QueryExpression, withMetadata: Boolean = false)(implicit ac : AdamContext): DataFrame = {
+  def indexOnlyQuery(entityname: EntityName)(expr: QueryExpression, withMetadata: Boolean = false)(implicit ac: AdamContext): DataFrame = {
     val tidFilter = expr.evaluate().map(x => Result(0.toFloat, x.getAs[Long](FieldNames.idColumnName))).map(_.tid).collect().toSet
 
     val rdd = ac.sc.parallelize(tidFilter.toSeq).map(res => Row(0.toFloat, res))
@@ -56,10 +59,8 @@ private[query] object CompoundQueryHandler {
       res = QueryHandler.joinWithMetadata(entityname, res)
     }
 
-   res
+    res
   }
-
-
 
 
 }

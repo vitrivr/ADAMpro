@@ -49,7 +49,7 @@ class AdamTestBase extends FeatureSpec with GivenWhenThen with Eventually with I
     */
   def getRandomName(len: Int = 10) = {
     val sb = new StringBuilder(len)
-    val ab = "abcdefghijklmnopqrstuvwxyz"
+    val ab = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
     for (i <- 0 until len) {
       sb.append(ab(Random.nextInt(ab.length)))
     }

@@ -53,13 +53,13 @@ class EntityTestSuite extends AdamTestBase {
       Given("there exists one entity")
       val entityname = getRandomName()
       CreateEntityOp(entityname)
-      assert(EntityHandler.list().contains(entityname))
+      assert(EntityHandler.list().contains(entityname.toLowerCase()))
 
       When("the entity is dropped")
       DropEntityOp(entityname)
 
       Then("the entity should no longer exist")
-      assert(!EntityHandler.list().contains(entityname))
+      assert(!EntityHandler.list().contains(entityname.toLowerCase()))
     }
 
     /**
@@ -86,10 +86,10 @@ class EntityTestSuite extends AdamTestBase {
       val entities = EntityHandler.list()
       val finalEntities = EntityHandler.list()
       assert(finalEntities.size == givenEntities.size + 1)
-      assert(finalEntities.contains(entityname))
+      assert(finalEntities.contains(entityname.toLowerCase()))
 
       And("The metadata table should have been created")
-      val result = getJDBCConnection.createStatement().executeQuery("SELECT column_name, data_type FROM information_schema.columns WHERE table_schema = 'public' AND table_name = '" + entityname + "'")
+      val result = getJDBCConnection.createStatement().executeQuery("SELECT column_name, data_type FROM information_schema.columns WHERE table_schema = 'public' AND table_name = '" + entityname.toLowerCase() + "'")
 
       val lb = new ListBuffer[(String, String)]()
       while (result.next) {
@@ -105,7 +105,7 @@ class EntityTestSuite extends AdamTestBase {
       assert(dbNames.keySet.forall({ key => dbNames(key) == templateNames(key) }))
 
       And("the index on the id field is created")
-      val indexesResult = getJDBCConnection.createStatement().executeQuery("SELECT t.relname AS table, i.relname AS index, a.attname AS column FROM pg_class t, pg_class i, pg_index ix, pg_attribute a WHERE t.oid = ix.indrelid AND i.oid = ix.indexrelid AND a.attrelid = t.oid AND a.attnum = ANY(ix.indkey) AND t.relkind = 'r' AND t.relname = '" + entityname + "' AND a.attname = '" + FieldNames.idColumnName + "'")
+      val indexesResult = getJDBCConnection.createStatement().executeQuery("SELECT t.relname AS table, i.relname AS index, a.attname AS column FROM pg_class t, pg_class i, pg_index ix, pg_attribute a WHERE t.oid = ix.indrelid AND i.oid = ix.indexrelid AND a.attrelid = t.oid AND a.attnum = ANY(ix.indkey) AND t.relkind = 'r' AND t.relname = '" + entityname.toLowerCase() + "' AND a.attname = '" + FieldNames.idColumnName + "'")
       indexesResult.next()
       assert(indexesResult.getString(3) == FieldNames.idColumnName)
 
@@ -122,7 +122,7 @@ class EntityTestSuite extends AdamTestBase {
       val fields = Map[String, FieldDefinition](("stringfield" -> FieldDefinition(FieldTypes.STRINGTYPE)))
       CreateEntityOp(entityname, Option(fields))
 
-      val preResult = getJDBCConnection.createStatement().executeQuery("SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = '" + entityname + "'")
+      val preResult = getJDBCConnection.createStatement().executeQuery("SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = '" + entityname.toLowerCase() + "'")
       var tableCount = 0
       while (preResult.next) {
         tableCount += 1
@@ -132,7 +132,7 @@ class EntityTestSuite extends AdamTestBase {
       DropEntityOp(entityname)
 
       Then("the metadata entity is dropped as well")
-      val postResult = getJDBCConnection.createStatement().executeQuery("SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = '" + entityname + "'")
+      val postResult = getJDBCConnection.createStatement().executeQuery("SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = '" + entityname.toLowerCase() + "'")
       while (postResult.next) {
         tableCount -= 1
       }
@@ -158,12 +158,12 @@ class EntityTestSuite extends AdamTestBase {
 
       Then("the PK should be correctly")
       val pkResult = getJDBCConnection.createStatement().executeQuery(
-        "SELECT a.attname FROM pg_index i JOIN   pg_attribute a ON a.attrelid = i.indrelid AND a.attnum = ANY(i.indkey) WHERE  i.indrelid = '" + entityname + "'::regclass AND i.indisprimary;")
+        "SELECT a.attname FROM pg_index i JOIN   pg_attribute a ON a.attrelid = i.indrelid AND a.attnum = ANY(i.indkey) WHERE  i.indrelid = '" + entityname.toLowerCase() + "'::regclass AND i.indisprimary;")
       pkResult.next()
       assert(pkResult.getString(1) == "pkfield")
 
       And("the unique and indexed fields should be set correctly")
-      val indexesResult = getJDBCConnection.createStatement().executeQuery("SELECT t.relname AS table, i.relname AS index, a.attname AS column FROM pg_class t, pg_class i, pg_index ix, pg_attribute a WHERE t.oid = ix.indrelid AND i.oid = ix.indexrelid AND a.attrelid = t.oid AND a.attnum = ANY(ix.indkey) AND t.relkind = 'r' AND t.relname = '" + entityname + "'")
+      val indexesResult = getJDBCConnection.createStatement().executeQuery("SELECT t.relname AS table, i.relname AS index, a.attname AS column FROM pg_class t, pg_class i, pg_index ix, pg_attribute a WHERE t.oid = ix.indrelid AND i.oid = ix.indexrelid AND a.attrelid = t.oid AND a.attnum = ANY(ix.indkey) AND t.relkind = 'r' AND t.relname = '" + entityname.toLowerCase() + "'")
       val indexesLb = ListBuffer.empty[String]
       while(indexesResult.next()){
         indexesLb += indexesResult.getString("column")

@@ -1,5 +1,6 @@
 package ch.unibas.dmi.dbis.adam.api
 
+import ch.unibas.dmi.dbis.adam.entity.Entity.EntityName
 import ch.unibas.dmi.dbis.adam.entity.EntityHandler
 import org.apache.log4j.Logger
 
@@ -19,7 +20,7 @@ object ListEntitiesOp {
  *
     * @return
     */
-  def apply(): Seq[String] = {
+  def apply(): Seq[EntityName] = {
     log.debug("perform list entities operation")
     EntityHandler.list
   }

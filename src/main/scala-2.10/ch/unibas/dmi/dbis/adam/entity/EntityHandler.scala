@@ -172,7 +172,7 @@ object EntityHandler {
     *
     * @return name of entities
     */
-  def list(): List[EntityName] = CatalogOperator.listEntities()
+  def list(): Seq[EntityName] = CatalogOperator.listEntities()
 
   /**
     *

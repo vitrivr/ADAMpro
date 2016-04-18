@@ -4,6 +4,7 @@ import java.io._
 
 import ch.unibas.dmi.dbis.adam.config.AdamConfig
 import ch.unibas.dmi.dbis.adam.entity.Entity.EntityName
+import ch.unibas.dmi.dbis.adam.entity.EntityNameHolder
 import ch.unibas.dmi.dbis.adam.exception.{EntityExistingException, EntityNotExistingException, IndexExistingException, IndexNotExistingException}
 import ch.unibas.dmi.dbis.adam.index.Index.{IndexName, IndexTypeName}
 import ch.unibas.dmi.dbis.adam.index.structures.IndexTypes
@@ -81,7 +82,7 @@ object CatalogOperator {
       }
     }
 
-    val query = entities.filter(_.entityname === entityname).delete
+    val query = entities.filter(_.entityname === entityname.toString()).delete
     val count = Await.result(db.run(query), MAX_WAITING_TIME)
 
     log.debug("dropped entity from catalog")
@@ -96,7 +97,7 @@ object CatalogOperator {
     * @return
     */
   def existsEntity(entityname: EntityName): Boolean = {
-    val query = entities.filter(_.entityname === entityname).length.result
+    val query = entities.filter(_.entityname === entityname.toString()).length.result
     val count = Await.result(db.run(query), MAX_WAITING_TIME)
 
     (count > 0)
@@ -108,7 +109,7 @@ object CatalogOperator {
     * @return
     */
   def getDimensionality(entityname: EntityName): Option[Int] = {
-    val query = entities.filter(_.entityname === entityname).take(1).result
+    val query = entities.filter(_.entityname === entityname.toString()).take(1).result
     val entity = Await.result(db.run(query), MAX_WAITING_TIME).head
 
     if(entity._2 != DEFAULT_DIMENSIONALITY){
@@ -125,7 +126,7 @@ object CatalogOperator {
     * @return
     */
   def updateDimensionality(entityname: EntityName, dimensionality: Int): Boolean = {
-    val query = entities.filter(_.entityname === entityname).take(1).result
+    val query = entities.filter(_.entityname === entityname.toString()).take(1).result
     val entity = Await.result(db.run(query), MAX_WAITING_TIME).head
 
     if (entity._2 != DEFAULT_DIMENSIONALITY && entity._2 != dimensionality) {
@@ -136,7 +137,7 @@ object CatalogOperator {
     } else {
 
       val setup = DBIO.seq(
-        entities.filter(_.entityname === entityname).update(entity._1, dimensionality, entity._3)
+        entities.filter(_.entityname === entityname.toString()).update(entity._1, dimensionality, entity._3)
       )
 
       Await.result(db.run(setup), MAX_WAITING_TIME)
@@ -153,7 +154,7 @@ object CatalogOperator {
     * @return
     */
   def hasEntityMetadata(entityname: EntityName): Boolean = {
-    val query = entities.filter(_.entityname === entityname).map(_.hasMeta).take(1).result
+    val query = entities.filter(_.entityname === entityname.toString()).map(_.hasMeta).take(1).result
     Await.result(db.run(query), MAX_WAITING_TIME).head
   }
 
@@ -162,9 +163,9 @@ object CatalogOperator {
     *
     * @return name of entities
     */
-  def listEntities(): List[EntityName] = {
+  def listEntities(): Seq[EntityName] = {
     val query = entities.map(_.entityname).result
-    Await.result(db.run(query), MAX_WAITING_TIME).toList
+    Await.result(db.run(query), MAX_WAITING_TIME).map(EntityNameHolder(_))
   }
 
   /**
@@ -249,7 +250,7 @@ object CatalogOperator {
 
     val existingIndexes = listIndexes(entityname).map(_._1)
 
-    val query = indexes.filter(_.entityname === entityname).delete
+    val query = indexes.filter(_.entityname === entityname.toString()).delete
     Await.result(db.run(query), MAX_WAITING_TIME)
 
     existingIndexes
@@ -266,7 +267,7 @@ object CatalogOperator {
     var catalog: Query[IndexesCatalog, (String, String, String, String), Seq] = indexes
 
     if (entityname != null) {
-      catalog = catalog.filter(_.entityname === entityname)
+      catalog = catalog.filter(_.entityname === entityname.toString())
     }
 
     if (indextypename != null) {
@@ -311,6 +312,7 @@ object CatalogOperator {
     */
   def getEntitynameFromIndex(indexname: IndexName): EntityName = {
     val query = indexes.filter(_.indexname === indexname).map(_.entityname).result.head
-    Await.result(db.run(query), MAX_WAITING_TIME)
+    val name = Await.result(db.run(query), MAX_WAITING_TIME)
+    EntityNameHolder(name)
   }
 }
