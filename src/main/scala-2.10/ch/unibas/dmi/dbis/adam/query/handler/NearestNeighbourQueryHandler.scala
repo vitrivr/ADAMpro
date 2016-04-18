@@ -1,9 +1,7 @@
 package ch.unibas.dmi.dbis.adam.query.handler
 
-import java.util.concurrent.TimeUnit
-
-import ch.unibas.dmi.dbis.adam.entity.{EntityHandler, Entity}
 import ch.unibas.dmi.dbis.adam.entity.Entity.EntityName
+import ch.unibas.dmi.dbis.adam.entity.EntityHandler
 import ch.unibas.dmi.dbis.adam.entity.Tuple.TupleID
 import ch.unibas.dmi.dbis.adam.exception.QueryNotConformException
 import ch.unibas.dmi.dbis.adam.index.Index.IndexName
@@ -90,14 +88,10 @@ private[query] object NearestNeighbourQueryHandler {
       throw QueryNotConformException()
     }
 
-    val future = Future {
-      EntityHandler.load(entityname).get
-    }
-
     log.debug("starting index scanner")
     val tidList = IndexScanner(IndexHandler.load(indexname).get, query, filter)
 
-    val entity = Await.result[Entity](future, Duration(100, TimeUnit.SECONDS))
+    val entity = EntityHandler.load(entityname).get
 
     log.debug("starting feature scanner")
     FeatureScanner(entity, query, Some(tidList.map(_.tid)))
