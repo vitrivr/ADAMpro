@@ -13,19 +13,19 @@ import org.apache.spark.rdd.RDD
 import org.apache.spark.util.random.ADAMSamplingUtils
 
 
-class LSHIndexer(numHashTables : Int, numHashes : Int, distance : DistanceFunction, trainingSize : Int)(@transient implicit val ac : AdamContext) extends IndexGenerator with Serializable {
+class LSHIndexer(numHashTables: Int, numHashes: Int, distance: DistanceFunction, trainingSize: Int)(@transient implicit val ac: AdamContext) extends IndexGenerator with Serializable {
   @transient lazy val log = Logger.getLogger(getClass.getName)
 
   override val indextypename: IndexTypeName = IndexTypes.LSHINDEX
 
   /**
-   *
-   * @param indexname
-   * @param entityname
-   * @param data
-   * @return
-   */
-  override def index(indexname : IndexName, entityname : EntityName, data: RDD[IndexingTaskTuple]): Index = {
+    *
+    * @param indexname
+    * @param entityname
+    * @param data
+    * @return
+    */
+  override def index(indexname: IndexName, entityname: EntityName, data: RDD[IndexingTaskTuple]): Index = {
     val n = EntityHandler.countTuples(entityname)
     val fraction = ADAMSamplingUtils.computeFractionForSampleSize(trainingSize, n, false)
     val trainData = data.sample(false, fraction)
@@ -45,24 +45,20 @@ class LSHIndexer(numHashTables : Int, numHashes : Int, distance : DistanceFuncti
   }
 
   /**
-   *
-   * @param trainData
-   * @return
-   */
-  private def train(trainData : Array[IndexingTaskTuple]) : LSHIndexMetaData = {
+    *
+    * @param trainData
+    * @return
+    */
+  private def train(trainData: Array[IndexingTaskTuple]): LSHIndexMetaData = {
     log.debug("LSH started training")
 
     //data
     val dims = trainData.head.feature.size
 
     val radiuses = {
-        val res = for (a <- trainData; b <- trainData) yield distance(a.feature, b.feature)
-        if(res.isEmpty){
-          Seq().iterator
-        }  else {
-          Seq(res.max).iterator
-        }
-      }
+      val res = for (a <- trainData; b <- trainData) yield (a.id, distance(a.feature, b.feature))
+      res.groupBy(_._1).map(x => x._2.map(_._2).max)
+    }.toSeq
     val radius = radiuses.sum / radiuses.length
 
     val hashFamily = distance match {
@@ -81,10 +77,10 @@ class LSHIndexer(numHashTables : Int, numHashes : Int, distance : DistanceFuncti
 
 object LSHIndexer {
   /**
-   *
-   * @param properties
-   */
-  def apply(distance : DistanceFunction, properties : Map[String, String] = Map[String, String]())(implicit ac : AdamContext) : IndexGenerator = {
+    *
+    * @param properties
+    */
+  def apply(distance: DistanceFunction, properties: Map[String, String] = Map[String, String]())(implicit ac: AdamContext): IndexGenerator = {
     val numHashTables = properties.getOrElse("nhashtables", "64").toInt
     val numHashes = properties.getOrElse("nhashes", "64").toInt
 
