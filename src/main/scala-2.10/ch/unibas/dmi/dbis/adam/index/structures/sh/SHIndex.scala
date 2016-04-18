@@ -14,6 +14,8 @@ import ch.unibas.dmi.dbis.adam.query.distance.{DistanceFunction, MinkowskiDistan
 import ch.unibas.dmi.dbis.adam.query.query.NearestNeighbourQuery
 import org.apache.spark.sql.DataFrame
 
+import scala.collection.mutable.ListBuffer
+
 
 /**
  * adamtwo
@@ -53,10 +55,30 @@ class SHIndex(val indexname: IndexName, val entityname: EntityName, private[inde
       score
     })
 
-    val ids = data
+    val ids = ListBuffer[Result]()
+
+    val localResults = data
       .withColumn(FieldNames.distanceColumnName, distUDF(df(FieldNames.featureIndexColumnName)))
-      .rdd.takeOrdered(k)(Ordering.by(r => r.getAs[Int](FieldNames.distanceColumnName)))
-      .map(result => Result(result.getAs[Int](FieldNames.distanceColumnName).toFloat / maxScore, result.getAs[Long](FieldNames.idColumnName)))
+      .rdd
+      .mapPartitions { items =>
+        val handler = new SHResultHandler(k)
+
+        items.foreach(item => {
+          handler.offer(item)
+        })
+
+        handler.results.iterator
+      }
+      .collect()
+      .groupBy(_.score)
+
+    val it = localResults.keys.toSeq.sorted.reverseIterator
+
+    while (it.hasNext && ids.length < k) {
+      val id = it.next()
+      val res: Array[SHResultElement] = localResults(id)
+      ids.append(localResults(id).map(res => Result(res.score.toFloat / maxScore, res.tid)).toSeq : _*)
+    }
 
     log.debug("SH index returning " + ids.length + " tuples")
     ids.toSet

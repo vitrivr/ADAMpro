@@ -8,19 +8,22 @@ import ch.unibas.dmi.dbis.adam.entity.Entity._
 import ch.unibas.dmi.dbis.adam.index.Index
 import ch.unibas.dmi.dbis.adam.index.Index.{IndexName, IndexTypeName}
 import ch.unibas.dmi.dbis.adam.index.structures.IndexTypes
+import ch.unibas.dmi.dbis.adam.index.structures.sh.{SHResultElement, SHResultHandler}
 import ch.unibas.dmi.dbis.adam.main.AdamContext
 import ch.unibas.dmi.dbis.adam.query.Result
 import ch.unibas.dmi.dbis.adam.query.distance.DistanceFunction
 import ch.unibas.dmi.dbis.adam.query.query.NearestNeighbourQuery
 import org.apache.spark.sql.DataFrame
 
+import scala.collection.mutable.ListBuffer
+
 /**
- * adamtwo
- *
- * Ivan Giangreco
- * August 2015
- */
-class LSHIndex(val indexname: IndexName, val entityname: EntityName, private[index]  val df: DataFrame, private[index] val metadata: LSHIndexMetaData)(@transient implicit val ac : AdamContext)
+  * adamtwo
+  *
+  * Ivan Giangreco
+  * August 2015
+  */
+class LSHIndex(val indexname: IndexName, val entityname: EntityName, private[index] val df: DataFrame, private[index] val metadata: LSHIndexMetaData)(@transient implicit val ac: AdamContext)
   extends Index {
 
   override val indextype: IndexTypeName = IndexTypes.LSHINDEX
@@ -28,7 +31,7 @@ class LSHIndex(val indexname: IndexName, val entityname: EntityName, private[ind
   override val lossy: Boolean = true
   override val confidence = 0.toFloat
 
-  override def scan(data : DataFrame, q : FeatureVector, distance : DistanceFunction, options : Map[String, Any], k : Int): Set[Result] = {
+  override def scan(data: DataFrame, q: FeatureVector, distance: DistanceFunction, options: Map[String, Any], k: Int): Set[Result] = {
     log.debug("scanning LSH index " + indexname)
 
     val numOfQueries = options.getOrElse("numOfQ", "3").asInstanceOf[String].toInt
@@ -37,7 +40,7 @@ class LSHIndex(val indexname: IndexName, val entityname: EntityName, private[ind
     val originalQuery = LSHUtils.hashFeature(q, metadata)
     val queries = ac.sc.broadcast(List.fill(numOfQueries)(LSHUtils.hashFeature(q.move(metadata.radius), metadata)) ::: List(originalQuery))
 
-    val maxScore : Float = originalQuery.intersectionCount(originalQuery) * numOfQueries
+    val maxScore: Float = originalQuery.intersectionCount(originalQuery) * numOfQueries
 
     import org.apache.spark.sql.functions.udf
     val distUDF = udf((c: BitString[_]) => {
@@ -52,18 +55,37 @@ class LSHIndex(val indexname: IndexName, val entityname: EntityName, private[ind
       score
     })
 
-    val ids = data
-      .withColumn(FieldNames.distanceColumnName, distUDF(df(FieldNames.featureIndexColumnName)))
-        .rdd.takeOrdered(k)(Ordering.by(r => r.getAs[Int](FieldNames.distanceColumnName)))
-        .map(result => Result(result.getAs[Int](FieldNames.distanceColumnName).toFloat / maxScore, result.getAs[Long](FieldNames.idColumnName)))
+    val ids = ListBuffer[Result]()
 
+    val localResults = data
+      .withColumn(FieldNames.distanceColumnName, distUDF(df(FieldNames.featureIndexColumnName)))
+      .rdd
+      .mapPartitions { items =>
+        val handler = new SHResultHandler(k)
+
+        items.foreach(item => {
+          handler.offer(item)
+        })
+
+        handler.results.iterator
+      }
+      .collect()
+      .groupBy(_.score)
+
+    val it = localResults.keys.toSeq.sorted.reverseIterator
+
+    while (it.hasNext && ids.length < k) {
+      val id = it.next()
+      val res: Array[SHResultElement] = localResults(id)
+      ids.append(localResults(id).map(res => Result(res.score.toFloat / maxScore, res.tid)).toSeq : _*)
+    }
 
     log.debug("LSH index returning " + ids.length + " tuples")
     ids.toSet
   }
 
   override def isQueryConform(nnq: NearestNeighbourQuery): Boolean = {
-    if(nnq.distance.isInstanceOf[metadata.distance.type]){
+    if (nnq.distance.isInstanceOf[metadata.distance.type]) {
       return true
     }
 
@@ -72,7 +94,7 @@ class LSHIndex(val indexname: IndexName, val entityname: EntityName, private[ind
 }
 
 object LSHIndex {
-  def apply(indexname: IndexName, entityname: EntityName, data: DataFrame, meta: Any)(implicit ac : AdamContext): LSHIndex = {
+  def apply(indexname: IndexName, entityname: EntityName, data: DataFrame, meta: Any)(implicit ac: AdamContext): LSHIndex = {
     val indexMetaData = meta.asInstanceOf[LSHIndexMetaData]
     new LSHIndex(indexname, entityname, data, indexMetaData)
   }

@@ -14,8 +14,8 @@ import scala.collection.mutable.ListBuffer
   * August 2015
   */
 private[va] class VAResultHandler(k: Int) {
-  val queue =  new FloatHeapPriorityQueue(FloatComparators.OPPOSITE_COMPARATOR)
-  var elementsLeft = k
+  @transient private var elementsLeft = k
+  @transient private val queue =  new FloatHeapPriorityQueue(2 * k, FloatComparators.OPPOSITE_COMPARATOR)
   @transient protected var ls = ListBuffer[VAResultElement]()
 
   /**
@@ -47,7 +47,11 @@ private[va] class VAResultHandler(k: Int) {
     }
   }
 
-
+  /**
+    *
+    * @param res
+    * @return
+    */
   def offer(res: VAResultElement): Boolean = {
     queue.synchronized {
       if (elementsLeft > 0) {
@@ -71,6 +75,9 @@ private[va] class VAResultHandler(k: Int) {
 
   /**
     *
+    * @param lower
+    * @param upper
+    * @param tid
     */
   private def enqueue(lower : Float, upper : Float, tid : TupleID): Unit ={
     enqueue(VAResultElement(lower, upper, tid))
