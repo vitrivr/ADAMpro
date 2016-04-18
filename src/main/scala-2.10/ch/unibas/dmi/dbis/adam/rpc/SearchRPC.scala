@@ -9,7 +9,7 @@ import ch.unibas.dmi.dbis.adam.http.grpc._
 import ch.unibas.dmi.dbis.adam.index.IndexHandler
 import ch.unibas.dmi.dbis.adam.main.AdamContext
 import ch.unibas.dmi.dbis.adam.query.handler.QueryHandler
-import ch.unibas.dmi.dbis.adam.query.progressive.ProgressiveQueryStatus
+import ch.unibas.dmi.dbis.adam.query.progressive.{ProgressiveQueryStatus, SimpleProgressivePathChooser}
 import io.grpc.stub.StreamObserver
 import org.apache.log4j.Logger
 import org.apache.spark.sql.DataFrame
@@ -150,7 +150,7 @@ class SearchRPC(implicit ac : AdamContext) extends AdamSearchGrpc.AdamSearch {
           responseObserver.onNext(prepareResults(request.queryid, confidence, 0, source, df))
         })
 
-        QueryOp.progressive(request.entity, SearchRPCMethods.prepareNNQ(request.nnq), SearchRPCMethods.prepareBQ(request.bq), onComplete, request.withMetadata)
+        QueryOp.progressive(request.entity, SearchRPCMethods.prepareNNQ(request.nnq), SearchRPCMethods.prepareBQ(request.bq), new SimpleProgressivePathChooser(), onComplete, request.withMetadata)
     } catch {
       case e: Exception => {
         log.error(e)
@@ -168,7 +168,7 @@ class SearchRPC(implicit ac : AdamContext) extends AdamSearchGrpc.AdamSearch {
   override def doTimedProgressiveQuery(request: TimedQueryMessage): Future[QueryResponseInfoMessage] = {
     log.debug("rpc call for timed progressive query operation")
     try {
-      val (df, confidence, source) = QueryOp.timedProgressive(request.entity, SearchRPCMethods.prepareNNQ(request.nnq), SearchRPCMethods.prepareBQ(request.bq), Duration(request.time, TimeUnit.MILLISECONDS), request.withMetadata)
+      val (df, confidence, source) = QueryOp.timedProgressive(request.entity, SearchRPCMethods.prepareNNQ(request.nnq), SearchRPCMethods.prepareBQ(request.bq), new SimpleProgressivePathChooser(), Duration(request.time, TimeUnit.MILLISECONDS), request.withMetadata)
       Future.successful(prepareResults(request.queryid, confidence, 0, source, df))
     } catch {
       case e: Exception => {

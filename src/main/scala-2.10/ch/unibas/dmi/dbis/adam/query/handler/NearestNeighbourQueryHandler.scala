@@ -30,7 +30,7 @@ import scala.concurrent.duration.Duration
 private[query] object NearestNeighbourQueryHandler {
   val log = Logger.getLogger(getClass.getName)
 
-  private def isQueryConform(entityname : EntityName, query : NearestNeighbourQuery)(implicit ac: AdamContext): Boolean ={
+  private def isQueryConform(entityname: EntityName, query: NearestNeighbourQuery)(implicit ac: AdamContext): Boolean = {
     val entity = EntityHandler.load(entityname).get
     entity.isQueryConform(query)
   }
@@ -43,9 +43,9 @@ private[query] object NearestNeighbourQueryHandler {
     * @param filter
     * @return
     */
-  def sequential(entityname: EntityName, query: NearestNeighbourQuery, filter: Option[Set[TupleID]])(implicit ac : AdamContext): DataFrame = {
+  def sequential(entityname: EntityName, query: NearestNeighbourQuery, filter: Option[Set[TupleID]])(implicit ac: AdamContext): DataFrame = {
     log.debug("performing sequential nearest neighbor scan")
-    if(!isQueryConform(entityname, query)){
+    if (!isQueryConform(entityname, query)) {
       throw QueryNotConformException()
     }
 
@@ -61,7 +61,7 @@ private[query] object NearestNeighbourQueryHandler {
     * @return depending on whether query.indexOnly is set to true only the index tuples are scanned,
     *         otherwise also the true data is scanned for performing the query
     */
-  def indexQuery(indexname: IndexName, query: NearestNeighbourQuery, filter: Option[Set[TupleID]])(implicit ac : AdamContext): DataFrame = {
+  def indexQuery(indexname: IndexName, query: NearestNeighbourQuery, filter: Option[Set[TupleID]])(implicit ac: AdamContext): DataFrame = {
     log.debug("performing index-based nearest neighbor scan")
 
     if (query.indexOnly) {
@@ -82,9 +82,9 @@ private[query] object NearestNeighbourQueryHandler {
     * @param filter
     * @return
     */
-  def indexQueryWithResults(indexname: IndexName, query: NearestNeighbourQuery, filter: Option[Set[TupleID]])(implicit ac : AdamContext): DataFrame = {
+  def indexQueryWithResults(indexname: IndexName, query: NearestNeighbourQuery, filter: Option[Set[TupleID]])(implicit ac: AdamContext): DataFrame = {
     val entityname = CatalogOperator.getEntitynameFromIndex(indexname)
-    if(!isQueryConform(entityname, query)){
+    if (!isQueryConform(entityname, query)) {
       throw QueryNotConformException()
     }
 
@@ -106,9 +106,9 @@ private[query] object NearestNeighbourQueryHandler {
     * @param filter
     * @return
     */
-  def indexOnlyQuery(indexname: IndexName, query: NearestNeighbourQuery, filter: Option[Set[TupleID]])(implicit ac : AdamContext): DataFrame = {
+  def indexOnlyQuery(indexname: IndexName, query: NearestNeighbourQuery, filter: Option[Set[TupleID]])(implicit ac: AdamContext): DataFrame = {
     val entityname = CatalogOperator.getEntitynameFromIndex(indexname)
-    if(!isQueryConform(entityname, query)){
+    if (!isQueryConform(entityname, query)) {
       throw QueryNotConformException()
     }
 
@@ -128,25 +128,23 @@ private[query] object NearestNeighbourQueryHandler {
     * @param onComplete
     * @return
     */
-  def progressiveQuery[U](entityname: EntityName, query: NearestNeighbourQuery, filter: Option[Set[TupleID]], onComplete: (ProgressiveQueryStatus.Value, DataFrame, Float, String, Map[String, String]) => U)(implicit ac : AdamContext): ProgressiveQueryStatusTracker = {
+  def progressiveQuery[U](entityname: EntityName, query: NearestNeighbourQuery, filter: Option[Set[TupleID]], paths: ProgressivePathChooser, onComplete: (ProgressiveQueryStatus.Value, DataFrame, Float, String, Map[String, String]) => U)(implicit ac: AdamContext): ProgressiveQueryStatusTracker = {
     log.debug("starting progressive query scanner")
-    if(!isQueryConform(entityname, query)){
+    if (!isQueryConform(entityname, query)) {
       throw QueryNotConformException()
     }
-
-    val indexnames = IndexHandler.list(entityname).map(_._1)
 
     val options = mMap[String, String]()
 
     val tracker = new ProgressiveQueryStatusTracker(query.queryID.get)
 
-    //index scans
-    val indexScanFutures = indexnames.par.map { indexname =>
+
+    val indexScanFutures = paths.getPaths[U](entityname).par.map { indexname =>
       val isf = new IndexScanFuture(indexname, query, onComplete, tracker)
     }
 
-    //sequential scan
-    val ssf = new SequentialScanFuture(entityname, query, onComplete, tracker)
+    //sequential
+    //val ssf = new SequentialScanFuture(entityname, query, onComplete, tracker)
 
     tracker
   }
@@ -161,10 +159,10 @@ private[query] object NearestNeighbourQueryHandler {
     * @param filter
     * @return
     */
-  def timedProgressiveQuery(entityname: EntityName, query: NearestNeighbourQuery, filter: Option[Set[TupleID]], timelimit: Duration)(implicit ac : AdamContext): ProgressiveQueryIntermediateResults = {
+  def timedProgressiveQuery(entityname: EntityName, query: NearestNeighbourQuery, filter: Option[Set[TupleID]], paths: ProgressivePathChooser, timelimit: Duration)(implicit ac: AdamContext): ProgressiveQueryIntermediateResults = {
     log.debug("starting timed progressive query scanner")
 
-    val tracker = progressiveQuery(entityname, query, filter, (status, result, confidence, source, info) => ())
+    val tracker = progressiveQuery[Unit](entityname, query, filter, paths, (status, result, confidence, source, info) => ())
 
     val timerFuture = Future {
       val sleepTime = Duration(500.toLong, "millis")
@@ -175,7 +173,7 @@ private[query] object NearestNeighbourQueryHandler {
         Thread.sleep(sleepTime.toMillis)
       }
     }
-    
+
     Await.result(timerFuture, timelimit)
     tracker.stop()
     log.debug("timed progressive query stopped")
