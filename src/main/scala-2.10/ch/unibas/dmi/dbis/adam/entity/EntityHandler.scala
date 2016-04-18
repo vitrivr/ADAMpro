@@ -173,4 +173,19 @@ object EntityHandler {
     * @return name of entities
     */
   def list(): List[EntityName] = CatalogOperator.listEntities()
+
+  /**
+    *
+    * @param entityname
+    * @return
+    */
+  def getProperties(entityname: EntityName)(implicit ac: AdamContext): Try[Map[String, String]] = {
+    val entity = load(entityname)
+
+    if (entity.isSuccess) {
+      Success(entity.get.getEntityProperties())
+    } else {
+      Failure(entity.failed.get)
+    }
+  }
 }

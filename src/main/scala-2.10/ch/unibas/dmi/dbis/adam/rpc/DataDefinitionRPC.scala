@@ -172,6 +172,7 @@ class DataDefinitionRPC(implicit ac: AdamContext) extends AdamDefinitionGrpc.Ada
     }
   }
 
+
   override def prepareForDemo(request: GenerateRandomEntityMessage): Future[AckMessage] = {
     log.debug("rpc call for creating random data")
 
@@ -191,7 +192,21 @@ class DataDefinitionRPC(implicit ac: AdamContext) extends AdamDefinitionGrpc.Ada
     }
   }
 
+
   override def listEntities(request: Empty): Future[EntitiesMessage] = {
+    log.debug("rpc call for listing entities")
     Future.successful(EntitiesMessage(ListEntitiesOp()))
+  }
+
+
+  override def getEntityProperties(request: EntityNameMessage): Future[EntityPropertiesMessage] = {
+    log.debug("rpc call for returning entity properties")
+    val properties = EntityHandler.getProperties(request.entity)
+
+    if(properties.isSuccess){
+      Future.successful(EntityPropertiesMessage(request.entity, properties.get))
+    } else {
+      Future.failed(properties.failed.get)
+    }
   }
 }

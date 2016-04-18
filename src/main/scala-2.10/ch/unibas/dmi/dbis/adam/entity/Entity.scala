@@ -13,6 +13,7 @@ import org.apache.spark.rdd.RDD
 import org.apache.spark.sql.types.{LongType, StructField, StructType}
 import org.apache.spark.sql.{DataFrame, Row, SaveMode}
 
+import scala.collection.mutable.ListBuffer
 import scala.util.{Success, Try}
 
 /**
@@ -21,7 +22,7 @@ import scala.util.{Success, Try}
   * Ivan Giangreco
   * October 2015
   */
-case class Entity(entityname: EntityName, featureStorage: FeatureStorage, metadataStorage: Option[MetadataStorage])(implicit ac : AdamContext) {
+case class Entity(entityname: EntityName, featureStorage: FeatureStorage, metadataStorage: Option[MetadataStorage])(implicit ac: AdamContext) {
   val log = Logger.getLogger(getClass.getName)
 
   private lazy val featureData = featureStorage.read(entityname).withColumnRenamed(FieldNames.featureColumnName, FieldNames.internFeatureColumnName)
@@ -36,13 +37,14 @@ case class Entity(entityname: EntityName, featureStorage: FeatureStorage, metada
     *
     * @return
     */
-  def count : Int = {
+  def count: Int = {
     if (tupleCount == -1) {
       tupleCount = featureStorage.count(entityname)
     }
 
     tupleCount
   }
+
   private var tupleCount = -1
 
   /**
@@ -65,7 +67,7 @@ case class Entity(entityname: EntityName, featureStorage: FeatureStorage, metada
     val dataDimensionality = insertion.first.getAs[FeatureVectorWrapper](FieldNames.featureColumnName).vector.size
 
     val entityDimensionality = CatalogOperator.getDimensionality(entityname)
-    if(entityDimensionality.isDefined && dataDimensionality != entityDimensionality.get){
+    if (entityDimensionality.isDefined && dataDimensionality != entityDimensionality.get) {
       log.warn("new data has not same dimensionality as existing data")
     } else {
       CatalogOperator.updateDimensionality(entityname, dataDimensionality)
@@ -84,7 +86,7 @@ case class Entity(entityname: EntityName, featureStorage: FeatureStorage, metada
       metadataStorage.get.write(entityname, insertionWithPK.drop(FieldNames.internFeatureColumnName), SaveMode.Append)
     }
 
-    if(!CatalogOperator.listIndexes(entityname).isEmpty){
+    if (!CatalogOperator.listIndexes(entityname).isEmpty) {
       log.warn("new data inserted, but indexes are not updated; please re-create index")
     }
 
@@ -92,6 +94,21 @@ case class Entity(entityname: EntityName, featureStorage: FeatureStorage, metada
     tupleCount = -1
 
     Success(null)
+  }
+
+  /**
+    * Returns a map of properties to the entity. Useful for printing.
+    */
+  def getEntityProperties(): Map[String, String] = {
+    val lb = ListBuffer[(String, String)]()
+
+
+    lb.append("hasMetadata" -> hasMetadata.toString)
+    lb.append("dimensionality" -> CatalogOperator.getDimensionality(entityname).getOrElse(-1).toString)
+    lb.append("schema" -> schema.map(field => field.name + "(" + field.dataType.simpleString + ")").mkString(","))
+    lb.append("indexes" -> CatalogOperator.listIndexes(entityname).mkString(", "))
+
+    lb.toMap
   }
 
   /**
@@ -146,10 +163,10 @@ case class Entity(entityname: EntityName, featureStorage: FeatureStorage, metada
     * @param query
     * @return
     */
-  def isQueryConform(query : NearestNeighbourQuery): Boolean ={
+  def isQueryConform(query: NearestNeighbourQuery): Boolean = {
     val entityDimensionality = CatalogOperator.getDimensionality(entityname)
 
-    if(entityDimensionality.isDefined && query.q.size != entityDimensionality.get){
+    if (entityDimensionality.isDefined && query.q.size != entityDimensionality.get) {
       return false
     } else {
       return true
@@ -165,7 +182,7 @@ case class Entity(entityname: EntityName, featureStorage: FeatureStorage, metada
   * @param unique
   * @param indexed
   */
-case class FieldDefinition(fieldtype : FieldType, pk : Boolean = false, unique : Boolean = false, indexed : Boolean = false)
+case class FieldDefinition(fieldtype: FieldType, pk: Boolean = false, unique: Boolean = false, indexed: Boolean = false)
 
 
 object Entity {

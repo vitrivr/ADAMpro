@@ -20,6 +20,7 @@ service AdamDefinition {
   //generates an entity with random data and with all available indexes (for demo purposes)
   rpc PrepareForDemo(GenerateRandomEntityMessage) returns (AckMessage) {}
   rpc ListEntities(Empty) returns (EntitiesMessage) {}
+  rpc GetEntityProperties(EntityNameMessage) returns (EntityPropertiesMessage) {}
 }
 
 service AdamSearch {
@@ -125,6 +126,12 @@ message IndexMessage {
 
 message EntitiesMessage {
   repeated string entities = 1;
+}
+
+message EntityPropertiesMessage {
+  string entity = 1;
+  map<string, string> properties = 2;
+}
 
 
 
