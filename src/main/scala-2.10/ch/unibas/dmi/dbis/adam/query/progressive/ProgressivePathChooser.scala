@@ -16,7 +16,7 @@ import ch.unibas.dmi.dbis.adam.main.AdamContext
   * Specifies which indexes to use in progressive querying
   */
 trait ProgressivePathChooser {
-  def getPaths[U](entityname: EntityName) : Seq[IndexName]
+  def getPaths[U](entityname: EntityName): Seq[IndexName]
 }
 
 /**
@@ -26,7 +26,7 @@ trait ProgressivePathChooser {
   */
 class SimpleProgressivePathChooser()(implicit ac: AdamContext) extends ProgressivePathChooser {
   override def getPaths[U](entityname: EntityName): Seq[IndexName] = {
-    IndexTypes.values.map(indextypename => IndexHandler.list(entityname).head).map(_._1)
+    IndexTypes.values.map(indextypename => IndexHandler.list(entityname, indextypename).head).map(_._1)
   }
 }
 
@@ -47,9 +47,9 @@ class AllProgressivePathChooser(implicit ac: AdamContext) extends ProgressivePat
   * @param indextypenames
   * @param ac
   */
-class IndexTypeProgressivePathChooser(indextypenames : Seq[IndexTypeName])(implicit ac: AdamContext) extends ProgressivePathChooser {
+class IndexTypeProgressivePathChooser(indextypenames: Seq[IndexTypeName])(implicit ac: AdamContext) extends ProgressivePathChooser {
   override def getPaths[U](entityname: EntityName): Seq[IndexName] = {
-    indextypenames.map(indextypename => IndexHandler.list(entityname).head).map(_._1)
+    indextypenames.map(indextypename => IndexHandler.list(entityname, indextypename).head).map(_._1)
   }
 }
 
@@ -59,6 +59,6 @@ class IndexTypeProgressivePathChooser(indextypenames : Seq[IndexTypeName])(impli
   * @param indexnames
   * @param ac
   */
-class IndexnameSpecifiedProgressivePathChooser(indexnames : Seq[IndexName])(implicit ac: AdamContext) extends ProgressivePathChooser {
+class IndexnameSpecifiedProgressivePathChooser(indexnames: Seq[IndexName])(implicit ac: AdamContext) extends ProgressivePathChooser {
   override def getPaths[U](entityname: EntityName): Seq[IndexName] = indexnames
 }
