@@ -67,7 +67,7 @@ class SearchRPC(implicit ac: AdamContext) extends AdamSearchGrpc.AdamSearch {
   override def doStandardQuery(request: SimpleQueryMessage): Future[QueryResponseInfoMessage] = {
     log.debug("rpc call for standard query operation")
     try {
-      val df = QueryOp.apply(SearchRPCMethods.toQueryHolder(request))
+      val df = QueryOp.apply(RPCHelperMethods.toQueryHolder(request))
       Future.successful(prepareResults(request.queryid, 0.0, 0, "", df))
     } catch {
       case e: Exception => {
@@ -86,7 +86,7 @@ class SearchRPC(implicit ac: AdamContext) extends AdamSearchGrpc.AdamSearch {
   override def doSequentialQuery(request: SimpleSequentialQueryMessage): Future[QueryResponseInfoMessage] = {
     log.debug("rpc call for sequential query operation")
     try {
-      val df = QueryOp.sequential(SearchRPCMethods.toQueryHolder(request))
+      val df = QueryOp.sequential(RPCHelperMethods.toQueryHolder(request))
       Future.successful(prepareResults(request.queryid, 0.0, 0, "", df))
     } catch {
       case e: Exception => {
@@ -106,7 +106,7 @@ class SearchRPC(implicit ac: AdamContext) extends AdamSearchGrpc.AdamSearch {
     log.debug("rpc call for index query operation")
 
     try {
-      val df = QueryOp.index(SearchRPCMethods.toQueryHolder(request))
+      val df = QueryOp.index(RPCHelperMethods.toQueryHolder(request))
       Future.successful(prepareResults(request.queryid, 0.0, 0, "", df))
     } catch {
       case e: Exception => {
@@ -126,7 +126,7 @@ class SearchRPC(implicit ac: AdamContext) extends AdamSearchGrpc.AdamSearch {
     log.debug("rpc call for index query operation")
 
     try {
-      val df = QueryOp.index(SearchRPCMethods.toQueryHolder(request))
+      val df = QueryOp.index(RPCHelperMethods.toQueryHolder(request))
       Future.successful(prepareResults(request.queryid, 0.0, 0, "", df))
     } catch {
       case e: Exception => {
@@ -158,7 +158,7 @@ class SearchRPC(implicit ac: AdamContext) extends AdamSearchGrpc.AdamSearch {
         new QueryHintsProgressivePathChooser(request.hints.map(QueryHints.withName(_).get))
       }
 
-      val tracker = QueryOp.progressive(request.entity, SearchRPCMethods.prepareNNQ(request.nnq), SearchRPCMethods.prepareBQ(request.bq), pathChooser, onComplete, request.withMetadata)
+      val tracker = QueryOp.progressive(request.entity, RPCHelperMethods.prepareNNQ(request.nnq), RPCHelperMethods.prepareBQ(request.bq), pathChooser, onComplete, request.withMetadata)
 
       //track on completed
       while (!tracker.isCompleted) {
@@ -185,7 +185,7 @@ class SearchRPC(implicit ac: AdamContext) extends AdamSearchGrpc.AdamSearch {
   override def doTimedProgressiveQuery(request: TimedQueryMessage): Future[QueryResponseInfoMessage] = {
     log.debug("rpc call for timed progressive query operation")
     try {
-      val (df, confidence, source) = QueryOp.timedProgressive(request.entity, SearchRPCMethods.prepareNNQ(request.nnq), SearchRPCMethods.prepareBQ(request.bq), new SimpleProgressivePathChooser(), Duration(request.time, TimeUnit.MILLISECONDS), request.withMetadata)
+      val (df, confidence, source) = QueryOp.timedProgressive(request.entity, RPCHelperMethods.prepareNNQ(request.nnq), RPCHelperMethods.prepareBQ(request.bq), new SimpleProgressivePathChooser(), Duration(request.time, TimeUnit.MILLISECONDS), request.withMetadata)
       Future.successful(prepareResults(request.queryid, confidence, 0, source, df))
     } catch {
       case e: Exception => {
@@ -205,7 +205,7 @@ class SearchRPC(implicit ac: AdamContext) extends AdamSearchGrpc.AdamSearch {
     log.debug("rpc call for chained query operation")
 
     try {
-      val qh = SearchRPCMethods.toQueryHolder(request)
+      val qh = RPCHelperMethods.toQueryHolder(request)
 
       val finalResults = QueryOp.compoundQuery(qh)
 
@@ -235,7 +235,7 @@ class SearchRPC(implicit ac: AdamContext) extends AdamSearchGrpc.AdamSearch {
     log.debug("rpc call for Boolean query operation")
 
     try {
-      val bq = SearchRPCMethods.toQueryHolder(request)
+      val bq = RPCHelperMethods.toQueryHolder(request)
 
       val results = QueryOp.booleanQuery(bq)
 

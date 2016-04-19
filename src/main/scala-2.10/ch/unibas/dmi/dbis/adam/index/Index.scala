@@ -10,6 +10,7 @@ import ch.unibas.dmi.dbis.adam.main.AdamContext
 import ch.unibas.dmi.dbis.adam.query.Result
 import ch.unibas.dmi.dbis.adam.query.distance.DistanceFunction
 import ch.unibas.dmi.dbis.adam.query.query.NearestNeighbourQuery
+import ch.unibas.dmi.dbis.adam.storage.partitions.PartitionHandler.PartitionID
 import org.apache.log4j.Logger
 import org.apache.spark.sql.DataFrame
 
@@ -19,11 +20,13 @@ import org.apache.spark.sql.DataFrame
   * Ivan Giangreco
   * August 2015
   */
-trait Index {
+abstract class Index(private[index] var dataframe : DataFrame) {
   @transient lazy val log = Logger.getLogger(getClass.getName)
 
   def indexname: IndexName
-  def indextype: IndexTypeName
+
+  def indextypename: IndexTypeName
+
   def entityname: EntityName
 
 
@@ -40,7 +43,7 @@ trait Index {
   /**
     *
     */
-  private[index] def df: DataFrame
+  private[index] def df: DataFrame = dataframe
 
   /**
     * Counts the number of elements in the index.
@@ -77,16 +80,23 @@ trait Index {
     * @param queryID  optional query id
     * @return a set of candidate tuple ids, possibly together with a tentative score (the number of tuples will be greater than k)
     */
-  def scan(q: FeatureVector, distance: DistanceFunction, options: Map[String, Any], k: Int, filter: Option[Set[TupleID]], queryID: Option[String] = None)(implicit ac : AdamContext): Set[Result] = {
+  def scan(q: FeatureVector, distance: DistanceFunction, options: Map[String, String], k: Int, filter: Option[Set[TupleID]], partitions: Option[Set[PartitionID]], queryID: Option[String] = None)(implicit ac: AdamContext): Set[Result] = {
     log.debug("started scanning index")
 
     ac.sc.setLocalProperty("spark.scheduler.pool", "index")
-    ac.sc.setJobGroup(queryID.getOrElse(""), indextype.name, true)
+    ac.sc.setJobGroup(queryID.getOrElse(""), indextypename.name, true)
 
-    val data = if (filter.isDefined) {
-      df.filter(df(FieldNames.idColumnName) isin (filter.get.toSeq: _*))
-    } else {
-      df
+    var data = df
+
+    //apply pre-filter
+    if (filter.isDefined) {
+      data = data.filter(df(FieldNames.idColumnName) isin (filter.get.toSeq: _*))
+    }
+
+    //choose specific partition
+    if (partitions.isDefined) {
+      val rdd = data.rdd.mapPartitionsWithIndex((idx, iter) => if (partitions.get.contains(idx)) iter else Iterator(), true)
+      data = ac.sqlContext.createDataFrame(rdd, df.schema)
     }
 
     scan(data, q, distance, options, k)

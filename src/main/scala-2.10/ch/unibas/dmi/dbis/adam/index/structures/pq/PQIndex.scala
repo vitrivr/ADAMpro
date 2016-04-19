@@ -19,9 +19,9 @@ import org.apache.spark.sql.DataFrame
   * Ivan Giangreco
   * April 2016
   */
-class PQIndex(val indexname: IndexName, val entityname: EntityName, private[index]  val df: DataFrame, private[index] val metadata: PQIndexMetaData)(@transient implicit val ac : AdamContext)
-  extends Index {
-  override val indextype: IndexTypeName = IndexTypes.PQINDEX
+class PQIndex(val indexname: IndexName, val entityname: EntityName, dataframe : DataFrame, private[index] val metadata: PQIndexMetaData)(@transient implicit val ac : AdamContext)
+  extends Index(dataframe) {
+  override val indextypename: IndexTypeName = IndexTypes.PQINDEX
 
   override def scan(data : DataFrame, q : FeatureVector, distance : DistanceFunction, options : Map[String, Any], k : Int): Set[Result] = {
     log.debug("scanning PQ index " + indexname)

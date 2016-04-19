@@ -16,6 +16,7 @@ import ch.unibas.dmi.dbis.adam.main.{AdamContext, SparkStartup}
 import ch.unibas.dmi.dbis.adam.storage.engine.CatalogOperator
 import org.apache.log4j.Logger
 import org.apache.spark.rdd.RDD
+import org.apache.spark.sql.DataFrame
 
 import scala.util.{Failure, Success, Try}
 
@@ -78,7 +79,6 @@ object IndexHandler {
     Success(index)
   }
 
-
   /**
     * Checks whether index exists.
     *
@@ -115,7 +115,7 @@ object IndexHandler {
     * @return
     */
   def indextype(indexname: IndexName)(implicit ac: AdamContext): IndexTypeName = {
-    loadIndexMetaData(indexname).get.indextype
+    loadIndexMetaData(indexname).get.indextypename
   }
 
   /**
@@ -193,6 +193,54 @@ object IndexHandler {
     }
 
     Success(null)
+  }
+
+
+  /**
+    *
+    * @param index
+    * @param n
+    * @param join
+    * @param cols
+    * @param materialize
+    * @param replace
+    * @return
+    */
+  def repartition(index: Index, n: Int, join: Option[DataFrame], cols: Option[Seq[String]], materialize: Boolean = false, replace: Boolean = false)(implicit ac: AdamContext): Try[Index] = {
+    var data = index.dataframe
+
+    if (join.isDefined) {
+      data = data.join(join.get)
+    }
+
+    data = if (cols.isDefined) {
+      data.repartition(n, cols.get.map(data(_)): _*)
+    } else {
+      data.repartition(n)
+    }
+
+    if (replace) {
+      if (materialize) {
+        SparkStartup.indexStorage.write(index.indexname, data)
+      } else {
+        index.dataframe = data
+      }
+
+      return Success(index)
+    } else {
+      val indexname = createIndexName(index.entityname, index.indextypename)
+
+      if(materialize){
+        storage.write(indexname, data)
+        CatalogOperator.createIndex(indexname, index.entityname, index.indextypename, index.metadata)
+        return loadIndexMetaData(indexname)
+      } else {
+        //val clone = index.clone().asInstanceOf[Index]
+        //clone.dataframe = data
+        log.error("repartitioning without materializing and replacing is forbidden at the moment")
+        return Failure[Index](new GeneralAdamException())
+      }
+    }
   }
 
 

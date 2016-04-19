@@ -29,6 +29,6 @@ object IndexScanner {
     */
   def apply(index: Index, query: NearestNeighbourQuery, filter: Option[Set[TupleID]])(implicit ac : AdamContext): Set[Result] = {
     log.debug("scan index")
-    index.scan(query.q, query.distance, query.options, query.k, filter, query.queryID)
+    index.scan(query.q, query.distance, query.options, query.k, filter, query.partitions, query.queryID)
   }
 }

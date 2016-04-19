@@ -3,6 +3,7 @@ package ch.unibas.dmi.dbis.adam.query.query
 import ch.unibas.dmi.dbis.adam.datatypes.feature.Feature._
 import ch.unibas.dmi.dbis.adam.entity.Tuple._
 import ch.unibas.dmi.dbis.adam.query.distance.DistanceFunction
+import ch.unibas.dmi.dbis.adam.storage.partitions.PartitionHandler._
 
 /**
   * adamtwo
@@ -83,6 +84,7 @@ case class BooleanQuery(
   * @param k
   * @param indexOnly if set to true, then only the index is scanned and the results are result candidates only
   *                  and may contain false positives
+  * @param partitions
   * @param options
   * @param queryID
   */
@@ -92,5 +94,6 @@ case class NearestNeighbourQuery(
                                   k: Int,
                                   indexOnly: Boolean = false,
                                   options: Map[String, String] = Map[String, String](),
+                                  partitions : Option[Set[PartitionID]] = None,
                                   queryID: Option[String] = Some(java.util.UUID.randomUUID().toString))
   extends Query(queryID) {}

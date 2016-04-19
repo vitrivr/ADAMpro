@@ -21,6 +21,7 @@ service AdamDefinition {
   rpc PrepareForDemo(GenerateRandomEntityMessage) returns (AckMessage) {}
   rpc ListEntities(Empty) returns (EntitiesMessage) {}
   rpc GetEntityProperties(EntityNameMessage) returns (EntityPropertiesMessage) {}
+  rpc RepartitionIndexData(RepartitionMessage) returns (AckMessage) {}
 }
 
 service AdamSearch {
@@ -115,6 +116,15 @@ message IndexMessage {
   DistanceMessage distance = 3;
   //for possible options see each index structure
   map<string, string> options = 4;
+}
+
+message RepartitionMessage {
+  string index = 1;
+  int32 numberOfPartitions = 2;
+  bool useMetadataForPartitioning = 3;
+  repeated string columns = 4;
+  bool materialize = 5;
+  bool replace = 6;
 }
 
 
@@ -263,6 +273,7 @@ message NearestNeighbourQueryMessage {
   bool indexOnly = 4;
   //for possible options see each index structure
   map<string, string> options = 5;
+  repeated int32 partitions = 6;
 }
 
 message DistanceMessage {

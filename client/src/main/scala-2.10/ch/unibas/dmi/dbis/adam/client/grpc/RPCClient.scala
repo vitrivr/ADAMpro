@@ -38,7 +38,7 @@ class RPCClient(channel: ManagedChannel, definer: AdamDefinitionBlockingStub, se
   }
 
   def addIndex(entityname: String, indextype: IndexType, norm: Int, options: Map[String, String]): String = {
-    val indexMessage = IndexMessage(entityname, indextype, norm, options)
+    val indexMessage = IndexMessage(entityname, indextype, Some(DistanceMessage(DistanceType.minkowski, Map("norm" -> norm.toString))), options)
     val res = definer.index(indexMessage)
     if (res.code == AckMessage.Code.OK) {
       res.message

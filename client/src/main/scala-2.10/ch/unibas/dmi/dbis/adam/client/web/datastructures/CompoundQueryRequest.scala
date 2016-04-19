@@ -23,7 +23,7 @@ case class CompoundQueryRequest(var id: String, var operation: String, var optio
 
   private def query = options.get("query").get.split(",").map(_.toFloat)
 
-  private def nnq = NearestNeighbourQueryMessage(query, Some(DistanceMessage(DistanceMessage.DistanceType.minkowski, Map("norm" -> "1"))), options.get("k").getOrElse("100").toInt, true, Map())
+  private def nnq = NearestNeighbourQueryMessage(query, Some(DistanceMessage(DistanceMessage.DistanceType.minkowski, Map("norm" -> "1"))), options.get("k").getOrElse("100").toInt, true, Map(), Seq())
 
   /**
     *

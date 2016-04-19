@@ -65,7 +65,7 @@ class EvaluationClient(channel: ManagedChannel, definer: AdamDefinitionBlockingS
     * @return
     */
   def createIndex(entityname: String, indextype: IndexTypes.IndexType, norm: Int) = {
-    definer.index(IndexMessage(entityname, indextype.indextype, norm))
+    definer.index(IndexMessage(entityname, indextype.indextype, Some(DistanceMessage(DistanceMessage.DistanceType.minkowski, Map("norm" -> norm.toString)))))
   }
 
   /**

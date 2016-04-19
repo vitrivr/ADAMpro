@@ -8,7 +8,8 @@ import ch.unibas.dmi.dbis.adam.http.grpc.CreateEntityMessage.FieldType
 import ch.unibas.dmi.dbis.adam.http.grpc.{AckMessage, CreateEntityMessage, _}
 import ch.unibas.dmi.dbis.adam.index.structures.IndexTypes
 import ch.unibas.dmi.dbis.adam.main.AdamContext
-import ch.unibas.dmi.dbis.adam.query.distance.{EuclideanDistance, NormBasedDistanceFunction}
+import ch.unibas.dmi.dbis.adam.query.distance.EuclideanDistance
+import ch.unibas.dmi.dbis.adam.storage.partitions.PartitionHandler
 import io.grpc.stub.StreamObserver
 import org.apache.log4j.Logger
 import org.apache.spark.sql.Row
@@ -136,7 +137,7 @@ class DataDefinitionRPC(implicit ac: AdamContext) extends AdamDefinitionGrpc.Ada
         throw new Exception("no index type name given.")
       }
 
-      val index = IndexOp(request.entity, indextypename, NormBasedDistanceFunction(request.norm),  request.options )
+      val index = IndexOp(request.entity, indextypename, RPCHelperMethods.prepareDistance(request.distance.get),  request.options )
       Future.successful(AckMessage(code = AckMessage.Code.OK, message = index.get.indexname))
     } catch {
       case e: Exception =>
@@ -207,6 +208,25 @@ class DataDefinitionRPC(implicit ac: AdamContext) extends AdamDefinitionGrpc.Ada
       Future.successful(EntityPropertiesMessage(request.entity, properties.get))
     } else {
       Future.failed(properties.failed.get)
+    }
+  }
+
+  override def repartitionIndexData(request: RepartitionMessage): Future[AckMessage] =  {
+    log.debug("rpc call for repartitioning index")
+
+    val cols = if(request.columns.isEmpty){
+      None
+    } else {
+      Some(request.columns)
+    }
+
+    val index = PartitionHandler.repartitionIndex(request.index, request.numberOfPartitions, request.useMetadataForPartitioning, cols, request.materialize, request.replace)
+
+    if(index.isSuccess){
+      Future.successful(AckMessage(AckMessage.Code.OK, index.get.indexname))
+    } else {
+      log.debug("exception while rpc call for repartitioning index")
+      Future.successful(AckMessage(code = AckMessage.Code.ERROR, message = index.failed.get.getMessage))
     }
   }
 }

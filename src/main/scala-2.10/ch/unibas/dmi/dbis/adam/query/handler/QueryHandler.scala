@@ -153,7 +153,7 @@ object QueryHandler {
       }
 
       val annq = if (nnq.isDefined) {
-        Option(NearestNeighbourQuery(nnq.get.q, nnq.get.distance, nnq.get.k, true, nnq.get.options, nnq.get.queryID))
+        Option(NearestNeighbourQuery(nnq.get.q, nnq.get.distance, nnq.get.k, true, nnq.get.options, nnq.get.partitions, nnq.get.queryID))
       } else {
         None
       }
@@ -207,7 +207,7 @@ object QueryHandler {
       if (filter.isDefined) {
         abq.append(filter.get)
       }
-      val annq = NearestNeighbourQuery(nnq.q, nnq.distance, nnq.k, true, nnq.options, nnq.queryID)
+      val annq = NearestNeighbourQuery(nnq.q, nnq.distance, nnq.k, true, nnq.options, nnq.partitions, nnq.queryID)
       sequentialQuery(entityname)(annq, Option(abq), false, id, cache)
     }
   }
@@ -253,7 +253,7 @@ object QueryHandler {
       if (filter.isDefined) {
         abq.append(filter.get)
       }
-      val annq = NearestNeighbourQuery(nnq.q, nnq.distance, nnq.k, true, nnq.options, nnq.queryID)
+      val annq = NearestNeighbourQuery(nnq.q, nnq.distance, nnq.k, true, nnq.options, nnq.partitions, nnq.queryID)
       indexQuery(entityname, indextypename)(annq, Option(abq), false, id, cache)
     }
   }
@@ -311,7 +311,7 @@ object QueryHandler {
       if (filter.isDefined) {
         abq.append(filter.get)
       }
-      val annq = NearestNeighbourQuery(nnq.q, nnq.distance, nnq.k, true, nnq.options, nnq.queryID)
+      val annq = NearestNeighbourQuery(nnq.q, nnq.distance, nnq.k, true, nnq.options, nnq.partitions, nnq.queryID)
       specifiedIndexQuery(indexname)(annq, Option(abq), false, id, cache)
     }
   }
