@@ -9,7 +9,7 @@ import ch.unibas.dmi.dbis.adam.index.Index.{IndexName, IndexTypeName}
 import ch.unibas.dmi.dbis.adam.index.IndexHandler
 import ch.unibas.dmi.dbis.adam.main.{AdamContext, SparkStartup}
 import ch.unibas.dmi.dbis.adam.query.Result
-import ch.unibas.dmi.dbis.adam.query.datastructures.{QueryCacheOptions, QueryExpression, QueryLRUCache, RunDetails}
+import ch.unibas.dmi.dbis.adam.query.datastructures._
 import ch.unibas.dmi.dbis.adam.query.distance.DistanceFunction
 import ch.unibas.dmi.dbis.adam.query.handler.QueryHints._
 import ch.unibas.dmi.dbis.adam.query.progressive._

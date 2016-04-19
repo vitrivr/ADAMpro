@@ -8,10 +8,11 @@ import ch.unibas.dmi.dbis.adam.config.FieldNames
 import ch.unibas.dmi.dbis.adam.index.structures.IndexTypes
 import ch.unibas.dmi.dbis.adam.main.SparkStartup
 import ch.unibas.dmi.dbis.adam.query.datastructures.CompoundQueryExpressions.{ExpressionEvaluationOrder, IntersectExpression}
+import ch.unibas.dmi.dbis.adam.query.datastructures.ProgressiveQueryStatus
 import ch.unibas.dmi.dbis.adam.query.distance.EuclideanDistance
 import ch.unibas.dmi.dbis.adam.query.handler.CompoundQueryHandler
 import ch.unibas.dmi.dbis.adam.query.handler.QueryHandler.SpecifiedIndexQueryHolder
-import ch.unibas.dmi.dbis.adam.query.progressive.{AllProgressivePathChooser, ProgressiveQueryStatus}
+import ch.unibas.dmi.dbis.adam.query.progressive.AllProgressivePathChooser
 import ch.unibas.dmi.dbis.adam.query.query.{BooleanQuery, NearestNeighbourQuery}
 import org.apache.log4j.Logger
 import org.apache.spark.sql.DataFrame

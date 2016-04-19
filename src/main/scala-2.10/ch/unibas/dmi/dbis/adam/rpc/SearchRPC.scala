@@ -8,8 +8,9 @@ import ch.unibas.dmi.dbis.adam.exception.QueryNotCachedException
 import ch.unibas.dmi.dbis.adam.http.grpc._
 import ch.unibas.dmi.dbis.adam.index.IndexHandler
 import ch.unibas.dmi.dbis.adam.main.AdamContext
+import ch.unibas.dmi.dbis.adam.query.datastructures.ProgressiveQueryStatus
 import ch.unibas.dmi.dbis.adam.query.handler.QueryHandler
-import ch.unibas.dmi.dbis.adam.query.progressive.{ProgressiveQueryStatus, SimpleProgressivePathChooser}
+import ch.unibas.dmi.dbis.adam.query.progressive.SimpleProgressivePathChooser
 import io.grpc.stub.StreamObserver
 import org.apache.log4j.Logger
 import org.apache.spark.sql.DataFrame

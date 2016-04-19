@@ -1,7 +1,8 @@
-package ch.unibas.dmi.dbis.adam.query.progressive
+package ch.unibas.dmi.dbis.adam.query.datastructures
 
 import ch.unibas.dmi.dbis.adam.config.AdamConfig
 import ch.unibas.dmi.dbis.adam.main.AdamContext
+import ch.unibas.dmi.dbis.adam.query.progressive.ScanFuture
 import org.apache.log4j.Logger
 import org.apache.spark.sql.DataFrame
 

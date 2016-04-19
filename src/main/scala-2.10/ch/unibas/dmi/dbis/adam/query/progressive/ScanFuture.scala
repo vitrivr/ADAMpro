@@ -4,6 +4,7 @@ import ch.unibas.dmi.dbis.adam.entity.Entity._
 import ch.unibas.dmi.dbis.adam.index.Index.IndexName
 import ch.unibas.dmi.dbis.adam.index.IndexHandler
 import ch.unibas.dmi.dbis.adam.main.AdamContext
+import ch.unibas.dmi.dbis.adam.query.datastructures.{ProgressiveQueryStatus, ProgressiveQueryStatusTracker}
 import ch.unibas.dmi.dbis.adam.query.handler.NearestNeighbourQueryHandler
 import ch.unibas.dmi.dbis.adam.query.query.NearestNeighbourQuery
 import org.apache.spark.sql.DataFrame

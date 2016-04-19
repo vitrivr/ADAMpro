@@ -3,11 +3,11 @@ package ch.unibas.dmi.dbis.adam.api
 import ch.unibas.dmi.dbis.adam.entity.Entity._
 import ch.unibas.dmi.dbis.adam.index.Index.{IndexName, IndexTypeName}
 import ch.unibas.dmi.dbis.adam.main.AdamContext
-import ch.unibas.dmi.dbis.adam.query.datastructures.QueryExpression
+import ch.unibas.dmi.dbis.adam.query.datastructures.{ProgressiveQueryStatus, ProgressiveQueryStatusTracker, QueryExpression}
 import ch.unibas.dmi.dbis.adam.query.handler.QueryHandler
 import ch.unibas.dmi.dbis.adam.query.handler.QueryHandler._
 import ch.unibas.dmi.dbis.adam.query.handler.QueryHints._
-import ch.unibas.dmi.dbis.adam.query.progressive.{ProgressivePathChooser, ProgressiveQueryStatus, ProgressiveQueryStatusTracker}
+import ch.unibas.dmi.dbis.adam.query.progressive.ProgressivePathChooser
 import ch.unibas.dmi.dbis.adam.query.query.{BooleanQuery, NearestNeighbourQuery}
 import org.apache.log4j.Logger
 import org.apache.spark.sql.DataFrame
