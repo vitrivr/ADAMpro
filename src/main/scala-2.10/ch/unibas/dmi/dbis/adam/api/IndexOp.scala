@@ -12,7 +12,7 @@ import ch.unibas.dmi.dbis.adam.index.structures.sh.SHIndexer
 import ch.unibas.dmi.dbis.adam.index.structures.va.{VAFIndexer, VAVIndexer}
 import ch.unibas.dmi.dbis.adam.index.{Index, IndexGenerator, IndexHandler}
 import ch.unibas.dmi.dbis.adam.main.AdamContext
-import ch.unibas.dmi.dbis.adam.query.distance.{DistanceFunction, MinkowskiDistance}
+import ch.unibas.dmi.dbis.adam.query.distance.DistanceFunction
 import org.apache.log4j.Logger
 
 import scala.util.Try
@@ -59,8 +59,8 @@ object IndexOp {
       case IndexTypes.LSHINDEX => LSHIndexer(distance, properties)
       case IndexTypes.PQINDEX => PQIndexer(properties)
       case IndexTypes.SHINDEX => SHIndexer(entity.get.getFeaturedata.first().getAs[FeatureVectorWrapper](1).vector.length, properties)
-      case IndexTypes.VAFINDEX => VAFIndexer(distance.asInstanceOf[MinkowskiDistance], properties)
-      case IndexTypes.VAVINDEX => VAVIndexer(entity.get.getFeaturedata.first().getAs[FeatureVectorWrapper](1).vector.length, distance.asInstanceOf[MinkowskiDistance], properties)
+      case IndexTypes.VAFINDEX => VAFIndexer(distance, properties)
+      case IndexTypes.VAVINDEX => VAVIndexer(entity.get.getFeaturedata.first().getAs[FeatureVectorWrapper](1).vector.length, distance, properties)
     }
 
     IndexHandler.createIndex(entity.get, generator)

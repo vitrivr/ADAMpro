@@ -112,7 +112,7 @@ message InsertMessage {
 message IndexMessage {
   string entity = 1;
   IndexType indextype = 2;
-  int32 norm = 3;
+  DistanceMessage distance = 3;
   //for possible options see each index structure
   map<string, string> options = 4;
 }

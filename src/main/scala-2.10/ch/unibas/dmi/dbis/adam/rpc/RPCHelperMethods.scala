@@ -18,7 +18,7 @@ import ch.unibas.dmi.dbis.adam.query.query.{BooleanQuery, NearestNeighbourQuery}
   * Ivan Giangreco
   * March 2016
   */
-private[rpc] object SearchRPCMethods {
+private[rpc] object RPCHelperMethods {
   /* implicits */
 
   implicit def toQueryHolder(request: SimpleQueryMessage)(implicit ac: AdamContext) = {
@@ -97,7 +97,13 @@ private[rpc] object SearchRPCMethods {
 
     val distance = prepareDistance(nnq.getDistance)
 
-    NearestNeighbourQuery(nnq.query, distance, nnq.k, nnq.indexOnly, nnq.options)
+    val partitions = if(!nnq.partitions.isEmpty){
+      Some(nnq.partitions.toSet)
+    } else {
+      None
+    }
+
+    NearestNeighbourQuery(nnq.query, distance, nnq.k, nnq.indexOnly, nnq.options, partitions)
   }
 
   def prepareDistance(dm: DistanceMessage): DistanceFunction = {

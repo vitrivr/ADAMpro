@@ -4,13 +4,14 @@ import breeze.linalg._
 import ch.unibas.dmi.dbis.adam.datatypes.feature.Feature._
 import ch.unibas.dmi.dbis.adam.entity.Entity._
 import ch.unibas.dmi.dbis.adam.entity.EntityHandler
+import ch.unibas.dmi.dbis.adam.exception.QueryNotConformException
 import ch.unibas.dmi.dbis.adam.index.Index.{IndexName, IndexTypeName}
 import ch.unibas.dmi.dbis.adam.index.structures.IndexTypes
 import ch.unibas.dmi.dbis.adam.index.structures.va.marks.{EquidistantMarksGenerator, EquifrequentMarksGenerator, MarksGenerator}
 import ch.unibas.dmi.dbis.adam.index.structures.va.signature.VariableSignatureGenerator
 import ch.unibas.dmi.dbis.adam.index.{BitStringIndexTuple, Index, IndexGenerator, IndexingTaskTuple}
 import ch.unibas.dmi.dbis.adam.main.{AdamContext, SparkStartup}
-import ch.unibas.dmi.dbis.adam.query.distance.MinkowskiDistance
+import ch.unibas.dmi.dbis.adam.query.distance.{DistanceFunction, MinkowskiDistance}
 import org.apache.log4j.Logger
 import org.apache.spark.rdd.RDD
 import org.apache.spark.util.random.ADAMSamplingUtils
@@ -95,20 +96,27 @@ class VAVIndexer (nbits : Int, marksGenerator: MarksGenerator, trainingSize : In
 
 
 object VAVIndexer {
+  lazy val log = Logger.getLogger(getClass.getName)
+
   /**
    *
    * @param properties
    */
-  def apply(dimensions : Int, distance : MinkowskiDistance, properties : Map[String, String] = Map[String, String]())(implicit ac : AdamContext) : IndexGenerator = {
+  def apply(dimensions : Int, distance : DistanceFunction, properties : Map[String, String] = Map[String, String]())(implicit ac : AdamContext) : IndexGenerator = {
     val marksGeneratorDescription = properties.getOrElse("marktype", "equifrequent")
     val marksGenerator = marksGeneratorDescription.toLowerCase match {
       case "equifrequent" => EquifrequentMarksGenerator
       case "equidistant" => EquidistantMarksGenerator
     }
 
+    if(!distance.isInstanceOf[MinkowskiDistance]){
+      log.error("only Minkowski distances allowed for VAV Indexer")
+      throw new QueryNotConformException()
+    }
+
     val totalNumBits = properties.getOrElse("signature-nbits", (dimensions * 8).toInt.toString).toInt
     val trainingSize = properties.getOrElse("ntraining", "1000").toInt
 
-    new VAVIndexer(totalNumBits, marksGenerator, trainingSize, distance)
+    new VAVIndexer(totalNumBits, marksGenerator, trainingSize, distance.asInstanceOf[MinkowskiDistance])
   }
 }
