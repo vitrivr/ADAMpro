@@ -29,6 +29,7 @@ trait ProgressivePathChooser {
   */
 class SimpleProgressivePathChooser()(implicit ac: AdamContext) extends ProgressivePathChooser {
   override def getPaths[U](entityname: EntityName): Seq[IndexName] = {
+    //TODO: choose better default
     IndexTypes.values.map(indextypename => IndexHandler.list(entityname, indextypename).head).map(_._1)
   }
 }
