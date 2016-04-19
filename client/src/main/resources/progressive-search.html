@@ -20,15 +20,17 @@
         <ul class="right hide-on-med-and-down">
             <li><a href="add-entity.html"><i class="material-icons">add</i></a></li>
             <li><a href="add-index.html"><i class="material-icons">toc</i></a></li>
-            <li><a href="search.html"><i class="material-icons">search</i></a></li>
+            <li><a href="compound-search.html"><i class="material-icons">search</i></a></li>
+            <li><a href="progressive-search.html"><i class="material-icons">youtube_searched_for</i></a></li>
         </ul>
     </div>
 </nav>
 
 <div class="container" style="width:90%">
     <div class="row">
-        <h1>Search.</h1>
+        <h1>Progressive Search.</h1>
     </div>
+
     <div class="row" style="margin-top: 20px;">
 
         <div class="input-field col s1">
@@ -39,42 +41,23 @@
             <input type="text" class="form-control" id="query" placeholder="query">
         </div>
 
-        <div class="col s3">
-            <div class="input-field col s10">
-                <select id="indextype">
-                    <option value="ecp">eCP Index</option>
-                    <option value="lsh">LSH Index</option>
-                    <option value="pq">PQ Index</option>
-                    <option value="sh">SH Index</option>
-                    <option value="vaf">VAF Index</option>
-                    <option value="vav">VAV Index</option>
-                </select>
-                <label>index type</label>
-            </div>
-            <div class="input-field col s2">
-                <a class="btn-floating" id="btnAddIndex"><i class="material-icons">add</i></a>
-            </div>
-        </div>
-
-        <div class="col s2">
-            <div class="input-field col s10">
-                <select id="indexoperation">
-                    <option value="union">UNION</option>
-                    <option value="intersect">INTERSECT</option>
-                    <option value="except">EXCEPT</option>
-                </select>
-                <label>aggregation</label>
-            </div>
-            <div class="input-field col s2">
-                <a class="btn-floating" id="btnAddOperation"><i class="material-icons">add</i></a>
-            </div>
-        </div>
-
-
         <div class="input-field col s1">
             <input type="text" class="form-control" id="k" placeholder="k" style="text-align:right;">
         </div>
 
+
+        <div class="input-field col s5">
+            <select multiple id="indextype">
+                <option value="" disabled selected>all</option>
+                <option value="ecp">eCP Index</option>
+                <option value="lsh">LSH Index</option>
+                <option value="pq">PQ Index</option>
+                <option value="sh">SH Index</option>
+                <option value="vaf">VAF Index</option>
+                <option value="vav">VAV Index</option>
+            </select>
+            <label>index type</label>
+        </div>
 
         <div class="input-field col s2">
             <button class="btn waves-effect waves-light red" name="action" id="btnSubmit">
@@ -84,26 +67,16 @@
 
     </div>
 
-
-    <div class="jtk-demo-main s12">
-        <!-- demo -->
-
-        <div class="jtk-demo-canvas canvas-wide statemachine-demo jtk-surface jtk-surface-nopan" id="canvas">
-            <div class="w" id="box-start" style="left: 20em; top: 20em;" data-adamtype="start">QUERY
-                <div class="res"></div>
-                <div class="ep" action="start"></div>
-            </div>
-        </div>
-
-    </div>
+    <div id="container" style="min-width: 400px; height: 400px; margin: 0 auto"></div>
 
 </div>
 
 <script src="https://code.jquery.com/jquery-2.1.1.min.js"></script>
 <script src="./lib/js/materialize.min.js"></script>
-<script src="./lib/js/jsPlumb-2.0.7-min.js"></script>
+<script src="https://code.highcharts.com/highcharts.js"></script>
+<script src="https://code.highcharts.com/modules/exporting.js"></script>
 <script src="lib/js/app.js"></script>
-<script src="lib/js/search.js"></script>
+<script src="lib/js/progressive-search.js"></script>
 <script>
     $(document).ready(function () {
         $('select').material_select();

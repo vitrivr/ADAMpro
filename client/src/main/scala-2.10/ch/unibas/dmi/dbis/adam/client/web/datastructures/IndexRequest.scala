@@ -1,4 +1,4 @@
-package ch.unibas.dmi.dbis.adam.client.web
+package ch.unibas.dmi.dbis.adam.client.web.datastructures
 
 /**
   * adampro

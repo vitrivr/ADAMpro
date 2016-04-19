@@ -127,7 +127,7 @@ $("#btnSubmit").click(function(){
     $("#progress").show();
 
 
-    $.ajax("/query", {
+    $.ajax("/query/compound", {
         data: JSON.stringify(evaluate("box-start")),
         contentType: 'application/json',
         type: 'POST',
