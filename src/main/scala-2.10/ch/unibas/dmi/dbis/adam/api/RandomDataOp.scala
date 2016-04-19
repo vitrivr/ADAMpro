@@ -29,7 +29,7 @@ object RandomDataOp {
     ))
 
     import SparkStartup.Implicits._
-    (0 until collectionSize).sliding(limit, limit).map { seq =>
+    (0 until collectionSize).sliding(limit, limit).foreach { seq =>
       val rdd = ac.sc.parallelize(seq.map(idx => Row(new FeatureVectorWrapper(Seq.fill(vectorSize)(Random.nextFloat())))))
       val data = sqlContext.createDataFrame(rdd, schema)
       InsertOp(entityname, data)
