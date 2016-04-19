@@ -141,9 +141,11 @@ private[query] object NearestNeighbourQueryHandler {
 
 
     val indexScanFutures = paths.getPaths[U](entityname).par.map { indexname =>
+      //TODO: possibly switch between index only and full result scan (give user the option to choose!)
       val isf = new IndexScanFuture(indexname, query, onComplete, tracker)
     }
 
+    //TODO: possibly re-add sequential scan
     //sequential
     //val ssf = new SequentialScanFuture(entityname, query, onComplete, tracker)
 
