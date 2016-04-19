@@ -207,7 +207,7 @@ object IndexHandler {
     * @return
     */
   def repartition(index: Index, n: Int, join: Option[DataFrame], cols: Option[Seq[String]], materialize: Boolean = false, replace: Boolean = false)(implicit ac: AdamContext): Try[Index] = {
-    var data = index.dataframe
+    var data = index.df
 
     if (join.isDefined) {
       data = data.join(join.get)
@@ -222,10 +222,9 @@ object IndexHandler {
     if (replace) {
       if (materialize) {
         SparkStartup.indexStorage.write(index.indexname, data)
-      } else {
-        index.dataframe = data
       }
 
+      index.df = data
       return Success(index)
     } else {
       val indexname = createIndexName(index.entityname, index.indextypename)

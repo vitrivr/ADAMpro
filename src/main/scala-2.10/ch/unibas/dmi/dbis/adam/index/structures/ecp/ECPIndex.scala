@@ -20,8 +20,8 @@ import scala.collection.mutable.ListBuffer
   * Ivan Giangreco
   * October 2015
   */
-class ECPIndex(val indexname: IndexName, val entityname: EntityName, dataframe: DataFrame, private[index] val metadata: ECPIndexMetaData)(@transient implicit val ac : AdamContext)
-  extends Index(dataframe) {
+class ECPIndex(val indexname: IndexName, val entityname: EntityName, override private[index] var df : DataFrame, private[index] val metadata: ECPIndexMetaData)(@transient implicit val ac : AdamContext)
+  extends Index {
 
   override val indextypename: IndexTypeName = IndexTypes.ECPINDEX
 

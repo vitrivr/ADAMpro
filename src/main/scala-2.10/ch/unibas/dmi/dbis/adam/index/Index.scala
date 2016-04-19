@@ -20,7 +20,7 @@ import org.apache.spark.sql.DataFrame
   * Ivan Giangreco
   * August 2015
   */
-abstract class Index(private[index] var dataframe : DataFrame) {
+trait Index {
   @transient lazy val log = Logger.getLogger(getClass.getName)
 
   def indexname: IndexName
@@ -43,7 +43,7 @@ abstract class Index(private[index] var dataframe : DataFrame) {
   /**
     *
     */
-  private[index] def df: DataFrame = dataframe
+  private[index] var df: DataFrame
 
   /**
     * Counts the number of elements in the index.
