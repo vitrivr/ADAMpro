@@ -9,8 +9,8 @@ import ch.unibas.dmi.dbis.adam.http.grpc._
 import ch.unibas.dmi.dbis.adam.index.IndexHandler
 import ch.unibas.dmi.dbis.adam.main.AdamContext
 import ch.unibas.dmi.dbis.adam.query.datastructures.ProgressiveQueryStatus
-import ch.unibas.dmi.dbis.adam.query.handler.QueryHandler
-import ch.unibas.dmi.dbis.adam.query.progressive.SimpleProgressivePathChooser
+import ch.unibas.dmi.dbis.adam.query.handler.{QueryHandler, QueryHints}
+import ch.unibas.dmi.dbis.adam.query.progressive.{QueryHintsProgressivePathChooser, SimpleProgressivePathChooser}
 import io.grpc.stub.StreamObserver
 import org.apache.log4j.Logger
 import org.apache.spark.sql.DataFrame
@@ -25,7 +25,7 @@ import scala.concurrent.duration.Duration
   * Ivan Giangreco
   * March 2016
   */
-class SearchRPC(implicit ac : AdamContext) extends AdamSearchGrpc.AdamSearch {
+class SearchRPC(implicit ac: AdamContext) extends AdamSearchGrpc.AdamSearch {
   val log = Logger.getLogger(getClass.getName)
 
 
@@ -146,12 +146,28 @@ class SearchRPC(implicit ac : AdamContext) extends AdamSearchGrpc.AdamSearch {
     log.debug("rpc call for progressive query operation")
 
     try {
+      //track on next
       val onComplete =
         (status: ProgressiveQueryStatus.Value, df: DataFrame, confidence: Float, source: String, info: Map[String, String]) => ({
           responseObserver.onNext(prepareResults(request.queryid, confidence, 0, source, df))
         })
 
-        QueryOp.progressive(request.entity, SearchRPCMethods.prepareNNQ(request.nnq), SearchRPCMethods.prepareBQ(request.bq), new SimpleProgressivePathChooser(), onComplete, request.withMetadata)
+      val pathChooser = if(request.hints.isEmpty){
+        new SimpleProgressivePathChooser()
+      } else {
+        new QueryHintsProgressivePathChooser(request.hints.map(QueryHints.withName(_).get))
+      }
+
+      val tracker = QueryOp.progressive(request.entity, SearchRPCMethods.prepareNNQ(request.nnq), SearchRPCMethods.prepareBQ(request.bq), pathChooser, onComplete, request.withMetadata)
+
+      //track on completed
+      while (!tracker.isCompleted) {
+        Thread.sleep(1000)
+      }
+
+      if (tracker.isCompleted) {
+        responseObserver.onCompleted()
+      }
     } catch {
       case e: Exception => {
         log.error(e)
@@ -200,7 +216,7 @@ class SearchRPC(implicit ac : AdamContext) extends AdamSearchGrpc.AdamSearch {
       }
 
       val results = resultInfos.map(res =>
-          prepareResults(res.id, 0.0, res.time.toMillis, res.source, res.results)
+        prepareResults(res.id, 0.0, res.time.toMillis, res.source, res.results)
       )
 
       Future.successful(CompoundQueryResponseInfoMessage(
@@ -243,7 +259,7 @@ class SearchRPC(implicit ac : AdamContext) extends AdamSearchGrpc.AdamSearch {
 
     val cached = QueryHandler.getFromQueryCache(Option(request.queryid))
 
-    if(cached.isSuccess){
+    if (cached.isSuccess) {
       Future.successful(prepareResults(request.queryid, 0.0, 0, "cache", cached.get))
     } else {
       Future.failed(QueryNotCachedException())
@@ -259,7 +275,7 @@ class SearchRPC(implicit ac : AdamContext) extends AdamSearchGrpc.AdamSearch {
     * @param df
     * @return
     */
-  private def prepareResults(queryid : String, confidence : Double, time : Long, source : String, df : DataFrame): QueryResponseInfoMessage = {
+  private def prepareResults(queryid: String, confidence: Double, time: Long, source: String, df: DataFrame): QueryResponseInfoMessage = {
     import org.apache.spark.sql.functions.{array, col, lit, udf}
 
     val asMap = udf((keys: Seq[String], values: Seq[String]) =>

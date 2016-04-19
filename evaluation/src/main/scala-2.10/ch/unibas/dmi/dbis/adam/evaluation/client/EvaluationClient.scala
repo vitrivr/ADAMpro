@@ -117,7 +117,7 @@ class EvaluationClient(channel: ManagedChannel, definer: AdamDefinitionBlockingS
     val distance = DistanceMessage(DistanceMessage.DistanceType.minkowski, Map("norm" -> "1"))
 
 
-    searcher.doProgressiveQuery(SimpleQueryMessage("", entityname, "", Some(NearestNeighbourQueryMessage(q, Some(distance), k, false))), observer)
+    searcher.doProgressiveQuery(SimpleQueryMessage("", entityname, Seq(), Some(NearestNeighbourQueryMessage(q, Some(distance), k, false))), observer)
   }
 
   /**

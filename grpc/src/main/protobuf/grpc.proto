@@ -145,7 +145,7 @@ message SimpleQueryMessage {
   string entity = 2;
   //for hints see  ch.unibas.dmi.dbis.adam.query.handler.QueryHints, possible values
   //include "index", "inexact", "ecp", "lsh", "pq", "sh", "exact", "va", "vaf", "vav"
-  string hint = 3;
+  repeated string hints = 3;
   NearestNeighbourQueryMessage nnq = 4;
   BooleanQueryMessage bq = 5;
   //specifies whether we should join the structured metadata to the results

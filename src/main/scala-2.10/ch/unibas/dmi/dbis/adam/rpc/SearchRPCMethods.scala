@@ -22,7 +22,8 @@ private[rpc] object SearchRPCMethods {
   /* implicits */
 
   implicit def toQueryHolder(request: SimpleQueryMessage)(implicit ac: AdamContext) = {
-    StandardQueryHolder(request.entity, QueryHints.withName(request.hint), Option(prepareNNQ(request.nnq)), prepareBQ(request.bq), prepareQI(request.queryid), prepareCO(request.readFromCache, request.putInCache))
+    //TODO: possibly consider all query hints
+    StandardQueryHolder(request.entity, QueryHints.withName(request.hints.head), Option(prepareNNQ(request.nnq)), prepareBQ(request.bq), prepareQI(request.queryid), prepareCO(request.readFromCache, request.putInCache))
   }
 
   implicit def toQueryHolder(request: SimpleSequentialQueryMessage)(implicit ac: AdamContext) = {
