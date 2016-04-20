@@ -8,7 +8,7 @@ import ch.unibas.dmi.dbis.adam.config.FieldNames
 import ch.unibas.dmi.dbis.adam.index.structures.IndexTypes
 import ch.unibas.dmi.dbis.adam.main.SparkStartup
 import ch.unibas.dmi.dbis.adam.query.datastructures.CompoundQueryExpressions.{ExpressionEvaluationOrder, IntersectExpression}
-import ch.unibas.dmi.dbis.adam.query.datastructures.ProgressiveQueryStatus
+import ch.unibas.dmi.dbis.adam.query.datastructures.{QueryCacheOptions, ProgressiveQueryStatus}
 import ch.unibas.dmi.dbis.adam.query.distance.EuclideanDistance
 import ch.unibas.dmi.dbis.adam.query.handler.CompoundQueryHandler
 import ch.unibas.dmi.dbis.adam.query.handler.QueryHandler.SpecifiedIndexQueryHolder
@@ -449,8 +449,8 @@ class QueryTestSuite extends AdamTestBase with ScalaFutures {
       //nnq has numOfQ  = 0 to avoid that by the various randomized q's the results get different
       val nnq = NearestNeighbourQuery(es.feature.vector, es.distance, es.k, false, Map("numOfQ" -> "0"), None)
 
-      val shqh = SpecifiedIndexQueryHolder(shidx.get.indexname, nnq, None)
-      val vhqh = SpecifiedIndexQueryHolder(vaidx.get.indexname, nnq, None)
+      val shqh = new SpecifiedIndexQueryHolder(shidx.get.indexname, nnq, None, None, Some(QueryCacheOptions()))
+      val vhqh = new SpecifiedIndexQueryHolder(vaidx.get.indexname, nnq, None, None, Some(QueryCacheOptions()))
 
       val results = time {
         CompoundQueryHandler.indexOnlyQuery("")(new IntersectExpression(shqh, vhqh), false)
@@ -488,8 +488,8 @@ class QueryTestSuite extends AdamTestBase with ScalaFutures {
       //nnq has numOfQ  = 0 to avoid that by the various randomized q's the results get different
       val nnq = NearestNeighbourQuery(es.feature.vector, es.distance, es.k, false, Map("numOfQ" -> "0"), None)
 
-      val va1qh = SpecifiedIndexQueryHolder(vaidx1.get.indexname, nnq, None)
-      val va2qh = SpecifiedIndexQueryHolder(vaidx2.get.indexname, nnq, None)
+      val va1qh = new SpecifiedIndexQueryHolder(vaidx1.get.indexname, nnq, None, None, Some(QueryCacheOptions()))
+      val va2qh = new SpecifiedIndexQueryHolder(vaidx2.get.indexname, nnq, None, None, Some(QueryCacheOptions()))
 
       val results = time {
         CompoundQueryHandler.indexOnlyQuery("")(new IntersectExpression(va1qh, va2qh, ExpressionEvaluationOrder.LeftFirst), false)
