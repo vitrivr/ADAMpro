@@ -5,14 +5,13 @@ import ch.unibas.dmi.dbis.adam.entity.EntityHandler
 import ch.unibas.dmi.dbis.adam.entity.Tuple.TupleID
 import ch.unibas.dmi.dbis.adam.exception.QueryNotConformException
 import ch.unibas.dmi.dbis.adam.index.Index.IndexName
-import ch.unibas.dmi.dbis.adam.index.IndexHandler
+import ch.unibas.dmi.dbis.adam.index.{Index, IndexHandler}
 import ch.unibas.dmi.dbis.adam.main.AdamContext
 import ch.unibas.dmi.dbis.adam.query.Result
-import ch.unibas.dmi.dbis.adam.query.datastructures.{ProgressiveQueryStatus, ProgressiveQueryStatusTracker, ProgressiveQueryIntermediateResults}
+import ch.unibas.dmi.dbis.adam.query.datastructures.{ProgressiveQueryIntermediateResults, ProgressiveQueryStatus, ProgressiveQueryStatusTracker}
 import ch.unibas.dmi.dbis.adam.query.progressive._
 import ch.unibas.dmi.dbis.adam.query.query.NearestNeighbourQuery
 import ch.unibas.dmi.dbis.adam.query.scanner.{FeatureScanner, IndexScanner}
-import ch.unibas.dmi.dbis.adam.storage.engine.CatalogOperator
 import org.apache.log4j.Logger
 import org.apache.spark.sql.{DataFrame, Row}
 
@@ -63,14 +62,27 @@ private[query] object NearestNeighbourQueryHandler {
     *         otherwise also the true data is scanned for performing the query
     */
   def indexQuery(indexname: IndexName, query: NearestNeighbourQuery, filter: Option[Set[TupleID]])(implicit ac: AdamContext): DataFrame = {
+    indexQuery(IndexHandler.load(indexname).get, query, filter)
+  }
+
+  /**
+    * Performs an index-based query.
+    *
+    * @param index
+    * @param query
+    * @param filter
+    * @return depending on whether query.indexOnly is set to true only the index tuples are scanned,
+    *         otherwise also the true data is scanned for performing the query
+    */
+  def indexQuery(index: Index, query: NearestNeighbourQuery, filter: Option[Set[TupleID]])(implicit ac: AdamContext): DataFrame = {
     log.debug("performing index-based nearest neighbor scan")
 
     if (query.indexOnly) {
       log.debug("reading only index")
-      indexOnlyQuery(indexname, query, filter)
+      indexOnlyQuery(index, query, filter)
     } else {
       log.debug("reading index with results")
-      indexQueryWithResults(indexname, query, filter)
+      indexQueryWithResults(index, query, filter)
     }
   }
 
@@ -78,19 +90,19 @@ private[query] object NearestNeighbourQueryHandler {
     * Performs an index-based query. Similar to traditional DBMS, a query is performed is on the index and then the true
     * data is accessed.
     *
-    * @param indexname
+    * @param index
     * @param query
     * @param filter
     * @return
     */
-  def indexQueryWithResults(indexname: IndexName, query: NearestNeighbourQuery, filter: Option[Set[TupleID]])(implicit ac: AdamContext): DataFrame = {
-    val entityname = CatalogOperator.getEntitynameFromIndex(indexname)
+  def indexQueryWithResults(index: Index, query: NearestNeighbourQuery, filter: Option[Set[TupleID]])(implicit ac: AdamContext): DataFrame = {
+    val entityname = index.entityname
     if (!isQueryConform(entityname, query)) {
       throw QueryNotConformException()
     }
 
     log.debug("starting index scanner")
-    val tidList = IndexScanner(IndexHandler.load(indexname).get, query, filter)
+    val tidList = IndexScanner(index, query, filter)
 
     val entity = EntityHandler.load(entityname).get
 
@@ -102,19 +114,19 @@ private[query] object NearestNeighbourQueryHandler {
     * Performs an index-based query. Unlike in traditional databases, this query returns result candidates, but may contain
     * false positives as well.
     *
-    * @param indexname
+    * @param index
     * @param query
     * @param filter
     * @return
     */
-  def indexOnlyQuery(indexname: IndexName, query: NearestNeighbourQuery, filter: Option[Set[TupleID]])(implicit ac: AdamContext): DataFrame = {
-    val entityname = CatalogOperator.getEntitynameFromIndex(indexname)
+  def indexOnlyQuery(index: Index, query: NearestNeighbourQuery, filter: Option[Set[TupleID]])(implicit ac: AdamContext): DataFrame = {
+    val entityname = index.entityname
     if (!isQueryConform(entityname, query)) {
       throw QueryNotConformException()
     }
 
     log.debug("starting index scanner")
-    val result = IndexScanner(IndexHandler.load(indexname).get, query, filter).toSeq
+    val result = IndexScanner(index, query, filter).toSeq
     val rdd = ac.sc.parallelize(result).map(res => Row(res.distance, res.tid))
     ac.sqlContext.createDataFrame(rdd, Result.resultSchema)
   }

@@ -10,6 +10,7 @@ import ch.unibas.dmi.dbis.adam.main.AdamContext
 import ch.unibas.dmi.dbis.adam.query.Result
 import ch.unibas.dmi.dbis.adam.query.distance.DistanceFunction
 import ch.unibas.dmi.dbis.adam.query.query.NearestNeighbourQuery
+import ch.unibas.dmi.dbis.adam.storage.engine.CatalogOperator
 import ch.unibas.dmi.dbis.adam.storage.partitions.PartitionHandler.PartitionID
 import org.apache.log4j.Logger
 import org.apache.spark.sql.DataFrame
@@ -28,6 +29,12 @@ trait Index {
   def indextypename: IndexTypeName
 
   def entityname: EntityName
+
+  /**
+    * Gets path of the index.
+    * @return
+    */
+  def path : String = CatalogOperator.getIndexPath(indexname)
 
 
   /**
@@ -113,6 +120,32 @@ trait Index {
     * @return a set of candidate tuple ids, possibly together with a tentative score (the number of tuples will be greater than k)
     */
   protected def scan(data: DataFrame, q: FeatureVector, distance: DistanceFunction, options: Map[String, Any], k: Int): Set[Result]
+
+  /**
+    * Copies the index structure. Note that this is a volatile operation and no data is stored on disk. Note also
+    * that it only returns a shallow copy.
+    *
+    * @param newName possibly new name for index
+    * @return
+    */
+  private[index] def copy(newName : Option[IndexName] = None) : Index = {
+    val current = this
+
+    val index = new Index {
+      def indexname: IndexName = newName.getOrElse(current.indexname)
+      def indextypename: IndexTypeName = current.indextypename
+      def entityname: EntityName = current.entityname
+      def confidence: Float = current.confidence
+      def lossy: Boolean = current.lossy
+      private[index] def metadata: Serializable = current.metadata
+      def isQueryConform(nnq: NearestNeighbourQuery): Boolean = current.isQueryConform(nnq)
+      protected def scan(data: DataFrame, q: FeatureVector, distance: DistanceFunction, options: Map[String, Any], k: Int): Set[Result] = current.scan(data, q, distance, options, k)
+
+      private[index] var df: DataFrame = current.df
+    }
+
+    index
+  }
 }
 
 object Index {

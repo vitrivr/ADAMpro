@@ -27,11 +27,10 @@ object PartitionHandler {
     * @param n
     * @param useMetadataForPartitioning
     * @param cols
-    * @param materialize
-    * @param replace
-    * @param ac
+    * @param option
+    * @return
     */
-  def repartitionIndex(indexname: IndexName, n: Int, useMetadataForPartitioning: Boolean, cols: Option[Seq[String]], materialize: Boolean = false, replace: Boolean = false)(implicit ac: AdamContext): Try[Index] = {
+  def repartitionIndex(indexname: IndexName, n: Int, useMetadataForPartitioning: Boolean, cols: Option[Seq[String]], option : PartitionOptions.Value)(implicit ac: AdamContext): Try[Index] = {
     val index = IndexHandler.load(indexname)
 
     if (index.isFailure) {
@@ -39,14 +38,38 @@ object PartitionHandler {
       throw IndexNotExistingException()
     }
 
-    val entity = EntityHandler.load(index.get.entityname)
+    repartitionIndex(index.get, n, useMetadataForPartitioning, cols, option)
+  }
 
-    val join = if(useMetadataForPartitioning){
+  /**
+    *
+    * @param index
+    * @param n
+    * @param useMetadataForPartitioning
+    * @param cols
+    * @param option
+    * @return
+    */
+  def repartitionIndex(index: Index, n: Int, useMetadataForPartitioning: Boolean, cols: Option[Seq[String]], option : PartitionOptions.Value)(implicit ac: AdamContext): Try[Index] = {
+    val entity = EntityHandler.load(index.entityname)
+
+    val join = if (useMetadataForPartitioning) {
       entity.get.getMetadata
     } else {
       None
     }
 
-    IndexHandler.repartition(index.get, n, join, cols, materialize, replace)
+    IndexHandler.repartition(index, n, join, cols, option)
   }
+}
+
+
+
+/**
+  *
+  */
+object PartitionOptions extends Enumeration {
+  val CREATE_NEW = Value("create new index (materialize)")
+  val REPLACE_EXISTING = Value("replace existing index (materialize)")
+  val CREATE_TEMP = Value("create temporary index in cache")
 }

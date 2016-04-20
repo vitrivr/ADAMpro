@@ -1,6 +1,5 @@
 package ch.unibas.dmi.dbis.adam.storage.components
 
-import ch.unibas.dmi.dbis.adam.entity.Entity._
 import ch.unibas.dmi.dbis.adam.entity.Tuple._
 import ch.unibas.dmi.dbis.adam.index.Index.IndexName
 import ch.unibas.dmi.dbis.adam.main.AdamContext
@@ -14,13 +13,20 @@ import org.apache.spark.sql.DataFrame
   */
 trait IndexStorage {
   /**
-    * Create the entity in the index storage (when creating the index)
     *
-    * @param entityname
+    * @param indexname
+    * @return
+    */
+  def exists(indexname : IndexName) : Boolean
+
+  /**
+    * Create an index in the index storage.
+    *
+    * @param indexname
     * @param df
     * @return
     */
-  def create(entityname: EntityName, df: DataFrame)(implicit ac: AdamContext) = write(entityname, df)
+  def create(indexname: IndexName, df: DataFrame)(implicit ac: AdamContext) = write(indexname, df)
 
   /**
     * Read index from the index storage.

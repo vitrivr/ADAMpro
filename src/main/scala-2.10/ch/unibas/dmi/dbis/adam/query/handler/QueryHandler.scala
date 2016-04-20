@@ -6,7 +6,7 @@ import ch.unibas.dmi.dbis.adam.entity.Entity._
 import ch.unibas.dmi.dbis.adam.entity.Tuple.TupleID
 import ch.unibas.dmi.dbis.adam.exception.IndexNotExistingException
 import ch.unibas.dmi.dbis.adam.index.Index.{IndexName, IndexTypeName}
-import ch.unibas.dmi.dbis.adam.index.IndexHandler
+import ch.unibas.dmi.dbis.adam.index.{Index, IndexHandler}
 import ch.unibas.dmi.dbis.adam.main.{AdamContext, SparkStartup}
 import ch.unibas.dmi.dbis.adam.query.Result
 import ch.unibas.dmi.dbis.adam.query.datastructures._
@@ -110,7 +110,7 @@ object QueryHandler {
         if (indexChoice.isDefined) {
           //TODO: use old measurements for choice rather than head
           val index = indexChoice.get.map(indexname => IndexHandler.load(indexname, false).get).filter(_.isQueryConform(nnq.get)).head
-          return Option(specifiedIndexQuery(index.indexname))
+          return Option(specifiedIndexQuery(index))
         } else {
           return None
         }
@@ -234,11 +234,11 @@ object QueryHandler {
     val indexes = IndexHandler.list(entityname, indextype).map(_._1)
 
     if (indexes.isEmpty) {
-      log.error("requested index of type " + indextype + " but not index of this type was found")
+      log.error("requested index of type " + indextype + " but no index of this type was found")
       throw new IndexNotExistingException()
     }
 
-    val res = specifiedIndexQuery(indexes.head)(nnq, bq, withMetadata)
+    val res = specifiedIndexQuery(IndexHandler.load(indexes.head).get)(nnq, bq, withMetadata)
 
     if (id.isDefined && cache.isDefined && cache.get.putInCache) {
       QueryLRUCache.put(id.get, res)
@@ -258,17 +258,18 @@ object QueryHandler {
     }
   }
 
-
   /**
     * Performs a index-based query.
     *
-    * @param indexname
-    * @param nnq          information for nearest neighbour query
-    * @param bq           information for boolean query
-    * @param withMetadata whether or not to retrieve corresponding metadata
+    * @param index
+    * @param nnq
+    * @param bq
+    * @param withMetadata
+    * @param id
+    * @param cache
     * @return
     */
-  def specifiedIndexQuery(indexname: IndexName)(nnq: NearestNeighbourQuery, bq: Option[BooleanQuery], withMetadata: Boolean, id: Option[String] = None, cache: Option[QueryCacheOptions] = Some(QueryCacheOptions()))(implicit ac: AdamContext): DataFrame = {
+  def specifiedIndexQuery(index : Index)(nnq: NearestNeighbourQuery, bq: Option[BooleanQuery], withMetadata: Boolean, id: Option[String] = None, cache: Option[QueryCacheOptions] = Some(QueryCacheOptions()))(implicit ac: AdamContext): DataFrame = {
     if (cache.isDefined && cache.get.useCached) {
       val cached = getFromQueryCache(id)
       if (cached.isSuccess) {
@@ -276,8 +277,7 @@ object QueryHandler {
       }
     }
 
-    val index = IndexHandler.load(indexname)
-    val entityname = index.get.entityname
+    val entityname = index.entityname
 
     log.debug("index query gets filter")
     val filter = if (bq.isDefined) {
@@ -286,12 +286,12 @@ object QueryHandler {
       None
     }
 
-    if (!index.get.isQueryConform(nnq)) {
+    if (!index.isQueryConform(nnq)) {
       log.warn("index is not conform with kNN query")
     }
 
     log.debug("index query performs kNN query")
-    var res = NearestNeighbourQueryHandler.indexQuery(indexname, nnq, filter)
+    var res = NearestNeighbourQueryHandler.indexQuery(index, nnq, filter)
 
     if (withMetadata) {
       log.debug("join metadata to results of index query")
@@ -305,14 +305,18 @@ object QueryHandler {
     res
   }
 
-  case class SpecifiedIndexQueryHolder(indexname: IndexName, nnq: NearestNeighbourQuery, bq: Option[BooleanQuery], id: Option[String] = None, cache: Option[QueryCacheOptions] = Some(QueryCacheOptions()))(implicit ac: AdamContext) extends QueryExpression(id) {
+  case class SpecifiedIndexQueryHolder(index: Index, nnq: NearestNeighbourQuery, bq: Option[BooleanQuery], id: Option[String] = None, cache: Option[QueryCacheOptions] = Some(QueryCacheOptions()))(implicit ac: AdamContext) extends QueryExpression(id) {
+    def this(indexname: IndexName, nnq: NearestNeighbourQuery, bq: Option[BooleanQuery], id: Option[String], cache: Option[QueryCacheOptions])(implicit ac: AdamContext){
+      this(IndexHandler.load(indexname).get, nnq, bq, id, cache)
+    }
+
     override protected def run(filter: Option[Set[TupleID]]): DataFrame = {
       val abq = bq.getOrElse(BooleanQuery())
       if (filter.isDefined) {
         abq.append(filter.get)
       }
       val annq = NearestNeighbourQuery(nnq.q, nnq.distance, nnq.k, true, nnq.options, nnq.partitions, nnq.queryID)
-      specifiedIndexQuery(indexname)(annq, Option(abq), false, id, cache)
+      specifiedIndexQuery(index)(annq, Option(abq), false, id, cache)
     }
   }
 

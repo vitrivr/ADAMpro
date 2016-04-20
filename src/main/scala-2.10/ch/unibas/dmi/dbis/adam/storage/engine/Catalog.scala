@@ -17,13 +17,14 @@ private[engine] class EntitiesCatalog(tag: Tag) extends Table[(String, Int, Bool
   def * = (entityname, featurelength, hasMeta)
 }
 
-private[engine] class IndexesCatalog(tag: Tag) extends Table[(String, String, String, String)](tag, "ADAMTWO_INDEXES") {
+private[engine] class IndexesCatalog(tag: Tag) extends Table[(String, String, String, String, String)](tag, "ADAMTWO_INDEXES") {
   def indexname = column[String]("INDEXNAME", O.PrimaryKey)
   def entityname = column[String]("ENTITYNAME")
   def indextypename = column[String]("INDEXTYPENAME")
-  def indexmeta = column[String]("INDEXMETA")
+  def indexpath = column[String]("INDEXPATH")
+  def indexmetapath = column[String]("INDEXMETAPATH")
 
-  def * = (indexname, entityname, indextypename, indexmeta)
+  def * = (indexname, entityname, indextypename, indexpath, indexmetapath)
 
   def supplier: ForeignKeyQuery[EntitiesCatalog, (String, Int, Boolean)] =
     foreignKey("ENTITYNAME", entityname, TableQuery[EntitiesCatalog])(_.entityname)

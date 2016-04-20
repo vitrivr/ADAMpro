@@ -42,6 +42,8 @@ object ParquetIndexStorage extends IndexStorage {
     log.debug("writing index to harddisk")
     storage.write(indexName, index)
   }
+
+  override def exists(indexname: IndexName): Boolean = storage.exists(indexname)
 }
 
 
@@ -79,9 +81,20 @@ class HadoopStorage extends GenericIndexStorage {
     val hadoopConf = new Configuration()
     hadoopConf.set("fs.defaultFS", AdamConfig.basePath)
     val hdfs = FileSystem.get(new Path(AdamConfig.indexPath).toUri, hadoopConf)
+
     hdfs.delete(new org.apache.hadoop.fs.Path(path), true)
     true
 
+  }
+
+  /**
+    *
+    * @param indexname
+    * @return
+    */
+  override def exists(indexname: IndexName): Boolean =  {
+    val path = AdamConfig.indexPath + "/" + indexname + ".parquet"
+    FileSystem.get(new Path(AdamConfig.indexPath).toUri, hadoopConf).exists(new org.apache.hadoop.fs.Path(path))
   }
 }
 
@@ -99,5 +112,14 @@ class LocalStorage extends GenericIndexStorage {
   override def drop(indexname: IndexName)(implicit ac: AdamContext): Boolean = {
     new File(AdamConfig.indexPath + "/" + indexname + ".parquet").delete()
     true
+  }
+
+  /**
+    *
+    * @param indexname
+    * @return
+    */
+  override def exists(indexname: IndexName): Boolean =  {
+    new File(AdamConfig.indexPath + "/" + indexname + ".parquet").exists()
   }
 }

@@ -14,11 +14,12 @@ import ch.unibas.dmi.dbis.adam.index.structures.sh.SHIndex
 import ch.unibas.dmi.dbis.adam.index.structures.va.VAIndex
 import ch.unibas.dmi.dbis.adam.main.{AdamContext, SparkStartup}
 import ch.unibas.dmi.dbis.adam.storage.engine.CatalogOperator
+import ch.unibas.dmi.dbis.adam.storage.partitions.PartitionOptions
 import org.apache.log4j.Logger
 import org.apache.spark.rdd.RDD
 import org.apache.spark.sql.DataFrame
 
-import scala.util.{Failure, Success, Try}
+import scala.util.{Random, Failure, Success, Try}
 
 /**
   * adampro
@@ -73,9 +74,9 @@ object IndexHandler {
     val indexname = createIndexName(entity.entityname, indexgenerator.indextypename)
     val rdd: RDD[IndexingTaskTuple] = entity.getFeaturedata.map { x => IndexingTaskTuple(x.getLong(0), x.getAs[FeatureVectorWrapper](1).vector) }
     val index = indexgenerator.index(indexname, entity.entityname, rdd)
-    val df = index.df.withColumnRenamed("id", FieldNames.idColumnName).withColumnRenamed("value", FieldNames.featureIndexColumnName)
-    storage.write(indexname, df)
-    CatalogOperator.createIndex(indexname, entity.entityname, indexgenerator.indextypename, index.metadata)
+    index.df = index.df.withColumnRenamed("id", FieldNames.idColumnName).withColumnRenamed("value", FieldNames.featureIndexColumnName)
+    storage.write(indexname, index.df)
+    CatalogOperator.createIndex(indexname, indexname, entity.entityname, indexgenerator.indextypename, index.metadata)
     Success(index)
   }
 
@@ -99,34 +100,14 @@ object IndexHandler {
   }
 
   /**
-    * Gets confidence score of index.
-    *
-    * @param indexname
-    * @return
-    */
-  def confidence(indexname: IndexName)(implicit ac: AdamContext): Float = {
-    loadIndexMetaData(indexname).get.confidence
-  }
-
-  /**
-    * Gets the type of the index.
-    *
-    * @param indexname
-    * @return
-    */
-  def indextype(indexname: IndexName)(implicit ac: AdamContext): IndexTypeName = {
-    loadIndexMetaData(indexname).get.indextypename
-  }
-
-  /**
     * Loads index into cache.
     *
     * @param indexname
     * @return
     */
   def load(indexname: IndexName, cache: Boolean = false)(implicit ac: AdamContext): Try[Index] = {
-    if (!exists(indexname)) {
-      throw new IndexNotExistingException()
+    if (!IndexLRUCache.contains(indexname) && !exists(indexname)) {
+      Failure(new IndexNotExistingException())
     }
 
     val index = IndexLRUCache.get(indexname)
@@ -149,7 +130,7 @@ object IndexHandler {
       Failure(IndexNotExistingException())
     }
 
-    val df = storage.read(indexname)
+    val df = storage.read(CatalogOperator.getIndexPath(indexname))
     val entityname = CatalogOperator.getEntitynameFromIndex(indexname)
     val meta = CatalogOperator.getIndexMeta(indexname)
 
@@ -202,12 +183,13 @@ object IndexHandler {
     * @param n
     * @param join
     * @param cols
-    * @param materialize
-    * @param replace
+    * @param option
     * @return
     */
-  def repartition(index: Index, n: Int, join: Option[DataFrame], cols: Option[Seq[String]], materialize: Boolean = false, replace: Boolean = false)(implicit ac: AdamContext): Try[Index] = {
+  def repartition(index: Index, n: Int, join: Option[DataFrame], cols: Option[Seq[String]], option: PartitionOptions.Value)(implicit ac: AdamContext): Try[Index] = {
     var data = index.df
+    //TODO: possibly add own partitioner
+    //data.map(r => (r.getAs(cols.get.head), r)).partitionBy(new HashPartitioner())
 
     if (join.isDefined) {
       data = data.join(join.get)
@@ -219,29 +201,46 @@ object IndexHandler {
       data.repartition(n)
     }
 
-    if (replace) {
-      if (materialize) {
-        SparkStartup.indexStorage.write(index.indexname, data)
-      }
+    if (join.isDefined) {
+      data = data.select(FieldNames.idColumnName, FieldNames.featureIndexColumnName)
+    }
 
-      index.df = data
-      return Success(index)
-    } else {
-      val indexname = createIndexName(index.entityname, index.indextypename)
+    option match {
+      case PartitionOptions.CREATE_NEW =>
+        val newName = createIndexName(index.entityname, index.indextypename)
+        storage.write(newName, data)
+        CatalogOperator.createIndex(newName, newName, index.entityname, index.indextypename, index.metadata)
+        IndexLRUCache.invalidate(newName)
 
-      if(materialize){
-        storage.write(indexname, data)
-        CatalogOperator.createIndex(indexname, index.entityname, index.indextypename, index.metadata)
-        return loadIndexMetaData(indexname)
-      } else {
-        //val clone = index.clone().asInstanceOf[Index]
-        //clone.dataframe = data
-        log.error("repartitioning without materializing and replacing is forbidden at the moment")
-        return Failure[Index](new GeneralAdamException())
-      }
+        return Success(load(newName).get)
+
+      case PartitionOptions.CREATE_TEMP =>
+        val newName = createIndexName(index.entityname, index.indextypename)
+
+        val newIndex = index.copy(Some(newName))
+        newIndex.df = data
+
+        IndexLRUCache.put(newName, newIndex)
+        return Success(newIndex)
+
+      case PartitionOptions.REPLACE_EXISTING =>
+        val oldPath = index.path
+
+        index.df = data
+        var newPath = ""
+
+        do {
+          newPath = index.indexname + "-rep" + Random.nextInt
+        } while(SparkStartup.indexStorage.exists(newPath))
+
+        SparkStartup.indexStorage.write(newPath, data)
+        CatalogOperator.updateIndexPath(index.indexname, newPath)
+        SparkStartup.indexStorage.drop(oldPath)
+
+        IndexLRUCache.invalidate(index.indexname)
+
+        return Success(index)
     }
   }
-
-
 }
 

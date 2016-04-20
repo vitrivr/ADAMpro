@@ -74,7 +74,7 @@ private[rpc] object RPCHelperMethods {
 
     val expr = seqm.get.submessage match {
       case SubExpressionQueryMessage.Submessage.Eqm(x) => toExpr(x)
-      case SubExpressionQueryMessage.Submessage.Ssiqm(request) => new SpecifiedIndexQueryHolder(request.index, prepareNNQ(request.nnq), prepareBQ(request.bq), Some(request.queryid))
+      case SubExpressionQueryMessage.Submessage.Ssiqm(request) => new SpecifiedIndexQueryHolder(request.index, prepareNNQ(request.nnq), prepareBQ(request.bq), Some(request.queryid), Some(QueryCacheOptions()))
       case SubExpressionQueryMessage.Submessage.Siqm(request) => new IndexQueryHolder(request.entity, IndexTypes.withIndextype(request.indextype).get, prepareNNQ(request.nnq), prepareBQ(request.bq), Some(request.queryid))
       case SubExpressionQueryMessage.Submessage.Ssqm(request) => new SequentialQueryHolder(request.entity, prepareNNQ(request.nnq), prepareBQ(request.bq), Some(request.queryid))
       case _ => EmptyQueryExpression();

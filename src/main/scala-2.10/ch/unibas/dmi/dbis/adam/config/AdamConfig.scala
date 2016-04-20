@@ -62,4 +62,10 @@ object AdamConfig{
   } else {
     None
   }
+
+  val localNodes = if(config.hasPath("adampro.localNodes")){
+    Option(config.getInt("adampro.localNodes"))
+  } else {
+    None
+  }
 }

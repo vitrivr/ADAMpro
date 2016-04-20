@@ -1,6 +1,7 @@
 package ch.unibas.dmi.dbis.adam.api
 
 import ch.unibas.dmi.dbis.adam.entity.Entity._
+import ch.unibas.dmi.dbis.adam.index.{IndexHandler, Index}
 import ch.unibas.dmi.dbis.adam.index.Index.{IndexName, IndexTypeName}
 import ch.unibas.dmi.dbis.adam.main.AdamContext
 import ch.unibas.dmi.dbis.adam.query.datastructures.{ProgressiveQueryStatus, ProgressiveQueryStatusTracker, QueryExpression}
@@ -67,9 +68,23 @@ object QueryOp {
     * @return
     */
   def index(indexname: IndexName, nnq: NearestNeighbourQuery, bq: Option[BooleanQuery], withMetadata: Boolean)(implicit ac : AdamContext): DataFrame = {
-    log.debug("perform index query operation")
-    QueryHandler.specifiedIndexQuery(indexname)(nnq, bq, withMetadata)
+    index(IndexHandler.load(indexname).get, nnq, bq, withMetadata)
   }
+
+  /**
+    * Performs an index-based query.
+    *
+    * @param index
+    * @param nnq
+    * @param bq
+    * @param withMetadata
+    * @return
+    */
+  def index(index: Index, nnq: NearestNeighbourQuery, bq: Option[BooleanQuery], withMetadata: Boolean)(implicit ac : AdamContext): DataFrame = {
+    log.debug("perform index query operation")
+    QueryHandler.specifiedIndexQuery(index)(nnq, bq, withMetadata)
+  }
+
   def index(q: SpecifiedIndexQueryHolder)(implicit ac : AdamContext): DataFrame = q.evaluate()
 
   /**

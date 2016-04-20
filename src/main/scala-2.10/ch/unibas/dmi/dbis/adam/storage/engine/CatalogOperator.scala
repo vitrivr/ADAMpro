@@ -112,7 +112,7 @@ object CatalogOperator {
     val query = entities.filter(_.entityname === entityname.toString()).take(1).result
     val entity = Await.result(db.run(query), MAX_WAITING_TIME).head
 
-    if(entity._2 != DEFAULT_DIMENSIONALITY){
+    if (entity._2 != DEFAULT_DIMENSIONALITY) {
       Some(entity._2)
     } else {
       None
@@ -136,11 +136,11 @@ object CatalogOperator {
       return true
     } else {
 
-      val setup = DBIO.seq(
+      val update = DBIO.seq(
         entities.filter(_.entityname === entityname.toString()).update(entity._1, dimensionality, entity._3)
       )
 
-      Await.result(db.run(setup), MAX_WAITING_TIME)
+      Await.result(db.run(update), MAX_WAITING_TIME)
 
       log.debug("updated entity in catalog")
       true
@@ -188,7 +188,7 @@ object CatalogOperator {
     * @param entityname
     * @param indexmeta
     */
-  def createIndex(indexname: IndexName, entityname: EntityName, indextypename: IndexTypeName, indexmeta: Serializable): Boolean = {
+  def createIndex(indexname: IndexName, filename: String, entityname: EntityName, indextypename: IndexTypeName, indexmeta: Serializable): Boolean = {
     if (!existsEntity(entityname)) {
       throw new EntityNotExistingException()
     }
@@ -207,7 +207,7 @@ object CatalogOperator {
     oos.close
 
     val setup = DBIO.seq(
-      indexes.+=((indexname, entityname, indextypename.name, metaFilePath))
+      indexes.+=((indexname, entityname, indextypename.name, filename, metaFilePath))
     )
 
     Await.result(db.run(setup), MAX_WAITING_TIME)
@@ -264,7 +264,7 @@ object CatalogOperator {
     * @return
     */
   def listIndexes(entityname: EntityName = null, indextypename: IndexTypeName = null): Seq[(IndexName, IndexTypeName)] = {
-    var catalog: Query[IndexesCatalog, (String, String, String, String), Seq] = indexes
+    var catalog: Query[IndexesCatalog, (String, String, String, String, String), Seq] = indexes
 
     if (entityname != null) {
       catalog = catalog.filter(_.entityname === entityname.toString())
@@ -285,10 +285,38 @@ object CatalogOperator {
     * @return
     */
   def getIndexMeta(indexname: IndexName): Any = {
-    val query = indexes.filter(_.indexname === indexname).map(_.indexmeta).result.head
+    val query = indexes.filter(_.indexname === indexname).map(_.indexmetapath).result.head
     val path = Await.result(db.run(query), MAX_WAITING_TIME)
     val ois = new ObjectInputStream(new FileInputStream(path))
     ois.readObject()
+  }
+
+  /**
+    *
+    * @param indexname
+    * @return
+    */
+  def getIndexPath(indexname: IndexName): String = {
+    val query = indexes.filter(_.indexname === indexname).map(_.indexpath).result.head
+    Await.result(db.run(query), MAX_WAITING_TIME)
+  }
+
+  /**
+    *
+    * @param indexname
+    * @return
+    */
+  def updateIndexPath(indexname: IndexName, newPath: String): Boolean = {
+    val query = indexes.filter(_.indexname === indexname).result.head
+    val index = Await.result(db.run(query), MAX_WAITING_TIME)
+
+    val update = DBIO.seq(
+      indexes.filter(_.indexname === indexname).update(index._1, index._2, index._3, newPath, index._5)
+    )
+    Await.result(db.run(update), MAX_WAITING_TIME)
+
+    log.debug("updated index in catalog")
+    true
   }
 
   /**

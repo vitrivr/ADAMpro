@@ -50,5 +50,39 @@ object IndexLRUCache {
         Failure(e)
     }
   }
+
+  /**
+    *
+    * @param indexname
+    * @return
+    */
+  def contains(indexname : IndexName) : Boolean = {
+    indexCache.getIfPresent(indexname) != null
+  }
+
+  /**
+    *
+    * @param indexname
+    * @param index
+    * @return
+    */
+  def put(indexname : IndexName, index : Index) : Unit = {
+    indexCache.put(indexname, index)
+  }
+
+  /**
+    *
+    */
+  def empty() : Unit = {
+    indexCache.invalidateAll()
+  }
+
+  /**
+    *
+    * @param indexname
+    */
+  def invalidate(indexname : IndexName): Unit = {
+    indexCache.invalidate(indexname)
+  }
 }
 

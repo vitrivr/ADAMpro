@@ -9,7 +9,7 @@ import ch.unibas.dmi.dbis.adam.http.grpc.{AckMessage, CreateEntityMessage, _}
 import ch.unibas.dmi.dbis.adam.index.structures.IndexTypes
 import ch.unibas.dmi.dbis.adam.main.AdamContext
 import ch.unibas.dmi.dbis.adam.query.distance.EuclideanDistance
-import ch.unibas.dmi.dbis.adam.storage.partitions.PartitionHandler
+import ch.unibas.dmi.dbis.adam.storage.partitions.{PartitionHandler, PartitionOptions}
 import io.grpc.stub.StreamObserver
 import org.apache.log4j.Logger
 import org.apache.spark.sql.Row
@@ -220,7 +220,14 @@ class DataDefinitionRPC(implicit ac: AdamContext) extends AdamDefinitionGrpc.Ada
       Some(request.columns)
     }
 
-    val index = PartitionHandler.repartitionIndex(request.index, request.numberOfPartitions, request.useMetadataForPartitioning, cols, request.materialize, request.replace)
+    val option = request.option match {
+      case RepartitionMessage.PartitionOptions.CREATE_NEW => PartitionOptions.CREATE_NEW
+      case RepartitionMessage.PartitionOptions.CREATE_TEMP => PartitionOptions.CREATE_TEMP
+      case RepartitionMessage.PartitionOptions.REPLACE_EXISTING => PartitionOptions.REPLACE_EXISTING
+      case _ => PartitionOptions.CREATE_NEW
+    }
+
+    val index = PartitionHandler.repartitionIndex(request.index, request.numberOfPartitions, request.useMetadataForPartitioning, cols, option)
 
     if(index.isSuccess){
       Future.successful(AckMessage(AckMessage.Code.OK, index.get.indexname))
