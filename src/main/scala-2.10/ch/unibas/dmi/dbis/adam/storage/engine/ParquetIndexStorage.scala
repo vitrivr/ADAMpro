@@ -7,6 +7,7 @@ import ch.unibas.dmi.dbis.adam.entity.Tuple._
 import ch.unibas.dmi.dbis.adam.index.Index.IndexName
 import ch.unibas.dmi.dbis.adam.main.AdamContext
 import ch.unibas.dmi.dbis.adam.storage.components.IndexStorage
+import org.apache.commons.io.FileUtils
 import org.apache.hadoop.conf.Configuration
 import org.apache.hadoop.fs.{FileSystem, Path}
 import org.apache.log4j.Logger
@@ -110,7 +111,7 @@ class LocalStorage extends GenericIndexStorage {
 
 
   override def drop(indexname: IndexName)(implicit ac: AdamContext): Boolean = {
-    new File(AdamConfig.indexPath + "/" + indexname + ".parquet").delete()
+    FileUtils.deleteDirectory(new File(AdamConfig.indexPath + "/" + indexname + ".parquet"))
     true
   }
 
