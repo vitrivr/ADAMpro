@@ -38,13 +38,12 @@ class PartitionTestSuite extends AdamTestBase {
 
       val partnnq = NearestNeighbourQuery(es.feature.vector, es.distance, es.k, false, Map[String, String](), Some(Set(0)))
 
-      val partresults = QueryOp.index(IndexHandler.load(index.get.indexname).get, partnnq, None, true)
-        .map(r => (r.getAs[Float](FieldNames.distanceColumnName), r.getAs[Long]("tid"))).collect() //get here TID of metadata
+      val partresults = QueryOp.index(IndexHandler.load(index.get.indexname).get, partnnq, None, false)
+        .map(r => (r.getAs[Float](FieldNames.distanceColumnName), r.getAs[Long](FieldNames.idColumnName))).collect()
         .sortBy(_._1).toSeq
 
       Then("we should retrieve the k nearest neighbors of one partition only")
-      //TODO: find better way to check
-      assert(partresults.length > 0)
+      assert(partresults.map(x => x._2 % nPartitions).distinct.length == 1)
 
       //clean up
       DropEntityOp(es.entity.entityname)
@@ -64,13 +63,12 @@ class PartitionTestSuite extends AdamTestBase {
       val partindex = PartitionHandler.repartitionIndex(index.get.indexname, nPartitions, false, Some(Seq(FieldNames.idColumnName)), PartitionOptions.CREATE_TEMP)
       val partnnq = NearestNeighbourQuery(es.feature.vector, es.distance, es.k, false, Map[String, String](), Some(Set(0)))
 
-      val partresults = QueryOp.index(IndexHandler.load(partindex.get.indexname).get, partnnq, None, true)
-        .map(r => (r.getAs[Float](FieldNames.distanceColumnName), r.getAs[Long]("tid"))).collect() //get here TID of metadata
+      val partresults = QueryOp.index(IndexHandler.load(partindex.get.indexname).get, partnnq, None, false)
+        .map(r => (r.getAs[Float](FieldNames.distanceColumnName), r.getAs[Long](FieldNames.idColumnName))).collect()
         .sortBy(_._1).toSeq
 
       Then("we should retrieve the k nearest neighbors of one partition only")
-      //TODO: find better way to check
-      assert(partresults.length > 0)
+      assert(partresults.map(x => x._2 % nPartitions).distinct.length == 1)
 
       When("clearing the cache")
       IndexLRUCache.empty()
@@ -102,13 +100,12 @@ class PartitionTestSuite extends AdamTestBase {
       val loadedIndex = IndexHandler.load(partindex.get.indexname)
       assert(loadedIndex.isSuccess)
 
-      val partresults = QueryOp.index(loadedIndex.get, partnnq, None, true)
-        .map(r => (r.getAs[Float](FieldNames.distanceColumnName), r.getAs[Long]("tid"))).collect() //get here TID of metadata
+      val partresults = QueryOp.index(loadedIndex.get, partnnq, None, false)
+        .map(r => (r.getAs[Float](FieldNames.distanceColumnName), r.getAs[Long](FieldNames.idColumnName))).collect()
         .sortBy(_._1).toSeq
 
       And("we should retrieve the k nearest neighbors of one partition only")
-      //TODO: find better way to check
-      assert(partresults.length > 0)
+      assert(partresults.map(x => x._2 % nPartitions).distinct.length == 1)
 
       //clean up
       DropEntityOp(es.entity.entityname)
@@ -124,7 +121,7 @@ class PartitionTestSuite extends AdamTestBase {
       assert(index.isSuccess)
 
       When("performing a repartitioning with replacement")
-      val partindex = PartitionHandler.repartitionIndex(index.get.indexname, nPartitions, true, Some(Seq("intfield")), PartitionOptions.CREATE_NEW)
+      val partindex = PartitionHandler.repartitionIndex(index.get.indexname, nPartitions, true, Some(Seq("tid")), PartitionOptions.CREATE_NEW)
       val partnnq = NearestNeighbourQuery(es.feature.vector, es.distance, es.k, false, Map[String, String](), Some(Set(0)))
 
       IndexLRUCache.empty()
@@ -138,8 +135,7 @@ class PartitionTestSuite extends AdamTestBase {
         .sortBy(_._1).toSeq
 
       And("we should retrieve the k nearest neighbors of one partition only")
-      //TODO: find better way to check
-      assert(partresults.length > 0)
+      assert(partresults.map(x => x._2 % nPartitions).distinct.length == 1)
 
       //clean up
       DropEntityOp(es.entity.entityname)
