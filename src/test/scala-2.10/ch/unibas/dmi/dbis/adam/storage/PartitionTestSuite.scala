@@ -113,5 +113,36 @@ class PartitionTestSuite extends AdamTestBase {
       //clean up
       DropEntityOp(es.entity.entityname)
     }
+
+    /**
+      *
+      */
+    scenario("repartition based on metadata") {
+      Given("an entity")
+      val es = getGroundTruthEvaluationSet()
+      val index = IndexOp(es.entity.entityname, IndexTypes.ECPINDEX, EuclideanDistance)
+      assert(index.isSuccess)
+
+      When("performing a repartitioning with replacement")
+      val partindex = PartitionHandler.repartitionIndex(index.get.indexname, nPartitions, true, Some(Seq("intfield")), PartitionOptions.CREATE_NEW)
+      val partnnq = NearestNeighbourQuery(es.feature.vector, es.distance, es.k, false, Map[String, String](), Some(Set(0)))
+
+      IndexLRUCache.empty()
+
+      Then("we should be able to load the index")
+      val loadedIndex = IndexHandler.load(partindex.get.indexname)
+      assert(loadedIndex.isSuccess)
+
+      val partresults = QueryOp.index(loadedIndex.get, partnnq, None, true)
+        .map(r => (r.getAs[Float](FieldNames.distanceColumnName), r.getAs[Long]("tid"))).collect() //get here TID of metadata
+        .sortBy(_._1).toSeq
+
+      And("we should retrieve the k nearest neighbors of one partition only")
+      //TODO: find better way to check
+      assert(partresults.length > 0)
+
+      //clean up
+      DropEntityOp(es.entity.entityname)
+    }
   }
 }

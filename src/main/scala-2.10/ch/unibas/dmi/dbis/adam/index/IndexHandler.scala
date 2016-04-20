@@ -192,7 +192,7 @@ object IndexHandler {
     //data.map(r => (r.getAs(cols.get.head), r)).partitionBy(new HashPartitioner())
 
     if (join.isDefined) {
-      data = data.join(join.get)
+      data = data.join(join.get, FieldNames.idColumnName)
     }
 
     data = if (cols.isDefined) {
