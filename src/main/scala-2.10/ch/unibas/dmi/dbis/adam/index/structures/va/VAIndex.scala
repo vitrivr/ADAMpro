@@ -57,8 +57,8 @@ class VAIndex(val indexname: IndexName, val entityname: EntityName, override pri
     })
 
     val results = data
-      .withColumn("lbound", distUDF(lbounds)(df(FieldNames.featureIndexColumnName)))
-      .withColumn("ubound", distUDF(ubounds)(df(FieldNames.featureIndexColumnName)))
+      .withColumn("lbound", distUDF(lbounds)(data(FieldNames.featureIndexColumnName)))
+      .withColumn("ubound", distUDF(ubounds)(data(FieldNames.featureIndexColumnName)))
         .mapPartitions(p => {
           val localRh = new VAResultHandler(k)
 
