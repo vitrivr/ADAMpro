@@ -11,6 +11,9 @@
 </head>
 
 <body>
+<div id="progress" class="progress" style="margin:0px; display:none;">
+    <div class="indeterminate"></div>
+</div>
 
 <nav>
     <div class="nav-wrapper blue-grey darken-3">
@@ -27,13 +30,27 @@
 
 <div class="container" style="width:90%">
     <div class="row">
-
-
+        <h1>Entity Overview.</h1>
+    </div>
+    <div class="row">
+        <div class="col s12">
+            <ul id="info" class="collapsible popout" data-collapsible="accordion">
+            </ul>
+        </div>
     </div>
 </div>
 
 <script src="https://code.jquery.com/jquery-2.1.1.min.js"></script>
 <script src="./lib/js/materialize.min.js"></script>
+<script src="lib/js/app.js"></script>
+<script src="lib/js/overview.js"></script>
+<script>
+    $(document).ready(function(){
+        $('.collapsible').collapsible({
+            accordion : false // A setting that changes the collapsible behavior to expandable instead of the default accordion style
+        });
+    });
+</script>
 </body>
 
 </html>

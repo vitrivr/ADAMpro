@@ -5,6 +5,7 @@ import ch.unibas.dmi.dbis.adam.client.web.datastructures.{CompoundQueryResponse,
 import ch.unibas.dmi.dbis.adam.http.grpc.AdamDefinitionGrpc.AdamDefinitionBlockingStub
 import ch.unibas.dmi.dbis.adam.http.grpc.AdamSearchGrpc.{AdamSearchBlockingStub, AdamSearchStub}
 import ch.unibas.dmi.dbis.adam.http.grpc.DistanceMessage.DistanceType
+import ch.unibas.dmi.dbis.adam.http.grpc.RepartitionMessage.PartitionOptions
 import ch.unibas.dmi.dbis.adam.http.grpc._
 import io.grpc.stub.StreamObserver
 import io.grpc.{ManagedChannel, ManagedChannelBuilder}
@@ -37,6 +38,31 @@ class RPCClient(channel: ManagedChannel, definer: AdamDefinitionBlockingStub, se
     }
   }
 
+
+  /**
+    *
+    * @return
+    */
+  def listEntities(): Seq[String] = {
+    definer.listEntities(Empty()).entities
+  }
+
+  /**
+    *
+    * @return
+    */
+  def getDetails(entity : String): Map[String, String] = {
+    definer.getEntityProperties(EntityNameMessage(entity)).properties
+  }
+
+  /**
+    *
+    * @param entityname
+    * @param indextype
+    * @param norm
+    * @param options
+    * @return
+    */
   def addIndex(entityname: String, indextype: IndexType, norm: Int, options: Map[String, String]): String = {
     val indexMessage = IndexMessage(entityname, indextype, Some(DistanceMessage(DistanceType.minkowski, Map("norm" -> norm.toString))), options)
     val res = definer.index(indexMessage)
@@ -89,6 +115,16 @@ class RPCClient(channel: ManagedChannel, definer: AdamDefinitionBlockingStub, se
     searcher.doProgressiveQuery(request, so)
 
     id
+  }
+
+  /**
+    *
+    * @param index
+    * @param partitions
+    * @return
+    */
+  def repartition(index : String, partitions : Int): String = {
+    definer.repartitionIndexData(RepartitionMessage(index, partitions, false, Seq(), PartitionOptions.CREATE_NEW)).message
   }
 
   /**

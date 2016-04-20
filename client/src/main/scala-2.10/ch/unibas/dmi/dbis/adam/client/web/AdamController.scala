@@ -27,8 +27,17 @@ class AdamController(rpcClient: RPCClient) extends Controller {
       "index.html")
   }
 
+  /**
+    *
+    */
+  get("/entity/list") { request : Request =>
+    log.info("listing data")
+    val results = rpcClient.listEntities().map(entity => EntityDetailResponse(entity, rpcClient.getDetails(entity)))
 
-  case class PreparationRequestReponse(code: Int, entityname: String = "", ntuples: Int = 0, ndims: Int = 0)
+    response.ok.json(EntityListResponse(200, results))
+  }
+  case class EntityListResponse(code: Int, entities : Seq[EntityDetailResponse])
+  case class EntityDetailResponse(entityname : String, details : Map[String, String])
 
   /**
     *
@@ -39,13 +48,13 @@ class AdamController(rpcClient: RPCClient) extends Controller {
     log.info("prepared data")
 
     if (res) {
-      response.ok.json(PreparationRequestReponse(200, request.entityname, request.ntuples, request.ndims))
+      response.ok.json(PreparationRequestResponse(200, request.entityname, request.ntuples, request.ndims))
     } else {
-      response.ok.json(PreparationRequestReponse(500))
+      response.ok.json(PreparationRequestResponse(500))
     }
   }
+  case class PreparationRequestResponse(code: Int, entityname: String = "", ntuples: Int = 0, ndims: Int = 0)
 
-  case class IndexRequestResponse(code: Int, entityname: String = "")
 
   /**
     *
@@ -71,6 +80,23 @@ class AdamController(rpcClient: RPCClient) extends Controller {
       response.ok.json(IndexRequestResponse(500))
     }
   }
+  case class IndexRequestResponse(code: Int, indexname : String = "")
+
+
+  /**
+    *
+    */
+  post("/index/repartition") { request: RepartitionRequest =>
+    val res = rpcClient.repartition(request.indexname, request.partitions)
+
+    log.info("repartitioned")
+
+    if (!res.isEmpty) {
+      response.ok.json(IndexRequestResponse(200, res))
+    } else {
+      response.ok.json(IndexRequestResponse(500))
+    }
+  }
 
   /**
     *
@@ -85,8 +111,6 @@ class AdamController(rpcClient: RPCClient) extends Controller {
   /**
     *
     */
-  case class ProgressiveStartResponse(id: String)
-
   post("/query/progressive") { request: ProgressiveQueryRequest =>
     log.info("progressive query start: " + request)
     val res = rpcClient.progressiveQuery(request.id, request.entityname, request.q, request.hints, request.k, processProgressiveResults, completedProgressiveResults)
@@ -102,6 +126,7 @@ class AdamController(rpcClient: RPCClient) extends Controller {
 
     response.ok.json(ProgressiveStartResponse(request.id))
   }
+  case class ProgressiveStartResponse(id: String)
 
 
   private def processProgressiveResults(id: String, confidence: Double, source: String, time: Long, results: Seq[(Float, Long)]) : Unit = {
@@ -138,7 +163,6 @@ class AdamController(rpcClient: RPCClient) extends Controller {
       }
     }
   }
-
   case class ProgressiveQueryResponse(results: ProgressiveTempResponse, status: String)
 }
 

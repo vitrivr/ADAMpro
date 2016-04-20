@@ -34,7 +34,7 @@ $("#btnSubmit").click(function () {
         type: 'POST',
         success: function (data) {
             if (data.code === 200) {
-                showAlert("index for " + data.entityname + " created");
+                showAlert("index for " + data.indexname + " created");
             }
             $("#progress").hide()
             $("#btnSubmit").removeClass('disabled');

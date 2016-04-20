@@ -101,6 +101,7 @@ for (var i = 0; i < windows.length; i++) {
 $("#btnAddIndex").click(function(){
     var innerhtml = "";
     innerhtml += "<input type=\"text\" class=\"form-control\" name=\"indexname\" placeholder=\"indexname\">";
+    innerhtml += "<input type=\"text\" class=\"form-control\" name=\"partitions\" placeholder=\"partitions\">";
 
     newNode(0, 0, innerhtml, $("#indextype option:selected").text(), $("#indextype").val());
 });
