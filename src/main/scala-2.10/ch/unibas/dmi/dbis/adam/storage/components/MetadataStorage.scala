@@ -17,7 +17,7 @@ trait MetadataStorage {
     * @param entityname
     * @param fields
     */
-  def create(entityname : EntityName, fields : Map[String, FieldDefinition]) : Boolean
+  def create(entityname : EntityName, fields : Seq[FieldDefinition]) : Boolean
 
   /**
     * Read data from metadata storage.

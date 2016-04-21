@@ -175,14 +175,14 @@ case class Entity(entityname: EntityName, featureStorage: FeatureStorage, metada
 }
 
 /**
-  * Field definition for creating new entity.
   *
+  * @param name
   * @param fieldtype
   * @param pk
   * @param unique
   * @param indexed
   */
-case class FieldDefinition(fieldtype: FieldType, pk: Boolean = false, unique: Boolean = false, indexed: Boolean = false)
+case class FieldDefinition(name : String, fieldtype: FieldType, pk: Boolean = false, unique: Boolean = false, indexed: Boolean = false)
 
 
 object Entity {

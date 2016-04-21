@@ -31,10 +31,10 @@ object EntityHandler {
     *
     * @param entityname
     * @param fields if fields is specified, in the metadata storage a table is created with these names, specify fields
-    *               as key = name, value = SQL type
+    *               as key = name, value = SQL type, note the reserved names
     * @return
     */
-  def create(entityname: EntityName, fields: Option[Map[String, FieldDefinition]] = None)(implicit ac: AdamContext): Try[Entity] = {
+  def create(entityname: EntityName, fields: Option[Seq[FieldDefinition]] = None)(implicit ac: AdamContext): Try[Entity] = {
     if (exists(entityname)) {
       log.error("entity " + entityname + " exists already")
       return Failure(EntityExistingException())
@@ -43,18 +43,24 @@ object EntityHandler {
     featureStorage.create(entityname)
 
     if (fields.isDefined) {
-      if (fields.get.contains(FieldNames.idColumnName)) {
-        log.error("entity defined with field " + FieldNames.idColumnName + ", but name is reserved")
+      FieldNames.reservedNames.foreach { reservedName =>
+        if (fields.get.contains(reservedName)) {
+          log.error("entity defined with field " + FieldNames.idColumnName + ", but name is reserved")
+          return Failure(EntityNotProperlyDefinedException())
+        }
+      }
+
+      if (fields.get.map(_.name).distinct.length != fields.get.length) {
+        log.error("entity defined with duplicate fields")
         return Failure(EntityNotProperlyDefinedException())
       }
 
-      if (fields.get.count { case (name, definition) => definition.pk } > 1) {
+      if (fields.get.filter(_.pk).length > 1) {
         log.error("entity defined with more than one primary key")
         return Failure(EntityNotProperlyDefinedException())
       }
 
-
-      val fieldsWithId = fields.get + (FieldNames.idColumnName -> FieldDefinition(LONGTYPE, false, true, true))
+      val fieldsWithId = fields.get.+:(FieldDefinition(FieldNames.idColumnName, LONGTYPE, false, true, true))
       metadataStorage.create(entityname, fieldsWithId)
       CatalogOperator.createEntity(entityname, true)
       Success(Entity(entityname, featureStorage, Option(metadataStorage)))

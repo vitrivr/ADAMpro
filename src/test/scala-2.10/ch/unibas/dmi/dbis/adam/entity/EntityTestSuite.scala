@@ -4,15 +4,13 @@ import ch.unibas.dmi.dbis.adam.AdamTestBase
 import ch.unibas.dmi.dbis.adam.api.{CreateEntityOp, DropEntityOp}
 import ch.unibas.dmi.dbis.adam.config.FieldNames
 import ch.unibas.dmi.dbis.adam.datatypes.feature.{FeatureVectorWrapper, FeatureVectorWrapperUDT}
-import ch.unibas.dmi.dbis.adam.main.SparkStartup
+import ch.unibas.dmi.dbis.adam.main.SparkStartup.Implicits._
 import org.apache.spark.sql.Row
 import org.apache.spark.sql.types._
 import org.scalatest.Matchers._
 
 import scala.collection.mutable.ListBuffer
 import scala.util.Random
-
-import SparkStartup.Implicits._
 
 /**
   * adamtwo
@@ -70,6 +68,8 @@ class EntityTestSuite extends AdamTestBase {
       val givenEntities = EntityHandler.list()
 
       When("a new random entity with metadata is created")
+      val entityname = getRandomName()
+
       val fieldTemplate = Seq(
         ("stringfield", FieldTypes.STRINGTYPE, "text"),
         ("floatfield", FieldTypes.FLOATTYPE, "real"),
@@ -79,8 +79,7 @@ class EntityTestSuite extends AdamTestBase {
         ("booleanfield", FieldTypes.BOOLEANTYPE, "boolean")
       )
 
-      val entityname = getRandomName()
-      CreateEntityOp(entityname, Some(fieldTemplate.map(ft => (ft._1, FieldDefinition(ft._2))).toMap))
+      val entity = EntityHandler.create(entityname, Some(fieldTemplate.map(ft => FieldDefinition(ft._1, ft._2))))
 
       Then("the entity should be created")
       val entities = EntityHandler.list()
@@ -119,7 +118,7 @@ class EntityTestSuite extends AdamTestBase {
     scenario("drop an entity with metadata") {
       Given("an entity with metadata")
       val entityname = getRandomName()
-      val fields = Map[String, FieldDefinition](("stringfield" -> FieldDefinition(FieldTypes.STRINGTYPE)))
+      val fields = Seq[FieldDefinition](FieldDefinition("stringfield", FieldTypes.STRINGTYPE))
       CreateEntityOp(entityname, Option(fields))
 
       val preResult = getJDBCConnection.createStatement().executeQuery("SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = '" + entityname.toLowerCase() + "'")
@@ -147,10 +146,10 @@ class EntityTestSuite extends AdamTestBase {
     scenario("create an entity with very specified metadata (indexed, unique, primary key)") {
       Given("an entity with metadata")
       val entityname = getRandomName()
-      val fields = Map[String, FieldDefinition](
-        ("pkfield" -> FieldDefinition(FieldTypes.INTTYPE, true)),
-        ("uniquefield" -> FieldDefinition(FieldTypes.INTTYPE, false, true)),
-        ("indexedfield" -> FieldDefinition(FieldTypes.INTTYPE, false, false, true))
+      val fields = Seq[FieldDefinition](
+        FieldDefinition("pkfield", FieldTypes.INTTYPE, true),
+        FieldDefinition("uniquefield", FieldTypes.INTTYPE, false, true),
+        FieldDefinition("indexedfield", FieldTypes.INTTYPE, false, false, true)
       )
 
       When("the entity is created")
@@ -232,8 +231,9 @@ class EntityTestSuite extends AdamTestBase {
         ("booleanfield", FieldTypes.BOOLEANTYPE, "boolean"),
         ("booleanfieldunfilled", FieldTypes.BOOLEANTYPE, "boolean")
       )
-      val fields = fieldTemplate.map(ft => (ft._1, FieldDefinition(ft._2))).toMap
-      CreateEntityOp(entityname, Option(fields))
+
+      val fields = fieldTemplate.map(ft => FieldDefinition(ft._1, ft._2))
+      CreateEntityOp(entityname, Some(fields))
 
       val ntuples = Random.nextInt(1000)
       val ndims = 100

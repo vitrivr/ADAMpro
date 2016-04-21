@@ -76,15 +76,22 @@ message Empty {
 
 message CreateEntityMessage {
   string entity = 1;
+  repeated FieldDefinitionMessage fields = 2;
+}
+
+message FieldDefinitionMessage {
+  string name = 1;
   enum FieldType {
-    LONG = 0;
-    INT = 1;
-    FLOAT = 2;
-    DOUBLE = 3;
-    STRING = 4;
-    BOOLEAN = 5;
-  }
-  map<string, FieldType> fields = 2;
+      LONG = 0;
+      INT = 1;
+      FLOAT = 2;
+      DOUBLE = 3;
+      STRING = 4;
+      BOOLEAN = 5;
+    }
+  FieldType fieldtype = 2;
+  bool unique = 3;
+  bool indexed = 4;
 }
 
 message EntityNameMessage {

@@ -4,7 +4,7 @@ import ch.unibas.dmi.dbis.adam.api._
 import ch.unibas.dmi.dbis.adam.config.FieldNames
 import ch.unibas.dmi.dbis.adam.entity.{EntityHandler, FieldDefinition, FieldTypes}
 import ch.unibas.dmi.dbis.adam.exception.GeneralAdamException
-import ch.unibas.dmi.dbis.adam.http.grpc.CreateEntityMessage.FieldType
+import ch.unibas.dmi.dbis.adam.http.grpc.FieldDefinitionMessage.FieldType
 import ch.unibas.dmi.dbis.adam.http.grpc.{AckMessage, CreateEntityMessage, _}
 import ch.unibas.dmi.dbis.adam.index.IndexHandler
 import ch.unibas.dmi.dbis.adam.index.structures.IndexTypes
@@ -32,7 +32,9 @@ class DataDefinitionRPC(implicit ac: AdamContext) extends AdamDefinitionGrpc.Ada
     try {
       if(!request.fields.isEmpty){
         val entityname = request.entity
-        val fields = request.fields.mapValues(field => FieldDefinition(matchFields(field)))
+        val fields = request.fields.map(field => {
+          FieldDefinition(field.name, matchFields(field.fieldtype), false, field.unique, field.indexed)
+        })
         CreateEntityOp(entityname, Option(fields))
       } else {
         if(request.fields.contains(FieldNames.idColumnName)
@@ -56,7 +58,7 @@ class DataDefinitionRPC(implicit ac: AdamContext) extends AdamDefinitionGrpc.Ada
     * @param ft
     * @return
     */
-  private def matchFields(ft : CreateEntityMessage.FieldType) = ft match {
+  private def matchFields(ft : FieldDefinitionMessage.FieldType) = ft match {
       case FieldType.BOOLEAN => FieldTypes.BOOLEANTYPE
       case FieldType.DOUBLE => FieldTypes.DOUBLETYPE
       case FieldType.FLOAT => FieldTypes.FLOATTYPE

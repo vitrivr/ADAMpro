@@ -101,7 +101,7 @@ class AdamTestBase extends FeatureSpec with GivenWhenThen with Eventually with I
       ("booleanfield", FieldTypes.BOOLEANTYPE, "boolean")
     )
 
-    EntityHandler.create(entityname, Some(fieldTemplate.map(ft => (ft._1, FieldDefinition(ft._2))).toMap))
+    val entity = EntityHandler.create(entityname, Some(fieldTemplate.map(ft => FieldDefinition(ft._1, ft._2))))
 
     val stringLength = 10
     val maxInt = 50000
@@ -222,6 +222,8 @@ class AdamTestBase extends FeatureSpec with GivenWhenThen with Eventually with I
     //prepare data
     val data = getData("groundtruth/data.tsv")
 
+    val entityname = getRandomName()
+
     val fieldTemplate = Seq(
       ("tid", FieldTypes.LONGTYPE, "bigint"),
       ("stringfield", FieldTypes.STRINGTYPE, "text"),
@@ -231,7 +233,8 @@ class AdamTestBase extends FeatureSpec with GivenWhenThen with Eventually with I
       ("longfield", FieldTypes.LONGTYPE, "bigint"),
       ("booleanfield", FieldTypes.BOOLEANTYPE, "boolean")
     )
-    val entity = EntityHandler.create(getRandomName(), Some(fieldTemplate.map(ft => (ft._1, FieldDefinition(ft._2))).toMap))
+
+    val entity = EntityHandler.create(entityname, Some(fieldTemplate.map(ft => FieldDefinition(ft._1, ft._2))))
     assert(entity.isSuccess)
     entity.get.insert(data.drop("gtdistance"))
 

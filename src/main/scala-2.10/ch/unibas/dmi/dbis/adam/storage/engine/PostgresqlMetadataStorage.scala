@@ -35,10 +35,10 @@ object PostgresqlMetadataStorage extends MetadataStorage {
     DriverManager.getConnection(AdamConfig.jdbcUrl, AdamConfig.jdbcUser, AdamConfig.jdbcPassword)
   }
 
-  override def create(tablename: EntityName, fields: Map[String, FieldDefinition]): Boolean = {
+  override def create(tablename: EntityName, fields: Seq[FieldDefinition]): Boolean = {
     log.debug("postgresql create operation")
     val structFields = fields.map {
-      case (name, fieldtype) => StructField(name, fieldtype.fieldtype.datatype)
+      field => StructField(field.name, field.fieldtype.datatype)
     }.toSeq
 
     import SparkStartup.Implicits._
@@ -47,20 +47,26 @@ object PostgresqlMetadataStorage extends MetadataStorage {
     write(tablename, df, SaveMode.ErrorIfExists)
 
     //make fields unique
-    val uniqueStmt = fields.filter { case (name, definition) => definition.unique }.map {
-      case (name, definition) => s"""ALTER TABLE $tablename ADD UNIQUE ($name)""".stripMargin
+    val uniqueStmt = fields.filter(_.unique).map {
+      field =>
+        val fieldname = field.name
+        s"""ALTER TABLE $tablename ADD UNIQUE ($fieldname)""".stripMargin
     }.mkString("; ")
 
     //add index to table
-    val indexedStmt = fields.filter { case (name, definition) => definition.indexed }.map {
-      case (name, definition) => s"""CREATE INDEX ON $tablename ($name)""".stripMargin
+    val indexedStmt = fields.filter (_.indexed).map {
+      field =>
+        val fieldname = field.name
+        s"""CREATE INDEX ON $tablename ($fieldname)""".stripMargin
     }.mkString("; ")
 
     //add primary key
-    val pkfield = fields.filter { case (name, definition) => definition.pk }
+    val pkfield = fields.filter (_.pk)
     assert(pkfield.size <= 1)
     val pkStmt = pkfield.map {
-      case (name, definition) => s"""ALTER TABLE $tablename ADD PRIMARY KEY ($name)""".stripMargin
+      case field =>
+        val fieldname = field.name
+        s"""ALTER TABLE $tablename ADD PRIMARY KEY ($fieldname)""".stripMargin
     }.mkString("; ")
 
     val connection = openConnection()
