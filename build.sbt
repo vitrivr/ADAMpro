@@ -34,6 +34,7 @@ mainClass in (Compile, run) := Some("ch.unibas.dmi.dbis.adam.main.Startup")
 
 unmanagedResourceDirectories in Compile += baseDirectory.value / "conf"
 //scalacOptions += "-Xlog-implicits"
+scalacOptions += "-target:jvm-1.7"
 
 //libs
 resolvers ++= Seq(

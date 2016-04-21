@@ -38,7 +38,7 @@ object SparkStartup {
   }
 
   object Implicits extends AdamContext {
-    implicit val ac = this
+    implicit lazy val ac = this
 
     @transient implicit lazy val sc = new SparkContext(sparkConfig)
     sc.setLogLevel(AdamConfig.loglevel)
