@@ -43,7 +43,7 @@ class AdamController(rpcClient: RPCClient) extends Controller {
     *
     */
   post("/entity/add") { request: PreparationRequest =>
-    val res = rpcClient.prepareDemo(request.entityname, request.ntuples, request.ndims)
+    val res = rpcClient.prepareDemo(request.entityname, request.ntuples, request.ndims, request.fields)
 
     log.info("prepared data")
 
@@ -87,7 +87,7 @@ class AdamController(rpcClient: RPCClient) extends Controller {
     *
     */
   post("/index/repartition") { request: RepartitionRequest =>
-    val res = rpcClient.repartition(request.indexname, request.partitions)
+    val res = rpcClient.repartition(request.indexname, request.partitions, request.usemetadata, request.columns)
 
     log.info("repartitioned")
 

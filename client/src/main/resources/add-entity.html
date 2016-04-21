@@ -20,18 +20,20 @@
         <a href="#!" class="brand-logo right">ADAMpro</a>
         <ul class="hide-on-med-and-down left">
             <li><a href="overview.html"><i class="material-icons left">explore</i>Overview</a></li>
-            <li class="active"><a href="add-entity.html"><i class="material-icons left">playlist_add</i>Create Entity</a></li>
+            <li class="active"><a href="add-entity.html"><i class="material-icons left">playlist_add</i>Create
+                Entity</a></li>
             <li><a href="add-index.html"><i class="material-icons left">filter_list</i>Add Index</a></li>
             <li><a href="partition.html"><i class="material-icons left">view_quilt</i>Partition Index</a></li>
             <li><a href="compound-search.html"><i class="material-icons left">search</i>Compound Search</a></li>
-            <li><a href="progressive-search.html"><i class="material-icons left">youtube_searched_for</i>Progressive Search</a></li>
+            <li><a href="progressive-search.html"><i class="material-icons left">youtube_searched_for</i>Progressive
+                Search</a></li>
         </ul>
     </div>
 </nav>
 
 <div class="container" style="width:90%">
     <div class="row">
-        <h1>Create Entity.</h1>
+        <h1>Prepare Demo Entity with Random Data.</h1>
     </div>
     <div class="row">
         <div class="row">
@@ -52,8 +54,51 @@
                 <label for="ndims">number of dimensions</label>
             </div>
         </div>
+        <div class="row" style="margin-top: 80px">
+
+        </div>
+        <div class="row">
+            <div class="col s6">
+                <label for="fields">structured metadata fields</label>
+                <select class="browser-default" id="fields" size="10" style="height:8rem;">
+                </select>
+            </div>
+            <div class="col s6">
+                <a class="btn-floating" id="btnRemoveField"><i class="material-icons">remove</i></a>
+            </div>
+        </div>
+        <div class="row">
+            <div class="col s6">
+                <div class="input-field col s6">
+                    <input id="fieldname" type="text">
+                    <label for="fieldname">name</label>
+                </div>
+                <div class="input-field col s4">
+                    <select id="datatype">
+                        <option value="" defaultSelected></option>
+                        <option value="long">long</option>
+                        <option value="int">int</option>
+                        <option value="float">float</option>
+                        <option value="double">double</option>
+                        <option value="string">string</option>
+                        <option value="boolean">boolean</option>
+                    </select>
+                    <label>data type</label>
+                </div>
+                <div class="input-field col s2">
+                    <input type="checkbox" id="indexed"/>
+                    <label for="indexed">indexed</label>
+                </div>
+            </div>
+            <div class="input-field col s1">
+                    <a class="btn-floating" id="btnAddField"><i class="material-icons">add</i></a>
+            </div>
+        </div>
+
         <div class="row">
             <div class="input-field col s6">
+                <label>indexes</label>
+                <br/>
                 <p>
                     <input type="checkbox" id="ecp" checked="checked" disabled="disabled"/>
                     <label for="ecp">eCP Index</label>
@@ -92,6 +137,11 @@
 <script src="./lib/js/materialize.min.js"></script>
 <script src="lib/js/app.js"></script>
 <script src="lib/js/add-entity.js"></script>
+<script>
+    $(document).ready(function () {
+        $('select').material_select();
+    });
+</script>
 </body>
 
 </html>

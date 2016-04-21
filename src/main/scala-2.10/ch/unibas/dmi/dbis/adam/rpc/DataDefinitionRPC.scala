@@ -30,16 +30,16 @@ class DataDefinitionRPC(implicit ac: AdamContext) extends AdamDefinitionGrpc.Ada
     log.debug("rpc call for create entity operation")
 
     try {
-      if(!request.fields.isEmpty){
+      if (!request.fields.isEmpty) {
         val entityname = request.entity
         val fields = request.fields.map(field => {
           FieldDefinition(field.name, matchFields(field.fieldtype), false, field.unique, field.indexed)
         })
         CreateEntityOp(entityname, Option(fields))
       } else {
-        if(request.fields.contains(FieldNames.idColumnName)
+        if (request.fields.contains(FieldNames.idColumnName)
           || request.fields.contains(FieldNames.internFeatureColumnName)
-          || request.fields.contains(FieldNames.distanceColumnName)){
+          || request.fields.contains(FieldNames.distanceColumnName)) {
           throw new GeneralAdamException("Field specification contains reserved name.")
         }
 
@@ -58,15 +58,15 @@ class DataDefinitionRPC(implicit ac: AdamContext) extends AdamDefinitionGrpc.Ada
     * @param ft
     * @return
     */
-  private def matchFields(ft : FieldDefinitionMessage.FieldType) = ft match {
-      case FieldType.BOOLEAN => FieldTypes.BOOLEANTYPE
-      case FieldType.DOUBLE => FieldTypes.DOUBLETYPE
-      case FieldType.FLOAT => FieldTypes.FLOATTYPE
-      case FieldType.INT => FieldTypes.INTTYPE
-      case FieldType.LONG => FieldTypes.LONGTYPE
-      case FieldType.STRING => FieldTypes.STRINGTYPE
-      case _ => FieldTypes.UNRECOGNIZEDTYPE
-    }
+  private def matchFields(ft: FieldDefinitionMessage.FieldType) = ft match {
+    case FieldType.BOOLEAN => FieldTypes.BOOLEANTYPE
+    case FieldType.DOUBLE => FieldTypes.DOUBLETYPE
+    case FieldType.FLOAT => FieldTypes.FLOATTYPE
+    case FieldType.INT => FieldTypes.INTTYPE
+    case FieldType.LONG => FieldTypes.LONGTYPE
+    case FieldType.STRING => FieldTypes.STRINGTYPE
+    case _ => FieldTypes.UNRECOGNIZEDTYPE
+  }
 
 
   override def count(request: EntityNameMessage): Future[AckMessage] = {
@@ -88,7 +88,7 @@ class DataDefinitionRPC(implicit ac: AdamContext) extends AdamDefinitionGrpc.Ada
       def onNext(insert: InsertMessage) {
         val entity = EntityHandler.load(insert.entity)
 
-        if(entity.isFailure){
+        if (entity.isFailure) {
           return onError(new GeneralAdamException("cannot load entity"))
         }
 
@@ -98,7 +98,7 @@ class DataDefinitionRPC(implicit ac: AdamContext) extends AdamDefinitionGrpc.Ada
         val rows = insert.tuples.map(tuple => {
           val metadata = tuple.metadata
           val data = schema.map(field => metadata.get(field.name).get).+:(tuple.vector)
-          Row(data : _*)
+          Row(data: _*)
         })
 
         val rdd = ac.sc.parallelize(rows)
@@ -122,7 +122,6 @@ class DataDefinitionRPC(implicit ac: AdamContext) extends AdamDefinitionGrpc.Ada
   }
 
 
-
   override def index(request: IndexMessage): Future[AckMessage] = {
     log.debug("rpc call for indexing operation")
 
@@ -136,11 +135,11 @@ class DataDefinitionRPC(implicit ac: AdamContext) extends AdamDefinitionGrpc.Ada
         case _ => null
       }
 
-      if(indextypename == null){
+      if (indextypename == null) {
         throw new Exception("no index type name given.")
       }
 
-      val index = IndexOp(request.entity, indextypename, RPCHelperMethods.prepareDistance(request.distance.get),  request.options )
+      val index = IndexOp(request.entity, indextypename, RPCHelperMethods.prepareDistance(request.distance.get), request.options)
       Future.successful(AckMessage(code = AckMessage.Code.OK, message = index.get.indexname))
     } catch {
       case e: Exception =>
@@ -163,7 +162,7 @@ class DataDefinitionRPC(implicit ac: AdamContext) extends AdamDefinitionGrpc.Ada
   }
 
 
-  override def dropIndex(request: IndexNameMessage): Future[AckMessage] ={
+  override def dropIndex(request: IndexNameMessage): Future[AckMessage] = {
     log.debug("rpc call for dropping index operation")
 
     try {
@@ -181,10 +180,17 @@ class DataDefinitionRPC(implicit ac: AdamContext) extends AdamDefinitionGrpc.Ada
     log.debug("rpc call for creating random data")
 
     try {
-      val res = RandomDataOp(request.entity, request.ntuples, request.ndims)
-      if(!res){
-        throw new GeneralAdamException()
+      val fields = if (!request.fields.isEmpty) {
+        Some(
+          request.fields.map(fd =>
+            FieldDefinition(fd.name, matchFields(fd.fieldtype), fd.pk, fd.unique, fd.indexed)
+          )
+        )
+      } else {
+        None
       }
+
+      RandomDataOp(request.entity, request.ntuples, request.ndims, fields)
       log.info("genereated random data")
       IndexOp.generateAll(request.entity, EuclideanDistance)
       log.info("genereated indices to random data")
@@ -207,17 +213,17 @@ class DataDefinitionRPC(implicit ac: AdamContext) extends AdamDefinitionGrpc.Ada
     log.debug("rpc call for returning entity properties")
     val properties = EntityHandler.getProperties(request.entity)
 
-    if(properties.isSuccess){
+    if (properties.isSuccess) {
       Future.successful(EntityPropertiesMessage(request.entity, properties.get))
     } else {
       Future.failed(properties.failed.get)
     }
   }
 
-  override def repartitionIndexData(request: RepartitionMessage): Future[AckMessage] =  {
+  override def repartitionIndexData(request: RepartitionMessage): Future[AckMessage] = {
     log.debug("rpc call for repartitioning index")
 
-    val cols = if(request.columns.isEmpty){
+    val cols = if (request.columns.isEmpty) {
       None
     } else {
       Some(request.columns)
@@ -232,7 +238,7 @@ class DataDefinitionRPC(implicit ac: AdamContext) extends AdamDefinitionGrpc.Ada
 
     val index = PartitionHandler.repartitionIndex(request.index, request.numberOfPartitions, request.useMetadataForPartitioning, cols, option)
 
-    if(index.isSuccess){
+    if (index.isSuccess) {
       Future.successful(AckMessage(AckMessage.Code.OK, index.get.indexname))
     } else {
       log.debug("exception while rpc call for repartitioning index")
@@ -243,7 +249,7 @@ class DataDefinitionRPC(implicit ac: AdamContext) extends AdamDefinitionGrpc.Ada
   override def setIndexWeight(request: IndexWeightMessage): Future[AckMessage] = {
     log.debug("rpc call for changing weight of index")
 
-    if(IndexHandler.setWeight(request.index, request.weight)){
+    if (IndexHandler.setWeight(request.index, request.weight)) {
       Future.successful(AckMessage(AckMessage.Code.OK, request.index))
     } else {
       Future.successful(AckMessage(AckMessage.Code.ERROR, "please try again"))

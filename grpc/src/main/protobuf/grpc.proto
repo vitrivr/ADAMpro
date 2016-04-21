@@ -90,8 +90,9 @@ message FieldDefinitionMessage {
       BOOLEAN = 5;
     }
   FieldType fieldtype = 2;
-  bool unique = 3;
-  bool indexed = 4;
+  bool pk = 3;
+  bool unique = 4;
+  bool indexed = 5;
 }
 
 message EntityNameMessage {
@@ -106,6 +107,7 @@ message GenerateRandomEntityMessage {
   string entity = 1;
   int32 ntuples = 2;
   int32 ndims = 3;
+  repeated FieldDefinitionMessage fields = 4;
 }
 
 message InsertMessage {

@@ -47,9 +47,19 @@
             </div>
         </div>
         <div class="row">
+            <div class="input-field col s4">
+                <input id="columns" type="text">
+                <label for="columns">partition columns</label>
+            </div>
+            <div class="input-field col s2">
+                    <input type="checkbox" id="metadata"/>
+                    <label for="metadata">use metadata</label>
+            </div>
+        </div>
+        <div class="row">
             <div class="input-field col s6">
                 <p>
-                    <input type="checkbox" id="materialized" checked="checked" disabled="disabled"/>
+                    <input type="checkbox" id="materialized" checked="checked"/>
                     <label for="materialized">materialized</label>
                 </p>
                 <p>

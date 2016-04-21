@@ -1,10 +1,11 @@
 package ch.unibas.dmi.dbis.adam.client.grpc
 
 import java.util.concurrent.TimeUnit
-import ch.unibas.dmi.dbis.adam.client.web.datastructures.{CompoundQueryResponse, CompoundQueryRequest}
+import ch.unibas.dmi.dbis.adam.client.web.datastructures.{PreparationRequestField, CompoundQueryResponse, CompoundQueryRequest}
 import ch.unibas.dmi.dbis.adam.http.grpc.AdamDefinitionGrpc.AdamDefinitionBlockingStub
 import ch.unibas.dmi.dbis.adam.http.grpc.AdamSearchGrpc.{AdamSearchBlockingStub, AdamSearchStub}
 import ch.unibas.dmi.dbis.adam.http.grpc.DistanceMessage.DistanceType
+import ch.unibas.dmi.dbis.adam.http.grpc.FieldDefinitionMessage.FieldType
 import ch.unibas.dmi.dbis.adam.http.grpc.RepartitionMessage.PartitionOptions
 import ch.unibas.dmi.dbis.adam.http.grpc._
 import io.grpc.stub.StreamObserver
@@ -25,11 +26,16 @@ class RPCClient(channel: ManagedChannel, definer: AdamDefinitionBlockingStub, se
     * @param entityname
     * @param ntuples
     * @param ndims
+    * @param fields
     * @return
     */
-  def prepareDemo(entityname: String, ntuples: Int, ndims: Int): Boolean = {
+  def prepareDemo(entityname: String, ntuples: Int, ndims: Int, fields : Seq[PreparationRequestField]): Boolean = {
     log.info("preparing demo data")
-    val res = definer.prepareForDemo(GenerateRandomEntityMessage(entityname, ntuples, ndims))
+    val fieldMessage = fields.map(field =>
+      FieldDefinitionMessage(field.name, getFieldType(field.datatype), false, false, field.indexed)
+    )
+
+    val res = definer.prepareForDemo(GenerateRandomEntityMessage(entityname, ntuples, ndims, fieldMessage))
     log.info("prepared demo data: " + res.code.toString())
     if (res.code == AckMessage.Code.OK) {
       return true
@@ -38,6 +44,20 @@ class RPCClient(channel: ManagedChannel, definer: AdamDefinitionBlockingStub, se
     }
   }
 
+  /**
+    *
+    * @param s
+    * @return
+    */
+  private def getFieldType(s : String) : FieldDefinitionMessage.FieldType = s match {
+    case "long" =>  FieldType.LONG
+    case "int" => FieldType.INT
+    case "float" => FieldType.FLOAT
+    case "double" => FieldType.DOUBLE
+    case "string" => FieldType.STRING
+    case "boolean" => FieldType.BOOLEAN
+    case _ => null
+  }
 
   /**
     *
@@ -123,8 +143,8 @@ class RPCClient(channel: ManagedChannel, definer: AdamDefinitionBlockingStub, se
     * @param partitions
     * @return
     */
-  def repartition(index : String, partitions : Int): String = {
-    definer.repartitionIndexData(RepartitionMessage(index, partitions, false, Seq(), PartitionOptions.CREATE_NEW)).message
+  def repartition(index : String, partitions : Int, useMetadata : Boolean = false, cols : Seq[String] = Seq()): String = {
+    definer.repartitionIndexData(RepartitionMessage(index, partitions, useMetadata, cols, PartitionOptions.CREATE_NEW)).message
   }
 
   /**

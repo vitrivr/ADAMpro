@@ -18,6 +18,13 @@ $("#btnSubmit").click(function () {
     var result = {};
     result.indexname = $("#indexname").val();
     result.partitions = $("#partitions").val();
+    result.columns = $("#columns").val().split(",");
+
+    if ($('#metadata').is(':checked')) {
+        result.usemetadata = true;
+    } else {
+        result.usemetadata = false;
+    }
 
     $.ajax("/index/repartition", {
         data: JSON.stringify(result),
