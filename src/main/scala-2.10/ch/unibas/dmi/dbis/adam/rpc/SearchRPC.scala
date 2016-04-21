@@ -149,7 +149,7 @@ class SearchRPC(implicit ac: AdamContext) extends AdamSearchGrpc.AdamSearch {
       //track on next
       val onComplete =
         (status: ProgressiveQueryStatus.Value, df: DataFrame, confidence: Float, source: String, info: Map[String, String]) => ({
-          responseObserver.onNext(prepareResults(request.queryid, confidence, 0, source, df))
+          responseObserver.onNext(prepareResults(request.queryid, confidence, 0, source + " (" + info.get("name").getOrElse("no details") + ")", df))
         })
 
       val pathChooser = if(request.hints.isEmpty){

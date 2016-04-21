@@ -38,7 +38,7 @@ class IndexScanFuture[U](indexname: IndexName, query: NearestNeighbourQuery, onC
   val index = IndexHandler.load(indexname).get
 
   val typename = index.indextypename.name
-  val info = Map[String, String]("type" -> ("index: " + indexname), "index" -> indexname, "qid" -> query.queryID.get)
+  val info = Map[String, String]("name" -> indexname, "type" -> ("index: " + indexname), "index" -> indexname, "qid" -> query.queryID.get)
 
   val future = Future {
     NearestNeighbourQueryHandler.indexQuery(index, query, None)
@@ -68,7 +68,7 @@ class SequentialScanFuture[U](entityname: EntityName, query: NearestNeighbourQue
   tracker.register(this)
 
   val typename = "sequential"
-  val info = Map[String, String]("type" -> "sequential", "relation" -> entityname, "qid" -> query.queryID.get)
+  val info = Map[String, String]("name" -> entityname, "type" -> "sequential", "relation" -> entityname, "qid" -> query.queryID.get)
 
   val future = Future {
     NearestNeighbourQueryHandler.sequential(entityname, query, None)
