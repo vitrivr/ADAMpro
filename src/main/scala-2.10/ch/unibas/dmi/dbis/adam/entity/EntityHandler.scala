@@ -35,12 +35,11 @@ object EntityHandler {
     * @return
     */
   def create(entityname: EntityName, fields: Option[Seq[FieldDefinition]] = None)(implicit ac: AdamContext): Try[Entity] = {
+    //checks
     if (exists(entityname)) {
       log.error("entity " + entityname + " exists already")
       return Failure(EntityExistingException())
     }
-
-    featureStorage.create(entityname)
 
     if (fields.isDefined) {
       FieldNames.reservedNames.foreach { reservedName =>
@@ -59,7 +58,12 @@ object EntityHandler {
         log.error("entity defined with more than one primary key")
         return Failure(EntityNotProperlyDefinedException())
       }
+    }
 
+    //perform
+    featureStorage.create(entityname)
+
+    if (fields.isDefined) {
       val fieldsWithId = fields.get.+:(FieldDefinition(FieldNames.idColumnName, LONGTYPE, false, true, true))
       metadataStorage.create(entityname, fieldsWithId)
       CatalogOperator.createEntity(entityname, true)
