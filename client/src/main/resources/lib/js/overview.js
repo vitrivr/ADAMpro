@@ -36,6 +36,10 @@ console.log(data);
                     accordion : false
                 });
             }
+        },
+        error : function() {
+            $("#progress").hide()
+            showAlert("Error in request."); return;
         }
     });
     $("#progress").hide();

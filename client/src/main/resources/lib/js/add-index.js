@@ -39,6 +39,12 @@ $("#btnSubmit").click(function () {
             $("#progress").hide()
             $("#btnSubmit").removeClass('disabled');
             $("#btnSubmit").prop('disabled', false);
+        },
+        error : function() {
+            $("#progress").hide()
+            $("#btnSubmit").removeClass('disabled');
+            $("#btnSubmit").prop('disabled', false);
+            showAlert("Error in request."); return;
         }
     });
 });
