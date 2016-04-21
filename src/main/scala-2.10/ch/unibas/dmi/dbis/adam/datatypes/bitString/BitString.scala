@@ -42,7 +42,7 @@ object BitString {
   * @tparam A sub-type
   */
 @SQLUserDefinedType(udt = classOf[BitStringUDT])
-trait BitString[A] {
+trait BitString[A] extends Serializable {
   /**
     * Hamming distance between two bit strings.
     *

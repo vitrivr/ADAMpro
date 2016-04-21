@@ -57,10 +57,9 @@ libraryDependencies ++= Seq(
   "com.fasterxml.jackson.core" % "jackson-core"          % "2.4.4",
   "org.apache.hadoop"      %    "hadoop-client"          % "2.6.4" % "provided",
   "org.apache.commons"     %    "commons-lang3"          % "3.4",
-  "org.slf4j"              %     "slf4j-log4j12"         % "1.7.21"
+  "org.slf4j"              %     "slf4j-log4j12"         % "1.7.21",
+  "it.unimi.dsi"           %    "fastutil"               % "7.0.12"
 )
-libraryDependencies += "it.unimi.dsi" % "fastutil" % "7.0.12"
-
 
 unmanagedBase <<= baseDirectory { base => base / "lib" }
 unmanagedResourceDirectories in Compile += baseDirectory.value / "conf"

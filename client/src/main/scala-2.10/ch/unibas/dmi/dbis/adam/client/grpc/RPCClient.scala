@@ -36,7 +36,7 @@ class RPCClient(channel: ManagedChannel, definer: AdamDefinitionBlockingStub, se
     )
 
     val res = definer.prepareForDemo(GenerateRandomEntityMessage(entityname, ntuples, ndims, fieldMessage))
-    log.info("prepared demo data: " + res.code.toString())
+    log.info("prepared demo data: " + res.code.toString() + " " + res.message)
     if (res.code == AckMessage.Code.OK) {
       return true
     } else {
