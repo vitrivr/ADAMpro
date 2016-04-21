@@ -22,6 +22,7 @@ service AdamDefinition {
   rpc ListEntities(Empty) returns (EntitiesMessage) {}
   rpc GetEntityProperties(EntityNameMessage) returns (EntityPropertiesMessage) {}
   rpc RepartitionIndexData(RepartitionMessage) returns (AckMessage) {}
+  rpc SetIndexWeight(IndexWeightMessage) returns (AckMessage) {}
 }
 
 service AdamSearch {
@@ -130,6 +131,15 @@ message RepartitionMessage {
     }
   PartitionOptions option = 5;
 }
+
+message IndexWeightMessage {
+  string index = 1;
+  float weight = 2;
+}
+
+
+
+
 
 
 //****  METADATA REQUESTS ****//

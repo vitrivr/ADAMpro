@@ -10,10 +10,8 @@ import ch.unibas.dmi.dbis.adam.index.Index.{IndexName, IndexTypeName}
 import ch.unibas.dmi.dbis.adam.index.structures.IndexTypes
 import org.apache.commons.io.FileUtils
 import org.apache.log4j.Logger
-import slick.dbio.Effect.Read
 import slick.driver.H2Driver.api._
 import slick.jdbc.meta.MTable
-import slick.profile.SqlAction
 
 import scala.concurrent.Await
 import scala.concurrent.duration._
@@ -43,6 +41,7 @@ object CatalogOperator {
   private val indexes = TableQuery[IndexesCatalog]
 
   private val DEFAULT_DIMENSIONALITY = -1
+  private val DEFAULT_INDEX_WEIGHT = 100
 
 
   /**
@@ -207,7 +206,7 @@ object CatalogOperator {
     oos.close
 
     val setup = DBIO.seq(
-      indexes.+=((indexname, entityname, indextypename.name, filename, metaFilePath))
+      indexes.+=((indexname, entityname, indextypename.name, filename, metaFilePath, DEFAULT_INDEX_WEIGHT))
     )
 
     Await.result(db.run(setup), MAX_WAITING_TIME)
@@ -263,8 +262,8 @@ object CatalogOperator {
     * @param indextypename filter by indextypename, set to null for not using filter
     * @return
     */
-  def listIndexes(entityname: EntityName = null, indextypename: IndexTypeName = null): Seq[(IndexName, IndexTypeName)] = {
-    var catalog: Query[IndexesCatalog, (String, String, String, String, String), Seq] = indexes
+  def listIndexes(entityname: EntityName = null, indextypename: IndexTypeName = null): Seq[(IndexName, IndexTypeName, Float)] = {
+    var catalog: Query[IndexesCatalog, (String, String, String, String, String, Float), Seq] = indexes
 
     if (entityname != null) {
       catalog = catalog.filter(_.entityname === entityname.toString())
@@ -274,8 +273,8 @@ object CatalogOperator {
       catalog = catalog.filter(_.indextypename === indextypename.name)
     }
 
-    val query = catalog.map(index => (index.indexname, index.indextypename)).result
-    Await.result(db.run(query), MAX_WAITING_TIME).map(index => (index._1, IndexTypes.withName(index._2).get))
+    val query = catalog.map(index => (index.indexname, index.indextypename, index.indexweight)).result
+    Await.result(db.run(query), MAX_WAITING_TIME).map(index => (index._1, IndexTypes.withName(index._2).get, index._3))
   }
 
   /**
@@ -307,15 +306,14 @@ object CatalogOperator {
     * @return
     */
   def updateIndexPath(indexname: IndexName, newPath: String): Boolean = {
-    val query = indexes.filter(_.indexname === indexname).result.head
-    val index = Await.result(db.run(query), MAX_WAITING_TIME)
+    val query = indexes.filter(_.indexname === indexname).map(_.indexpath)
 
     val update = DBIO.seq(
-      indexes.filter(_.indexname === indexname).update(index._1, index._2, index._3, newPath, index._5)
+      query.update(newPath)
     )
     Await.result(db.run(update), MAX_WAITING_TIME)
 
-    log.debug("updated index in catalog")
+    log.debug("updated index path in catalog")
     true
   }
 
@@ -326,10 +324,56 @@ object CatalogOperator {
     * @return
     */
   def getIndexTypeName(indexname: IndexName): IndexTypeName = {
-    val query: SqlAction[String, NoStream, Read] = indexes.filter(_.indexname === indexname).map(_.indextypename).result.head
+    val query = indexes.filter(_.indexname === indexname).map(_.indextypename).result.head
     val result = Await.result(db.run(query), MAX_WAITING_TIME)
 
     IndexTypes.withName(result).get
+  }
+
+  /**
+    *
+    * @param indexname
+    * @return
+    */
+  def getIndexWeight(indexname: IndexName): Float = {
+    val query = indexes.filter(_.indexname === indexname).map(_.indexweight).result.head
+    Await.result(db.run(query), MAX_WAITING_TIME)
+  }
+
+  /**
+    *
+    * @param indexname
+    * @param newWeight  specify the new weight for the index (the higher the more important), if no weight is
+    *                   specified the default index weight is used
+    * @return
+    */
+  def updateIndexWeight(indexname: IndexName, newWeight: Float = DEFAULT_INDEX_WEIGHT): Boolean = {
+    val query = indexes.filter(_.indexname === indexname).map(_.indexweight)
+
+    val update = DBIO.seq(
+      query.update(newWeight)
+    )
+    Await.result(db.run(update), MAX_WAITING_TIME)
+
+    log.debug("updated weight in catalog")
+    true
+  }
+
+  /**
+    *
+    * @param entityname
+    * @return
+    */
+  def resetIndexWeight(entityname: EntityName): Boolean = {
+    val query = indexes.filter(_.entityname === entityname.toString()).map(_.indexweight)
+
+    val update = DBIO.seq(
+      query.update(DEFAULT_INDEX_WEIGHT)
+    )
+    Await.result(db.run(update), MAX_WAITING_TIME)
+
+    log.debug("updated weight in catalog")
+    true
   }
 
   /**

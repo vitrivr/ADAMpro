@@ -95,7 +95,7 @@ object IndexHandler {
     * @param indextypename
     * @return
     */
-  def list(entityname: EntityName = null, indextypename: IndexTypeName = null)(implicit ac: AdamContext): Seq[(IndexName, IndexTypeName)] = {
+  def list(entityname: EntityName = null, indextypename: IndexTypeName = null)(implicit ac: AdamContext): Seq[(IndexName, IndexTypeName, Float)] = {
     CatalogOperator.listIndexes(entityname, indextypename)
   }
 
@@ -231,7 +231,7 @@ object IndexHandler {
 
         do {
           newPath = index.indexname + "-rep" + Random.nextInt
-        } while(SparkStartup.indexStorage.exists(newPath))
+        } while (SparkStartup.indexStorage.exists(newPath))
 
         SparkStartup.indexStorage.write(newPath, data)
         CatalogOperator.updateIndexPath(index.indexname, newPath)
@@ -241,6 +241,24 @@ object IndexHandler {
 
         return Success(index)
     }
+  }
+
+  /**
+    *
+    * @param indexname
+    * @param weight
+    */
+  def setWeight(indexname: IndexName, weight: Float): Boolean = {
+    CatalogOperator.updateIndexWeight(indexname, weight)
+  }
+
+  /**
+    * Resets all weights to default weight.
+    *
+    * @param entityname
+    */
+  def resetAllWeights(entityname: EntityName): Boolean = {
+    CatalogOperator.resetIndexWeight(entityname)
   }
 }
 

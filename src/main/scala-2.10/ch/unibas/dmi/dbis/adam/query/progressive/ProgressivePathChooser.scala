@@ -19,6 +19,7 @@ import org.apache.log4j.Logger
   */
 trait ProgressivePathChooser {
   val log = Logger.getLogger(getClass.getName)
+
   def getPaths[U](entityname: EntityName): Seq[IndexName]
 }
 
@@ -30,7 +31,9 @@ trait ProgressivePathChooser {
 class SimpleProgressivePathChooser()(implicit ac: AdamContext) extends ProgressivePathChooser {
   override def getPaths[U](entityname: EntityName): Seq[IndexName] = {
     //TODO: choose better default
-    IndexTypes.values.map(indextypename => IndexHandler.list(entityname, indextypename).head).map(_._1)
+    IndexTypes.values
+      .map(indextypename => IndexHandler.list(entityname, indextypename).sortBy(-_._3).head)
+      .map(_._1)
   }
 }
 
@@ -53,7 +56,9 @@ class AllProgressivePathChooser(implicit ac: AdamContext) extends ProgressivePat
   */
 class IndexTypeProgressivePathChooser(indextypenames: Seq[IndexTypeName])(implicit ac: AdamContext) extends ProgressivePathChooser {
   override def getPaths[U](entityname: EntityName): Seq[IndexName] = {
-    indextypenames.map(indextypename => IndexHandler.list(entityname, indextypename).head).map(_._1)
+    indextypenames
+      .map(indextypename => IndexHandler.list(entityname, indextypename).sortBy(-_._3).head)
+      .map(_._1)
   }
 }
 
@@ -65,12 +70,15 @@ class IndexTypeProgressivePathChooser(indextypenames: Seq[IndexTypeName])(implic
   */
 class QueryHintsProgressivePathChooser(hints: Seq[QueryHint])(implicit ac: AdamContext) extends ProgressivePathChooser {
   override def getPaths[U](entityname: EntityName): Seq[IndexName] = {
-    hints.map(choosePlan(entityname, _)).filterNot(_ == null).toSeq
+    hints.map(choosePlan(entityname, _)).filterNot(_ == null)
   }
 
   private def choosePlan(entityname: EntityName, hint: QueryHint)(implicit ac: AdamContext) = {
     if (hint.isInstanceOf[IndexQueryHint]) {
-      IndexHandler.list(entityname, hint.asInstanceOf[IndexQueryHint].structureType).head._1
+      IndexHandler.list(entityname, hint.asInstanceOf[IndexQueryHint].structureType)
+        .sortBy(-_._3)
+        .map(_._1)
+        .head
     } else {
       log.error("only query hints of the type IndexQueryHint are accepted")
       null

@@ -108,9 +108,16 @@ object QueryHandler {
         val indexChoice = indexes.get(iqh.structureType)
 
         if (indexChoice.isDefined) {
-          //TODO: use old measurements for choice rather than head
-          val index = indexChoice.get.map(indexname => IndexHandler.load(indexname, false).get).filter(_.isQueryConform(nnq.get)).head
-          return Option(specifiedIndexQuery(index))
+          val indexes = indexChoice.get
+            .map(indexname => IndexHandler.load(indexname, false).get)
+            .filter(_.isQueryConform(nnq.get)) //choose only indexes that are conform to query
+            .sortBy(- _.weight) //order by weight (highest weight first)
+
+          if(indexes.isEmpty){
+            return None
+          }
+
+          return Option(specifiedIndexQuery(indexes.head))
         } else {
           return None
         }
@@ -231,14 +238,17 @@ object QueryHandler {
       }
     }
 
-    val indexes = IndexHandler.list(entityname, indextype).map(_._1)
+    val indexes = IndexHandler.list(entityname, indextype)
+      .map(x => IndexHandler.load(x._1).get)
+      .filter(_.isQueryConform(nnq)) //choose only indexes that are conform to query
+      .sortBy(- _.weight) //order by weight (highest weight first)
 
     if (indexes.isEmpty) {
       log.error("requested index of type " + indextype + " but no index of this type was found")
       throw new IndexNotExistingException()
     }
 
-    val res = specifiedIndexQuery(IndexHandler.load(indexes.head).get)(nnq, bq, withMetadata)
+    val res = specifiedIndexQuery(indexes.head)(nnq, bq, withMetadata)
 
     if (id.isDefined && cache.isDefined && cache.get.putInCache) {
       QueryLRUCache.put(id.get, res)

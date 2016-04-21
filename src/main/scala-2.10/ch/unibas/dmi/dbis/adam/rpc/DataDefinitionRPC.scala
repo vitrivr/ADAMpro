@@ -6,6 +6,7 @@ import ch.unibas.dmi.dbis.adam.entity.{EntityHandler, FieldDefinition, FieldType
 import ch.unibas.dmi.dbis.adam.exception.GeneralAdamException
 import ch.unibas.dmi.dbis.adam.http.grpc.CreateEntityMessage.FieldType
 import ch.unibas.dmi.dbis.adam.http.grpc.{AckMessage, CreateEntityMessage, _}
+import ch.unibas.dmi.dbis.adam.index.IndexHandler
 import ch.unibas.dmi.dbis.adam.index.structures.IndexTypes
 import ch.unibas.dmi.dbis.adam.main.AdamContext
 import ch.unibas.dmi.dbis.adam.query.distance.EuclideanDistance
@@ -234,6 +235,16 @@ class DataDefinitionRPC(implicit ac: AdamContext) extends AdamDefinitionGrpc.Ada
     } else {
       log.debug("exception while rpc call for repartitioning index")
       Future.successful(AckMessage(code = AckMessage.Code.ERROR, message = index.failed.get.getMessage))
+    }
+  }
+
+  override def setIndexWeight(request: IndexWeightMessage): Future[AckMessage] = {
+    log.debug("rpc call for changing weight of index")
+
+    if(IndexHandler.setWeight(request.index, request.weight)){
+      Future.successful(AckMessage(AckMessage.Code.OK, request.index))
+    } else {
+      Future.successful(AckMessage(AckMessage.Code.ERROR, "please try again"))
     }
   }
 }
