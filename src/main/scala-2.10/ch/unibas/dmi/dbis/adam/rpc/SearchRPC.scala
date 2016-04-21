@@ -278,13 +278,13 @@ class SearchRPC(implicit ac: AdamContext) extends AdamSearchGrpc.AdamSearch {
   private def prepareResults(queryid: String, confidence: Double, time: Long, source: String, df: DataFrame): QueryResponseInfoMessage = {
     import org.apache.spark.sql.functions.{array, col, lit, udf}
 
-    val asMap = udf((keys: Seq[String], values: Seq[String]) =>
-      keys.zip(values).filter {
+    val asMap = udf((keys: Seq[String], values: Seq[Any]) =>
+      keys.zip(values.map(_.toString)).filter {
         case (k, null) => false
         case _ => true
       }.toMap)
 
-    val cols = df.dtypes.slice(2, df.dtypes.length).map(_._1)
+    val cols = df.dtypes.map(_._1).filterNot(x => FieldNames.reservedNames.contains(x))
 
     val keys = array(cols.map(lit): _*)
     val values = array(cols.map(col): _*)
