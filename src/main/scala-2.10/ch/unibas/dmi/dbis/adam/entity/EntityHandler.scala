@@ -91,7 +91,7 @@ object EntityHandler {
         if (!ifExists) {
           return Failure(EntityNotExistingException())
         } else {
-          Success(null)
+          return Success(null)
         }
       }
 
