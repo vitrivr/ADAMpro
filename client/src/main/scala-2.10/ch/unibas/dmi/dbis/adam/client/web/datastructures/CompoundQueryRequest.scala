@@ -23,12 +23,27 @@ case class CompoundQueryRequest(var id: String, var operation: String, var optio
 
   private def query = options.get("query").get.split(",").map(_.toFloat)
 
-  private def nnq = NearestNeighbourQueryMessage(query,
-    Some(DistanceMessage(DistanceMessage.DistanceType.minkowski, Map("norm" -> "1"))),
-    options.get("k").getOrElse("100").toInt,
-    true,
-    Map(),
-    options.getOrElse("partitions", "").split(",").map(_.toInt))
+  private def nnq = {
+    val partitions = if (options.get("partitions").isDefined) {
+      val s = options.get("partitions").get
+      if (s.contains(",")) {
+        s.split(",").map(_.toInt).toSeq
+      } else {
+        Seq[Int](s.toInt)
+      }
+    } else {
+      Seq[Int]()
+    }
+
+    val nnq = NearestNeighbourQueryMessage(query,
+      Some(DistanceMessage(DistanceMessage.DistanceType.minkowski, Map("norm" -> "1"))),
+      options.get("k").getOrElse("100").toInt,
+      true,
+      Map(),
+      partitions)
+
+    nnq
+  }
 
   /**
     *
@@ -42,8 +57,8 @@ case class CompoundQueryRequest(var id: String, var operation: String, var optio
       operation = "aggregate"
       options = Map("aggregation" -> "intersect", "operationorder" -> "right")
       targets = Option(Seq(from, to))
-    } else if(targets.isDefined) {
-      targets.get.foreach{t =>
+    } else if (targets.isDefined) {
+      targets.get.foreach { t =>
         t.prepare()
       }
     }
@@ -93,7 +108,7 @@ case class CompoundQueryRequest(var id: String, var operation: String, var optio
       case "parallel" => ExpressionQueryMessage.OperationOrder.PARALLEL
       case "left" => ExpressionQueryMessage.OperationOrder.LEFTFIRST
       case "right" => ExpressionQueryMessage.OperationOrder.RIGHTFIRST
-      case _  => ExpressionQueryMessage.OperationOrder.PARALLEL
+      case _ => ExpressionQueryMessage.OperationOrder.PARALLEL
     }
 
     ExpressionQueryMessage(id, Option(lsqm), op, order, Option(rsqm))
