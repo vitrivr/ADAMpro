@@ -30,14 +30,16 @@ class AdamController(rpcClient: RPCClient) extends Controller {
   /**
     *
     */
-  get("/entity/list") { request : Request =>
+  get("/entity/list") { request: Request =>
     log.info("listing data")
     val results = rpcClient.listEntities().map(entity => EntityDetailResponse(entity, rpcClient.getDetails(entity)))
 
     response.ok.json(EntityListResponse(200, results))
   }
-  case class EntityListResponse(code: Int, entities : Seq[EntityDetailResponse])
-  case class EntityDetailResponse(entityname : String, details : Map[String, String])
+
+  case class EntityListResponse(code: Int, entities: Seq[EntityDetailResponse])
+
+  case class EntityDetailResponse(entityname: String, details: Map[String, String])
 
   /**
     *
@@ -53,6 +55,7 @@ class AdamController(rpcClient: RPCClient) extends Controller {
       response.ok.json(PreparationRequestResponse(500))
     }
   }
+
   case class PreparationRequestResponse(code: Int, entityname: String = "", ntuples: Int = 0, ndims: Int = 0)
 
 
@@ -80,7 +83,8 @@ class AdamController(rpcClient: RPCClient) extends Controller {
       response.ok.json(IndexRequestResponse(500))
     }
   }
-  case class IndexRequestResponse(code: Int, indexname : String = "")
+
+  case class IndexRequestResponse(code: Int, indexname: String = "")
 
 
   /**
@@ -126,18 +130,21 @@ class AdamController(rpcClient: RPCClient) extends Controller {
 
     response.ok.json(ProgressiveStartResponse(request.id))
   }
+
   case class ProgressiveStartResponse(id: String)
 
 
-  private def processProgressiveResults(id: String, confidence: Double, source: String, time: Long, results: Seq[(Float, Long)]) : Unit = {
-    progTempResults.get(id).get += ProgressiveTempResponse(id,  confidence, source, time, results, ProgressiveQueryStatus.RUNNING)
+  private def processProgressiveResults(id: String, confidence: Double, source: String, time: Long, results: Seq[(Float, Long)]): Unit = {
+    val sourcetype = source.substring(0, source.indexOf("(")).toLowerCase
+    progTempResults.get(id).get += ProgressiveTempResponse(id, confidence, source, sourcetype, time, results, ProgressiveQueryStatus.RUNNING)
   }
 
-  case class ProgressiveTempResponse(id: String, confidence: Double, source: String, time: Long, results: Seq[(Float, Long)], status : ProgressiveQueryStatus.Value)
+  case class ProgressiveTempResponse(id: String, confidence: Double, source : String, sourcetype: String, time: Long, results: Seq[(Float, Long)], status: ProgressiveQueryStatus.Value)
+
   val progTempResults = mutable.HashMap[String, mutable.Queue[ProgressiveTempResponse]]()
 
   private def completedProgressiveResults(id: String): Unit = {
-    progTempResults.get(id).get += ProgressiveTempResponse(id,  0.0, "", 0, Seq(), ProgressiveQueryStatus.FINISHED)
+    progTempResults.get(id).get += ProgressiveTempResponse(id, 0.0, "", "", 0, Seq(), ProgressiveQueryStatus.FINISHED)
     log.info("completed progressive query, deleting results in 10 seconds")
     lazy val f = Future {
       Thread.sleep(10000);
@@ -163,7 +170,9 @@ class AdamController(rpcClient: RPCClient) extends Controller {
       }
     }
   }
+
   case class ProgressiveQueryResponse(results: ProgressiveTempResponse, status: String)
+
 }
 
 /**

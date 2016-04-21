@@ -1,4 +1,5 @@
 //submit operation
+var indextypes = ['ecp', 'lsh', 'pq', 'sh', 'vaf', 'vav', ''].reverse();
 
 $("#btnSubmit").click(function () {
     if ($("#entityname").val().length === 0) {
@@ -72,14 +73,10 @@ $("#btnSubmit").click(function () {
             title: {
                 text: null
             },
-            lineWidth: 0,
-            minorGridLineWidth: 0,
-            lineColor: 'transparent',
-            labels: {
-                enabled: false
-            },
-            minorTickLength: 0,
-            tickLength: 0
+            categories: indextypes,
+            crosshair: true,
+            min : 0,
+            max : indextypes.length - 1
         },
         plotOptions: {
             line: {
@@ -144,7 +141,7 @@ $("#btnSubmit").click(function () {
 
                 for (i = -20; i <= 0; i += 1) {
                     var x = time + i * 1000;
-                    data.push({x: x, y: 0, fillColor: 'transparent', enabled: false, radius: 0,         enableMouseTracking: false});
+                    data.push({x: x, y: 0, fillColor: 'transparent', enabled: false, radius: 0, enableMouseTracking: false});
                 }
                 return data;
             }())
@@ -183,8 +180,9 @@ $("#btnSubmit").click(function () {
                             var x = (new Date()).getTime();
                             series.addPoint({
                                 x: x,
-                                y: 0,
+                                y: indextypes.indexOf(data.results.sourcetype),
                                 source: data.results.source,
+                                sourcetype : data.results.sourcetype,
                                 confidence: data.results.confidence,
                                 time: Math.abs(startTime - x),
                                 results : data.results.results.length,
