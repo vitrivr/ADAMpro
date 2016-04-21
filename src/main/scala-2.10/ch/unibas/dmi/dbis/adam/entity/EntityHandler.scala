@@ -26,6 +26,8 @@ object EntityHandler {
 
   def exists(entityname: EntityName): Boolean = CatalogOperator.existsEntity(entityname)
 
+  private val lock = new Object()
+
   /**
     * Creates an entity.
     *
@@ -35,42 +37,44 @@ object EntityHandler {
     * @return
     */
   def create(entityname: EntityName, fields: Option[Seq[FieldDefinition]] = None)(implicit ac: AdamContext): Try[Entity] = {
-    //checks
-    if (exists(entityname)) {
-      log.error("entity " + entityname + " exists already")
-      return Failure(EntityExistingException())
-    }
+    lock.synchronized {
+      //checks
+      if (exists(entityname)) {
+        log.error("entity " + entityname + " exists already")
+        return Failure(EntityExistingException())
+      }
 
-    if (fields.isDefined) {
-      FieldNames.reservedNames.foreach { reservedName =>
-        if (fields.get.contains(reservedName)) {
-          log.error("entity defined with field " + FieldNames.idColumnName + ", but name is reserved")
+      if (fields.isDefined) {
+        FieldNames.reservedNames.foreach { reservedName =>
+          if (fields.get.contains(reservedName)) {
+            log.error("entity defined with field " + FieldNames.idColumnName + ", but name is reserved")
+            return Failure(EntityNotProperlyDefinedException())
+          }
+        }
+
+        if (fields.get.map(_.name).distinct.length != fields.get.length) {
+          log.error("entity defined with duplicate fields")
+          return Failure(EntityNotProperlyDefinedException())
+        }
+
+        if (fields.get.filter(_.pk).length > 1) {
+          log.error("entity defined with more than one primary key")
           return Failure(EntityNotProperlyDefinedException())
         }
       }
 
-      if (fields.get.map(_.name).distinct.length != fields.get.length) {
-        log.error("entity defined with duplicate fields")
-        return Failure(EntityNotProperlyDefinedException())
+      //perform
+      featureStorage.create(entityname)
+
+      if (fields.isDefined) {
+        val fieldsWithId = fields.get.+:(FieldDefinition(FieldNames.idColumnName, LONGTYPE, false, true, true))
+        metadataStorage.create(entityname, fieldsWithId)
+        CatalogOperator.createEntity(entityname, true)
+        Success(Entity(entityname, featureStorage, Option(metadataStorage)))
+      } else {
+        CatalogOperator.createEntity(entityname, false)
+        Success(Entity(entityname, featureStorage, None))
       }
-
-      if (fields.get.filter(_.pk).length > 1) {
-        log.error("entity defined with more than one primary key")
-        return Failure(EntityNotProperlyDefinedException())
-      }
-    }
-
-    //perform
-    featureStorage.create(entityname)
-
-    if (fields.isDefined) {
-      val fieldsWithId = fields.get.+:(FieldDefinition(FieldNames.idColumnName, LONGTYPE, false, true, true))
-      metadataStorage.create(entityname, fieldsWithId)
-      CatalogOperator.createEntity(entityname, true)
-      Success(Entity(entityname, featureStorage, Option(metadataStorage)))
-    } else {
-      CatalogOperator.createEntity(entityname, false)
-      Success(Entity(entityname, featureStorage, None))
     }
   }
 
@@ -82,24 +86,26 @@ object EntityHandler {
     * @return
     */
   def drop(entityname: EntityName, ifExists: Boolean = false)(implicit ac: AdamContext): Try[Null] = {
-    if (!exists(entityname)) {
-      if (!ifExists) {
-        return Failure(EntityNotExistingException())
-      } else {
-        Success(null)
+    lock.synchronized {
+      if (!exists(entityname)) {
+        if (!ifExists) {
+          return Failure(EntityNotExistingException())
+        } else {
+          Success(null)
+        }
       }
+
+      IndexHandler.dropAll(entityname)
+
+      featureStorage.drop(entityname)
+
+      if (CatalogOperator.hasEntityMetadata(entityname)) {
+        metadataStorage.drop(entityname)
+      }
+
+      CatalogOperator.dropEntity(entityname, ifExists)
+      Success(null)
     }
-
-    IndexHandler.dropAll(entityname)
-
-    featureStorage.drop(entityname)
-
-    if (CatalogOperator.hasEntityMetadata(entityname)) {
-      metadataStorage.drop(entityname)
-    }
-
-    CatalogOperator.dropEntity(entityname, ifExists)
-    Success(null)
   }
 
   /**
@@ -127,6 +133,8 @@ object EntityHandler {
     * @return
     */
   def load(entityname: EntityName, cache: Boolean = false)(implicit ac: AdamContext): Try[Entity] = {
+    //TODO: add entity lock?
+
     if (!exists(entityname)) {
       return Failure(EntityNotExistingException())
     }

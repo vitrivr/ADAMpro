@@ -34,6 +34,8 @@ object IndexHandler {
 
   private val MINIMUM_NUMBER_OF_TUPLE = 10
 
+  private val lock = new Object()
+
 
   /**
     * Creates an index that is unique and which folows the naming rules of indexes.
@@ -65,19 +67,21 @@ object IndexHandler {
     * @return index
     */
   def createIndex(entity: Entity, indexgenerator: IndexGenerator)(implicit ac: AdamContext): Try[Index] = {
-    val count = entity.count
-    if (count < MINIMUM_NUMBER_OF_TUPLE) {
-      log.error("not enough tuples for creating index, needs at least " + MINIMUM_NUMBER_OF_TUPLE + " but has only " + count)
-      return Failure(new GeneralAdamException("not enough tuples for index"))
-    }
+    lock.synchronized {
+      val count = entity.count
+      if (count < MINIMUM_NUMBER_OF_TUPLE) {
+        log.error("not enough tuples for creating index, needs at least " + MINIMUM_NUMBER_OF_TUPLE + " but has only " + count)
+        return Failure(new GeneralAdamException("not enough tuples for index"))
+      }
 
-    val indexname = createIndexName(entity.entityname, indexgenerator.indextypename)
-    val rdd: RDD[IndexingTaskTuple] = entity.getFeaturedata.map { x => IndexingTaskTuple(x.getLong(0), x.getAs[FeatureVectorWrapper](1).vector) }
-    val index = indexgenerator.index(indexname, entity.entityname, rdd)
-    index.df = index.df.withColumnRenamed("id", FieldNames.idColumnName).withColumnRenamed("value", FieldNames.featureIndexColumnName)
-    storage.write(indexname, index.df)
-    CatalogOperator.createIndex(indexname, indexname, entity.entityname, indexgenerator.indextypename, index.metadata)
-    Success(index)
+      val indexname = createIndexName(entity.entityname, indexgenerator.indextypename)
+      val rdd: RDD[IndexingTaskTuple] = entity.getFeaturedata.map { x => IndexingTaskTuple(x.getLong(0), x.getAs[FeatureVectorWrapper](1).vector) }
+      val index = indexgenerator.index(indexname, entity.entityname, rdd)
+      index.df = index.df.withColumnRenamed("id", FieldNames.idColumnName).withColumnRenamed("value", FieldNames.featureIndexColumnName)
+      storage.write(indexname, index.df)
+      CatalogOperator.createIndex(indexname, indexname, entity.entityname, indexgenerator.indextypename, index.metadata)
+      Success(index)
+    }
   }
 
   /**
@@ -155,9 +159,11 @@ object IndexHandler {
     * @return true if index was dropped
     */
   def drop(indexname: IndexName)(implicit ac: AdamContext): Try[Void] = {
-    CatalogOperator.dropIndex(indexname)
-    storage.drop(indexname)
-    Success(null)
+    lock.synchronized {
+      CatalogOperator.dropIndex(indexname)
+      storage.drop(indexname)
+      Success(null)
+    }
   }
 
   /**
