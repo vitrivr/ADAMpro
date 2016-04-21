@@ -2,6 +2,7 @@ package ch.unibas.dmi.dbis.adam
 
 import java.sql.DriverManager
 
+import ch.unibas.dmi.dbis.adam.api.DropEntityOp
 import ch.unibas.dmi.dbis.adam.config.{AdamConfig, FieldNames}
 import ch.unibas.dmi.dbis.adam.datatypes.feature.{FeatureVectorWrapper, FeatureVectorWrapperUDT}
 import ch.unibas.dmi.dbis.adam.entity.{EntityHandler, Entity, FieldDefinition, FieldTypes}
@@ -41,7 +42,6 @@ class AdamTestBase extends FeatureSpec with GivenWhenThen with Eventually with I
     DriverManager.getConnection(AdamConfig.jdbcUrl, AdamConfig.jdbcUser, AdamConfig.jdbcPassword)
   }
 
-
   /**
     *
     * @param len
@@ -59,27 +59,16 @@ class AdamTestBase extends FeatureSpec with GivenWhenThen with Eventually with I
 
   /**
     *
-    * @param ntuples
-    * @param ndims
-    * @return
+    * @param testCode
     */
-  def createSimpleEntity(ntuples: Int, ndims: Int): String = {
+  def withEntityName(testCode: String => Any) {
     val entityname = getRandomName()
-    EntityHandler.create(entityname)
-
-    val schema = StructType(Seq(
-      StructField(FieldNames.featureColumnName, new FeatureVectorWrapperUDT, false)
-    ))
-
-    val rdd = ac.sc.parallelize((0 until ntuples).map(id =>
-      Row(new FeatureVectorWrapper(Seq.fill(ndims)(Random.nextFloat())))
-    ))
-
-    val data = ac.sqlContext.createDataFrame(rdd, schema)
-
-    EntityHandler.insertData(entityname, data)
-
-    entityname
+    try {
+      testCode(entityname)
+    }
+    finally {
+      DropEntityOp(entityname, true)
+    }
   }
 
 
@@ -89,43 +78,80 @@ class AdamTestBase extends FeatureSpec with GivenWhenThen with Eventually with I
     * @param ndims
     * @return
     */
-  def createEntityWithMetadata(ntuples: Int, ndims: Int): String = {
+  def withSimpleEntity(ntuples: Int, ndims: Int)(testCode: String => Any) {
     val entityname = getRandomName()
 
-    val fieldTemplate = Seq(
-      ("stringfield", FieldTypes.STRINGTYPE, "text"),
-      ("floatfield", FieldTypes.FLOATTYPE, "real"),
-      ("doublefield", FieldTypes.DOUBLETYPE, "double precision"),
-      ("intfield", FieldTypes.INTTYPE, "integer"),
-      ("longfield", FieldTypes.LONGTYPE, "bigint"),
-      ("booleanfield", FieldTypes.BOOLEANTYPE, "boolean")
-    )
+    try {
+      EntityHandler.create(entityname)
 
-    val entity = EntityHandler.create(entityname, Some(fieldTemplate.map(ft => FieldDefinition(ft._1, ft._2))))
+      val schema = StructType(Seq(
+        StructField(FieldNames.featureColumnName, new FeatureVectorWrapperUDT, false)
+      ))
 
-    val stringLength = 10
-    val maxInt = 50000
+      val rdd = ac.sc.parallelize((0 until ntuples).map(id =>
+        Row(new FeatureVectorWrapper(Seq.fill(ndims)(Random.nextFloat())))
+      ))
 
-    val schema = StructType(fieldTemplate
-      .map(field => StructField(field._1, field._2.datatype, false)).+:(StructField(FieldNames.featureColumnName, new FeatureVectorWrapperUDT, false)))
+      val data = ac.sqlContext.createDataFrame(rdd, schema)
+
+      EntityHandler.insertData(entityname, data)
+
+      testCode(entityname)
+    }
+    finally {
+      DropEntityOp(entityname, true)
+    }
+  }
 
 
-    val rdd = ac.sc.parallelize((0 until ntuples).map(id =>
-      Row(
-        getRandomFeatureVector(ndims),
-        Random.nextString(stringLength),
-        math.abs(Random.nextFloat()),
-        math.abs(Random.nextDouble()),
-        math.abs(Random.nextInt(maxInt)),
-        id.toLong, //we use this field as id field
-        Random.nextBoolean()
-      )))
+  /**
+    *
+    * @param ntuples
+    * @param ndims
+    * @return
+    */
+  def  withComplexEntity(ntuples: Int, ndims: Int)(testCode: String => Any) {
+    val entityname = getRandomName()
 
-    val data = ac.sqlContext.createDataFrame(rdd, schema)
+    try {
+      val fieldTemplate = Seq(
+        ("stringfield", FieldTypes.STRINGTYPE, "text"),
+        ("floatfield", FieldTypes.FLOATTYPE, "real"),
+        ("doublefield", FieldTypes.DOUBLETYPE, "double precision"),
+        ("intfield", FieldTypes.INTTYPE, "integer"),
+        ("longfield", FieldTypes.LONGTYPE, "bigint"),
+        ("booleanfield", FieldTypes.BOOLEANTYPE, "boolean")
+      )
 
-    EntityHandler.insertData(entityname, data)
+      val entity = EntityHandler.create(entityname, Some(fieldTemplate.map(ft => FieldDefinition(ft._1, ft._2))))
 
-    entityname
+      val stringLength = 10
+      val maxInt = 50000
+
+      val schema = StructType(fieldTemplate
+        .map(field => StructField(field._1, field._2.datatype, false)).+:(StructField(FieldNames.featureColumnName, new FeatureVectorWrapperUDT, false)))
+
+
+      val rdd = ac.sc.parallelize((0 until ntuples).map(id =>
+        Row(
+          getRandomFeatureVector(ndims),
+          Random.nextString(stringLength),
+          math.abs(Random.nextFloat()),
+          math.abs(Random.nextDouble()),
+          math.abs(Random.nextInt(maxInt)),
+          id.toLong, //we use this field as id field
+          Random.nextBoolean()
+        )))
+
+      val data = ac.sqlContext.createDataFrame(rdd, schema)
+
+      EntityHandler.insertData(entityname, data)
+
+      testCode(entityname)
+    }
+    finally {
+      DropEntityOp(entityname, true)
+    }
   }
 
   /**
