@@ -6,7 +6,6 @@ $(document).ready(function () {
         type: 'GET',
         success: function (data) {
             if (data.code === 200) {
-console.log(data);
                 jQuery.each(data.entities, function (index, value) {
                     var innerhtml = '';
                     innerhtml += "<li>";
