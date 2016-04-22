@@ -59,18 +59,21 @@ case class Entity(entityname: EntityName, featureStorage: FeatureStorage, metada
     * Inserts data into the entity.
     *
     * @param insertion
+    * @param ignoreChecks
     * @return
     */
-  def insert(insertion: DataFrame)(implicit ac: AdamContext): Try[Void] = {
+  def insert(insertion: DataFrame, ignoreChecks: Boolean = false)(implicit ac: AdamContext): Try[Void] = {
     log.debug("inserting data into entity")
 
-    val dataDimensionality = insertion.first.getAs[FeatureVectorWrapper](FieldNames.featureColumnName).vector.size
+    if (!ignoreChecks) {
+      val dataDimensionality = insertion.first.getAs[FeatureVectorWrapper](FieldNames.featureColumnName).vector.size
 
-    val entityDimensionality = CatalogOperator.getDimensionality(entityname)
-    if (entityDimensionality.isDefined && dataDimensionality != entityDimensionality.get) {
-      log.warn("new data has not same dimensionality as existing data")
-    } else {
-      CatalogOperator.updateDimensionality(entityname, dataDimensionality)
+      val entityDimensionality = CatalogOperator.getDimensionality(entityname)
+      if (entityDimensionality.isDefined && dataDimensionality != entityDimensionality.get) {
+        log.warn("new data has not same dimensionality as existing data")
+      } else if (entityDimensionality.isEmpty) {
+        CatalogOperator.updateDimensionality(entityname, dataDimensionality)
+      }
     }
 
     val rdd = insertion.rdd.zipWithUniqueId.map { case (r: Row, adamtwoid: Long) => Row.fromSeq(adamtwoid +: r.toSeq) }
@@ -182,7 +185,7 @@ case class Entity(entityname: EntityName, featureStorage: FeatureStorage, metada
   * @param unique
   * @param indexed
   */
-case class FieldDefinition(name : String, fieldtype: FieldType, pk: Boolean = false, unique: Boolean = false, indexed: Boolean = false)
+case class FieldDefinition(name: String, fieldtype: FieldType, pk: Boolean = false, unique: Boolean = false, indexed: Boolean = false)
 
 
 object Entity {

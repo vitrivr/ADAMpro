@@ -3,7 +3,7 @@ package ch.unibas.dmi.dbis.adam.api
 import ch.unibas.dmi.dbis.adam.config.FieldNames
 import ch.unibas.dmi.dbis.adam.datatypes.feature.{FeatureVectorWrapper, FeatureVectorWrapperUDT}
 import ch.unibas.dmi.dbis.adam.entity.Entity.EntityName
-import ch.unibas.dmi.dbis.adam.entity.FieldDefinition
+import ch.unibas.dmi.dbis.adam.entity.{EntityHandler, FieldDefinition}
 import ch.unibas.dmi.dbis.adam.entity.FieldTypes._
 import ch.unibas.dmi.dbis.adam.main.SparkStartup.Implicits._
 import org.apache.spark.sql.Row
@@ -49,7 +49,7 @@ object RandomDataOp {
         )
         val data = sqlContext.createDataFrame(rdd, schema)
 
-        InsertOp(entityname, data)
+        EntityHandler.insertData(entityname, data, true)
       }
 
       //entity with data created

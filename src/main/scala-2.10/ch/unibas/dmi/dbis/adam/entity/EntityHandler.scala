@@ -114,16 +114,18 @@ object EntityHandler {
     * @param entityname
     * @param insertion data frame containing all columns (of both the feature storage and the metadata storage);
     *                  note that you should name the feature column as ("feature").
+    * @param ignoreChecks
     * @return
     */
-  def insertData(entityname: EntityName, insertion: DataFrame)(implicit ac: AdamContext): Try[Void] = {
+  def insertData(entityname: EntityName, insertion: DataFrame, ignoreChecks: Boolean = false )(implicit ac: AdamContext): Try[Void] = {
     val entity = load(entityname).get
+
+    //TODO: possibly compare schemas
     //val insertionSchema = insertion.schema
     //val entitySchema = entity.schema
 
-    //TODO: possibly compare schemas
 
-    entity.insert(insertion)
+    entity.insert(insertion, ignoreChecks)
   }
 
   /**
