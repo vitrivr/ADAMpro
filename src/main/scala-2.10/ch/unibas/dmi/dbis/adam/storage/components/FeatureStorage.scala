@@ -16,6 +16,13 @@ import org.apache.spark.sql.{DataFrame, Row, SaveMode}
   */
 trait FeatureStorage {
   /**
+    *
+    * @param entityname
+    * @return
+    */
+  def exists(entityname : EntityName) : Boolean
+
+  /**
     * Create the entity in the feature storage.
     *
     * @param entityname

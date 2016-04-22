@@ -72,6 +72,13 @@ object CassandraFeatureStorage extends FeatureStorage with Serializable {
   /**
     *
     * @param entityname
+    * @return
+    */
+  override def exists(entityname: EntityName): Boolean = ???
+
+  /**
+    *
+    * @param entityname
     */
   override def create(entityname: EntityName)(implicit ac: AdamContext): Boolean = {
     log.debug("cassandra create operation")
@@ -187,6 +194,7 @@ object CassandraFeatureStorage extends FeatureStorage with Serializable {
   private def asWorkingVectorWrapper(value: Vector[Float]): FeatureVectorWrapper = {
     new FeatureVectorWrapper(value.toSeq)
   }
+
 }
 
 
