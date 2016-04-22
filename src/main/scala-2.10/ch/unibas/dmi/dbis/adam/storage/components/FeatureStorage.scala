@@ -1,6 +1,7 @@
 package ch.unibas.dmi.dbis.adam.storage.components
 
 import ch.unibas.dmi.dbis.adam.config.FieldNames
+import ch.unibas.dmi.dbis.adam.datatypes.feature.FeatureVectorWrapperUDT
 import ch.unibas.dmi.dbis.adam.entity.Entity.EntityName
 import ch.unibas.dmi.dbis.adam.entity.Tuple.TupleID
 import ch.unibas.dmi.dbis.adam.main.AdamContext
@@ -24,7 +25,7 @@ trait FeatureStorage {
     val featureSchema = StructType(
       Seq(
         StructField(FieldNames.idColumnName, LongType, false),
-        StructField(FieldNames.internFeatureColumnName, ArrayType(FloatType), false)
+        StructField(FieldNames.internFeatureColumnName,  new FeatureVectorWrapperUDT, false)
       )
     )
     val df = ac.sqlContext.createDataFrame(ac.sc.emptyRDD[Row], featureSchema)

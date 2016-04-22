@@ -19,7 +19,7 @@ import scala.util.Random
   */
 object RandomDataOp {
   def apply(entityname: EntityName, collectionSize: Int, vectorSize: Int, fields: Option[Seq[FieldDefinition]] = None): Unit = {
-    val limit = 10000
+    val limit = math.min(collectionSize, 100000)
 
     val entity = CreateEntityOp(entityname, fields)
     if (entity.isFailure) {
