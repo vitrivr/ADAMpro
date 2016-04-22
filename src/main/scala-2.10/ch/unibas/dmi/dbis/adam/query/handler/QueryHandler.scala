@@ -545,13 +545,7 @@ object QueryHandler {
     * @return
     */
   private[handler] def joinWithMetadata(entityname: EntityName, res: DataFrame)(implicit ac: AdamContext): DataFrame = {
-    val mdRes = BooleanQueryHandler.getData(entityname, res.select(FieldNames.idColumnName).collect().map(r => r.getLong(0)).toSet)
-
-    if (mdRes.isDefined) {
-      mdRes.get.join(res, FieldNames.idColumnName) //with metadata
-    } else {
-      res //no metadata
-    }
+    BooleanQueryHandler.getData(entityname, res).getOrElse(res)
   }
 
 

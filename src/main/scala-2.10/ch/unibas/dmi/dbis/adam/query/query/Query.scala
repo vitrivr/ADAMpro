@@ -11,7 +11,7 @@ import ch.unibas.dmi.dbis.adam.storage.partitions.PartitionHandler._
   * Ivan Giangreco
   * November 2015
   */
-abstract class Query(queryID: Option[String] = Some(java.util.UUID.randomUUID().toString)) {}
+abstract class Query(queryID: Option[String] = Some(java.util.UUID.randomUUID().toString)) extends Serializable {}
 
 /**
   * Boolean query parameters.

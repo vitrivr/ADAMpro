@@ -71,7 +71,7 @@ class VAIndex(val indexname: IndexName, val entityname: EntityName, override pri
         }).collect()
 
     val globalResultHandler = new VAResultHandler(k)
-    results.sortBy(_.upper).foreach(result => globalResultHandler.offer(result))
+    results.sortBy(- _.upper).foreach(result => globalResultHandler.offer(result))
 
     val ids = globalResultHandler.results
 

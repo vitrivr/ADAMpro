@@ -2,7 +2,6 @@ package ch.unibas.dmi.dbis.adam.query.scanner
 
 import ch.unibas.dmi.dbis.adam.config.FieldNames
 import ch.unibas.dmi.dbis.adam.entity.Entity
-import ch.unibas.dmi.dbis.adam.entity.Tuple._
 import ch.unibas.dmi.dbis.adam.main.SparkStartup
 import ch.unibas.dmi.dbis.adam.query.query.BooleanQuery
 import org.apache.log4j.Logger
@@ -108,10 +107,10 @@ object MetadataScanner {
     * @param filter tuple ids to filter on
     * @return
     */
-  def apply(entity: Entity, filter: Set[TupleID]): Option[DataFrame] = {
+  def apply(entity: Entity, filter: DataFrame): Option[DataFrame] = {
     if (entity.hasMetadata) {
       val df = entity.getMetadata.get
-      Option(df.filter(df(FieldNames.idColumnName) isin (filter.toSeq: _*)))
+      Option(filter.join(df, FieldNames.idColumnName))
     } else {
       log.warn("asked for metadata, but entity " + entity + " has no metadata available")
       None

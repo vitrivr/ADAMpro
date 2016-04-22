@@ -119,8 +119,8 @@ case class Entity(entityname: EntityName, featureStorage: FeatureStorage, metada
     * @param filter
     * @return
     */
-  def filter(filter: Set[Long]): RDD[Tuple] = {
-    featureStorage.read(entityname, Option(filter)).rdd.map(r => r: Tuple)
+  def filter(filter: Set[Long]): DataFrame = {
+    featureStorage.read(entityname, Option(filter))
   }
 
   /**

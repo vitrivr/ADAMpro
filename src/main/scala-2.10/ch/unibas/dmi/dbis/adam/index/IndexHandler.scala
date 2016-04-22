@@ -1,6 +1,6 @@
 package ch.unibas.dmi.dbis.adam.index
 
-import ch.unibas.dmi.dbis.adam.config.FieldNames
+import ch.unibas.dmi.dbis.adam.config.{AdamConfig, FieldNames}
 import ch.unibas.dmi.dbis.adam.datatypes.feature.FeatureVectorWrapper
 import ch.unibas.dmi.dbis.adam.entity.Entity
 import ch.unibas.dmi.dbis.adam.entity.Entity.EntityName
@@ -77,7 +77,11 @@ object IndexHandler {
       val indexname = createIndexName(entity.entityname, indexgenerator.indextypename)
       val rdd: RDD[IndexingTaskTuple] = entity.getFeaturedata.map { x => IndexingTaskTuple(x.getLong(0), x.getAs[FeatureVectorWrapper](1).vector) }
       val index = indexgenerator.index(indexname, entity.entityname, rdd)
-      index.df = index.df.withColumnRenamed("id", FieldNames.idColumnName).withColumnRenamed("value", FieldNames.featureIndexColumnName)
+      index.df = index
+        .df
+        .repartition(AdamConfig.defaultNumberOfPartitions)
+        .withColumnRenamed("id", FieldNames.idColumnName)
+        .withColumnRenamed("value", FieldNames.featureIndexColumnName)
       storage.write(indexname, index.df)
       CatalogOperator.createIndex(indexname, indexname, entity.entityname, indexgenerator.indextypename, index.metadata)
       Success(index)
