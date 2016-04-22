@@ -143,8 +143,18 @@ class RPCClient(channel: ManagedChannel, definer: AdamDefinitionBlockingStub, se
     * @param partitions
     * @return
     */
-  def repartition(index : String, partitions : Int, useMetadata : Boolean = false, cols : Seq[String] = Seq()): String = {
-    definer.repartitionIndexData(RepartitionMessage(index, partitions, useMetadata, cols, PartitionOptions.CREATE_NEW)).message
+  def repartition(index : String, partitions : Int, useMetadata : Boolean = false, cols : Seq[String] = Seq(), materialize : Boolean, replace : Boolean): String = {
+    val option = if(replace){
+      PartitionOptions.REPLACE_EXISTING
+    } else if(materialize){
+      PartitionOptions.CREATE_NEW
+    } else if(!materialize) {
+      PartitionOptions.CREATE_TEMP
+    } else {
+      PartitionOptions.CREATE_NEW
+    }
+
+    definer.repartitionIndexData(RepartitionMessage(index, partitions, useMetadata, cols, option)).message
   }
 
   /**

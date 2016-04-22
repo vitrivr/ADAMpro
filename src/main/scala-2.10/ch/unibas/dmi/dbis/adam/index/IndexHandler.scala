@@ -206,6 +206,7 @@ object IndexHandler {
     }
 
     data = if (cols.isDefined) {
+      //TODO: check that cols are existent in dataframe
       data.repartition(n, cols.get.map(data(_)): _*)
     } else {
       data.repartition(n)

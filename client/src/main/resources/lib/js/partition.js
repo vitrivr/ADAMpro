@@ -19,12 +19,10 @@ $("#btnSubmit").click(function () {
     result.indexname = $("#indexname").val();
     result.partitions = $("#partitions").val();
     result.columns = $("#columns").val().split(",");
+    result.materialize = $('#materialize').is(':checked');
+    result.replace = $('#replace').is(':checked');
+    result.usemetadata = $('#metadata').is(':checked');
 
-    if ($('#metadata').is(':checked')) {
-        result.usemetadata = true;
-    } else {
-        result.usemetadata = false;
-    }
 
     $.ajax("/index/repartition", {
         data: JSON.stringify(result),

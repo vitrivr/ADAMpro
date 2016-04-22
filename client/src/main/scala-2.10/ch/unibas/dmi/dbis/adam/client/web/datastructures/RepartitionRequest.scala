@@ -6,5 +6,5 @@ package ch.unibas.dmi.dbis.adam.client.web.datastructures
   * Ivan Giangreco
   * April 2016
   */
-case class RepartitionRequest(indexname: String, partitions : Int, usemetadata : Boolean, columns : Seq[String])
+case class RepartitionRequest(indexname: String, partitions : Int, materialize : Boolean, replace : Boolean, usemetadata : Boolean, columns : Seq[String])
 

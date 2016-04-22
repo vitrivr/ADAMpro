@@ -91,7 +91,7 @@ class AdamController(rpcClient: RPCClient) extends Controller {
     *
     */
   post("/index/repartition") { request: RepartitionRequest =>
-    val res = rpcClient.repartition(request.indexname, request.partitions, request.usemetadata, request.columns)
+    val res = rpcClient.repartition(request.indexname, request.partitions, request.usemetadata, request.columns.filter(_.length > 0), request.materialize, request.replace  )
 
     log.info("repartitioned")
 
