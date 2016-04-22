@@ -2,7 +2,7 @@ package ch.unibas.dmi.dbis.adam.main
 
 import ch.unibas.dmi.dbis.adam.config.AdamConfig
 import ch.unibas.dmi.dbis.adam.storage.components.{FeatureStorage, IndexStorage, MetadataStorage}
-import ch.unibas.dmi.dbis.adam.storage.engine.{CassandraFeatureStorage, ParquetIndexStorage, PostgresqlMetadataStorage}
+import ch.unibas.dmi.dbis.adam.storage.engine.{ParquetFeatureStorage, ParquetIndexStorage, PostgresqlMetadataStorage}
 import org.apache.log4j.Logger
 import org.apache.spark.sql.hive.HiveContext
 import org.apache.spark.{SparkConf, SparkContext}
@@ -45,7 +45,7 @@ object SparkStartup {
     @transient implicit lazy val sqlContext = new HiveContext(sc)
   }
 
-  val featureStorage: FeatureStorage = CassandraFeatureStorage
+  val featureStorage: FeatureStorage = ParquetFeatureStorage
   val metadataStorage: MetadataStorage = PostgresqlMetadataStorage
   val indexStorage: IndexStorage = ParquetIndexStorage
 }

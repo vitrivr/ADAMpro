@@ -24,6 +24,7 @@ object AdamConfig{
   val basePath = config.getString("adampro.basePath")
   val isBaseOnHadoop = basePath.startsWith("hdfs")
 
+  val dataPath = config.getString("adampro.dataPath")
   val indexPath = config.getString("adampro.indexPath")
 
   val catalogPath = config.getString("adampro.catalogPath")
@@ -62,6 +63,8 @@ object AdamConfig{
   } else {
     None
   }
+
+  val defaultNumberOfPartitions = 10
 
   val localNodes = if(config.hasPath("adampro.localNodes")){
     Option(config.getInt("adampro.localNodes"))
