@@ -1,8 +1,6 @@
 package ch.unibas.dmi.dbis.adam.main
 
 import ch.unibas.dmi.dbis.adam.config.AdamConfig
-import ch.unibas.dmi.dbis.adam.datatypes.bitString.{BitString, MinimalBitString}
-import ch.unibas.dmi.dbis.adam.datatypes.feature.FeatureVectorWrapper
 import ch.unibas.dmi.dbis.adam.storage.components.{FeatureStorage, IndexStorage, MetadataStorage}
 import ch.unibas.dmi.dbis.adam.storage.engine.{CassandraFeatureStorage, ParquetIndexStorage, PostgresqlMetadataStorage}
 import org.apache.log4j.Logger
@@ -10,18 +8,17 @@ import org.apache.spark.sql.hive.HiveContext
 import org.apache.spark.{SparkConf, SparkContext}
 
 /**
- * adamtwo
- *
- * Ivan Giangreco
- * August 2015
- */
+  * adamtwo
+  *
+  * Ivan Giangreco
+  * August 2015
+  */
 object SparkStartup {
   val log = Logger.getLogger(getClass.getName)
 
   log.debug("Spark starting up")
 
   val sparkConfig = new SparkConf().setAppName("ADAMpro")
-    .set("spark.serializer", "org.apache.spark.serializer.KryoSerializer")
     .set("spark.driver.maxResultSize", "1000m")
     .set("spark.kryoserializer.buffer.max", "2047m")
     .set("spark.kryoserializer.buffer", "2047")
@@ -31,10 +28,12 @@ object SparkStartup {
     .set("spark.cassandra.connection.port", AdamConfig.cassandraPort)
     .set("spark.cassandra.auth.username", AdamConfig.cassandraUsername)
     .set("spark.cassandra.auth.password", AdamConfig.cassandraPassword)
-    .registerKryoClasses(Array(classOf[BitString[_]], classOf[MinimalBitString], classOf[FeatureVectorWrapper]))
+  //TODO: add kryo serializer back, but check with deployment to yarn
+  //.set("spark.serializer", "org.apache.spark.serializer.KryoSerializer")
+  //.registerKryoClasses(Array(classOf[BitString[_]], classOf[MinimalBitString], classOf[FeatureVectorWrapper]))
 
-  if(AdamConfig.master.isDefined){
-   sparkConfig.setMaster(AdamConfig.master.get)
+  if (AdamConfig.master.isDefined) {
+    sparkConfig.setMaster(AdamConfig.master.get)
   }
 
   object Implicits extends AdamContext {
@@ -46,7 +45,7 @@ object SparkStartup {
     @transient implicit lazy val sqlContext = new HiveContext(sc)
   }
 
-  val featureStorage : FeatureStorage = CassandraFeatureStorage
-  val metadataStorage : MetadataStorage = PostgresqlMetadataStorage
+  val featureStorage: FeatureStorage = CassandraFeatureStorage
+  val metadataStorage: MetadataStorage = PostgresqlMetadataStorage
   val indexStorage: IndexStorage = ParquetIndexStorage
 }
