@@ -35,11 +35,11 @@ $(document).ready(function () {
                     accordion : false
                 });
             }
+            $("#progress").hide();
         },
         error : function() {
             $("#progress").hide()
             showAlert("Error in request."); return;
         }
     });
-    $("#progress").hide();
 });
