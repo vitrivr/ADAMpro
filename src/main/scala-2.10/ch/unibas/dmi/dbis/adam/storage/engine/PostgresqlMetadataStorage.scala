@@ -22,6 +22,8 @@ import org.apache.spark.sql.{DataFrame, Row, SaveMode}
 object PostgresqlMetadataStorage extends MetadataStorage {
   val log = Logger.getLogger(getClass.getName)
 
+  Class.forName("org.postgresql.Driver")
+
   val url = AdamConfig.jdbcUrl
   AdamDialectRegistrar.register(url)
 
@@ -31,7 +33,6 @@ object PostgresqlMetadataStorage extends MetadataStorage {
     * @return
     */
   private def openConnection(): Connection = {
-    Class.forName("org.postgresql.Driver").newInstance
     DriverManager.getConnection(AdamConfig.jdbcUrl, AdamConfig.jdbcUser, AdamConfig.jdbcPassword)
   }
 
@@ -93,6 +94,7 @@ object PostgresqlMetadataStorage extends MetadataStorage {
     val props = new Properties()
     props.put("user", AdamConfig.jdbcUser)
     props.put("password", AdamConfig.jdbcPassword)
+    props.put("driver", "org.postgresql.Driver")
     df.write.mode(mode).jdbc(url, tablename, props)
     true
   }
