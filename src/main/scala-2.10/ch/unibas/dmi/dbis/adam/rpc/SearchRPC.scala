@@ -294,7 +294,7 @@ class SearchRPC(implicit ac: AdamContext) extends AdamSearchGrpc.AdamSearch {
         .collect().map(row => QueryResultMessage(
         row.getAs[Long](FieldNames.idColumnName),
         row.getAs[Float](FieldNames.distanceColumnName),
-        row.getMap[String, String](3).toMap
+        row.getAs[Map[String, String]]("metadata").toMap
       ))
     } else {
       df
