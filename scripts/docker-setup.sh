@@ -14,7 +14,7 @@ docker run --net=adampronw -p 5432:5432 -h postgresql --name postgresql --net-al
 # creates Spark container
 DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && cd ".." && pwd )"
 if [[ "$(docker images -q sparkj1.8 2> /dev/null)" == "" ]]; then
-  docker build -t sparkj1.8 $DIR/scripts
+  docker build -t sparkj1.8 $DIR/scripts/docker
 fi
 
 # note that we mount the target folder to the docker VM
