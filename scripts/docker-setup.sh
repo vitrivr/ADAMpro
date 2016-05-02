@@ -19,4 +19,4 @@ fi
 
 # note that we mount the target folder to the docker VM
 DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && cd ".." && pwd )"
-docker run --net=adampronw -d -p 8088:8088 -p 8042:8042 -p 4040:4040 -p 5890:5890 -v $DIR/target:/target -h spark --name spark --net-alias spark sparkj1.8 -d
+docker run --net=adampronw -d -p 8088:8088 -p 8042:8042 -p 4040:4040 -p 5890:5890 -v $DIR/target:/target -h spark --name spark --net-alias spark -d sparkj1.8
