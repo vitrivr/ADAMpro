@@ -32,7 +32,7 @@ class SHIndexer(nbits : Int, trainingSize : Int)(@transient implicit val ac : Ad
    * @return
    */
   override def index(indexname : IndexName, entityname : EntityName, data: RDD[IndexingTaskTuple]): Index = {
-    val n = EntityHandler.countTuples(entityname)
+    val n = EntityHandler.countTuples(entityname).get
     val fraction = ADAMSamplingUtils.computeFractionForSampleSize(trainingSize, n, false)
     val trainData = data.sample(false, fraction)
 

@@ -5,6 +5,8 @@ import ch.unibas.dmi.dbis.adam.index.IndexHandler
 import ch.unibas.dmi.dbis.adam.main.AdamContext
 import org.apache.log4j.Logger
 
+import scala.util.Try
+
 /**
   * adamtwo
   *
@@ -23,9 +25,9 @@ object DropIndexOp {
     * @param indexname
     * @return true if index was dropped
     */
-  def apply(indexname: IndexName)(implicit ac: AdamContext): Boolean = {
+  def apply(indexname: IndexName)(implicit ac: AdamContext): Try[Void] = {
     log.debug("perform drop index operation")
-    IndexHandler.drop(indexname).isSuccess
+    IndexHandler.drop(indexname)
   }
 }
 

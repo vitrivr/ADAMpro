@@ -33,25 +33,20 @@
 
 <div class="container" style="width:90%">
     <div class="row">
-        <h1>Prepare Demo Entity with Random Data.</h1>
+        <h1>Prepare Demo Entity.</h1>
     </div>
+
+    <hr/>
+
+    <div class="row">
+        <h2>1. Create Entity</h2>
+    </div>
+
     <div class="row">
         <div class="row">
             <div class="input-field col s6">
                 <input id="entityname" type="text">
                 <label for="entityname">name of entity</label>
-            </div>
-        </div>
-        <div class="row">
-            <div class="input-field col s6">
-                <input id="ntuples" type="text">
-                <label for="ntuples">number of tuples</label>
-            </div>
-        </div>
-        <div class="row">
-            <div class="input-field col s6">
-                <input id="ndims" type="text">
-                <label for="ndims">number of dimensions</label>
             </div>
         </div>
         <div class="row" style="margin-top: 80px">
@@ -95,6 +90,43 @@
             </div>
         </div>
 
+        <div class="row" style="padding-top: 40px;">
+            <button class="btn waves-effect waves-light red" name="action" id="btnSubmitCreateEntity">
+                Create Entity
+            </button>
+        </div>
+
+        <hr/>
+
+        <div class="row">
+            <h2>2. Create Tuples</h2>
+        </div>
+
+        <div class="row">
+            <div class="input-field col s6">
+                <input id="ntuples" type="text">
+                <label for="ntuples">number of tuples</label>
+            </div>
+        </div>
+        <div class="row">
+            <div class="input-field col s6">
+                <input id="ndims" type="text">
+                <label for="ndims">number of dimensions</label>
+            </div>
+        </div>
+
+        <div class="row" style="padding-top: 40px;">
+            <button class="btn waves-effect waves-light red" name="action" id="btnSubmitInsertData">
+                Insert Data
+            </button>
+        </div>
+
+        <hr/>
+
+        <div class="row">
+            <h2>3. Create Indexes</h2>
+        </div>
+
         <div class="row">
             <div class="input-field col s6">
                 <label>indexes</label>
@@ -126,8 +158,8 @@
             </div>
         </div>
         <div class="row" style="padding-top: 40px;">
-            <button class="btn waves-effect waves-light red" name="action" id="btnSubmit">
-                Create
+            <button class="btn waves-effect waves-light red" name="action" id="btnSubmitCreateIndex">
+                Create Indexes
             </button>
         </div>
     </div>

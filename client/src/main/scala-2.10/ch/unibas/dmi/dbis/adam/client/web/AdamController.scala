@@ -44,25 +44,59 @@ class AdamController(rpcClient: RPCClient) extends Controller {
   /**
     *
     */
-  post("/entity/add") { request: PreparationRequest =>
-    val res = rpcClient.prepareDemo(request.entityname, request.ntuples, request.ndims, request.fields)
+  post("/entity/add") { request: EntityCreationRequest =>
+    log.info("creating entity")
 
-    log.info("prepared data")
-
+    val res = rpcClient.createEntity(request.entityname, request.fields)
     if (res) {
-      response.ok.json(PreparationRequestResponse(200, request.entityname, request.ntuples, request.ndims))
+      response.ok.json(EntityCreationResponse(200, request.entityname))
     } else {
-      response.ok.json(PreparationRequestResponse(500))
+      response.ok.json(EntityCreationResponse(500))
     }
   }
 
-  case class PreparationRequestResponse(code: Int, entityname: String = "", ntuples: Int = 0, ndims: Int = 0)
+  case class EntityCreationResponse(code: Int, entityname: String = "")
 
 
   /**
     *
     */
+  post("/entity/insertdemo") { request: InsertDataRequest =>
+    log.info("inserting data into entity")
+
+    val res = rpcClient.prepareDemo(request.entityname, request.ntuples, request.ndims, request.fields)
+
+    if (res) {
+      response.ok.json(InsertDataResponse(200, request.entityname, request.ntuples, request.ndims))
+    } else {
+      response.ok.json(InsertDataResponse(500))
+    }
+  }
+
+  case class InsertDataResponse(code: Int, entityname: String = "", ntuples: Int = 0, ndims: Int = 0)
+
+
+
+  post("/entity/indexall") { request: IndexAllRequest =>
+    log.info("index all")
+
+    val res = rpcClient.addAllIndex(request.entityname, 2)
+
+    log.info("index all done")
+
+    if (res) {
+      response.ok.json(IndexRequestResponse(200))
+    } else {
+      response.ok.json(IndexRequestResponse(500))
+    }
+  }
+
+  /**
+    *
+    */
   post("/index/add") { request: IndexRequest =>
+    log.info("creating index")
+
     val indextype = request.indextype match {
       case "ecp" => IndexType.ecp
       case "lsh" => IndexType.lsh

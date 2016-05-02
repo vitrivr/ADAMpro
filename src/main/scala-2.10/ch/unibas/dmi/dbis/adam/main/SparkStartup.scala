@@ -24,10 +24,6 @@ object SparkStartup {
     .set("spark.kryoserializer.buffer", "2047")
     .set("spark.akka.frameSize", "1024")
     .set("spark.scheduler.mode", "FAIR")
-    .set("spark.cassandra.connection.host", AdamConfig.cassandraUrl)
-    .set("spark.cassandra.connection.port", AdamConfig.cassandraPort)
-    .set("spark.cassandra.auth.username", AdamConfig.cassandraUsername)
-    .set("spark.cassandra.auth.password", AdamConfig.cassandraPassword)
   //TODO: add kryo serializer back, but check with deployment to yarn
   //.set("spark.serializer", "org.apache.spark.serializer.KryoSerializer")
   //.registerKryoClasses(Array(classOf[BitString[_]], classOf[MinimalBitString], classOf[FeatureVectorWrapper]))

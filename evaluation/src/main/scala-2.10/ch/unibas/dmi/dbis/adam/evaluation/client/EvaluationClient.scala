@@ -127,7 +127,7 @@ class EvaluationClient(channel: ManagedChannel, definer: AdamDefinitionBlockingS
     * @param vectorSize
     */
   def generateRandomData(entityname : String, collectionSize : Int, vectorSize : Int): Unit = {
-    definer.prepareForDemo(GenerateRandomEntityMessage(entityname, collectionSize, vectorSize))
+    definer.generateRandomData(GenerateRandomDataMessage(entityname, collectionSize, vectorSize))
   }
 
 

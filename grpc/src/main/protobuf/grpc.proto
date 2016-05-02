@@ -15,10 +15,11 @@ service AdamDefinition {
   rpc Insert(stream InsertMessage) returns (AckMessage) {}
   //creates an index on the data
   rpc Index(IndexMessage) returns (AckMessage) {}
+  rpc GenerateAllIndexes(IndexMessage) returns (AckMessage) {}
   rpc DropIndex(IndexNameMessage) returns (AckMessage) {}
   rpc Count(EntityNameMessage) returns (AckMessage) {}
   //generates an entity with random data and with all available indexes (for demo purposes)
-  rpc PrepareForDemo(GenerateRandomEntityMessage) returns (AckMessage) {}
+  rpc GenerateRandomData(GenerateRandomDataMessage) returns (AckMessage) {}
   rpc ListEntities(Empty) returns (EntitiesMessage) {}
   rpc GetEntityProperties(EntityNameMessage) returns (EntityPropertiesMessage) {}
   rpc RepartitionIndexData(RepartitionMessage) returns (AckMessage) {}
@@ -103,11 +104,10 @@ message IndexNameMessage {
   string index = 1;
 }
 
-message GenerateRandomEntityMessage {
+message GenerateRandomDataMessage {
   string entity = 1;
   int32 ntuples = 2;
   int32 ndims = 3;
-  repeated FieldDefinitionMessage fields = 4;
 }
 
 message InsertMessage {
@@ -144,22 +144,6 @@ message RepartitionMessage {
 message IndexWeightMessage {
   string index = 1;
   float weight = 2;
-}
-
-
-
-
-
-
-//****  METADATA REQUESTS ****//
-
-message EntitiesMessage {
-  repeated string entities = 1;
-}
-
-message EntityPropertiesMessage {
-  string entity = 1;
-  map<string, string> properties = 2;
 }
 
 
@@ -329,14 +313,24 @@ message CachedResultsMessage {
 
 
 //****  RESPONSES ****//
-
 message AckMessage {
-  enum Code {
-    OK = 0;
-    ERROR = 1;
-  }
+enum Code {
+  OK = 0;
+  ERROR = 1;
+}
   Code code = 1;
   string message = 2;
+}
+
+message EntitiesMessage {
+  AckMessage ack = 1;
+  repeated string entities = 2;
+}
+
+message EntityPropertiesMessage {
+  AckMessage ack = 1;
+  string entity = 2;
+  map<string, string> properties = 3;
 }
 
 message CompoundQueryResponseInfoMessage {
@@ -345,14 +339,14 @@ message CompoundQueryResponseInfoMessage {
 
 message QueryResponseInfoMessage {
   //id of result (given in the query)
-  string queryid = 1;
+  string queryid = 3;
   //confidence in results (between 0 - 1)
-  double confidence = 2;
+  double confidence = 4;
   //retrieval time
-  int64 time = 3;
-  string source = 4;
+  int64 time = 5;
+  string source = 6;
   //result list
-  repeated QueryResultMessage results = 5;
+  repeated QueryResultMessage results = 7;
 }
 
 message QueryResultMessage {

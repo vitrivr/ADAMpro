@@ -30,7 +30,7 @@ class ECPIndexer(trainingSize: Int = -1, distance: DistanceFunction)(@transient 
     * @return
     */
   override def index(indexname: IndexName, entityname: EntityName, data: RDD[IndexingTaskTuple]): Index = {
-    val n = EntityHandler.countTuples(entityname)
+    val n = EntityHandler.countTuples(entityname).get
     val ntuples = if (trainingSize == -1) {
       math.sqrt(n)
     } else {

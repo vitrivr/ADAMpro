@@ -85,7 +85,7 @@ object EntityHandler {
     * @param ifExists
     * @return
     */
-  def drop(entityname: EntityName, ifExists: Boolean = false)(implicit ac: AdamContext): Try[Null] = {
+  def drop(entityname: EntityName, ifExists: Boolean = false)(implicit ac: AdamContext): Try[Void] = {
     lock.synchronized {
       if (!exists(entityname)) {
         if (!ifExists) {
@@ -183,8 +183,13 @@ object EntityHandler {
     * @param entityname
     * @return the number of tuples in the entity
     */
-  def countTuples(entityname: EntityName)(implicit ac: AdamContext): Int = {
-    load(entityname).get.count
+  def countTuples(entityname: EntityName)(implicit ac: AdamContext): Try[Long] = {
+    val entity = load(entityname)
+    if(entity.isSuccess){
+      Success(entity.get.count)
+    } else {
+      Failure(entity.failed.get)
+    }
   }
 
   /**

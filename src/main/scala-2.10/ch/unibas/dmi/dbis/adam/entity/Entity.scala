@@ -9,7 +9,6 @@ import ch.unibas.dmi.dbis.adam.query.query.NearestNeighbourQuery
 import ch.unibas.dmi.dbis.adam.storage.components.{FeatureStorage, MetadataStorage}
 import ch.unibas.dmi.dbis.adam.storage.engine.CatalogOperator
 import org.apache.log4j.Logger
-import org.apache.spark.rdd.RDD
 import org.apache.spark.sql.types.{LongType, StructField, StructType}
 import org.apache.spark.sql.{DataFrame, Row, SaveMode}
 
@@ -25,8 +24,8 @@ import scala.util.{Success, Try}
 case class Entity(entityname: EntityName, featureStorage: FeatureStorage, metadataStorage: Option[MetadataStorage])(implicit ac: AdamContext) {
   val log = Logger.getLogger(getClass.getName)
 
-  private lazy val featureData = featureStorage.read(entityname).withColumnRenamed(FieldNames.featureColumnName, FieldNames.internFeatureColumnName)
-  private lazy val metaData = if (metadataStorage.isDefined) {
+  private def featureData = featureStorage.read(entityname).get.withColumnRenamed(FieldNames.featureColumnName, FieldNames.internFeatureColumnName)
+  private def metaData = if (metadataStorage.isDefined) {
     Some(metadataStorage.get.read(entityname))
   } else {
     None
@@ -37,7 +36,7 @@ case class Entity(entityname: EntityName, featureStorage: FeatureStorage, metada
     *
     * @return
     */
-  def count: Int = {
+  def count: Long = {
     if (tupleCount == -1) {
       tupleCount = featureStorage.count(entityname)
     }
@@ -45,7 +44,7 @@ case class Entity(entityname: EntityName, featureStorage: FeatureStorage, metada
     tupleCount
   }
 
-  private var tupleCount = -1
+  private var tupleCount : Long = -1
 
   /**
     * Gives preview of entity.
@@ -120,7 +119,7 @@ case class Entity(entityname: EntityName, featureStorage: FeatureStorage, metada
     * @return
     */
   def filter(filter: Set[Long]): DataFrame = {
-    featureStorage.read(entityname, Option(filter))
+    featureStorage.read(entityname, Option(filter)).get
   }
 
   /**

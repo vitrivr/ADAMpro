@@ -1,7 +1,7 @@
 package ch.unibas.dmi.dbis.adam.client.grpc
 
 import java.util.concurrent.TimeUnit
-import ch.unibas.dmi.dbis.adam.client.web.datastructures.{PreparationRequestField, CompoundQueryResponse, CompoundQueryRequest}
+import ch.unibas.dmi.dbis.adam.client.web.datastructures.{EntityField, CompoundQueryResponse, CompoundQueryRequest}
 import ch.unibas.dmi.dbis.adam.http.grpc.AdamDefinitionGrpc.AdamDefinitionBlockingStub
 import ch.unibas.dmi.dbis.adam.http.grpc.AdamSearchGrpc.{AdamSearchBlockingStub, AdamSearchStub}
 import ch.unibas.dmi.dbis.adam.http.grpc.DistanceMessage.DistanceType
@@ -24,18 +24,41 @@ class RPCClient(channel: ManagedChannel, definer: AdamDefinitionBlockingStub, se
   /**
     *
     * @param entityname
+    * @param fields
+    * @return
+    */
+  def createEntity(entityname: String, fields: Seq[EntityField]): Boolean = {
+    log.info("creating entity")
+    val fieldMessage = fields.map(field =>
+      FieldDefinitionMessage(field.name, getFieldType(field.datatype), false, false, field.indexed)
+    )
+
+    val res = definer.createEntity(CreateEntityMessage(entityname, fieldMessage))
+    log.info("created entity : " + res.code.toString() + " " + res.message)
+    if (res.code == AckMessage.Code.OK) {
+      return true
+    } else {
+      return false
+    }
+
+  }
+
+
+  /**
+    *
+    * @param entityname
     * @param ntuples
     * @param ndims
     * @param fields
     * @return
     */
-  def prepareDemo(entityname: String, ntuples: Int, ndims: Int, fields : Seq[PreparationRequestField]): Boolean = {
+  def prepareDemo(entityname: String, ntuples: Int, ndims: Int, fields: Seq[EntityField]): Boolean = {
     log.info("preparing demo data")
     val fieldMessage = fields.map(field =>
       FieldDefinitionMessage(field.name, getFieldType(field.datatype), false, false, field.indexed)
     )
 
-    val res = definer.prepareForDemo(GenerateRandomEntityMessage(entityname, ntuples, ndims, fieldMessage))
+    val res = definer.generateRandomData(GenerateRandomDataMessage(entityname, ntuples, ndims))
     log.info("prepared demo data: " + res.code.toString() + " " + res.message)
     if (res.code == AckMessage.Code.OK) {
       return true
@@ -49,8 +72,8 @@ class RPCClient(channel: ManagedChannel, definer: AdamDefinitionBlockingStub, se
     * @param s
     * @return
     */
-  private def getFieldType(s : String) : FieldDefinitionMessage.FieldType = s match {
-    case "long" =>  FieldType.LONG
+  private def getFieldType(s: String): FieldDefinitionMessage.FieldType = s match {
+    case "long" => FieldType.LONG
     case "int" => FieldType.INT
     case "float" => FieldType.FLOAT
     case "double" => FieldType.DOUBLE
@@ -71,8 +94,8 @@ class RPCClient(channel: ManagedChannel, definer: AdamDefinitionBlockingStub, se
     *
     * @return
     */
-  def getDetails(entity : String): Map[String, String] = {
-    definer.getEntityProperties(EntityNameMessage(entity)).properties
+  def getDetails(entityname: String): Map[String, String] = {
+    definer.getEntityProperties(EntityNameMessage(entityname)).properties
   }
 
   /**
@@ -96,6 +119,21 @@ class RPCClient(channel: ManagedChannel, definer: AdamDefinitionBlockingStub, se
 
   /**
     *
+    * @param entityname
+    * @return
+    */
+  def addAllIndex(entityname: String, norm: Int): Boolean = {
+    val res = definer.generateAllIndexes(IndexMessage(entity = entityname, distance = Some(DistanceMessage(DistanceType.minkowski, options = Map("norm" -> norm.toString)))))
+    if (res.code == AckMessage.Code.OK) {
+      true
+    } else {
+      log.error(res.message)
+      false
+    }
+  }
+
+  /**
+    *
     * @param request
     * @return
     */
@@ -109,7 +147,7 @@ class RPCClient(channel: ManagedChannel, definer: AdamDefinitionBlockingStub, se
   /**
     *
     */
-  def progressiveQuery(id : String, entityname: String, query: Seq[Float], hints : Seq[String], k: Int, next: (String, Double, String, Long, Seq[(Float, Long)]) => (Unit), completed: (String) => (Unit)) : String = {
+  def progressiveQuery(id: String, entityname: String, query: Seq[Float], hints: Seq[String], k: Int, next: (String, Double, String, Long, Seq[(Float, Long)]) => (Unit), completed: (String) => (Unit)): String = {
     val nnq = NearestNeighbourQueryMessage(query, Option(DistanceMessage(DistanceType.minkowski, Map("norm" -> "2"))), k)
     val request = SimpleQueryMessage(entity = entityname, hints = hints, nnq = Option(nnq))
 
@@ -143,12 +181,12 @@ class RPCClient(channel: ManagedChannel, definer: AdamDefinitionBlockingStub, se
     * @param partitions
     * @return
     */
-  def repartition(index : String, partitions : Int, useMetadata : Boolean = false, cols : Seq[String] = Seq(), materialize : Boolean, replace : Boolean): String = {
-    val option = if(replace){
+  def repartition(index: String, partitions: Int, useMetadata: Boolean = false, cols: Seq[String] = Seq(), materialize: Boolean, replace: Boolean): String = {
+    val option = if (replace) {
       PartitionOptions.REPLACE_EXISTING
-    } else if(materialize){
+    } else if (materialize) {
       PartitionOptions.CREATE_NEW
-    } else if(!materialize) {
+    } else if (!materialize) {
       PartitionOptions.CREATE_TEMP
     } else {
       PartitionOptions.CREATE_NEW
