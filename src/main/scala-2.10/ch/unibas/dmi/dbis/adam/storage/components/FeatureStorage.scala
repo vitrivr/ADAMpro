@@ -8,6 +8,8 @@ import ch.unibas.dmi.dbis.adam.main.AdamContext
 import org.apache.spark.sql.types._
 import org.apache.spark.sql.{DataFrame, Row, SaveMode}
 
+import scala.util.Try
+
 /**
   * adamtwo
   *
@@ -46,7 +48,7 @@ trait FeatureStorage {
     * @param filter
     * @return
     */
-  def read(entityname: EntityName, filter: Option[Set[TupleID]] = None)(implicit ac : AdamContext): DataFrame
+  def read(entityname: EntityName, filter: Option[Set[TupleID]] = None)(implicit ac : AdamContext): Try[DataFrame]
 
   /**
     * Count the number of tuples in the feature storage.
@@ -54,7 +56,7 @@ trait FeatureStorage {
     * @param entityname
     * @return
     */
-  def count(entityname: EntityName)(implicit ac: AdamContext): Int
+  def count(entityname: EntityName)(implicit ac: AdamContext): Long
 
   /**
     * Write entity to the feature storage.

@@ -5,14 +5,16 @@ import java.io.File
 import ch.unibas.dmi.dbis.adam.config.{AdamConfig, FieldNames}
 import ch.unibas.dmi.dbis.adam.entity.Entity.EntityName
 import ch.unibas.dmi.dbis.adam.entity.Tuple.TupleID
-import ch.unibas.dmi.dbis.adam.index.Index._
+import ch.unibas.dmi.dbis.adam.exception.EntityNotExistingException
 import ch.unibas.dmi.dbis.adam.main.AdamContext
 import ch.unibas.dmi.dbis.adam.storage.components.FeatureStorage
 import org.apache.commons.io.FileUtils
 import org.apache.hadoop.conf.Configuration
-import org.apache.hadoop.fs.{Path, FileSystem}
+import org.apache.hadoop.fs.{FileSystem, Path}
 import org.apache.log4j.Logger
 import org.apache.spark.sql.{DataFrame, SaveMode}
+
+import scala.util.{Success, Failure, Try}
 
 /**
   * adampro
@@ -31,42 +33,42 @@ object ParquetFeatureStorage extends FeatureStorage {
     new LocalStorage()
   }
 
-  override def create(entityname: EntityName)(implicit ac: AdamContext): Boolean = {
-    true
-  }
-
   override def exists(entityname: EntityName): Boolean = storage.exists(entityname)
 
-  override def count(entityname: EntityName)(implicit ac: AdamContext): Int = storage.count(entityname)
+  override def count(entityname: EntityName)(implicit ac: AdamContext): Long = storage.count(entityname)
 
   override def drop(entityname: EntityName)(implicit ac: AdamContext): Boolean = storage.drop(entityname)
 
   override def write(entityname: EntityName, df: DataFrame, mode: SaveMode)(implicit ac: AdamContext): Boolean = storage.write(entityname, df, mode)
 
-  override def read(entityname: EntityName, filter: Option[Set[TupleID]])(implicit ac: AdamContext): DataFrame = storage.read(entityname, filter)
+  override def read(entityname: EntityName, filter: Option[Set[TupleID]])(implicit ac: AdamContext): Try[DataFrame] = storage.read(entityname, filter)
 
 
   protected trait GenericFeatureStorage extends FeatureStorage {
-    override def read(entityname: EntityName, filter: Option[Set[TupleID]])(implicit ac: AdamContext): DataFrame = {
-      val df = ac.sqlContext.read.parquet(AdamConfig.dataPath + "/" + entityname + ".parquet")
+    override def read(entityname: EntityName, filter: Option[Set[TupleID]])(implicit ac: AdamContext): Try[DataFrame] = {
+      if (!exists(entityname)) {
+        Failure(throw EntityNotExistingException())
+      }
+
+      var df = ac.sqlContext.read.parquet(AdamConfig.dataPath + "/" + entityname + ".parquet")
 
       if (filter.isDefined) {
-        df.filter(df(FieldNames.idColumnName) isin (filter.get.toSeq: _*))
-      } else {
-        df
+        df = df.filter(df(FieldNames.idColumnName) isin (filter.get.toSeq: _*))
       }
+
+      Success(df)
     }
 
     override def write(entityname: EntityName, df: DataFrame, mode: SaveMode)(implicit ac: AdamContext): Boolean = {
       df
         .repartition(AdamConfig.defaultNumberOfPartitions, df(FieldNames.idColumnName))
-        .write.mode(mode).parquet(AdamConfig.dataPath + "/" +  entityname + ".parquet")
+        .write.mode(mode).parquet(AdamConfig.dataPath + "/" + entityname + ".parquet")
       true
     }
 
 
-    override def count(entityname: EntityName)(implicit ac: AdamContext): Int = {
-      read(entityname).count().toInt
+    override def count(entityname: EntityName)(implicit ac: AdamContext): Long = {
+      read(entityname).get.count()
     }
   }
 
@@ -83,7 +85,7 @@ object ParquetFeatureStorage extends FeatureStorage {
     }
 
     def drop(entityname: EntityName)(implicit ac: AdamContext): Boolean = {
-      val path = AdamConfig.indexPath + "/" + entityname + ".parquet"
+      val path = AdamConfig.dataPath + "/" + entityname + ".parquet"
       val hadoopConf = new Configuration()
       hadoopConf.set("fs.defaultFS", AdamConfig.basePath)
       val hdfs = FileSystem.get(new Path(AdamConfig.dataPath).toUri, hadoopConf)
