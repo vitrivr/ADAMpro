@@ -13,6 +13,7 @@ import slick.lifted.ForeignKeyQuery
 private[engine] class EntitiesCatalog(tag: Tag) extends Table[(String, Boolean)](tag, "ADAMTWO_ENTITIES") {
   def entityname = column[String]("ENTITYNAME", O.PrimaryKey)
   def hasMeta = column[Boolean]("HASMETA")
+
   def * = (entityname, hasMeta)
 }
 
@@ -20,6 +21,7 @@ private[engine] class EntityFieldsCatalog(tag: Tag) extends Table[(String, Strin
   def fieldname = column[String]("FIELDNAME")
   def entityname = column[String]("ENTITYNAME")
   def featurelength = column[Int]("FEATURELENGTH")
+
   def * = (fieldname, entityname, featurelength)
 
   def supplier: ForeignKeyQuery[EntitiesCatalog, (String, Boolean)] =

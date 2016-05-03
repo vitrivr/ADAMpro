@@ -96,13 +96,13 @@ class DataDefinitionRPC(implicit ac: AdamContext) extends AdamDefinitionGrpc.Ada
         responseObserver.onNext(AckMessage(code = AckMessage.Code.OK))
       }
 
-      def onError(t: Throwable) {
+      def onError(t: Throwable) = {
         responseObserver.onNext(AckMessage(code = AckMessage.Code.ERROR))
         log.error("error on insertion", t)
         responseObserver.onError(t)
       }
 
-      def onCompleted(): Unit = {
+      def onCompleted() = {
         responseObserver.onCompleted()
       }
     }
@@ -112,21 +112,13 @@ class DataDefinitionRPC(implicit ac: AdamContext) extends AdamDefinitionGrpc.Ada
   override def index(request: IndexMessage): Future[AckMessage] = {
     log.debug("rpc call for indexing operation")
 
-    val indextypename = request.indextype match {
-      case IndexType.ecp => IndexTypes.ECPINDEX
-      case IndexType.sh => IndexTypes.SHINDEX
-      case IndexType.lsh => IndexTypes.LSHINDEX
-      case IndexType.pq => IndexTypes.PQINDEX
-      case IndexType.vaf => IndexTypes.VAFINDEX
-      case IndexType.vav => IndexTypes.VAVINDEX
-      case _ => null
-    }
+    val indextypename = IndexTypes.withIndextype(request.indextype)
 
-    if (indextypename == null) {
+    if (indextypename.isEmpty) {
       throw new Exception("no index type name given.")
     }
 
-    val index = IndexOp(request.entity, request.column, indextypename, RPCHelperMethods.prepareDistance(request.distance.get), request.options)
+    val index = IndexOp(request.entity, request.column, indextypename.get, RPCHelperMethods.prepareDistance(request.distance.get), request.options)
 
     if (index.isSuccess) {
       Future.successful(AckMessage(code = AckMessage.Code.OK, message = index.get.indexname))

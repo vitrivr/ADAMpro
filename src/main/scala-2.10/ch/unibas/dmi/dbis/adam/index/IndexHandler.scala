@@ -2,16 +2,10 @@ package ch.unibas.dmi.dbis.adam.index
 
 import ch.unibas.dmi.dbis.adam.config.{AdamConfig, FieldNames}
 import ch.unibas.dmi.dbis.adam.datatypes.feature.FeatureVectorWrapper
-import ch.unibas.dmi.dbis.adam.entity.Entity
+import ch.unibas.dmi.dbis.adam.entity.{EntityHandler, Entity}
 import ch.unibas.dmi.dbis.adam.entity.Entity.EntityName
 import ch.unibas.dmi.dbis.adam.exception.{GeneralAdamException, IndexNotExistingException}
 import ch.unibas.dmi.dbis.adam.index.Index.{IndexName, IndexTypeName}
-import ch.unibas.dmi.dbis.adam.index.structures.IndexTypes
-import ch.unibas.dmi.dbis.adam.index.structures.ecp.ECPIndex
-import ch.unibas.dmi.dbis.adam.index.structures.lsh.LSHIndex
-import ch.unibas.dmi.dbis.adam.index.structures.pq.PQIndex
-import ch.unibas.dmi.dbis.adam.index.structures.sh.SHIndex
-import ch.unibas.dmi.dbis.adam.index.structures.va.VAIndex
 import ch.unibas.dmi.dbis.adam.main.{AdamContext, SparkStartup}
 import ch.unibas.dmi.dbis.adam.storage.engine.CatalogOperator
 import ch.unibas.dmi.dbis.adam.storage.partitions.PartitionOptions
@@ -19,7 +13,7 @@ import org.apache.log4j.Logger
 import org.apache.spark.rdd.RDD
 import org.apache.spark.sql.DataFrame
 
-import scala.util.{Random, Failure, Success, Try}
+import scala.util.{Failure, Random, Success, Try}
 
 /**
   * adampro
@@ -69,13 +63,16 @@ object IndexHandler {
     */
   def createIndex(entity: Entity, column : String, indexgenerator: IndexGenerator)(implicit ac: AdamContext): Try[Index] = {
     lock.synchronized {
+      if(!entity.schema.fieldNames.contains(column)){
+        log.error("column not existing in entity " + entity.entityname + entity.schema.fieldNames.mkString("(", ",", ")"))
+        return Failure(new GeneralAdamException("column not existing"))
+      }
+
       val count = entity.count
       if (count < MINIMUM_NUMBER_OF_TUPLE) {
         log.error("not enough tuples for creating index, needs at least " + MINIMUM_NUMBER_OF_TUPLE + " but has only " + count)
         return Failure(new GeneralAdamException("not enough tuples for index"))
       }
-
-      //TODO: does column exist?
 
       val indexname = createIndexName(entity.entityname, column, indexgenerator.indextypename)
       val rdd: RDD[IndexingTaskTuple] = entity.getFeaturedata.map { x => IndexingTaskTuple(x.getAs[Long](FieldNames.idColumnName), x.getAs[FeatureVectorWrapper](column).vector) }
@@ -147,14 +144,7 @@ object IndexHandler {
 
     val indextypename = CatalogOperator.getIndexTypeName(indexname)
 
-    val index = indextypename match {
-      case IndexTypes.ECPINDEX => ECPIndex(indexname, entityname, df, meta)
-      case IndexTypes.LSHINDEX => LSHIndex(indexname, entityname, df, meta)
-      case IndexTypes.PQINDEX => PQIndex(indexname, entityname, df, meta)
-      case IndexTypes.SHINDEX => SHIndex(indexname, entityname, df, meta)
-      case IndexTypes.VAFINDEX => VAIndex(indexname, entityname, df, meta)
-      case IndexTypes.VAVINDEX => VAIndex(indexname, entityname, df, meta)
-    }
+    val index = indextypename.index(indexname, entityname, df, meta)
 
     Success(index)
   }
@@ -209,7 +199,11 @@ object IndexHandler {
     }
 
     data = if (cols.isDefined) {
-      //TODO: check that cols are existent in dataframe
+      val entityColNames = EntityHandler.load(index.entityname).get.schema.fieldNames
+      if(!cols.get.forall(name => entityColNames.contains(name))){
+        log.error("column not existing in entity " + index.entityname + entityColNames.mkString("(", ",", ")"))
+      }
+
       data.repartition(n, cols.get.map(data(_)): _*)
     } else {
       data.repartition(n)

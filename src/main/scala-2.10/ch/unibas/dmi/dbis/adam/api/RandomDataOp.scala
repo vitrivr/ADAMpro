@@ -5,7 +5,8 @@ import ch.unibas.dmi.dbis.adam.datatypes.feature.FeatureVectorWrapper
 import ch.unibas.dmi.dbis.adam.entity.Entity.EntityName
 import ch.unibas.dmi.dbis.adam.entity.EntityHandler
 import ch.unibas.dmi.dbis.adam.main.SparkStartup.Implicits._
-import org.apache.spark.sql.types.{UserDefinedType, DataType, StructType}
+import org.apache.log4j.Logger
+import org.apache.spark.sql.types.{DataType, StructType, UserDefinedType}
 import org.apache.spark.sql.{Row, types}
 
 import scala.util.Random
@@ -17,11 +18,22 @@ import scala.util.Random
   * March 2016
   */
 object RandomDataOp {
+  val log = Logger.getLogger(getClass.getName)
+
+  /**
+    *
+    * @param entityname
+    * @param collectionSize
+    * @param vectorSize
+    */
   def apply(entityname: EntityName, collectionSize: Int, vectorSize: Int): Unit = {
+    log.debug("perform generate data operation")
+
     val limit = math.min(collectionSize, 100000)
 
     val entity = EntityHandler.load(entityname)
     if (entity.isFailure) {
+      log.error("entity could not be loaded")
       throw entity.failed.get
     }
 
@@ -38,6 +50,7 @@ object RandomDataOp {
       )
       val data = sqlContext.createDataFrame(rdd, StructType(schema))
 
+      log.debug("inserting data batch")
       EntityHandler.insertData(entityname, data, true)
     }
 

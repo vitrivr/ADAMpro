@@ -6,6 +6,7 @@ import ch.unibas.dmi.dbis.adam.index.Index.{IndexName, IndexTypeName}
 import ch.unibas.dmi.dbis.adam.index._
 import ch.unibas.dmi.dbis.adam.index.structures.IndexTypes
 import ch.unibas.dmi.dbis.adam.main.{AdamContext, SparkStartup}
+import ch.unibas.dmi.dbis.adam.query.distance.DistanceFunction
 import org.apache.log4j.Logger
 import org.apache.spark.mllib.clustering.{KMeans, KMeansModel}
 import org.apache.spark.mllib.linalg.Vectors
@@ -86,7 +87,7 @@ object PQIndexer {
     *
     * @param properties
     */
-  def apply(properties : Map[String, String] = Map[String, String]())(implicit ac : AdamContext) : IndexGenerator = {
+  def apply(distance: DistanceFunction, properties : Map[String, String] = Map[String, String]())(implicit ac : AdamContext) : IndexGenerator = {
     val nsq = properties.getOrElse("nsq", "8").toInt
     val trainingSize = properties.getOrElse("ntraining", "500").toInt
 

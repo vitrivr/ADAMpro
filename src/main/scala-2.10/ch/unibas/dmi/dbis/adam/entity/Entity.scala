@@ -21,7 +21,7 @@ import scala.util.{Success, Try}
   * Ivan Giangreco
   * October 2015
   */
-case class Entity(entityname: EntityName, featureStorage: FeatureStorage, metadataStorage: Option[MetadataStorage])(implicit ac: AdamContext) {
+case class Entity(entityname: EntityName, private val featureStorage: FeatureStorage, private val metadataStorage: Option[MetadataStorage])(implicit ac: AdamContext) {
   val log = Logger.getLogger(getClass.getName)
 
   private def featureData = featureStorage.read(entityname).get
@@ -65,7 +65,6 @@ case class Entity(entityname: EntityName, featureStorage: FeatureStorage, metada
     log.debug("inserting data into entity")
 
    //TODO: check dimensionality is correct
-    //TODO: make indexes stale ("is up to date")
 
     val rdd = insertion.rdd.zipWithUniqueId.map { case (r: Row, adamtwoid: Long) => Row.fromSeq(adamtwoid +: r.toSeq) }
     val insertionWithPK = ac.sqlContext
@@ -81,8 +80,9 @@ case class Entity(entityname: EntityName, featureStorage: FeatureStorage, metada
       metadataStorage.get.write(entityname, insertionWithPK.select(FieldNames.idColumnName, metadataFieldNames.toSeq : _*), SaveMode.Append)
     }
 
-    if (!CatalogOperator.listIndexes(entityname).isEmpty) {
+    if (CatalogOperator.listIndexes(entityname).nonEmpty) {
       log.warn("new data inserted, but indexes are not updated; please re-create index")
+      CatalogOperator.updateIndexesToStale(entityname)
     }
 
     //reset count
@@ -94,7 +94,7 @@ case class Entity(entityname: EntityName, featureStorage: FeatureStorage, metada
   /**
     * Returns a map of properties to the entity. Useful for printing.
     */
-  def getEntityProperties(): Map[String, String] = {
+  def properties : Map[String, String] = {
     val lb = ListBuffer[(String, String)]()
 
 
@@ -159,7 +159,7 @@ case class Entity(entityname: EntityName, featureStorage: FeatureStorage, metada
     */
   def isQueryConform(query: NearestNeighbourQuery): Boolean = {
     //TODO: check dimensionality of field and compare to dimensionality of query
-    return true
+    true
   }
 }
 

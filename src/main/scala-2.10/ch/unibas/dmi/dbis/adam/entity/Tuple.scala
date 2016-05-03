@@ -1,7 +1,7 @@
 package ch.unibas.dmi.dbis.adam.entity
 
 import ch.unibas.dmi.dbis.adam.datatypes.feature.Feature.FeatureVector
-import ch.unibas.dmi.dbis.adam.datatypes.feature.{Feature, FeatureVectorWrapper}
+import ch.unibas.dmi.dbis.adam.datatypes.feature.FeatureVectorWrapper
 import ch.unibas.dmi.dbis.adam.entity.Tuple.TupleID
 import org.apache.spark.sql.Row
 

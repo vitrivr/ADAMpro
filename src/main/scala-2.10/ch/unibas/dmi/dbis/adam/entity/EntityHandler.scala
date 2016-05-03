@@ -135,8 +135,6 @@ object EntityHandler {
     * @return
     */
   def load(entityname: EntityName, cache: Boolean = false)(implicit ac: AdamContext): Try[Entity] = {
-    //TODO: add entity lock?
-
     if (!exists(entityname)) {
       return Failure(EntityNotExistingException())
     }
@@ -208,7 +206,7 @@ object EntityHandler {
     val entity = load(entityname)
 
     if (entity.isSuccess) {
-      Success(entity.get.getEntityProperties())
+      Success(entity.get.properties)
     } else {
       Failure(entity.failed.get)
     }

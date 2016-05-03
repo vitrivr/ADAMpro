@@ -22,7 +22,7 @@ import org.apache.spark.util.random.ADAMSamplingUtils
  * Ivan Giangreco
  * September 2015
  */
-class VAVIndexer (nbits : Int, marksGenerator: MarksGenerator, trainingSize : Int, distance : MinkowskiDistance)(@transient implicit val ac : AdamContext) extends IndexGenerator with Serializable {
+class VAVIndexer (nbits : Option[Int], marksGenerator: MarksGenerator, trainingSize : Int, distance : MinkowskiDistance)(@transient implicit val ac : AdamContext) extends IndexGenerator with Serializable {
   @transient lazy val log = Logger.getLogger(getClass.getName)
 
   override val indextypename: IndexTypeName = IndexTypes.VAVINDEX
@@ -64,14 +64,14 @@ class VAVIndexer (nbits : Int, marksGenerator: MarksGenerator, trainingSize : In
     val dataMatrix = DenseMatrix(dTrainData.toList : _*)
 
     val nfeatures =  dTrainData.head.length
-    val numComponents = math.min(nfeatures, nbits)
+    val numComponents = math.min(nfeatures, nbits.getOrElse(nfeatures * 8))
 
     // pca
     val variance = diag(cov(dataMatrix, true)).toArray
     val sumVariance = variance.sum
 
     // compute shares of bits
-    val modes = variance.map(variance => (variance / sumVariance * nbits).toInt)
+    val modes = variance.map(variance => (variance / sumVariance * nbits.getOrElse(nfeatures * 8)).toInt)
 
     val signatureGenerator =  new VariableSignatureGenerator(modes)
     val marks = marksGenerator.getMarks(trainData, modes.map(x => 2 << (x - 1)))
@@ -102,7 +102,7 @@ object VAVIndexer {
    *
    * @param properties
    */
-  def apply(dimensions : Int, distance : DistanceFunction, properties : Map[String, String] = Map[String, String]())(implicit ac : AdamContext) : IndexGenerator = {
+  def apply(distance : DistanceFunction, properties : Map[String, String] = Map[String, String]())(implicit ac : AdamContext) : IndexGenerator = {
     val marksGeneratorDescription = properties.getOrElse("marktype", "equifrequent")
     val marksGenerator = marksGeneratorDescription.toLowerCase match {
       case "equifrequent" => EquifrequentMarksGenerator
@@ -114,7 +114,11 @@ object VAVIndexer {
       throw new QueryNotConformException()
     }
 
-    val totalNumBits = properties.getOrElse("signature-nbits", (dimensions * 8).toInt.toString).toInt
+    val totalNumBits = if(properties.get("signature-nbits").isDefined){
+      Some(properties.get("signature-nbits").get.toInt)
+    } else {
+      None
+    }
     val trainingSize = properties.getOrElse("ntraining", "1000").toInt
 
     new VAVIndexer(totalNumBits, marksGenerator, trainingSize, distance.asInstanceOf[MinkowskiDistance])

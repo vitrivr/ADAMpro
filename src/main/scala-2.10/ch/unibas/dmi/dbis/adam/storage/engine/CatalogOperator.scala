@@ -36,13 +36,12 @@ object CatalogOperator {
     db.run(mdd._2.schema.create)
   })
 
-
   private val entities = TableQuery[EntitiesCatalog]
-  private val fields = TableQuery[EntityFieldsCatalog]
+  private val entityfields = TableQuery[EntityFieldsCatalog]
   private val indexes = TableQuery[IndexesCatalog]
 
-  private val DEFAULT_DIMENSIONALITY = -1
-  private val DEFAULT_INDEX_WEIGHT = 100
+  private val DEFAULT_DIMENSIONALITY : Int = -1
+  private val DEFAULT_INDEX_WEIGHT : Float = 100
 
 
   /**
@@ -52,7 +51,7 @@ object CatalogOperator {
     * @param withMetadata
     * @return
     */
-  def createEntity(entityname: EntityName, fielddefs: Seq[FieldDefinition], withMetadata: Boolean = false): Boolean = {
+  def createEntity(entityname: EntityName, fields: Seq[FieldDefinition], withMetadata: Boolean = false): Boolean = {
     if (existsEntity(entityname)) {
       throw new EntityExistingException()
     }
@@ -61,12 +60,12 @@ object CatalogOperator {
       entities.+=(entityname, withMetadata)
     )
 
-    fielddefs.foreach { field =>
-      val setup = DBIO.seq(fields.+=(field.name, entityname, DEFAULT_DIMENSIONALITY))
+    Await.result(db.run(setup), MAX_WAITING_TIME)
+
+    fields.foreach { field =>
+      val setup = DBIO.seq(entityfields.+=(field.name, entityname, DEFAULT_DIMENSIONALITY))
       Await.result(db.run(setup), MAX_WAITING_TIME)
     }
-
-    Await.result(db.run(setup), MAX_WAITING_TIME)
 
     log.debug("created entity in catalog")
     true
@@ -87,11 +86,8 @@ object CatalogOperator {
       }
     }
 
-    val query = entities.filter(_.entityname === entityname.toString()).delete
-    Await.result(db.run(query), MAX_WAITING_TIME)
-
-    val fieldquery = fields.filter(_.entityname === entityname.toString()).delete
-    Await.result(db.run(fieldquery), MAX_WAITING_TIME)
+    Await.result(db.run(entityfields.filter(_.entityname === entityname.toString()).delete), MAX_WAITING_TIME)
+    Await.result(db.run(entities.filter(_.entityname === entityname.toString()).delete), MAX_WAITING_TIME)
 
     log.debug("dropped entity from catalog")
 
@@ -171,7 +167,7 @@ object CatalogOperator {
     oos.close
 
     val setup = DBIO.seq(
-      indexes.+=((indexname, entityname, column, indextypename.name, filename, metaFilePath, DEFAULT_INDEX_WEIGHT))
+      indexes.+=((indexname, entityname, column, indextypename.name, filename, metaFilePath, true, DEFAULT_INDEX_WEIGHT))
     )
 
     Await.result(db.run(setup), MAX_WAITING_TIME)
@@ -228,7 +224,7 @@ object CatalogOperator {
     * @return
     */
   def listIndexes(entityname: EntityName = null, indextypename: IndexTypeName = null): Seq[(IndexName, IndexTypeName, Float)] = {
-    var catalog: Query[IndexesCatalog, (String, String, String, String, String, String, Float), Seq] = indexes
+    var catalog: Query[IndexesCatalog, (String, String, String, String, String, String, Boolean, Float), Seq] = indexes
 
     if (entityname != null) {
       catalog = catalog.filter(_.entityname === entityname.toString())
@@ -348,6 +344,32 @@ object CatalogOperator {
     Await.result(db.run(update), MAX_WAITING_TIME)
 
     log.debug("updated weight in catalog")
+    true
+  }
+
+  /**
+    *
+    * @param indexname
+    * @return
+    */
+  def isIndexUptodate(indexname: IndexName): Boolean = {
+    val query = indexes.filter(_.indexname === indexname).map(_.uptodate).result.head
+    Await.result(db.run(query), MAX_WAITING_TIME)
+  }
+
+  /**
+    * Mark indexes for given entity stale.
+    * @param entityname
+    */
+  def updateIndexesToStale(entityname : EntityName) : Boolean = {
+    val query = indexes.filter(_.entityname === entityname.toString()).map(_.uptodate)
+
+    val update = DBIO.seq(
+      query.update(false)
+    )
+    Await.result(db.run(update), MAX_WAITING_TIME)
+
+    log.debug("made indexes stale in catalog")
     true
   }
 

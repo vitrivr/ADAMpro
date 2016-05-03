@@ -60,6 +60,12 @@ trait Index {
   def count = df.count()
 
   /**
+    *
+    * @return
+    */
+  def isStale = !CatalogOperator.isIndexUptodate(indexname)
+
+  /**
     * Gets the metadata attached to the index.
     *
     * @return
@@ -100,7 +106,11 @@ trait Index {
     */
   def scan(q: FeatureVector, distance: DistanceFunction, options: Map[String, String], k: Int, filter: Option[Set[TupleID]], partitions: Option[Set[PartitionID]], queryID: Option[String] = None)(implicit ac: AdamContext): Set[Result] = {
     log.debug("started scanning index")
-    //TODO: warn if index is stale
+
+    if(isStale){
+      log.warn("index is stale but still used, please re-create " + indexname)
+    }
+
     ac.sc.setLocalProperty("spark.scheduler.pool", "index")
     ac.sc.setJobGroup(queryID.getOrElse(""), indextypename.name, true)
 
@@ -148,6 +158,7 @@ trait Index {
       def entityname: EntityName = current.entityname
       def confidence: Float = current.confidence
       def lossy: Boolean = current.lossy
+      override def isStale = current.isStale
       private[index] def metadata: Serializable = current.metadata
       def isQueryConform(nnq: NearestNeighbourQuery): Boolean = current.isQueryConform(nnq)
       protected def scan(data: DataFrame, q: FeatureVector, distance: DistanceFunction, options: Map[String, Any], k: Int): Set[Result] = current.scan(data, q, distance, options, k)

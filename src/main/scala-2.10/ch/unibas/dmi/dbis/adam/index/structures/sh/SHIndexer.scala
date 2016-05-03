@@ -9,6 +9,7 @@ import ch.unibas.dmi.dbis.adam.index.Index.{IndexName, IndexTypeName}
 import ch.unibas.dmi.dbis.adam.index._
 import ch.unibas.dmi.dbis.adam.index.structures.IndexTypes
 import ch.unibas.dmi.dbis.adam.main.{AdamContext, SparkStartup}
+import ch.unibas.dmi.dbis.adam.query.distance.DistanceFunction
 import org.apache.log4j.Logger
 import org.apache.spark.rdd.RDD
 import org.apache.spark.util.random.ADAMSamplingUtils
@@ -20,7 +21,7 @@ import org.apache.spark.util.random.ADAMSamplingUtils
  * Ivan Giangreco
  * August 2015
  */
-class SHIndexer(nbits : Int, trainingSize : Int)(@transient implicit val ac : AdamContext) extends IndexGenerator with Serializable {
+class SHIndexer(nbits : Option[Int], trainingSize : Int)(@transient implicit val ac : AdamContext) extends IndexGenerator with Serializable {
   @transient lazy val log = Logger.getLogger(getClass.getName)
 
   override val indextypename: IndexTypeName = IndexTypes.SHINDEX
@@ -63,7 +64,7 @@ class SHIndexer(nbits : Int, trainingSize : Int)(@transient implicit val ac : Ad
 
     val nfeatures =  dTrainData.head.length
 
-    val numComponents = math.min(nfeatures, nbits)
+    val numComponents = math.min(nfeatures, nbits.getOrElse(nfeatures * 2))
 
     // pca
     val covs = cov(dataMatrix, true)
@@ -83,9 +84,9 @@ class SHIndexer(nbits : Int, trainingSize : Int)(@transient implicit val ac : Ad
     val maxProj = breeze.linalg.max(projected(::, *)).t.toDenseVector
 
     // enumerate eigenfunctions
-    val maxMode = computeShareOfBits(minProj, maxProj, nbits)
+    val maxMode = computeShareOfBits(minProj, maxProj, nbits.getOrElse(nfeatures * 2))
     val allModes = getAllModes(maxMode, numComponents)
-    val modes = getSortedModes(allModes, minProj, maxProj, nbits)
+    val modes = getSortedModes(allModes, minProj, maxProj, nbits.getOrElse(nfeatures * 2))
 
     // compute "radius" for moving query around
     val min = breeze.linalg.min(dataMatrix(*, ::)).toDenseVector
@@ -102,12 +103,12 @@ class SHIndexer(nbits : Int, trainingSize : Int)(@transient implicit val ac : Ad
    *
    * @param min
    * @param max
-   * @param nbits
+   * @param bits
    * @return
    */
-  private def computeShareOfBits(min : Vector[VectorBase], max : Vector[VectorBase], nbits : Int) : Array[Int] = {
+  private def computeShareOfBits(min : Vector[VectorBase], max : Vector[VectorBase], bits : Int) : Array[Int] = {
     val range = max - min
-    (range * ((nbits + 1) / breeze.linalg.max(range))).map(x => math.ceil(x).toInt - 1).toArray
+    (range * ((bits + 1) / breeze.linalg.max(range))).map(x => math.ceil(x).toInt - 1).toArray
   }
 
   /**
@@ -136,10 +137,10 @@ class SHIndexer(nbits : Int, trainingSize : Int)(@transient implicit val ac : Ad
    * @param modes
    * @param min
    * @param max
-   * @param nbits
+   * @param bits
    * @return
    */
-  private def getSortedModes(modes : DenseMatrix[VectorBase], min : Vector[VectorBase], max : Vector[VectorBase], nbits : Int) : Matrix[VectorBase] = {
+  private def getSortedModes(modes : DenseMatrix[VectorBase], min : Vector[VectorBase], max : Vector[VectorBase], bits : Int) : Matrix[VectorBase] = {
     val range = max - min
     val omega0 = range.mapValues(r => conv_double2vectorBase(math.Pi / math.abs(r))) //abs() added
     val omegas = modes(*, ::).:*(omega0)
@@ -148,8 +149,8 @@ class SHIndexer(nbits : Int, trainingSize : Int)(@transient implicit val ac : Ad
 
     val sortOrder = eigVal.toArray.zipWithIndex.sortBy(x => x._1).map(x => x._2) //removed reverse
 
-    val selectedModes : DenseMatrix[VectorBase] = DenseMatrix.zeros[VectorBase](nbits, modes.cols)
-    sortOrder.drop(1).take(nbits).zipWithIndex.foreach {
+    val selectedModes : DenseMatrix[VectorBase] = DenseMatrix.zeros[VectorBase](bits, modes.cols)
+    sortOrder.drop(1).take(bits).zipWithIndex.foreach {
       case (so, idx) =>
         selectedModes(idx, ::).:=(modes(so, ::))
     }
@@ -163,8 +164,12 @@ object SHIndexer {
    *
    * @param properties
    */
-  def apply(dimensions : Int, properties : Map[String, String] = Map[String, String]())(implicit ac : AdamContext) : IndexGenerator = {
-    val nbits = math.min(500, properties.getOrElse("nbits", (dimensions * 2).toString).toInt)
+  def apply(distance: DistanceFunction, properties : Map[String, String] = Map[String, String]())(implicit ac : AdamContext) : IndexGenerator = {
+    val nbits = if(properties.get("nbits").isDefined){
+        Some(properties.get("nbits").get.toInt)
+      } else {
+      None
+    }
     val trainingSize = properties.getOrElse("ntraining", "500").toInt
 
     new SHIndexer(nbits, trainingSize)

@@ -34,12 +34,6 @@ object AdamConfig{
   val jdbcUser = config.getString("adampro.jdbc.user")
   val jdbcPassword = config.getString("adampro.jdbc.password")
 
-  val cassandraUrl = config.getString("adampro.cassandra.url")
-  val cassandraPort = config.getString("adampro.cassandra.port")
-  val cassandraUsername = config.getString("adampro.cassandra.user")
-  val cassandraPassword = config.getString("adampro.cassandra.password")
-  val cassandraKeyspace = "adampro"
-
   val grpcPort = config.getInt("adampro.grpc.port")
 
   var evaluation = false

@@ -111,9 +111,10 @@ object QueryHandler {
           val indexes = indexChoice.get
             .map(indexname => IndexHandler.load(indexname, false).get)
             .filter(_.isQueryConform(nnq.get)) //choose only indexes that are conform to query
-            .sortBy(- _.weight) //order by weight (highest weight first)
+            .filterNot(_.isStale) //don't use stale indexes
+            .sortBy(-_.weight) //order by weight (highest weight first)
 
-          if(indexes.isEmpty){
+          if (indexes.isEmpty) {
             return None
           }
 
@@ -241,7 +242,7 @@ object QueryHandler {
     val indexes = IndexHandler.list(entityname, indextype)
       .map(x => IndexHandler.load(x._1).get)
       .filter(_.isQueryConform(nnq)) //choose only indexes that are conform to query
-      .sortBy(- _.weight) //order by weight (highest weight first)
+      .sortBy(-_.weight) //order by weight (highest weight first)
 
     if (indexes.isEmpty) {
       log.error("requested index of type " + indextype + " but no index of this type was found")
@@ -279,7 +280,7 @@ object QueryHandler {
     * @param cache
     * @return
     */
-  def specifiedIndexQuery(index : Index)(nnq: NearestNeighbourQuery, bq: Option[BooleanQuery], withMetadata: Boolean, id: Option[String] = None, cache: Option[QueryCacheOptions] = Some(QueryCacheOptions()))(implicit ac: AdamContext): DataFrame = {
+  def specifiedIndexQuery(index: Index)(nnq: NearestNeighbourQuery, bq: Option[BooleanQuery], withMetadata: Boolean, id: Option[String] = None, cache: Option[QueryCacheOptions] = Some(QueryCacheOptions()))(implicit ac: AdamContext): DataFrame = {
     if (cache.isDefined && cache.get.useCached) {
       val cached = getFromQueryCache(id)
       if (cached.isSuccess) {
@@ -316,7 +317,7 @@ object QueryHandler {
   }
 
   case class SpecifiedIndexQueryHolder(index: Index, nnq: NearestNeighbourQuery, bq: Option[BooleanQuery], id: Option[String] = None, cache: Option[QueryCacheOptions] = Some(QueryCacheOptions()))(implicit ac: AdamContext) extends QueryExpression(id) {
-    def this(indexname: IndexName, nnq: NearestNeighbourQuery, bq: Option[BooleanQuery], id: Option[String], cache: Option[QueryCacheOptions])(implicit ac: AdamContext){
+    def this(indexname: IndexName, nnq: NearestNeighbourQuery, bq: Option[BooleanQuery], id: Option[String], cache: Option[QueryCacheOptions])(implicit ac: AdamContext) {
       this(IndexHandler.load(indexname).get, nnq, bq, id, cache)
     }
 
@@ -488,9 +489,8 @@ object QueryHandler {
     if (res.isDefined) {
       return res.get
     } else {
-      import SparkStartup.Implicits._
-      val rdd = sc.emptyRDD[Row]
-      return sqlContext.createDataFrame(rdd, Result.resultSchema)
+      val rdd = ac.sc.emptyRDD[Row]
+      return ac.sqlContext.createDataFrame(rdd, Result.resultSchema)
     }
   }
 
