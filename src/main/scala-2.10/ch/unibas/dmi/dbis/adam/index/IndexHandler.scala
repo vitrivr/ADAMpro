@@ -2,8 +2,8 @@ package ch.unibas.dmi.dbis.adam.index
 
 import ch.unibas.dmi.dbis.adam.config.{AdamConfig, FieldNames}
 import ch.unibas.dmi.dbis.adam.datatypes.feature.FeatureVectorWrapper
-import ch.unibas.dmi.dbis.adam.entity.{EntityHandler, Entity}
 import ch.unibas.dmi.dbis.adam.entity.Entity.EntityName
+import ch.unibas.dmi.dbis.adam.entity.{Entity, EntityHandler}
 import ch.unibas.dmi.dbis.adam.exception.{GeneralAdamException, IndexNotExistingException}
 import ch.unibas.dmi.dbis.adam.index.Index.{IndexName, IndexTypeName}
 import ch.unibas.dmi.dbis.adam.main.{AdamContext, SparkStartup}
@@ -199,9 +199,10 @@ object IndexHandler {
     }
 
     data = if (cols.isDefined) {
-      val entityColNames = EntityHandler.load(index.entityname).get.schema.fieldNames
+      val entityColNames = EntityHandler.load(index.entityname).get.schema.fieldNames.toSeq.+(FieldNames.idColumnName)
       if(!cols.get.forall(name => entityColNames.contains(name))){
-        log.error("column not existing in entity " + index.entityname + entityColNames.mkString("(", ",", ")"))
+        log.error("one of the columns " + cols.mkString(",") + " is not existing in entity " + index.entityname + entityColNames.mkString("(", ",", ")"))
+        Failure(throw new GeneralAdamException("repartition column not existing in entity"))
       }
 
       data.repartition(n, cols.get.map(data(_)): _*)

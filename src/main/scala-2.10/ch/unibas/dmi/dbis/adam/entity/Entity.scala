@@ -110,8 +110,8 @@ case class Entity(entityname: EntityName, private val featureStorage: FeatureSto
     * @param filter
     * @return
     */
-  def filter(filter: Set[Long]): DataFrame = {
-    featureStorage.read(entityname, Option(filter)).get
+  def filter(filter: DataFrame): DataFrame = {
+    featureStorage.read(entityname).get.join(filter, FieldNames.idColumnName)
   }
 
   /**

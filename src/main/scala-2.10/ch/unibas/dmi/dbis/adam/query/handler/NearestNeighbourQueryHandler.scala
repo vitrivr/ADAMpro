@@ -1,8 +1,8 @@
 package ch.unibas.dmi.dbis.adam.query.handler
 
+import ch.unibas.dmi.dbis.adam.config.FieldNames
 import ch.unibas.dmi.dbis.adam.entity.Entity.EntityName
 import ch.unibas.dmi.dbis.adam.entity.EntityHandler
-import ch.unibas.dmi.dbis.adam.entity.Tuple.TupleID
 import ch.unibas.dmi.dbis.adam.exception.QueryNotConformException
 import ch.unibas.dmi.dbis.adam.index.Index.IndexName
 import ch.unibas.dmi.dbis.adam.index.{Index, IndexHandler}
@@ -13,6 +13,7 @@ import ch.unibas.dmi.dbis.adam.query.progressive._
 import ch.unibas.dmi.dbis.adam.query.query.NearestNeighbourQuery
 import ch.unibas.dmi.dbis.adam.query.scanner.{FeatureScanner, IndexScanner}
 import org.apache.log4j.Logger
+import org.apache.spark.sql.types.{LongType, StructField, StructType}
 import org.apache.spark.sql.{DataFrame, Row}
 
 import scala.collection.mutable.{Map => mMap}
@@ -43,7 +44,7 @@ private[query] object NearestNeighbourQueryHandler {
     * @param filter
     * @return
     */
-  def sequential(entityname: EntityName, query: NearestNeighbourQuery, filter: Option[Set[TupleID]])(implicit ac: AdamContext): DataFrame = {
+  def sequential(entityname: EntityName, query: NearestNeighbourQuery, filter: Option[DataFrame])(implicit ac: AdamContext): DataFrame = {
     log.debug("performing sequential nearest neighbor scan")
     if (!isQueryConform(entityname, query)) {
       throw QueryNotConformException()
@@ -61,7 +62,7 @@ private[query] object NearestNeighbourQueryHandler {
     * @return depending on whether query.indexOnly is set to true only the index tuples are scanned,
     *         otherwise also the true data is scanned for performing the query
     */
-  def indexQuery(indexname: IndexName, query: NearestNeighbourQuery, filter: Option[Set[TupleID]])(implicit ac: AdamContext): DataFrame = {
+  def indexQuery(indexname: IndexName, query: NearestNeighbourQuery, filter: Option[DataFrame])(implicit ac: AdamContext): DataFrame = {
     indexQuery(IndexHandler.load(indexname).get, query, filter)
   }
 
@@ -74,7 +75,7 @@ private[query] object NearestNeighbourQueryHandler {
     * @return depending on whether query.indexOnly is set to true only the index tuples are scanned,
     *         otherwise also the true data is scanned for performing the query
     */
-  def indexQuery(index: Index, query: NearestNeighbourQuery, filter: Option[Set[TupleID]])(implicit ac: AdamContext): DataFrame = {
+  def indexQuery(index: Index, query: NearestNeighbourQuery, filter: Option[DataFrame])(implicit ac: AdamContext): DataFrame = {
     log.debug("performing index-based nearest neighbor scan")
 
     if (query.indexOnly) {
@@ -95,19 +96,22 @@ private[query] object NearestNeighbourQueryHandler {
     * @param filter
     * @return
     */
-  def indexQueryWithResults(index: Index, query: NearestNeighbourQuery, filter: Option[Set[TupleID]])(implicit ac: AdamContext): DataFrame = {
+  def indexQueryWithResults(index: Index, query: NearestNeighbourQuery, filter: Option[DataFrame])(implicit ac: AdamContext): DataFrame = {
     val entityname = index.entityname
     if (!isQueryConform(entityname, query)) {
       throw QueryNotConformException()
     }
 
     log.debug("starting index scanner")
-    val tidList = IndexScanner(index, query, filter)
+    val results = IndexScanner(index, query, filter)
 
     val entity = EntityHandler.load(entityname).get
 
     log.debug("starting feature scanner")
-    FeatureScanner(entity, query, Some(tidList.map(_.tid)))
+    val rdd = ac.sc.parallelize(results.map(result => Row(result.tid)).toSeq)
+    val fields = StructType(Seq(StructField(FieldNames.idColumnName, LongType, false)))
+    val df = ac.sqlContext.createDataFrame(rdd, fields)
+    FeatureScanner(entity, query, Some(df))
   }
 
   /**
@@ -119,7 +123,7 @@ private[query] object NearestNeighbourQueryHandler {
     * @param filter
     * @return
     */
-  def indexOnlyQuery(index: Index, query: NearestNeighbourQuery, filter: Option[Set[TupleID]])(implicit ac: AdamContext): DataFrame = {
+  def indexOnlyQuery(index: Index, query: NearestNeighbourQuery, filter: Option[DataFrame])(implicit ac: AdamContext): DataFrame = {
     val entityname = index.entityname
     if (!isQueryConform(entityname, query)) {
       throw QueryNotConformException()
@@ -141,7 +145,7 @@ private[query] object NearestNeighbourQueryHandler {
     * @param onComplete
     * @return
     */
-  def progressiveQuery[U](entityname: EntityName, query: NearestNeighbourQuery, filter: Option[Set[TupleID]], paths: ProgressivePathChooser, onComplete: (ProgressiveQueryStatus.Value, DataFrame, Float, String, Map[String, String]) => U)(implicit ac: AdamContext): ProgressiveQueryStatusTracker = {
+  def progressiveQuery[U](entityname: EntityName, query: NearestNeighbourQuery, filter: Option[DataFrame], paths: ProgressivePathChooser, onComplete: (ProgressiveQueryStatus.Value, DataFrame, Float, String, Map[String, String]) => U)(implicit ac: AdamContext): ProgressiveQueryStatusTracker = {
     log.debug("starting progressive query scanner")
     if (!isQueryConform(entityname, query)) {
       throw QueryNotConformException()
@@ -174,7 +178,7 @@ private[query] object NearestNeighbourQueryHandler {
     * @param filter
     * @return
     */
-  def timedProgressiveQuery(entityname: EntityName, query: NearestNeighbourQuery, filter: Option[Set[TupleID]], paths: ProgressivePathChooser, timelimit: Duration)(implicit ac: AdamContext): ProgressiveQueryIntermediateResults = {
+  def timedProgressiveQuery(entityname: EntityName, query: NearestNeighbourQuery, filter: Option[DataFrame], paths: ProgressivePathChooser, timelimit: Duration)(implicit ac: AdamContext): ProgressiveQueryIntermediateResults = {
     log.debug("starting timed progressive query scanner")
 
     val tracker = progressiveQuery[Unit](entityname, query, filter, paths, (status, result, confidence, source, info) => ())

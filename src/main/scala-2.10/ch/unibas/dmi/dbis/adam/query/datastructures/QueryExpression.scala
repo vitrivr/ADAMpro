@@ -2,7 +2,6 @@ package ch.unibas.dmi.dbis.adam.query.datastructures
 
 import java.util.concurrent.TimeUnit
 
-import ch.unibas.dmi.dbis.adam.entity.Tuple._
 import org.apache.spark.sql.DataFrame
 
 import scala.collection.mutable.ListBuffer
@@ -23,7 +22,7 @@ abstract class QueryExpression(id: Option[String]) {
     * @param filter
     * @return
     */
-  def evaluate(filter: Option[Set[TupleID]] = None): DataFrame = {
+  def evaluate(filter: Option[DataFrame] = None): DataFrame = {
     val t1 = System.currentTimeMillis
     results = run(filter)
     val t2 = System.currentTimeMillis
@@ -38,7 +37,7 @@ abstract class QueryExpression(id: Option[String]) {
     * @param filter
     * @return
     */
-  protected def run(filter: Option[Set[TupleID]]): DataFrame
+  protected def run(filter: Option[DataFrame]): DataFrame
 
 
   /**

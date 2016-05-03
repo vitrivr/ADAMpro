@@ -29,7 +29,7 @@ private[query] object CompoundQueryHandler {
     * @return
     */
   def indexQueryWithResults(entityname: EntityName)(nnq: NearestNeighbourQuery, expr: QueryExpression, withMetadata: Boolean)(implicit ac: AdamContext): DataFrame = {
-    val tidFilter = expr.evaluate().map(x => Result(0.toFloat, x.getAs[Long](FieldNames.idColumnName))).map(_.tid).collect().toSet
+    val tidFilter = expr.evaluate()
     var res = FeatureScanner(EntityHandler.load(entityname).get, nnq, Some(tidFilter))
 
     if (withMetadata) {

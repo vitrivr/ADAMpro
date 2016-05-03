@@ -3,7 +3,6 @@ package ch.unibas.dmi.dbis.adam.index
 import ch.unibas.dmi.dbis.adam.config.FieldNames
 import ch.unibas.dmi.dbis.adam.datatypes.feature.Feature._
 import ch.unibas.dmi.dbis.adam.entity.Entity._
-import ch.unibas.dmi.dbis.adam.entity.Tuple._
 import ch.unibas.dmi.dbis.adam.index.Index.{IndexName, IndexTypeName}
 import ch.unibas.dmi.dbis.adam.index.structures.IndexTypes
 import ch.unibas.dmi.dbis.adam.main.AdamContext
@@ -104,7 +103,7 @@ trait Index {
     * @param queryID  optional query id
     * @return a set of candidate tuple ids, possibly together with a tentative score (the number of tuples will be greater than k)
     */
-  def scan(q: FeatureVector, distance: DistanceFunction, options: Map[String, String], k: Int, filter: Option[Set[TupleID]], partitions: Option[Set[PartitionID]], queryID: Option[String] = None)(implicit ac: AdamContext): Set[Result] = {
+  def scan(q: FeatureVector, distance: DistanceFunction, options: Map[String, String], k: Int, filter: Option[DataFrame], partitions: Option[Set[PartitionID]], queryID: Option[String] = None)(implicit ac: AdamContext): Set[Result] = {
     log.debug("started scanning index")
 
     if(isStale){
@@ -118,7 +117,7 @@ trait Index {
 
     //apply pre-filter
     if (filter.isDefined) {
-      data = data.filter(df(FieldNames.idColumnName) isin (filter.get.toSeq: _*))
+      data = data.join(filter.get, FieldNames.idColumnName)
     }
 
     //choose specific partition

@@ -3,7 +3,6 @@ package ch.unibas.dmi.dbis.adam.query.scanner
 import ch.unibas.dmi.dbis.adam.config.FieldNames
 import ch.unibas.dmi.dbis.adam.datatypes.feature.FeatureVectorWrapper
 import ch.unibas.dmi.dbis.adam.entity.Entity
-import ch.unibas.dmi.dbis.adam.entity.Tuple.TupleID
 import ch.unibas.dmi.dbis.adam.main.AdamContext
 import ch.unibas.dmi.dbis.adam.query.query.NearestNeighbourQuery
 import org.apache.log4j.Logger
@@ -28,7 +27,7 @@ object FeatureScanner {
     * @param filter if filter is defined, we pre-filter for the features
     * @return
     */
-  def apply(entity: Entity, query: NearestNeighbourQuery, filter: Option[Set[TupleID]])(implicit ac: AdamContext): DataFrame = {
+  def apply(entity: Entity, query: NearestNeighbourQuery, filter: Option[DataFrame])(implicit ac: AdamContext): DataFrame = {
     val data = if (filter.isDefined) {
       //scan based on tuples filtered in index
       log.debug("scan features with pre-filter")

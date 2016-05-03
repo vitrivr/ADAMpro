@@ -29,7 +29,7 @@ object CompoundQueryExpressions {
   }
 
   case class EmptyQueryExpression(id : Option[String] = None) extends QueryExpression(id){
-    override protected def run(filter: Option[Set[TupleID]]): DataFrame = {
+    override protected def run(filter: Option[DataFrame]): DataFrame = {
       import SparkStartup.Implicits._
       val rdd = sc.emptyRDD[Row]
       sqlContext.createDataFrame(rdd, Result.resultSchema)
@@ -47,7 +47,7 @@ object CompoundQueryExpressions {
       * @param filter
       * @return
       */
-    override protected def run(filter: Option[Set[TupleID]]): DataFrame = {
+    override protected def run(filter: Option[DataFrame]): DataFrame = {
       val results = parallelExec(filter)
 
       val rdd = ac.sc.parallelize(results.map(res => Row(res.distance, res.tid)))
@@ -58,7 +58,7 @@ object CompoundQueryExpressions {
       *
       * @return
       */
-    private def parallelExec(filter: Option[Set[TupleID]]): Seq[Result] = {
+    private def parallelExec(filter: Option[DataFrame]): Seq[Result] = {
       val lfut = Future(l.evaluate(filter))
       val rfut = Future(r.evaluate(filter))
 
@@ -105,7 +105,7 @@ object CompoundQueryExpressions {
       * @param filter
       * @return
       */
-    override protected def run(filter: Option[Set[TupleID]]): DataFrame = {
+    override protected def run(filter: Option[DataFrame]): DataFrame = {
       val results = order match {
         case ExpressionEvaluationOrder.LeftFirst => leftFirstExec(filter)
         case ExpressionEvaluationOrder.RightFirst => rightFirstExec(filter)
@@ -120,9 +120,9 @@ object CompoundQueryExpressions {
       *
       * @return
       */
-    private def leftFirstExec(filter: Option[Set[TupleID]]): Seq[Result] = {
+    private def leftFirstExec(filter: Option[DataFrame]): Seq[Result] = {
       val leftResult = l.evaluate(filter)
-      val rightResult = r.evaluate(Option(leftResult.map(r => r.getAs[Long](FieldNames.idColumnName)).collect().toSet))
+      val rightResult = r.evaluate(Some(leftResult.select(FieldNames.idColumnName)))
 
       aggregate(leftResult, rightResult)
     }
@@ -131,9 +131,9 @@ object CompoundQueryExpressions {
       *
       * @return
       */
-    private def rightFirstExec(filter: Option[Set[TupleID]]): Seq[Result] = {
+    private def rightFirstExec(filter: Option[DataFrame]): Seq[Result] = {
       val rightResult = r.evaluate(filter)
-      val leftResult = l.evaluate(Option(rightResult.map(r => r.getAs[Long](FieldNames.idColumnName)).collect().toSet))
+      val leftResult = l.evaluate(Some(rightResult.select(FieldNames.idColumnName)))
 
       aggregate(leftResult, rightResult)
     }
@@ -142,7 +142,7 @@ object CompoundQueryExpressions {
       *
       * @return
       */
-    private def parallelExec(filter: Option[Set[TupleID]]): Seq[Result] = {
+    private def parallelExec(filter: Option[DataFrame]): Seq[Result] = {
       val lfut = Future(l.evaluate(filter))
       val rfut = Future(r.evaluate(filter))
 
@@ -189,7 +189,7 @@ object CompoundQueryExpressions {
       * @param filter
       * @return
       */
-    override protected def run(filter: Option[Set[TupleID]]): DataFrame = {
+    override protected def run(filter: Option[DataFrame]): DataFrame = {
       val results = order match {
         case ExpressionEvaluationOrder.LeftFirst => leftFirstExec(filter)
         case ExpressionEvaluationOrder.RightFirst => rightFirstExec(filter)
@@ -204,9 +204,9 @@ object CompoundQueryExpressions {
       *
       * @return
       */
-    private def leftFirstExec(filter: Option[Set[TupleID]]): Seq[Result] = {
+    private def leftFirstExec(filter: Option[DataFrame]): Seq[Result] = {
       val leftResult = l.evaluate(filter)
-      val rightResult = r.evaluate(Option(leftResult.map(r => r.getAs[Long](FieldNames.idColumnName)).collect().toSet))
+      val rightResult = r.evaluate(Some(leftResult.select(FieldNames.idColumnName)))
 
       aggregate(leftResult, rightResult)
     }
@@ -215,9 +215,9 @@ object CompoundQueryExpressions {
       *
       * @return
       */
-    private def rightFirstExec(filter: Option[Set[TupleID]]): Seq[Result] = {
+    private def rightFirstExec(filter: Option[DataFrame]): Seq[Result] = {
       val rightResult = r.evaluate(filter)
-      val leftResult = l.evaluate(Option(rightResult.map(r => r.getAs[Long](FieldNames.idColumnName)).collect().toSet))
+      val leftResult = l.evaluate(Some(rightResult.select(FieldNames.idColumnName)))
 
       aggregate(leftResult, rightResult)
     }
@@ -226,7 +226,7 @@ object CompoundQueryExpressions {
       *
       * @return
       */
-    private def parallelExec(filter: Option[Set[TupleID]]): Seq[Result] = {
+    private def parallelExec(filter: Option[DataFrame]): Seq[Result] = {
       val lfut = Future(l.evaluate(filter))
       val rfut = Future(r.evaluate(filter))
 
