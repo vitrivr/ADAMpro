@@ -166,6 +166,7 @@ var evaluate = function(id){
             result.operation = "start";
             result.options = {};
             result.options.entityname = $("#entityname").val();
+            result.options.column = $("#column").val();
 
             if($("#k").val().length > 0){
                 result.options.k = $("#k").val();

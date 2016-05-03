@@ -20,6 +20,7 @@ $("#btnSubmit").click(function () {
     var query = {};
     query.id = id;
     query.entityname = $("#entityname").val();
+    query.column = $("#column").val();
     query.query = $("#query").val();
     query.hints = $("#indextype").val();
 

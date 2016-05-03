@@ -73,6 +73,7 @@ class RPCClient(channel: ManagedChannel, definer: AdamDefinitionBlockingStub, se
     * @return
     */
   private def getFieldType(s: String): FieldDefinitionMessage.FieldType = s match {
+    case "feature" => FieldType.FEATURE
     case "long" => FieldType.LONG
     case "int" => FieldType.INT
     case "float" => FieldType.FLOAT
@@ -106,8 +107,8 @@ class RPCClient(channel: ManagedChannel, definer: AdamDefinitionBlockingStub, se
     * @param options
     * @return
     */
-  def addIndex(entityname: String, indextype: IndexType, norm: Int, options: Map[String, String]): String = {
-    val indexMessage = IndexMessage(entityname, indextype, Some(DistanceMessage(DistanceType.minkowski, Map("norm" -> norm.toString))), options)
+  def addIndex(entityname: String, column : String, indextype: IndexType, norm: Int, options: Map[String, String]): String = {
+    val indexMessage = IndexMessage(entityname, column, indextype,Some(DistanceMessage(DistanceType.minkowski, Map("norm" -> norm.toString))), options)
     val res = definer.index(indexMessage)
     if (res.code == AckMessage.Code.OK) {
       res.message
@@ -122,14 +123,20 @@ class RPCClient(channel: ManagedChannel, definer: AdamDefinitionBlockingStub, se
     * @param entityname
     * @return
     */
-  def addAllIndex(entityname: String, norm: Int): Boolean = {
-    val res = definer.generateAllIndexes(IndexMessage(entity = entityname, distance = Some(DistanceMessage(DistanceType.minkowski, options = Map("norm" -> norm.toString)))))
-    if (res.code == AckMessage.Code.OK) {
-      true
-    } else {
-      log.error(res.message)
-      false
-    }
+  def addAllIndex(entityname: String, fields: Seq[EntityField], norm: Int): Boolean = {
+    val fieldMessage = fields.map(field =>
+      FieldDefinitionMessage(field.name, getFieldType(field.datatype), false, false, field.indexed)
+    ).filter(_.fieldtype == FieldType.FEATURE)
+
+    fieldMessage.map{ column =>
+      val res = definer.generateAllIndexes(IndexMessage(entity = entityname, column = column.name, distance = Some(DistanceMessage(DistanceType.minkowski, options = Map("norm" -> norm.toString)))))
+      if (res.code == AckMessage.Code.OK) {
+        true
+      } else {
+        log.error(res.message)
+        false
+      }
+    }.reduce(_ && _)
   }
 
   /**
@@ -147,8 +154,8 @@ class RPCClient(channel: ManagedChannel, definer: AdamDefinitionBlockingStub, se
   /**
     *
     */
-  def progressiveQuery(id: String, entityname: String, query: Seq[Float], hints: Seq[String], k: Int, next: (String, Double, String, Long, Seq[(Float, Long)]) => (Unit), completed: (String) => (Unit)): String = {
-    val nnq = NearestNeighbourQueryMessage(query, Option(DistanceMessage(DistanceType.minkowski, Map("norm" -> "2"))), k)
+  def progressiveQuery(id: String, entityname: String, query: Seq[Float], column : String, hints: Seq[String], k: Int, next: (String, Double, String, Long, Seq[(Float, Long)]) => (Unit), completed: (String) => (Unit)): String = {
+    val nnq = NearestNeighbourQueryMessage(column, query, Option(DistanceMessage(DistanceType.minkowski, Map("norm" -> "2"))), k)
     val request = SimpleQueryMessage(entity = entityname, hints = hints, nnq = Option(nnq))
 
     val so = new StreamObserver[QueryResponseInfoMessage]() {

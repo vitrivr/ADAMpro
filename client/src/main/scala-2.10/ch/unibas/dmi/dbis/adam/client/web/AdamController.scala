@@ -80,7 +80,7 @@ class AdamController(rpcClient: RPCClient) extends Controller {
   post("/entity/indexall") { request: IndexAllRequest =>
     log.info("index all")
 
-    val res = rpcClient.addAllIndex(request.entityname, 2)
+    val res = rpcClient.addAllIndex(request.entityname, request.fields, 2)
 
     log.info("index all done")
 
@@ -107,7 +107,7 @@ class AdamController(rpcClient: RPCClient) extends Controller {
       case _ => null
     }
 
-    val res = rpcClient.addIndex(request.entityname, indextype, request.norm, request.options)
+    val res = rpcClient.addIndex(request.entityname, "feature", indextype, request.norm, request.options)
 
     log.info("created index")
 
@@ -151,7 +151,7 @@ class AdamController(rpcClient: RPCClient) extends Controller {
     */
   post("/query/progressive") { request: ProgressiveQueryRequest =>
     log.info("progressive query start: " + request)
-    val res = rpcClient.progressiveQuery(request.id, request.entityname, request.q, request.hints, request.k, processProgressiveResults, completedProgressiveResults)
+    val res = rpcClient.progressiveQuery(request.id, request.entityname, request.q, request.column, request.hints, request.k, processProgressiveResults, completedProgressiveResults)
 
     progTempResults.synchronized {
       if (!progTempResults.contains(request.id)) {

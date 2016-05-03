@@ -95,7 +95,9 @@ $("#btnSubmitCreateIndex").click(function () {
 
     var result = {};
     result.entityname = $("#entityname").val();
-
+    result.fields = $.map(fields, function (value, index) {
+        return [value];
+    });
 
     $.ajax("/entity/indexall", {
         data: JSON.stringify(result),
