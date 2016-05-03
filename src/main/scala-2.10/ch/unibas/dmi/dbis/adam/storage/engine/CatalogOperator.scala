@@ -4,7 +4,7 @@ import java.io._
 
 import ch.unibas.dmi.dbis.adam.config.AdamConfig
 import ch.unibas.dmi.dbis.adam.entity.Entity.EntityName
-import ch.unibas.dmi.dbis.adam.entity.EntityNameHolder
+import ch.unibas.dmi.dbis.adam.entity.{FieldDefinition, EntityNameHolder}
 import ch.unibas.dmi.dbis.adam.exception.{EntityExistingException, EntityNotExistingException, IndexExistingException, IndexNotExistingException}
 import ch.unibas.dmi.dbis.adam.index.Index.{IndexName, IndexTypeName}
 import ch.unibas.dmi.dbis.adam.index.structures.IndexTypes
@@ -38,6 +38,7 @@ object CatalogOperator {
 
 
   private val entities = TableQuery[EntitiesCatalog]
+  private val fields = TableQuery[EntityFieldsCatalog]
   private val indexes = TableQuery[IndexesCatalog]
 
   private val DEFAULT_DIMENSIONALITY = -1
@@ -51,14 +52,19 @@ object CatalogOperator {
     * @param withMetadata
     * @return
     */
-  def createEntity(entityname: EntityName, withMetadata: Boolean = false): Boolean = {
+  def createEntity(entityname: EntityName, fielddefs: Seq[FieldDefinition], withMetadata: Boolean = false): Boolean = {
     if (existsEntity(entityname)) {
       throw new EntityExistingException()
     }
 
     val setup = DBIO.seq(
-      entities.+=(entityname, DEFAULT_DIMENSIONALITY, withMetadata)
+      entities.+=(entityname, withMetadata)
     )
+
+    fielddefs.foreach { field =>
+      val setup = DBIO.seq(fields.+=(field.name, entityname, DEFAULT_DIMENSIONALITY))
+      Await.result(db.run(setup), MAX_WAITING_TIME)
+    }
 
     Await.result(db.run(setup), MAX_WAITING_TIME)
 
@@ -82,7 +88,10 @@ object CatalogOperator {
     }
 
     val query = entities.filter(_.entityname === entityname.toString()).delete
-    val count = Await.result(db.run(query), MAX_WAITING_TIME)
+    Await.result(db.run(query), MAX_WAITING_TIME)
+
+    val fieldquery = fields.filter(_.entityname === entityname.toString()).delete
+    Await.result(db.run(fieldquery), MAX_WAITING_TIME)
 
     log.debug("dropped entity from catalog")
 
@@ -100,50 +109,6 @@ object CatalogOperator {
     val count = Await.result(db.run(query), MAX_WAITING_TIME)
 
     (count > 0)
-  }
-
-  /**
-    *
-    * @param entityname
-    * @return
-    */
-  def getDimensionality(entityname: EntityName): Option[Int] = {
-    val query = entities.filter(_.entityname === entityname.toString()).take(1).result
-    val entity = Await.result(db.run(query), MAX_WAITING_TIME).head
-
-    if (entity._2 != DEFAULT_DIMENSIONALITY) {
-      Some(entity._2)
-    } else {
-      None
-    }
-  }
-
-  /**
-    *
-    * @param entityname
-    * @param dimensionality
-    * @return
-    */
-  def updateDimensionality(entityname: EntityName, dimensionality: Int): Boolean = {
-    val query = entities.filter(_.entityname === entityname.toString()).take(1).result
-    val entity = Await.result(db.run(query), MAX_WAITING_TIME).head
-
-    if (entity._2 != DEFAULT_DIMENSIONALITY && entity._2 != dimensionality) {
-      log.error("dimensionality has been set already and cannot be changed")
-      return false
-    } else if (entity._2 == dimensionality) {
-      return true
-    } else {
-
-      val update = DBIO.seq(
-        entities.filter(_.entityname === entityname.toString()).update(entity._1, dimensionality, entity._3)
-      )
-
-      Await.result(db.run(update), MAX_WAITING_TIME)
-
-      log.debug("updated entity in catalog")
-      true
-    }
   }
 
   /**
@@ -187,7 +152,7 @@ object CatalogOperator {
     * @param entityname
     * @param indexmeta
     */
-  def createIndex(indexname: IndexName, filename: String, entityname: EntityName, column : String, indextypename: IndexTypeName, indexmeta: Serializable): Boolean = {
+  def createIndex(indexname: IndexName, filename: String, entityname: EntityName, column: String, indextypename: IndexTypeName, indexmeta: Serializable): Boolean = {
     if (!existsEntity(entityname)) {
       throw new EntityNotExistingException()
     }
@@ -282,7 +247,7 @@ object CatalogOperator {
     * @param indexname
     * @return
     */
-  def getIndexColumn(indexname : IndexName) : String = {
+  def getIndexColumn(indexname: IndexName): String = {
     val query = indexes.filter(_.indexname === indexname).map(_.fieldname).result.head
     Await.result(db.run(query), MAX_WAITING_TIME)
   }
@@ -353,8 +318,8 @@ object CatalogOperator {
   /**
     *
     * @param indexname
-    * @param newWeight  specify the new weight for the index (the higher the more important), if no weight is
-    *                   specified the default index weight is used
+    * @param newWeight specify the new weight for the index (the higher the more important), if no weight is
+    *                  specified the default index weight is used
     * @return
     */
   def updateIndexWeight(indexname: IndexName, newWeight: Float = DEFAULT_INDEX_WEIGHT): Boolean = {

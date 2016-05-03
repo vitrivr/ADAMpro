@@ -1,6 +1,6 @@
 package ch.unibas.dmi.dbis.adam.index
 
-import ch.unibas.dmi.dbis.adam.config.{AdamConfig, FieldNames}
+import ch.unibas.dmi.dbis.adam.config.FieldNames
 import ch.unibas.dmi.dbis.adam.datatypes.feature.Feature._
 import ch.unibas.dmi.dbis.adam.entity.Entity._
 import ch.unibas.dmi.dbis.adam.entity.Tuple._
@@ -100,7 +100,7 @@ trait Index {
     */
   def scan(q: FeatureVector, distance: DistanceFunction, options: Map[String, String], k: Int, filter: Option[Set[TupleID]], partitions: Option[Set[PartitionID]], queryID: Option[String] = None)(implicit ac: AdamContext): Set[Result] = {
     log.debug("started scanning index")
-
+    //TODO: warn if index is stale
     ac.sc.setLocalProperty("spark.scheduler.pool", "index")
     ac.sc.setJobGroup(queryID.getOrElse(""), indextypename.name, true)
 

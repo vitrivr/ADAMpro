@@ -75,6 +75,8 @@ object IndexHandler {
         return Failure(new GeneralAdamException("not enough tuples for index"))
       }
 
+      //TODO: does column exist?
+
       val indexname = createIndexName(entity.entityname, column, indexgenerator.indextypename)
       val rdd: RDD[IndexingTaskTuple] = entity.getFeaturedata.map { x => IndexingTaskTuple(x.getAs[Long](FieldNames.idColumnName), x.getAs[FeatureVectorWrapper](column).vector) }
       val index = indexgenerator.index(indexname, entity.entityname, rdd)

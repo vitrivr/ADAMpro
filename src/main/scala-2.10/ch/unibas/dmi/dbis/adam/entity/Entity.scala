@@ -64,16 +64,8 @@ case class Entity(entityname: EntityName, featureStorage: FeatureStorage, metada
   def insert(insertion: DataFrame, ignoreChecks: Boolean = false)(implicit ac: AdamContext): Try[Void] = {
     log.debug("inserting data into entity")
 
-    if (!ignoreChecks) {
-      /*TODO: val dataDimensionality = insertion.first.getAs[FeatureVectorWrapper](FieldNames.featureColumnName).vector.size
-
-      val entityDimensionality = CatalogOperator.getDimensionality(entityname)
-      if (entityDimensionality.isDefined && dataDimensionality != entityDimensionality.get) {
-        log.warn("new data has not same dimensionality as existing data")
-      } else if (entityDimensionality.isEmpty) {
-        CatalogOperator.updateDimensionality(entityname, dataDimensionality)
-      }*/
-    }
+   //TODO: check dimensionality is correct
+    //TODO: make indexes stale ("is up to date")
 
     val rdd = insertion.rdd.zipWithUniqueId.map { case (r: Row, adamtwoid: Long) => Row.fromSeq(adamtwoid +: r.toSeq) }
     val insertionWithPK = ac.sqlContext
@@ -107,7 +99,6 @@ case class Entity(entityname: EntityName, featureStorage: FeatureStorage, metada
 
 
     lb.append("hasMetadata" -> hasMetadata.toString)
-    lb.append("dimensionality" -> CatalogOperator.getDimensionality(entityname).getOrElse(-1).toString)
     lb.append("schema" -> schema.map(field => field.name + "(" + field.dataType.simpleString + ")").mkString(","))
     lb.append("indexes" -> CatalogOperator.listIndexes(entityname).mkString(", "))
 
@@ -167,13 +158,8 @@ case class Entity(entityname: EntityName, featureStorage: FeatureStorage, metada
     * @return
     */
   def isQueryConform(query: NearestNeighbourQuery): Boolean = {
-    val entityDimensionality = CatalogOperator.getDimensionality(entityname)
-
-    if (entityDimensionality.isDefined && query.q.size != entityDimensionality.get) {
-      return false
-    } else {
-      return true
-    }
+    //TODO: check dimensionality of field and compare to dimensionality of query
+    return true
   }
 }
 

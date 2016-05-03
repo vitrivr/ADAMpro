@@ -75,10 +75,10 @@ object EntityHandler {
     if (!fields.filterNot(_.fieldtype == FEATURETYPE).isEmpty) {
       val metadataFields = fields.filterNot(_.fieldtype == FEATURETYPE).+:(FieldDefinition(FieldNames.idColumnName, LONGTYPE, false, true, true))
       metadataStorage.create(entityname, metadataFields)
-      CatalogOperator.createEntity(entityname, true)
+      CatalogOperator.createEntity(entityname, fields, true)
       Success(Entity(entityname, featureStorage, Option(metadataStorage)))
     } else {
-      CatalogOperator.createEntity(entityname, false)
+      CatalogOperator.createEntity(entityname, fields, false)
       Success(Entity(entityname, featureStorage, None))
     }
   }
@@ -124,11 +124,6 @@ object EntityHandler {
     */
   def insertData(entityname: EntityName, insertion: DataFrame, ignoreChecks: Boolean = false)(implicit ac: AdamContext): Try[Void] = {
     val entity = load(entityname).get
-
-    //TODO: possibly compare schemas
-    //val insertionSchema = insertion.schema
-    //val entitySchema = entity.schema
-
 
     entity.insert(insertion, ignoreChecks)
   }
