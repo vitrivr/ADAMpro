@@ -44,14 +44,14 @@ object IndexHandler {
     * @param indextype
     * @return
     */
-  private def createIndexName(entityname: EntityName, indextype: IndexTypeName): String = {
+  private def createIndexName(entityname: EntityName, column : String, indextype: IndexTypeName): String = {
     val indexes = CatalogOperator.listIndexes(entityname, indextype).map(_._1)
 
     var indexname = ""
 
     var i = indexes.length
     do {
-      indexname = entityname + "_" + indextype.name + "_" + i
+      indexname = entityname + "_" + column + "_" + indextype.name + "_" + i
       i += 1
     } while (indexes.contains(indexname))
 
@@ -63,10 +63,11 @@ object IndexHandler {
     * Creates an index.
     *
     * @param entity
+    * @param column the column to index
     * @param indexgenerator generator to create index
     * @return index
     */
-  def createIndex(entity: Entity, indexgenerator: IndexGenerator)(implicit ac: AdamContext): Try[Index] = {
+  def createIndex(entity: Entity, column : String, indexgenerator: IndexGenerator)(implicit ac: AdamContext): Try[Index] = {
     lock.synchronized {
       val count = entity.count
       if (count < MINIMUM_NUMBER_OF_TUPLE) {
@@ -74,8 +75,8 @@ object IndexHandler {
         return Failure(new GeneralAdamException("not enough tuples for index"))
       }
 
-      val indexname = createIndexName(entity.entityname, indexgenerator.indextypename)
-      val rdd: RDD[IndexingTaskTuple] = entity.getFeaturedata.map { x => IndexingTaskTuple(x.getLong(0), x.getAs[FeatureVectorWrapper](1).vector) }
+      val indexname = createIndexName(entity.entityname, column, indexgenerator.indextypename)
+      val rdd: RDD[IndexingTaskTuple] = entity.getFeaturedata.map { x => IndexingTaskTuple(x.getAs[Long](FieldNames.idColumnName), x.getAs[FeatureVectorWrapper](column).vector) }
       val index = indexgenerator.index(indexname, entity.entityname, rdd)
       index.df = index
         .df
@@ -83,7 +84,7 @@ object IndexHandler {
         .withColumnRenamed("id", FieldNames.idColumnName)
         .withColumnRenamed("value", FieldNames.featureIndexColumnName)
       storage.write(indexname, index.df)
-      CatalogOperator.createIndex(indexname, indexname, entity.entityname, indexgenerator.indextypename, index.metadata)
+      CatalogOperator.createIndex(indexname, indexname, entity.entityname, column, indexgenerator.indextypename, index.metadata)
       Success(index)
     }
   }
@@ -218,15 +219,15 @@ object IndexHandler {
 
     option match {
       case PartitionOptions.CREATE_NEW =>
-        val newName = createIndexName(index.entityname, index.indextypename)
+        val newName = createIndexName(index.entityname, index.column, index.indextypename)
         storage.write(newName, data)
-        CatalogOperator.createIndex(newName, newName, index.entityname, index.indextypename, index.metadata)
+        CatalogOperator.createIndex(newName, newName, index.entityname, index.column, index.indextypename, index.metadata)
         IndexLRUCache.invalidate(newName)
 
         return Success(load(newName).get)
 
       case PartitionOptions.CREATE_TEMP =>
-        val newName = createIndexName(index.entityname, index.indextypename)
+        val newName = createIndexName(index.entityname, index.column, index.indextypename)
 
         val newIndex = index.copy(Some(newName))
         newIndex.df = data

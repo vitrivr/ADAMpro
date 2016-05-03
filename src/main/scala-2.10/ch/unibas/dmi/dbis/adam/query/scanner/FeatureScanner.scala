@@ -51,7 +51,7 @@ object FeatureScanner {
     })
 
     data
-      .withColumn(FieldNames.distanceColumnName, distUDF(data(FieldNames.internFeatureColumnName)))
+      .withColumn(FieldNames.distanceColumnName, distUDF(data(query.column)))
       .select(col(FieldNames.distanceColumnName), col(FieldNames.idColumnName))
       .orderBy(col(FieldNames.distanceColumnName))
       .limit(query.k)

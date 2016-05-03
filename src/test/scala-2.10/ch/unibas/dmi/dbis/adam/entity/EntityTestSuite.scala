@@ -31,7 +31,7 @@ class EntityTestSuite extends AdamTestBase {
         val givenEntities = EntityHandler.list()
 
         When("a new random entity (without any metadata) is created")
-        CreateEntityOp(entityname)
+        EntityHandler.create(entityname, Seq(FieldDefinition("feature", FieldTypes.FEATURETYPE, false, false, false)))
 
         Then("one entity should be created")
         val finalEntities = EntityHandler.list()
@@ -50,7 +50,7 @@ class EntityTestSuite extends AdamTestBase {
     scenario("drop an existing entity") {
       withEntityName { entityname =>
         Given("there exists one entity")
-        CreateEntityOp(entityname)
+        EntityHandler.create(entityname, Seq(FieldDefinition("feature", FieldTypes.FEATURETYPE, false, false, false)))
         assert(EntityHandler.list().contains(entityname.toLowerCase()))
 
         When("the entity is dropped")
@@ -71,6 +71,7 @@ class EntityTestSuite extends AdamTestBase {
 
         When("a new random entity with metadata is created")
         val fieldTemplate = Seq(
+          ("featurefield", FieldTypes.FEATURETYPE, ""),
           ("stringfield", FieldTypes.STRINGTYPE, "text"),
           ("floatfield", FieldTypes.FLOATTYPE, "real"),
           ("doublefield", FieldTypes.DOUBLETYPE, "double precision"),
@@ -79,7 +80,7 @@ class EntityTestSuite extends AdamTestBase {
           ("booleanfield", FieldTypes.BOOLEANTYPE, "boolean")
         )
 
-        val entity = EntityHandler.create(entityname, Some(fieldTemplate.map(ft => FieldDefinition(ft._1, ft._2))))
+        val entity = EntityHandler.create(entityname, fieldTemplate.map(x => FieldDefinition(x._1, x._2)))
 
         Then("the entity should be created")
         val entities = EntityHandler.list()
@@ -98,7 +99,7 @@ class EntityTestSuite extends AdamTestBase {
         val dbNames = lb.toList.toMap
         val templateNames = fieldTemplate.map(ft => (ft._1, ft._3)).toMap + (FieldNames.idColumnName -> "bigint")
 
-        assert(dbNames.size == templateNames.size)
+        assert(dbNames.size == templateNames.size - 1) //-1 because metadata does not contain our feature field
 
         And("the metadata table should contain the same columns (with the corresponding data type)")
         assert(dbNames.keySet.forall({ key => dbNames(key) == templateNames(key) }))
@@ -116,8 +117,8 @@ class EntityTestSuite extends AdamTestBase {
     scenario("drop an entity with metadata") {
       withEntityName { entityname =>
         Given("an entity with metadata")
-        val fields = Seq[FieldDefinition](FieldDefinition("stringfield", FieldTypes.STRINGTYPE))
-        CreateEntityOp(entityname, Option(fields))
+        val fields = Seq[FieldDefinition](FieldDefinition("feature", FieldTypes.FEATURETYPE), FieldDefinition("stringfield", FieldTypes.STRINGTYPE))
+        CreateEntityOp(entityname, fields)
 
         val preResult = getJDBCConnection.createStatement().executeQuery("SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = '" + entityname.toLowerCase() + "'")
         var tableCount = 0
@@ -148,11 +149,12 @@ class EntityTestSuite extends AdamTestBase {
         val fields = Seq[FieldDefinition](
           FieldDefinition("pkfield", FieldTypes.INTTYPE, true),
           FieldDefinition("uniquefield", FieldTypes.INTTYPE, false, true),
-          FieldDefinition("indexedfield", FieldTypes.INTTYPE, false, false, true)
+          FieldDefinition("indexedfield", FieldTypes.INTTYPE, false, false, true),
+          FieldDefinition("feature", FieldTypes.FEATURETYPE)
         )
 
         When("the entity is created")
-        CreateEntityOp(entityname, Option(fields))
+        CreateEntityOp(entityname, fields)
 
         Then("the PK should be correctly")
         val pkResult = getJDBCConnection.createStatement().executeQuery(
@@ -183,13 +185,13 @@ class EntityTestSuite extends AdamTestBase {
     scenario("insert data in an entity without metadata") {
       withEntityName { entityname =>
         Given("an entity without metadata")
-        CreateEntityOp(entityname)
+        EntityHandler.create(entityname, Seq(FieldDefinition("featurefield", FieldTypes.FEATURETYPE, false, false, false)))
 
         val ntuples = Random.nextInt(1000)
         val ndims = 100
 
         val schema = StructType(Seq(
-          StructField(FieldNames.featureColumnName, new FeatureVectorWrapperUDT, false)
+          StructField("featurefield", new FeatureVectorWrapperUDT, false)
         ))
 
         val rdd = ac.sc.parallelize((0 until ntuples).map(id =>
@@ -202,7 +204,8 @@ class EntityTestSuite extends AdamTestBase {
         EntityHandler.insertData(entityname, data)
 
         Then("the data is available without metadata")
-        assert(EntityHandler.countTuples(entityname) == ntuples)
+        val counted = EntityHandler.countTuples(entityname).get
+        assert(counted - ntuples == 0)
       }
     }
 
@@ -215,6 +218,7 @@ class EntityTestSuite extends AdamTestBase {
         Given("an entity with metadata")
         //every field has been created twice, one is not filled to check whether this works too
         val fieldTemplate = Seq(
+          ("featurefield", FieldTypes.FEATURETYPE, ""),
           ("stringfield", FieldTypes.STRINGTYPE, "text"),
           ("stringfieldunfilled", FieldTypes.STRINGTYPE, "text"),
           ("floatfield", FieldTypes.FLOATTYPE, "real"),
@@ -230,7 +234,7 @@ class EntityTestSuite extends AdamTestBase {
         )
 
         val fields = fieldTemplate.map(ft => FieldDefinition(ft._1, ft._2))
-        CreateEntityOp(entityname, Some(fields))
+        CreateEntityOp(entityname, fields)
 
         val ntuples = Random.nextInt(1000)
         val ndims = 100
@@ -238,7 +242,7 @@ class EntityTestSuite extends AdamTestBase {
         val maxInt = 50000
 
         val schema = StructType(fieldTemplate.filterNot(_._1.endsWith("unfilled"))
-          .map(field => StructField(field._1, field._2.datatype, false)).+:(StructField(FieldNames.featureColumnName, new FeatureVectorWrapperUDT, false)))
+          .map(field => StructField(field._1, field._2.datatype, false)))
 
         val rdd = ac.sc.parallelize((0 until ntuples).map(id =>
           Row(new FeatureVectorWrapper(Seq.fill(ndims)(Random.nextFloat())),
@@ -256,12 +260,13 @@ class EntityTestSuite extends AdamTestBase {
         EntityHandler.insertData(entityname, data)
 
         Then("the data is available with metadata")
-        assert(EntityHandler.countTuples(entityname) == ntuples)
+        assert(EntityHandler.countTuples(entityname).get.toInt == ntuples)
 
         And("all tuples are inserted")
         val countResult = getJDBCConnection.createStatement().executeQuery("SELECT COUNT(*) AS count FROM " + entityname)
         countResult.next() //go to first result
-      val tableCount = countResult.getInt("count")
+
+        val tableCount = countResult.getInt("count")
         assert(tableCount == ntuples)
 
         And("all filled fields should be filled")

@@ -79,6 +79,7 @@ case class BooleanQuery(
 /**
   * Nearest neighbour query parameters.
   *
+  * @param column name of column to perform query on
   * @param q
   * @param distance
   * @param k
@@ -89,6 +90,7 @@ case class BooleanQuery(
   * @param queryID
   */
 case class NearestNeighbourQuery(
+                                  column : String,
                                   q: FeatureVector,
                                   distance: DistanceFunction,
                                   k: Int,

@@ -1,10 +1,10 @@
 package ch.unibas.dmi.dbis.adam.storage.components
 
-import ch.unibas.dmi.dbis.adam.config.FieldNames
-import ch.unibas.dmi.dbis.adam.datatypes.feature.FeatureVectorWrapperUDT
 import ch.unibas.dmi.dbis.adam.entity.Entity.EntityName
+import ch.unibas.dmi.dbis.adam.entity.FieldDefinition
 import ch.unibas.dmi.dbis.adam.entity.Tuple.TupleID
 import ch.unibas.dmi.dbis.adam.main.AdamContext
+import ch.unibas.dmi.dbis.adam.main.SparkStartup.Implicits._
 import org.apache.spark.sql.types._
 import org.apache.spark.sql.{DataFrame, Row, SaveMode}
 
@@ -30,14 +30,12 @@ trait FeatureStorage {
     * @param entityname
     * @return true on success
     */
-  def create(entityname: EntityName)(implicit ac: AdamContext): Boolean = {
-    val featureSchema = StructType(
-      Seq(
-        StructField(FieldNames.idColumnName, LongType, false),
-        StructField(FieldNames.internFeatureColumnName,  new FeatureVectorWrapperUDT, false)
-      )
-    )
-    val df = ac.sqlContext.createDataFrame(ac.sc.emptyRDD[Row], featureSchema)
+  def create(entityname: EntityName, fields : Seq[FieldDefinition])(implicit ac: AdamContext): Boolean = {
+    val structFields = fields.map {
+      field => StructField(field.name, field.fieldtype.datatype)
+    }
+
+    val df = sqlContext.createDataFrame(sc.emptyRDD[Row], StructType(structFields))
     write(entityname, df, SaveMode.Overwrite)
   }
 

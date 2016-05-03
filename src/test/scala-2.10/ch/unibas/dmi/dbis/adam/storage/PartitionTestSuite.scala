@@ -30,13 +30,13 @@ class PartitionTestSuite extends AdamTestBase {
     scenario("repartition replacing existing") {
       Given("an entity")
       val es = getGroundTruthEvaluationSet()
-      val index = IndexOp(es.entity.entityname, IndexTypes.ECPINDEX, EuclideanDistance)
+      val index = IndexOp(es.entity.entityname, "featurefield", IndexTypes.ECPINDEX, EuclideanDistance)
       assert(index.isSuccess)
 
       When("performing a repartitioning with replacement")
       PartitionHandler.repartitionIndex(index.get.indexname, nPartitions, false, Some(Seq(FieldNames.idColumnName)), PartitionOptions.REPLACE_EXISTING)
 
-      val partnnq = NearestNeighbourQuery(es.feature.vector, es.distance, es.k, false, Map[String, String](), Some(Set(0)))
+      val partnnq = NearestNeighbourQuery("featurefield", es.feature.vector, es.distance, es.k, false, Map[String, String](), Some(Set(0)))
 
       val partresults = QueryOp.index(IndexHandler.load(index.get.indexname).get, partnnq, None, false)
         .map(r => (r.getAs[Float](FieldNames.distanceColumnName), r.getAs[Long](FieldNames.idColumnName))).collect()
@@ -56,12 +56,12 @@ class PartitionTestSuite extends AdamTestBase {
     scenario("repartition creating temporary new") {
       Given("an entity")
       val es = getGroundTruthEvaluationSet()
-      val index = IndexOp(es.entity.entityname, IndexTypes.ECPINDEX, EuclideanDistance)
+      val index = IndexOp(es.entity.entityname, "featurefield", IndexTypes.ECPINDEX, EuclideanDistance)
       assert(index.isSuccess)
 
       When("performing a repartitioning with replacement")
       val partindex = PartitionHandler.repartitionIndex(index.get.indexname, nPartitions, false, Some(Seq(FieldNames.idColumnName)), PartitionOptions.CREATE_TEMP)
-      val partnnq = NearestNeighbourQuery(es.feature.vector, es.distance, es.k, false, Map[String, String](), Some(Set(0)))
+      val partnnq = NearestNeighbourQuery("featurefield", es.feature.vector, es.distance, es.k, false, Map[String, String](), Some(Set(0)))
 
       val partresults = QueryOp.index(IndexHandler.load(partindex.get.indexname).get, partnnq, None, false)
         .map(r => (r.getAs[Float](FieldNames.distanceColumnName), r.getAs[Long](FieldNames.idColumnName))).collect()
@@ -87,12 +87,12 @@ class PartitionTestSuite extends AdamTestBase {
     scenario("repartition creating new") {
       Given("an entity")
       val es = getGroundTruthEvaluationSet()
-      val index = IndexOp(es.entity.entityname, IndexTypes.ECPINDEX, EuclideanDistance)
+      val index = IndexOp(es.entity.entityname, "featurefield", IndexTypes.ECPINDEX, EuclideanDistance)
       assert(index.isSuccess)
 
       When("performing a repartitioning with replacement")
       val partindex = PartitionHandler.repartitionIndex(index.get.indexname, nPartitions, false, Some(Seq(FieldNames.idColumnName)), PartitionOptions.CREATE_NEW)
-      val partnnq = NearestNeighbourQuery(es.feature.vector, es.distance, es.k, false, Map[String, String](), Some(Set(0)))
+      val partnnq = NearestNeighbourQuery("featurefield", es.feature.vector, es.distance, es.k, false, Map[String, String](), Some(Set(0)))
 
       IndexLRUCache.empty()
 
@@ -117,12 +117,12 @@ class PartitionTestSuite extends AdamTestBase {
     scenario("repartition based on metadata") {
       Given("an entity")
       val es = getGroundTruthEvaluationSet()
-      val index = IndexOp(es.entity.entityname, IndexTypes.ECPINDEX, EuclideanDistance)
+      val index = IndexOp(es.entity.entityname, "featurefield", IndexTypes.ECPINDEX, EuclideanDistance)
       assert(index.isSuccess)
 
       When("performing a repartitioning with replacement")
       val partindex = PartitionHandler.repartitionIndex(index.get.indexname, nPartitions, true, Some(Seq("tid")), PartitionOptions.CREATE_NEW)
-      val partnnq = NearestNeighbourQuery(es.feature.vector, es.distance, es.k, false, Map[String, String](), Some(Set(0)))
+      val partnnq = NearestNeighbourQuery("featurefield", es.feature.vector, es.distance, es.k, false, Map[String, String](), Some(Set(0)))
 
       IndexLRUCache.empty()
 

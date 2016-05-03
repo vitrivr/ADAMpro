@@ -27,7 +27,7 @@ object CreateEntityOp {
     *               as key = name, value = field definition
     * @return
     */
-  def apply(entityname: EntityName, fields: Option[Seq[FieldDefinition]] = None)(implicit ac: AdamContext): Try[Entity] = {
+  def apply(entityname: EntityName, fields: Seq[FieldDefinition])(implicit ac: AdamContext): Try[Entity] = {
     log.debug("perform create entity operation")
     EntityHandler.create(entityname, fields)
   }

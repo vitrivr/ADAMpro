@@ -187,7 +187,7 @@ object CatalogOperator {
     * @param entityname
     * @param indexmeta
     */
-  def createIndex(indexname: IndexName, filename: String, entityname: EntityName, indextypename: IndexTypeName, indexmeta: Serializable): Boolean = {
+  def createIndex(indexname: IndexName, filename: String, entityname: EntityName, column : String, indextypename: IndexTypeName, indexmeta: Serializable): Boolean = {
     if (!existsEntity(entityname)) {
       throw new EntityNotExistingException()
     }
@@ -206,7 +206,7 @@ object CatalogOperator {
     oos.close
 
     val setup = DBIO.seq(
-      indexes.+=((indexname, entityname, indextypename.name, filename, metaFilePath, DEFAULT_INDEX_WEIGHT))
+      indexes.+=((indexname, entityname, column, indextypename.name, filename, metaFilePath, DEFAULT_INDEX_WEIGHT))
     )
 
     Await.result(db.run(setup), MAX_WAITING_TIME)
@@ -263,7 +263,7 @@ object CatalogOperator {
     * @return
     */
   def listIndexes(entityname: EntityName = null, indextypename: IndexTypeName = null): Seq[(IndexName, IndexTypeName, Float)] = {
-    var catalog: Query[IndexesCatalog, (String, String, String, String, String, Float), Seq] = indexes
+    var catalog: Query[IndexesCatalog, (String, String, String, String, String, String, Float), Seq] = indexes
 
     if (entityname != null) {
       catalog = catalog.filter(_.entityname === entityname.toString())
@@ -275,6 +275,16 @@ object CatalogOperator {
 
     val query = catalog.map(index => (index.indexname, index.indextypename, index.indexweight)).result
     Await.result(db.run(query), MAX_WAITING_TIME).map(index => (index._1, IndexTypes.withName(index._2).get, index._3))
+  }
+
+  /**
+    *
+    * @param indexname
+    * @return
+    */
+  def getIndexColumn(indexname : IndexName) : String = {
+    val query = indexes.filter(_.indexname === indexname).map(_.fieldname).result.head
+    Await.result(db.run(query), MAX_WAITING_TIME)
   }
 
   /**

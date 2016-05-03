@@ -27,15 +27,11 @@ class DataDefinitionRPC(implicit ac: AdamContext) extends AdamDefinitionGrpc.Ada
   override def createEntity(request: CreateEntityMessage): Future[AckMessage] = {
     log.debug("rpc call for create entity operation")
 
-    val entity = if (!request.fields.isEmpty) {
-      val entityname = request.entity
-      val fields = request.fields.map(field => {
-        FieldDefinition(field.name, matchFields(field.fieldtype), false, field.unique, field.indexed)
-      })
-      CreateEntityOp(entityname, Option(fields))
-    } else {
-      CreateEntityOp(request.entity, None)
-    }
+    val entityname = request.entity
+    val fields = request.fields.map(field => {
+      FieldDefinition(field.name, matchFields(field.fieldtype), false, field.unique, field.indexed)
+    })
+    val entity = CreateEntityOp(entityname, fields)
 
     if (entity.isSuccess) {
       Future.successful(AckMessage(code = AckMessage.Code.OK, entity.get.entityname))
@@ -56,6 +52,7 @@ class DataDefinitionRPC(implicit ac: AdamContext) extends AdamDefinitionGrpc.Ada
     case FieldType.INT => FieldTypes.INTTYPE
     case FieldType.LONG => FieldTypes.LONGTYPE
     case FieldType.STRING => FieldTypes.STRINGTYPE
+    case FieldType.FEATURE => FieldTypes.FEATURETYPE
     case _ => FieldTypes.UNRECOGNIZEDTYPE
   }
 
@@ -129,7 +126,7 @@ class DataDefinitionRPC(implicit ac: AdamContext) extends AdamDefinitionGrpc.Ada
       throw new Exception("no index type name given.")
     }
 
-    val index = IndexOp(request.entity, indextypename, RPCHelperMethods.prepareDistance(request.distance.get), request.options)
+    val index = IndexOp(request.entity, request.column, indextypename, RPCHelperMethods.prepareDistance(request.distance.get), request.options)
 
     if (index.isSuccess) {
       Future.successful(AckMessage(code = AckMessage.Code.OK, message = index.get.indexname))
@@ -232,7 +229,7 @@ class DataDefinitionRPC(implicit ac: AdamContext) extends AdamDefinitionGrpc.Ada
   }
 
   override def generateAllIndexes(request: IndexMessage): Future[AckMessage] = {
-    val res = IndexOp.generateAll(request.entity, RPCHelperMethods.prepareDistance(request.distance.get))
+    val res = IndexOp.generateAll(request.entity, request.column, RPCHelperMethods.prepareDistance(request.distance.get))
 
     if (res) {
       Future.successful(AckMessage(AckMessage.Code.OK))

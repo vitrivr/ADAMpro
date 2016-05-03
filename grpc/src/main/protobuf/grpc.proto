@@ -89,6 +89,7 @@ message FieldDefinitionMessage {
       DOUBLE = 3;
       STRING = 4;
       BOOLEAN = 5;
+      FEATURE = 6;
     }
   FieldType fieldtype = 2;
   bool pk = 3;
@@ -122,10 +123,11 @@ message InsertMessage {
 
 message IndexMessage {
   string entity = 1;
-  IndexType indextype = 2;
-  DistanceMessage distance = 3;
+  string column = 2;
+  IndexType indextype = 3;
+  DistanceMessage distance = 4;
   //for possible options see each index structure
-  map<string, string> options = 4;
+  map<string, string> options = 5;
 }
 
 message RepartitionMessage {
@@ -269,14 +271,15 @@ message SubExpressionQueryMessage {
 }
 
 message NearestNeighbourQueryMessage {
-  repeated float query = 1 [packed=true];
-  DistanceMessage distance = 2;
-  int32 k = 3;
+  string column = 1;
+  repeated float query = 2 [packed=true];
+  DistanceMessage distance = 3;
+  int32 k = 4;
   //specifies whether only the candidates from the index search are returned and no exact distance computation is performed
-  bool indexOnly = 4;
+  bool indexOnly = 5;
   //for possible options see each index structure
-  map<string, string> options = 5;
-  repeated int32 partitions = 6;
+  map<string, string> options = 6;
+  repeated int32 partitions = 7;
 }
 
 message DistanceMessage {

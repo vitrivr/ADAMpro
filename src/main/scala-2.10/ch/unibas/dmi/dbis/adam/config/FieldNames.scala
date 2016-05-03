@@ -8,12 +8,9 @@ package ch.unibas.dmi.dbis.adam.config
   */
 object FieldNames {
   val idColumnName = "adamproid"
-  val internFeatureColumnName = "adamprofeature"
   val distanceColumnName = "adamprodistance"
-
-  val featureColumnName = "feature"
 
   val featureIndexColumnName = "adamproindexfeature"
 
-  val reservedNames = Seq(idColumnName, internFeatureColumnName, distanceColumnName, featureColumnName, featureIndexColumnName)
+  val reservedNames = Seq(idColumnName, distanceColumnName, featureIndexColumnName)
 }

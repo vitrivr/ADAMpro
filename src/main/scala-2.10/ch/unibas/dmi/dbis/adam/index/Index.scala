@@ -67,6 +67,12 @@ trait Index {
   private[index] def metadata: Serializable
 
   /**
+    *
+    * @return
+    */
+  def column = CatalogOperator.getIndexColumn(indexname)
+
+  /**
     * Returns the weight set to the index. The index weight is used at query time to choose which index is used.
     */
   def weight = CatalogOperator.getIndexWeight(indexname)

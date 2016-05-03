@@ -2,7 +2,7 @@ package ch.unibas.dmi.dbis.adam.entity
 
 import ch.unibas.dmi.dbis.adam.config.FieldNames
 import ch.unibas.dmi.dbis.adam.entity.Entity.EntityName
-import ch.unibas.dmi.dbis.adam.entity.FieldTypes.LONGTYPE
+import ch.unibas.dmi.dbis.adam.entity.FieldTypes.{FEATURETYPE, LONGTYPE}
 import ch.unibas.dmi.dbis.adam.exception.{EntityExistingException, EntityNotExistingException, EntityNotProperlyDefinedException}
 import ch.unibas.dmi.dbis.adam.index.IndexHandler
 import ch.unibas.dmi.dbis.adam.main.{AdamContext, SparkStartup}
@@ -36,7 +36,7 @@ object EntityHandler {
     *               as key = name, value = SQL type, note the reserved names
     * @return
     */
-  def create(entityname: EntityName, fields: Option[Seq[FieldDefinition]] = None)(implicit ac: AdamContext): Try[Entity] = {
+  def create(entityname: EntityName, fields: Seq[FieldDefinition])(implicit ac: AdamContext): Try[Entity] = {
     lock.synchronized {
       //checks
       if (exists(entityname)) {
@@ -44,37 +44,42 @@ object EntityHandler {
         return Failure(EntityExistingException())
       }
 
-      if (fields.isDefined) {
-        FieldNames.reservedNames.foreach { reservedName =>
-          if (fields.get.contains(reservedName)) {
-            log.error("entity defined with field " + FieldNames.idColumnName + ", but name is reserved")
-            return Failure(EntityNotProperlyDefinedException())
-          }
-        }
+      if(fields.isEmpty){
+        log.error("entity " + entityname + " will have no fields")
+        return Failure(EntityNotProperlyDefinedException())
+      }
 
-        if (fields.get.map(_.name).distinct.length != fields.get.length) {
-          log.error("entity defined with duplicate fields")
-          return Failure(EntityNotProperlyDefinedException())
-        }
-
-        if (fields.get.filter(_.pk).length > 1) {
-          log.error("entity defined with more than one primary key")
+      FieldNames.reservedNames.foreach { reservedName =>
+        if (fields.contains(reservedName)) {
+          log.error("entity defined with field " + FieldNames.idColumnName + ", but name is reserved")
           return Failure(EntityNotProperlyDefinedException())
         }
       }
 
-      //perform
-      featureStorage.create(entityname)
-
-      if (fields.isDefined) {
-        val fieldsWithId = fields.get.+:(FieldDefinition(FieldNames.idColumnName, LONGTYPE, false, true, true))
-        metadataStorage.create(entityname, fieldsWithId)
-        CatalogOperator.createEntity(entityname, true)
-        Success(Entity(entityname, featureStorage, Option(metadataStorage)))
-      } else {
-        CatalogOperator.createEntity(entityname, false)
-        Success(Entity(entityname, featureStorage, None))
+      if (fields.map(_.name).distinct.length != fields.length) {
+        log.error("entity defined with duplicate fields")
+        return Failure(EntityNotProperlyDefinedException())
       }
+
+      if (fields.filter(_.pk).length > 1) {
+        log.error("entity defined with more than one primary key")
+        return Failure(EntityNotProperlyDefinedException())
+      }
+    }
+
+    val featureFields = fields.filter(_.fieldtype == FEATURETYPE).+:(FieldDefinition(FieldNames.idColumnName, LONGTYPE, false, true, true))
+
+    //perform
+    featureStorage.create(entityname, featureFields)
+
+    if (!fields.filterNot(_.fieldtype == FEATURETYPE).isEmpty) {
+      val metadataFields = fields.filterNot(_.fieldtype == FEATURETYPE).+:(FieldDefinition(FieldNames.idColumnName, LONGTYPE, false, true, true))
+      metadataStorage.create(entityname, metadataFields)
+      CatalogOperator.createEntity(entityname, true)
+      Success(Entity(entityname, featureStorage, Option(metadataStorage)))
+    } else {
+      CatalogOperator.createEntity(entityname, false)
+      Success(Entity(entityname, featureStorage, None))
     }
   }
 
@@ -117,7 +122,7 @@ object EntityHandler {
     * @param ignoreChecks
     * @return
     */
-  def insertData(entityname: EntityName, insertion: DataFrame, ignoreChecks: Boolean = false )(implicit ac: AdamContext): Try[Void] = {
+  def insertData(entityname: EntityName, insertion: DataFrame, ignoreChecks: Boolean = false)(implicit ac: AdamContext): Try[Void] = {
     val entity = load(entityname).get
 
     //TODO: possibly compare schemas
@@ -185,7 +190,7 @@ object EntityHandler {
     */
   def countTuples(entityname: EntityName)(implicit ac: AdamContext): Try[Long] = {
     val entity = load(entityname)
-    if(entity.isSuccess){
+    if (entity.isSuccess) {
       Success(entity.get.count)
     } else {
       Failure(entity.failed.get)

@@ -35,7 +35,7 @@ class IndexTestSuite extends AdamTestBase {
         assert(entity.isSuccess)
 
         When("creating the index")
-        val index = IndexOp(entity.get.entityname, IndexTypes.ECPINDEX, EuclideanDistance)
+        val index = IndexOp(entity.get.entityname, "feature", IndexTypes.ECPINDEX, EuclideanDistance)
         assert(index.isSuccess)
 
         Then("the index should be created")
@@ -59,7 +59,7 @@ class IndexTestSuite extends AdamTestBase {
         assert(entity.isSuccess)
 
         When("creating the index")
-        val index = IndexOp(entity.get.entityname, IndexTypes.ECPINDEX, EuclideanDistance)
+        val index = IndexOp(entity.get.entityname, "feature", IndexTypes.ECPINDEX, EuclideanDistance)
         assert(index.isSuccess)
 
         Then("the index should be created")
@@ -83,7 +83,7 @@ class IndexTestSuite extends AdamTestBase {
         assert(entity.isSuccess)
 
         When("an eCP index is created")
-        val index = IndexOp(entity.get.entityname, IndexTypes.ECPINDEX, EuclideanDistance)
+        val index = IndexOp(entity.get.entityname, "feature", IndexTypes.ECPINDEX, EuclideanDistance)
         assert(index.isSuccess)
 
         Then("the index has been created")
@@ -105,7 +105,7 @@ class IndexTestSuite extends AdamTestBase {
         assert(entity.isSuccess)
 
         When("an LSH index is created")
-        val index = IndexOp(entity.get.entityname, IndexTypes.LSHINDEX, EuclideanDistance)
+        val index = IndexOp(entity.get.entityname, "feature", IndexTypes.LSHINDEX, EuclideanDistance)
         assert(index.isSuccess)
 
         Then("the index has been created")
@@ -127,7 +127,7 @@ class IndexTestSuite extends AdamTestBase {
         assert(entity.isSuccess)
 
         When("an SH index is created")
-        val index = IndexOp(entity.get.entityname, IndexTypes.PQINDEX, EuclideanDistance)
+        val index = IndexOp(entity.get.entityname, "feature", IndexTypes.PQINDEX, EuclideanDistance)
         assert(index.isSuccess)
 
         Then("the index has been created")
@@ -150,7 +150,7 @@ class IndexTestSuite extends AdamTestBase {
         assert(entity.isSuccess)
 
         When("an SH index is created")
-        val index = IndexOp(entity.get.entityname, IndexTypes.SHINDEX, EuclideanDistance)
+        val index = IndexOp(entity.get.entityname, "feature", IndexTypes.SHINDEX, EuclideanDistance)
         assert(index.isSuccess)
 
         Then("the index has been created")
@@ -173,7 +173,7 @@ class IndexTestSuite extends AdamTestBase {
         assert(entity.isSuccess)
 
         When("an VA-File index is created")
-        val index = IndexOp(entity.get.entityname, IndexTypes.VAFINDEX, EuclideanDistance)
+        val index = IndexOp(entity.get.entityname, "feature", IndexTypes.VAFINDEX, EuclideanDistance)
         assert(index.isSuccess)
 
         Then("the index has been created")
@@ -199,7 +199,7 @@ class IndexTestSuite extends AdamTestBase {
         assert(entity.isSuccess)
 
         When("an VA-File index is created")
-        val index = IndexOp(entity.get.entityname, IndexTypes.VAVINDEX, EuclideanDistance)
+        val index = IndexOp(entity.get.entityname, "feature", IndexTypes.VAVINDEX, EuclideanDistance)
         assert(index.isSuccess)
 
         Then("the index has been created")

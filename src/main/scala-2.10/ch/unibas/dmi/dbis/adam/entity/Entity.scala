@@ -1,7 +1,7 @@
 package ch.unibas.dmi.dbis.adam.entity
 
 import ch.unibas.dmi.dbis.adam.config.FieldNames
-import ch.unibas.dmi.dbis.adam.datatypes.feature.FeatureVectorWrapper
+import ch.unibas.dmi.dbis.adam.datatypes.feature.FeatureVectorWrapperUDT
 import ch.unibas.dmi.dbis.adam.entity.Entity._
 import ch.unibas.dmi.dbis.adam.entity.FieldTypes.FieldType
 import ch.unibas.dmi.dbis.adam.main.AdamContext
@@ -24,7 +24,7 @@ import scala.util.{Success, Try}
 case class Entity(entityname: EntityName, featureStorage: FeatureStorage, metadataStorage: Option[MetadataStorage])(implicit ac: AdamContext) {
   val log = Logger.getLogger(getClass.getName)
 
-  private def featureData = featureStorage.read(entityname).get.withColumnRenamed(FieldNames.featureColumnName, FieldNames.internFeatureColumnName)
+  private def featureData = featureStorage.read(entityname).get
   private def metaData = if (metadataStorage.isDefined) {
     Some(metadataStorage.get.read(entityname))
   } else {
@@ -65,27 +65,28 @@ case class Entity(entityname: EntityName, featureStorage: FeatureStorage, metada
     log.debug("inserting data into entity")
 
     if (!ignoreChecks) {
-      val dataDimensionality = insertion.first.getAs[FeatureVectorWrapper](FieldNames.featureColumnName).vector.size
+      /*TODO: val dataDimensionality = insertion.first.getAs[FeatureVectorWrapper](FieldNames.featureColumnName).vector.size
 
       val entityDimensionality = CatalogOperator.getDimensionality(entityname)
       if (entityDimensionality.isDefined && dataDimensionality != entityDimensionality.get) {
         log.warn("new data has not same dimensionality as existing data")
       } else if (entityDimensionality.isEmpty) {
         CatalogOperator.updateDimensionality(entityname, dataDimensionality)
-      }
+      }*/
     }
 
     val rdd = insertion.rdd.zipWithUniqueId.map { case (r: Row, adamtwoid: Long) => Row.fromSeq(adamtwoid +: r.toSeq) }
     val insertionWithPK = ac.sqlContext
       .createDataFrame(
         rdd, StructType(StructField(FieldNames.idColumnName, LongType, false) +: insertion.schema.fields))
-      .withColumnRenamed(FieldNames.featureColumnName, FieldNames.internFeatureColumnName)
 
-    featureStorage.write(entityname, insertionWithPK.select(FieldNames.idColumnName, FieldNames.internFeatureColumnName), SaveMode.Append)
+    val featureFieldNames = insertion.schema.fields.filter(_.dataType == new FeatureVectorWrapperUDT).map(_.name)
+    featureStorage.write(entityname, insertionWithPK.select(FieldNames.idColumnName, featureFieldNames.toSeq : _*), SaveMode.Append)
 
+    val metadataFieldNames = insertion.schema.fields.filterNot(_.dataType == new FeatureVectorWrapperUDT).map(_.name)
     if (metadataStorage.isDefined) {
       log.debug("metadata storage is defined: inserting data also into metadata storage")
-      metadataStorage.get.write(entityname, insertionWithPK.drop(FieldNames.internFeatureColumnName), SaveMode.Append)
+      metadataStorage.get.write(entityname, insertionWithPK.select(FieldNames.idColumnName, metadataFieldNames.toSeq : _*), SaveMode.Append)
     }
 
     if (!CatalogOperator.listIndexes(entityname).isEmpty) {

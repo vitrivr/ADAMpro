@@ -160,7 +160,7 @@ object QueryHandler {
       }
 
       val annq = if (nnq.isDefined) {
-        Option(NearestNeighbourQuery(nnq.get.q, nnq.get.distance, nnq.get.k, true, nnq.get.options, nnq.get.partitions, nnq.get.queryID))
+        Option(NearestNeighbourQuery(nnq.get.column, nnq.get.q, nnq.get.distance, nnq.get.k, true, nnq.get.options, nnq.get.partitions, nnq.get.queryID))
       } else {
         None
       }
@@ -214,7 +214,7 @@ object QueryHandler {
       if (filter.isDefined) {
         abq.append(filter.get)
       }
-      val annq = NearestNeighbourQuery(nnq.q, nnq.distance, nnq.k, true, nnq.options, nnq.partitions, nnq.queryID)
+      val annq = NearestNeighbourQuery(nnq.column, nnq.q, nnq.distance, nnq.k, true, nnq.options, nnq.partitions, nnq.queryID)
       sequentialQuery(entityname)(annq, Option(abq), false, id, cache)
     }
   }
@@ -263,7 +263,7 @@ object QueryHandler {
       if (filter.isDefined) {
         abq.append(filter.get)
       }
-      val annq = NearestNeighbourQuery(nnq.q, nnq.distance, nnq.k, true, nnq.options, nnq.partitions, nnq.queryID)
+      val annq = NearestNeighbourQuery(nnq.column, nnq.q, nnq.distance, nnq.k, true, nnq.options, nnq.partitions, nnq.queryID)
       indexQuery(entityname, indextypename)(annq, Option(abq), false, id, cache)
     }
   }
@@ -325,7 +325,7 @@ object QueryHandler {
       if (filter.isDefined) {
         abq.append(filter.get)
       }
-      val annq = NearestNeighbourQuery(nnq.q, nnq.distance, nnq.k, true, nnq.options, nnq.partitions, nnq.queryID)
+      val annq = NearestNeighbourQuery(nnq.column, nnq.q, nnq.distance, nnq.k, true, nnq.options, nnq.partitions, nnq.queryID)
       specifiedIndexQuery(index)(annq, Option(abq), false, id, cache)
     }
   }
@@ -513,6 +513,7 @@ object QueryHandler {
     * @return
     */
   private def getFilter(entityname: EntityName, bq: BooleanQuery)(implicit ac: AdamContext): Option[Set[TupleID]] = {
+    //TODO: filter using dataframe
     var filter = Set[TupleID]()
 
     val results = BooleanQueryHandler.getIds(entityname, bq)

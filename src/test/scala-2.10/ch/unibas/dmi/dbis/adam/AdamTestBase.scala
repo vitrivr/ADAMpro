@@ -3,10 +3,11 @@ package ch.unibas.dmi.dbis.adam
 import java.sql.DriverManager
 
 import ch.unibas.dmi.dbis.adam.api.DropEntityOp
-import ch.unibas.dmi.dbis.adam.config.{AdamConfig, FieldNames}
+import ch.unibas.dmi.dbis.adam.config.AdamConfig
 import ch.unibas.dmi.dbis.adam.datatypes.feature.{FeatureVectorWrapper, FeatureVectorWrapperUDT}
-import ch.unibas.dmi.dbis.adam.entity.{EntityHandler, Entity, FieldDefinition, FieldTypes}
+import ch.unibas.dmi.dbis.adam.entity.{Entity, EntityHandler, FieldDefinition, FieldTypes}
 import ch.unibas.dmi.dbis.adam.main.SparkStartup
+import ch.unibas.dmi.dbis.adam.main.SparkStartup.Implicits._
 import ch.unibas.dmi.dbis.adam.query.distance.{ManhattanDistance, MinkowskiDistance}
 import org.apache.spark.sql.types.{StructField, StructType}
 import org.apache.spark.sql.{DataFrame, Row, types}
@@ -14,8 +15,6 @@ import org.scalatest.concurrent.{Eventually, IntegrationPatience}
 import org.scalatest.{FeatureSpec, GivenWhenThen}
 
 import scala.util.Random
-
-import SparkStartup.Implicits._
 
 
 /**
@@ -82,10 +81,10 @@ class AdamTestBase extends FeatureSpec with GivenWhenThen with Eventually with I
     val entityname = getRandomName()
 
     try {
-      EntityHandler.create(entityname)
+      EntityHandler.create(entityname, Seq(FieldDefinition("feature", FieldTypes.FEATURETYPE, false, false, false)))
 
       val schema = StructType(Seq(
-        StructField(FieldNames.featureColumnName, new FeatureVectorWrapperUDT, false)
+        StructField("feature", new FeatureVectorWrapperUDT, false)
       ))
 
       val rdd = ac.sc.parallelize((0 until ntuples).map(id =>
@@ -110,26 +109,27 @@ class AdamTestBase extends FeatureSpec with GivenWhenThen with Eventually with I
     * @param ndims
     * @return
     */
-  def  withComplexEntity(ntuples: Int, ndims: Int)(testCode: String => Any) {
+  def withComplexEntity(ntuples: Int, ndims: Int)(testCode: String => Any) {
     val entityname = getRandomName()
 
     try {
       val fieldTemplate = Seq(
         ("stringfield", FieldTypes.STRINGTYPE, "text"),
         ("floatfield", FieldTypes.FLOATTYPE, "real"),
+        ("featurefield", FieldTypes.FEATURETYPE, ""),
         ("doublefield", FieldTypes.DOUBLETYPE, "double precision"),
         ("intfield", FieldTypes.INTTYPE, "integer"),
         ("longfield", FieldTypes.LONGTYPE, "bigint"),
         ("booleanfield", FieldTypes.BOOLEANTYPE, "boolean")
       )
 
-      val entity = EntityHandler.create(entityname, Some(fieldTemplate.map(ft => FieldDefinition(ft._1, ft._2))))
+      val entity = EntityHandler.create(entityname, fieldTemplate.map(ft => FieldDefinition(ft._1, ft._2)))
 
       val stringLength = 10
       val maxInt = 50000
 
       val schema = StructType(fieldTemplate
-        .map(field => StructField(field._1, field._2.datatype, false)).+:(StructField(FieldNames.featureColumnName, new FeatureVectorWrapperUDT, false)))
+        .map(field => StructField(field._1, field._2.datatype, false)).+:(StructField("feature", new FeatureVectorWrapperUDT, false)))
 
 
       val rdd = ac.sc.parallelize((0 until ntuples).map(id =>
@@ -217,7 +217,7 @@ class AdamTestBase extends FeatureSpec with GivenWhenThen with Eventually with I
 
       val schema = StructType(Seq(
         StructField("tid", types.LongType, false),
-        StructField(FieldNames.featureColumnName, new FeatureVectorWrapperUDT, false),
+        StructField("featurefield", new FeatureVectorWrapperUDT, false),
         StructField("stringfield", types.StringType, false),
         StructField("floatfield", types.FloatType, false),
         StructField("doublefield", types.DoubleType, false),
@@ -252,6 +252,7 @@ class AdamTestBase extends FeatureSpec with GivenWhenThen with Eventually with I
 
     val fieldTemplate = Seq(
       ("tid", FieldTypes.LONGTYPE, "bigint"),
+      ("featurefield", FieldTypes.FEATURETYPE, ""),
       ("stringfield", FieldTypes.STRINGTYPE, "text"),
       ("floatfield", FieldTypes.FLOATTYPE, "real"),
       ("doublefield", FieldTypes.DOUBLETYPE, "double precision"),
@@ -260,7 +261,7 @@ class AdamTestBase extends FeatureSpec with GivenWhenThen with Eventually with I
       ("booleanfield", FieldTypes.BOOLEANTYPE, "boolean")
     )
 
-    val entity = EntityHandler.create(entityname, Some(fieldTemplate.map(ft => FieldDefinition(ft._1, ft._2))))
+    val entity = EntityHandler.create(entityname, fieldTemplate.map(ft => FieldDefinition(ft._1, ft._2)))
     assert(entity.isSuccess)
     entity.get.insert(data.drop("gtdistance"))
 

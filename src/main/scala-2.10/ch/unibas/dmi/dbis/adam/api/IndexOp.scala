@@ -36,9 +36,9 @@ object IndexOp {
     * @param distance   distance function to use
     * @param properties further index specific properties
     */
-  def apply(entityname: EntityName, indextype: String, distance: DistanceFunction, properties: Map[String, String])(implicit ac : AdamContext): Try[Index] = {
+  def apply(entityname: EntityName, column : String, indextype: String, distance: DistanceFunction, properties: Map[String, String])(implicit ac : AdamContext): Try[Index] = {
     log.debug("perform create index operation")
-    apply(entityname, IndexTypes.withName(indextype).get, distance, properties)
+    apply(entityname, column, IndexTypes.withName(indextype).get, distance, properties)
   }
 
   /**
@@ -49,7 +49,7 @@ object IndexOp {
     * @param distance      distance function to use
     * @param properties    further index specific properties
     */
-  def apply(entityname: EntityName, indextypename: IndexTypeName, distance: DistanceFunction, properties: Map[String, String] = Map())(implicit ac : AdamContext): Try[Index] = {
+  def apply(entityname: EntityName, column : String, indextypename: IndexTypeName, distance: DistanceFunction, properties: Map[String, String] = Map())(implicit ac : AdamContext): Try[Index] = {
     log.debug("perform create index operation")
 
     val entity = EntityHandler.load(entityname)
@@ -58,12 +58,12 @@ object IndexOp {
       case IndexTypes.ECPINDEX => ECPIndexer(distance, properties)
       case IndexTypes.LSHINDEX => LSHIndexer(distance, properties)
       case IndexTypes.PQINDEX => PQIndexer(properties)
-      case IndexTypes.SHINDEX => SHIndexer(entity.get.getFeaturedata.first().getAs[FeatureVectorWrapper](1).vector.length, properties)
+      case IndexTypes.SHINDEX => SHIndexer(entity.get.getFeaturedata.first().getAs[FeatureVectorWrapper](column).vector.length, properties)
       case IndexTypes.VAFINDEX => VAFIndexer(distance, properties)
-      case IndexTypes.VAVINDEX => VAVIndexer(entity.get.getFeaturedata.first().getAs[FeatureVectorWrapper](1).vector.length, distance, properties)
+      case IndexTypes.VAVINDEX => VAVIndexer(entity.get.getFeaturedata.first().getAs[FeatureVectorWrapper](column).vector.length, distance, properties)
     }
 
-    IndexHandler.createIndex(entity.get, generator)
+    IndexHandler.createIndex(entity.get, column, generator)
   }
 
   /**
@@ -73,9 +73,9 @@ object IndexOp {
     * @param distance   distance function to use
     * @param properties further index specific properties
     */
-  def generateAll(entityname: EntityName, distance: DistanceFunction, properties: Map[String, String] = Map())(implicit ac : AdamContext): Boolean = {
+  def generateAll(entityname: EntityName, column : String, distance: DistanceFunction, properties: Map[String, String] = Map())(implicit ac : AdamContext): Boolean = {
     IndexTypes.values.foreach { indextypename =>
-      apply(entityname, indextypename, distance, properties)
+      apply(entityname, column, indextypename, distance, properties)
     }
     true
   }
