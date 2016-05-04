@@ -20,7 +20,7 @@ service AdamDefinition {
   rpc Count(EntityNameMessage) returns (AckMessage) {}
   //generates an entity with random data and with all available indexes (for demo purposes)
   rpc GenerateRandomData(GenerateRandomDataMessage) returns (AckMessage) {}
-  rpc ListEntities(Empty) returns (EntitiesMessage) {}
+  rpc ListEntities(EmptyMessage) returns (EntitiesMessage) {}
   rpc GetEntityProperties(EntityNameMessage) returns (EntityPropertiesMessage) {}
   rpc RepartitionIndexData(RepartitionMessage) returns (AckMessage) {}
   rpc SetIndexWeight(IndexWeightMessage) returns (AckMessage) {}
@@ -65,7 +65,11 @@ enum IndexType {
     vav = 5;
 }
 
-message Empty {
+message EmptyMessage {
+}
+
+message FeatureVectorMessage {
+  repeated float vector = 1 [packed=true];
 }
 
 
@@ -116,7 +120,7 @@ message InsertMessage {
   repeated TupleInsertMessage tuples = 2;
 
   message TupleInsertMessage {
-    map<string, string> data = 1;
+    map<string, string> data = 1; //possibly switch from string to any or oneof?
   }
 }
 
@@ -271,7 +275,7 @@ message SubExpressionQueryMessage {
 
 message NearestNeighbourQueryMessage {
   string column = 1;
-  repeated float query = 2 [packed=true];
+  FeatureVectorMessage query = 2;
   DistanceMessage distance = 3;
   int32 k = 4;
   //specifies whether only the candidates from the index search are returned and no exact distance computation is performed

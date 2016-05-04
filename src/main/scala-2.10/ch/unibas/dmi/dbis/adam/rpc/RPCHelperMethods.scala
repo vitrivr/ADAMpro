@@ -103,7 +103,7 @@ private[rpc] object RPCHelperMethods {
       None
     }
 
-    NearestNeighbourQuery(nnq.column, nnq.query, distance, nnq.k, nnq.indexOnly, nnq.options, partitions)
+    NearestNeighbourQuery(nnq.column, nnq.query.get.vector, distance, nnq.k, nnq.indexOnly, nnq.options, partitions)
   }
 
   def prepareDistance(dm: DistanceMessage): DistanceFunction = {

@@ -88,7 +88,7 @@ class RPCClient(channel: ManagedChannel, definer: AdamDefinitionBlockingStub, se
     * @return
     */
   def listEntities(): Seq[String] = {
-    definer.listEntities(Empty()).entities
+    definer.listEntities(EmptyMessage()).entities
   }
 
   /**
@@ -155,7 +155,7 @@ class RPCClient(channel: ManagedChannel, definer: AdamDefinitionBlockingStub, se
     *
     */
   def progressiveQuery(id: String, entityname: String, query: Seq[Float], column : String, hints: Seq[String], k: Int, next: (String, Double, String, Long, Seq[(Float, Long)]) => (Unit), completed: (String) => (Unit)): String = {
-    val nnq = NearestNeighbourQueryMessage(column, query, Option(DistanceMessage(DistanceType.minkowski, Map("norm" -> "2"))), k)
+    val nnq = NearestNeighbourQueryMessage(column, Some(FeatureVectorMessage(query)), Option(DistanceMessage(DistanceType.minkowski, Map("norm" -> "2"))), k)
     val request = SimpleQueryMessage(entity = entityname, hints = hints, nnq = Option(nnq))
 
     val so = new StreamObserver[QueryResponseInfoMessage]() {

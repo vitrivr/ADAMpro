@@ -185,7 +185,7 @@ class DataDefinitionRPC(implicit ac: AdamContext) extends AdamDefinitionGrpc.Ada
   }
 
 
-  override def listEntities(request: Empty): Future[EntitiesMessage] = {
+  override def listEntities(request: EmptyMessage): Future[EntitiesMessage] = {
     log.debug("rpc call for listing entities")
     Future.successful(EntitiesMessage(Some(AckMessage(AckMessage.Code.OK)), ListEntitiesOp().map(_.toString())))
   }
