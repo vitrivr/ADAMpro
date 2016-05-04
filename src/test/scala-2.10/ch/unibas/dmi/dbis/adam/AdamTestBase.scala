@@ -24,7 +24,7 @@ import scala.util.Random
   * March 2016
   */
 class AdamTestBase extends FeatureSpec with GivenWhenThen with Eventually with IntegrationPatience {
-  SparkStartup
+  val startup = SparkStartup
 
   /**
     * Precision
