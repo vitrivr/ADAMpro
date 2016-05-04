@@ -116,8 +116,7 @@ message InsertMessage {
   repeated TupleInsertMessage tuples = 2;
 
   message TupleInsertMessage {
-    repeated float vector = 1 [packed=true];
-    map<string, string> metadata = 2;
+    map<string, string> data = 1;
   }
 }
 

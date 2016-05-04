@@ -1,6 +1,7 @@
 package ch.unibas.dmi.dbis.adam.rpc
 
 import ch.unibas.dmi.dbis.adam.api._
+import ch.unibas.dmi.dbis.adam.datatypes.feature.{FeatureVectorWrapper, FeatureVectorWrapperUDT}
 import ch.unibas.dmi.dbis.adam.entity.{EntityHandler, FieldDefinition, FieldTypes}
 import ch.unibas.dmi.dbis.adam.exception.GeneralAdamException
 import ch.unibas.dmi.dbis.adam.http.grpc.FieldDefinitionMessage.FieldType
@@ -11,7 +12,8 @@ import ch.unibas.dmi.dbis.adam.main.AdamContext
 import ch.unibas.dmi.dbis.adam.storage.partitions.{PartitionHandler, PartitionOptions}
 import io.grpc.stub.StreamObserver
 import org.apache.log4j.Logger
-import org.apache.spark.sql.Row
+import org.apache.spark.sql.types.DataType
+import org.apache.spark.sql.{Row, types}
 
 import scala.concurrent.Future
 
@@ -56,6 +58,16 @@ class DataDefinitionRPC(implicit ac: AdamContext) extends AdamDefinitionGrpc.Ada
     case _ => FieldTypes.UNRECOGNIZEDTYPE
   }
 
+  private def converter(datatype : DataType) : (String) => (Any) = datatype match {
+    case types.BooleanType => (x) => x.toBoolean
+    case types.DoubleType => (x) => x.toDouble
+    case types.FloatType => (x) => x.toFloat
+    case types.IntegerType => (x) => x.toInt
+    case types.LongType => (x) => x.toLong
+    case types.StringType => (x) => x
+    case _ : FeatureVectorWrapperUDT => (x) => new FeatureVectorWrapper(x.split(",").map(_.toFloat))
+  }
+
 
   override def count(request: EntityNameMessage): Future[AckMessage] = {
     log.debug("rpc call for count entity operation")
@@ -81,11 +93,16 @@ class DataDefinitionRPC(implicit ac: AdamContext) extends AdamDefinitionGrpc.Ada
 
         val schema = entity.get.schema
 
-
         val rows = insert.tuples.map(tuple => {
-          val metadata = tuple.metadata
-          val data = schema.map(field => metadata.get(field.name).get).+:(tuple.vector)
-          Row(data: _*)
+          val data = schema.map(field => {
+            val datum = tuple.data.get(field.name).getOrElse(null)
+            if(datum != null) {
+              converter(field.dataType)(datum)
+            } else {
+              null
+            }
+          })
+          Row(data : _*)
         })
 
         val rdd = ac.sc.parallelize(rows)
