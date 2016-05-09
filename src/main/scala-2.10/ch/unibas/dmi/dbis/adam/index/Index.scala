@@ -97,7 +97,7 @@ trait Index extends Serializable {
     *
     * @return
     */
-  def pk = CatalogOperator.getEntityPK(entityname)
+  lazy val pk = CatalogOperator.getEntityPK(entityname)
 
   /**
     * Scans the index.
