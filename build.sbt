@@ -43,12 +43,12 @@ resolvers ++= Seq(
 resolvers += Resolver.sonatypeRepo("snapshots")
 
 libraryDependencies ++= Seq(
-  "org.apache.spark"       %%   "spark-core"             % "1.6.1" % "provided" excludeAll(
+  "org.apache.spark"       %%   "spark-core"             % "1.6.1" excludeAll(
     ExclusionRule("org.apache.hadoop")
     ),
-  "org.apache.spark"       %%   "spark-sql"              % "1.6.1" % "provided",
-  "org.apache.spark"       %%   "spark-hive"             % "1.6.1" % "provided",
-  "org.apache.spark"       %%   "spark-mllib"            % "1.6.1" % "provided",
+  "org.apache.spark"       %%   "spark-sql"              % "1.6.1",
+  "org.apache.spark"       %%   "spark-hive"             % "1.6.1",
+  "org.apache.spark"       %%   "spark-mllib"            % "1.6.1",
   "org.scalanlp" 		       %%   "breeze" 				         % "0.11.2",
   "org.scalanlp" 		       %%   "breeze-natives" 	       % "0.11.2",
   "com.typesafe.slick"     %%   "slick"                  % "3.1.0",
@@ -56,7 +56,7 @@ libraryDependencies ++= Seq(
   "org.postgresql"         %    "postgresql"             % "9.4.1208",
   "com.datastax.spark"     %%   "spark-cassandra-connector" % "1.6.0-M1",
   "com.fasterxml.jackson.core" % "jackson-core"          % "2.4.4",
-  "org.apache.hadoop"      %    "hadoop-client"          % "2.6.4" % "provided",
+  "org.apache.hadoop"      %    "hadoop-client"          % "2.6.4",
   "org.apache.commons"     %    "commons-lang3"          % "3.4",
   "org.slf4j"              %     "slf4j-log4j12"         % "1.7.21",
   "it.unimi.dsi"           %    "fastutil"               % "7.0.12"
