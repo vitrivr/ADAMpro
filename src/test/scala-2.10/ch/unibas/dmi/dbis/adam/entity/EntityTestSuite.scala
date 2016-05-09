@@ -65,6 +65,28 @@ class EntityTestSuite extends AdamTestBase {
     /**
       *
       */
+    scenario("create an entity with multiple feature fields") {
+      withEntityName { entityname =>
+        Given("a database with a few elements already")
+        val givenEntities = EntityHandler.list()
+
+        When("a new random entity (without any metadata) is created")
+        EntityHandler.create(entityname, Seq(FieldDefinition("idfield", FieldTypes.LONGTYPE, true), FieldDefinition("feature1", FieldTypes.FEATURETYPE), FieldDefinition("feature2", FieldTypes.FEATURETYPE)))
+
+        Then("one entity should be created")
+        val finalEntities = EntityHandler.list()
+        eventually {
+          finalEntities.size shouldBe givenEntities.size + 1
+        }
+        eventually {
+          finalEntities.contains(entityname)
+        }
+      }
+    }
+
+    /**
+      *
+      */
     scenario("create an entity with metadata") {
       withEntityName { entityname =>
         Given("a database with a few elements already")
@@ -199,6 +221,38 @@ class EntityTestSuite extends AdamTestBase {
 
         val rdd = ac.sc.parallelize((0 until ntuples).map(id =>
           Row(Random.nextLong(), new FeatureVectorWrapper(Seq.fill(ndims)(Random.nextFloat())))
+        ))
+
+        val data = ac.sqlContext.createDataFrame(rdd, schema)
+
+        When("data without metadata is inserted")
+        EntityHandler.insertData(entityname, data)
+
+        Then("the data is available without metadata")
+        val counted = EntityHandler.countTuples(entityname).get
+        assert(counted - ntuples == 0)
+      }
+    }
+
+    /**
+      *
+      */
+    scenario("insert data in an entity with multiple feature fields without metadata") {
+      withEntityName { entityname =>
+        Given("an entity without metadata")
+        EntityHandler.create(entityname, Seq(FieldDefinition("idfield", FieldTypes.LONGTYPE, true), FieldDefinition("featurefield1", FieldTypes.FEATURETYPE), FieldDefinition("featurefield2", FieldTypes.FEATURETYPE)))
+
+        val ntuples = Random.nextInt(1000)
+        val ndims = 100
+
+        val schema = StructType(Seq(
+          StructField("idfield", LongType, false),
+          StructField("featurefield1", new FeatureVectorWrapperUDT, false),
+          StructField("featurefield2", new FeatureVectorWrapperUDT, false)
+        ))
+
+        val rdd = ac.sc.parallelize((0 until ntuples).map(id =>
+          Row(Random.nextLong(), new FeatureVectorWrapper(Seq.fill(ndims)(Random.nextFloat())), new FeatureVectorWrapper(Seq.fill(ndims)(Random.nextFloat())))
         ))
 
         val data = ac.sqlContext.createDataFrame(rdd, schema)
