@@ -94,7 +94,7 @@ class IndexTestSuite extends AdamTestBase {
         assert(IndexHandler.exists(index2.get.indexname))
 
         When("dropping the second index")
-        DropIndexOp(index1.get.indexname)
+        DropIndexOp(index2.get.indexname)
 
         Then("the second index should be dropped")
         assert(!IndexHandler.exists(index1.get.indexname))
