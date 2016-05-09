@@ -38,7 +38,7 @@ object QueryOp {
     */
   def apply(entityname: EntityName, hint: Option[QueryHint], nnq: Option[NearestNeighbourQuery], bq: Option[BooleanQuery], withMetadata: Boolean)(implicit ac : AdamContext): DataFrame = {
     log.debug("perform standard query operation")
-    QueryHandler.query(entityname, hint, nnq, bq, withMetadata)
+    QueryHandler.query(entityname, hint, nnq, bq, None, withMetadata)
   }
   def apply(q: StandardQueryHolder)(implicit ac : AdamContext): DataFrame = q.evaluate()
 
@@ -53,7 +53,7 @@ object QueryOp {
     */
   def sequential(entityname: EntityName, nnq: NearestNeighbourQuery, bq: Option[BooleanQuery], withMetadata: Boolean)(implicit ac : AdamContext): DataFrame = {
     log.debug("perform sequential query operation")
-    QueryHandler.sequentialQuery(entityname)(nnq, bq, withMetadata)
+    QueryHandler.sequentialQuery(entityname)(nnq, bq, None, withMetadata)
   }
   def sequential(q: SequentialQueryHolder)(implicit ac : AdamContext): DataFrame = q.evaluate()
 
@@ -82,7 +82,7 @@ object QueryOp {
     */
   def index(index: Index, nnq: NearestNeighbourQuery, bq: Option[BooleanQuery], withMetadata: Boolean)(implicit ac : AdamContext): DataFrame = {
     log.debug("perform index query operation")
-    QueryHandler.specifiedIndexQuery(index)(nnq, bq, withMetadata)
+    QueryHandler.specifiedIndexQuery(index)(nnq, bq, None, withMetadata)
   }
 
   def index(q: SpecifiedIndexQueryHolder)(implicit ac : AdamContext): DataFrame = q.evaluate()
@@ -99,7 +99,7 @@ object QueryOp {
     */
   def index(entityname: EntityName, indextypename: IndexTypeName, nnq: NearestNeighbourQuery, bq: Option[BooleanQuery], withMetadata: Boolean)(implicit ac : AdamContext): DataFrame = {
     log.debug("perform index query operation")
-    QueryHandler.indexQuery(entityname, indextypename)(nnq, bq, withMetadata)
+    QueryHandler.indexQuery(entityname, indextypename)(nnq, bq, None, withMetadata)
   }
   def index(q: IndexQueryHolder)(implicit ac : AdamContext): DataFrame = q.evaluate()
 
@@ -116,7 +116,7 @@ object QueryOp {
     */
   def progressive[U](entityname: EntityName, nnq: NearestNeighbourQuery, bq: Option[BooleanQuery], paths : ProgressivePathChooser, onComplete: (ProgressiveQueryStatus.Value, DataFrame, Float, String, Map[String, String]) => U, withMetadata: Boolean)(implicit ac : AdamContext): ProgressiveQueryStatusTracker = {
     log.debug("perform progressive query operation")
-    QueryHandler.progressiveQuery(entityname)(nnq, bq, paths, onComplete, withMetadata)
+    QueryHandler.progressiveQuery(entityname)(nnq, bq, None, paths, onComplete, withMetadata)
   }
 
 
@@ -133,7 +133,7 @@ object QueryOp {
     */
   def timedProgressive(entityname: EntityName, nnq: NearestNeighbourQuery, bq: Option[BooleanQuery], paths : ProgressivePathChooser, timelimit: Duration, withMetadata: Boolean)(implicit ac : AdamContext): (DataFrame, Float, String) = {
     log.debug("perform timed progressive query operation")
-    QueryHandler.timedProgressiveQuery(entityname)(nnq, bq, paths, timelimit, withMetadata)
+    QueryHandler.timedProgressiveQuery(entityname)(nnq, bq, None, paths, timelimit, withMetadata)
   }
 
   /**

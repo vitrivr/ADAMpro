@@ -1,6 +1,5 @@
 package ch.unibas.dmi.dbis.adam.index.structures.va
 
-import ch.unibas.dmi.dbis.adam.entity.Tuple._
 import it.unimi.dsi.fastutil.floats.{FloatComparators, FloatHeapPriorityQueue}
 import org.apache.spark.sql.Row
 
@@ -12,10 +11,10 @@ import scala.collection.mutable.ListBuffer
   * Ivan Giangreco
   * August 2015
   */
-private[va] class VAResultHandler(k: Int) {
+private[va] class VAResultHandler[A](k: Int) {
   @transient private var elementsLeft = k
   @transient private val queue =  new FloatHeapPriorityQueue(2 * k, FloatComparators.OPPOSITE_COMPARATOR)
-  @transient protected var ls = ListBuffer[VAResultElement]()
+  @transient protected var ls = ListBuffer[VAResultElement[A]]()
 
   /**
     *
@@ -26,7 +25,7 @@ private[va] class VAResultHandler(k: Int) {
       if (elementsLeft > 0) {
         val lower = r.getAs[Float]("lbound")
         val upper = r.getAs[Float]("ubound")
-        val tid = r.getAs[Long](pk)
+        val tid = r.getAs[A](pk)
         elementsLeft -= 1
         enqueue(lower, upper, tid)
         return true
@@ -36,7 +35,7 @@ private[va] class VAResultHandler(k: Int) {
         if (peek > lower) {
           queue.dequeueFloat()
           val upper = r.getAs[Float]("ubound")
-          val tid = r.getAs[Long](pk : String)
+          val tid = r.getAs[A](pk : String)
           enqueue(lower, upper, tid)
           return true
         } else {
@@ -51,7 +50,7 @@ private[va] class VAResultHandler(k: Int) {
     * @param res
     * @return
     */
-  def offer(res: VAResultElement): Boolean = {
+  def offer(res: VAResultElement[A]): Boolean = {
     queue.synchronized {
       if (elementsLeft > 0) {
         elementsLeft -= 1
@@ -78,7 +77,7 @@ private[va] class VAResultHandler(k: Int) {
     * @param upper
     * @param tid
     */
-  private def enqueue(lower : Float, upper : Float, tid : TupleID): Unit ={
+  private def enqueue(lower : Float, upper : Float, tid : A): Unit ={
     enqueue(VAResultElement(lower, upper, tid))
   }
 
@@ -86,7 +85,7 @@ private[va] class VAResultHandler(k: Int) {
     *
     * @param res
     */
-  private def enqueue(res: VAResultElement): Unit = {
+  private def enqueue(res: VAResultElement[A]): Unit = {
     queue.enqueue(res.upper)
     ls += res
   }
@@ -100,4 +99,4 @@ private[va] class VAResultHandler(k: Int) {
 
 }
 
-case class VAResultElement(lower: Float, upper : Float, tid: TupleID) {}
+case class VAResultElement[A](lower: Float, upper : Float, tid: A) {}

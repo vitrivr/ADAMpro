@@ -1,7 +1,6 @@
 package ch.unibas.dmi.dbis.adam.query
 
 import ch.unibas.dmi.dbis.adam.config.FieldNames
-import ch.unibas.dmi.dbis.adam.entity.Tuple.TupleID
 import ch.unibas.dmi.dbis.adam.query.distance.Distance.Distance
 import org.apache.spark.sql.types.{FloatType, LongType, StructField, StructType}
 
@@ -11,7 +10,7 @@ import org.apache.spark.sql.types.{FloatType, LongType, StructField, StructType}
   * Ivan Giangreco
   * August 2015
   */
-case class Result(distance: Distance, tid: TupleID) extends Ordered[Result] {
+case class Result(distance: Distance, tid: Any) extends Ordered[Result] {
   override def compare(that: Result): Int = distance compare that.distance
 }
 

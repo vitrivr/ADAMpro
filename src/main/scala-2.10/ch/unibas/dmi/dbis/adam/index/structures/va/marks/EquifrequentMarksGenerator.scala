@@ -23,7 +23,7 @@ private[va] object EquifrequentMarksGenerator extends MarksGenerator with Serial
    * @param maxMarks
    * @return
    */
-  private[va] def getMarks(samples : Array[IndexingTaskTuple], maxMarks : Seq[Int]) : Marks = {
+  private[va] def getMarks(samples : Array[IndexingTaskTuple[_]], maxMarks : Seq[Int]) : Marks = {
     log.debug("get equifrequent marks for VA-File")
 
     val sampleSize = samples.length

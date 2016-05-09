@@ -294,9 +294,8 @@ message DistanceMessage {
 }
 
 message BooleanQueryMessage {
-  repeated WhereMessage where = 2;
-  repeated JoinMessage joins = 3;
-  repeated int64 prefilter = 1;
+  repeated WhereMessage where = 1;
+  repeated JoinMessage joins = 2;
 
   message WhereMessage {
     //if field ends on certain operators (e.g., != or IN), then the operation used in query is adapted, otherwise equality is used
@@ -309,6 +308,10 @@ message BooleanQueryMessage {
     repeated string columns = 2;
   }
 }
+
+//message TupleIDQueryMessage {
+//  repeated Any filter = 1;
+//}
 
 message CachedResultsMessage {
   string queryid = 1;

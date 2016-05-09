@@ -1,7 +1,6 @@
 package ch.unibas.dmi.dbis.adam.index.structures.sh
 
 import ch.unibas.dmi.dbis.adam.config.FieldNames
-import ch.unibas.dmi.dbis.adam.entity.Tuple._
 import it.unimi.dsi.fastutil.ints.IntHeapPriorityQueue
 import org.apache.spark.sql.Row
 
@@ -13,10 +12,10 @@ import scala.collection.mutable.ListBuffer
   * Ivan Giangreco
   * April 2016
   */
-class SHResultHandler(k: Int) {
+class SHResultHandler[A](k: Int) {
   @transient private var elementsLeft = k
   @transient private val queue =  new IntHeapPriorityQueue(2 * k)
-  @transient protected var ls = ListBuffer[SHResultElement]()
+  @transient protected var ls = ListBuffer[SHResultElement[A]]()
 
   /**
     *
@@ -26,7 +25,7 @@ class SHResultHandler(k: Int) {
     queue.synchronized {
       if (elementsLeft > 0) {
         val score = r.getAs[Int](FieldNames.distanceColumnName)
-        val tid = r.getAs[Long](pk)
+        val tid = r.getAs[A](pk)
         elementsLeft -= 1
         enqueue(score, tid)
         return true
@@ -35,7 +34,7 @@ class SHResultHandler(k: Int) {
         val score = r.getAs[Int](FieldNames.distanceColumnName)
         if (peek < score) {
           queue.dequeueInt()
-          val tid = r.getAs[Long](pk)
+          val tid = r.getAs[A](pk)
           enqueue(score, tid)
           return true
         } else {
@@ -50,7 +49,7 @@ class SHResultHandler(k: Int) {
     * @param res
     * @return
     */
-  def offer(res: SHResultElement): Boolean = {
+  def offer(res: SHResultElement[A]): Boolean = {
     queue.synchronized {
       if (elementsLeft > 0) {
         elementsLeft -= 1
@@ -72,11 +71,11 @@ class SHResultHandler(k: Int) {
 
 
   /**
-    * 
+    *
     * @param score
     * @param tid
     */
-  private def enqueue(score : Int, tid : TupleID): Unit ={
+  private def enqueue(score : Int, tid : A): Unit ={
     enqueue(SHResultElement(score, tid))
   }
 
@@ -84,7 +83,7 @@ class SHResultHandler(k: Int) {
     * 
     * @param res
     */
-  private def enqueue(res: SHResultElement): Unit = {
+  private def enqueue(res: SHResultElement[A]): Unit = {
     queue.enqueue(res.score)
     ls += res
   }
@@ -95,7 +94,6 @@ class SHResultHandler(k: Int) {
     * @return
     */
   def results = ls.sortBy(_.score).toSeq
-
 }
 
-case class SHResultElement(score : Int, tid: TupleID) {}
+case class SHResultElement[A](score : Int, tid: A) {}

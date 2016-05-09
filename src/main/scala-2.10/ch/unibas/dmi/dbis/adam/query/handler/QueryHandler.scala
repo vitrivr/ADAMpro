@@ -3,7 +3,6 @@ package ch.unibas.dmi.dbis.adam.query.handler
 import ch.unibas.dmi.dbis.adam.config.FieldNames
 import ch.unibas.dmi.dbis.adam.entity.Entity._
 import ch.unibas.dmi.dbis.adam.entity.EntityHandler
-import ch.unibas.dmi.dbis.adam.entity.Tuple.TupleID
 import ch.unibas.dmi.dbis.adam.exception.IndexNotExistingException
 import ch.unibas.dmi.dbis.adam.index.Index.{IndexName, IndexTypeName}
 import ch.unibas.dmi.dbis.adam.index.{Index, IndexHandler}
@@ -12,7 +11,7 @@ import ch.unibas.dmi.dbis.adam.query.Result
 import ch.unibas.dmi.dbis.adam.query.datastructures._
 import ch.unibas.dmi.dbis.adam.query.handler.QueryHints._
 import ch.unibas.dmi.dbis.adam.query.progressive._
-import ch.unibas.dmi.dbis.adam.query.query.{BooleanQuery, NearestNeighbourQuery}
+import ch.unibas.dmi.dbis.adam.query.query.{TupleIDQuery, BooleanQuery, NearestNeighbourQuery}
 import ch.unibas.dmi.dbis.adam.storage.engine.CatalogOperator
 import org.apache.log4j.Logger
 import org.apache.spark.sql.types.{StructType, LongType, StructField}
@@ -43,7 +42,7 @@ object QueryHandler {
     * @param cache        caching options
     * @return
     */
-  def query(entityname: EntityName, hint: Option[QueryHint], nnq: Option[NearestNeighbourQuery], bq: Option[BooleanQuery], withMetadata: Boolean, id: Option[String] = None, cache: Option[QueryCacheOptions] = Some(QueryCacheOptions()))(implicit ac: AdamContext): DataFrame = {
+  def query(entityname: EntityName, hint: Option[QueryHint], nnq: Option[NearestNeighbourQuery], bq: Option[BooleanQuery], tiq: Option[TupleIDQuery[_]], withMetadata: Boolean, id: Option[String] = None, cache: Option[QueryCacheOptions] = Some(QueryCacheOptions()))(implicit ac: AdamContext): DataFrame = {
     val entity = EntityHandler.load(entityname).get
 
     if (id.isDefined && cache.isDefined && cache.get.useCached) {
@@ -74,7 +73,7 @@ object QueryHandler {
       plan = choosePlan(entityname, indexes, Some(QueryHints.FALLBACK_HINTS), nnq)
     }
 
-    val res = plan.get(nnq.get, bq, withMetadata, id, cache)
+    val res = plan.get(nnq.get, bq, tiq, withMetadata, id, cache)
 
     if (id.isDefined && cache.isDefined && cache.get.putInCache) {
       QueryLRUCache.put(id.get, res)
@@ -91,7 +90,7 @@ object QueryHandler {
     * @param hint
     * @return
     */
-  private def choosePlan(entityname: EntityName, indexes: Map[IndexTypeName, Seq[IndexName]], hint: Option[QueryHint], nnq: Option[NearestNeighbourQuery])(implicit ac: AdamContext): Option[(NearestNeighbourQuery, Option[BooleanQuery], Boolean, Option[String], Option[QueryCacheOptions]) => DataFrame] = {
+  private def choosePlan(entityname: EntityName, indexes: Map[IndexTypeName, Seq[IndexName]], hint: Option[QueryHint], nnq: Option[NearestNeighbourQuery])(implicit ac: AdamContext): Option[(NearestNeighbourQuery, Option[BooleanQuery], Option[TupleIDQuery[_]], Boolean, Option[String], Option[QueryCacheOptions]) => DataFrame] = {
     if (!hint.isDefined) {
       log.debug("no execution plan hint")
       return None
@@ -147,26 +146,23 @@ object QueryHandler {
   }
 
 
-  case class StandardQueryHolder(entityname: EntityName, hint: Option[QueryHint], nnq: Option[NearestNeighbourQuery], bq: Option[BooleanQuery], id: Option[String] = None, cache: Option[QueryCacheOptions] = Some(QueryCacheOptions()))(implicit ac: AdamContext) extends QueryExpression(id) {
+  case class StandardQueryHolder(entityname: EntityName, hint: Option[QueryHint], nnq: Option[NearestNeighbourQuery], bq: Option[BooleanQuery], tiq: Option[TupleIDQuery[_]], id: Option[String] = None, cache: Option[QueryCacheOptions] = Some(QueryCacheOptions()))(implicit ac: AdamContext) extends QueryExpression(id) {
     override protected def run(filter: Option[DataFrame]): DataFrame = {
-      val abq = if (bq.isDefined) {
-        val tmp = bq.get
-
-        if (filter.isDefined) {
-          tmp.append(filter.get)
-        }
-
-        Option(tmp)
-      } else {
-        None
-      }
-
       val annq = if (nnq.isDefined) {
         Option(NearestNeighbourQuery(nnq.get.column, nnq.get.q, nnq.get.distance, nnq.get.k, true, nnq.get.options, nnq.get.partitions, nnq.get.queryID))
       } else {
         None
       }
-      query(entityname, hint, annq, abq, false, id, cache)
+      val atiq = if (tiq.isDefined) {
+        Some(tiq.get.+:(filter))
+      } else {
+        if (filter.isDefined) {
+          Some(new TupleIDQuery(filter.get))
+        } else {
+          None
+        }
+      }
+      query(entityname, hint, annq, bq, atiq, false, id, cache)
     }
   }
 
@@ -179,7 +175,7 @@ object QueryHandler {
     * @param withMetadata whether or not to retrieve corresponding metadata
     * @return
     */
-  def sequentialQuery(entityname: EntityName)(nnq: NearestNeighbourQuery, bq: Option[BooleanQuery], withMetadata: Boolean, id: Option[String] = None, cache: Option[QueryCacheOptions] = Some(QueryCacheOptions()))(implicit ac: AdamContext): DataFrame = {
+  def sequentialQuery(entityname: EntityName)(nnq: NearestNeighbourQuery, bq: Option[BooleanQuery], tiq: Option[TupleIDQuery[_]], withMetadata: Boolean, id: Option[String] = None, cache: Option[QueryCacheOptions] = Some(QueryCacheOptions()))(implicit ac: AdamContext): DataFrame = {
     log.debug("sequential query gets filter")
 
     if (cache.isDefined && cache.get.useCached) {
@@ -189,11 +185,7 @@ object QueryHandler {
       }
     }
 
-    val filter = if (bq.isDefined) {
-      getFilter(entityname, bq.get)
-    } else {
-      None
-    }
+    val filter = getFilter(entityname, bq, tiq)
 
     log.debug("sequential query performs kNN query")
     var res = NearestNeighbourQueryHandler.sequential(entityname, nnq, filter)
@@ -210,14 +202,19 @@ object QueryHandler {
     res
   }
 
-  case class SequentialQueryHolder(entityname: EntityName, nnq: NearestNeighbourQuery, bq: Option[BooleanQuery], id: Option[String] = None, cache: Option[QueryCacheOptions] = Some(QueryCacheOptions()))(implicit ac: AdamContext) extends QueryExpression(id) {
+  case class SequentialQueryHolder(entityname: EntityName, nnq: NearestNeighbourQuery, bq: Option[BooleanQuery], tiq: Option[TupleIDQuery[_]], id: Option[String] = None, cache: Option[QueryCacheOptions] = Some(QueryCacheOptions()))(implicit ac: AdamContext) extends QueryExpression(id) {
     override protected def run(filter: Option[DataFrame]): DataFrame = {
-      val abq = bq.getOrElse(BooleanQuery())
-      if (filter.isDefined) {
-        abq.append(filter.get)
-      }
       val annq = NearestNeighbourQuery(nnq.column, nnq.q, nnq.distance, nnq.k, true, nnq.options, nnq.partitions, nnq.queryID)
-      sequentialQuery(entityname)(annq, Option(abq), false, id, cache)
+      val atiq = if (tiq.isDefined) {
+        Some(tiq.get.+:(filter))
+      } else {
+        if (filter.isDefined) {
+          Some(new TupleIDQuery(filter.get))
+        } else {
+          None
+        }
+      }
+      sequentialQuery(entityname)(annq, bq, atiq, false, id, cache)
     }
   }
 
@@ -232,7 +229,7 @@ object QueryHandler {
     * @param withMetadata
     * @return
     */
-  def indexQuery(entityname: EntityName, indextype: IndexTypeName)(nnq: NearestNeighbourQuery, bq: Option[BooleanQuery], withMetadata: Boolean, id: Option[String] = None, cache: Option[QueryCacheOptions] = Some(QueryCacheOptions()))(implicit ac: AdamContext): DataFrame = {
+  def indexQuery(entityname: EntityName, indextype: IndexTypeName)(nnq: NearestNeighbourQuery, bq: Option[BooleanQuery], tiq: Option[TupleIDQuery[_]], withMetadata: Boolean, id: Option[String] = None, cache: Option[QueryCacheOptions] = Some(QueryCacheOptions()))(implicit ac: AdamContext): DataFrame = {
     if (cache.isDefined && cache.get.useCached) {
       val cached = getFromQueryCache(id)
       if (cached.isSuccess) {
@@ -250,7 +247,7 @@ object QueryHandler {
       throw new IndexNotExistingException()
     }
 
-    val res = specifiedIndexQuery(indexes.head)(nnq, bq, withMetadata)
+    val res = specifiedIndexQuery(indexes.head)(nnq, bq, tiq, withMetadata)
 
     if (id.isDefined && cache.isDefined && cache.get.putInCache) {
       QueryLRUCache.put(id.get, res)
@@ -259,14 +256,19 @@ object QueryHandler {
     res
   }
 
-  case class IndexQueryHolder(entityname: EntityName, indextypename: IndexTypeName, nnq: NearestNeighbourQuery, bq: Option[BooleanQuery], id: Option[String] = None, cache: Option[QueryCacheOptions] = Some(QueryCacheOptions()))(implicit ac: AdamContext) extends QueryExpression(id) {
+  case class IndexQueryHolder(entityname: EntityName, indextypename: IndexTypeName, nnq: NearestNeighbourQuery, bq: Option[BooleanQuery], tiq: Option[TupleIDQuery[_]], id: Option[String] = None, cache: Option[QueryCacheOptions] = Some(QueryCacheOptions()))(implicit ac: AdamContext) extends QueryExpression(id) {
     override protected def run(filter: Option[DataFrame]): DataFrame = {
-      val abq = bq.getOrElse(BooleanQuery())
-      if (filter.isDefined) {
-        abq.append(filter.get)
-      }
       val annq = NearestNeighbourQuery(nnq.column, nnq.q, nnq.distance, nnq.k, true, nnq.options, nnq.partitions, nnq.queryID)
-      indexQuery(entityname, indextypename)(annq, Option(abq), false, id, cache)
+      val atiq = if (tiq.isDefined) {
+        Some(tiq.get.+:(filter))
+      } else {
+        if (filter.isDefined) {
+          Some(new TupleIDQuery(filter.get))
+        } else {
+          None
+        }
+      }
+      indexQuery(entityname, indextypename)(annq, bq, atiq, false, id, cache)
     }
   }
 
@@ -281,7 +283,7 @@ object QueryHandler {
     * @param cache
     * @return
     */
-  def specifiedIndexQuery(index: Index)(nnq: NearestNeighbourQuery, bq: Option[BooleanQuery], withMetadata: Boolean, id: Option[String] = None, cache: Option[QueryCacheOptions] = Some(QueryCacheOptions()))(implicit ac: AdamContext): DataFrame = {
+  def specifiedIndexQuery(index: Index)(nnq: NearestNeighbourQuery, bq: Option[BooleanQuery], tiq: Option[TupleIDQuery[_]], withMetadata: Boolean, id: Option[String] = None, cache: Option[QueryCacheOptions] = Some(QueryCacheOptions()))(implicit ac: AdamContext): DataFrame = {
     if (cache.isDefined && cache.get.useCached) {
       val cached = getFromQueryCache(id)
       if (cached.isSuccess) {
@@ -292,11 +294,7 @@ object QueryHandler {
     val entityname = index.entityname
 
     log.debug("index query gets filter")
-    val filter = if (bq.isDefined) {
-      getFilter(entityname, bq.get)
-    } else {
-      None
-    }
+    val filter = getFilter(entityname, bq, tiq)
 
     if (!index.isQueryConform(nnq)) {
       log.warn("index is not conform with kNN query")
@@ -317,18 +315,23 @@ object QueryHandler {
     res
   }
 
-  case class SpecifiedIndexQueryHolder(index: Index, nnq: NearestNeighbourQuery, bq: Option[BooleanQuery], id: Option[String] = None, cache: Option[QueryCacheOptions] = Some(QueryCacheOptions()))(implicit ac: AdamContext) extends QueryExpression(id) {
-    def this(indexname: IndexName, nnq: NearestNeighbourQuery, bq: Option[BooleanQuery], id: Option[String], cache: Option[QueryCacheOptions])(implicit ac: AdamContext) {
-      this(IndexHandler.load(indexname).get, nnq, bq, id, cache)
+  case class SpecifiedIndexQueryHolder(index: Index, nnq: NearestNeighbourQuery, bq: Option[BooleanQuery], tiq: Option[TupleIDQuery[_]], id: Option[String] = None, cache: Option[QueryCacheOptions] = Some(QueryCacheOptions()))(implicit ac: AdamContext) extends QueryExpression(id) {
+    def this(indexname: IndexName, nnq: NearestNeighbourQuery, bq: Option[BooleanQuery], tiq: Option[TupleIDQuery[_]], id: Option[String], cache: Option[QueryCacheOptions])(implicit ac: AdamContext) {
+      this(IndexHandler.load(indexname).get, nnq, bq, tiq, id, cache)
     }
 
     override protected def run(filter: Option[DataFrame]): DataFrame = {
-      val abq = bq.getOrElse(BooleanQuery())
-      if (filter.isDefined) {
-        abq.append(filter.get)
-      }
       val annq = NearestNeighbourQuery(nnq.column, nnq.q, nnq.distance, nnq.k, true, nnq.options, nnq.partitions, nnq.queryID)
-      specifiedIndexQuery(index)(annq, Option(abq), false, id, cache)
+      val atiq = if (tiq.isDefined) {
+        Some(tiq.get.+:(filter))
+      } else {
+        if (filter.isDefined) {
+          Some(new TupleIDQuery(filter.get))
+        } else {
+          None
+        }
+      }
+      specifiedIndexQuery(index)(annq, bq, atiq, false, id, cache)
     }
   }
 
@@ -349,7 +352,7 @@ object QueryHandler {
     * @return a tracker for the progressive query
     */
   def progressiveQuery[U](entityname: EntityName)(
-    nnq: NearestNeighbourQuery, bq: Option[BooleanQuery],
+    nnq: NearestNeighbourQuery, bq: Option[BooleanQuery], tiq: Option[TupleIDQuery[_]],
     paths: ProgressivePathChooser,
     onComplete: (ProgressiveQueryStatus.Value, DataFrame, Float, String, Map[String, String]) => U,
     withMetadata: Boolean, id: Option[String] = None)(implicit ac: AdamContext)
@@ -364,11 +367,7 @@ object QueryHandler {
     }
 
     log.debug("progressive query gets filter")
-    val filter = if (bq.isDefined) {
-      getFilter(entityname, bq.get)
-    } else {
-      None
-    }
+    val filter = getFilter(entityname, bq, tiq)
 
     log.debug("progressive query performs kNN query")
     NearestNeighbourQueryHandler.progressiveQuery(entityname, nnq, filter, paths, onCompleteFunction)
@@ -386,17 +385,13 @@ object QueryHandler {
     * @return the results available together with a confidence score
     */
   def timedProgressiveQuery(entityname: EntityName)(
-    nnq: NearestNeighbourQuery, bq: Option[BooleanQuery],
+    nnq: NearestNeighbourQuery, bq: Option[BooleanQuery], tiq: Option[TupleIDQuery[_]],
     paths: ProgressivePathChooser,
     timelimit: Duration, withMetadata: Boolean, id: Option[String] = None, cache: Option[QueryCacheOptions] = Some(QueryCacheOptions()))(implicit ac: AdamContext): (DataFrame, Float, String) = {
     log.debug("timed progressive query gets filter")
     //TODO: use cache
 
-    val filter = if (bq.isDefined) {
-      getFilter(entityname, bq.get)
-    } else {
-      None
-    }
+    val filter = getFilter(entityname, bq, tiq)
 
     log.debug("timed progressive query performs kNN query")
     val results = NearestNeighbourQueryHandler.timedProgressiveQuery(entityname, nnq, filter, paths, timelimit)
@@ -506,11 +501,7 @@ object QueryHandler {
 
   case class BooleanQueryHolder(entityname: EntityName, bq: Option[BooleanQuery], id: Option[String] = None, cache: Option[QueryCacheOptions] = Some(QueryCacheOptions()))(implicit ac: AdamContext) extends QueryExpression(id) {
     override protected def run(filter: Option[DataFrame]): DataFrame = {
-      val abq = bq.getOrElse(BooleanQuery())
-      if (filter.isDefined) {
-        abq.append(filter.get)
-      }
-      booleanQuery(entityname)(Option(abq), id, cache)
+      booleanQuery(entityname)(bq, id, cache)
     }
   }
 
@@ -522,27 +513,31 @@ object QueryHandler {
     * @param bq
     * @return
     */
-  private def getFilter(entityname: EntityName, bq: BooleanQuery)(implicit ac: AdamContext): Option[DataFrame] = {
+  private def getFilter(entityname: EntityName, bq: Option[BooleanQuery], tiq: Option[TupleIDQuery[_]])(implicit ac: AdamContext): Option[DataFrame] = {
     val entity = EntityHandler.load(entityname).get
 
-    val results = BooleanQueryHandler.getIds(entityname, bq)
-    if (results.isDefined) {
-      var filter = results.get.select(entity.pk)
+    //TODO: adjust this code!!! return more often none
 
-      if (bq.tidFilter.isDefined) {
-        filter = filter.filter(filter(entity.pk) isin (bq.tidFilter.get.toSeq: _*))
-      }
-
-      Some(filter)
+    val bqres = if(bq.isDefined){
+     BooleanQueryHandler.getBQIds(entityname, bq)
     } else {
-      if (bq.tidFilter.isDefined) {
-        val rdd = ac.sc.parallelize(bq.tidFilter.get.map(Row(_)).toSeq)
-        val fields = StructType(Seq(StructField(entity.pk, LongType, false)))
-        val df = ac.sqlContext.createDataFrame(rdd, fields)
-        Some(df)
-      } else {
-        None
-      }
+      None
+    }
+
+    val tiqres = if(tiq.isDefined){
+      BooleanQueryHandler.getTIQIds(entityname, tiq)
+    } else {
+      None
+    }
+
+    if(bqres.isDefined && tiqres.isDefined){
+      Some(bqres.get.join(tiqres.get, entity.pk))
+    } else if (bqres.isDefined){
+      bqres
+    }  else if (tiqres.isDefined){
+      tiqres
+    } else {
+      None
     }
   }
 

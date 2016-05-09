@@ -1,14 +1,17 @@
 package ch.unibas.dmi.dbis.adam.index.structures.ecp
 
+import ch.unibas.dmi.dbis.adam.config.FieldNames
 import ch.unibas.dmi.dbis.adam.entity.Entity.EntityName
 import ch.unibas.dmi.dbis.adam.entity.EntityHandler
 import ch.unibas.dmi.dbis.adam.index.Index.{IndexName, IndexTypeName}
 import ch.unibas.dmi.dbis.adam.index._
 import ch.unibas.dmi.dbis.adam.index.structures.IndexTypes
-import ch.unibas.dmi.dbis.adam.main.{AdamContext, SparkStartup}
+import ch.unibas.dmi.dbis.adam.main.AdamContext
 import ch.unibas.dmi.dbis.adam.query.distance.DistanceFunction
 import org.apache.log4j.Logger
 import org.apache.spark.rdd.RDD
+import org.apache.spark.sql.Row
+import org.apache.spark.sql.types.{StructField, StructType}
 import org.apache.spark.util.random.ADAMSamplingUtils
 
 /**
@@ -29,7 +32,9 @@ class ECPIndexer(trainingSize: Int = -1, distance: DistanceFunction)(@transient 
     * @param data
     * @return
     */
-  override def index(indexname: IndexName, entityname: EntityName, data: RDD[IndexingTaskTuple]): Index = {
+  override def index(indexname: IndexName, entityname: EntityName, data: RDD[IndexingTaskTuple[_]]): Index = {
+    val entity = EntityHandler.load(entityname).get
+
     val n = EntityHandler.countTuples(entityname).get
     val ntuples = if (trainingSize == -1) {
       math.sqrt(n)
@@ -49,11 +54,17 @@ class ECPIndexer(trainingSize: Int = -1, distance: DistanceFunction)(@transient 
         (l.id, distance.apply(datum.feature, l.feature))
       }).minBy(_._2)._1
 
-      LongIndexTuple(datum.id, minTID)
+      Row(datum.id, minTID)
     })
 
-    import SparkStartup.Implicits.sqlContext.implicits._
-    new ECPIndex(indexname, entityname, indexdata.toDF, ECPIndexMetaData(leaders.value.toArray.toSeq, distance))
+    val schema = StructType(Seq(
+      StructField(entity.pk, entity.pkType.datatype, false),
+      StructField(FieldNames.featureIndexColumnName, entity.pkType.datatype, false)
+    ))
+
+    val df = ac.sqlContext.createDataFrame(indexdata, schema)
+
+    new ECPIndex(indexname, entityname, df, ECPIndexMetaData(leaders.value.toSeq, distance))
   }
 }
 

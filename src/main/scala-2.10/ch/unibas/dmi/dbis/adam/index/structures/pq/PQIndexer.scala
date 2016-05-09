@@ -1,16 +1,19 @@
 package ch.unibas.dmi.dbis.adam.index.structures.pq
 
+import ch.unibas.dmi.dbis.adam.config.FieldNames
 import ch.unibas.dmi.dbis.adam.entity.Entity.EntityName
 import ch.unibas.dmi.dbis.adam.entity.EntityHandler
 import ch.unibas.dmi.dbis.adam.index.Index.{IndexName, IndexTypeName}
 import ch.unibas.dmi.dbis.adam.index._
 import ch.unibas.dmi.dbis.adam.index.structures.IndexTypes
-import ch.unibas.dmi.dbis.adam.main.{AdamContext, SparkStartup}
+import ch.unibas.dmi.dbis.adam.main.AdamContext
 import ch.unibas.dmi.dbis.adam.query.distance.DistanceFunction
 import org.apache.log4j.Logger
 import org.apache.spark.mllib.clustering.{KMeans, KMeansModel}
 import org.apache.spark.mllib.linalg.Vectors
 import org.apache.spark.rdd.RDD
+import org.apache.spark.sql.Row
+import org.apache.spark.sql.types.{ArrayType, ByteType, StructField, StructType}
 import org.apache.spark.util.random.ADAMSamplingUtils
 
 import scala.collection.immutable.IndexedSeq
@@ -26,7 +29,9 @@ class PQIndexer(nsq: Int, trainingSize: Int)(@transient implicit val ac : AdamCo
 
   override def indextypename : IndexTypeName = IndexTypes.PQINDEX
 
-  override def index(indexname: IndexName, entityname: EntityName, data: RDD[IndexingTaskTuple]): Index = {
+  override def index(indexname: IndexName, entityname: EntityName, data: RDD[IndexingTaskTuple[_]]): Index = {
+    val entity = EntityHandler.load(entityname).get
+
     val n = EntityHandler.countTuples(entityname).get
     val fraction = ADAMSamplingUtils.computeFractionForSampleSize(trainingSize, n, false)
     val trainData = data.sample(false, fraction)
@@ -34,7 +39,6 @@ class PQIndexer(nsq: Int, trainingSize: Int)(@transient implicit val ac : AdamCo
     val indexMetaData = train(collected)
 
     val d = collected.head.feature.size
-
 
     log.debug("PQ indexing...")
 
@@ -44,11 +48,17 @@ class PQIndexer(nsq: Int, trainingSize: Int)(@transient implicit val ac : AdamCo
           .grouped(math.max(1, d / nsq)).toSeq
           .zipWithIndex
           .map{case(split,idx) => indexMetaData.models(idx).predict(Vectors.dense(split.map(_.toDouble))).toByte}
-        ByteArrayIndexTuple(datum.id, hash)
+        Row(datum.id, hash)
       })
 
-    import SparkStartup.Implicits.sqlContext.implicits._
-    new PQIndex(indexname, entityname, indexdata.toDF, indexMetaData)
+
+    val schema = StructType(Seq(
+      StructField(entity.pk, entity.pkType.datatype, false),
+      StructField(FieldNames.featureIndexColumnName, new ArrayType(ByteType, false), false)
+    ))
+
+    val df = ac.sqlContext.createDataFrame(indexdata, schema)
+    new PQIndex(indexname, entityname, df, indexMetaData)
   }
 
   /**
@@ -56,7 +66,7 @@ class PQIndexer(nsq: Int, trainingSize: Int)(@transient implicit val ac : AdamCo
     * @param trainData
     * @return
     */
-  private def train(trainData: Array[IndexingTaskTuple]): PQIndexMetaData = {
+  private def train(trainData: Array[IndexingTaskTuple[_]]): PQIndexMetaData = {
     val numIterations = 100
     val nsqbits : Int = 8 //index produces a byte array index tuple
     val numClusters : Int = 2 ^ nsqbits

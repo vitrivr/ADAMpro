@@ -4,7 +4,8 @@ import java.io._
 
 import ch.unibas.dmi.dbis.adam.config.AdamConfig
 import ch.unibas.dmi.dbis.adam.entity.Entity.EntityName
-import ch.unibas.dmi.dbis.adam.entity.{FieldDefinition, EntityNameHolder}
+import ch.unibas.dmi.dbis.adam.entity.FieldTypes.FieldType
+import ch.unibas.dmi.dbis.adam.entity.{FieldTypes, FieldDefinition, EntityNameHolder}
 import ch.unibas.dmi.dbis.adam.exception.{EntityExistingException, EntityNotExistingException, IndexExistingException, IndexNotExistingException}
 import ch.unibas.dmi.dbis.adam.index.Index.{IndexName, IndexTypeName}
 import ch.unibas.dmi.dbis.adam.index.structures.IndexTypes
@@ -64,7 +65,7 @@ object CatalogOperator {
     Await.result(db.run(setup), MAX_WAITING_TIME)
 
     fields.foreach { field =>
-      val setup = DBIO.seq(entityfields.+=(field.name, entityname, DEFAULT_DIMENSIONALITY))
+      val setup = DBIO.seq(entityfields.+=(field.name, field.fieldtype.name, entityname, DEFAULT_DIMENSIONALITY))
       Await.result(db.run(setup), MAX_WAITING_TIME)
     }
 
@@ -116,6 +117,18 @@ object CatalogOperator {
   def getEntityPK(entityname: EntityName) : String = {
     val query = entities.filter(_.entityname === entityname.toString()).map(_.pk).take(1).result
     Await.result(db.run(query), MAX_WAITING_TIME).head
+  }
+
+  /**
+    *
+    * @param entityname
+    * @return
+    */
+  def getEntityPKType(entityname: EntityName) : FieldType = {
+    val pk = getEntityPK(entityname)
+    val query = entityfields.filter(_.entityname === entityname.toString()).filter(_.fieldname === pk).map(_.fieldtype).take(1).result
+    val fieldType = Await.result(db.run(query), MAX_WAITING_TIME).head
+    FieldTypes.fromString(fieldType)
   }
 
   /**
@@ -370,6 +383,7 @@ object CatalogOperator {
 
   /**
     * Mark indexes for given entity stale.
+ *
     * @param entityname
     */
   def updateIndexesToStale(entityname : EntityName) : Boolean = {

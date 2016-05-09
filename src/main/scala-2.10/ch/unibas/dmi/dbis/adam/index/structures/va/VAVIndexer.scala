@@ -1,6 +1,8 @@
 package ch.unibas.dmi.dbis.adam.index.structures.va
 
 import breeze.linalg._
+import ch.unibas.dmi.dbis.adam.config.FieldNames
+import ch.unibas.dmi.dbis.adam.datatypes.bitString.BitStringUDT
 import ch.unibas.dmi.dbis.adam.datatypes.feature.Feature._
 import ch.unibas.dmi.dbis.adam.entity.Entity._
 import ch.unibas.dmi.dbis.adam.entity.EntityHandler
@@ -9,11 +11,13 @@ import ch.unibas.dmi.dbis.adam.index.Index.{IndexName, IndexTypeName}
 import ch.unibas.dmi.dbis.adam.index.structures.IndexTypes
 import ch.unibas.dmi.dbis.adam.index.structures.va.marks.{EquidistantMarksGenerator, EquifrequentMarksGenerator, MarksGenerator}
 import ch.unibas.dmi.dbis.adam.index.structures.va.signature.VariableSignatureGenerator
-import ch.unibas.dmi.dbis.adam.index.{BitStringIndexTuple, Index, IndexGenerator, IndexingTaskTuple}
-import ch.unibas.dmi.dbis.adam.main.{AdamContext, SparkStartup}
+import ch.unibas.dmi.dbis.adam.index.{Index, IndexGenerator, IndexingTaskTuple}
+import ch.unibas.dmi.dbis.adam.main.AdamContext
 import ch.unibas.dmi.dbis.adam.query.distance.{DistanceFunction, MinkowskiDistance}
 import org.apache.log4j.Logger
 import org.apache.spark.rdd.RDD
+import org.apache.spark.sql.Row
+import org.apache.spark.sql.types.{StructField, StructType}
 import org.apache.spark.util.random.ADAMSamplingUtils
 
 /**
@@ -30,7 +34,9 @@ class VAVIndexer (nbits : Option[Int], marksGenerator: MarksGenerator, trainingS
   /**
    *
    */
-  override def index(indexname : IndexName, entityname : EntityName, data: RDD[IndexingTaskTuple]): Index = {
+  override def index(indexname : IndexName, entityname : EntityName, data: RDD[IndexingTaskTuple[_]]): Index = {
+    val entity = EntityHandler.load(entityname).get
+
     val n = EntityHandler.countTuples(entityname).get
     val fraction = ADAMSamplingUtils.computeFractionForSampleSize(trainingSize, n, false)
     val trainData = data.sample(false, fraction)
@@ -43,11 +49,17 @@ class VAVIndexer (nbits : Option[Int], marksGenerator: MarksGenerator, trainingS
       datum => {
         val cells = getCells(datum.feature, indexMetaData.marks)
         val signature = indexMetaData.signatureGenerator.toSignature(cells)
-        BitStringIndexTuple(datum.id, signature)
+        Row(datum.id, signature)
       })
 
-    import SparkStartup.Implicits.sqlContext.implicits._
-    new VAIndex(indexname, entityname, indexdata.toDF, indexMetaData)
+    val schema = StructType(Seq(
+      StructField(entity.pk, entity.pkType.datatype, false),
+      StructField(FieldNames.featureIndexColumnName, new BitStringUDT, false)
+    ))
+
+    val df = ac.sqlContext.createDataFrame(indexdata, schema)
+
+    new VAIndex(indexname, entityname, df, indexMetaData)
   }
 
   /**
@@ -55,7 +67,7 @@ class VAVIndexer (nbits : Option[Int], marksGenerator: MarksGenerator, trainingS
    * @param trainData
    * @return
    */
-  private def train(trainData : Array[IndexingTaskTuple]) : VAIndexMetaData = {
+  private def train(trainData : Array[IndexingTaskTuple[_]]) : VAIndexMetaData = {
     log.debug("VA-File (variable) started training")
 
     //data

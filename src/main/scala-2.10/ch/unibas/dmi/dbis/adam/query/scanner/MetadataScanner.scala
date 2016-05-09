@@ -89,7 +89,7 @@ object MetadataScanner {
     * @param entity
     * @return
     */
-  private def retrieveAll(entity: Entity): Option[DataFrame] = {
+  def retrieveAll(entity: Entity): Option[DataFrame] = {
     if (entity.hasMetadata) {
       val df = entity.getMetadata.get
       Option(df)

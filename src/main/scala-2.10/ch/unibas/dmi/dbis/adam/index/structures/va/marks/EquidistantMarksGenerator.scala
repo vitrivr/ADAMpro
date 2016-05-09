@@ -21,7 +21,7 @@ private[va] object EquidistantMarksGenerator extends MarksGenerator with Seriali
    * @param maxMarks
    * @return
    */
-  private[va] def getMarks(samples : Array[IndexingTaskTuple], maxMarks : Seq[Int]) : Marks = {
+  private[va] def getMarks(samples : Array[IndexingTaskTuple[_]], maxMarks : Seq[Int]) : Marks = {
     log.debug("get equidistant marks for VA-File")
     val dimensionality = maxMarks.length
 

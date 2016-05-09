@@ -76,7 +76,7 @@ class SHIndex(val indexname: IndexName, val entityname: EntityName, override pri
 
     while (it.hasNext && ids.length < k) {
       val id = it.next()
-      val res: Array[SHResultElement] = localResults(id)
+      val res = localResults(id)
       ids.append(localResults(id).map(res => Result(res.score.toFloat / maxScore, res.tid)).toSeq : _*)
     }
 

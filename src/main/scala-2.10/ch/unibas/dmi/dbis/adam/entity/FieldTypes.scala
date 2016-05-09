@@ -11,14 +11,20 @@ import org.apache.spark.sql.types.DataType
   * March 2016
   */
 object FieldTypes {
-  sealed abstract class FieldType(val datatype : DataType)
+  sealed abstract class FieldType(val name : String, val datatype : DataType)
 
-  case object INTTYPE extends FieldType(types.IntegerType)
-  case object LONGTYPE extends FieldType(types.LongType)
-  case object FLOATTYPE extends FieldType(types.FloatType)
-  case object DOUBLETYPE extends FieldType(types.DoubleType)
-  case object STRINGTYPE extends FieldType(types.StringType)
-  case object BOOLEANTYPE extends FieldType(types.BooleanType)
-  case object FEATURETYPE extends FieldType(new FeatureVectorWrapperUDT)
-  case object UNRECOGNIZEDTYPE extends FieldType(types.NullType)
+  case object INTTYPE extends FieldType("integer", types.IntegerType)
+  case object LONGTYPE extends FieldType("long", types.LongType)
+  case object FLOATTYPE extends FieldType("float", types.FloatType)
+  case object DOUBLETYPE extends FieldType("double", types.DoubleType)
+  case object STRINGTYPE extends FieldType("string", types.StringType)
+  case object BOOLEANTYPE extends FieldType("boolean", types.BooleanType)
+  case object FEATURETYPE extends FieldType("feature", new FeatureVectorWrapperUDT)
+  case object UNRECOGNIZEDTYPE extends FieldType("", types.NullType)
+
+  def values = Seq(INTTYPE, LONGTYPE, FLOATTYPE, DOUBLETYPE, STRINGTYPE, BOOLEANTYPE, FEATURETYPE)
+
+  def fromString(s : String): FieldType ={
+    values.filter(x => x.name == s).head
+  }
 }

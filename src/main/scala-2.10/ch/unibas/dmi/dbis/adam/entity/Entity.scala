@@ -19,10 +19,10 @@ import scala.util.{Success, Try}
   * Ivan Giangreco
   * October 2015
   */
-case class Entity(val entityname: EntityName, val pk : String, private val featureStorage: FeatureStorage, private val metadataStorage: Option[MetadataStorage]) {
+case class Entity(val entityname: EntityName, val pk : String, private val featureStorage: FeatureStorage, private val metadataStorage: Option[MetadataStorage])(@transient implicit val ac : AdamContext)  {
   @transient val log = Logger.getLogger(getClass.getName)
 
-  private def featureData(implicit ac: AdamContext) = featureStorage.read(entityname).get
+  private def featureData = featureStorage.read(entityname).get
   private def metaData = if (metadataStorage.isDefined) {
     Some(metadataStorage.get.read(entityname))
   } else {
@@ -34,7 +34,7 @@ case class Entity(val entityname: EntityName, val pk : String, private val featu
     *
     * @return
     */
-  def count(implicit ac: AdamContext): Long = {
+  def count : Long = {
     if (tupleCount == -1) {
       tupleCount = featureStorage.count(entityname)
     }
@@ -50,7 +50,7 @@ case class Entity(val entityname: EntityName, val pk : String, private val featu
     * @param k number of elements to show in preview
     * @return
     */
-  def show(k: Int)(implicit ac: AdamContext) = rdd.take(k)
+  def show(k: Int) = rdd.take(k)
 
   /**
     * Inserts data into the entity.
@@ -59,7 +59,7 @@ case class Entity(val entityname: EntityName, val pk : String, private val featu
     * @param ignoreChecks
     * @return
     */
-  def insert(insertion: DataFrame, ignoreChecks: Boolean = false)(implicit ac: AdamContext): Try[Void] = {
+  def insert(insertion: DataFrame, ignoreChecks: Boolean = false) : Try[Void] = {
     log.debug("inserting data into entity")
 
    //TODO: check dimensionality is correct
@@ -88,9 +88,8 @@ case class Entity(val entityname: EntityName, val pk : String, private val featu
   /**
     * Returns a map of properties to the entity. Useful for printing.
     */
-  def properties(implicit ac: AdamContext) : Map[String, String] = {
+  def properties : Map[String, String] = {
     val lb = ListBuffer[(String, String)]()
-
 
     lb.append("hasMetadata" -> hasMetadata.toString)
     lb.append("schema" -> schema.map(field => field.name + "(" + field.dataType.simpleString + ")").mkString(","))
@@ -104,7 +103,7 @@ case class Entity(val entityname: EntityName, val pk : String, private val featu
     * @param filter
     * @return
     */
-  def filter(filter: DataFrame)(implicit ac: AdamContext): DataFrame = {
+  def filter(filter: DataFrame) : DataFrame = {
     featureStorage.read(entityname).get.join(filter, pk)
   }
 
@@ -112,7 +111,7 @@ case class Entity(val entityname: EntityName, val pk : String, private val featu
     *
     * @return
     */
-  def schema(implicit ac: AdamContext) = if (metaData.isDefined) {
+  def schema = if (metaData.isDefined) {
     featureData.join(metaData.get, pk).schema
   } else {
     featureData.schema
@@ -122,7 +121,13 @@ case class Entity(val entityname: EntityName, val pk : String, private val featu
     *
     * @return
     */
-  def rdd(implicit ac: AdamContext) = if (metaData.isDefined) {
+  def pkType = CatalogOperator.getEntityPKType(entityname)
+
+  /**
+    *
+    * @return
+    */
+  def rdd = if (metaData.isDefined) {
     featureData.join(metaData.get).rdd
   } else {
     featureData.rdd
@@ -132,7 +137,7 @@ case class Entity(val entityname: EntityName, val pk : String, private val featu
     *
     * @return
     */
-  def getFeaturedata(implicit ac: AdamContext): DataFrame = featureData
+  def getFeaturedata: DataFrame = featureData
 
   /**
     *

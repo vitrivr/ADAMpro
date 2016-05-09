@@ -13,5 +13,5 @@ import org.apache.spark.rdd.RDD
  */
 trait IndexGenerator {
   def indextypename: IndexTypes.IndexType
-  def index(indexname : IndexName, entityname : EntityName, data: RDD[IndexingTaskTuple]):  Index
+  def index(indexname : IndexName, entityname : EntityName, data: RDD[IndexingTaskTuple[_]]):  Index
 }

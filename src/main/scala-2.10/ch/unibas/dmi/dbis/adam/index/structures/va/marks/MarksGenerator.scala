@@ -17,7 +17,7 @@ private[va] trait MarksGenerator extends Serializable {
    * @param maxMarks
    * @return
    */
-  private[va] def getMarks(sample: Array[IndexingTaskTuple], maxMarks: Seq[Int]): Marks
+  private[va] def getMarks(sample: Array[IndexingTaskTuple[_]], maxMarks: Seq[Int]): Marks
 
   /**
    *
@@ -25,7 +25,7 @@ private[va] trait MarksGenerator extends Serializable {
    * @param maxMarks
    * @return
    */
-  private[va] def getMarks(sample: Array[IndexingTaskTuple], maxMarks: Int): Marks = {
+  private[va] def getMarks(sample: Array[IndexingTaskTuple[_]], maxMarks: Int): Marks = {
     val dimensionality = sample.head.feature.length
     getMarks(sample, Seq.fill(dimensionality)(maxMarks))
   }

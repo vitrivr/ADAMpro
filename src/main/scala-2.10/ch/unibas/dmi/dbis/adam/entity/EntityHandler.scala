@@ -2,7 +2,7 @@ package ch.unibas.dmi.dbis.adam.entity
 
 import ch.unibas.dmi.dbis.adam.config.FieldNames
 import ch.unibas.dmi.dbis.adam.entity.Entity.EntityName
-import ch.unibas.dmi.dbis.adam.entity.FieldTypes.FEATURETYPE
+import ch.unibas.dmi.dbis.adam.entity.FieldTypes.{STRINGTYPE, INTTYPE, LONGTYPE, FEATURETYPE}
 import ch.unibas.dmi.dbis.adam.exception.{EntityExistingException, EntityNotExistingException, EntityNotProperlyDefinedException}
 import ch.unibas.dmi.dbis.adam.index.IndexHandler
 import ch.unibas.dmi.dbis.adam.main.{AdamContext, SparkStartup}
@@ -44,14 +44,14 @@ object EntityHandler {
         return Failure(EntityExistingException())
       }
 
-      if(fields.isEmpty){
+      if (fields.isEmpty) {
         log.error("entity " + entityname + " will have no fields")
         return Failure(EntityNotProperlyDefinedException())
       }
 
       FieldNames.reservedNames.foreach { reservedName =>
         if (fields.contains(reservedName)) {
-          log.error("entity defined with field " + reservedName+ ", but name is reserved")
+          log.error("entity defined with field " + reservedName + ", but name is reserved")
           return Failure(EntityNotProperlyDefinedException())
         }
       }
@@ -64,30 +64,29 @@ object EntityHandler {
       if (fields.filter(_.pk).length > 1) {
         log.error("entity defined with more than one primary key")
         return Failure(EntityNotProperlyDefinedException())
-      } else if (fields.filter(_.pk).isEmpty){
+      } else if (fields.filter(_.pk).isEmpty) {
         log.error("entity defined has no primary key")
         return Failure(EntityNotProperlyDefinedException())
-      } else if (fields.filter(_.pk).head.fieldtype != FieldTypes.LONGTYPE){
-        log.error("entity defined needs a LONG primary key")
+      } else if (fields.filter(_.pk).forall(pk => Seq(INTTYPE, LONGTYPE, STRINGTYPE).map(_.name).contains(pk.fieldtype))) {
+        log.error("entity defined needs a INT, LONG or STRING primary key")
         return Failure(EntityNotProperlyDefinedException())
       }
-    }
 
-    val pk = fields.filter(_.pk).head
-    val featureFields = fields.filter(_.fieldtype == FEATURETYPE).+:(pk)
+      val pk = fields.filter(_.pk).head
+      val featureFields = fields.filter(_.fieldtype == FEATURETYPE).+:(pk)
 
+      //perform
+      featureStorage.create(entityname, featureFields)
 
-    //perform
-    featureStorage.create(entityname, featureFields)
-
-    if (!fields.filterNot(_.fieldtype == FEATURETYPE).filterNot(_.pk).isEmpty) {
-      val metadataFields = fields.filterNot(_.fieldtype == FEATURETYPE)
-      metadataStorage.create(entityname, metadataFields)
-      CatalogOperator.createEntity(entityname, pk.name, fields, true)
-      Success(Entity(entityname, pk.name, featureStorage, Option(metadataStorage)))
-    } else {
-      CatalogOperator.createEntity(entityname, pk.name, fields, false)
-      Success(Entity(entityname, pk.name, featureStorage, None))
+      if (!fields.filterNot(_.fieldtype == FEATURETYPE).filterNot(_.pk).isEmpty) {
+        val metadataFields = fields.filterNot(_.fieldtype == FEATURETYPE)
+        metadataStorage.create(entityname, metadataFields)
+        CatalogOperator.createEntity(entityname, pk.name, fields, true)
+        Success(Entity(entityname, pk.name, featureStorage, Option(metadataStorage)))
+      } else {
+        CatalogOperator.createEntity(entityname, pk.name, fields, false)
+        Success(Entity(entityname, pk.name, featureStorage, None))
+      }
     }
   }
 

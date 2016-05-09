@@ -1,6 +1,8 @@
 package ch.unibas.dmi.dbis.adam.index.structures.sh
 
 import breeze.linalg.{Matrix, Vector, _}
+import ch.unibas.dmi.dbis.adam.config.FieldNames
+import ch.unibas.dmi.dbis.adam.datatypes.bitString.BitStringUDT
 import ch.unibas.dmi.dbis.adam.datatypes.feature.Feature
 import ch.unibas.dmi.dbis.adam.datatypes.feature.Feature.{VectorBase, _}
 import ch.unibas.dmi.dbis.adam.entity.{EntityHandler, Entity}
@@ -12,6 +14,8 @@ import ch.unibas.dmi.dbis.adam.main.{AdamContext, SparkStartup}
 import ch.unibas.dmi.dbis.adam.query.distance.DistanceFunction
 import org.apache.log4j.Logger
 import org.apache.spark.rdd.RDD
+import org.apache.spark.sql.Row
+import org.apache.spark.sql.types.{StructField, StructType}
 import org.apache.spark.util.random.ADAMSamplingUtils
 
 
@@ -32,7 +36,9 @@ class SHIndexer(nbits : Option[Int], trainingSize : Int)(@transient implicit val
    * @param data
    * @return
    */
-  override def index(indexname : IndexName, entityname : EntityName, data: RDD[IndexingTaskTuple]): Index = {
+  override def index(indexname : IndexName, entityname : EntityName, data: RDD[IndexingTaskTuple[_]]): Index = {
+    val entity = EntityHandler.load(entityname).get
+
     val n = EntityHandler.countTuples(entityname).get
     val fraction = ADAMSamplingUtils.computeFractionForSampleSize(trainingSize, n, false)
     val trainData = data.sample(false, fraction)
@@ -44,11 +50,16 @@ class SHIndexer(nbits : Option[Int], trainingSize : Int)(@transient implicit val
     val indexdata = data.map(
       datum => {
         val hash = SHUtils.hashFeature(datum.feature, indexMetaData)
-        BitStringIndexTuple(datum.id, hash)
+        Row(datum.id, hash)
       })
 
-    import SparkStartup.Implicits.sqlContext.implicits._
-    new SHIndex(indexname, entityname, indexdata.toDF, indexMetaData)
+    val schema = StructType(Seq(
+      StructField(entity.pk, entity.pkType.datatype, false),
+      StructField(FieldNames.featureIndexColumnName, new BitStringUDT, false)
+    ))
+
+    val df = ac.sqlContext.createDataFrame(indexdata, schema)
+    new SHIndex(indexname, entityname, df, indexMetaData)
   }
 
   /**
@@ -56,7 +67,7 @@ class SHIndexer(nbits : Option[Int], trainingSize : Int)(@transient implicit val
    * @param trainData
    * @return
    */
-  private def train(trainData : Array[IndexingTaskTuple]) : SHIndexMetaData = {
+  private def train(trainData : Array[IndexingTaskTuple[_]]) : SHIndexMetaData = {
     log.debug("SH started training")
 
     val dTrainData = trainData.map(x => x.feature.map(x => x.toDouble).toArray)

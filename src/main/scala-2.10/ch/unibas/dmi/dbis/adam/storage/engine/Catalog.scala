@@ -18,12 +18,13 @@ private[engine] class EntitiesCatalog(tag: Tag) extends Table[(String, String, B
   def * = (entityname, pk, hasMeta)
 }
 
-private[engine] class EntityFieldsCatalog(tag: Tag) extends Table[(String, String, Int)](tag, "ADAMTWO_FIELDS") {
+private[engine] class EntityFieldsCatalog(tag: Tag) extends Table[(String, String, String, Int)](tag, "ADAMTWO_FIELDS") {
   def fieldname = column[String]("FIELDNAME")
+  def fieldtype = column[String]("FIELDTYPE")
   def entityname = column[String]("ENTITYNAME")
   def featurelength = column[Int]("FEATURELENGTH")
 
-  def * = (fieldname, entityname, featurelength)
+  def * = (fieldname, fieldtype, entityname, featurelength)
 
   def supplier: ForeignKeyQuery[EntitiesCatalog, (String, String, Boolean)] =
     foreignKey("ENTITYNAME", entityname, TableQuery[EntitiesCatalog])(_.entityname)

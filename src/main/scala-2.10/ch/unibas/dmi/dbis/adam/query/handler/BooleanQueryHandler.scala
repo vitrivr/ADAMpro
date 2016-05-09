@@ -6,7 +6,7 @@ import ch.unibas.dmi.dbis.adam.config.AdamConfig
 import ch.unibas.dmi.dbis.adam.entity.Entity._
 import ch.unibas.dmi.dbis.adam.entity.EntityHandler
 import ch.unibas.dmi.dbis.adam.main.{AdamContext, SparkStartup}
-import ch.unibas.dmi.dbis.adam.query.query.BooleanQuery
+import ch.unibas.dmi.dbis.adam.query.query.{BooleanQuery, TupleIDQuery}
 import ch.unibas.dmi.dbis.adam.query.scanner.MetadataScanner
 import com.google.common.cache.{CacheBuilder, CacheLoader}
 import org.apache.log4j.Logger
@@ -29,9 +29,29 @@ private[query] object BooleanQueryHandler {
     * @param query
     * @return
     */
-  def getIds(entityname: EntityName, query: BooleanQuery)(implicit ac: AdamContext): Option[DataFrame] = {
+  def getBQIds(entityname: EntityName, query: Option[BooleanQuery])(implicit ac: AdamContext): Option[DataFrame] = {
     log.debug("performing metadata-based boolean query on " + entityname)
     BooleanQueryLRUCache.get(entityname, query).get
+  }
+
+  /**
+    * Performs a Boolean query on the metadata.
+    *
+    * @param entityname
+    * @param query
+    * @return
+    */
+  def getTIQIds(entityname: EntityName, query: Option[TupleIDQuery[_]])(implicit ac: AdamContext): Option[DataFrame] = {
+    log.debug("performing id query on " + entityname)
+    val entity = EntityHandler.load(entityname).get
+    if(query.isDefined){
+      import org.apache.spark.sql.functions.col
+
+      val filter = query.get.tidFilter.toSeq
+      Some(entity.getFeaturedata.select(entity.pk).filter(col(entity.pk).isin(filter : _*)))
+    } else {
+      None
+    }
   }
 
 
@@ -42,7 +62,7 @@ private[query] object BooleanQueryHandler {
     * @return
     */
   def getData(entityname: EntityName, query : Option[BooleanQuery] = None)(implicit ac: AdamContext) : Option[DataFrame] = {
-    MetadataScanner(EntityHandler.load(entityname).get, query)
+    BooleanQueryLRUCache.get(entityname, query).get
   }
 
 
@@ -68,10 +88,10 @@ private[query] object BooleanQueryHandler {
       maximumSize(maximumCacheSize).
       expireAfterAccess(expireAfterAccess, TimeUnit.MINUTES).
       build(
-        new CacheLoader[(EntityName, BooleanQuery), Option[DataFrame]]() {
-          def load(query: (EntityName, BooleanQuery)): Option[DataFrame] = {
+        new CacheLoader[(EntityName, Option[BooleanQuery]), Option[DataFrame]]() {
+          def load(query: (EntityName, Option[BooleanQuery])): Option[DataFrame] = {
             import SparkStartup.Implicits._
-            val df = MetadataScanner.apply(EntityHandler.load(query._1).get, Option(query._2))
+            val df = MetadataScanner.apply(EntityHandler.load(query._1).get, query._2)
 
             if(df.isDefined){
               df.get.cache()
@@ -83,7 +103,7 @@ private[query] object BooleanQueryHandler {
       )
 
 
-    def get(entityname: EntityName, bq : BooleanQuery): Try[Option[DataFrame]] = {
+    def get(entityname: EntityName, bq : Option[BooleanQuery]): Try[Option[DataFrame]] = {
       try {
         Success(bqCache.get((entityname, bq)))
       } catch {

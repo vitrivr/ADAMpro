@@ -23,19 +23,19 @@ private[rpc] object RPCHelperMethods {
 
   implicit def toQueryHolder(request: SimpleQueryMessage)(implicit ac: AdamContext) = {
     //TODO: possibly consider all query hints
-    StandardQueryHolder(request.entity, QueryHints.withName(request.hints.head), Option(prepareNNQ(request.nnq)), prepareBQ(request.bq), prepareQI(request.queryid), prepareCO(request.readFromCache, request.putInCache))
+    StandardQueryHolder(request.entity, QueryHints.withName(request.hints.head), Option(prepareNNQ(request.nnq)), prepareBQ(request.bq), None, prepareQI(request.queryid), prepareCO(request.readFromCache, request.putInCache))
   }
 
   implicit def toQueryHolder(request: SimpleSequentialQueryMessage)(implicit ac: AdamContext) = {
-    new SequentialQueryHolder(request.entity, prepareNNQ(request.nnq), prepareBQ(request.bq), prepareQI(request.queryid), prepareCO(request.readFromCache, request.putInCache))
+    new SequentialQueryHolder(request.entity, prepareNNQ(request.nnq), prepareBQ(request.bq), None, prepareQI(request.queryid), prepareCO(request.readFromCache, request.putInCache))
   }
 
   implicit def toQueryHolder(request: SimpleIndexQueryMessage)(implicit ac: AdamContext) = {
-    new IndexQueryHolder(request.entity, IndexTypes.withIndextype(request.indextype).get, prepareNNQ(request.nnq), prepareBQ(request.bq), prepareQI(request.queryid), prepareCO(request.readFromCache, request.putInCache))
+    new IndexQueryHolder(request.entity, IndexTypes.withIndextype(request.indextype).get, prepareNNQ(request.nnq), prepareBQ(request.bq), None, prepareQI(request.queryid), prepareCO(request.readFromCache, request.putInCache))
   }
 
   implicit def toQueryHolder(request: SimpleSpecifiedIndexQueryMessage)(implicit ac: AdamContext) = {
-    new SpecifiedIndexQueryHolder(request.index, prepareNNQ(request.nnq), prepareBQ(request.bq), prepareQI(request.queryid), prepareCO(request.readFromCache, request.putInCache))
+    new SpecifiedIndexQueryHolder(request.index, prepareNNQ(request.nnq), prepareBQ(request.bq), None, prepareQI(request.queryid), prepareCO(request.readFromCache, request.putInCache))
   }
 
 
@@ -74,9 +74,9 @@ private[rpc] object RPCHelperMethods {
 
     val expr = seqm.get.submessage match {
       case SubExpressionQueryMessage.Submessage.Eqm(x) => toExpr(x)
-      case SubExpressionQueryMessage.Submessage.Ssiqm(request) => new SpecifiedIndexQueryHolder(request.index, prepareNNQ(request.nnq), prepareBQ(request.bq), Some(request.queryid), Some(QueryCacheOptions()))
-      case SubExpressionQueryMessage.Submessage.Siqm(request) => new IndexQueryHolder(request.entity, IndexTypes.withIndextype(request.indextype).get, prepareNNQ(request.nnq), prepareBQ(request.bq), Some(request.queryid))
-      case SubExpressionQueryMessage.Submessage.Ssqm(request) => new SequentialQueryHolder(request.entity, prepareNNQ(request.nnq), prepareBQ(request.bq), Some(request.queryid))
+      case SubExpressionQueryMessage.Submessage.Ssiqm(request) => new SpecifiedIndexQueryHolder(request.index, prepareNNQ(request.nnq), prepareBQ(request.bq), None, Some(request.queryid), Some(QueryCacheOptions()))
+      case SubExpressionQueryMessage.Submessage.Siqm(request) => new IndexQueryHolder(request.entity, IndexTypes.withIndextype(request.indextype).get, prepareNNQ(request.nnq), prepareBQ(request.bq), None, Some(request.queryid))
+      case SubExpressionQueryMessage.Submessage.Ssqm(request) => new SequentialQueryHolder(request.entity, prepareNNQ(request.nnq), prepareBQ(request.bq), None, Some(request.queryid))
       case _ => EmptyQueryExpression();
     }
 
@@ -123,7 +123,7 @@ private[rpc] object RPCHelperMethods {
   def prepareBQ(option: Option[BooleanQueryMessage]): Option[BooleanQuery] = {
     if (option.isDefined) {
       val bq = option.get
-      Some(BooleanQuery(Option(bq.where.map(bqm => (bqm.field, bqm.value))), Option(bq.joins.map(x => (x.table, x.columns))), Option(bq.prefilter.toSet)))
+      Some(BooleanQuery(Option(bq.where.map(bqm => (bqm.field, bqm.value))), Option(bq.joins.map(x => (x.table, x.columns)))))
     } else {
       None
     }

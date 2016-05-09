@@ -75,7 +75,7 @@ object IndexHandler {
       }
 
       val indexname = createIndexName(entity.entityname, column, indexgenerator.indextypename)
-      val rdd: RDD[IndexingTaskTuple] = entity.getFeaturedata.map { x => IndexingTaskTuple(x.getAs[Long](entity.pk), x.getAs[FeatureVectorWrapper](column).vector) }
+      val rdd: RDD[IndexingTaskTuple[_]] = entity.getFeaturedata.map { x => IndexingTaskTuple(x.getAs[Any](entity.pk), x.getAs[FeatureVectorWrapper](column).vector) }
       val index = indexgenerator.index(indexname, entity.entityname, rdd)
       index.df = index
         .df
@@ -199,7 +199,7 @@ object IndexHandler {
     }
 
     data = if (cols.isDefined) {
-      val entityColNames = EntityHandler.load(index.entityname).get.schema.fieldNames.toSeq.+(index.pk)
+      val entityColNames = EntityHandler.load(index.entityname).get.schema.fieldNames.toSeq
       if(!cols.get.forall(name => entityColNames.contains(name))){
         log.error("one of the columns " + cols.mkString(",") + " is not existing in entity " + index.entityname + entityColNames.mkString("(", ",", ")"))
         Failure(throw new GeneralAdamException("repartition column not existing in entity"))
@@ -207,7 +207,7 @@ object IndexHandler {
 
       data.repartition(n, cols.get.map(data(_)): _*)
     } else {
-      data.repartition(n)
+      data.repartition(n, data(index.pk))
     }
 
     if (join.isDefined) {

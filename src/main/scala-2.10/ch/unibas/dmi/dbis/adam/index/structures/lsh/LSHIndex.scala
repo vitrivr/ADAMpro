@@ -8,7 +8,7 @@ import ch.unibas.dmi.dbis.adam.entity.Entity._
 import ch.unibas.dmi.dbis.adam.index.Index
 import ch.unibas.dmi.dbis.adam.index.Index.{IndexName, IndexTypeName}
 import ch.unibas.dmi.dbis.adam.index.structures.IndexTypes
-import ch.unibas.dmi.dbis.adam.index.structures.sh.{SHResultElement, SHResultHandler}
+import ch.unibas.dmi.dbis.adam.index.structures.sh.SHResultHandler
 import ch.unibas.dmi.dbis.adam.main.AdamContext
 import ch.unibas.dmi.dbis.adam.query.Result
 import ch.unibas.dmi.dbis.adam.query.distance.DistanceFunction
@@ -76,7 +76,7 @@ class LSHIndex(val indexname: IndexName, val entityname: EntityName, override pr
 
     while (it.hasNext && ids.length < k) {
       val id = it.next()
-      val res: Array[SHResultElement] = localResults(id)
+      val res = localResults(id)
       ids.append(localResults(id).map(res => Result(res.score.toFloat / maxScore, res.tid)).toSeq : _*)
     }
 

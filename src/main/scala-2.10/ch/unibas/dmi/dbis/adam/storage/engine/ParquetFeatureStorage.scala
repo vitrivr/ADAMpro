@@ -56,7 +56,7 @@ object ParquetFeatureStorage extends FeatureStorage {
 
     override def write(entityname: EntityName, pk : String, df: DataFrame, mode: SaveMode)(implicit ac: AdamContext): Boolean = {
       df
-        .repartition(AdamConfig.defaultNumberOfPartitions, df(pk))
+        .repartition(AdamConfig.defaultNumberOfPartitions, df(pk)) //hack? remove?
         .write.mode(mode).parquet(AdamConfig.dataPath + "/" + entityname + ".parquet")
       true
     }

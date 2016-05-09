@@ -124,7 +124,7 @@ trait Index extends Serializable {
 
     //apply pre-filter
     if (filter.isDefined) {
-      data = data.join(filter.get, pk)
+      data = data.join(filter.get.select(pk), pk)
     }
 
     //choose specific partition
@@ -167,7 +167,7 @@ trait Index extends Serializable {
       override def isStale = current.isStale
       private[index] def metadata: Serializable = current.metadata
       def isQueryConform(nnq: NearestNeighbourQuery): Boolean = current.isQueryConform(nnq)
-      protected def scan(data: DataFrame, q: FeatureVector, distance: DistanceFunction, options: Map[String, Any], k: Int): Set[Result] = current.scan(data, q, distance, options, k)
+      protected def scan(data: DataFrame, q: FeatureVector, distance: DistanceFunction, options: Map[String, Any], k: Int) = current.scan(data, q, distance, options, k)
 
       private[index] var df: DataFrame = current.df
     }

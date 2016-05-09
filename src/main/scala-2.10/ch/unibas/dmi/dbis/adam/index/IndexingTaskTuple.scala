@@ -1,7 +1,6 @@
 package ch.unibas.dmi.dbis.adam.index
 
 import ch.unibas.dmi.dbis.adam.datatypes.feature.Feature.FeatureVector
-import ch.unibas.dmi.dbis.adam.entity.Tuple._
 
 /**
   * adamtwo
@@ -12,4 +11,4 @@ import ch.unibas.dmi.dbis.adam.entity.Tuple._
   * September 2015
   */
 @SerialVersionUID(100L)
-case class IndexingTaskTuple(id: TupleID, feature: FeatureVector) extends Serializable
+case class IndexingTaskTuple[A](id: A, feature: FeatureVector) extends Serializable
