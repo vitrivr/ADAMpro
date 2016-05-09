@@ -1,6 +1,5 @@
 package ch.unibas.dmi.dbis.adam.api
 
-import ch.unibas.dmi.dbis.adam.config.FieldNames
 import ch.unibas.dmi.dbis.adam.datatypes.feature.FeatureVectorWrapper
 import ch.unibas.dmi.dbis.adam.entity.Entity.EntityName
 import ch.unibas.dmi.dbis.adam.entity.EntityHandler
@@ -38,7 +37,7 @@ object RandomDataOp {
     }
 
     //schema of random data dataframe to insert
-    val schema = entity.get.schema.fields.filterNot(_.name == FieldNames.idColumnName)
+    val schema = entity.get.schema.fields
 
     //data
     (0 until collectionSize).sliding(limit, limit).foreach { seq =>

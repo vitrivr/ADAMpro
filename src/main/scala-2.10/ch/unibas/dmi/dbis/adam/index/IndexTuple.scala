@@ -18,9 +18,9 @@ case class LongIndexTuple(id: TupleID, value : Long) extends IndexTuple
 case class ByteArrayIndexTuple(id: TupleID, value : Seq[Byte]) extends IndexTuple
 
 object IndexTuple {
-  implicit def conv_row2bitstringtuple(row: Row): BitStringIndexTuple = BitStringIndexTuple(row.getAs[Long](FieldNames.idColumnName), row.getAs[BitString[_]](FieldNames.featureIndexColumnName))
-  implicit def conv_row2longtuple(row: Row): LongIndexTuple = LongIndexTuple(row.getAs[Long](FieldNames.idColumnName), row.getAs[Long](FieldNames.featureIndexColumnName))
-  implicit def conv_row2inttuple(row: Row): IntIndexTuple = IntIndexTuple(row.getAs[Long](FieldNames.idColumnName), row.getAs[Int](FieldNames.featureIndexColumnName))
-  implicit def conv_row2bytearraytuple(row: Row): ByteArrayIndexTuple = ByteArrayIndexTuple(row.getAs[Long](FieldNames.idColumnName), row.getAs[Seq[Byte]](FieldNames.featureIndexColumnName))
+  implicit def conv_row2bitstringtuple(row: Row): BitStringIndexTuple = BitStringIndexTuple(row.getAs[Long](0), row.getAs[BitString[_]](FieldNames.featureIndexColumnName))
+  implicit def conv_row2longtuple(row: Row): LongIndexTuple = LongIndexTuple(row.getAs[Long](0), row.getAs[Long](FieldNames.featureIndexColumnName))
+  implicit def conv_row2inttuple(row: Row): IntIndexTuple = IntIndexTuple(row.getAs[Long](0), row.getAs[Int](FieldNames.featureIndexColumnName))
+  implicit def conv_row2bytearraytuple(row: Row): ByteArrayIndexTuple = ByteArrayIndexTuple(row.getAs[Long](0), row.getAs[Seq[Byte]](FieldNames.featureIndexColumnName))
 
 }

@@ -22,11 +22,11 @@ class SHResultHandler(k: Int) {
     *
     * @param r
     */
-  def offer(r: Row): Boolean = {
+  def offer(r: Row, pk : String): Boolean = {
     queue.synchronized {
       if (elementsLeft > 0) {
         val score = r.getAs[Int](FieldNames.distanceColumnName)
-        val tid = r.getAs[Long](FieldNames.idColumnName)
+        val tid = r.getAs[Long](pk)
         elementsLeft -= 1
         enqueue(score, tid)
         return true
@@ -35,7 +35,7 @@ class SHResultHandler(k: Int) {
         val score = r.getAs[Int](FieldNames.distanceColumnName)
         if (peek < score) {
           queue.dequeueInt()
-          val tid = r.getAs[Long](FieldNames.idColumnName)
+          val tid = r.getAs[Long](pk)
           enqueue(score, tid)
           return true
         } else {

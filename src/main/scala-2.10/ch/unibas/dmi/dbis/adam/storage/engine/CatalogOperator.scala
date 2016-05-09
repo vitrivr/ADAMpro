@@ -48,16 +48,17 @@ object CatalogOperator {
     * Creates entity in catalog.
     *
     * @param entityname
+    * @param pk
     * @param withMetadata
     * @return
     */
-  def createEntity(entityname: EntityName, fields: Seq[FieldDefinition], withMetadata: Boolean = false): Boolean = {
+  def createEntity(entityname: EntityName, pk : String, fields: Seq[FieldDefinition], withMetadata: Boolean = false): Boolean = {
     if (existsEntity(entityname)) {
       throw new EntityExistingException()
     }
 
     val setup = DBIO.seq(
-      entities.+=(entityname, withMetadata)
+      entities.+=(entityname, pk, withMetadata)
     )
 
     Await.result(db.run(setup), MAX_WAITING_TIME)
@@ -105,6 +106,16 @@ object CatalogOperator {
     val count = Await.result(db.run(query), MAX_WAITING_TIME)
 
     (count > 0)
+  }
+
+  /**
+    *
+    * @param entityname
+    * @return
+    */
+  def getEntityPK(entityname: EntityName) : String = {
+    val query = entities.filter(_.entityname === entityname.toString()).map(_.pk).take(1).result
+    Await.result(db.run(query), MAX_WAITING_TIME).head
   }
 
   /**

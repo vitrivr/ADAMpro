@@ -1,6 +1,5 @@
 package ch.unibas.dmi.dbis.adam.query.query
 
-import ch.unibas.dmi.dbis.adam.config.FieldNames
 import ch.unibas.dmi.dbis.adam.datatypes.feature.Feature._
 import ch.unibas.dmi.dbis.adam.entity.Tuple._
 import ch.unibas.dmi.dbis.adam.query.distance.DistanceFunction
@@ -60,7 +59,7 @@ case class BooleanQuery(
     * @param filter
     */
   def append(filter: DataFrame): Unit = {
-    tidFilter = Option(tidFilter.getOrElse(Set()) ++ filter.select(FieldNames.idColumnName).collect().map(_.getLong(0)))
+    tidFilter = Option(tidFilter.getOrElse(Set()) ++ filter.collect().map(_.getLong(0)))
   }
 
   override def hashCode(): Int = {

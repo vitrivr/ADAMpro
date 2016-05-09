@@ -1,6 +1,5 @@
 package ch.unibas.dmi.dbis.adam.query.handler
 
-import ch.unibas.dmi.dbis.adam.config.FieldNames
 import ch.unibas.dmi.dbis.adam.entity.Entity.EntityName
 import ch.unibas.dmi.dbis.adam.entity.EntityHandler
 import ch.unibas.dmi.dbis.adam.main.AdamContext
@@ -49,10 +48,12 @@ private[query] object CompoundQueryHandler {
     * @return
     */
   def indexOnlyQuery(entityname: EntityName)(expr: QueryExpression, withMetadata: Boolean = false)(implicit ac: AdamContext): DataFrame = {
-    val tidFilter = expr.evaluate().map(x => Result(0.toFloat, x.getAs[Long](FieldNames.idColumnName))).map(_.tid).collect().toSet
+    val entity = EntityHandler.load(entityname).get
+
+    val tidFilter = expr.evaluate().map(x => Result(0.toFloat, x.getAs[Long](entity.pk))).map(_.tid).collect().toSet
 
     val rdd = ac.sc.parallelize(tidFilter.toSeq).map(res => Row(0.toFloat, res))
-    var res = ac.sqlContext.createDataFrame(rdd, Result.resultSchema)
+    var res = ac.sqlContext.createDataFrame(rdd, Result.resultSchema(entity.pk))
 
     if (withMetadata) {
       log.debug("join metadata to results of compound query")

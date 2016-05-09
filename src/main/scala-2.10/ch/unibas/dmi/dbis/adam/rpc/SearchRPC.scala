@@ -13,7 +13,7 @@ import ch.unibas.dmi.dbis.adam.query.handler.{QueryHandler, QueryHints}
 import ch.unibas.dmi.dbis.adam.query.progressive.{QueryHintsProgressivePathChooser, SimpleProgressivePathChooser}
 import io.grpc.stub.StreamObserver
 import org.apache.log4j.Logger
-import org.apache.spark.sql.DataFrame
+import org.apache.spark.sql.{DataFrame, types}
 
 import scala.collection.mutable.ListBuffer
 import scala.concurrent.Future
@@ -289,17 +289,19 @@ class SearchRPC(implicit ac: AdamContext) extends AdamSearchGrpc.AdamSearch {
     val keys = array(cols.map(lit): _*)
     val values = array(cols.map(col): _*)
 
+    val pk = df.schema.fields.filter(_.dataType == types.LongType).head.name
+
     val results = if (!cols.isEmpty) {
       df.withColumn("metadata", asMap(keys, values))
         .collect().map(row => QueryResultMessage(
-        row.getAs[Long](FieldNames.idColumnName),
+        row.getAs[Long](pk),
         row.getAs[Float](FieldNames.distanceColumnName),
         row.getAs[Map[String, String]]("metadata").toMap
       ))
     } else {
       df
         .collect().map(row => QueryResultMessage(
-        row.getAs[Long](FieldNames.idColumnName),
+        row.getAs[Long](pk),
         row.getAs[Float](FieldNames.distanceColumnName),
         Map[String, String]()
       ))

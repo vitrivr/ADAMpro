@@ -32,17 +32,6 @@ import SparkStartup.Implicits._
 class QueryTestSuite extends AdamTestBase with ScalaFutures {
   val log = Logger.getLogger(getClass.getName)
 
-  def withQueryEvaluationSet(testCode: EvaluationSet => Any) {
-    val es = getGroundTruthEvaluationSet()
-
-    try {
-      testCode(es)
-    }
-    finally {
-      DropEntityOp(es.entity.entityname)
-    }
-  }
-
 
   feature("standard query") {
     /**
@@ -437,13 +426,12 @@ class QueryTestSuite extends AdamTestBase with ScalaFutures {
         val vhqh = new SpecifiedIndexQueryHolder(vaidx.get.indexname, nnq, None, None, Some(QueryCacheOptions()))
 
         val results = time {
-          CompoundQueryHandler.indexOnlyQuery("")(new IntersectExpression(shqh, vhqh), false)
-            .map(r => (r.getAs[Long](FieldNames.idColumnName))).collect().sorted
+          CompoundQueryHandler.indexOnlyQuery(es.entity.entityname)(new IntersectExpression(shqh, vhqh), false)
+            .map(r => (r.getAs[Long]("tid"))).collect().sorted
         }
 
-        //results (note we truly compare the id-column here and not the metadata "tid"
-        val shres = shqh.evaluate().map(r => r.getAs[Long](FieldNames.idColumnName)).collect()
-        val vhres = vhqh.evaluate().map(r => r.getAs[Long](FieldNames.idColumnName)).collect()
+        val shres = shqh.evaluate().map(r => r.getAs[Long]("tid")).collect()
+        val vhres = vhqh.evaluate().map(r => r.getAs[Long]("tid")).collect()
 
         Then("we should have a match in the aggregated list")
         val gt = vhres.intersect(shres).sorted
@@ -474,13 +462,13 @@ class QueryTestSuite extends AdamTestBase with ScalaFutures {
         val va2qh = new SpecifiedIndexQueryHolder(vaidx2.get.indexname, nnq, None, None, Some(QueryCacheOptions()))
 
         val results = time {
-          CompoundQueryHandler.indexOnlyQuery("")(new IntersectExpression(va1qh, va2qh, ExpressionEvaluationOrder.Parallel), false)
-            .map(r => (r.getAs[Long](FieldNames.idColumnName))).collect().sorted
+          CompoundQueryHandler.indexOnlyQuery(es.entity.entityname)(new IntersectExpression(va1qh, va2qh, ExpressionEvaluationOrder.Parallel), false)
+            .map(r => (r.getAs[Long]("tid"))).collect().sorted
         }
 
         //results (note we truly compare the id-column here and not the metadata "tid"
-        val vh1res = va1qh.evaluate().map(r => r.getAs[Long](FieldNames.idColumnName)).collect()
-        val vh2res = va2qh.evaluate().map(r => r.getAs[Long](FieldNames.idColumnName)).collect()
+        val vh1res = va1qh.evaluate().map(r => r.getAs[Long]("tid")).collect()
+        val vh2res = va2qh.evaluate().map(r => r.getAs[Long]("tid")).collect()
 
         Then("we should have a match in the aggregated list")
         val gt = vh1res.intersect(vh2res).sorted

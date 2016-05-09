@@ -2,6 +2,7 @@ package ch.unibas.dmi.dbis.adam.query.handler
 
 import ch.unibas.dmi.dbis.adam.config.FieldNames
 import ch.unibas.dmi.dbis.adam.entity.Entity._
+import ch.unibas.dmi.dbis.adam.entity.EntityHandler
 import ch.unibas.dmi.dbis.adam.entity.Tuple.TupleID
 import ch.unibas.dmi.dbis.adam.exception.IndexNotExistingException
 import ch.unibas.dmi.dbis.adam.index.Index.{IndexName, IndexTypeName}
@@ -43,6 +44,8 @@ object QueryHandler {
     * @return
     */
   def query(entityname: EntityName, hint: Option[QueryHint], nnq: Option[NearestNeighbourQuery], bq: Option[BooleanQuery], withMetadata: Boolean, id: Option[String] = None, cache: Option[QueryCacheOptions] = Some(QueryCacheOptions()))(implicit ac: AdamContext): DataFrame = {
+    val entity = EntityHandler.load(entityname).get
+
     if (id.isDefined && cache.isDefined && cache.get.useCached) {
       val cached = getFromQueryCache(id)
       if (cached.isSuccess) {
@@ -57,7 +60,7 @@ object QueryHandler {
         return res.get
       } else {
         val rdd = ac.sc.emptyRDD[Row]
-        return ac.sqlContext.createDataFrame(rdd, Result.resultSchema)
+        return ac.sqlContext.createDataFrame(rdd, Result.resultSchema(entity.pk))
       }
     }
 
@@ -440,6 +443,8 @@ object QueryHandler {
     private var run = false
 
     override protected def run(filter: Option[DataFrame]): DataFrame = {
+      val entity = EntityHandler.load(entityname).get
+
       val results = if (indexOnly) {
         CompoundQueryHandler.indexOnlyQuery(entityname)(expr, withMetadata)
       } else {
@@ -447,7 +452,7 @@ object QueryHandler {
       }
 
       if (filter.isDefined) {
-        results.join(filter.get, FieldNames.idColumnName)
+        results.join(filter.get, entity.pk)
       }
 
       run = true
@@ -487,13 +492,15 @@ object QueryHandler {
     * @param cache
     */
   def booleanQuery(entityname: EntityName)(bq: Option[BooleanQuery], id: Option[String] = None, cache: Option[QueryCacheOptions] = Some(QueryCacheOptions()))(implicit ac: AdamContext): DataFrame = {
+    val entity = EntityHandler.load(entityname).get
+
     val res = BooleanQueryHandler.getData(entityname, bq)
 
     if (res.isDefined) {
       return res.get
     } else {
       val rdd = ac.sc.emptyRDD[Row]
-      return ac.sqlContext.createDataFrame(rdd, Result.resultSchema)
+      return ac.sqlContext.createDataFrame(rdd, Result.resultSchema(entity.pk))
     }
   }
 
@@ -516,20 +523,21 @@ object QueryHandler {
     * @return
     */
   private def getFilter(entityname: EntityName, bq: BooleanQuery)(implicit ac: AdamContext): Option[DataFrame] = {
+    val entity = EntityHandler.load(entityname).get
 
     val results = BooleanQueryHandler.getIds(entityname, bq)
     if (results.isDefined) {
-      var filter = results.get.select(FieldNames.idColumnName)
+      var filter = results.get.select(entity.pk)
 
       if (bq.tidFilter.isDefined) {
-        filter = filter.filter(filter(FieldNames.idColumnName) isin (bq.tidFilter.get.toSeq: _*))
+        filter = filter.filter(filter(entity.pk) isin (bq.tidFilter.get.toSeq: _*))
       }
 
       Some(filter)
     } else {
       if (bq.tidFilter.isDefined) {
         val rdd = ac.sc.parallelize(bq.tidFilter.get.map(Row(_)).toSeq)
-        val fields = StructType(Seq(StructField(FieldNames.idColumnName, LongType, false)))
+        val fields = StructType(Seq(StructField(entity.pk, LongType, false)))
         val df = ac.sqlContext.createDataFrame(rdd, fields)
         Some(df)
       } else {

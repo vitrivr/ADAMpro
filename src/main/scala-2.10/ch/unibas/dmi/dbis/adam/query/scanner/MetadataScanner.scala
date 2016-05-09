@@ -1,6 +1,5 @@
 package ch.unibas.dmi.dbis.adam.query.scanner
 
-import ch.unibas.dmi.dbis.adam.config.FieldNames
 import ch.unibas.dmi.dbis.adam.entity.Entity
 import ch.unibas.dmi.dbis.adam.main.SparkStartup
 import ch.unibas.dmi.dbis.adam.query.query.BooleanQuery
@@ -29,7 +28,7 @@ object MetadataScanner {
     val res = apply(entity, query)
 
     if(res.isDefined){
-      Option(res.get.select(FieldNames.idColumnName))
+      Option(res.get.select(entity.pk))
     } else {
       None
     }
@@ -110,7 +109,7 @@ object MetadataScanner {
   def apply(entity: Entity, filter: DataFrame): Option[DataFrame] = {
     if (entity.hasMetadata) {
       val df = entity.getMetadata.get
-      Option(filter.join(df, FieldNames.idColumnName))
+      Option(filter.join(df, entity.pk))
     } else {
       log.warn("asked for metadata, but entity " + entity + " has no metadata available")
       None

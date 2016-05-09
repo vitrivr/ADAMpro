@@ -75,12 +75,12 @@ object IndexHandler {
       }
 
       val indexname = createIndexName(entity.entityname, column, indexgenerator.indextypename)
-      val rdd: RDD[IndexingTaskTuple] = entity.getFeaturedata.map { x => IndexingTaskTuple(x.getAs[Long](FieldNames.idColumnName), x.getAs[FeatureVectorWrapper](column).vector) }
+      val rdd: RDD[IndexingTaskTuple] = entity.getFeaturedata.map { x => IndexingTaskTuple(x.getAs[Long](entity.pk), x.getAs[FeatureVectorWrapper](column).vector) }
       val index = indexgenerator.index(indexname, entity.entityname, rdd)
       index.df = index
         .df
         .repartition(AdamConfig.defaultNumberOfPartitions)
-        .withColumnRenamed("id", FieldNames.idColumnName)
+        .withColumnRenamed("id", entity.pk)
         .withColumnRenamed("value", FieldNames.featureIndexColumnName)
       storage.write(indexname, index.df)
       CatalogOperator.createIndex(indexname, indexname, entity.entityname, column, indexgenerator.indextypename, index.metadata)
@@ -195,11 +195,11 @@ object IndexHandler {
     //data.map(r => (r.getAs(cols.get.head), r)).partitionBy(new HashPartitioner())
 
     if (join.isDefined) {
-      data = data.join(join.get, FieldNames.idColumnName)
+      data = data.join(join.get, index.pk)
     }
 
     data = if (cols.isDefined) {
-      val entityColNames = EntityHandler.load(index.entityname).get.schema.fieldNames.toSeq.+(FieldNames.idColumnName)
+      val entityColNames = EntityHandler.load(index.entityname).get.schema.fieldNames.toSeq.+(index.pk)
       if(!cols.get.forall(name => entityColNames.contains(name))){
         log.error("one of the columns " + cols.mkString(",") + " is not existing in entity " + index.entityname + entityColNames.mkString("(", ",", ")"))
         Failure(throw new GeneralAdamException("repartition column not existing in entity"))
@@ -211,7 +211,7 @@ object IndexHandler {
     }
 
     if (join.isDefined) {
-      data = data.select(FieldNames.idColumnName, FieldNames.featureIndexColumnName)
+      data = data.select(index.pk, FieldNames.featureIndexColumnName)
     }
 
     option match {

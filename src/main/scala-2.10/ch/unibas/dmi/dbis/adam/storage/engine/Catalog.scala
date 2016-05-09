@@ -10,11 +10,12 @@ import slick.lifted.ForeignKeyQuery
  * Ivan Giangreco
  * August 2015
  */
-private[engine] class EntitiesCatalog(tag: Tag) extends Table[(String, Boolean)](tag, "ADAMTWO_ENTITIES") {
+private[engine] class EntitiesCatalog(tag: Tag) extends Table[(String, String, Boolean)](tag, "ADAMTWO_ENTITIES") {
   def entityname = column[String]("ENTITYNAME", O.PrimaryKey)
+  def pk = column[String]("PRIMARYKEY")
   def hasMeta = column[Boolean]("HASMETA")
 
-  def * = (entityname, hasMeta)
+  def * = (entityname, pk, hasMeta)
 }
 
 private[engine] class EntityFieldsCatalog(tag: Tag) extends Table[(String, String, Int)](tag, "ADAMTWO_FIELDS") {
@@ -24,7 +25,7 @@ private[engine] class EntityFieldsCatalog(tag: Tag) extends Table[(String, Strin
 
   def * = (fieldname, entityname, featurelength)
 
-  def supplier: ForeignKeyQuery[EntitiesCatalog, (String, Boolean)] =
+  def supplier: ForeignKeyQuery[EntitiesCatalog, (String, String, Boolean)] =
     foreignKey("ENTITYNAME", entityname, TableQuery[EntitiesCatalog])(_.entityname)
 }
 
@@ -40,7 +41,7 @@ private[engine] class IndexesCatalog(tag: Tag) extends Table[(String, String, St
 
   def * = (indexname, entityname, fieldname, indextypename, indexpath, indexmetapath, uptodate, indexweight)
 
-  def supplier: ForeignKeyQuery[EntitiesCatalog, (String, Boolean)] =
+  def supplier: ForeignKeyQuery[EntitiesCatalog, (String, String, Boolean)] =
     foreignKey("ENTITYNAME", entityname, TableQuery[EntitiesCatalog])(_.entityname)
 }
 

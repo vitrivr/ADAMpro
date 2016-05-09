@@ -31,7 +31,7 @@ class DataDefinitionRPC(implicit ac: AdamContext) extends AdamDefinitionGrpc.Ada
 
     val entityname = request.entity
     val fields = request.fields.map(field => {
-      FieldDefinition(field.name, matchFields(field.fieldtype), false, field.unique, field.indexed)
+      FieldDefinition(field.name, matchFields(field.fieldtype), field.pk, field.unique, field.indexed)
     })
     val entity = CreateEntityOp(entityname, fields)
 

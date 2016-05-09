@@ -10,7 +10,7 @@ import org.apache.spark.sql.{DataFrame, SaveMode}
  * Ivan Giangreco
  * October 2015
  */
-trait MetadataStorage {
+trait MetadataStorage extends Serializable{
   /**
     * Create entity in metadata storage.
     *

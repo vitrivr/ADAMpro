@@ -1,6 +1,5 @@
 package ch.unibas.dmi.dbis.adam.entity
 
-import ch.unibas.dmi.dbis.adam.config.FieldNames
 import ch.unibas.dmi.dbis.adam.datatypes.feature.FeatureVectorWrapperUDT
 import ch.unibas.dmi.dbis.adam.entity.Entity._
 import ch.unibas.dmi.dbis.adam.entity.FieldTypes.FieldType
@@ -9,8 +8,7 @@ import ch.unibas.dmi.dbis.adam.query.query.NearestNeighbourQuery
 import ch.unibas.dmi.dbis.adam.storage.components.{FeatureStorage, MetadataStorage}
 import ch.unibas.dmi.dbis.adam.storage.engine.CatalogOperator
 import org.apache.log4j.Logger
-import org.apache.spark.sql.types.{LongType, StructField, StructType}
-import org.apache.spark.sql.{DataFrame, Row, SaveMode}
+import org.apache.spark.sql.{DataFrame, SaveMode}
 
 import scala.collection.mutable.ListBuffer
 import scala.util.{Success, Try}
@@ -21,10 +19,10 @@ import scala.util.{Success, Try}
   * Ivan Giangreco
   * October 2015
   */
-case class Entity(entityname: EntityName, private val featureStorage: FeatureStorage, private val metadataStorage: Option[MetadataStorage])(implicit ac: AdamContext) {
-  val log = Logger.getLogger(getClass.getName)
+case class Entity(val entityname: EntityName, val pk : String, private val featureStorage: FeatureStorage, private val metadataStorage: Option[MetadataStorage]) {
+  @transient val log = Logger.getLogger(getClass.getName)
 
-  private def featureData = featureStorage.read(entityname).get
+  private def featureData(implicit ac: AdamContext) = featureStorage.read(entityname).get
   private def metaData = if (metadataStorage.isDefined) {
     Some(metadataStorage.get.read(entityname))
   } else {
@@ -36,7 +34,7 @@ case class Entity(entityname: EntityName, private val featureStorage: FeatureSto
     *
     * @return
     */
-  def count: Long = {
+  def count(implicit ac: AdamContext): Long = {
     if (tupleCount == -1) {
       tupleCount = featureStorage.count(entityname)
     }
@@ -52,7 +50,7 @@ case class Entity(entityname: EntityName, private val featureStorage: FeatureSto
     * @param k number of elements to show in preview
     * @return
     */
-  def show(k: Int) = rdd.take(k)
+  def show(k: Int)(implicit ac: AdamContext) = rdd.take(k)
 
   /**
     * Inserts data into the entity.
@@ -65,19 +63,15 @@ case class Entity(entityname: EntityName, private val featureStorage: FeatureSto
     log.debug("inserting data into entity")
 
    //TODO: check dimensionality is correct
-
-    val rdd = insertion.rdd.zipWithUniqueId.map { case (r: Row, adamtwoid: Long) => Row.fromSeq(adamtwoid +: r.toSeq) }
-    val insertionWithPK = ac.sqlContext
-      .createDataFrame(
-        rdd, StructType(StructField(FieldNames.idColumnName, LongType, false) +: insertion.schema.fields))
+    //TODO: if PK not set in insertion, auto-increment?
 
     val featureFieldNames = insertion.schema.fields.filter(_.dataType == new FeatureVectorWrapperUDT).map(_.name)
-    featureStorage.write(entityname, insertionWithPK.select(FieldNames.idColumnName, featureFieldNames.toSeq : _*), SaveMode.Append)
+    featureStorage.write(entityname, pk, insertion.select(pk, featureFieldNames.toSeq : _*), SaveMode.Append)
 
     val metadataFieldNames = insertion.schema.fields.filterNot(_.dataType == new FeatureVectorWrapperUDT).map(_.name)
     if (metadataStorage.isDefined) {
       log.debug("metadata storage is defined: inserting data also into metadata storage")
-      metadataStorage.get.write(entityname, insertionWithPK.select(FieldNames.idColumnName, metadataFieldNames.toSeq : _*), SaveMode.Append)
+      metadataStorage.get.write(entityname, insertion.select(pk, metadataFieldNames.filterNot(x => x == pk).toSeq : _*), SaveMode.Append)
     }
 
     if (CatalogOperator.listIndexes(entityname).nonEmpty) {
@@ -94,7 +88,7 @@ case class Entity(entityname: EntityName, private val featureStorage: FeatureSto
   /**
     * Returns a map of properties to the entity. Useful for printing.
     */
-  def properties : Map[String, String] = {
+  def properties(implicit ac: AdamContext) : Map[String, String] = {
     val lb = ListBuffer[(String, String)]()
 
 
@@ -110,25 +104,25 @@ case class Entity(entityname: EntityName, private val featureStorage: FeatureSto
     * @param filter
     * @return
     */
-  def filter(filter: DataFrame): DataFrame = {
-    featureStorage.read(entityname).get.join(filter, FieldNames.idColumnName)
+  def filter(filter: DataFrame)(implicit ac: AdamContext): DataFrame = {
+    featureStorage.read(entityname).get.join(filter, pk)
   }
 
   /**
     *
     * @return
     */
-  def schema = if (metaData.isDefined) {
-    featureData.join(metaData.get).drop(FieldNames.idColumnName).schema
+  def schema(implicit ac: AdamContext) = if (metaData.isDefined) {
+    featureData.join(metaData.get, pk).schema
   } else {
-    featureData.drop(FieldNames.idColumnName).schema
+    featureData.schema
   }
 
   /**
     *
     * @return
     */
-  def rdd = if (metaData.isDefined) {
+  def rdd(implicit ac: AdamContext) = if (metaData.isDefined) {
     featureData.join(metaData.get).rdd
   } else {
     featureData.rdd
@@ -138,7 +132,7 @@ case class Entity(entityname: EntityName, private val featureStorage: FeatureSto
     *
     * @return
     */
-  def getFeaturedata: DataFrame = featureData
+  def getFeaturedata(implicit ac: AdamContext): DataFrame = featureData
 
   /**
     *

@@ -20,7 +20,7 @@ import org.apache.spark.sql.{DataFrame, Row, SaveMode}
   * October 2015
   */
 object PostgresqlMetadataStorage extends MetadataStorage {
-  val log = Logger.getLogger(getClass.getName)
+  @transient val log = Logger.getLogger(getClass.getName)
 
   Class.forName("org.postgresql.Driver")
 

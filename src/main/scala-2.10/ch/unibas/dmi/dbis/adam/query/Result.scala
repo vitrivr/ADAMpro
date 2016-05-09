@@ -17,9 +17,9 @@ case class Result(distance: Distance, tid: TupleID) extends Ordered[Result] {
 
 
 object Result {
-  val resultSchema = StructType(Seq(
+  def resultSchema(pk : String) = StructType(Seq(
     StructField(FieldNames.distanceColumnName, FloatType, true),
-    StructField(FieldNames.idColumnName, LongType, true)
+    StructField(pk, LongType, true)
   ))
 }
 

@@ -1,6 +1,5 @@
 package ch.unibas.dmi.dbis.adam.index
 
-import ch.unibas.dmi.dbis.adam.config.FieldNames
 import ch.unibas.dmi.dbis.adam.datatypes.feature.Feature._
 import ch.unibas.dmi.dbis.adam.entity.Entity._
 import ch.unibas.dmi.dbis.adam.index.Index.{IndexName, IndexTypeName}
@@ -20,7 +19,7 @@ import org.apache.spark.sql.DataFrame
   * Ivan Giangreco
   * August 2015
   */
-trait Index {
+trait Index extends Serializable {
   @transient lazy val log = Logger.getLogger(getClass.getName)
 
   def indexname: IndexName
@@ -31,6 +30,7 @@ trait Index {
 
   /**
     * Gets path of the index.
+    *
     * @return
     */
   def path : String = CatalogOperator.getIndexPath(indexname)
@@ -92,6 +92,13 @@ trait Index {
     */
   def isQueryConform(nnq: NearestNeighbourQuery): Boolean
 
+
+  /**
+    *
+    * @return
+    */
+  def pk = CatalogOperator.getEntityPK(entityname)
+
   /**
     * Scans the index.
     *
@@ -117,7 +124,7 @@ trait Index {
 
     //apply pre-filter
     if (filter.isDefined) {
-      data = data.join(filter.get, FieldNames.idColumnName)
+      data = data.join(filter.get, pk)
     }
 
     //choose specific partition

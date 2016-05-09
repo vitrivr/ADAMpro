@@ -52,7 +52,7 @@ class PQIndex(val indexname: IndexName, val entityname: EntityName, override pri
 
     val ids = df
       .withColumn(FieldNames.distanceColumnName, distUDF(df(FieldNames.featureIndexColumnName)))
-      .map(r => Result(r.getAs[Float](FieldNames.distanceColumnName), r.getAs[Long](FieldNames.idColumnName)))
+      .map(r => Result(r.getAs[Float](FieldNames.distanceColumnName), r.getAs[Long](this.pk)))
       .takeOrdered(k)
 
     log.debug("PQ index returning " + ids.length + " tuples")

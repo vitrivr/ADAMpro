@@ -1,6 +1,5 @@
 package ch.unibas.dmi.dbis.adam.storage.components
 
-import ch.unibas.dmi.dbis.adam.entity.Tuple._
 import ch.unibas.dmi.dbis.adam.index.Index.IndexName
 import ch.unibas.dmi.dbis.adam.main.AdamContext
 import org.apache.spark.sql.DataFrame
@@ -32,10 +31,9 @@ trait IndexStorage {
     * Read index from the index storage.
     *
     * @param indexName
-    * @param filter
     * @return
     */
-  def read(indexName: IndexName, filter: Option[scala.collection.Set[TupleID]] = None)(implicit ac : AdamContext): DataFrame
+  def read(indexName: IndexName)(implicit ac : AdamContext): DataFrame
 
   /**
     * Write index to the index storage.

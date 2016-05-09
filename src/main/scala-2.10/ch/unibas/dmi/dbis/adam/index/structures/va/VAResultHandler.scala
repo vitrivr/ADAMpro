@@ -1,6 +1,5 @@
 package ch.unibas.dmi.dbis.adam.index.structures.va
 
-import ch.unibas.dmi.dbis.adam.config.FieldNames
 import ch.unibas.dmi.dbis.adam.entity.Tuple._
 import it.unimi.dsi.fastutil.floats.{FloatComparators, FloatHeapPriorityQueue}
 import org.apache.spark.sql.Row
@@ -22,12 +21,12 @@ private[va] class VAResultHandler(k: Int) {
     *
     * @param r
     */
-  def offer(r: Row): Boolean = {
+  def offer(r: Row, pk : String): Boolean = {
     queue.synchronized {
       if (elementsLeft > 0) {
         val lower = r.getAs[Float]("lbound")
         val upper = r.getAs[Float]("ubound")
-        val tid = r.getAs[Long](FieldNames.idColumnName)
+        val tid = r.getAs[Long](pk)
         elementsLeft -= 1
         enqueue(lower, upper, tid)
         return true
@@ -37,7 +36,7 @@ private[va] class VAResultHandler(k: Int) {
         if (peek > lower) {
           queue.dequeueFloat()
           val upper = r.getAs[Float]("ubound")
-          val tid = r.getAs[Long](FieldNames.idColumnName)
+          val tid = r.getAs[Long](pk : String)
           enqueue(lower, upper, tid)
           return true
         } else {

@@ -24,7 +24,8 @@ class RPCTestSuite extends AdamTestBase with ScalaFutures {
   val log = Logger.getLogger(getClass.getName)
   private val MAX_WAITING_TIME: Duration = 100.seconds
   new Thread(new RPCStartup()).start
-  Thread.sleep(5000) //wait for RPC server to startup
+  Thread.sleep(5000)
+  //wait for RPC server to startup
 
   val channel = ManagedChannelBuilder.forAddress("localhost", AdamConfig.grpcPort).usePlaintext(true).asInstanceOf[ManagedChannelBuilder[_]].build()
   val definition = AdamDefinitionGrpc.blockingStub(channel)
@@ -40,7 +41,13 @@ class RPCTestSuite extends AdamTestBase with ScalaFutures {
     scenario("create entity") {
       withEntityName { entityname =>
         When("a new random entity (without any metadata) is created")
-        val createEntityFuture = definition.createEntity(CreateEntityMessage(entityname, Seq(FieldDefinitionMessage("feature", FieldDefinitionMessage.FieldType.FEATURE))))
+        val createEntityFuture =
+          definition.createEntity(
+            CreateEntityMessage(entityname,
+              Seq(
+                FieldDefinitionMessage("tid", FieldDefinitionMessage.FieldType.LONG, true),
+                FieldDefinitionMessage("feature", FieldDefinitionMessage.FieldType.FEATURE)
+              )))
         Then("the entity should exist")
         assert(EntityHandler.exists(entityname))
       }
@@ -52,7 +59,13 @@ class RPCTestSuite extends AdamTestBase with ScalaFutures {
     scenario("insert feature data into entity") {
       withEntityName { entityname =>
         Given("an entity")
-        val createEntityFuture = definition.createEntity(CreateEntityMessage(entityname, Seq(FieldDefinitionMessage("feature", FieldDefinitionMessage.FieldType.FEATURE))))
+        val createEntityFuture =
+          definition.createEntity(
+            CreateEntityMessage(entityname,
+              Seq(
+                FieldDefinitionMessage("tid", FieldDefinitionMessage.FieldType.LONG, true),
+                FieldDefinitionMessage("feature", FieldDefinitionMessage.FieldType.FEATURE)
+              )))
 
         val requestObserver: StreamObserver[InsertMessage] = definitionNb.insert(new StreamObserver[AckMessage]() {
           def onNext(ack: AckMessage) {}
@@ -67,7 +80,7 @@ class RPCTestSuite extends AdamTestBase with ScalaFutures {
         val ntuples = 10
 
         When("tuples are inserted")
-        val tuples = (0 until ntuples).map(i => Map[String, String]("feature" -> Seq.fill(10)(Random.nextFloat()).mkString(",")))
+        val tuples = (0 until ntuples).map(i => Map[String, String]("tid" -> Random.nextLong().toString,"feature" -> Seq.fill(10)(Random.nextFloat()).mkString(",")))
         requestObserver.onNext(InsertMessage(entityname, tuples.map(tuple => TupleInsertMessage(tuple))))
         requestObserver.onCompleted()
 
@@ -87,6 +100,7 @@ class RPCTestSuite extends AdamTestBase with ScalaFutures {
         Given("an entity")
         val createEntityFuture = definition.createEntity(CreateEntityMessage(entityname,
           Seq(
+            FieldDefinitionMessage("tid", FieldDefinitionMessage.FieldType.LONG, true),
             FieldDefinitionMessage("stringfield", FieldDefinitionMessage.FieldType.STRING),
             FieldDefinitionMessage("intfield", FieldDefinitionMessage.FieldType.INT),
             FieldDefinitionMessage("featurefield", FieldDefinitionMessage.FieldType.FEATURE)
@@ -107,6 +121,7 @@ class RPCTestSuite extends AdamTestBase with ScalaFutures {
         When("tuples are inserted")
         val tuples = (0 until ntuples).map(i =>
           Map[String, String](
+            "tid" -> Random.nextLong.toString,
             "featurefield" -> Seq.fill(10)(Random.nextFloat()).mkString(","),
             "intfield" -> Random.nextInt(10).toString,
             "stringfield" -> getRandomName(10)

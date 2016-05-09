@@ -32,7 +32,7 @@ object CompoundQueryExpressions {
     override protected def run(filter: Option[DataFrame]): DataFrame = {
       import SparkStartup.Implicits._
       val rdd = sc.emptyRDD[Row]
-      sqlContext.createDataFrame(rdd, Result.resultSchema)
+      sqlContext.createDataFrame(rdd, Result.resultSchema(""))
     }
   }
 
@@ -48,22 +48,22 @@ object CompoundQueryExpressions {
       * @return
       */
     override protected def run(filter: Option[DataFrame]): DataFrame = {
-      val results = parallelExec(filter)
+      val (results, pk) = parallelExec(filter)
 
       val rdd = ac.sc.parallelize(results.map(res => Row(res.distance, res.tid)))
-      ac.sqlContext.createDataFrame(rdd, Result.resultSchema)
+      ac.sqlContext.createDataFrame(rdd, Result.resultSchema(pk))
     }
 
     /**
       *
       * @return
       */
-    private def parallelExec(filter: Option[DataFrame]): Seq[Result] = {
+    private def parallelExec(filter: Option[DataFrame]): (Seq[Result], String) = {
       val lfut = Future(l.evaluate(filter))
       val rfut = Future(r.evaluate(filter))
 
       val f = for (leftResult <- lfut; rightResult <- rfut) yield ({
-        aggregate(leftResult, rightResult)
+        aggregate(leftResult, rightResult, leftResult.schema.fields.filterNot(_.name == FieldNames.distanceColumnName).head.name)
       })
 
       Await.result(f, Duration(100, TimeUnit.SECONDS))
@@ -75,10 +75,11 @@ object CompoundQueryExpressions {
       * @param rightResult
       * @return
       */
-    private def aggregate(leftResult: DataFrame, rightResult: DataFrame): Seq[Result] = {
-      val left = leftResult.map(r => r.getAs[Long](FieldNames.idColumnName)).collect()
-      val right = rightResult.map(r => r.getAs[Long](FieldNames.idColumnName)).collect()
-      left.union(right).map(id => new Result(0.toFloat, id))
+    private def aggregate(leftResult: DataFrame, rightResult: DataFrame, pk : String): (Seq[Result], String) = {
+      val left = leftResult.map(r => r.getAs[Long](pk)).collect()
+      val right = rightResult.map(r => r.getAs[Long](pk)).collect()
+      val result = left.union(right).map(id => new Result(0.toFloat, id))
+      (result, pk)
     }
 
     /**
@@ -106,48 +107,50 @@ object CompoundQueryExpressions {
       * @return
       */
     override protected def run(filter: Option[DataFrame]): DataFrame = {
-      val results = order match {
+      val (results, pk) = order match {
         case ExpressionEvaluationOrder.LeftFirst => leftFirstExec(filter)
         case ExpressionEvaluationOrder.RightFirst => rightFirstExec(filter)
         case ExpressionEvaluationOrder.Parallel => parallelExec(filter)
       }
 
       val rdd = ac.sc.parallelize(results.map(res => Row(res.distance, res.tid)))
-      ac.sqlContext.createDataFrame(rdd, Result.resultSchema)
+      ac.sqlContext.createDataFrame(rdd, Result.resultSchema(pk))
     }
 
     /**
       *
       * @return
       */
-    private def leftFirstExec(filter: Option[DataFrame]): Seq[Result] = {
+    private def leftFirstExec(filter: Option[DataFrame]): (Seq[Result], String) = {
       val leftResult = l.evaluate(filter)
-      val rightResult = r.evaluate(Some(leftResult.select(FieldNames.idColumnName)))
+      val pk = leftResult.schema.fields.filterNot(_.name == FieldNames.distanceColumnName).head.name
+      val rightResult = r.evaluate(Some(leftResult.select(pk)))
 
-      aggregate(leftResult, rightResult)
+      aggregate(leftResult, rightResult, pk)
     }
 
     /**
       *
       * @return
       */
-    private def rightFirstExec(filter: Option[DataFrame]): Seq[Result] = {
+    private def rightFirstExec(filter: Option[DataFrame]): (Seq[Result], String) = {
       val rightResult = r.evaluate(filter)
-      val leftResult = l.evaluate(Some(rightResult.select(FieldNames.idColumnName)))
+      val pk = rightResult.schema.fields.filterNot(_.name == FieldNames.distanceColumnName).head.name
+      val leftResult = l.evaluate(Some(rightResult.select(pk)))
 
-      aggregate(leftResult, rightResult)
+      aggregate(leftResult, rightResult, pk)
     }
 
     /**
       *
       * @return
       */
-    private def parallelExec(filter: Option[DataFrame]): Seq[Result] = {
+    private def parallelExec(filter: Option[DataFrame]): (Seq[Result], String) = {
       val lfut = Future(l.evaluate(filter))
       val rfut = Future(r.evaluate(filter))
 
       val f = for (leftResult <- lfut; rightResult <- rfut) yield ({
-        aggregate(leftResult, rightResult)
+        aggregate(leftResult, rightResult, leftResult.schema.fields.filterNot(_.name == FieldNames.distanceColumnName).head.name)
       })
 
       Await.result(f, Duration(100, TimeUnit.SECONDS))
@@ -159,10 +162,11 @@ object CompoundQueryExpressions {
       * @param rightResult
       * @return
       */
-    private def aggregate(leftResult: DataFrame, rightResult: DataFrame): Seq[Result] = {
-      val left = leftResult.map(r => r.getAs[Long](FieldNames.idColumnName)).collect()
-      val right = rightResult.map(r => r.getAs[Long](FieldNames.idColumnName)).collect()
-      left.intersect(right).map(id => new Result(0.toFloat, id))
+    private def aggregate(leftResult: DataFrame, rightResult: DataFrame, pk : String): (Seq[Result], String) = {
+      val left = leftResult.map(r => r.getAs[Long](pk)).collect()
+      val right = rightResult.map(r => r.getAs[Long](pk)).collect()
+      val result = left.intersect(right).map(id => new Result(0.toFloat, id))
+      (result, pk)
     }
 
     /**
@@ -190,48 +194,50 @@ object CompoundQueryExpressions {
       * @return
       */
     override protected def run(filter: Option[DataFrame]): DataFrame = {
-      val results = order match {
+      val (results, pk) = order match {
         case ExpressionEvaluationOrder.LeftFirst => leftFirstExec(filter)
         case ExpressionEvaluationOrder.RightFirst => rightFirstExec(filter)
         case ExpressionEvaluationOrder.Parallel => parallelExec(filter)
       }
 
       val rdd = ac.sc.parallelize(results.map(res => Row(res.distance, res.tid)))
-      ac.sqlContext.createDataFrame(rdd, Result.resultSchema)
+      ac.sqlContext.createDataFrame(rdd, Result.resultSchema(pk))
     }
 
     /**
       *
       * @return
       */
-    private def leftFirstExec(filter: Option[DataFrame]): Seq[Result] = {
+    private def leftFirstExec(filter: Option[DataFrame]): (Seq[Result], String) = {
       val leftResult = l.evaluate(filter)
-      val rightResult = r.evaluate(Some(leftResult.select(FieldNames.idColumnName)))
+      val pk = leftResult.schema.fields.filterNot(_.name == FieldNames.distanceColumnName).head.name
+      val rightResult = r.evaluate(Some(leftResult.select(pk)))
 
-      aggregate(leftResult, rightResult)
+      aggregate(leftResult, rightResult, pk)
     }
 
     /**
       *
       * @return
       */
-    private def rightFirstExec(filter: Option[DataFrame]): Seq[Result] = {
+    private def rightFirstExec(filter: Option[DataFrame]):  (Seq[Result], String) = {
       val rightResult = r.evaluate(filter)
-      val leftResult = l.evaluate(Some(rightResult.select(FieldNames.idColumnName)))
+      val pk = rightResult.schema.fields.filterNot(_.name == FieldNames.distanceColumnName).head.name
+      val leftResult = l.evaluate(Some(rightResult.select(pk)))
 
-      aggregate(leftResult, rightResult)
+      aggregate(leftResult, rightResult, pk)
     }
 
     /**
       *
       * @return
       */
-    private def parallelExec(filter: Option[DataFrame]): Seq[Result] = {
+    private def parallelExec(filter: Option[DataFrame]):  (Seq[Result], String) = {
       val lfut = Future(l.evaluate(filter))
       val rfut = Future(r.evaluate(filter))
 
       val f = for (leftResult <- lfut; rightResult <- rfut) yield ({
-        aggregate(leftResult, rightResult)
+        aggregate(leftResult, rightResult, leftResult.schema.fields.filterNot(_.name == FieldNames.distanceColumnName).head.name)
       })
 
       Await.result(f, Duration(100, TimeUnit.SECONDS))
@@ -243,10 +249,11 @@ object CompoundQueryExpressions {
       * @param rightResult
       * @return
       */
-    private def aggregate(leftResult: DataFrame, rightResult: DataFrame): Seq[Result] = {
-      val left = leftResult.map(r => r.getAs[Long](FieldNames.idColumnName)).collect()
-      val right = rightResult.map(r => r.getAs[Long](FieldNames.idColumnName)).collect()
-      (left.toSet -- right.toSet).map(id => new Result(0.toFloat, id)).toSeq
+    private def aggregate(leftResult: DataFrame, rightResult: DataFrame, pk : String):  (Seq[Result], String) = {
+      val left = leftResult.map(r => r.getAs[Long](pk)).collect()
+      val right = rightResult.map(r => r.getAs[Long](pk)).collect()
+      val result = (left.toSet -- right.toSet).map(id => new Result(0.toFloat, id)).toSeq
+      (result, pk)
     }
 
     /**

@@ -2,7 +2,6 @@ package ch.unibas.dmi.dbis.adam.storage.components
 
 import ch.unibas.dmi.dbis.adam.entity.Entity.EntityName
 import ch.unibas.dmi.dbis.adam.entity.FieldDefinition
-import ch.unibas.dmi.dbis.adam.entity.Tuple.TupleID
 import ch.unibas.dmi.dbis.adam.main.AdamContext
 import ch.unibas.dmi.dbis.adam.main.SparkStartup.Implicits._
 import org.apache.spark.sql.types._
@@ -16,7 +15,7 @@ import scala.util.Try
   * Ivan Giangreco
   * August 2015
   */
-trait FeatureStorage {
+trait FeatureStorage extends Serializable {
   /**
     *
     * @param entityname
@@ -36,17 +35,16 @@ trait FeatureStorage {
     }
 
     val df = sqlContext.createDataFrame(sc.emptyRDD[Row], StructType(structFields))
-    write(entityname, df, SaveMode.Overwrite)
+    write(entityname, fields.filter(_.pk).head.name, df, SaveMode.Overwrite)
   }
 
   /**
     * Read entity from feature storage.
     *
     * @param entityname
-    * @param filter
     * @return
     */
-  def read(entityname: EntityName, filter: Option[Set[TupleID]] = None)(implicit ac : AdamContext): Try[DataFrame]
+  def read(entityname: EntityName)(implicit ac : AdamContext): Try[DataFrame]
 
   /**
     * Count the number of tuples in the feature storage.
@@ -64,7 +62,7 @@ trait FeatureStorage {
     * @param mode
     * @return true on success
     */
-  def write(entityname: EntityName, df: DataFrame, mode: SaveMode = SaveMode.Append)(implicit ac: AdamContext): Boolean
+  def write(entityname: EntityName, pk : String, df: DataFrame, mode: SaveMode = SaveMode.Append)(implicit ac: AdamContext): Boolean
 
   /**
     * Drop the entity from the feature storage

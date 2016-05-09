@@ -2,8 +2,7 @@ package ch.unibas.dmi.dbis.adam.storage.engine
 
 import java.io.File
 
-import ch.unibas.dmi.dbis.adam.config.{AdamConfig, FieldNames}
-import ch.unibas.dmi.dbis.adam.entity.Tuple._
+import ch.unibas.dmi.dbis.adam.config.AdamConfig
 import ch.unibas.dmi.dbis.adam.index.Index.IndexName
 import ch.unibas.dmi.dbis.adam.main.AdamContext
 import ch.unibas.dmi.dbis.adam.storage.components.IndexStorage
@@ -31,9 +30,9 @@ object ParquetIndexStorage extends IndexStorage {
     new LocalStorage()
   }
 
-  override def read(indexName: IndexName, filter: Option[collection.Set[TupleID]])(implicit ac: AdamContext): DataFrame = {
+  override def read(indexName: IndexName)(implicit ac: AdamContext): DataFrame = {
     log.debug("reading index from harddisk")
-    storage.read(indexName, filter)
+    storage.read(indexName)
   }
 
   override def drop(indexName: IndexName)(implicit ac: AdamContext): Boolean = {
@@ -49,14 +48,8 @@ object ParquetIndexStorage extends IndexStorage {
   override def exists(indexname: IndexName): Boolean = storage.exists(indexname)
 
   private[engine] trait GenericIndexStorage extends IndexStorage {
-    override def read(indexname: IndexName, filter: Option[scala.collection.Set[TupleID]] = None)(implicit ac: AdamContext): DataFrame = {
-      val df = ac.sqlContext.read.parquet(AdamConfig.indexPath + "/" + indexname + ".parquet")
-
-      if (filter.isDefined) {
-        df.filter(df(FieldNames.idColumnName) isin (filter.get.toSeq: _*))
-      } else {
-        df
-      }
+    override def read(indexname: IndexName)(implicit ac: AdamContext): DataFrame = {
+      ac.sqlContext.read.parquet(AdamConfig.indexPath + "/" + indexname + ".parquet")
     }
 
     override def write(indexname: IndexName, df: DataFrame)(implicit ac: AdamContext): Boolean = {

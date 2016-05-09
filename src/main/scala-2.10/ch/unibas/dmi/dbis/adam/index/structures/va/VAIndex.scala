@@ -64,7 +64,7 @@ class VAIndex(val indexname: IndexName, val entityname: EntityName, override pri
 
           while(p.hasNext){
             val current = p.next()
-            localRh.offer(current)
+            localRh.offer(current, this.pk)
           }
 
           localRh.results.iterator

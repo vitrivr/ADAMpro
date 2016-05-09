@@ -2,7 +2,6 @@ package ch.unibas.dmi.dbis.adam.entity
 
 import ch.unibas.dmi.dbis.adam.AdamTestBase
 import ch.unibas.dmi.dbis.adam.api.{CreateEntityOp, DropEntityOp}
-import ch.unibas.dmi.dbis.adam.config.FieldNames
 import ch.unibas.dmi.dbis.adam.datatypes.feature.{FeatureVectorWrapper, FeatureVectorWrapperUDT}
 import ch.unibas.dmi.dbis.adam.main.SparkStartup.Implicits._
 import org.apache.spark.sql.Row
@@ -20,6 +19,8 @@ import scala.util.Random
   */
 class EntityTestSuite extends AdamTestBase {
 
+  case class TemplateFieldDefinition(name: String, fieldType: FieldTypes.FieldType, pk: Boolean, sqlType: String)
+
 
   feature("data definition") {
     /**
@@ -31,7 +32,7 @@ class EntityTestSuite extends AdamTestBase {
         val givenEntities = EntityHandler.list()
 
         When("a new random entity (without any metadata) is created")
-        EntityHandler.create(entityname, Seq(FieldDefinition("feature", FieldTypes.FEATURETYPE, false, false, false)))
+        EntityHandler.create(entityname, Seq(FieldDefinition("idfield", FieldTypes.LONGTYPE, true), FieldDefinition("feature", FieldTypes.FEATURETYPE)))
 
         Then("one entity should be created")
         val finalEntities = EntityHandler.list()
@@ -50,7 +51,7 @@ class EntityTestSuite extends AdamTestBase {
     scenario("drop an existing entity") {
       withEntityName { entityname =>
         Given("there exists one entity")
-        EntityHandler.create(entityname, Seq(FieldDefinition("feature", FieldTypes.FEATURETYPE, false, false, false)))
+        EntityHandler.create(entityname, Seq(FieldDefinition("idfield", FieldTypes.LONGTYPE, true), FieldDefinition("feature", FieldTypes.FEATURETYPE)))
         assert(EntityHandler.list().contains(entityname.toLowerCase()))
 
         When("the entity is dropped")
@@ -71,16 +72,17 @@ class EntityTestSuite extends AdamTestBase {
 
         When("a new random entity with metadata is created")
         val fieldTemplate = Seq(
-          ("featurefield", FieldTypes.FEATURETYPE, ""),
-          ("stringfield", FieldTypes.STRINGTYPE, "text"),
-          ("floatfield", FieldTypes.FLOATTYPE, "real"),
-          ("doublefield", FieldTypes.DOUBLETYPE, "double precision"),
-          ("intfield", FieldTypes.INTTYPE, "integer"),
-          ("longfield", FieldTypes.LONGTYPE, "bigint"),
-          ("booleanfield", FieldTypes.BOOLEANTYPE, "boolean")
+          TemplateFieldDefinition("idfield", FieldTypes.LONGTYPE, true, "bigint"),
+          TemplateFieldDefinition("featurefield", FieldTypes.FEATURETYPE, false, ""),
+          TemplateFieldDefinition("stringfield", FieldTypes.STRINGTYPE, false, "text"),
+          TemplateFieldDefinition("floatfield", FieldTypes.FLOATTYPE, false, "real"),
+          TemplateFieldDefinition("doublefield", FieldTypes.DOUBLETYPE, false, "double precision"),
+          TemplateFieldDefinition("intfield", FieldTypes.INTTYPE, false, "integer"),
+          TemplateFieldDefinition("longfield", FieldTypes.LONGTYPE, false, "bigint"),
+          TemplateFieldDefinition("booleanfield", FieldTypes.BOOLEANTYPE, false, "boolean")
         )
 
-        val entity = EntityHandler.create(entityname, fieldTemplate.map(x => FieldDefinition(x._1, x._2)))
+        val entity = EntityHandler.create(entityname, fieldTemplate.map(ft => FieldDefinition(ft.name, ft.fieldType, ft.pk)))
 
         Then("the entity should be created")
         val entities = EntityHandler.list()
@@ -96,18 +98,18 @@ class EntityTestSuite extends AdamTestBase {
           lb.+=((result.getString(1), result.getString(2)))
         }
 
-        val dbNames = lb.toList.toMap
-        val templateNames = fieldTemplate.map(ft => (ft._1, ft._3)).toMap + (FieldNames.idColumnName -> "bigint")
+        val dbNames = lb.toList.toMap //fields from relational database
+        val templateNames = fieldTemplate.filter(_.sqlType.length > 0).map(ft => ft.name -> ft.sqlType).toMap //fields that should be stored in relational database
 
-        assert(dbNames.size == templateNames.size - 1) //-1 because metadata does not contain our feature field
+        assert(dbNames.size == templateNames.size)
 
         And("the metadata table should contain the same columns (with the corresponding data type)")
         assert(dbNames.keySet.forall({ key => dbNames(key) == templateNames(key) }))
 
         And("the index on the id field is created")
-        val indexesResult = getJDBCConnection.createStatement().executeQuery("SELECT t.relname AS table, i.relname AS index, a.attname AS column FROM pg_class t, pg_class i, pg_index ix, pg_attribute a WHERE t.oid = ix.indrelid AND i.oid = ix.indexrelid AND a.attrelid = t.oid AND a.attnum = ANY(ix.indkey) AND t.relkind = 'r' AND t.relname = '" + entityname.toLowerCase() + "' AND a.attname = '" + FieldNames.idColumnName + "'")
+        val indexesResult = getJDBCConnection.createStatement().executeQuery("SELECT t.relname AS table, i.relname AS index, a.attname AS column FROM pg_class t, pg_class i, pg_index ix, pg_attribute a WHERE t.oid = ix.indrelid AND i.oid = ix.indexrelid AND a.attrelid = t.oid AND a.attnum = ANY(ix.indkey) AND t.relkind = 'r' AND t.relname = '" + entityname.toLowerCase() + "' AND a.attname = '" + "idfield" + "'")
         indexesResult.next()
-        assert(indexesResult.getString(3) == FieldNames.idColumnName)
+        assert(indexesResult.getString(3) == "idfield")
       }
     }
 
@@ -117,7 +119,7 @@ class EntityTestSuite extends AdamTestBase {
     scenario("drop an entity with metadata") {
       withEntityName { entityname =>
         Given("an entity with metadata")
-        val fields = Seq[FieldDefinition](FieldDefinition("feature", FieldTypes.FEATURETYPE), FieldDefinition("stringfield", FieldTypes.STRINGTYPE))
+        val fields = Seq[FieldDefinition](FieldDefinition("idfield", FieldTypes.LONGTYPE, true), FieldDefinition("feature", FieldTypes.FEATURETYPE), FieldDefinition("stringfield", FieldTypes.STRINGTYPE))
         CreateEntityOp(entityname, fields)
 
         val preResult = getJDBCConnection.createStatement().executeQuery("SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = '" + entityname.toLowerCase() + "'")
@@ -147,7 +149,7 @@ class EntityTestSuite extends AdamTestBase {
       withEntityName { entityname =>
         Given("an entity with metadata")
         val fields = Seq[FieldDefinition](
-          FieldDefinition("pkfield", FieldTypes.INTTYPE, true),
+          FieldDefinition("pkfield", FieldTypes.LONGTYPE, true),
           FieldDefinition("uniquefield", FieldTypes.INTTYPE, false, true),
           FieldDefinition("indexedfield", FieldTypes.INTTYPE, false, false, true),
           FieldDefinition("feature", FieldTypes.FEATURETYPE)
@@ -185,17 +187,18 @@ class EntityTestSuite extends AdamTestBase {
     scenario("insert data in an entity without metadata") {
       withEntityName { entityname =>
         Given("an entity without metadata")
-        EntityHandler.create(entityname, Seq(FieldDefinition("featurefield", FieldTypes.FEATURETYPE, false, false, false)))
+        EntityHandler.create(entityname, Seq(FieldDefinition("idfield", FieldTypes.LONGTYPE, true), FieldDefinition("featurefield", FieldTypes.FEATURETYPE, false, false, false)))
 
         val ntuples = Random.nextInt(1000)
         val ndims = 100
 
         val schema = StructType(Seq(
+          StructField("idfield", LongType, false),
           StructField("featurefield", new FeatureVectorWrapperUDT, false)
         ))
 
         val rdd = ac.sc.parallelize((0 until ntuples).map(id =>
-          Row(new FeatureVectorWrapper(Seq.fill(ndims)(Random.nextFloat())))
+          Row(Random.nextLong(), new FeatureVectorWrapper(Seq.fill(ndims)(Random.nextFloat())))
         ))
 
         val data = ac.sqlContext.createDataFrame(rdd, schema)
@@ -218,34 +221,38 @@ class EntityTestSuite extends AdamTestBase {
         Given("an entity with metadata")
         //every field has been created twice, one is not filled to check whether this works too
         val fieldTemplate = Seq(
-          ("featurefield", FieldTypes.FEATURETYPE, ""),
-          ("stringfield", FieldTypes.STRINGTYPE, "text"),
-          ("stringfieldunfilled", FieldTypes.STRINGTYPE, "text"),
-          ("floatfield", FieldTypes.FLOATTYPE, "real"),
-          ("floatfieldunfilled", FieldTypes.FLOATTYPE, "real"),
-          ("doublefield", FieldTypes.DOUBLETYPE, "double precision"),
-          ("doublefieldunfilled", FieldTypes.DOUBLETYPE, "double precision"),
-          ("intfield", FieldTypes.INTTYPE, "integer"),
-          ("intfieldunfilled", FieldTypes.LONGTYPE, "bigint"),
-          ("longfield", FieldTypes.LONGTYPE, "bigint"),
-          ("longfieldunfilled", FieldTypes.LONGTYPE, "bigint"),
-          ("booleanfield", FieldTypes.BOOLEANTYPE, "boolean"),
-          ("booleanfieldunfilled", FieldTypes.BOOLEANTYPE, "boolean")
+          TemplateFieldDefinition("idfield", FieldTypes.LONGTYPE, true, "bigint"),
+          TemplateFieldDefinition("featurefield", FieldTypes.FEATURETYPE, false, ""),
+          TemplateFieldDefinition("stringfield", FieldTypes.STRINGTYPE, false, "text"),
+          TemplateFieldDefinition("stringfieldunfilled", FieldTypes.STRINGTYPE, false, "text"),
+          TemplateFieldDefinition("floatfield", FieldTypes.FLOATTYPE, false, "real"),
+          TemplateFieldDefinition("floatfieldunfilled", FieldTypes.FLOATTYPE, false, "real"),
+          TemplateFieldDefinition("doublefield", FieldTypes.DOUBLETYPE, false, "double precision"),
+          TemplateFieldDefinition("doublefieldunfilled", FieldTypes.DOUBLETYPE, false, "double precision"),
+          TemplateFieldDefinition("intfield", FieldTypes.INTTYPE, false, "integer"),
+          TemplateFieldDefinition("intfieldunfilled", FieldTypes.LONGTYPE, false, "integer"),
+          TemplateFieldDefinition("longfield", FieldTypes.LONGTYPE, false, "bigint"),
+          TemplateFieldDefinition("longfieldunfilled", FieldTypes.LONGTYPE, false, "bigint"),
+          TemplateFieldDefinition("booleanfield", FieldTypes.BOOLEANTYPE, false, "boolean"),
+          TemplateFieldDefinition("booleanfieldunfilled", FieldTypes.BOOLEANTYPE, false, "boolean")
         )
 
-        val fields = fieldTemplate.map(ft => FieldDefinition(ft._1, ft._2))
-        CreateEntityOp(entityname, fields)
+        val entity = EntityHandler.create(entityname, fieldTemplate.map(x => FieldDefinition(x.name, x.fieldType, x.pk)))
 
         val ntuples = Random.nextInt(1000)
         val ndims = 100
         val stringLength = 10
         val maxInt = 50000
 
-        val schema = StructType(fieldTemplate.filterNot(_._1.endsWith("unfilled"))
-          .map(field => StructField(field._1, field._2.datatype, false)))
+        val schema = StructType(
+          fieldTemplate.filterNot(_.name.endsWith("unfilled"))
+            .map(field => StructField(field.name, field.fieldType.datatype, false))
+        )
 
         val rdd = ac.sc.parallelize((0 until ntuples).map(id =>
-          Row(new FeatureVectorWrapper(Seq.fill(ndims)(Random.nextFloat())),
+          Row(
+            Random.nextLong(),
+            new FeatureVectorWrapper(Seq.fill(ndims)(Random.nextFloat())),
             Random.nextString(stringLength),
             math.abs(Random.nextFloat()),
             math.abs(Random.nextDouble()),
