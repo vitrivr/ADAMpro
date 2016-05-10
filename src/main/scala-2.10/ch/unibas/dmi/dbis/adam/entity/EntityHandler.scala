@@ -46,38 +46,38 @@ object EntityHandler {
 
       if (fields.isEmpty) {
         log.error("entity " + entityname + " will have no fields")
-        return Failure(EntityNotProperlyDefinedException(Some("entity with no fields")))
+        return Failure(EntityNotProperlyDefinedException(Some("Entity with no fields.")))
       }
 
       FieldNames.reservedNames.foreach { reservedName =>
         if (fields.contains(reservedName)) {
           log.error("entity defined with field " + reservedName + ", but name is reserved")
-          return Failure(EntityNotProperlyDefinedException(Some("using reserved name")))
+          return Failure(EntityNotProperlyDefinedException(Some("Using reserved name.")))
         }
       }
 
       if (fields.map(_.name).distinct.length != fields.length) {
         log.error("entity defined with duplicate fields")
-        return Failure(EntityNotProperlyDefinedException(Some("duplicate field names")))
+        return Failure(EntityNotProperlyDefinedException(Some("Duplicate field names.")))
       }
 
       if (fields.count(_.pk) > 1) {
         log.error("entity defined with more than one primary key")
-        return Failure(EntityNotProperlyDefinedException(Some("more than one primary key")))
+        return Failure(EntityNotProperlyDefinedException(Some("More than one primary key.")))
       } else if (fields.filter(_.pk).isEmpty) {
         log.error("entity defined has no primary key")
-        return Failure(EntityNotProperlyDefinedException(Some("no primary key defined")))
+        return Failure(EntityNotProperlyDefinedException(Some("No primary key defined.")))
       } else if (fields.filter(_.pk).forall(pk => Seq(INTTYPE, LONGTYPE, STRINGTYPE, AUTOTYPE).map(_.name).contains(pk.fieldtype))) {
         log.error("entity defined needs a AUTO, INT, LONG or STRING primary key")
-        return Failure(EntityNotProperlyDefinedException(Some("only AUTO, INT, LONG and STRING primary keys allowed")))
+        return Failure(EntityNotProperlyDefinedException(Some("Only AUTO, INT, LONG and STRING primary keys allowed.")))
       }
 
       if(fields.count(_.fieldtype == AUTOTYPE) > 1){
         log.error("only one auto type allowed, and only in primary key")
-        return Failure(EntityNotProperlyDefinedException(Some("too many auto fields defined")))
+        return Failure(EntityNotProperlyDefinedException(Some("Too many auto fields defined.")))
       } else if ( fields.count(_.fieldtype == AUTOTYPE) > 0 && !fields.filter(_.pk).forall(_.fieldtype == AUTOTYPE)){
         log.error("auto type only allowed in primary key ")
-        return Failure(EntityNotProperlyDefinedException(Some("auto type only allowed in primary key")))
+        return Failure(EntityNotProperlyDefinedException(Some("Auto type only allowed in primary key.")))
       }
 
 
