@@ -67,7 +67,7 @@ libraryDependencies ++= Seq(
   "org.apache.hadoop"      %    "hadoop-client"          % "2.6.4",
   "org.apache.commons"     %    "commons-lang3"          % "3.4",
   "it.unimi.dsi"           %    "fastutil"               % "7.0.12",
-  "com.google.guava"       %    "guava"                  % "19.0"
+  "com.google.guava"       %    "guava"                  % "16.0.1"
 ).map (
   _.excludeAll(ExclusionRule(organization = "org.scala-lang"))
 )
