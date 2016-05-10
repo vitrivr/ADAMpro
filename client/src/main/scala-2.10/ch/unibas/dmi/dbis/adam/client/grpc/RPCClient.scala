@@ -171,7 +171,7 @@ class RPCClient(channel: ManagedChannel, definer: AdamDefinitionBlockingStub, se
         val confidence = v.confidence
         val source = v.source
         val time = v.time
-        val results = v.results.map(x => (x.distance, x.id))
+        val results = v.results.map(x => (x.distance, 0.toLong)) //TODO: 0.toLong
 
         next(id, confidence, source, time, results)
       }
