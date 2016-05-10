@@ -202,6 +202,53 @@ class EntityTestSuite extends AdamTestBase {
 
 
   feature("data manipulation") {
+    /**
+      *
+      */
+    scenario("insert data in an entity with auto-increment metadata") {
+      withEntityName { entityname =>
+        EntityHandler.create(entityname, Seq(FieldDefinition("idfield", FieldTypes.AUTOTYPE, true), FieldDefinition("featurefield", FieldTypes.FEATURETYPE, false, false, false)))
+
+        val ntuples = Random.nextInt(1000)
+        val ndims = 100
+
+        When("data is inserted by specifying id")
+        val wrongschema = StructType(Seq(
+          StructField("idfield", LongType, false),
+          StructField("featurefield", new FeatureVectorWrapperUDT, false)
+        ))
+
+        val wrongrdd = ac.sc.parallelize((0 until ntuples).map(id =>
+          Row(Random.nextLong(), new FeatureVectorWrapper(Seq.fill(ndims)(Random.nextFloat())))
+        ))
+
+        val wrongdata = ac.sqlContext.createDataFrame(wrongrdd, wrongschema)
+
+        val wronginsert = EntityHandler.insertData(entityname, wrongdata)
+
+        Then("the data is not inserted")
+        assert(wronginsert.isFailure)
+
+
+        val schema = StructType(Seq(
+          StructField("featurefield", new FeatureVectorWrapperUDT, false)
+        ))
+
+        val rdd = ac.sc.parallelize((0 until ntuples).map(id =>
+          Row(new FeatureVectorWrapper(Seq.fill(ndims)(Random.nextFloat())))
+        ))
+
+        val data = ac.sqlContext.createDataFrame(rdd, schema)
+
+        When("data is inserted without specifying id")
+        val insert = EntityHandler.insertData(entityname, data)
+        assert(insert.isSuccess)
+
+        Then("the data is available")
+        val counted = EntityHandler.countTuples(entityname).get
+        assert(counted - ntuples == 0)
+      }
+    }
 
     /**
       *

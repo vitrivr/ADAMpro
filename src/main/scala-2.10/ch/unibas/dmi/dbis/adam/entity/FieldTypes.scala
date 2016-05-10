@@ -21,8 +21,9 @@ object FieldTypes {
   case object BOOLEANTYPE extends FieldType("boolean", types.BooleanType)
   case object FEATURETYPE extends FieldType("feature", new FeatureVectorWrapperUDT)
   case object UNRECOGNIZEDTYPE extends FieldType("", types.NullType)
+  case object AUTOTYPE extends FieldType("auto", types.LongType)
 
-  def values = Seq(INTTYPE, LONGTYPE, FLOATTYPE, DOUBLETYPE, STRINGTYPE, BOOLEANTYPE, FEATURETYPE)
+  def values = Seq(INTTYPE, LONGTYPE, FLOATTYPE, DOUBLETYPE, STRINGTYPE, BOOLEANTYPE, FEATURETYPE, AUTOTYPE)
 
   def fromString(s : String): FieldType ={
     values.filter(x => x.name == s).head

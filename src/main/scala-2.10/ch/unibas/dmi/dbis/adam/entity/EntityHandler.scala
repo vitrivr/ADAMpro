@@ -2,7 +2,7 @@ package ch.unibas.dmi.dbis.adam.entity
 
 import ch.unibas.dmi.dbis.adam.config.FieldNames
 import ch.unibas.dmi.dbis.adam.entity.Entity.EntityName
-import ch.unibas.dmi.dbis.adam.entity.FieldTypes.{STRINGTYPE, INTTYPE, LONGTYPE, FEATURETYPE}
+import ch.unibas.dmi.dbis.adam.entity.FieldTypes._
 import ch.unibas.dmi.dbis.adam.exception.{EntityExistingException, EntityNotExistingException, EntityNotProperlyDefinedException}
 import ch.unibas.dmi.dbis.adam.index.IndexHandler
 import ch.unibas.dmi.dbis.adam.main.{AdamContext, SparkStartup}
@@ -71,6 +71,15 @@ object EntityHandler {
         log.error("entity defined needs a AUTO, INT, LONG or STRING primary key")
         return Failure(EntityNotProperlyDefinedException(Some("only AUTO, INT, LONG and STRING primary keys allowed")))
       }
+
+      if(fields.count(_.fieldtype == AUTOTYPE) > 1){
+        log.error("only one auto type allowed, and only in primary key")
+        return Failure(EntityNotProperlyDefinedException(Some("too many auto fields defined")))
+      } else if ( fields.count(_.fieldtype == AUTOTYPE) > 0 && !fields.filter(_.pk).forall(_.fieldtype == AUTOTYPE)){
+        log.error("auto type only allowed in primary key ")
+        return Failure(EntityNotProperlyDefinedException(Some("auto type only allowed in primary key")))
+      }
+
 
       val pk = fields.filter(_.pk).head
       val featureFields = fields.filter(_.fieldtype == FEATURETYPE).+:(pk)

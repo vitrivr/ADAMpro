@@ -3,15 +3,17 @@ package ch.unibas.dmi.dbis.adam.entity
 import ch.unibas.dmi.dbis.adam.datatypes.feature.FeatureVectorWrapperUDT
 import ch.unibas.dmi.dbis.adam.entity.Entity._
 import ch.unibas.dmi.dbis.adam.entity.FieldTypes.FieldType
+import ch.unibas.dmi.dbis.adam.exception.GeneralAdamException
 import ch.unibas.dmi.dbis.adam.main.AdamContext
 import ch.unibas.dmi.dbis.adam.query.query.NearestNeighbourQuery
 import ch.unibas.dmi.dbis.adam.storage.components.{FeatureStorage, MetadataStorage}
 import ch.unibas.dmi.dbis.adam.storage.engine.CatalogOperator
 import org.apache.log4j.Logger
-import org.apache.spark.sql.{DataFrame, SaveMode}
+import org.apache.spark.sql.types.{StructField, StructType}
+import org.apache.spark.sql.{DataFrame, Row, SaveMode}
 
 import scala.collection.mutable.ListBuffer
-import scala.util.{Success, Try}
+import scala.util.{Failure, Success, Try}
 
 /**
   * adamtwo
@@ -19,10 +21,11 @@ import scala.util.{Success, Try}
   * Ivan Giangreco
   * October 2015
   */
-case class Entity(val entityname: EntityName, val pk : String, private val featureStorage: FeatureStorage, private val metadataStorage: Option[MetadataStorage])(@transient implicit val ac : AdamContext)  {
+case class Entity(val entityname: EntityName, val pk: String, private val featureStorage: FeatureStorage, private val metadataStorage: Option[MetadataStorage])(@transient implicit val ac: AdamContext) {
   @transient val log = Logger.getLogger(getClass.getName)
 
   private def featureData = featureStorage.read(entityname).get
+
   private def metaData = if (metadataStorage.isDefined) {
     Some(metadataStorage.get.read(entityname))
   } else {
@@ -34,7 +37,7 @@ case class Entity(val entityname: EntityName, val pk : String, private val featu
     *
     * @return
     */
-  def count : Long = {
+  def count: Long = {
     if (tupleCount == -1) {
       tupleCount = featureStorage.count(entityname)
     }
@@ -42,7 +45,7 @@ case class Entity(val entityname: EntityName, val pk : String, private val featu
     tupleCount
   }
 
-  private var tupleCount : Long = -1
+  private var tupleCount: Long = -1
 
   /**
     * Gives preview of entity.
@@ -55,23 +58,36 @@ case class Entity(val entityname: EntityName, val pk : String, private val featu
   /**
     * Inserts data into the entity.
     *
-    * @param insertion
+    * @param data
     * @param ignoreChecks
     * @return
     */
-  def insert(insertion: DataFrame, ignoreChecks: Boolean = false) : Try[Void] = {
+  def insert(data: DataFrame, ignoreChecks: Boolean = false): Try[Void] = {
     log.debug("inserting data into entity")
 
-   //TODO: check dimensionality is correct
-    //TODO: if PK not set in insertion, auto-increment?
+    //TODO: check dimensionality is correct
+
+    val insertion =
+      if (pkType == FieldTypes.AUTOTYPE) {
+        if(data.schema.fieldNames.contains(pk)){
+          return Failure(new GeneralAdamException("the field " + pk + " has been specified as auto and should therefore not be provided"))
+        }
+
+        val rdd = data.rdd.zipWithUniqueId.map { case (r: Row, id: Long) => Row.fromSeq(id +: r.toSeq) }
+        ac.sqlContext
+          .createDataFrame(
+            rdd, StructType(StructField(pk, pkType.datatype, false) +: data.schema.fields))
+      } else {
+        data
+      }
 
     val featureFieldNames = insertion.schema.fields.filter(_.dataType == new FeatureVectorWrapperUDT).map(_.name)
-    featureStorage.write(entityname, pk, insertion.select(pk, featureFieldNames.toSeq : _*), SaveMode.Append)
+    featureStorage.write(entityname, pk, insertion.select(pk, featureFieldNames.toSeq: _*), SaveMode.Append)
 
     val metadataFieldNames = insertion.schema.fields.filterNot(_.dataType == new FeatureVectorWrapperUDT).map(_.name)
     if (metadataStorage.isDefined) {
       log.debug("metadata storage is defined: inserting data also into metadata storage")
-      metadataStorage.get.write(entityname, insertion.select(pk, metadataFieldNames.filterNot(x => x == pk).toSeq : _*), SaveMode.Append)
+      metadataStorage.get.write(entityname, insertion.select(pk, metadataFieldNames.filterNot(x => x == pk).toSeq: _*), SaveMode.Append)
     }
 
     if (CatalogOperator.listIndexes(entityname).nonEmpty) {
@@ -88,7 +104,7 @@ case class Entity(val entityname: EntityName, val pk : String, private val featu
   /**
     * Returns a map of properties to the entity. Useful for printing.
     */
-  def properties : Map[String, String] = {
+  def properties: Map[String, String] = {
     val lb = ListBuffer[(String, String)]()
 
     lb.append("hasMetadata" -> hasMetadata.toString)
@@ -103,7 +119,7 @@ case class Entity(val entityname: EntityName, val pk : String, private val featu
     * @param filter
     * @return
     */
-  def filter(filter: DataFrame) : DataFrame = {
+  def filter(filter: DataFrame): DataFrame = {
     featureStorage.read(entityname).get.join(filter, pk)
   }
 

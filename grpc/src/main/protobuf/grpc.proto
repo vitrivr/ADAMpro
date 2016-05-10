@@ -94,6 +94,7 @@ message FieldDefinitionMessage {
       STRING = 4;
       BOOLEAN = 5;
       FEATURE = 6;
+      AUTO = 7;
     }
   FieldType fieldtype = 2;
   bool pk = 3;
