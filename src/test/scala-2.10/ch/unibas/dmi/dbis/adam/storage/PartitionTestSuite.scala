@@ -83,7 +83,7 @@ class PartitionTestSuite extends AdamTestBase {
         val index = IndexOp(es.entity.entityname, "featurefield", IndexTypes.ECPINDEX, EuclideanDistance)
         assert(index.isSuccess)
 
-        When("performing a repartitioning with replacement")
+        When("performing a repartitioning, creating new")
         val partindex = PartitionOp(index.get.indexname, nPartitions, false, Some(Seq("tid")), PartitionOptions.CREATE_NEW)
         val partnnq = NearestNeighbourQuery("featurefield", es.feature.vector, es.distance, es.k, false, Map[String, String](), Some(Set(0)))
 
@@ -110,7 +110,7 @@ class PartitionTestSuite extends AdamTestBase {
         val index = IndexOp(es.entity.entityname, "featurefield", IndexTypes.ECPINDEX, EuclideanDistance)
         assert(index.isSuccess)
 
-        When("performing a repartitioning with replacement")
+        When("performing a repartitioning, creating new")
         val partindex = PartitionOp(index.get.indexname, nPartitions, true, Some(Seq("tid")), PartitionOptions.CREATE_NEW)
         val partnnq = NearestNeighbourQuery("featurefield", es.feature.vector, es.distance, es.k, false, Map[String, String](), Some(Set(0)))
 
