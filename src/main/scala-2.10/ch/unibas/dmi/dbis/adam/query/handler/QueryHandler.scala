@@ -492,7 +492,8 @@ object QueryHandler {
     val res = BooleanQueryHandler.getData(entityname, bq)
 
     if (res.isDefined) {
-      return res.get
+      import org.apache.spark.sql.functions._
+      return res.get.withColumn(FieldNames.distanceColumnName, lit(0.toFloat))
     } else {
       val rdd = ac.sc.emptyRDD[Row]
       return ac.sqlContext.createDataFrame(rdd, Result.resultSchema(entity.pk))

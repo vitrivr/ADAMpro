@@ -38,6 +38,7 @@ case class BooleanQuery(
     * @return
     */
   def buildWhereClause(): String = {
+    //TODO: refactor
     val regex = s"""^(${sqlOperators.mkString("|")}){0,1}(.*)""".r
 
     where.get.map { case (field, value) =>
@@ -45,7 +46,7 @@ case class BooleanQuery(
 
       //if a sqlOperator was found then keep the SQL operator, otherwise add a '='
       (prefix, suffix) match {
-        case (null, s) => field + " =" + " " + value
+        case (null, s) => field + " = " + " '" + value + "'"
         case _ => field + " " + value
       }
     }.mkString("(", ") AND (", ")")
