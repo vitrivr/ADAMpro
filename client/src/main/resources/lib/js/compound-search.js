@@ -1,19 +1,19 @@
 var instance = jsPlumb.getInstance({
     Endpoint: ["Dot", {radius: 2}],
-    Connector:"StateMachine",
-    HoverPaintStyle: {strokeStyle: "#f44336", lineWidth: 2 },
+    Connector: "StateMachine",
+    HoverPaintStyle: {strokeStyle: "#f44336", lineWidth: 2},
     ConnectionOverlays: [
-        [ "Arrow", {
+        ["Arrow", {
             location: 1,
             id: "arrow",
             length: 14,
             foldback: 0.8
-        } ]
+        }]
     ],
     Container: "canvas"
 });
 
-instance.registerConnectionType("basic", { anchor:"Continuous", connector:"StateMachine" });
+instance.registerConnectionType("basic", {anchor: "Continuous", connector: "StateMachine"});
 
 window.jsp = instance;
 
@@ -28,25 +28,25 @@ instance.bind("click", function (c) {
 
 jsPlumb.fire("jsPlumbDemoLoaded", instance);
 
-var initNode = function(el) {
+var initNode = function (el) {
     instance.draggable(el);
     instance.makeSource(el, {
         filter: ".ep",
         anchor: "Continuous",
-        connectorStyle: { strokeStyle: "#26a69a", lineWidth: 2, outlineColor: "transparent", outlineWidth: 4 },
-        connectionType:"basic",
-        extract:{
-            "action":"the-action"
+        connectorStyle: {strokeStyle: "#26a69a", lineWidth: 2, outlineColor: "transparent", outlineWidth: 4},
+        connectionType: "basic",
+        extract: {
+            "action": "the-action"
         }
     });
     instance.makeTarget(el, {
-        dropOptions: { hoverClass: "dragHover" },
+        dropOptions: {hoverClass: "dragHover"},
         anchor: "Continuous",
         allowLoopback: true
     });
 };
 
-var newNode = function(x, y, fields, frontname, backname) {
+var newNode = function (x, y, fields, frontname, backname) {
     var d = document.createElement("div");
     var id = jsPlumbUtil.uuid();
     d.className = "w";
@@ -55,12 +55,12 @@ var newNode = function(x, y, fields, frontname, backname) {
     var innerhtml = "";
     innerhtml += "<div class=\"btnClose\"><i class=\"material-icons tiny\">close</i></div>";
     innerhtml += "<div style=\"height:20px\">";
-    if(fields.length > 0){
+    if (fields.length > 0) {
         innerhtml += "<div class=\"btnSettings\" style=\"float:left\"><i class=\"tiny material-icons\">mode_edit</i></div>&nbsp;&nbsp;";
     }
     innerhtml += frontname;
     innerhtml += "</div>";
-    if(fields.length > 0){
+    if (fields.length > 0) {
         innerhtml += "<div class=\"settings\" style=\"display:none\">";
         innerhtml += fields;
         innerhtml += "</div>";
@@ -76,13 +76,13 @@ var newNode = function(x, y, fields, frontname, backname) {
     document.getElementById("canvas").appendChild(d);
     initNode(d);
 
-    if(fields.length > 0){
-        $("#" + d.id + " > div > .btnSettings").click(function() {
+    if (fields.length > 0) {
+        $("#" + d.id + " > div > .btnSettings").click(function () {
             $("#" + d.id + " > .settings").toggle("slow");
         });
     }
 
-    $("#" + d.id + " > .btnClose").click(function(e) {
+    $("#" + d.id + " > .btnClose").click(function (e) {
         instance.remove($("#" + d.id));
         e.stopPropagation();
     });
@@ -91,14 +91,13 @@ var newNode = function(x, y, fields, frontname, backname) {
 };
 
 
-
 //init
 for (var i = 0; i < windows.length; i++) {
     initNode(windows[i], true);
 }
 
 //add index
-$("#btnAddIndex").click(function(){
+$("#btnAddIndex").click(function () {
     var innerhtml = "";
     innerhtml += "<input type=\"text\" class=\"form-control\" name=\"indexname\" placeholder=\"indexname\">";
     innerhtml += "<input type=\"text\" class=\"form-control\" name=\"partitions\" placeholder=\"all partitions\">";
@@ -107,7 +106,7 @@ $("#btnAddIndex").click(function(){
 });
 
 //add operation
-$("#btnAddOperation").click(function(){
+$("#btnAddOperation").click(function () {
     var innerhtml = "";
     innerhtml += "<div class=\"input-field\"><select name=\"operationorder\" class=\"browser-default\"><option value=\"parallel\" selected=\"selected\">parallel</option><option value=\"left\">left first</option><option value=\"right\">right first</option> </select></div>";
 
@@ -115,11 +114,20 @@ $("#btnAddOperation").click(function(){
 });
 
 //submit operation
-$("#btnSubmit").click(function(){
-    if($("#entityname").val().length === 0){
-        showAlert(" Please specify an entity."); return;
-    } else if($("#query").val().length === 0){
-        showAlert(" Please specify a query vector."); return;
+$("#btnSubmit").click(function () {
+    if ($("#entityname").val().length === 0) {
+        showAlert(" Please specify an entity.");
+        return;
+    }
+
+    if ($("#query").val().length === 0) {
+        showAlert(" Please specify a query vector.");
+        return;
+    }
+
+    if ($("#column").val().length === 0) {
+        showAlert(" Please specify an attribute.");
+        return;
     }
 
     $("#btnSubmit").addClass('disabled');
@@ -132,28 +140,32 @@ $("#btnSubmit").click(function(){
         data: JSON.stringify(evaluate("box-start")),
         contentType: 'application/json',
         type: 'POST',
-        success: function(data){
-            $.each(data.intermediate_responses, function(idx, val){
-                if(val.id.length > 0){
-                    $("#" + val.id + " > .res").html("execution time: " + val.time + "ms" + "<br/>" + "results: " + val.length);
-                }
-            });
+        success: function (data) {
+            if (data.code === 200) {
+                $.each(data.details.intermediate_responses, function (idx, val) {
+                    if (val.id.length > 0) {
+                        $("#" + val.id + " > .res").html("execution time: " + val.time + "ms" + "<br/>" + "results: " + val.length);
+                    }
+                });
+            } else {
+                showAlert("Error in request: " + data.message);
+            }
             $("#progress").hide()
             $("#btnSubmit").removeClass('disabled');
             $("#btnSubmit").prop('disabled', false);
         },
-        error : function() {
+        error: function () {
             $("#progress").hide()
             $("#btnSubmit").removeClass('disabled');
             $("#btnSubmit").prop('disabled', false);
-            showAlert("Error in request."); return;
+            showAlert("Error in request.");
         }
     });
 });
 
 
 //evaluate canvas
-var evaluate = function(id){
+var evaluate = function (id) {
     var type = $("#" + id).attr("data-adamtype");
 
     switch (type) {
@@ -168,12 +180,14 @@ var evaluate = function(id){
             result.options.entityname = $("#entityname").val();
             result.options.column = $("#column").val();
 
-            if($("#k").val().length > 0){
+            if ($("#k").val().length > 0) {
                 result.options.k = $("#k").val();
             }
 
             result.options.query = $("#query").val();
-            result.targets = $.map(targets, function(val, i){return evaluate(val)});
+            result.targets = $.map(targets, function (val, i) {
+                return evaluate(val)
+            });
 
             return result;
             break;
@@ -190,22 +204,24 @@ var evaluate = function(id){
             result.options = {};
 
             result.options.indextype = type;
-            $("#" + id + " > .settings").find(":input").each(function() {
-                if($(this).val().length > 0){
-                    result.options[$(this).attr('name')] =  $(this).val();
+            $("#" + id + " > .settings").find(":input").each(function () {
+                if ($(this).val().length > 0) {
+                    result.options[$(this).attr('name')] = $(this).val();
                 }
             });
 
             var targets = getTargets(id); //TODO: only one target allowed!
 
-            if(targets.length > 0){
-                result.targets = $.map(targets, function(val, i){return evaluate(val)});
+            if (targets.length > 0) {
+                result.targets = $.map(targets, function (val, i) {
+                    return evaluate(val)
+                });
             }
 
             //TODO: possibly switch to "local" information
             result.options.entityname = $("#entityname").val();
             result.options.query = $("#query").val();
-            if($("#k").val().length > 0){
+            if ($("#k").val().length > 0) {
                 result.options.k = $("#k").val();
             }
 
@@ -222,12 +238,14 @@ var evaluate = function(id){
             result.operation = "aggregate";
             result.options = {};
             result.options.aggregation = type;
-            $("#" + id + " > .settings").find(":input").each(function() {
-                if($(this).val().length > 0){
-                    result.options[$(this).attr('name')] =  $(this).val();
+            $("#" + id + " > .settings").find(":input").each(function () {
+                if ($(this).val().length > 0) {
+                    result.options[$(this).attr('name')] = $(this).val();
                 }
             });
-            result.targets = $.map(targets, function(val, i){return evaluate(val)});
+            result.targets = $.map(targets, function (val, i) {
+                return evaluate(val)
+            });
 
             return result;
             break;
@@ -236,9 +254,9 @@ var evaluate = function(id){
     }
 };
 
-var getTargets = function(id) {
-    var connections = instance.getConnections({ source:id });
-    var targets = $.map( connections, function( val, i ) {
+var getTargets = function (id) {
+    var connections = instance.getConnections({source: id});
+    var targets = $.map(connections, function (val, i) {
         return val.targetId
     });
     return targets;

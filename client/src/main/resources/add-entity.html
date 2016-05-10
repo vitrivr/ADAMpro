@@ -44,7 +44,7 @@
 
     <div class="row">
         <div class="row">
-            <div class="input-field col s6">
+            <div class="input-field col s8">
                 <input id="entityname" type="text">
                 <label for="entityname">name of entity</label>
             </div>
@@ -53,17 +53,17 @@
 
         </div>
         <div class="row">
-            <div class="col s6">
-                <label for="fields">structured metadata fields</label>
+            <div class="col s8">
+                <label for="fields">schema</label>
                 <select class="browser-default" id="fields" size="10" style="height:8rem;">
                 </select>
             </div>
-            <div class="col s6">
+            <div class="col s8">
                 <a class="btn-floating" id="btnRemoveField"><i class="material-icons">remove</i></a>
             </div>
         </div>
         <div class="row">
-            <div class="col s6">
+            <div class="col s8">
                 <div class="input-field col s6">
                     <input id="fieldname" type="text">
                     <label for="fieldname">name</label>
@@ -80,6 +80,10 @@
                         <option value="boolean">boolean</option>
                     </select>
                     <label>data type</label>
+                </div>
+                <div class="input-field col s2">
+                    <input type="checkbox" id="pk"/>
+                    <label for="pk">primary key</label>
                 </div>
                 <div class="input-field col s2">
                     <input type="checkbox" id="indexed"/>
@@ -104,13 +108,13 @@
         </div>
 
         <div class="row">
-            <div class="input-field col s6">
+            <div class="input-field col s8">
                 <input id="ntuples" type="text">
                 <label for="ntuples">number of tuples</label>
             </div>
         </div>
         <div class="row">
-            <div class="input-field col s6">
+            <div class="input-field col s8">
                 <input id="ndims" type="text">
                 <label for="ndims">number of dimensions</label>
             </div>
@@ -129,7 +133,7 @@
         </div>
 
         <div class="row">
-            <div class="input-field col s6">
+            <div class="input-field col s8">
                 <label>indexes</label>
                 <br/>
                 <p>

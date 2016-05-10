@@ -12,7 +12,7 @@ import ch.unibas.dmi.dbis.adam.http.grpc.{CompoundQueryResponseInfoMessage, Quer
   *
   * @param intermediateResponses
   */
-case class CompoundQueryResponse(intermediateResponses : Seq[QueryResponseInfo]) {
+case class CompoundQueryDetails(intermediateResponses : Seq[QueryResponseInfo]) {
   def this(msg : CompoundQueryResponseInfoMessage){
     this(msg.responses.map(ir => new QueryResponseInfo(ir)))
   }

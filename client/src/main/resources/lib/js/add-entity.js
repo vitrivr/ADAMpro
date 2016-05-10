@@ -1,4 +1,68 @@
-//prepare operation
+//create entity
+var fieldId = 0;
+var fields = new Object();
+
+$("#btnAddField").click(function () {
+    fieldId += 1;
+
+    if ($("#fieldname").val().length === 0) {
+        showAlert(" Please specify a name for the field.");
+        return;
+    }
+
+    if (!$("#datatype").val() || $("#datatype").val().length === 0) {
+        showAlert(" Please specify a datatype for the field.");
+        return;
+    }
+
+    var field = {}
+    field.name = $("#fieldname").val();
+    field.datatype = $("#datatype").val();
+    if ($('#indexed').is(':checked')) {
+        field.indexed = true;
+    } else {
+        field.indexed = false;
+    }
+
+    if ($('#pk').is(':checked')) {
+        field.pk = true;
+    } else {
+        field.pk = false;
+    }
+
+    $("#fields").append($('<option></option>').attr("value", fieldId).text(function () {
+        var text = "";
+        text += field.name;
+        text += " (";
+        text += field.datatype;
+
+        if (field.indexed) {
+            text += ", indexed";
+        }
+
+        if (field.pk) {
+            text += ", pk";
+        }
+
+        text += ")";
+
+        return text;
+    }));
+
+    fields[fieldId] = field;
+
+    $("#fieldname").val("");
+    $('#indexed').prop("checked", false);
+    $('#pk').prop("checked", false);
+});
+
+$("#btnRemoveField").click(function () {
+    var fieldIdToRemove = $("#fields").val();
+    $("#fields option:selected").remove();
+    delete fields[fieldIdToRemove];
+});
+
+
 $("#btnSubmitCreateEntity").click(function () {
     if ($("#entityname").val().length === 0) {
         showAlert(" Please specify an entity.");
@@ -23,7 +87,9 @@ $("#btnSubmitCreateEntity").click(function () {
         type: 'POST',
         success: function (data) {
             if (data.code === 200) {
-                showAlert(data.entityname + " created");
+                showAlert(data.message + " created");
+            } else {
+                showAlert("Error in request: " + data.message);
             }
             $("#progress").hide()
             $("#btnSubmitCreateEntity").removeClass('disabled');
@@ -33,13 +99,13 @@ $("#btnSubmitCreateEntity").click(function () {
             $("#progress").hide()
             $("#btnSubmitCreateEntity").removeClass('disabled');
             $("#btnSubmitCreateEntity").prop('disabled', false);
-            showAlert("Error in request.");
-            return;
+            showAlert("Unspecified error in request.");
         }
     });
 });
 
 
+//create data
 $("#btnSubmitInsertData").click(function () {
     if ($("#entityname").val().length === 0) {
         showAlert(" Please specify an entity.");
@@ -66,7 +132,9 @@ $("#btnSubmitInsertData").click(function () {
         type: 'POST',
         success: function (data) {
             if (data.code === 200) {
-                showAlert("data inserted into " + data.entityname);
+                showAlert("data inserted");
+            } else {
+                showAlert("Error in request: " + data.message);
             }
             $("#progress").hide()
             $("#btnSubmitInsertData").removeClass('disabled');
@@ -76,12 +144,13 @@ $("#btnSubmitInsertData").click(function () {
             $("#progress").hide()
             $("#btnSubmitInsertData").removeClass('disabled');
             $("#btnSubmitInsertData").prop('disabled', false);
-            showAlert("Error in request.");
-            return;
+            showAlert("Unspecified error in request.");
         }
     });
 });
 
+
+//create index
 $("#btnSubmitCreateIndex").click(function () {
     if ($("#entityname").val().length === 0) {
         showAlert(" Please specify an entity.");
@@ -106,6 +175,8 @@ $("#btnSubmitCreateIndex").click(function () {
         success: function (data) {
             if (data.code === 200) {
                 showAlert("indexes created");
+            } else {
+                showAlert("Error in request: " + data.message);
             }
             $("#progress").hide()
             $("#btnSubmitCreateIndex").removeClass('disabled');
@@ -115,60 +186,7 @@ $("#btnSubmitCreateIndex").click(function () {
             $("#progress").hide()
             $("#btnSubmitCreateIndex").removeClass('disabled');
             $("#btnSubmitCreateIndex").prop('disabled', false);
-            showAlert("Error in request.");
-            return;
+            showAlert("Unspecified error in request.");
         }
     });
-});
-
-var fieldId = 0;
-var fields = new Object();
-
-$("#btnAddField").click(function () {
-    fieldId += 1;
-
-    if ($("#fieldname").val().length === 0) {
-        showAlert(" Please specify a name for the field.");
-        return;
-    }
-
-    if (!$("#datatype").val() || $("#datatype").val().length === 0) {
-        showAlert(" Please specify a datatype for the field.");
-        return;
-    }
-
-    var field = {}
-    field.name = $("#fieldname").val();
-    field.datatype = $("#datatype").val();
-    if ($('#indexed').is(':checked')) {
-        field.indexed = true;
-    } else {
-        field.indexed = false;
-    }
-
-    $("#fields").append($('<option></option>').attr("value", fieldId).text(function () {
-        var text = "";
-        text += field.name;
-        text += " (";
-        text += field.datatype;
-
-        if (field.indexed) {
-            text += ", indexed";
-        }
-
-        text += ")";
-
-        return text;
-    }));
-
-    fields[fieldId] = field;
-
-    $("#fieldname").val("");
-    $('#indexed').prop("checked", false);
-});
-
-$("#btnRemoveField").click(function () {
-    var fieldIdToRemove = $("#fields").val();
-    $("#fields option:selected").remove();
-    delete fields[fieldIdToRemove];
 });

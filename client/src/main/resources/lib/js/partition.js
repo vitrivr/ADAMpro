@@ -30,7 +30,9 @@ $("#btnSubmit").click(function () {
         type: 'POST',
         success: function (data) {
             if (data.code === 200) {
-                showAlert("index " + result.indexname + " repartitioned to " + data.indexname);
+                showAlert("index repartitioned to " + data.message);
+            } else {
+                showAlert("Error in request: " + data.message);
             }
             $("#progress").hide()
             $("#btnSubmit").removeClass('disabled');
@@ -40,7 +42,7 @@ $("#btnSubmit").click(function () {
             $("#progress").hide()
             $("#btnSubmit").removeClass('disabled');
             $("#btnSubmit").prop('disabled', false);
-            showAlert("Error in request."); return;
+            showAlert("Unspecified error in request.");
         }
     });
 });

@@ -71,7 +71,7 @@ case class CompoundQueryRequest(var id: String, var operation: String, var optio
     */
   private def cqm(): CompoundQueryMessage = {
     if (targets.get.isEmpty) {
-      val sqm = SubExpressionQueryMessage().withSsqm(SimpleSequentialQueryMessage(id, entity, Option(nnq), None, true))
+      val sqm = SubExpressionQueryMessage().withSsqm(SimpleSequentialQueryMessage("sequential", entity, Option(nnq), None, true))
       return CompoundQueryMessage(id, entity, Option(nnq), None, Option(sqm), true, true);
     }
 

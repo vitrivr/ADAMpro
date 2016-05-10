@@ -34,12 +34,14 @@ $(document).ready(function () {
                 $('.collapsible').collapsible({
                     accordion : false
                 });
+            } else {
+                showAlert("Error in request: " + data.message);
             }
             $("#progress").hide();
         },
         error : function() {
             $("#progress").hide()
-            showAlert("Error in request."); return;
+            showAlert("Unspecified error in request.");
         }
     });
 });

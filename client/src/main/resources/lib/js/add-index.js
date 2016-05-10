@@ -5,6 +5,11 @@ $("#btnSubmit").click(function () {
         return;
     }
 
+    if ($("#column").val().length === 0) {
+        showAlert(" Please specify an attribute.");
+        return;
+    }
+
 
     $("#btnSubmit").addClass('disabled');
     $("#btnSubmit").prop('disabled', true);
@@ -13,6 +18,8 @@ $("#btnSubmit").click(function () {
 
     var result = {};
     result.entityname = $("#entityname").val();
+    result.column = $("#column").val();
+
     if($("#norm").val()){
         result.norm = $("#norm").val();
     } else {
@@ -34,7 +41,9 @@ $("#btnSubmit").click(function () {
         type: 'POST',
         success: function (data) {
             if (data.code === 200) {
-                showAlert("index for " + data.indexname + " created");
+                showAlert("index created");
+            } else {
+                showAlert("Error in request: " + data.message);
             }
             $("#progress").hide()
             $("#btnSubmit").removeClass('disabled');
@@ -44,7 +53,7 @@ $("#btnSubmit").click(function () {
             $("#progress").hide()
             $("#btnSubmit").removeClass('disabled');
             $("#btnSubmit").prop('disabled', false);
-            showAlert("Error in request."); return;
+            showAlert("Unspecified error in request.");
         }
     });
 });

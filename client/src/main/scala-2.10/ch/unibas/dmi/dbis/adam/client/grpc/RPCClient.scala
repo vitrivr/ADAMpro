@@ -1,7 +1,7 @@
 package ch.unibas.dmi.dbis.adam.client.grpc
 
 import java.util.concurrent.TimeUnit
-import ch.unibas.dmi.dbis.adam.client.web.datastructures.{EntityField, CompoundQueryResponse, CompoundQueryRequest}
+import ch.unibas.dmi.dbis.adam.client.web.datastructures.{EntityField, CompoundQueryDetails, CompoundQueryRequest}
 import ch.unibas.dmi.dbis.adam.http.grpc.AdamDefinitionGrpc.AdamDefinitionBlockingStub
 import ch.unibas.dmi.dbis.adam.http.grpc.AdamSearchGrpc.{AdamSearchBlockingStub, AdamSearchStub}
 import ch.unibas.dmi.dbis.adam.http.grpc.DistanceMessage.DistanceType
@@ -11,6 +11,8 @@ import ch.unibas.dmi.dbis.adam.http.grpc._
 import io.grpc.stub.StreamObserver
 import io.grpc.{ManagedChannel, ManagedChannelBuilder}
 import org.apache.log4j.Logger
+
+import scala.util.{Failure, Success, Try}
 
 /**
   * adamtwo
@@ -27,20 +29,23 @@ class RPCClient(channel: ManagedChannel, definer: AdamDefinitionBlockingStub, se
     * @param fields
     * @return
     */
-  def createEntity(entityname: String, fields: Seq[EntityField]): Boolean = {
-    log.info("creating entity")
-    val fieldMessage = fields.map(field =>
-      FieldDefinitionMessage(field.name, getFieldType(field.datatype), false, false, field.indexed)
-    )
+  def createEntity(entityname: String, fields: Seq[EntityField]): Try[String] = {
+    try {
+      log.info("creating entity")
 
-    val res = definer.createEntity(CreateEntityMessage(entityname, fieldMessage))
-    log.info("created entity : " + res.code.toString() + " " + res.message)
-    if (res.code == AckMessage.Code.OK) {
-      return true
-    } else {
-      return false
+      val fieldMessage = fields.map(field =>
+        FieldDefinitionMessage(field.name, getFieldType(field.datatype), field.pk, false, field.indexed)
+      )
+
+      val res = definer.createEntity(CreateEntityMessage(entityname, fieldMessage))
+      if (res.code == AckMessage.Code.OK) {
+        return Success(res.message)
+      } else {
+        return Failure(new Exception(res.message))
+      }
+    } catch {
+      case e: Exception => Failure(e)
     }
-
   }
 
 
@@ -52,18 +57,22 @@ class RPCClient(channel: ManagedChannel, definer: AdamDefinitionBlockingStub, se
     * @param fields
     * @return
     */
-  def prepareDemo(entityname: String, ntuples: Int, ndims: Int, fields: Seq[EntityField]): Boolean = {
-    log.info("preparing demo data")
-    val fieldMessage = fields.map(field =>
-      FieldDefinitionMessage(field.name, getFieldType(field.datatype), false, false, field.indexed)
-    )
+  def prepareDemo(entityname: String, ntuples: Int, ndims: Int, fields: Seq[EntityField]): Try[Void] = {
+    try {
+      log.info("preparing demo data")
+      val fieldMessage = fields.map(field =>
+        FieldDefinitionMessage(field.name, getFieldType(field.datatype), false, false, field.indexed)
+      )
 
-    val res = definer.generateRandomData(GenerateRandomDataMessage(entityname, ntuples, ndims))
-    log.info("prepared demo data: " + res.code.toString() + " " + res.message)
-    if (res.code == AckMessage.Code.OK) {
-      return true
-    } else {
-      return false
+      val res = definer.generateRandomData(GenerateRandomDataMessage(entityname, ntuples, ndims))
+
+      if (res.code == AckMessage.Code.OK) {
+        return Success(null)
+      } else {
+        return Failure(new Exception(res.message))
+      }
+    } catch {
+      case e: Exception => Failure(e)
     }
   }
 
@@ -83,20 +92,33 @@ class RPCClient(channel: ManagedChannel, definer: AdamDefinitionBlockingStub, se
     case _ => null
   }
 
+
   /**
     *
     * @return
     */
-  def listEntities(): Seq[String] = {
-    definer.listEntities(EmptyMessage()).entities
+  def listEntities(): Try[Seq[String]] = {
+    log.info("listing entities")
+
+    try {
+      Success(definer.listEntities(EmptyMessage()).entities)
+    } catch {
+      case e: Exception => Failure(e)
+    }
   }
 
   /**
     *
     * @return
     */
-  def getDetails(entityname: String): Map[String, String] = {
-    definer.getEntityProperties(EntityNameMessage(entityname)).properties
+  def getDetails(entityname: String): Try[Map[String, String]] = {
+    log.info("retrieving entity details")
+
+    try {
+      Success(definer.getEntityProperties(EntityNameMessage(entityname)).properties)
+    } catch {
+      case e: Exception => Failure(e)
+    }
   }
 
   /**
@@ -107,14 +129,20 @@ class RPCClient(channel: ManagedChannel, definer: AdamDefinitionBlockingStub, se
     * @param options
     * @return
     */
-  def addIndex(entityname: String, column : String, indextype: IndexType, norm: Int, options: Map[String, String]): String = {
-    val indexMessage = IndexMessage(entityname, column, indextype,Some(DistanceMessage(DistanceType.minkowski, Map("norm" -> norm.toString))), options)
-    val res = definer.index(indexMessage)
-    if (res.code == AckMessage.Code.OK) {
-      res.message
-    } else {
-      log.error(res.message)
-      ""
+  def addIndex(entityname: String, column: String, indextype: IndexType, norm: Int, options: Map[String, String]): Try[String] = {
+    log.info("adding index")
+
+    try {
+      val indexMessage = IndexMessage(entityname, column, indextype, Some(DistanceMessage(DistanceType.minkowski, Map("norm" -> norm.toString))), options)
+      val res = definer.index(indexMessage)
+
+      if (res.code == AckMessage.Code.OK) {
+        return Success(res.message)
+      } else {
+        return Failure(new Exception(res.message))
+      }
+    } catch {
+      case e: Exception => Failure(e)
     }
   }
 
@@ -123,20 +151,25 @@ class RPCClient(channel: ManagedChannel, definer: AdamDefinitionBlockingStub, se
     * @param entityname
     * @return
     */
-  def addAllIndex(entityname: String, fields: Seq[EntityField], norm: Int): Boolean = {
-    val fieldMessage = fields.map(field =>
-      FieldDefinitionMessage(field.name, getFieldType(field.datatype), false, false, field.indexed)
-    ).filter(_.fieldtype == FieldType.FEATURE)
+  def addAllIndex(entityname: String, fields: Seq[EntityField], norm: Int): Try[Void] = {
+    log.info("adding all index")
 
-    fieldMessage.map{ column =>
-      val res = definer.generateAllIndexes(IndexMessage(entity = entityname, column = column.name, distance = Some(DistanceMessage(DistanceType.minkowski, options = Map("norm" -> norm.toString)))))
-      if (res.code == AckMessage.Code.OK) {
-        true
-      } else {
-        log.error(res.message)
-        false
+    try {
+      val fieldMessage = fields.map(field =>
+        FieldDefinitionMessage(field.name, getFieldType(field.datatype), false, false, field.indexed)
+      ).filter(_.fieldtype == FieldType.FEATURE)
+
+      fieldMessage.map { column =>
+        val res = definer.generateAllIndexes(IndexMessage(entity = entityname, column = column.name, distance = Some(DistanceMessage(DistanceType.minkowski, options = Map("norm" -> norm.toString)))))
+        if (res.code != AckMessage.Code.OK) {
+          return Failure(new Exception(res.message))
+        }
       }
-    }.reduce(_ && _)
+
+      Success(null)
+    } catch {
+      case e: Exception => Failure(e)
+    }
   }
 
   /**
@@ -144,42 +177,53 @@ class RPCClient(channel: ManagedChannel, definer: AdamDefinitionBlockingStub, se
     * @param request
     * @return
     */
-  def compoundQuery(request: CompoundQueryRequest): CompoundQueryResponse = {
+  def compoundQuery(request: CompoundQueryRequest): Try[CompoundQueryDetails] = {
     log.info("compound query start")
-    val res = searcherBlocking.doCompoundQuery(request.toRPCMessage())
-    log.info("compound query results received")
-    new CompoundQueryResponse(res)
+
+    try {
+      val res = searcherBlocking.doCompoundQuery(request.toRPCMessage())
+      Success(new CompoundQueryDetails(res))
+    } catch {
+      case e: Exception => Failure(e)
+    }
   }
 
   /**
     *
     */
-  def progressiveQuery(id: String, entityname: String, query: Seq[Float], column : String, hints: Seq[String], k: Int, next: (String, Double, String, Long, Seq[(Float, Long)]) => (Unit), completed: (String) => (Unit)): String = {
-    val nnq = NearestNeighbourQueryMessage(column, Some(FeatureVectorMessage(query)), Option(DistanceMessage(DistanceType.minkowski, Map("norm" -> "2"))), k)
-    val request = SimpleQueryMessage(entity = entityname, hints = hints, nnq = Option(nnq))
+  def progressiveQuery(id: String, entityname: String, query: Seq[Float], column: String, hints: Seq[String], k: Int, next: (String, Double, String, Long, Seq[(Float, Map[String, String])]) => (Unit), completed: (String) => (Unit)): Try[Void] = {
+    log.info("progressive query start")
 
-    val so = new StreamObserver[QueryResponseInfoMessage]() {
-      override def onError(throwable: Throwable): Unit = {
-        log.error(throwable)
+    try {
+      val nnq = NearestNeighbourQueryMessage(column, Some(FeatureVectorMessage(query)), Option(DistanceMessage(DistanceType.minkowski, Map("norm" -> "2"))), k)
+      val request = SimpleQueryMessage(entity = entityname, hints = hints, nnq = Option(nnq))
+
+      val so = new StreamObserver[QueryResponseInfoMessage]() {
+        override def onError(throwable: Throwable): Unit = {
+          log.error(throwable)
+        }
+
+        override def onCompleted(): Unit = {
+          completed(id)
+        }
+
+        override def onNext(v: QueryResponseInfoMessage): Unit = {
+          log.info("new progressive results arrived")
+
+          val confidence = v.confidence
+          val source = v.source
+          val time = v.time
+          val results = v.results.map(x => (x.distance, x.metadata))
+
+          next(id, confidence, source, time, results)
+        }
       }
 
-      override def onCompleted(): Unit = {
-        completed(id)
-      }
-
-      override def onNext(v: QueryResponseInfoMessage): Unit = {
-        val confidence = v.confidence
-        val source = v.source
-        val time = v.time
-        val results = v.results.map(x => (x.distance, 0.toLong)) //TODO: 0.toLong
-
-        next(id, confidence, source, time, results)
-      }
+      searcher.doProgressiveQuery(request, so)
+      Success(null)
+    } catch {
+      case e: Exception => Failure(e)
     }
-
-    searcher.doProgressiveQuery(request, so)
-
-    id
   }
 
   /**
@@ -188,18 +232,24 @@ class RPCClient(channel: ManagedChannel, definer: AdamDefinitionBlockingStub, se
     * @param partitions
     * @return
     */
-  def repartition(index: String, partitions: Int, useMetadata: Boolean = false, cols: Seq[String] = Seq(), materialize: Boolean, replace: Boolean): String = {
-    val option = if (replace) {
-      PartitionOptions.REPLACE_EXISTING
-    } else if (materialize) {
-      PartitionOptions.CREATE_NEW
-    } else if (!materialize) {
-      PartitionOptions.CREATE_TEMP
-    } else {
-      PartitionOptions.CREATE_NEW
-    }
+  def repartition(index: String, partitions: Int, useMetadata: Boolean = false, cols: Seq[String] = Seq(), materialize: Boolean, replace: Boolean): Try[String] = {
+    log.info("repartitioning index")
 
-    definer.repartitionIndexData(RepartitionMessage(index, partitions, useMetadata, cols, option)).message
+    try {
+      val option = if (replace) {
+        PartitionOptions.REPLACE_EXISTING
+      } else if (materialize) {
+        PartitionOptions.CREATE_NEW
+      } else if (!materialize) {
+        PartitionOptions.CREATE_TEMP
+      } else {
+        PartitionOptions.CREATE_NEW
+      }
+
+      Success(definer.repartitionIndexData(RepartitionMessage(index, partitions, useMetadata, cols, option)).message)
+    } catch {
+      case e: Exception => Failure(e)
+    }
   }
 
   /**
