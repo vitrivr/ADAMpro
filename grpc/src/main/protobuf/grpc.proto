@@ -258,6 +258,13 @@ message ExpressionQueryMessage {
 
 }
 
+message ExternalHandlerQueryMessage {
+  string queryid = 1;
+  string entity = 2;
+  string handler = 3;
+  map<string, string> params = 4;
+}
+
 message SubExpressionQueryMessage {
     string queryid = 1;
    //Any is not yet supported
@@ -270,6 +277,7 @@ message SubExpressionQueryMessage {
        SimpleSpecifiedIndexQueryMessage ssiqm = 3;
        SimpleIndexQueryMessage siqm = 4;
        ExpressionQueryMessage eqm = 5;
+       ExternalHandlerQueryMessage ehqm = 6;
      }
 }
 

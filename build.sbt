@@ -76,6 +76,10 @@ libraryDependencies ++= Seq(
   "org.slf4j"              %    "slf4j-api"              % "1.7.5",
   "org.slf4j"              %    "slf4j-log4j12"          % "1.7.5"
 )
+
+//solr
+libraryDependencies ++= Seq(
+  "org.apache.solr"        % "solr-solrj"                % "5.5.0"
 )
 
 unmanagedBase <<= baseDirectory { base => base / "lib" }
@@ -86,7 +90,7 @@ assemblyOption in assembly :=
   (assemblyOption in assembly).value.copy(includeScala = false)
 
 assemblyShadeRules in assembly := Seq(
-  ShadeRule.rename("com.google.**" -> "adampro.com.google.@1").inAll //different guava versions,
+  ShadeRule.rename("com.google.**" -> "adampro.shaded.com.google.@1").inAll //different guava versions,
 )
 
 val meta = """META.INF(.)*""".r

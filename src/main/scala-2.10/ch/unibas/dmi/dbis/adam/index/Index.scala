@@ -127,6 +127,8 @@ trait Index extends Serializable {
       data = data.join(filter.get.select(pk), pk)
     }
 
+    //TODO: possibly join on other sources and keep all data
+
     //choose specific partition
     if (partitions.isDefined) {
       val rdd = data.rdd.mapPartitionsWithIndex((idx, iter) => if (partitions.get.contains(idx)) iter else Iterator(), true)

@@ -10,6 +10,7 @@ import ch.unibas.dmi.dbis.adam.query.datastructures.{QueryCacheOptions, QueryExp
 import ch.unibas.dmi.dbis.adam.query.distance.{DistanceFunction, NormBasedDistanceFunction}
 import ch.unibas.dmi.dbis.adam.query.handler.QueryHandler._
 import ch.unibas.dmi.dbis.adam.query.handler.QueryHints
+import ch.unibas.dmi.dbis.adam.query.handler.external.ExternalHandlers
 import ch.unibas.dmi.dbis.adam.query.query.{BooleanQuery, NearestNeighbourQuery}
 
 /**
@@ -36,6 +37,10 @@ private[rpc] object RPCHelperMethods {
 
   implicit def toQueryHolder(request: SimpleSpecifiedIndexQueryMessage)(implicit ac: AdamContext) = {
     new SpecifiedIndexQueryHolder(request.index, prepareNNQ(request.nnq), prepareBQ(request.bq), None, prepareQI(request.queryid), prepareCO(request.readFromCache, request.putInCache))
+  }
+
+  implicit def toQueryHolder(request: ExternalHandlerQueryMessage)(implicit ac: AdamContext) = {
+    ExternalHandlers.toQueryExpression(request.handler, request.entity, request.params, prepareQI(request.queryid))
   }
 
 
