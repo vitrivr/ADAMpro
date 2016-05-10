@@ -42,9 +42,18 @@ resolvers ++= Seq(
 )
 resolvers += Resolver.sonatypeRepo("snapshots")
 
+//base libs
+libraryDependencies ++= Seq(
+  "org.scala-lang"         % "scala-compiler"            % "2.10.6",
+  "org.scala-lang"         % "scala-reflect"             % "2.10.6"
+)
+
+//adampro core libs
 libraryDependencies ++= Seq(
   "org.apache.spark"       %%   "spark-core"             % "1.6.1" excludeAll(
-    ExclusionRule("org.apache.hadoop")
+    ExclusionRule("org.apache.hadoop"),
+    ExclusionRule("jline", "jline"),
+    ExclusionRule("org.slf4j", "slf4j-api")
     ),
   "org.apache.spark"       %%   "spark-sql"              % "1.6.1",
   "org.apache.spark"       %%   "spark-hive"             % "1.6.1",
@@ -54,12 +63,19 @@ libraryDependencies ++= Seq(
   "com.typesafe.slick"     %%   "slick"                  % "3.1.0",
   "com.h2database"         %    "h2"                     % "1.4.188",
   "org.postgresql"         %    "postgresql"             % "9.4.1208",
-  "com.datastax.spark"     %%   "spark-cassandra-connector" % "1.6.0-M1",
   "com.fasterxml.jackson.core" % "jackson-core"          % "2.4.4",
   "org.apache.hadoop"      %    "hadoop-client"          % "2.6.4",
   "org.apache.commons"     %    "commons-lang3"          % "3.4",
-  "org.slf4j"              %     "slf4j-log4j12"         % "1.7.21",
   "it.unimi.dsi"           %    "fastutil"               % "7.0.12"
+).map (
+  _.excludeAll(ExclusionRule(organization = "org.scala-lang"))
+)
+
+//slf4j
+libraryDependencies ++= Seq(
+  "org.slf4j"              %    "slf4j-api"              % "1.7.5",
+  "org.slf4j"              %    "slf4j-log4j12"          % "1.7.5"
+)
 )
 
 unmanagedBase <<= baseDirectory { base => base / "lib" }
@@ -70,7 +86,7 @@ assemblyOption in assembly :=
   (assemblyOption in assembly).value.copy(includeScala = false)
 
 assemblyShadeRules in assembly := Seq(
-  ShadeRule.rename("com.google.**" -> "shadeio.@1").inAll //different guava versions
+  ShadeRule.rename("com.google.**" -> "adampro.com.google.@1").inAll //different guava versions,
 )
 
 val meta = """META.INF(.)*""".r
