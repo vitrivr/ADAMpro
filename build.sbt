@@ -66,7 +66,8 @@ libraryDependencies ++= Seq(
   "com.fasterxml.jackson.core" % "jackson-core"          % "2.4.4",
   "org.apache.hadoop"      %    "hadoop-client"          % "2.6.4",
   "org.apache.commons"     %    "commons-lang3"          % "3.4",
-  "it.unimi.dsi"           %    "fastutil"               % "7.0.12"
+  "it.unimi.dsi"           %    "fastutil"               % "7.0.12",
+  "com.google.guava"       %    "guava"                  % "19.0"
 ).map (
   _.excludeAll(ExclusionRule(organization = "org.scala-lang"))
 )
@@ -88,10 +89,6 @@ unmanagedResourceDirectories in Compile += baseDirectory.value / "conf"
 //assembly
 assemblyOption in assembly :=
   (assemblyOption in assembly).value.copy(includeScala = false)
-
-assemblyShadeRules in assembly := Seq(
-  ShadeRule.rename("com.google.**" -> "adampro.shaded.com.google.@1").inAll //different guava versions,
-)
 
 val meta = """META.INF(.)*""".r
 assemblyMergeStrategy in assembly := {
