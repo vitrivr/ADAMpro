@@ -30,6 +30,8 @@ import scala.util.{Failure, Try}
 object QueryHandler {
   val log = Logger.getLogger(getClass.getName)
 
+  //TODO: check dim before query
+
   /**
     * Performs a standard query, built up by a nearest neighbour query and a boolean query.
     *
