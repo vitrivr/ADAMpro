@@ -29,7 +29,7 @@ object InsertOp {
       EntityHandler.insertData(entityname, df)
       Success(null)
     } catch {
-      case e => Failure(e)
+      case e: Exception => Failure(e)
     }
   }
 }

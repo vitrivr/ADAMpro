@@ -30,7 +30,7 @@ object DropIndexOp {
       log.debug("perform drop index operation")
       IndexHandler.drop(indexname)
     } catch {
-      case e => Failure(e)
+      case e : Exception => Failure(e)
     }
   }
 }

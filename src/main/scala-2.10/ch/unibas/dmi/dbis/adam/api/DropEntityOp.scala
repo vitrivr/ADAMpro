@@ -30,7 +30,7 @@ object DropEntityOp {
       log.debug("perform drop entity operation")
       EntityHandler.drop(entityname, ifExists)
     } catch {
-      case e => Failure(e)
+      case e : Exception => Failure(e)
     }
   }
 }

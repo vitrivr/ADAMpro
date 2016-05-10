@@ -35,7 +35,7 @@ object IndexOp {
     try {
       apply(entityname, column, IndexTypes.withName(indextype).get, distance, properties)
     } catch {
-      case e => Failure(e)
+      case e : Exception => Failure(e)
 
     }
   }
@@ -58,7 +58,7 @@ object IndexOp {
 
       IndexHandler.createIndex(entity.get, column, generator)
     } catch {
-      case e => Failure(e)
+      case e : Exception => Failure(e)
     }
   }
 
