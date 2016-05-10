@@ -369,7 +369,6 @@ message QueryResponseInfoMessage {
 }
 
 message QueryResultMessage {
-  int64 id = 1;
   float distance = 2;
   map<string, string> metadata = 3;
 }
