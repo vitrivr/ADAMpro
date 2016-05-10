@@ -61,15 +61,17 @@ object EntityHandler {
         return Failure(EntityNotProperlyDefinedException(Some("Duplicate field names.")))
       }
 
+      val allowedPkTypes = Seq(INTTYPE, LONGTYPE, STRINGTYPE, AUTOTYPE)
+
       if (fields.count(_.pk) > 1) {
         log.error("entity defined with more than one primary key")
         return Failure(EntityNotProperlyDefinedException(Some("More than one primary key.")))
       } else if (fields.filter(_.pk).isEmpty) {
         log.error("entity defined has no primary key")
         return Failure(EntityNotProperlyDefinedException(Some("No primary key defined.")))
-      } else if (fields.filter(_.pk).forall(pk => Seq(INTTYPE, LONGTYPE, STRINGTYPE, AUTOTYPE).map(_.name).contains(pk.fieldtype))) {
-        log.error("entity defined needs a AUTO, INT, LONG or STRING primary key")
-        return Failure(EntityNotProperlyDefinedException(Some("Only AUTO, INT, LONG and STRING primary keys allowed.")))
+      } else if (!fields.filter(_.pk).forall(field => allowedPkTypes.contains(field.fieldtype))) {
+        log.error("entity defined needs a " + allowedPkTypes.map(_.name).mkString(", " ) + " primary key")
+        return Failure(EntityNotProperlyDefinedException(Some("Entity defined needs a " + allowedPkTypes.map(_.name).mkString(", " ) + " primary key")))
       }
 
       if(fields.count(_.fieldtype == AUTOTYPE) > 1){
