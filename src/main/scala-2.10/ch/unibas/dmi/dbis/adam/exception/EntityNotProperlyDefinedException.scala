@@ -6,4 +6,4 @@ package ch.unibas.dmi.dbis.adam.exception
   * Ivan Giangreco
   * March 2016
   */
-case class EntityNotProperlyDefinedException()  extends GeneralAdamException("Entity not properly defined.")
+case class EntityNotProperlyDefinedException(details : Option[String] = None)  extends GeneralAdamException("Entity not properly defined." + details.getOrElse(""))

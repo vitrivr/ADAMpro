@@ -46,30 +46,30 @@ object EntityHandler {
 
       if (fields.isEmpty) {
         log.error("entity " + entityname + " will have no fields")
-        return Failure(EntityNotProperlyDefinedException())
+        return Failure(EntityNotProperlyDefinedException(Some("entity with no fields")))
       }
 
       FieldNames.reservedNames.foreach { reservedName =>
         if (fields.contains(reservedName)) {
           log.error("entity defined with field " + reservedName + ", but name is reserved")
-          return Failure(EntityNotProperlyDefinedException())
+          return Failure(EntityNotProperlyDefinedException(Some("using reserved name")))
         }
       }
 
       if (fields.map(_.name).distinct.length != fields.length) {
         log.error("entity defined with duplicate fields")
-        return Failure(EntityNotProperlyDefinedException())
+        return Failure(EntityNotProperlyDefinedException(Some("duplicate field names")))
       }
 
-      if (fields.filter(_.pk).length > 1) {
+      if (fields.count(_.pk) > 1) {
         log.error("entity defined with more than one primary key")
-        return Failure(EntityNotProperlyDefinedException())
+        return Failure(EntityNotProperlyDefinedException(Some("more than one primary key")))
       } else if (fields.filter(_.pk).isEmpty) {
         log.error("entity defined has no primary key")
-        return Failure(EntityNotProperlyDefinedException())
-      } else if (fields.filter(_.pk).forall(pk => Seq(INTTYPE, LONGTYPE, STRINGTYPE).map(_.name).contains(pk.fieldtype))) {
-        log.error("entity defined needs a INT, LONG or STRING primary key")
-        return Failure(EntityNotProperlyDefinedException())
+        return Failure(EntityNotProperlyDefinedException(Some("no primary key defined")))
+      } else if (fields.filter(_.pk).forall(pk => Seq(INTTYPE, LONGTYPE, STRINGTYPE, AUTOTYPE).map(_.name).contains(pk.fieldtype))) {
+        log.error("entity defined needs a AUTO, INT, LONG or STRING primary key")
+        return Failure(EntityNotProperlyDefinedException(Some("only AUTO, INT, LONG and STRING primary keys allowed")))
       }
 
       val pk = fields.filter(_.pk).head
