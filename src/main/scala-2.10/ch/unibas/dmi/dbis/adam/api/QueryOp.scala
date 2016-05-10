@@ -14,6 +14,7 @@ import org.apache.log4j.Logger
 import org.apache.spark.sql.DataFrame
 
 import scala.concurrent.duration.Duration
+import scala.util.{Success, Failure, Try}
 
 /**
   * adamtwo
@@ -36,11 +37,22 @@ object QueryOp {
     * @param withMetadata whether or not to retrieve corresponding metadata
     * @return
     */
-  def apply(entityname: EntityName, hint: Option[QueryHint], nnq: Option[NearestNeighbourQuery], bq: Option[BooleanQuery], withMetadata: Boolean)(implicit ac : AdamContext): DataFrame = {
+  def apply(entityname: EntityName, hint: Option[QueryHint], nnq: Option[NearestNeighbourQuery], bq: Option[BooleanQuery], withMetadata: Boolean)(implicit ac: AdamContext): Try[DataFrame] = {
     log.debug("perform standard query operation")
-    QueryHandler.query(entityname, hint, nnq, bq, None, withMetadata)
+    try {
+      Success(QueryHandler.query(entityname, hint, nnq, bq, None, withMetadata))
+    } catch {
+      case e: Exception => Failure(e)
+    }
   }
-  def apply(q: StandardQueryHolder)(implicit ac : AdamContext): DataFrame = q.evaluate()
+
+  def apply(q: StandardQueryHolder)(implicit ac: AdamContext): Try[DataFrame] = {
+    try {
+      Success(q.evaluate())
+    } catch {
+      case e: Exception => Failure(e)
+    }
+  }
 
   /**
     * Performs a sequential query, i.e., without using any index structure.
@@ -51,11 +63,22 @@ object QueryOp {
     * @param withMetadata whether or not to retrieve corresponding metadata
     * @return
     */
-  def sequential(entityname: EntityName, nnq: NearestNeighbourQuery, bq: Option[BooleanQuery], withMetadata: Boolean)(implicit ac : AdamContext): DataFrame = {
+  def sequential(entityname: EntityName, nnq: NearestNeighbourQuery, bq: Option[BooleanQuery], withMetadata: Boolean)(implicit ac: AdamContext): Try[DataFrame] = {
     log.debug("perform sequential query operation")
-    QueryHandler.sequentialQuery(entityname)(nnq, bq, None, withMetadata)
+    try {
+      Success(QueryHandler.sequentialQuery(entityname)(nnq, bq, None, withMetadata))
+    } catch {
+      case e: Exception => Failure(e)
+    }
   }
-  def sequential(q: SequentialQueryHolder)(implicit ac : AdamContext): DataFrame = q.evaluate()
+
+  def sequential(q: SequentialQueryHolder)(implicit ac: AdamContext): Try[DataFrame] = {
+    try {
+      Success(q.evaluate())
+    } catch {
+      case e: Exception => Failure(e)
+    }
+  }
 
 
   /**
@@ -67,7 +90,7 @@ object QueryOp {
     * @param withMetadata whether or not to retrieve corresponding metadata
     * @return
     */
-  def index(indexname: IndexName, nnq: NearestNeighbourQuery, bq: Option[BooleanQuery], withMetadata: Boolean)(implicit ac : AdamContext): DataFrame = {
+  def index(indexname: IndexName, nnq: NearestNeighbourQuery, bq: Option[BooleanQuery], withMetadata: Boolean)(implicit ac: AdamContext): Try[DataFrame] = {
     index(IndexHandler.load(indexname).get, nnq, bq, withMetadata)
   }
 
@@ -80,12 +103,22 @@ object QueryOp {
     * @param withMetadata
     * @return
     */
-  def index(index: Index, nnq: NearestNeighbourQuery, bq: Option[BooleanQuery], withMetadata: Boolean)(implicit ac : AdamContext): DataFrame = {
+  def index(index: Index, nnq: NearestNeighbourQuery, bq: Option[BooleanQuery], withMetadata: Boolean)(implicit ac: AdamContext): Try[DataFrame] = {
     log.debug("perform index query operation")
-    QueryHandler.specifiedIndexQuery(index)(nnq, bq, None, withMetadata)
+    try {
+      Success(QueryHandler.specifiedIndexQuery(index)(nnq, bq, None, withMetadata))
+    } catch {
+      case e: Exception => Failure(e)
+    }
   }
 
-  def index(q: SpecifiedIndexQueryHolder)(implicit ac : AdamContext): DataFrame = q.evaluate()
+  def index(q: SpecifiedIndexQueryHolder)(implicit ac: AdamContext): Try[DataFrame] = {
+    try {
+      Success(q.evaluate())
+    } catch {
+      case e: Exception => Failure(e)
+    }
+  }
 
   /**
     * Performs an index-based query.
@@ -97,11 +130,22 @@ object QueryOp {
     * @param withMetadata whether or not to retrieve corresponding metadata
     * @return
     */
-  def index(entityname: EntityName, indextypename: IndexTypeName, nnq: NearestNeighbourQuery, bq: Option[BooleanQuery], withMetadata: Boolean)(implicit ac : AdamContext): DataFrame = {
+  def index(entityname: EntityName, indextypename: IndexTypeName, nnq: NearestNeighbourQuery, bq: Option[BooleanQuery], withMetadata: Boolean)(implicit ac: AdamContext): Try[DataFrame] = {
     log.debug("perform index query operation")
-    QueryHandler.indexQuery(entityname, indextypename)(nnq, bq, None, withMetadata)
+    try {
+      Success(QueryHandler.indexQuery(entityname, indextypename)(nnq, bq, None, withMetadata))
+    } catch {
+      case e: Exception => Failure(e)
+    }
   }
-  def index(q: IndexQueryHolder)(implicit ac : AdamContext): DataFrame = q.evaluate()
+
+  def index(q: IndexQueryHolder)(implicit ac: AdamContext): Try[DataFrame] = {
+    try {
+      Success(q.evaluate())
+    } catch {
+      case e: Exception => Failure(e)
+    }
+  }
 
   /**
     * Performs a progressive query, i.e., all indexes and sequential search are started at the same time and results are returned as soon
@@ -114,9 +158,13 @@ object QueryOp {
     * @param withMetadata whether or not to retrieve corresponding metadata
     * @return a tracker for the progressive query
     */
-  def progressive[U](entityname: EntityName, nnq: NearestNeighbourQuery, bq: Option[BooleanQuery], paths : ProgressivePathChooser, onComplete: (ProgressiveQueryStatus.Value, DataFrame, Float, String, Map[String, String]) => U, withMetadata: Boolean)(implicit ac : AdamContext): ProgressiveQueryStatusTracker = {
+  def progressive[U](entityname: EntityName, nnq: NearestNeighbourQuery, bq: Option[BooleanQuery], paths: ProgressivePathChooser, onComplete: (ProgressiveQueryStatus.Value, DataFrame, Float, String, Map[String, String]) => U, withMetadata: Boolean)(implicit ac: AdamContext): Try[ProgressiveQueryStatusTracker] = {
     log.debug("perform progressive query operation")
-    QueryHandler.progressiveQuery(entityname)(nnq, bq, None, paths, onComplete, withMetadata)
+    try {
+      Success(QueryHandler.progressiveQuery(entityname)(nnq, bq, None, paths, onComplete, withMetadata))
+    } catch {
+      case e: Exception => Failure(e)
+    }
   }
 
 
@@ -131,9 +179,13 @@ object QueryOp {
     * @param withMetadata whether or not to retrieve corresponding metadata
     * @return the results available together with a confidence score
     */
-  def timedProgressive(entityname: EntityName, nnq: NearestNeighbourQuery, bq: Option[BooleanQuery], paths : ProgressivePathChooser, timelimit: Duration, withMetadata: Boolean)(implicit ac : AdamContext): (DataFrame, Float, String) = {
+  def timedProgressive(entityname: EntityName, nnq: NearestNeighbourQuery, bq: Option[BooleanQuery], paths: ProgressivePathChooser, timelimit: Duration, withMetadata: Boolean)(implicit ac: AdamContext): Try[(DataFrame, Float, String)] = {
     log.debug("perform timed progressive query operation")
-    QueryHandler.timedProgressiveQuery(entityname)(nnq, bq, None, paths, timelimit, withMetadata)
+    try {
+      Success(QueryHandler.timedProgressiveQuery(entityname)(nnq, bq, None, paths, timelimit, withMetadata))
+    } catch {
+      case e: Exception => Failure(e)
+    }
   }
 
   /**
@@ -145,11 +197,22 @@ object QueryOp {
     * @param withMetadata
     * @return
     */
-  def compoundQuery(entityname: EntityName, nnq: NearestNeighbourQuery, expr : QueryExpression, withMetadata: Boolean)(implicit ac : AdamContext): DataFrame = {
-    QueryHandler.compoundQuery(entityname)(nnq, expr, false, withMetadata)
+  def compoundQuery(entityname: EntityName, nnq: NearestNeighbourQuery, expr: QueryExpression, withMetadata: Boolean)(implicit ac: AdamContext): Try[DataFrame] = {
+    log.debug("perform compound query operation")
+    try {
+      Success(QueryHandler.compoundQuery(entityname)(nnq, expr, false, withMetadata))
+    } catch {
+      case e: Exception => Failure(e)
+    }
   }
 
-  def compoundQuery(q : CompoundQueryHolder)(implicit ac : AdamContext): DataFrame = q.evaluate()
+  def compoundQuery(q: CompoundQueryHolder)(implicit ac: AdamContext): Try[DataFrame] = {
+    try {
+      Success(q.evaluate())
+    } catch {
+      case e: Exception => Failure(e)
+    }
+  }
 
   /**
     * Performs a boolean query.
@@ -157,9 +220,20 @@ object QueryOp {
     * @param entityname
     * @param bq
     */
-  def booleanQuery(entityname: EntityName, bq: Option[BooleanQuery])(implicit ac : AdamContext): DataFrame ={
-    QueryHandler.booleanQuery(entityname )(bq)
+  def booleanQuery(entityname: EntityName, bq: Option[BooleanQuery])(implicit ac: AdamContext): Try[DataFrame] = {
+    log.debug("perform boolean query operation")
+    try {
+      Success(QueryHandler.booleanQuery(entityname)(bq))
+    } catch {
+      case e: Exception => Failure(e)
+    }
   }
 
-  def booleanQuery(q : BooleanQueryHolder): DataFrame = q.evaluate()
+  def booleanQuery(q: BooleanQueryHolder): Try[DataFrame] = {
+    try {
+      Success(q.evaluate())
+    } catch {
+      case e: Exception => Failure(e)
+    }
+  }
 }

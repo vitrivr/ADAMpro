@@ -5,7 +5,7 @@ import ch.unibas.dmi.dbis.adam.entity.{EntityHandler, Entity, FieldDefinition}
 import ch.unibas.dmi.dbis.adam.main.AdamContext
 import org.apache.log4j.Logger
 
-import scala.util.Try
+import scala.util.{Failure, Try}
 
 /**
   * adamtwo
@@ -28,7 +28,11 @@ object CreateEntityOp {
     * @return
     */
   def apply(entityname: EntityName, fields: Seq[FieldDefinition])(implicit ac: AdamContext): Try[Entity] = {
-    log.debug("perform create entity operation")
-    EntityHandler.create(entityname, fields)
+    try {
+      log.debug("perform create entity operation")
+      EntityHandler.create(entityname, fields)
+    } catch {
+      case e : Exception => Failure(e)
+    }
   }
 }

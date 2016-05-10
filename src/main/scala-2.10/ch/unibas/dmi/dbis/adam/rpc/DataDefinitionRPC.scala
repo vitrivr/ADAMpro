@@ -6,10 +6,9 @@ import ch.unibas.dmi.dbis.adam.entity.{EntityHandler, FieldDefinition, FieldType
 import ch.unibas.dmi.dbis.adam.exception.GeneralAdamException
 import ch.unibas.dmi.dbis.adam.http.grpc.FieldDefinitionMessage.FieldType
 import ch.unibas.dmi.dbis.adam.http.grpc.{AckMessage, CreateEntityMessage, _}
-import ch.unibas.dmi.dbis.adam.index.IndexHandler
 import ch.unibas.dmi.dbis.adam.index.structures.IndexTypes
 import ch.unibas.dmi.dbis.adam.main.AdamContext
-import ch.unibas.dmi.dbis.adam.storage.partitions.{PartitionHandler, PartitionOptions}
+import ch.unibas.dmi.dbis.adam.storage.partitions.PartitionOptions
 import io.grpc.stub.StreamObserver
 import org.apache.log4j.Logger
 import org.apache.spark.sql.types.DataType
@@ -28,17 +27,17 @@ class DataDefinitionRPC(implicit ac: AdamContext) extends AdamDefinitionGrpc.Ada
 
   override def createEntity(request: CreateEntityMessage): Future[AckMessage] = {
     log.debug("rpc call for create entity operation")
-
     val entityname = request.entity
     val fields = request.fields.map(field => {
       FieldDefinition(field.name, matchFields(field.fieldtype), field.pk, field.unique, field.indexed)
     })
-    val entity = CreateEntityOp(entityname, fields)
+    val res = CreateEntityOp(entityname, fields)
 
-    if (entity.isSuccess) {
-      Future.successful(AckMessage(code = AckMessage.Code.OK, entity.get.entityname))
+    if (res.isSuccess) {
+      Future.successful(AckMessage(code = AckMessage.Code.OK, res.get.entityname))
     } else {
-      Future.successful(AckMessage(code = AckMessage.Code.ERROR, message = entity.failed.get.getMessage))
+      log.error(res.failed.get)
+      Future.successful(AckMessage(code = AckMessage.Code.ERROR, message = res.failed.get.getMessage))
     }
   }
 
@@ -71,19 +70,20 @@ class DataDefinitionRPC(implicit ac: AdamContext) extends AdamDefinitionGrpc.Ada
 
   override def count(request: EntityNameMessage): Future[AckMessage] = {
     log.debug("rpc call for count entity operation")
+    val res = CountOp(request.entity)
 
-    val count = CountOp(request.entity)
-
-    if (count.isSuccess) {
-      Future.successful(AckMessage(code = AckMessage.Code.OK, count.get.toString))
+    if (res.isSuccess) {
+      Future.successful(AckMessage(code = AckMessage.Code.OK, res.get.toString))
     } else {
-      Future.successful(AckMessage(code = AckMessage.Code.ERROR, message = count.failed.get.getMessage))
+      log.error(res.failed.get)
+      Future.successful(AckMessage(code = AckMessage.Code.ERROR, message = res.failed.get.getMessage))
     }
   }
 
 
   override def insert(responseObserver: StreamObserver[AckMessage]): StreamObserver[InsertMessage] = {
     new StreamObserver[InsertMessage]() {
+
       def onNext(insert: InsertMessage) {
         val entity = EntityHandler.load(insert.entity)
 
@@ -93,32 +93,32 @@ class DataDefinitionRPC(implicit ac: AdamContext) extends AdamDefinitionGrpc.Ada
 
         val schema = entity.get.schema
 
-        try {
-          val rows = insert.tuples.map(tuple => {
-            val data = schema.map(field => {
-              val datum = tuple.data.get(field.name).getOrElse(null)
-              if (datum != null) {
-                converter(field.dataType)(datum)
-              } else {
-                null
-              }
-            })
-            Row(data: _*)
+        val rows = insert.tuples.map(tuple => {
+          val data = schema.map(field => {
+            val datum = tuple.data.get(field.name).getOrElse(null)
+            if (datum != null) {
+              converter(field.dataType)(datum)
+            } else {
+              null
+            }
           })
+          Row(data: _*)
+        })
 
-          val rdd = ac.sc.parallelize(rows)
-          val df = ac.sqlContext.createDataFrame(rdd, entity.get.schema)
+        val rdd = ac.sc.parallelize(rows)
+        val df = ac.sqlContext.createDataFrame(rdd, entity.get.schema)
 
-          InsertOp(entity.get.entityname, df)
+        val res = InsertOp(entity.get.entityname, df)
 
-          responseObserver.onNext(AckMessage(code = AckMessage.Code.OK))
-        } catch {
-          case e: Exception => onError(e)
+        if (res.isSuccess) {
+          Future.successful(AckMessage(code = AckMessage.Code.OK))
+        } else {
+          Future.successful(AckMessage(code = AckMessage.Code.ERROR, message = res.failed.get.getMessage))
         }
       }
 
       def onError(t: Throwable) = {
-        log.error("exception while rpc call for inserting data", t)
+        log.error(t)
         responseObserver.onNext(AckMessage(code = AckMessage.Code.ERROR, message = t.getMessage))
       }
 
@@ -131,77 +131,83 @@ class DataDefinitionRPC(implicit ac: AdamContext) extends AdamDefinitionGrpc.Ada
 
   override def index(request: IndexMessage): Future[AckMessage] = {
     log.debug("rpc call for indexing operation")
-
     val indextypename = IndexTypes.withIndextype(request.indextype)
 
     if (indextypename.isEmpty) {
-      throw new Exception("no index type name given.")
+      return Future.successful(AckMessage(code = AckMessage.Code.ERROR, message = "index type not existing"))
     }
 
-    val index = IndexOp(request.entity, request.column, indextypename.get, RPCHelperMethods.prepareDistance(request.distance.get), request.options)
+    val res = IndexOp(request.entity, request.column, indextypename.get, RPCHelperMethods.prepareDistance(request.distance.get), request.options)
 
-    if (index.isSuccess) {
-      Future.successful(AckMessage(code = AckMessage.Code.OK, message = index.get.indexname))
+    if (res.isSuccess) {
+      Future.successful(AckMessage(code = AckMessage.Code.OK, message = res.get.indexname))
     } else {
-      Future.successful(AckMessage(code = AckMessage.Code.ERROR, message = index.failed.get.getMessage))
+      log.error(res.failed.get)
+      Future.successful(AckMessage(code = AckMessage.Code.ERROR, message = res.failed.get.getMessage))
     }
   }
 
   override def dropEntity(request: EntityNameMessage): Future[AckMessage] = {
     log.debug("rpc call for dropping entity operation")
+    val res = DropEntityOp(request.entity)
 
-    val drop = DropEntityOp(request.entity)
-
-    if (drop.isSuccess) {
+    if (res.isSuccess) {
       Future.successful(AckMessage(code = AckMessage.Code.OK))
     } else {
-      Future.successful(AckMessage(code = AckMessage.Code.ERROR, message = drop.failed.get.getMessage))
+      log.error(res.failed.get)
+      Future.successful(AckMessage(code = AckMessage.Code.ERROR, message = res.failed.get.getMessage))
     }
   }
 
 
   override def dropIndex(request: IndexNameMessage): Future[AckMessage] = {
     log.debug("rpc call for dropping index operation")
+    val res = DropIndexOp(request.index)
 
-    val drop = DropIndexOp(request.index)
-
-    if (drop.isSuccess) {
+    if (res.isSuccess) {
       Future.successful(AckMessage(code = AckMessage.Code.OK))
     } else {
-      Future.successful(AckMessage(code = AckMessage.Code.ERROR, message = drop.failed.get.getMessage))
+      log.error(res.failed.get)
+      Future.successful(AckMessage(code = AckMessage.Code.ERROR, message = res.failed.get.getMessage))
     }
   }
 
 
   override def generateRandomData(request: GenerateRandomDataMessage): Future[AckMessage] = {
     log.debug("rpc call for creating random data")
+    val res = RandomDataOp(request.entity, request.ntuples, request.ndims)
 
-    try {
-      RandomDataOp(request.entity, request.ntuples, request.ndims)
-      log.info("genereated random data")
+    if (res.isSuccess) {
       Future.successful(AckMessage(code = AckMessage.Code.OK))
-    } catch {
-      case e: Exception =>
-        log.error("exception while rpc call for creating random data", e)
-        Future.successful(AckMessage(code = AckMessage.Code.ERROR, message = e.getMessage))
+    } else {
+      log.error(res.failed.get)
+      Future.successful(AckMessage(code = AckMessage.Code.ERROR, message = res.failed.get.getMessage))
     }
   }
 
 
   override def listEntities(request: EmptyMessage): Future[EntitiesMessage] = {
     log.debug("rpc call for listing entities")
-    Future.successful(EntitiesMessage(Some(AckMessage(AckMessage.Code.OK)), ListEntitiesOp().map(_.toString())))
+    val res = ListEntitiesOp()
+
+    if (res.isSuccess) {
+      Future.successful(EntitiesMessage(Some(AckMessage(AckMessage.Code.OK)), res.get.map(_.toString())))
+    } else {
+      log.error(res.failed.get)
+      Future.successful(EntitiesMessage(Some(AckMessage(code = AckMessage.Code.ERROR, message = res.failed.get.getMessage))))
+    }
   }
 
 
   override def getEntityProperties(request: EntityNameMessage): Future[EntityPropertiesMessage] = {
     log.debug("rpc call for returning entity properties")
-    val properties = EntityHandler.getProperties(request.entity)
+    val res = PropertiesOp(request.entity)
 
-    if (properties.isSuccess) {
-      Future.successful(EntityPropertiesMessage(Some(AckMessage(AckMessage.Code.OK)), request.entity, properties.get))
+    if (res.isSuccess) {
+      Future.successful(EntityPropertiesMessage(Some(AckMessage(AckMessage.Code.OK)), request.entity, res.get))
     } else {
-      Future.successful(EntityPropertiesMessage(Some(AckMessage(AckMessage.Code.ERROR, properties.failed.get.getMessage))))
+      log.error(res.failed.get)
+      Future.successful(EntityPropertiesMessage(Some(AckMessage(AckMessage.Code.ERROR, res.failed.get.getMessage))))
     }
   }
 
@@ -221,21 +227,24 @@ class DataDefinitionRPC(implicit ac: AdamContext) extends AdamDefinitionGrpc.Ada
       case _ => PartitionOptions.CREATE_NEW
     }
 
-    val index = PartitionHandler.repartitionIndex(request.index, request.numberOfPartitions, request.useMetadataForPartitioning, cols, option)
+    val res = PartitionOp(request.index, request.numberOfPartitions, request.useMetadataForPartitioning, cols, option)
 
-    if (index.isSuccess) {
-      Future.successful(AckMessage(AckMessage.Code.OK, index.get.indexname))
+    if (res.isSuccess) {
+      Future.successful(AckMessage(AckMessage.Code.OK, res.get.indexname))
     } else {
-      Future.successful(AckMessage(code = AckMessage.Code.ERROR, message = index.failed.get.getMessage))
+      log.error(res.failed.get)
+      Future.successful(AckMessage(code = AckMessage.Code.ERROR, message = res.failed.get.getMessage))
     }
   }
 
   override def setIndexWeight(request: IndexWeightMessage): Future[AckMessage] = {
     log.debug("rpc call for changing weight of index")
+    val res = IndexOp.setWeight(request.index, request.weight)
 
-    if (IndexHandler.setWeight(request.index, request.weight)) {
+    if (res.isSuccess) {
       Future.successful(AckMessage(AckMessage.Code.OK, request.index))
     } else {
+      log.error(res.failed.get)
       Future.successful(AckMessage(code = AckMessage.Code.ERROR, message = "please re-try"))
     }
   }
@@ -243,9 +252,10 @@ class DataDefinitionRPC(implicit ac: AdamContext) extends AdamDefinitionGrpc.Ada
   override def generateAllIndexes(request: IndexMessage): Future[AckMessage] = {
     val res = IndexOp.generateAll(request.entity, request.column, RPCHelperMethods.prepareDistance(request.distance.get))
 
-    if (res) {
+    if (res.isSuccess) {
       Future.successful(AckMessage(AckMessage.Code.OK))
     } else {
+      log.error(res.failed.get)
       Future.successful(AckMessage(AckMessage.Code.ERROR))
     }
   }

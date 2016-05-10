@@ -5,7 +5,7 @@ import ch.unibas.dmi.dbis.adam.entity.EntityHandler
 import ch.unibas.dmi.dbis.adam.main.AdamContext
 import org.apache.log4j.Logger
 
-import scala.util.Try
+import scala.util.{Failure, Try}
 
 /**
   * adamtwo
@@ -26,7 +26,11 @@ object DropEntityOp {
     * @return
     */
   def apply(entityname: EntityName, ifExists: Boolean = false)(implicit ac: AdamContext): Try[Void] = {
-    log.debug("perform drop entity operation")
-    EntityHandler.drop(entityname, ifExists)
+    try {
+      log.debug("perform drop entity operation")
+      EntityHandler.drop(entityname, ifExists)
+    } catch {
+      case e => Failure(e)
+    }
   }
 }
