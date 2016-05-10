@@ -343,19 +343,21 @@ message EntityPropertiesMessage {
 }
 
 message CompoundQueryResponseInfoMessage {
-  repeated QueryResponseInfoMessage responses = 1;
+  AckMessage ack = 1;
+  repeated QueryResponseInfoMessage responses = 2;
 }
 
 message QueryResponseInfoMessage {
+  AckMessage ack = 1;
   //id of result (given in the query)
-  string queryid = 3;
+  string queryid = 2;
   //confidence in results (between 0 - 1)
-  double confidence = 4;
+  double confidence = 3;
   //retrieval time
-  int64 time = 5;
-  string source = 6;
+  int64 time = 4;
+  string source = 5;
   //result list
-  repeated QueryResultMessage results = 7;
+  repeated QueryResultMessage results = 6;
 }
 
 message QueryResultMessage {

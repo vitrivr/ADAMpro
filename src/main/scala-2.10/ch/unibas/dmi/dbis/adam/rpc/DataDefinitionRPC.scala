@@ -58,14 +58,14 @@ class DataDefinitionRPC(implicit ac: AdamContext) extends AdamDefinitionGrpc.Ada
     case _ => FieldTypes.UNRECOGNIZEDTYPE
   }
 
-  private def converter(datatype : DataType) : (String) => (Any) = datatype match {
+  private def converter(datatype: DataType): (String) => (Any) = datatype match {
     case types.BooleanType => (x) => x.toBoolean
     case types.DoubleType => (x) => x.toDouble
     case types.FloatType => (x) => x.toFloat
     case types.IntegerType => (x) => x.toInt
     case types.LongType => (x) => x.toLong
     case types.StringType => (x) => x
-    case _ : FeatureVectorWrapperUDT => (x) => new FeatureVectorWrapper(x.split(",").map(_.toFloat))
+    case _: FeatureVectorWrapperUDT => (x) => new FeatureVectorWrapper(x.split(",").map(_.toFloat))
   }
 
 
@@ -93,30 +93,33 @@ class DataDefinitionRPC(implicit ac: AdamContext) extends AdamDefinitionGrpc.Ada
 
         val schema = entity.get.schema
 
-        val rows = insert.tuples.map(tuple => {
-          val data = schema.map(field => {
-            val datum = tuple.data.get(field.name).getOrElse(null)
-            if(datum != null) {
-              converter(field.dataType)(datum)
-            } else {
-              null
-            }
+        try {
+          val rows = insert.tuples.map(tuple => {
+            val data = schema.map(field => {
+              val datum = tuple.data.get(field.name).getOrElse(null)
+              if (datum != null) {
+                converter(field.dataType)(datum)
+              } else {
+                null
+              }
+            })
+            Row(data: _*)
           })
-          Row(data : _*)
-        })
 
-        val rdd = ac.sc.parallelize(rows)
-        val df = ac.sqlContext.createDataFrame(rdd, entity.get.schema)
+          val rdd = ac.sc.parallelize(rows)
+          val df = ac.sqlContext.createDataFrame(rdd, entity.get.schema)
 
-        InsertOp(entity.get.entityname, df)
+          InsertOp(entity.get.entityname, df)
 
-        responseObserver.onNext(AckMessage(code = AckMessage.Code.OK))
+          responseObserver.onNext(AckMessage(code = AckMessage.Code.OK))
+        } catch {
+          case e: Exception => onError(e)
+        }
       }
 
       def onError(t: Throwable) = {
-        responseObserver.onNext(AckMessage(code = AckMessage.Code.ERROR))
-        log.error("error on insertion", t)
-        responseObserver.onError(t)
+        log.error("exception while rpc call for inserting data", t)
+        responseObserver.onNext(AckMessage(code = AckMessage.Code.ERROR, message = t.getMessage))
       }
 
       def onCompleted() = {
@@ -179,7 +182,7 @@ class DataDefinitionRPC(implicit ac: AdamContext) extends AdamDefinitionGrpc.Ada
       Future.successful(AckMessage(code = AckMessage.Code.OK))
     } catch {
       case e: Exception =>
-        log.debug("exception while rpc call for creating random data")
+        log.error("exception while rpc call for creating random data", e)
         Future.successful(AckMessage(code = AckMessage.Code.ERROR, message = e.getMessage))
     }
   }
@@ -233,7 +236,7 @@ class DataDefinitionRPC(implicit ac: AdamContext) extends AdamDefinitionGrpc.Ada
     if (IndexHandler.setWeight(request.index, request.weight)) {
       Future.successful(AckMessage(AckMessage.Code.OK, request.index))
     } else {
-      Future.successful(AckMessage(AckMessage.Code.ERROR, "please try again"))
+      Future.successful(AckMessage(code = AckMessage.Code.ERROR, message = "please re-try"))
     }
   }
 

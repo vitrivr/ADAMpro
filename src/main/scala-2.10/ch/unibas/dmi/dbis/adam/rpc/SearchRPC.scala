@@ -43,7 +43,7 @@ class SearchRPC(implicit ac: AdamContext) extends AdamSearchGrpc.AdamSearch {
       Future.successful(AckMessage(code = AckMessage.Code.OK))
     } catch {
       case e: Exception =>
-        log.debug("exception while rpc call for indexing operation")
+        log.error("exception while rpc call for indexing operation", e)
         Future.successful(AckMessage(code = AckMessage.Code.ERROR, message = e.getMessage))
     }
   }
@@ -71,8 +71,8 @@ class SearchRPC(implicit ac: AdamContext) extends AdamSearchGrpc.AdamSearch {
       Future.successful(prepareResults(request.queryid, 0.0, 0, "", df))
     } catch {
       case e: Exception => {
-        log.error(e)
-        Future.failed(e)
+        log.error("exception while rpc call for standard query", e)
+        Future.successful(QueryResponseInfoMessage(ack = Some(AckMessage(code = AckMessage.Code.ERROR, message = e.getMessage))))
       }
     }
   }
@@ -90,8 +90,8 @@ class SearchRPC(implicit ac: AdamContext) extends AdamSearchGrpc.AdamSearch {
       Future.successful(prepareResults(request.queryid, 0.0, 0, "", df))
     } catch {
       case e: Exception => {
-        log.error(e)
-        Future.failed(e)
+        log.error("exception while rpc call for sequential query", e)
+        Future.successful(QueryResponseInfoMessage(ack = Some(AckMessage(code = AckMessage.Code.ERROR, message = e.getMessage))))
       }
     }
   }
@@ -110,8 +110,8 @@ class SearchRPC(implicit ac: AdamContext) extends AdamSearchGrpc.AdamSearch {
       Future.successful(prepareResults(request.queryid, 0.0, 0, "", df))
     } catch {
       case e: Exception => {
-        log.error(e)
-        Future.failed(e)
+        log.error("exception while rpc call for index query", e)
+        Future.successful(QueryResponseInfoMessage(ack = Some(AckMessage(code = AckMessage.Code.ERROR, message = e.getMessage))))
       }
     }
   }
@@ -130,8 +130,8 @@ class SearchRPC(implicit ac: AdamContext) extends AdamSearchGrpc.AdamSearch {
       Future.successful(prepareResults(request.queryid, 0.0, 0, "", df))
     } catch {
       case e: Exception => {
-        log.error(e)
-        Future.failed(e)
+        log.error("exception while rpc call for specified index query", e)
+        Future.successful(QueryResponseInfoMessage(ack = Some(AckMessage(code = AckMessage.Code.ERROR, message = e.getMessage))))
       }
     }
   }
@@ -152,7 +152,7 @@ class SearchRPC(implicit ac: AdamContext) extends AdamSearchGrpc.AdamSearch {
           responseObserver.onNext(prepareResults(request.queryid, confidence, 0, source + " (" + info.get("name").getOrElse("no details") + ")", df))
         })
 
-      val pathChooser = if(request.hints.isEmpty){
+      val pathChooser = if (request.hints.isEmpty) {
         new SimpleProgressivePathChooser()
       } else {
         new QueryHintsProgressivePathChooser(request.hints.map(QueryHints.withName(_).get))
@@ -170,8 +170,8 @@ class SearchRPC(implicit ac: AdamContext) extends AdamSearchGrpc.AdamSearch {
       }
     } catch {
       case e: Exception => {
-        log.error(e)
-        Future.failed(e)
+        log.error("exception while rpc call for progressive query", e)
+        Future.successful(QueryResponseInfoMessage(ack = Some(AckMessage(code = AckMessage.Code.ERROR, message = e.getMessage))))
       }
     }
   }
@@ -189,8 +189,8 @@ class SearchRPC(implicit ac: AdamContext) extends AdamSearchGrpc.AdamSearch {
       Future.successful(prepareResults(request.queryid, confidence, 0, source, df))
     } catch {
       case e: Exception => {
-        log.error(e)
-        Future.failed(e)
+        log.error("exception while rpc call for timed progressive query", e)
+        Future.successful(QueryResponseInfoMessage(ack = Some(AckMessage(code = AckMessage.Code.ERROR, message = e.getMessage))))
       }
     }
   }
@@ -220,13 +220,14 @@ class SearchRPC(implicit ac: AdamContext) extends AdamSearchGrpc.AdamSearch {
       )
 
       Future.successful(CompoundQueryResponseInfoMessage(
+        Some(AckMessage(AckMessage.Code.OK)) ,
         results
       ))
 
     } catch {
       case e: Exception => {
-        log.error(e)
-        Future.failed(e)
+        log.error("exception while rpc call for compound query", e)
+        Future.successful(CompoundQueryResponseInfoMessage(ack = Some(AckMessage(code = AckMessage.Code.ERROR, message = e.getMessage))))
       }
     }
   }
@@ -242,8 +243,8 @@ class SearchRPC(implicit ac: AdamContext) extends AdamSearchGrpc.AdamSearch {
       Future.successful(prepareResults(request.queryid, 0.0, 0, "metadata", results))
     } catch {
       case e: Exception => {
-        log.error(e)
-        Future.failed(e)
+        log.error("exception while rpc call for boolean query", e)
+        Future.successful(QueryResponseInfoMessage(ack = Some(AckMessage(code = AckMessage.Code.ERROR, message = e.getMessage))))
       }
     }
   }
@@ -307,6 +308,6 @@ class SearchRPC(implicit ac: AdamContext) extends AdamSearchGrpc.AdamSearch {
       ))
     }
 
-    QueryResponseInfoMessage(queryid, confidence, time, source, results)
+    QueryResponseInfoMessage(Some(AckMessage(AckMessage.Code.OK)), queryid, confidence, time, source, results)
   }
 }
