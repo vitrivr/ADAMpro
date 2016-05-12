@@ -51,7 +51,7 @@ object FeatureScanner {
 
     data
       .withColumn(FieldNames.distanceColumnName, distUDF(data(query.column)))
-      .select(col(FieldNames.distanceColumnName), col(entity.pk))
+      .select(col(FieldNames.distanceColumnName), col(entity.pk.name))
       .orderBy(col(FieldNames.distanceColumnName))
       .limit(query.k)
   }

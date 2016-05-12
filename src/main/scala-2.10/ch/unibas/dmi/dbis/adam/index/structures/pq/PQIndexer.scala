@@ -53,7 +53,7 @@ class PQIndexer(nsq: Int, trainingSize: Int)(@transient implicit val ac : AdamCo
 
 
     val schema = StructType(Seq(
-      StructField(entity.pk, entity.pkType.datatype, false),
+      StructField(entity.pk.name, entity.pk.fieldtype.datatype, false),
       StructField(FieldNames.featureIndexColumnName, new ArrayType(ByteType, false), false)
     ))
 

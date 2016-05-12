@@ -64,7 +64,7 @@ class LSHIndex(val indexname: IndexName, val entityname: EntityName, override pr
         val handler = new SHResultHandler(k)
 
         items.foreach(item => {
-          handler.offer(item, this.pk)
+          handler.offer(item, this.pk.name)
         })
 
         handler.results.iterator

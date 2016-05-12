@@ -63,8 +63,8 @@ object IndexHandler {
     */
   def createIndex(entity: Entity, column : String, indexgenerator: IndexGenerator)(implicit ac: AdamContext): Try[Index] = {
     lock.synchronized {
-      if(!entity.schema.fieldNames.contains(column)){
-        return Failure(new GeneralAdamException("column not existing in entity " + entity.entityname + entity.schema.fieldNames.mkString("(", ",", ")")))
+      if(!entity.schema.map(_.name).contains(column)){
+        return Failure(new GeneralAdamException("column not existing in entity " + entity.entityname + entity.schema.map(_.name).mkString("(", ",", ")")))
       }
 
       val count = entity.count
@@ -76,12 +76,12 @@ object IndexHandler {
       }
 
       val indexname = createIndexName(entity.entityname, column, indexgenerator.indextypename)
-      val rdd: RDD[IndexingTaskTuple[_]] = entity.getFeaturedata.map { x => IndexingTaskTuple(x.getAs[Any](entity.pk), x.getAs[FeatureVectorWrapper](column).vector) }
+      val rdd: RDD[IndexingTaskTuple[_]] = entity.getFeaturedata.map { x => IndexingTaskTuple(x.getAs[Any](entity.pk.name), x.getAs[FeatureVectorWrapper](column).vector) }
       val index = indexgenerator.index(indexname, entity.entityname, rdd)
       index.df = index
         .df
         .repartition(AdamConfig.defaultNumberOfPartitions)
-        .withColumnRenamed("id", entity.pk)
+        .withColumnRenamed("id", entity.pk.name)
         .withColumnRenamed("value", FieldNames.featureIndexColumnName)
       storage.write(indexname, index.df)
       CatalogOperator.createIndex(indexname, indexname, entity.entityname, column, indexgenerator.indextypename, index.metadata)
@@ -200,11 +200,11 @@ object IndexHandler {
     //data.map(r => (r.getAs(cols.get.head), r)).partitionBy(new HashPartitioner())
 
     if (join.isDefined) {
-      data = data.join(join.get, index.pk)
+      data = data.join(join.get, index.pk.name)
     }
 
     data = if (cols.isDefined) {
-      val entityColNames = EntityHandler.load(index.entityname).get.schema.fieldNames.toSeq
+      val entityColNames = EntityHandler.load(index.entityname).get.schema.map(_.name)
       if(!cols.get.forall(name => entityColNames.contains(name))){
         log.error("one of the columns " + cols.mkString(",") + " is not existing in entity " + index.entityname + entityColNames.mkString("(", ",", ")"))
         Failure(throw new GeneralAdamException("repartition column not existing in entity"))
@@ -212,11 +212,11 @@ object IndexHandler {
 
       data.repartition(n, cols.get.map(data(_)): _*)
     } else {
-      data.repartition(n, data(index.pk))
+      data.repartition(n, data(index.pk.name))
     }
 
     if (join.isDefined) {
-      data = data.select(index.pk, FieldNames.featureIndexColumnName)
+      data = data.select(index.pk.name, FieldNames.featureIndexColumnName)
     }
 
     option match {

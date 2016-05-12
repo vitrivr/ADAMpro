@@ -2,7 +2,7 @@ package ch.unibas.dmi.dbis.adam.storage.engine
 
 import java.io._
 
-import ch.unibas.dmi.dbis.adam.config.AdamConfig
+import ch.unibas.dmi.dbis.adam.config.{FieldNames, AdamConfig}
 import ch.unibas.dmi.dbis.adam.entity.Entity.EntityName
 import ch.unibas.dmi.dbis.adam.entity.FieldTypes.FieldType
 import ch.unibas.dmi.dbis.adam.entity.{FieldTypes, FieldDefinition, EntityNameHolder}
@@ -49,23 +49,22 @@ object CatalogOperator {
     * Creates entity in catalog.
     *
     * @param entityname
-    * @param pk
     * @param withMetadata
     * @return
     */
-  def createEntity(entityname: EntityName, pk : String, fields: Seq[FieldDefinition], withMetadata: Boolean = false): Boolean = {
+  def createEntity(entityname: EntityName, fields: Seq[FieldDefinition], withMetadata: Boolean = false): Boolean = {
     if (existsEntity(entityname)) {
       throw new EntityExistingException()
     }
 
     val setup = DBIO.seq(
-      entities.+=(entityname, pk, withMetadata)
+      entities.+=(entityname, withMetadata)
     )
 
     Await.result(db.run(setup), MAX_WAITING_TIME)
 
     fields.foreach { field =>
-      val setup = DBIO.seq(entityfields.+=(field.name, field.fieldtype.name, entityname, DEFAULT_DIMENSIONALITY))
+      val setup = DBIO.seq(entityfields.+=(field.name, field.fieldtype.name, field.pk, field.unique, field.indexed, entityname, DEFAULT_DIMENSIONALITY))
       Await.result(db.run(setup), MAX_WAITING_TIME)
     }
 
@@ -114,9 +113,11 @@ object CatalogOperator {
     * @param entityname
     * @return
     */
-  def getEntityPK(entityname: EntityName) : String = {
-    val query = entities.filter(_.entityname === entityname.toString()).map(_.pk).take(1).result
-    Await.result(db.run(query), MAX_WAITING_TIME).head
+  def getEntityPK(entityname: EntityName) : FieldDefinition = {
+    val query = entityfields.filter(_.entityname === entityname.toString()).filter(_.pk).result
+    val fields = Await.result(db.run(query), MAX_WAITING_TIME)
+
+    fields.map(x => FieldDefinition(x._1, FieldTypes.fromString(x._2), x._3, x._4, x._5)).head
   }
 
   /**
@@ -124,11 +125,11 @@ object CatalogOperator {
     * @param entityname
     * @return
     */
-  def getEntityPKType(entityname: EntityName) : FieldType = {
-    val pk = getEntityPK(entityname)
-    val query = entityfields.filter(_.entityname === entityname.toString()).filter(_.fieldname === pk).map(_.fieldtype).take(1).result
-    val fieldType = Await.result(db.run(query), MAX_WAITING_TIME).head
-    FieldTypes.fromString(fieldType)
+  def getFields(entityname : EntityName) : Seq[FieldDefinition] = {
+    val query = entityfields.filter(_.entityname === entityname.toString()).result
+    val fields = Await.result(db.run(query), MAX_WAITING_TIME)
+
+    fields.map(x => FieldDefinition(x._1, FieldTypes.fromString(x._2), x._3, x._4, x._5))
   }
 
   /**

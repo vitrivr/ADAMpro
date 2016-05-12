@@ -85,11 +85,11 @@ object EntityHandler {
         if (!fields.filterNot(_.fieldtype == FEATURETYPE).filterNot(_.pk).isEmpty) {
           val metadataFields = fields.filterNot(_.fieldtype == FEATURETYPE)
           metadataStorage.create(entityname, metadataFields)
-          CatalogOperator.createEntity(entityname, pk.name, fields, true)
-          Success(Entity(entityname, pk.name, featureStorage, Option(metadataStorage)))
+          CatalogOperator.createEntity(entityname, fields, true)
+          Success(Entity(entityname, featureStorage, Option(metadataStorage)))
         } else {
-          CatalogOperator.createEntity(entityname, pk.name, fields, false)
-          Success(Entity(entityname, pk.name, featureStorage, None))
+          CatalogOperator.createEntity(entityname, fields, false)
+          Success(Entity(entityname, featureStorage, None))
         }
       }
     } catch {
@@ -190,7 +190,7 @@ object EntityHandler {
 
     val pk = CatalogOperator.getEntityPK(entityname)
 
-    Success(Entity(entityname, pk, featureStorage, entityMetadataStorage))
+    Success(Entity(entityname, featureStorage, entityMetadataStorage))
   }
 
 

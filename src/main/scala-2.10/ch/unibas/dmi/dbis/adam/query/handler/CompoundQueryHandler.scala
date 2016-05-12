@@ -50,10 +50,10 @@ private[query] object CompoundQueryHandler {
   def indexOnlyQuery(entityname: EntityName)(expr: QueryExpression, withMetadata: Boolean = false)(implicit ac: AdamContext): DataFrame = {
     val entity = EntityHandler.load(entityname).get
 
-    val tidFilter = expr.evaluate().map(x => Result(0.toFloat, x.getAs[Long](entity.pk))).map(_.tid).collect().toSet
+    val tidFilter = expr.evaluate().map(x => Result(0.toFloat, x.getAs[Long](entity.pk.name))).map(_.tid).collect().toSet
 
     val rdd = ac.sc.parallelize(tidFilter.toSeq).map(res => Row(0.toFloat, res))
-    var res = ac.sqlContext.createDataFrame(rdd, Result.resultSchema(entity.pk))
+    var res = ac.sqlContext.createDataFrame(rdd, Result.resultSchema(entity.pk.name))
 
     if (withMetadata) {
       log.debug("join metadata to results of compound query")

@@ -11,7 +11,7 @@ import org.apache.spark.sql.types.DataType
   * March 2016
   */
 object FieldTypes {
-  sealed abstract class FieldType(val name : String, val datatype : DataType)
+  sealed abstract class FieldType(val name : String, val datatype : DataType) extends Serializable
 
   case object INTTYPE extends FieldType("integer", types.IntegerType)
   case object LONGTYPE extends FieldType("long", types.LongType)
@@ -25,7 +25,6 @@ object FieldTypes {
 
   def values = Seq(INTTYPE, LONGTYPE, FLOATTYPE, DOUBLETYPE, STRINGTYPE, BOOLEANTYPE, FEATURETYPE, AUTOTYPE)
 
-  def fromString(s : String): FieldType ={
-    values.filter(x => x.name == s).head
-  }
+  def fromString(s : String): FieldType = values.filter(x => x.name == s).head
+  def fromDataType(d : DataType) : FieldType = values.filter(x => x.datatype == d).head
 }

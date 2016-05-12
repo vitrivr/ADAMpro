@@ -108,7 +108,7 @@ private[query] object NearestNeighbourQueryHandler {
 
     log.debug("starting feature scanner")
     val rdd = ac.sc.parallelize(results.map(result => Row(result.tid)).toSeq)
-    val fields = StructType(Seq(StructField(index.pk, LongType, false)))
+    val fields = StructType(Seq(StructField(index.pk.name, LongType, false)))
     val df = ac.sqlContext.createDataFrame(rdd, fields)
     FeatureScanner(entity, query, Some(df))
   }
@@ -131,7 +131,7 @@ private[query] object NearestNeighbourQueryHandler {
     log.debug("starting index scanner")
     val result = IndexScanner(index, query, filter).toSeq
     val rdd = ac.sc.parallelize(result).map(res => Row(res.distance, res.tid))
-    ac.sqlContext.createDataFrame(rdd, Result.resultSchema(index.pk))
+    ac.sqlContext.createDataFrame(rdd, Result.resultSchema(index.pk.name))
   }
 
   /**

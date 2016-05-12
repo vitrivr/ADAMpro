@@ -40,7 +40,7 @@ class ECPIndex(val indexname: IndexName, val entityname: EntityName, override pr
     var i = 0
     while (i < centroids.value.length && results.length < k) {
       results ++= data.filter(data(FieldNames.featureIndexColumnName) === centroids.value(i)._1).collect()
-        .map(tuple => Result(centroids.value(i)._2, tuple.getAs[Any](this.pk)))
+        .map(tuple => Result(centroids.value(i)._2, tuple.getAs[Any](this.pk.name)))
       i += 1
     }
     val ids = results.toSeq

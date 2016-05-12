@@ -5,7 +5,7 @@ import ch.unibas.dmi.dbis.adam.entity.Entity.EntityName
 import ch.unibas.dmi.dbis.adam.entity.EntityHandler
 import ch.unibas.dmi.dbis.adam.main.SparkStartup.Implicits._
 import org.apache.log4j.Logger
-import org.apache.spark.sql.types.{DataType, StructType, UserDefinedType}
+import org.apache.spark.sql.types.{StructField, DataType, StructType, UserDefinedType}
 import org.apache.spark.sql.{Row, types}
 
 import scala.util.{Success, Failure, Try, Random}
@@ -38,17 +38,17 @@ object RandomDataOp {
       }
 
       //schema of random data dataframe to insert
-      val schema = entity.get.schema.fields
+      val schema = entity.get.schema
 
       //data
       (0 until collectionSize).sliding(limit, limit).foreach { seq =>
         val rdd = ac.sc.parallelize(
           seq.map(idx => {
-            var data = schema.map(field => randomGenerator(field.dataType)())
+            var data = schema.map(field => randomGenerator(field.fieldtype.datatype)())
             Row(data: _*)
           })
         )
-        val data = sqlContext.createDataFrame(rdd, StructType(schema))
+        val data = sqlContext.createDataFrame(rdd, StructType(schema.map(field => StructField(field.name, field.fieldtype.datatype))))
 
         log.debug("inserting data batch")
         EntityHandler.insertData(entityname, data, true)

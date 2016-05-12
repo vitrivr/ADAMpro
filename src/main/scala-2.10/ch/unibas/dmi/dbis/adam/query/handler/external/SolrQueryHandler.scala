@@ -44,15 +44,15 @@ import org.apache.spark.sql.{DataFrame, Row}
     val fields: Seq[String] = if (query.contains("fields")) {
       val fields = query.get("fields").get.split(",")
 
-      if (fields.contains(query.getOrElse("pk", pk))) {
-        fields.drop(fields.indexOf(query.getOrElse("pk", pk)))
+      if (fields.contains(query.getOrElse("pk", pk.name))) {
+        fields.drop(fields.indexOf(query.getOrElse("pk", pk.name)))
       } else {
         fields
       }
     } else {
       Seq()
     }
-    solrQuery.setFields(fields.+:(query.getOrElse("pk", pk)): _*)
+    solrQuery.setFields(fields.+:(query.getOrElse("pk", pk.name)): _*)
 
 
     if (query.contains("start")) {
@@ -88,7 +88,7 @@ import org.apache.spark.sql.{DataFrame, Row}
     val data = ac.sc.parallelize(rows)
 
     val schema = StructType(
-      Seq(StructField(pk, entity.pkType.datatype, false))
+      Seq(StructField(pk.name, entity.pk.fieldtype.datatype, false))
         ++ fields.map(field => StructField(field, StringType, true))
     )
 

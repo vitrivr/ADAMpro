@@ -446,7 +446,7 @@ object QueryHandler {
       }
 
       if (filter.isDefined) {
-        results.join(filter.get, entity.pk)
+        results.join(filter.get, entity.pk.name)
       }
 
       run = true
@@ -501,7 +501,7 @@ object QueryHandler {
       return res.get.withColumn(FieldNames.distanceColumnName, lit(0.toFloat))
     } else {
       val rdd = ac.sc.emptyRDD[Row]
-      return ac.sqlContext.createDataFrame(rdd, Result.resultSchema(entity.pk))
+      return ac.sqlContext.createDataFrame(rdd, Result.resultSchema(entity.pk.name))
     }
   }
 
@@ -534,7 +534,7 @@ object QueryHandler {
     }
 
     if (tiq.isDefined) {
-      data = BooleanQueryHandler.filter(data, pk, tiq.get)
+      data = BooleanQueryHandler.filter(data, pk.name, tiq.get)
     }
 
     Some(data)
@@ -553,7 +553,7 @@ object QueryHandler {
     var data = entity.data
     var pk = entity.pk
 
-    BooleanQueryHandler.filter(data, pk, res)
+    BooleanQueryHandler.filter(data, pk.name, res)
   }
 
 

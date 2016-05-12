@@ -58,8 +58,8 @@ class ECPIndexer(trainingSize: Int = -1, distance: DistanceFunction)(@transient 
     })
 
     val schema = StructType(Seq(
-      StructField(entity.pk, entity.pkType.datatype, false),
-      StructField(FieldNames.featureIndexColumnName, entity.pkType.datatype, false)
+      StructField(entity.pk.name, entity.pk.fieldtype.datatype, false),
+      StructField(FieldNames.featureIndexColumnName, entity.pk.fieldtype.datatype, false)
     ))
 
     val df = ac.sqlContext.createDataFrame(indexdata, schema)

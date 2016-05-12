@@ -21,7 +21,7 @@ import scala.util.{Failure, Success, Try}
   * Ivan Giangreco
   * October 2015
   */
-case class Entity(val entityname: EntityName, val pk: String, private val featureStorage: FeatureStorage, private val metadataStorage: Option[MetadataStorage])(@transient implicit val ac: AdamContext) {
+case class Entity(val entityname: EntityName, private val featureStorage: FeatureStorage, private val metadataStorage: Option[MetadataStorage])(@transient implicit val ac: AdamContext) {
   @transient val log = Logger.getLogger(getClass.getName)
 
   private def featureData = featureStorage.read(entityname).get
@@ -73,7 +73,7 @@ case class Entity(val entityname: EntityName, val pk: String, private val featur
 
     try {
       val insertion =
-        if (pkType == FieldTypes.AUTOTYPE) {
+        if (pk.fieldtype == FieldTypes.AUTOTYPE) {
           if (data.schema.fieldNames.contains(pk)) {
             return Failure(new GeneralAdamException("the field " + pk + " has been specified as auto and should therefore not be provided"))
           }
@@ -81,7 +81,7 @@ case class Entity(val entityname: EntityName, val pk: String, private val featur
           val rdd = data.rdd.zipWithUniqueId.map { case (r: Row, id: Long) => Row.fromSeq(id +: r.toSeq) }
           ac.sqlContext
             .createDataFrame(
-              rdd, StructType(StructField(pk, pkType.datatype, false) +: data.schema.fields))
+              rdd, StructType(StructField(pk.name, pk.fieldtype.datatype, false) +: data.schema.fields))
         } else {
           data
         }
@@ -90,12 +90,12 @@ case class Entity(val entityname: EntityName, val pk: String, private val featur
       //TODO: check schema
 
       val featureFieldNames = insertion.schema.fields.filter(_.dataType == new FeatureVectorWrapperUDT).map(_.name)
-      featureStorage.write(entityname, pk, insertion.select(pk, featureFieldNames.toSeq: _*), SaveMode.Append)
+      featureStorage.write(entityname, pk.name, insertion.select(pk.name, featureFieldNames.toSeq: _*), SaveMode.Append)
 
       val metadataFieldNames = insertion.schema.fields.filterNot(_.dataType == new FeatureVectorWrapperUDT).map(_.name)
       if (metadataStorage.isDefined) {
         log.debug("metadata storage is defined: inserting data also into metadata storage")
-        metadataStorage.get.write(entityname, insertion.select(pk, metadataFieldNames.filterNot(x => x == pk).toSeq: _*), SaveMode.Append)
+        metadataStorage.get.write(entityname, insertion.select(pk.name, metadataFieldNames.filterNot(x => x == pk.name).toSeq: _*), SaveMode.Append)
       }
 
       if (CatalogOperator.listIndexes(entityname).nonEmpty) {
@@ -119,7 +119,7 @@ case class Entity(val entityname: EntityName, val pk: String, private val featur
     val lb = ListBuffer[(String, String)]()
 
     lb.append("hasMetadata" -> hasMetadata.toString)
-    lb.append("schema" -> schema.map(field => field.name + "(" + field.dataType.simpleString + ")").mkString(","))
+    lb.append("schema" -> schema.map(field => field.name + "(" + field.fieldtype.name + ")").mkString(","))
     lb.append("indexes" -> CatalogOperator.listIndexes(entityname).mkString(", "))
 
     lb.toMap
@@ -131,28 +131,27 @@ case class Entity(val entityname: EntityName, val pk: String, private val featur
     * @return
     */
   def filter(filter: DataFrame): DataFrame = {
-    featureStorage.read(entityname).get.join(filter.select(pk), pk)
+    featureStorage.read(entityname).get.join(filter.select(pk.name), pk.name)
   }
 
   /**
     *
     * @return
     */
-  def schema = data.schema
+  def schema : Seq[FieldDefinition] = CatalogOperator.getFields(entityname)
 
   /**
     *
     * @return
     */
-  //TODO: remove this and integrate with PK
-  def pkType = CatalogOperator.getEntityPKType(entityname)
+  val pk = CatalogOperator.getEntityPK(entityname)
 
   /**
     *
     * @return
     */
   def data = if (metaData.isDefined) {
-    featureData.join(metaData.get, pk)
+    featureData.join(metaData.get, pk.name)
   } else {
     featureData
   }

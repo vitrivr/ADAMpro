@@ -11,7 +11,7 @@ import ch.unibas.dmi.dbis.adam.main.AdamContext
 import ch.unibas.dmi.dbis.adam.storage.partitions.PartitionOptions
 import io.grpc.stub.StreamObserver
 import org.apache.log4j.Logger
-import org.apache.spark.sql.types.DataType
+import org.apache.spark.sql.types.{StructField, StructType, DataType}
 import org.apache.spark.sql.{Row, types}
 
 import scala.concurrent.Future
@@ -97,7 +97,7 @@ class DataDefinitionRPC(implicit ac: AdamContext) extends AdamDefinitionGrpc.Ada
           val data = schema.map(field => {
             val datum = tuple.data.get(field.name).getOrElse(null)
             if (datum != null) {
-              converter(field.dataType)(datum)
+              converter(field.fieldtype.datatype)(datum)
             } else {
               null
             }
@@ -106,7 +106,7 @@ class DataDefinitionRPC(implicit ac: AdamContext) extends AdamDefinitionGrpc.Ada
         })
 
         val rdd = ac.sc.parallelize(rows)
-        val df = ac.sqlContext.createDataFrame(rdd, entity.get.schema)
+        val df = ac.sqlContext.createDataFrame(rdd, StructType(entity.get.schema.map(field => StructField(field.name, field.fieldtype.datatype))))
 
         val res = InsertOp(entity.get.entityname, df)
 

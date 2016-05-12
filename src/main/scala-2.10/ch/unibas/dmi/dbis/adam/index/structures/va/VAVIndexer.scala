@@ -53,7 +53,7 @@ class VAVIndexer (nbits : Option[Int], marksGenerator: MarksGenerator, trainingS
       })
 
     val schema = StructType(Seq(
-      StructField(entity.pk, entity.pkType.datatype, false),
+      StructField(entity.pk.name, entity.pk.fieldtype.datatype, false),
       StructField(FieldNames.featureIndexColumnName, new BitStringUDT, false)
     ))
 

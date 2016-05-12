@@ -124,7 +124,7 @@ trait Index extends Serializable {
 
     //apply pre-filter
     if (filter.isDefined) {
-      data = data.join(filter.get.select(pk), pk)
+      data = data.join(filter.get.select(pk.name), pk.name)
     }
 
     //TODO: possibly join on other sources and keep all data
