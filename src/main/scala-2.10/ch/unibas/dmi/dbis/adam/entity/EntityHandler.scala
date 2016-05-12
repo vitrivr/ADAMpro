@@ -40,37 +40,30 @@ object EntityHandler {
     lock.synchronized {
       //checks
       if (exists(entityname)) {
-        log.error("entity " + entityname + " exists already")
         return Failure(EntityExistingException())
       }
 
       if (fields.isEmpty) {
-        log.error("entity " + entityname + " will have no fields")
-        return Failure(EntityNotProperlyDefinedException(Some("Entity with no fields.")))
+        return Failure(EntityNotProperlyDefinedException(Some("Entity " + entityname + " will have no fields")))
       }
 
       FieldNames.reservedNames.foreach { reservedName =>
         if (fields.contains(reservedName)) {
-          log.error("entity defined with field " + reservedName + ", but name is reserved")
-          return Failure(EntityNotProperlyDefinedException(Some("Using reserved name.")))
+          return Failure(EntityNotProperlyDefinedException(Some("Entity defined with field " + reservedName + ", but name is reserved")))
         }
       }
 
       if (fields.map(_.name).distinct.length != fields.length) {
-        log.error("entity defined with duplicate fields")
-        return Failure(EntityNotProperlyDefinedException(Some("Duplicate field names.")))
+        return Failure(EntityNotProperlyDefinedException(Some("Entity defined with duplicate fields.")))
       }
 
       val allowedPkTypes = Seq(INTTYPE, LONGTYPE, STRINGTYPE, AUTOTYPE)
 
       if (fields.count(_.pk) > 1) {
-        log.error("entity defined with more than one primary key")
-        return Failure(EntityNotProperlyDefinedException(Some("More than one primary key.")))
+        return Failure(EntityNotProperlyDefinedException(Some("Entity defined with more than one primary key")))
       } else if (fields.filter(_.pk).isEmpty) {
-        log.error("entity defined has no primary key")
-        return Failure(EntityNotProperlyDefinedException(Some("No primary key defined.")))
+        return Failure(EntityNotProperlyDefinedException(Some("Entity defined has no primary key.")))
       } else if (!fields.filter(_.pk).forall(field => allowedPkTypes.contains(field.fieldtype))) {
-        log.error("entity defined needs a " + allowedPkTypes.map(_.name).mkString(", " ) + " primary key")
         return Failure(EntityNotProperlyDefinedException(Some("Entity defined needs a " + allowedPkTypes.map(_.name).mkString(", " ) + " primary key")))
       }
 
@@ -78,7 +71,6 @@ object EntityHandler {
         log.error("only one auto type allowed, and only in primary key")
         return Failure(EntityNotProperlyDefinedException(Some("Too many auto fields defined.")))
       } else if ( fields.count(_.fieldtype == AUTOTYPE) > 0 && !fields.filter(_.pk).forall(_.fieldtype == AUTOTYPE)){
-        log.error("auto type only allowed in primary key ")
         return Failure(EntityNotProperlyDefinedException(Some("Auto type only allowed in primary key.")))
       }
 
