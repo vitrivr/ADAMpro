@@ -144,7 +144,7 @@ class IndexTestSuite extends AdamTestBase {
         And("and the confidence is set properly")
         assert(index.get.confidence <= 1)
         And("all elements are indexed")
-        assert(index.get.count == entity.get.count)
+        assert(index.get.count == entity.get.count.get)
       }
     }
 
@@ -166,7 +166,7 @@ class IndexTestSuite extends AdamTestBase {
         And("and the confidence is set properly")
         assert(index.get.confidence <= 1)
         And("all elements are indexed")
-        assert(index.get.count == entity.get.count)
+        assert(index.get.count == entity.get.count.get)
       }
     }
 
@@ -188,7 +188,7 @@ class IndexTestSuite extends AdamTestBase {
         And("and the confidence is set properly")
         assert(index.get.confidence <= 1)
         And("all elements are indexed")
-        assert(index.get.count == entity.get.count)
+        assert(index.get.count == entity.get.count.get)
       }
     }
 
@@ -211,7 +211,7 @@ class IndexTestSuite extends AdamTestBase {
         And("and the confidence is set properly")
         assert(index.get.confidence <= 1)
         And("all elements are indexed")
-        assert(index.get.count == entity.get.count)
+        assert(index.get.count == entity.get.count.get)
       }
     }
 
@@ -234,7 +234,7 @@ class IndexTestSuite extends AdamTestBase {
         And("and the confidence is set properly")
         assert(index.get.confidence == 1)
         And("all elements are indexed")
-        assert(index.get.count == entity.get.count)
+        assert(index.get.count == entity.get.count.get)
 
         //clean up
         DropEntityOp(entityname)
@@ -260,7 +260,7 @@ class IndexTestSuite extends AdamTestBase {
         And("and the confidence is set properly")
         assert(index.get.confidence == 1)
         And("all elements are indexed")
-        assert(index.get.count == entity.get.count)
+        assert(index.get.count == entity.get.count.get)
       }
     }
   }

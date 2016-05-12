@@ -37,59 +37,63 @@ object EntityHandler {
     * @return
     */
   def create(entityname: EntityName, fields: Seq[FieldDefinition])(implicit ac: AdamContext): Try[Entity] = {
-    lock.synchronized {
-      //checks
-      if (exists(entityname)) {
-        return Failure(EntityExistingException())
-      }
+    try {
+      lock.synchronized {
+        //checks
+        if (exists(entityname)) {
+          return Failure(EntityExistingException())
+        }
 
-      if (fields.isEmpty) {
-        return Failure(EntityNotProperlyDefinedException(Some("Entity " + entityname + " will have no fields")))
-      }
+        if (fields.isEmpty) {
+          return Failure(EntityNotProperlyDefinedException(Some("Entity " + entityname + " will have no fields")))
+        }
 
-      FieldNames.reservedNames.foreach { reservedName =>
-        if (fields.contains(reservedName)) {
-          return Failure(EntityNotProperlyDefinedException(Some("Entity defined with field " + reservedName + ", but name is reserved")))
+        FieldNames.reservedNames.foreach { reservedName =>
+          if (fields.contains(reservedName)) {
+            return Failure(EntityNotProperlyDefinedException(Some("Entity defined with field " + reservedName + ", but name is reserved")))
+          }
+        }
+
+        if (fields.map(_.name).distinct.length != fields.length) {
+          return Failure(EntityNotProperlyDefinedException(Some("Entity defined with duplicate fields.")))
+        }
+
+        val allowedPkTypes = Seq(INTTYPE, LONGTYPE, STRINGTYPE, AUTOTYPE)
+
+        if (fields.count(_.pk) > 1) {
+          return Failure(EntityNotProperlyDefinedException(Some("Entity defined with more than one primary key")))
+        } else if (fields.filter(_.pk).isEmpty) {
+          return Failure(EntityNotProperlyDefinedException(Some("Entity defined has no primary key.")))
+        } else if (!fields.filter(_.pk).forall(field => allowedPkTypes.contains(field.fieldtype))) {
+          return Failure(EntityNotProperlyDefinedException(Some("Entity defined needs a " + allowedPkTypes.map(_.name).mkString(", ") + " primary key")))
+        }
+
+        if (fields.count(_.fieldtype == AUTOTYPE) > 1) {
+          log.error("only one auto type allowed, and only in primary key")
+          return Failure(EntityNotProperlyDefinedException(Some("Too many auto fields defined.")))
+        } else if (fields.count(_.fieldtype == AUTOTYPE) > 0 && !fields.filter(_.pk).forall(_.fieldtype == AUTOTYPE)) {
+          return Failure(EntityNotProperlyDefinedException(Some("Auto type only allowed in primary key.")))
+        }
+
+
+        val pk = fields.filter(_.pk).head
+        val featureFields = fields.filter(_.fieldtype == FEATURETYPE)
+
+        //perform
+        featureStorage.create(entityname, featureFields.+:(pk))
+
+        if (!fields.filterNot(_.fieldtype == FEATURETYPE).filterNot(_.pk).isEmpty) {
+          val metadataFields = fields.filterNot(_.fieldtype == FEATURETYPE)
+          metadataStorage.create(entityname, metadataFields)
+          CatalogOperator.createEntity(entityname, pk.name, fields, true)
+          Success(Entity(entityname, pk.name, featureStorage, Option(metadataStorage)))
+        } else {
+          CatalogOperator.createEntity(entityname, pk.name, fields, false)
+          Success(Entity(entityname, pk.name, featureStorage, None))
         }
       }
-
-      if (fields.map(_.name).distinct.length != fields.length) {
-        return Failure(EntityNotProperlyDefinedException(Some("Entity defined with duplicate fields.")))
-      }
-
-      val allowedPkTypes = Seq(INTTYPE, LONGTYPE, STRINGTYPE, AUTOTYPE)
-
-      if (fields.count(_.pk) > 1) {
-        return Failure(EntityNotProperlyDefinedException(Some("Entity defined with more than one primary key")))
-      } else if (fields.filter(_.pk).isEmpty) {
-        return Failure(EntityNotProperlyDefinedException(Some("Entity defined has no primary key.")))
-      } else if (!fields.filter(_.pk).forall(field => allowedPkTypes.contains(field.fieldtype))) {
-        return Failure(EntityNotProperlyDefinedException(Some("Entity defined needs a " + allowedPkTypes.map(_.name).mkString(", " ) + " primary key")))
-      }
-
-      if(fields.count(_.fieldtype == AUTOTYPE) > 1){
-        log.error("only one auto type allowed, and only in primary key")
-        return Failure(EntityNotProperlyDefinedException(Some("Too many auto fields defined.")))
-      } else if ( fields.count(_.fieldtype == AUTOTYPE) > 0 && !fields.filter(_.pk).forall(_.fieldtype == AUTOTYPE)){
-        return Failure(EntityNotProperlyDefinedException(Some("Auto type only allowed in primary key.")))
-      }
-
-
-      val pk = fields.filter(_.pk).head
-      val featureFields = fields.filter(_.fieldtype == FEATURETYPE).+:(pk)
-
-      //perform
-      featureStorage.create(entityname, featureFields)
-
-      if (!fields.filterNot(_.fieldtype == FEATURETYPE).filterNot(_.pk).isEmpty) {
-        val metadataFields = fields.filterNot(_.fieldtype == FEATURETYPE)
-        metadataStorage.create(entityname, metadataFields)
-        CatalogOperator.createEntity(entityname, pk.name, fields, true)
-        Success(Entity(entityname, pk.name, featureStorage, Option(metadataStorage)))
-      } else {
-        CatalogOperator.createEntity(entityname, pk.name, fields, false)
-        Success(Entity(entityname, pk.name, featureStorage, None))
-      }
+    } catch {
+      case e: Exception => Failure(e)
     }
   }
 
@@ -196,7 +200,7 @@ object EntityHandler {
   def countTuples(entityname: EntityName)(implicit ac: AdamContext): Try[Long] = {
     val entity = load(entityname)
     if (entity.isSuccess) {
-      Success(entity.get.count)
+      entity.get.count
     } else {
       Failure(entity.failed.get)
     }

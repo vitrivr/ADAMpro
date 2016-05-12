@@ -4,6 +4,8 @@ import ch.unibas.dmi.dbis.adam.index.Index.IndexName
 import ch.unibas.dmi.dbis.adam.main.AdamContext
 import org.apache.spark.sql.DataFrame
 
+import scala.util.Try
+
 /**
   * adamtwo
   *
@@ -16,7 +18,7 @@ trait IndexStorage {
     * @param indexname
     * @return
     */
-  def exists(indexname : IndexName) : Boolean
+  def exists(indexname : IndexName) : Try[Boolean]
 
   /**
     * Create an index in the index storage.
@@ -33,7 +35,7 @@ trait IndexStorage {
     * @param indexName
     * @return
     */
-  def read(indexName: IndexName)(implicit ac : AdamContext): DataFrame
+  def read(indexName: IndexName)(implicit ac : AdamContext): Try[DataFrame]
 
   /**
     * Write index to the index storage.
@@ -42,7 +44,7 @@ trait IndexStorage {
     * @param index
     * @return true on success
     */
-  def write(indexName: IndexName, index: DataFrame)(implicit ac: AdamContext): Boolean
+  def write(indexName: IndexName, index: DataFrame)(implicit ac: AdamContext): Try[Void]
 
   /**
     * Drop the index from the index storage.
@@ -50,5 +52,5 @@ trait IndexStorage {
     * @param indexName
     * @return true on success
     */
-  def drop(indexName: IndexName)(implicit ac: AdamContext): Boolean
+  def drop(indexName: IndexName)(implicit ac: AdamContext): Try[Void]
 }

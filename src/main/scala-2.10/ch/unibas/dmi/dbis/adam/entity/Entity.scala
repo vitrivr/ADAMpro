@@ -37,12 +37,18 @@ case class Entity(val entityname: EntityName, val pk: String, private val featur
     *
     * @return
     */
-  def count: Long = {
+  def count: Try[Long] = {
     if (tupleCount == -1) {
-      tupleCount = featureStorage.count(entityname)
+      val count = featureStorage.count(entityname)
+
+      if (count.isFailure) {
+        return count
+      } else {
+        tupleCount = count.get
+      }
     }
 
-    tupleCount
+    Success(tupleCount)
   }
 
   private var tupleCount: Long = -1
@@ -65,40 +71,45 @@ case class Entity(val entityname: EntityName, val pk: String, private val featur
   def insert(data: DataFrame, ignoreChecks: Boolean = false): Try[Void] = {
     log.debug("inserting data into entity")
 
-    //TODO: check dimensionality is correct
+    try {
+      val insertion =
+        if (pkType == FieldTypes.AUTOTYPE) {
+          if (data.schema.fieldNames.contains(pk)) {
+            return Failure(new GeneralAdamException("the field " + pk + " has been specified as auto and should therefore not be provided"))
+          }
 
-    val insertion =
-      if (pkType == FieldTypes.AUTOTYPE) {
-        if(data.schema.fieldNames.contains(pk)){
-          return Failure(new GeneralAdamException("the field " + pk + " has been specified as auto and should therefore not be provided"))
+          val rdd = data.rdd.zipWithUniqueId.map { case (r: Row, id: Long) => Row.fromSeq(id +: r.toSeq) }
+          ac.sqlContext
+            .createDataFrame(
+              rdd, StructType(StructField(pk, pkType.datatype, false) +: data.schema.fields))
+        } else {
+          data
         }
 
-        val rdd = data.rdd.zipWithUniqueId.map { case (r: Row, id: Long) => Row.fromSeq(id +: r.toSeq) }
-        ac.sqlContext
-          .createDataFrame(
-            rdd, StructType(StructField(pk, pkType.datatype, false) +: data.schema.fields))
-      } else {
-        data
+
+      //TODO: check schema
+
+      val featureFieldNames = insertion.schema.fields.filter(_.dataType == new FeatureVectorWrapperUDT).map(_.name)
+      featureStorage.write(entityname, pk, insertion.select(pk, featureFieldNames.toSeq: _*), SaveMode.Append)
+
+      val metadataFieldNames = insertion.schema.fields.filterNot(_.dataType == new FeatureVectorWrapperUDT).map(_.name)
+      if (metadataStorage.isDefined) {
+        log.debug("metadata storage is defined: inserting data also into metadata storage")
+        metadataStorage.get.write(entityname, insertion.select(pk, metadataFieldNames.filterNot(x => x == pk).toSeq: _*), SaveMode.Append)
       }
 
-    val featureFieldNames = insertion.schema.fields.filter(_.dataType == new FeatureVectorWrapperUDT).map(_.name)
-    featureStorage.write(entityname, pk, insertion.select(pk, featureFieldNames.toSeq: _*), SaveMode.Append)
+      if (CatalogOperator.listIndexes(entityname).nonEmpty) {
+        log.warn("new data inserted, but indexes are not updated; please re-create index")
+        CatalogOperator.updateIndexesToStale(entityname)
+      }
 
-    val metadataFieldNames = insertion.schema.fields.filterNot(_.dataType == new FeatureVectorWrapperUDT).map(_.name)
-    if (metadataStorage.isDefined) {
-      log.debug("metadata storage is defined: inserting data also into metadata storage")
-      metadataStorage.get.write(entityname, insertion.select(pk, metadataFieldNames.filterNot(x => x == pk).toSeq: _*), SaveMode.Append)
+      //reset count
+      tupleCount = -1
+
+      Success(null)
+    } catch {
+      case e: Exception => Failure(e)
     }
-
-    if (CatalogOperator.listIndexes(entityname).nonEmpty) {
-      log.warn("new data inserted, but indexes are not updated; please re-create index")
-      CatalogOperator.updateIndexesToStale(entityname)
-    }
-
-    //reset count
-    tupleCount = -1
-
-    Success(null)
   }
 
   /**

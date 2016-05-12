@@ -7,7 +7,7 @@ import ch.unibas.dmi.dbis.adam.main.SparkStartup.Implicits._
 import org.apache.spark.sql.types._
 import org.apache.spark.sql.{DataFrame, Row, SaveMode}
 
-import scala.util.Try
+import scala.util.{Failure, Try}
 
 /**
   * adamtwo
@@ -21,7 +21,7 @@ trait FeatureStorage extends Serializable {
     * @param entityname
     * @return
     */
-  def exists(entityname : EntityName) : Boolean
+  def exists(entityname: EntityName): Try[Boolean]
 
   /**
     * Create the entity in the feature storage.
@@ -29,13 +29,17 @@ trait FeatureStorage extends Serializable {
     * @param entityname
     * @return true on success
     */
-  def create(entityname: EntityName, fields : Seq[FieldDefinition])(implicit ac: AdamContext): Boolean = {
-    val structFields = fields.map {
-      field => StructField(field.name, field.fieldtype.datatype)
-    }
+  def create(entityname: EntityName, fields: Seq[FieldDefinition])(implicit ac: AdamContext): Try[Void] = {
+    try {
+      val structFields = fields.map {
+        field => StructField(field.name, field.fieldtype.datatype)
+      }
 
-    val df = sqlContext.createDataFrame(sc.emptyRDD[Row], StructType(structFields))
-    write(entityname, fields.filter(_.pk).head.name, df, SaveMode.Overwrite)
+      val df = sqlContext.createDataFrame(sc.emptyRDD[Row], StructType(structFields))
+      write(entityname, fields.filter(_.pk).head.name, df, SaveMode.Overwrite)
+    } catch {
+      case e : Exception => Failure(e)
+    }
   }
 
   /**
@@ -44,7 +48,7 @@ trait FeatureStorage extends Serializable {
     * @param entityname
     * @return
     */
-  def read(entityname: EntityName)(implicit ac : AdamContext): Try[DataFrame]
+  def read(entityname: EntityName)(implicit ac: AdamContext): Try[DataFrame]
 
   /**
     * Count the number of tuples in the feature storage.
@@ -52,7 +56,7 @@ trait FeatureStorage extends Serializable {
     * @param entityname
     * @return
     */
-  def count(entityname: EntityName)(implicit ac: AdamContext): Long
+  def count(entityname: EntityName)(implicit ac: AdamContext): Try[Long]
 
   /**
     * Write entity to the feature storage.
@@ -62,7 +66,7 @@ trait FeatureStorage extends Serializable {
     * @param mode
     * @return true on success
     */
-  def write(entityname: EntityName, pk : String, df: DataFrame, mode: SaveMode = SaveMode.Append)(implicit ac: AdamContext): Boolean
+  def write(entityname: EntityName, pk: String, df: DataFrame, mode: SaveMode = SaveMode.Append)(implicit ac: AdamContext): Try[Void]
 
   /**
     * Drop the entity from the feature storage
@@ -70,6 +74,6 @@ trait FeatureStorage extends Serializable {
     * @param entityname
     * @return true on success
     */
-  def drop(entityname: EntityName)(implicit ac: AdamContext): Boolean
+  def drop(entityname: EntityName)(implicit ac: AdamContext): Try[Void]
 }
 

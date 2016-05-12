@@ -64,14 +64,15 @@ object IndexHandler {
   def createIndex(entity: Entity, column : String, indexgenerator: IndexGenerator)(implicit ac: AdamContext): Try[Index] = {
     lock.synchronized {
       if(!entity.schema.fieldNames.contains(column)){
-        log.error("column not existing in entity " + entity.entityname + entity.schema.fieldNames.mkString("(", ",", ")"))
-        return Failure(new GeneralAdamException("column not existing"))
+        return Failure(new GeneralAdamException("column not existing in entity " + entity.entityname + entity.schema.fieldNames.mkString("(", ",", ")")))
       }
 
       val count = entity.count
-      if (count < MINIMUM_NUMBER_OF_TUPLE) {
-        log.error("not enough tuples for creating index, needs at least " + MINIMUM_NUMBER_OF_TUPLE + " but has only " + count)
-        return Failure(new GeneralAdamException("not enough tuples for index"))
+      if(count.isFailure){
+        return Failure(count.failed.get)
+      }
+      if (count.get < MINIMUM_NUMBER_OF_TUPLE) {
+        return Failure(new GeneralAdamException("not enough tuples for creating index, needs at least " + MINIMUM_NUMBER_OF_TUPLE + " but has only " + count))
       }
 
       val indexname = createIndexName(entity.entityname, column, indexgenerator.indextypename)
@@ -139,12 +140,16 @@ object IndexHandler {
     }
 
     val df = storage.read(CatalogOperator.getIndexPath(indexname))
+    if(df.isFailure){
+      return Failure(df.failed.get)
+    }
+
     val entityname = CatalogOperator.getEntitynameFromIndex(indexname)
     val meta = CatalogOperator.getIndexMeta(indexname)
 
     val indextypename = CatalogOperator.getIndexTypeName(indexname)
 
-    val index = indextypename.index(indexname, entityname, df, meta)
+    val index = indextypename.index(indexname, entityname, df.get, meta)
 
     Success(index)
   }
@@ -240,7 +245,7 @@ object IndexHandler {
 
         do {
           newPath = index.indexname + "-rep" + Random.nextInt
-        } while (SparkStartup.indexStorage.exists(newPath))
+        } while (SparkStartup.indexStorage.exists(newPath).get)
 
         SparkStartup.indexStorage.write(newPath, data)
         CatalogOperator.updateIndexPath(index.indexname, newPath)
