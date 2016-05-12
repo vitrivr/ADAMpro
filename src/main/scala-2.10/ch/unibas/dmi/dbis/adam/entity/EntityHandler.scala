@@ -93,7 +93,10 @@ object EntityHandler {
         }
       }
     } catch {
-      case e: Exception => Failure(e)
+      case e: Exception => {
+        //TODO: possibly drop what has been already created
+        Failure(e)
+      }
     }
   }
 

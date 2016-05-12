@@ -138,11 +138,7 @@ case class Entity(val entityname: EntityName, val pk: String, private val featur
     *
     * @return
     */
-  def schema = if (metaData.isDefined) {
-    featureData.join(metaData.get, pk).schema
-  } else {
-    featureData.schema
-  }
+  def schema = data.schema
 
   /**
     *
@@ -154,11 +150,17 @@ case class Entity(val entityname: EntityName, val pk: String, private val featur
     *
     * @return
     */
-  def rdd = if (metaData.isDefined) {
-    featureData.join(metaData.get).rdd
+  def data = if (metaData.isDefined) {
+    featureData.join(metaData.get, pk)
   } else {
-    featureData.rdd
+    featureData
   }
+
+  /**
+    *
+    * @return
+    */
+  def rdd = data.rdd
 
   /**
     *
