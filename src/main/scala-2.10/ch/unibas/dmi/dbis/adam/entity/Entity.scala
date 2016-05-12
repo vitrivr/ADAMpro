@@ -131,7 +131,7 @@ case class Entity(val entityname: EntityName, val pk: String, private val featur
     * @return
     */
   def filter(filter: DataFrame): DataFrame = {
-    featureStorage.read(entityname).get.join(filter, pk)
+    featureStorage.read(entityname).get.join(filter.select(pk), pk)
   }
 
   /**
@@ -144,6 +144,7 @@ case class Entity(val entityname: EntityName, val pk: String, private val featur
     *
     * @return
     */
+  //TODO: remove this and integrate with PK
   def pkType = CatalogOperator.getEntityPKType(entityname)
 
   /**

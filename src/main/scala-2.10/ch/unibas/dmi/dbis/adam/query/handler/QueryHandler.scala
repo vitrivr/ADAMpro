@@ -55,13 +55,10 @@ object QueryHandler {
     }
 
     if (nnq.isEmpty) {
-      val res = BooleanQueryHandler.getData(entityname, bq)
-
-      if (res.isDefined) {
-        return res.get
+      if(bq.isDefined){
+        BooleanQueryHandler.filter(entity.data, bq.get)
       } else {
-        val rdd = ac.sc.emptyRDD[Row]
-        return ac.sqlContext.createDataFrame(rdd, Result.resultSchema(entity.pk))
+        entity.data
       }
     }
 
@@ -490,8 +487,14 @@ object QueryHandler {
     */
   def booleanQuery(entityname: EntityName)(bq: Option[BooleanQuery], id: Option[String] = None, cache: Option[QueryCacheOptions] = Some(QueryCacheOptions()))(implicit ac: AdamContext): DataFrame = {
     val entity = EntityHandler.load(entityname).get
+    var data = entity.data
+    var pk = entity.pk
 
-    val res = BooleanQueryHandler.getData(entityname, bq)
+    val res = if (bq.isDefined) {
+      Some(BooleanQueryHandler.filter(data, bq.get))
+    } else {
+      None
+    }
 
     if (res.isDefined) {
       import org.apache.spark.sql.functions._
@@ -517,31 +520,24 @@ object QueryHandler {
     * @return
     */
   private def getFilter(entityname: EntityName, bq: Option[BooleanQuery], tiq: Option[TupleIDQuery[_]])(implicit ac: AdamContext): Option[DataFrame] = {
+    if(bq.isEmpty && tiq.isEmpty){
+      return None
+    }
+
     val entity = EntityHandler.load(entityname).get
+    var data = entity.data
+    var pk = entity.pk
 
-    //TODO: adjust this code!!! return more often none
 
-    val bqres = if(bq.isDefined){
-     BooleanQueryHandler.getBQIds(entityname, bq)
-    } else {
-      None
+    if (bq.isDefined) {
+      data = BooleanQueryHandler.filter(data, bq.get)
     }
 
-    val tiqres = if(tiq.isDefined){
-      BooleanQueryHandler.getTIQIds(entityname, tiq)
-    } else {
-      None
+    if (tiq.isDefined) {
+      data = BooleanQueryHandler.filter(data, pk, tiq.get)
     }
 
-    if(bqres.isDefined && tiqres.isDefined){
-      Some(bqres.get.join(tiqres.get, entity.pk))
-    } else if (bqres.isDefined){
-      bqres
-    }  else if (tiqres.isDefined){
-      tiqres
-    } else {
-      None
-    }
+    Some(data)
   }
 
 
@@ -553,7 +549,11 @@ object QueryHandler {
     * @return
     */
   private[handler] def joinWithMetadata(entityname: EntityName, res: DataFrame)(implicit ac: AdamContext): DataFrame = {
-    BooleanQueryHandler.getData(entityname, res).getOrElse(res)
+    val entity = EntityHandler.load(entityname).get
+    var data = entity.data
+    var pk = entity.pk
+
+    BooleanQueryHandler.filter(data, pk, res)
   }
 
 
