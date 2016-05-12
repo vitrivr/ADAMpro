@@ -111,9 +111,9 @@ class DataDefinitionRPC(implicit ac: AdamContext) extends AdamDefinitionGrpc.Ada
         val res = InsertOp(entity.get.entityname, df)
 
         if (res.isSuccess) {
-          Future.successful(AckMessage(code = AckMessage.Code.OK))
+          responseObserver.onNext(AckMessage(code = AckMessage.Code.OK))
         } else {
-          Future.successful(AckMessage(code = AckMessage.Code.ERROR, message = res.failed.get.getMessage))
+          responseObserver.onNext(AckMessage(code = AckMessage.Code.ERROR, message = res.failed.get.getMessage))
         }
       }
 

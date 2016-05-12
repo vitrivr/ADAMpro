@@ -164,7 +164,7 @@ class SearchRPC(implicit ac: AdamContext) extends AdamSearchGrpc.AdamSearch {
     } catch {
       case e: Exception => {
         log.error(e)
-        Future.successful(QueryResponseInfoMessage(ack = Some(AckMessage(code = AckMessage.Code.ERROR, message = e.getMessage))))
+        responseObserver.onNext(QueryResponseInfoMessage(ack = Some(AckMessage(code = AckMessage.Code.ERROR, message = e.getMessage))))
       }
     }
   }
