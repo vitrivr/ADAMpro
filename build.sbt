@@ -1,3 +1,4 @@
+import sbt.ExclusionRule
 import sbt.Keys._
 import sbtassembly.AssemblyPlugin.autoImport._
 
@@ -11,10 +12,10 @@ lazy val commonSettings = Seq(
 
 //projects
 lazy val root = (project in file(".")).
-  settings(commonSettings : _* )
+  settings(commonSettings: _*)
 
 lazy val grpc = project.
-  settings(commonSettings ++ Seq(assemblyOutputPath in assembly := baseDirectory.value / ".." / "lib" / "grpc-assembly-0.1-SNAPSHOT.jar") : _*)
+  settings(commonSettings ++ Seq(assemblyOutputPath in assembly := baseDirectory.value / ".." / "lib" / "grpc-assembly-0.1-SNAPSHOT.jar"): _*)
 
 lazy val client = project.
   settings(commonSettings: _*)
@@ -30,11 +31,10 @@ lazy val buildSettings = Seq(
   ivyScala := ivyScala.value.map(_.copy(overrideScalaVersion = true))
 )
 
-mainClass in (Compile, run) := Some("ch.unibas.dmi.dbis.adam.main.Startup")
+mainClass in(Compile, run) := Some("ch.unibas.dmi.dbis.adam.main.Startup")
 
 unmanagedResourceDirectories in Compile += baseDirectory.value / "conf"
-//scalacOptions += "-Xlog-implicits"
-scalacOptions += "-target:jvm-1.7"
+scalacOptions ++= Seq("-target:jvm-1.7")
 
 //libs
 resolvers ++= Seq(
@@ -44,43 +44,47 @@ resolvers += Resolver.sonatypeRepo("snapshots")
 
 //base libs
 libraryDependencies ++= Seq(
-  "org.scala-lang"         % "scala-compiler"            % "2.10.6",
-  "org.scala-lang"         % "scala-reflect"             % "2.10.6"
+  "org.scala-lang" % "scala-compiler" % "2.10.6",
+  "org.scala-lang" % "scala-reflect" % "2.10.6"
 )
 
 //adampro core libs
 libraryDependencies ++= Seq(
-  "org.apache.spark"       %%   "spark-core"             % "1.6.1" excludeAll(
-    ExclusionRule("org.apache.hadoop"),
-    ExclusionRule("jline", "jline"),
+  "org.apache.spark" %% "spark-core" % "1.6.1" excludeAll ExclusionRule("org.apache.hadoop"),
+  "org.apache.spark" %% "spark-sql" % "1.6.1",
+  "org.apache.spark" %% "spark-hive" % "1.6.1",
+  "org.apache.spark" %% "spark-mllib" % "1.6.1",
+  "org.scalanlp" %% "breeze" % "0.11.2",
+  "org.scalanlp" %% "breeze-natives" % "0.11.2",
+  "com.typesafe.slick" %% "slick" % "3.1.0",
+  "com.h2database" % "h2" % "1.4.188" excludeAll ExclusionRule("org.mortbay.jetty"),
+  "org.postgresql" % "postgresql" % "9.4.1208",
+  "org.apache.hadoop" % "hadoop-client" % "2.6.4" excludeAll ExclusionRule("javax.servlet"),
+  "org.apache.commons" % "commons-lang3" % "3.4" force(),
+  "org.apache.commons" % "commons-math3" % "3.4.1" force(),
+  "it.unimi.dsi" % "fastutil" % "7.0.12",
+  "com.google.guava" % "guava" % "16.0.1" force()
+).map(
+  _.excludeAll(
+    ExclusionRule("org.scala-lang"),
     ExclusionRule("org.slf4j", "slf4j-api")
-    ),
-  "org.apache.spark"       %%   "spark-sql"              % "1.6.1",
-  "org.apache.spark"       %%   "spark-hive"             % "1.6.1",
-  "org.apache.spark"       %%   "spark-mllib"            % "1.6.1",
-  "org.scalanlp" 		       %%   "breeze" 				         % "0.11.2",
-  "org.scalanlp" 		       %%   "breeze-natives" 	       % "0.11.2",
-  "com.typesafe.slick"     %%   "slick"                  % "3.1.0",
-  "com.h2database"         %    "h2"                     % "1.4.188",
-  "org.postgresql"         %    "postgresql"             % "9.4.1208",
-  "com.fasterxml.jackson.core" % "jackson-core"          % "2.4.4",
-  "org.apache.hadoop"      %    "hadoop-client"          % "2.6.4",
-  "org.apache.commons"     %    "commons-lang3"          % "3.4",
-  "it.unimi.dsi"           %    "fastutil"               % "7.0.12",
-  "com.google.guava"       %    "guava"                  % "16.0.1"
-).map (
-  _.excludeAll(ExclusionRule(organization = "org.scala-lang"))
+  )
 )
 
 //slf4j
 libraryDependencies ++= Seq(
-  "org.slf4j"              %    "slf4j-api"              % "1.7.5",
-  "org.slf4j"              %    "slf4j-log4j12"          % "1.7.5"
+  "org.slf4j" % "slf4j-api" % "1.7.5" force(),
+  "org.slf4j" % "slf4j-log4j12" % "1.7.5" force()
 )
 
-//solr
+//externals
 libraryDependencies ++= Seq(
-  "org.apache.solr"        % "solr-solrj"                % "5.5.0"
+  "org.apache.solr" % "solr-solrj" % "5.5.0"
+).map(
+  _.excludeAll(
+    ExclusionRule("org.scala-lang"),
+    ExclusionRule("org.slf4j", "slf4j-api")
+  )
 )
 
 unmanagedBase <<= baseDirectory { base => base / "lib" }
@@ -92,9 +96,13 @@ assemblyOption in assembly :=
 
 val meta = """META.INF(.)*""".r
 assemblyMergeStrategy in assembly := {
+  case x if x.contains("slf4j-api") => MergeStrategy.last
+  case x if x.contains("org.slf4j") => MergeStrategy.first
+  case x if x.contains("org.apache.httpcomponents") => MergeStrategy.last
+  case x if x.contains("org.apache.commons") => MergeStrategy.last
   case PathList("application.conf") => MergeStrategy.discard
-  case PathList("javax", "servlet", xs @ _*) => MergeStrategy.last
-  case PathList(ps @ _*) if ps.last endsWith ".html" => MergeStrategy.last
+  case PathList("javax", "servlet", xs@_*) => MergeStrategy.last
+  case PathList(ps@_*) if ps.last endsWith ".html" => MergeStrategy.last
   case n if n.startsWith("reference.conf") => MergeStrategy.concat
   case n if n.endsWith(".conf") => MergeStrategy.concat
   case meta(_) => MergeStrategy.discard
@@ -106,12 +114,17 @@ mainClass in assembly := Some("ch.unibas.dmi.dbis.adam.main.Startup")
 test in assembly := {}
 
 //provided libraries should be included in "run"
-run in Compile <<= Defaults.runTask(fullClasspath in Compile, mainClass in (Compile, run), runner in (Compile, run))
+run in Compile <<= Defaults.runTask(fullClasspath in Compile, mainClass in(Compile, run), runner in(Compile, run))
 
 
 //test
 libraryDependencies ++= Seq(
-  "org.scalatest"          % "scalatest_2.10"            %  "3.0.0-M15"
+  "org.scalatest" % "scalatest_2.10" % "3.0.0-M15"
+).map(
+  _.excludeAll(
+    ExclusionRule("org.scala-lang"),
+    ExclusionRule("org.slf4j", "slf4j-api")
+  )
 )
 
 parallelExecution in Test := false
