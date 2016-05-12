@@ -1,7 +1,7 @@
 package ch.unibas.dmi.dbis.adam.rpc
 
 import ch.unibas.dmi.dbis.adam.api._
-import ch.unibas.dmi.dbis.adam.datatypes.feature.FeatureVectorWrapperUDT
+import ch.unibas.dmi.dbis.adam.datatypes.feature.{FeatureVectorWrapper, FeatureVectorWrapperUDT}
 import ch.unibas.dmi.dbis.adam.entity.{EntityHandler, FieldDefinition, FieldTypes}
 import ch.unibas.dmi.dbis.adam.exception.GeneralAdamException
 import ch.unibas.dmi.dbis.adam.http.grpc.FieldDefinitionMessage.FieldType
@@ -64,7 +64,7 @@ class DataDefinitionRPC(implicit ac: AdamContext) extends AdamDefinitionGrpc.Ada
     case types.IntegerType => (x) => x.getIntData
     case types.LongType => (x) => x.getLongData
     case types.StringType => (x) => x.getStringData
-    case _: FeatureVectorWrapperUDT => (x) => RPCHelperMethods.prepareFeatureVector(x.getFeatureData)
+    case _: FeatureVectorWrapperUDT => (x) => FeatureVectorWrapper(RPCHelperMethods.prepareFeatureVector(x.getFeatureData))
   }
 
 
