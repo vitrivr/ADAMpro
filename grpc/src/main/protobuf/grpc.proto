@@ -57,21 +57,38 @@ service AdamSearch {
 //****  GLOBALS ****//
 
 enum IndexType {
-    ecp = 0;
-    lsh = 1;
-    pq = 2;
-    sh = 3;
-    vaf = 4;
-    vav = 5;
+  ecp = 0;
+  lsh = 1;
+  pq = 2;
+  sh = 3;
+  vaf = 4;
+  vav = 5;
 }
 
 message EmptyMessage {
 }
 
 message FeatureVectorMessage {
+  oneof feature {
+     DenseVectorMessage denseVector = 1;
+     SparseVectorMessage sparseVector = 2;
+     IntVectorMessage intVector = 3;
+  }
+}
+
+message DenseVectorMessage {
   repeated float vector = 1 [packed=true];
 }
 
+message SparseVectorMessage {
+  repeated float vector = 1 [packed=true];
+  repeated int32 position = 2 [packed=true];
+  int32 length = 3;
+}
+
+message IntVectorMessage {
+  repeated int32 vector = 1 [packed=true];
+}
 
 
 
@@ -121,8 +138,20 @@ message InsertMessage {
   repeated TupleInsertMessage tuples = 2;
 
   message TupleInsertMessage {
-    map<string, string> data = 1; //possibly switch from string to any or oneof?
+    map<string, InsertDataMessage> data = 1;
   }
+}
+
+message InsertDataMessage {
+  oneof inserttype {
+        int64 longData = 1;
+        int32 intData = 2;
+        float floatData = 3;
+        double doubleData = 4;
+        string stringData = 5;
+        bool booleanData = 6;
+        FeatureVectorMessage featureData = 7;
+       }
 }
 
 message IndexMessage {

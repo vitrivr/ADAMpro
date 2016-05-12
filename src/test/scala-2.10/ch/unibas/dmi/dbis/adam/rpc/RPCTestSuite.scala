@@ -80,7 +80,12 @@ class RPCTestSuite extends AdamTestBase with ScalaFutures {
         val ntuples = 10
 
         When("tuples are inserted")
-        val tuples = (0 until ntuples).map(i => Map[String, String]("tid" -> Random.nextLong().toString,"feature" -> Seq.fill(10)(Random.nextFloat()).mkString(",")))
+        val tuples = (0 until ntuples)
+          .map(i => Map[String, InsertDataMessage](
+            "tid" -> InsertDataMessage().withLongData(Random.nextLong()),
+            "feature" -> InsertDataMessage().withFeatureData(FeatureVectorMessage().withDenseVector(DenseVectorMessage(Seq.fill(10)(Random.nextFloat()))))
+          ))
+
         requestObserver.onNext(InsertMessage(entityname, tuples.map(tuple => TupleInsertMessage(tuple))))
         requestObserver.onCompleted()
 
@@ -119,14 +124,13 @@ class RPCTestSuite extends AdamTestBase with ScalaFutures {
         val ntuples = 10
 
         When("tuples are inserted")
-        val tuples = (0 until ntuples).map(i =>
-          Map[String, String](
-            "tid" -> Random.nextLong.toString,
-            "featurefield" -> Seq.fill(10)(Random.nextFloat()).mkString(","),
-            "intfield" -> Random.nextInt(10).toString,
-            "stringfield" -> getRandomName(10)
-          )
-        )
+        val tuples = (0 until ntuples)
+          .map(i => Map[String, InsertDataMessage](
+            "tid" -> InsertDataMessage().withLongData(Random.nextLong()),
+            "featurefield" -> InsertDataMessage().withFeatureData(FeatureVectorMessage().withDenseVector(DenseVectorMessage(Seq.fill(10)(Random.nextFloat())))),
+            "intfield" -> InsertDataMessage().withIntData(Random.nextInt(10)),
+            "stringfield" -> InsertDataMessage().withStringData(getRandomName(10))
+          ))
         requestObserver.onNext(InsertMessage(entityname, tuples.map(tuple => TupleInsertMessage(tuple))))
         requestObserver.onCompleted()
 

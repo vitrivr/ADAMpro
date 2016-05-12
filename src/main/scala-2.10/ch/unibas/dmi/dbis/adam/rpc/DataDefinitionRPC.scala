@@ -1,7 +1,7 @@
 package ch.unibas.dmi.dbis.adam.rpc
 
 import ch.unibas.dmi.dbis.adam.api._
-import ch.unibas.dmi.dbis.adam.datatypes.feature.{FeatureVectorWrapper, FeatureVectorWrapperUDT}
+import ch.unibas.dmi.dbis.adam.datatypes.feature.FeatureVectorWrapperUDT
 import ch.unibas.dmi.dbis.adam.entity.{EntityHandler, FieldDefinition, FieldTypes}
 import ch.unibas.dmi.dbis.adam.exception.GeneralAdamException
 import ch.unibas.dmi.dbis.adam.http.grpc.FieldDefinitionMessage.FieldType
@@ -57,14 +57,14 @@ class DataDefinitionRPC(implicit ac: AdamContext) extends AdamDefinitionGrpc.Ada
     case _ => FieldTypes.UNRECOGNIZEDTYPE
   }
 
-  private def converter(datatype: DataType): (String) => (Any) = datatype match {
-    case types.BooleanType => (x) => x.toBoolean
-    case types.DoubleType => (x) => x.toDouble
-    case types.FloatType => (x) => x.toFloat
-    case types.IntegerType => (x) => x.toInt
-    case types.LongType => (x) => x.toLong
-    case types.StringType => (x) => x
-    case _: FeatureVectorWrapperUDT => (x) => new FeatureVectorWrapper(x.split(",").map(_.toFloat))
+  private def converter(datatype: DataType): (InsertDataMessage) => (Any) = datatype match {
+    case types.BooleanType => (x) => x.getBooleanData
+    case types.DoubleType => (x) => x.getBooleanData
+    case types.FloatType => (x) => x.getFloatData
+    case types.IntegerType => (x) => x.getIntData
+    case types.LongType => (x) => x.getLongData
+    case types.StringType => (x) => x.getStringData
+    case _: FeatureVectorWrapperUDT => (x) => RPCHelperMethods.prepareFeatureVector(x.getFeatureData)
   }
 
 
