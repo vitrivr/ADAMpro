@@ -1,8 +1,8 @@
 package ch.unibas.dmi.dbis.adam.query.query
 
 import ch.unibas.dmi.dbis.adam.datatypes.feature.Feature._
+import ch.unibas.dmi.dbis.adam.index.IndexHandler.PartitionID
 import ch.unibas.dmi.dbis.adam.query.distance.DistanceFunction
-import ch.unibas.dmi.dbis.adam.storage.partitions.PartitionHandler._
 import org.apache.spark.sql.DataFrame
 
 /**
@@ -96,14 +96,14 @@ case class NearestNeighbourQuery(
   * @param tidFilter
   * @tparam A
   */
-case class TupleIDQuery[A](tidFilter: Set[A]) {
+case class PrimaryKeyFilter[A](tidFilter: Set[A]) {
   def this(filter: DataFrame) = {
     this(filter.collect().map(_.getAs[A](0)).toSet)
   }
 
-  def +:(filter: Option[DataFrame]): TupleIDQuery[A] = {
+  def +:(filter: Option[DataFrame]): PrimaryKeyFilter[A] = {
     if (filter.isDefined) {
-      TupleIDQuery(tidFilter ++ filter.get.collect().map(_.getAs[A](0)))
+      PrimaryKeyFilter(tidFilter ++ filter.get.collect().map(_.getAs[A](0)))
     } else {
       this
     }

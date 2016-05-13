@@ -3,7 +3,6 @@ package ch.unibas.dmi.dbis.adam.query.datastructures
 import java.util.concurrent.TimeUnit
 
 import ch.unibas.dmi.dbis.adam.config.FieldNames
-import ch.unibas.dmi.dbis.adam.entity.Tuple._
 import ch.unibas.dmi.dbis.adam.main.{AdamContext, SparkStartup}
 import ch.unibas.dmi.dbis.adam.query.Result
 import org.apache.spark.sql.{DataFrame, Row}
@@ -29,7 +28,7 @@ object CompoundQueryExpressions {
   }
 
   case class EmptyQueryExpression(id : Option[String] = None) extends QueryExpression(id){
-    override protected def run(filter: Option[DataFrame]): DataFrame = {
+    override protected def run(filter: Option[DataFrame])(implicit ac: AdamContext): DataFrame = {
       import SparkStartup.Implicits._
       val rdd = sc.emptyRDD[Row]
       sqlContext.createDataFrame(rdd, Result.resultSchema(""))
@@ -47,7 +46,7 @@ object CompoundQueryExpressions {
       * @param filter
       * @return
       */
-    override protected def run(filter: Option[DataFrame]): DataFrame = {
+    override protected def run(filter: Option[DataFrame])(implicit ac: AdamContext): DataFrame = {
       val (results, pk) = parallelExec(filter)
 
       val rdd = ac.sc.parallelize(results.map(res => Row(res.distance, res.tid)))
@@ -106,7 +105,7 @@ object CompoundQueryExpressions {
       * @param filter
       * @return
       */
-    override protected def run(filter: Option[DataFrame]): DataFrame = {
+    override protected def run(filter: Option[DataFrame])(implicit ac: AdamContext): DataFrame = {
       val (results, pk) = order match {
         case ExpressionEvaluationOrder.LeftFirst => leftFirstExec(filter)
         case ExpressionEvaluationOrder.RightFirst => rightFirstExec(filter)
@@ -193,7 +192,7 @@ object CompoundQueryExpressions {
       * @param filter
       * @return
       */
-    override protected def run(filter: Option[DataFrame]): DataFrame = {
+    override protected def run(filter: Option[DataFrame])(implicit ac: AdamContext): DataFrame = {
       val (results, pk) = order match {
         case ExpressionEvaluationOrder.LeftFirst => leftFirstExec(filter)
         case ExpressionEvaluationOrder.RightFirst => rightFirstExec(filter)

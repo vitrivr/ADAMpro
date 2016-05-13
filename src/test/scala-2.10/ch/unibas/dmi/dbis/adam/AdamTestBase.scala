@@ -1,8 +1,7 @@
 package ch.unibas.dmi.dbis.adam
 
 import java.sql.DriverManager
-
-import ch.unibas.dmi.dbis.adam.api.DropEntityOp
+import ch.unibas.dmi.dbis.adam.api.EntityOp
 import ch.unibas.dmi.dbis.adam.config.AdamConfig
 import ch.unibas.dmi.dbis.adam.datatypes.feature.{FeatureVectorWrapper, FeatureVectorWrapperUDT}
 import ch.unibas.dmi.dbis.adam.entity.{Entity, EntityHandler, FieldDefinition, FieldTypes}
@@ -66,7 +65,7 @@ class AdamTestBase extends FeatureSpec with GivenWhenThen with Eventually with I
       testCode(entityname)
     }
     finally {
-      DropEntityOp(entityname, true)
+      EntityOp.drop(entityname, true)
     }
   }
 
@@ -98,12 +97,12 @@ class AdamTestBase extends FeatureSpec with GivenWhenThen with Eventually with I
 
       val data = ac.sqlContext.createDataFrame(rdd, schema)
 
-      EntityHandler.insertData(entityname, data)
+      EntityOp.insert(entityname, data)
 
       testCode(entityname)
     }
     finally {
-      DropEntityOp(entityname, true)
+      EntityOp.drop(entityname, true)
     }
   }
 
@@ -118,7 +117,7 @@ class AdamTestBase extends FeatureSpec with GivenWhenThen with Eventually with I
       testCode(es)
     }
     finally {
-      DropEntityOp(es.entity.entityname)
+      EntityOp.drop(es.entity.entityname)
     }
   }
 

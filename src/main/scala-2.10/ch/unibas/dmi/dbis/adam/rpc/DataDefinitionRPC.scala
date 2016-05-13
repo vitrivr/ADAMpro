@@ -6,9 +6,9 @@ import ch.unibas.dmi.dbis.adam.entity.{EntityHandler, FieldDefinition, FieldType
 import ch.unibas.dmi.dbis.adam.exception.GeneralAdamException
 import ch.unibas.dmi.dbis.adam.http.grpc.FieldDefinitionMessage.FieldType
 import ch.unibas.dmi.dbis.adam.http.grpc.{AckMessage, CreateEntityMessage, _}
+import ch.unibas.dmi.dbis.adam.index.IndexHandler.PartitionMode
 import ch.unibas.dmi.dbis.adam.index.structures.IndexTypes
 import ch.unibas.dmi.dbis.adam.main.AdamContext
-import ch.unibas.dmi.dbis.adam.storage.partitions.PartitionOptions
 import io.grpc.stub.StreamObserver
 import org.apache.log4j.Logger
 import org.apache.spark.sql.types.{StructField, StructType, DataType}
@@ -31,7 +31,7 @@ class DataDefinitionRPC(implicit ac: AdamContext) extends AdamDefinitionGrpc.Ada
     val fields = request.fields.map(field => {
       FieldDefinition(field.name, matchFields(field.fieldtype), field.pk, field.unique, field.indexed)
     })
-    val res = CreateEntityOp(entityname, fields)
+    val res = EntityOp(entityname, fields)
 
     if (res.isSuccess) {
       Future.successful(AckMessage(code = AckMessage.Code.OK, res.get.entityname))
@@ -70,7 +70,7 @@ class DataDefinitionRPC(implicit ac: AdamContext) extends AdamDefinitionGrpc.Ada
 
   override def count(request: EntityNameMessage): Future[AckMessage] = {
     log.debug("rpc call for count entity operation")
-    val res = CountOp(request.entity)
+    val res = EntityOp.count(request.entity)
 
     if (res.isSuccess) {
       Future.successful(AckMessage(code = AckMessage.Code.OK, res.get.toString))
@@ -108,7 +108,7 @@ class DataDefinitionRPC(implicit ac: AdamContext) extends AdamDefinitionGrpc.Ada
         val rdd = ac.sc.parallelize(rows)
         val df = ac.sqlContext.createDataFrame(rdd, StructType(entity.get.schema.map(field => StructField(field.name, field.fieldtype.datatype))))
 
-        val res = InsertOp(entity.get.entityname, df)
+        val res = EntityOp.insert(entity.get.entityname, df)
 
         if (res.isSuccess) {
           responseObserver.onNext(AckMessage(code = AckMessage.Code.OK))
@@ -149,7 +149,7 @@ class DataDefinitionRPC(implicit ac: AdamContext) extends AdamDefinitionGrpc.Ada
 
   override def dropEntity(request: EntityNameMessage): Future[AckMessage] = {
     log.debug("rpc call for dropping entity operation")
-    val res = DropEntityOp(request.entity)
+    val res = EntityOp.drop(request.entity)
 
     if (res.isSuccess) {
       Future.successful(AckMessage(code = AckMessage.Code.OK))
@@ -162,7 +162,7 @@ class DataDefinitionRPC(implicit ac: AdamContext) extends AdamDefinitionGrpc.Ada
 
   override def dropIndex(request: IndexNameMessage): Future[AckMessage] = {
     log.debug("rpc call for dropping index operation")
-    val res = DropIndexOp(request.index)
+    val res = IndexOp.drop(request.index)
 
     if (res.isSuccess) {
       Future.successful(AckMessage(code = AckMessage.Code.OK))
@@ -188,7 +188,7 @@ class DataDefinitionRPC(implicit ac: AdamContext) extends AdamDefinitionGrpc.Ada
 
   override def listEntities(request: EmptyMessage): Future[EntitiesMessage] = {
     log.debug("rpc call for listing entities")
-    val res = ListEntitiesOp()
+    val res = EntityOp.list()
 
     if (res.isSuccess) {
       Future.successful(EntitiesMessage(Some(AckMessage(AckMessage.Code.OK)), res.get.map(_.toString())))
@@ -201,7 +201,7 @@ class DataDefinitionRPC(implicit ac: AdamContext) extends AdamDefinitionGrpc.Ada
 
   override def getEntityProperties(request: EntityNameMessage): Future[EntityPropertiesMessage] = {
     log.debug("rpc call for returning entity properties")
-    val res = PropertiesOp(request.entity)
+    val res = EntityOp.properties(request.entity)
 
     if (res.isSuccess) {
       Future.successful(EntityPropertiesMessage(Some(AckMessage(AckMessage.Code.OK)), request.entity, res.get))
@@ -221,13 +221,13 @@ class DataDefinitionRPC(implicit ac: AdamContext) extends AdamDefinitionGrpc.Ada
     }
 
     val option = request.option match {
-      case RepartitionMessage.PartitionOptions.CREATE_NEW => PartitionOptions.CREATE_NEW
-      case RepartitionMessage.PartitionOptions.CREATE_TEMP => PartitionOptions.CREATE_TEMP
-      case RepartitionMessage.PartitionOptions.REPLACE_EXISTING => PartitionOptions.REPLACE_EXISTING
-      case _ => PartitionOptions.CREATE_NEW
+      case RepartitionMessage.PartitionOptions.CREATE_NEW => PartitionMode.CREATE_NEW
+      case RepartitionMessage.PartitionOptions.CREATE_TEMP => PartitionMode.CREATE_TEMP
+      case RepartitionMessage.PartitionOptions.REPLACE_EXISTING => PartitionMode.REPLACE_EXISTING
+      case _ => PartitionMode.CREATE_NEW
     }
 
-    val res = PartitionOp(request.index, request.numberOfPartitions, request.useMetadataForPartitioning, cols, option)
+    val res = IndexOp.partition(request.index, request.numberOfPartitions, None, cols, option)
 
     if (res.isSuccess) {
       Future.successful(AckMessage(AckMessage.Code.OK, res.get.indexname))

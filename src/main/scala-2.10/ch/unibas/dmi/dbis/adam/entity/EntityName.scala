@@ -27,11 +27,10 @@ case class EntityNameHolder(originalName: String) {
     * @param str
     * @return
     */
-  private def cleanName(str : String): String = str.replaceAll("[^A-Za-z_-]", "").toLowerCase()
+  private def cleanName(str : String): String = str.replaceAll("[^A-Za-z1-9_-]", "").toLowerCase()
 }
 
 object EntityNameHolder {
-  implicit def EntityName2String(name: EntityName): String = name.toString
-
-  implicit def EntityName2String(str: String): EntityName = EntityNameHolder(str)
+  implicit def toString(name: EntityName): String = name.toString
+  implicit def fromString(str: String): EntityName = EntityNameHolder(str)
 }

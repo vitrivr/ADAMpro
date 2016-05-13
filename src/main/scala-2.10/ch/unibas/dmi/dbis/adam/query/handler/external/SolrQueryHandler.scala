@@ -108,10 +108,9 @@ import org.apache.spark.sql.{DataFrame, Row}
   *               - start, only ints (e.g. 0)
   *               - defType
   * @param id
-  * @param ac
   */
-case class SolrQueryHolder(entityname: EntityName, params: Map[String, String], id: Option[String] = None)(implicit ac: AdamContext) extends QueryExpression(id) {
-  override protected def run(filter: Option[DataFrame]): DataFrame = {
+case class SolrQueryHolder(entityname: EntityName, params: Map[String, String], id: Option[String] = None) extends QueryExpression(id) {
+  override protected def run(filter: Option[DataFrame])(implicit ac: AdamContext): DataFrame = {
     val url = params.get("url").get
     val client = new SolrQueryHandler(url) //possibly cache solr client
     client.query(entityname, params)

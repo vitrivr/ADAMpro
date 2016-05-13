@@ -1,7 +1,7 @@
 package ch.unibas.dmi.dbis.adam.index
 
 import ch.unibas.dmi.dbis.adam.AdamTestBase
-import ch.unibas.dmi.dbis.adam.api.{DropEntityOp, DropIndexOp, IndexOp}
+import ch.unibas.dmi.dbis.adam.api.{EntityOp, IndexOp}
 import ch.unibas.dmi.dbis.adam.datatypes.feature.{FeatureVectorWrapper, FeatureVectorWrapperUDT}
 import ch.unibas.dmi.dbis.adam.entity.{FieldTypes, FieldDefinition, EntityHandler}
 import ch.unibas.dmi.dbis.adam.index.structures.IndexTypes
@@ -45,7 +45,7 @@ class IndexTestSuite extends AdamTestBase {
         assert(IndexHandler.exists(index.get.indexname))
 
         When("dropping the index")
-        DropIndexOp(index.get.indexname)
+        IndexOp.drop(index.get.indexname)
 
         Then("the index should be dropped")
         assert(!IndexHandler.exists(index.get.indexname))
@@ -69,7 +69,7 @@ class IndexTestSuite extends AdamTestBase {
           Row(Random.nextLong(), new FeatureVectorWrapper(Seq.fill(ndims)(Random.nextFloat())), new FeatureVectorWrapper(Seq.fill(ndims)(Random.nextFloat())))
         ))
         val data = ac.sqlContext.createDataFrame(rdd, schema)
-        EntityHandler.insertData(entityname, data)
+        EntityOp.insert(entityname, data)
 
 
         When("creating the first index")
@@ -87,14 +87,14 @@ class IndexTestSuite extends AdamTestBase {
         assert(IndexHandler.exists(index2.get.indexname))
 
         When("dropping the first index")
-        DropIndexOp(index1.get.indexname)
+        IndexOp.drop(index1.get.indexname)
 
         Then("the first index should be dropped")
         assert(!IndexHandler.exists(index1.get.indexname))
         assert(IndexHandler.exists(index2.get.indexname))
 
         When("dropping the second index")
-        DropIndexOp(index2.get.indexname)
+        IndexOp.drop(index2.get.indexname)
 
         Then("the second index should be dropped")
         assert(!IndexHandler.exists(index1.get.indexname))
@@ -119,7 +119,7 @@ class IndexTestSuite extends AdamTestBase {
         assert(IndexHandler.exists(index.get.indexname))
 
         When("dropping the entity")
-        DropEntityOp(entityname)
+        EntityOp.drop(entityname)
 
         Then("the index should be dropped")
         assert(!IndexHandler.exists(index.get.indexname))
@@ -144,7 +144,7 @@ class IndexTestSuite extends AdamTestBase {
         And("and the confidence is set properly")
         assert(index.get.confidence <= 1)
         And("all elements are indexed")
-        assert(index.get.count == entity.get.count.get)
+        assert(index.get.count == EntityOp.count(entityname).get)
       }
     }
 
@@ -166,7 +166,7 @@ class IndexTestSuite extends AdamTestBase {
         And("and the confidence is set properly")
         assert(index.get.confidence <= 1)
         And("all elements are indexed")
-        assert(index.get.count == entity.get.count.get)
+        assert(index.get.count == EntityOp.count(entityname).get)
       }
     }
 
@@ -188,7 +188,7 @@ class IndexTestSuite extends AdamTestBase {
         And("and the confidence is set properly")
         assert(index.get.confidence <= 1)
         And("all elements are indexed")
-        assert(index.get.count == entity.get.count.get)
+        assert(index.get.count == EntityOp.count(entityname).get)
       }
     }
 
@@ -211,7 +211,7 @@ class IndexTestSuite extends AdamTestBase {
         And("and the confidence is set properly")
         assert(index.get.confidence <= 1)
         And("all elements are indexed")
-        assert(index.get.count == entity.get.count.get)
+        assert(index.get.count == EntityOp.count(entityname).get)
       }
     }
 
@@ -234,10 +234,10 @@ class IndexTestSuite extends AdamTestBase {
         And("and the confidence is set properly")
         assert(index.get.confidence == 1)
         And("all elements are indexed")
-        assert(index.get.count == entity.get.count.get)
+        assert(index.get.count == EntityOp.count(entityname).get)
 
         //clean up
-        DropEntityOp(entityname)
+        EntityOp.drop(entityname)
       }
     }
 
@@ -260,7 +260,7 @@ class IndexTestSuite extends AdamTestBase {
         And("and the confidence is set properly")
         assert(index.get.confidence == 1)
         And("all elements are indexed")
-        assert(index.get.count == entity.get.count.get)
+        assert(index.get.count == EntityOp.count(entityname).get)
       }
     }
   }

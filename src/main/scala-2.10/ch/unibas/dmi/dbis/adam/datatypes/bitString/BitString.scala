@@ -11,7 +11,7 @@ import org.apache.spark.sql.types.{BinaryType, DataType, SQLUserDefinedType, Use
   * September 2015
   */
 object BitString {
-  val log = Logger.getLogger(getClass.getName)
+  private val log = Logger.getLogger(getClass.getName)
 
   /**
     * Creates a new bit string of the given type in which every index specified is set to true.

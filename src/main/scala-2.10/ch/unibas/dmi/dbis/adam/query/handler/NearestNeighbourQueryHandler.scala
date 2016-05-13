@@ -6,14 +6,12 @@ import ch.unibas.dmi.dbis.adam.exception.QueryNotConformException
 import ch.unibas.dmi.dbis.adam.index.Index.IndexName
 import ch.unibas.dmi.dbis.adam.index.{Index, IndexHandler}
 import ch.unibas.dmi.dbis.adam.main.AdamContext
-import ch.unibas.dmi.dbis.adam.query.Result
 import ch.unibas.dmi.dbis.adam.query.datastructures.{ProgressiveQueryIntermediateResults, ProgressiveQueryStatus, ProgressiveQueryStatusTracker}
 import ch.unibas.dmi.dbis.adam.query.progressive._
 import ch.unibas.dmi.dbis.adam.query.query.NearestNeighbourQuery
 import ch.unibas.dmi.dbis.adam.query.scanner.{FeatureScanner, IndexScanner}
 import org.apache.log4j.Logger
-import org.apache.spark.sql.types.{LongType, StructField, StructType}
-import org.apache.spark.sql.{DataFrame, Row}
+import org.apache.spark.sql.DataFrame
 
 import scala.collection.mutable.{Map => mMap}
 import scala.concurrent.ExecutionContext.Implicits.global
@@ -103,14 +101,9 @@ private[query] object NearestNeighbourQueryHandler {
 
     log.debug("starting index scanner")
     val results = IndexScanner(index, query, filter)
-
     val entity = EntityHandler.load(entityname).get
 
-    log.debug("starting feature scanner")
-    val rdd = ac.sc.parallelize(results.map(result => Row(result.tid)).toSeq)
-    val fields = StructType(Seq(StructField(index.pk.name, LongType, false)))
-    val df = ac.sqlContext.createDataFrame(rdd, fields)
-    FeatureScanner(entity, query, Some(df))
+    FeatureScanner(entity, query, Some(results))
   }
 
   /**
@@ -128,10 +121,7 @@ private[query] object NearestNeighbourQueryHandler {
       throw QueryNotConformException()
     }
 
-    log.debug("starting index scanner")
-    val result = IndexScanner(index, query, filter).toSeq
-    val rdd = ac.sc.parallelize(result).map(res => Row(res.distance, res.tid))
-    ac.sqlContext.createDataFrame(rdd, Result.resultSchema(index.pk.name))
+    IndexScanner(index, query, filter)
   }
 
   /**

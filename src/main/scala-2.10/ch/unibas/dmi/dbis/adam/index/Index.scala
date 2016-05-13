@@ -2,14 +2,15 @@ package ch.unibas.dmi.dbis.adam.index
 
 import ch.unibas.dmi.dbis.adam.datatypes.feature.Feature._
 import ch.unibas.dmi.dbis.adam.entity.Entity._
+import ch.unibas.dmi.dbis.adam.entity.EntityHandler
 import ch.unibas.dmi.dbis.adam.index.Index.{IndexName, IndexTypeName}
+import ch.unibas.dmi.dbis.adam.index.IndexHandler.PartitionID
 import ch.unibas.dmi.dbis.adam.index.structures.IndexTypes
 import ch.unibas.dmi.dbis.adam.main.AdamContext
 import ch.unibas.dmi.dbis.adam.query.Result
 import ch.unibas.dmi.dbis.adam.query.distance.DistanceFunction
 import ch.unibas.dmi.dbis.adam.query.query.NearestNeighbourQuery
 import ch.unibas.dmi.dbis.adam.storage.engine.CatalogOperator
-import ch.unibas.dmi.dbis.adam.storage.partitions.PartitionHandler.PartitionID
 import org.apache.log4j.Logger
 import org.apache.spark.sql.DataFrame
 
@@ -19,13 +20,14 @@ import org.apache.spark.sql.DataFrame
   * Ivan Giangreco
   * August 2015
   */
-trait Index extends Serializable {
+abstract class Index extends Serializable {
   @transient lazy val log = Logger.getLogger(getClass.getName)
 
   def indexname: IndexName
 
   def indextypename: IndexTypeName
 
+  def entity(implicit ac: AdamContext) = EntityHandler.load(entityname)
   def entityname: EntityName
 
   /**
@@ -92,6 +94,14 @@ trait Index extends Serializable {
     */
   def isQueryConform(nnq: NearestNeighbourQuery): Boolean
 
+  /**
+    *
+    * @param weight
+    * @return
+    */
+  def setWeight(weight: Float): Boolean = {
+    CatalogOperator.updateIndexWeight(indexname, weight)
+  }
 
   /**
     *

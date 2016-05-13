@@ -39,14 +39,25 @@ object FeatureScanner {
       log.debug("scan features without pre-filter")
       ac.sc.setLocalProperty("spark.scheduler.pool", "slow")
       ac.sc.setJobGroup(query.queryID.getOrElse(""), entity.entityname, true)
-      entity.getFeaturedata
+      entity.featureData
     }
 
     val q = ac.sc.broadcast(query.q)
 
-    import org.apache.spark.sql.functions._
+    import org.apache.spark.sql.functions.{udf, col}
     val distUDF = udf((c: FeatureVectorWrapper) => {
-      query.distance(q.value, c.vector)
+      try{
+      if(c != null){
+        query.distance(q.value, c.vector)
+      } else {
+        Float.MaxValue
+      }
+      } catch {
+        case e : Exception => {
+          log.error("error when computing distance")
+          Float.MaxValue
+        }
+      }
     })
 
     data

@@ -29,6 +29,14 @@ object QueryHints {
 
   val FALLBACK_HINTS : QueryHint = EXACT_QUERY
 
+  def withName(s : Seq[String]) : Seq[QueryHint] = {
+    if(s != null){
+      s.map(withName(_)).filter(_.isDefined).map(_.get)
+    } else {
+      Seq()
+    }
+  }
+
   def withName(s : String) : Option[QueryHint] = s match {
     case "sequential" => Some(SEQUENTIAL_QUERY)
     case "index" => Some(INDEX_QUERY)

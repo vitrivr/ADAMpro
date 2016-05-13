@@ -8,6 +8,7 @@ import ch.unibas.dmi.dbis.adam.index.IndexHandler
 import ch.unibas.dmi.dbis.adam.main.{AdamContext, SparkStartup}
 import ch.unibas.dmi.dbis.adam.storage.engine.CatalogOperator
 import org.apache.log4j.Logger
+import org.apache.spark.Logging
 import org.apache.spark.sql.DataFrame
 
 import scala.util.{Failure, Success, Try}
@@ -18,9 +19,7 @@ import scala.util.{Failure, Success, Try}
   * Ivan Giangreco
   * April 2016
   */
-object EntityHandler {
-  val log = Logger.getLogger(getClass.getName)
-
+object EntityHandler extends Logging {
   private val featureStorage = SparkStartup.featureStorage
   private val metadataStorage = SparkStartup.metadataStorage
 
@@ -131,21 +130,6 @@ object EntityHandler {
   }
 
   /**
-    * Inserts data into an entity.
-    *
-    * @param entityname
-    * @param insertion data frame containing all columns (of both the feature storage and the metadata storage);
-    *                  note that you should name the feature column as ("feature").
-    * @param ignoreChecks
-    * @return
-    */
-  def insertData(entityname: EntityName, insertion: DataFrame, ignoreChecks: Boolean = false)(implicit ac: AdamContext): Try[Void] = {
-    val entity = load(entityname).get
-
-    entity.insert(insertion, ignoreChecks)
-  }
-
-  /**
     * Loads an entity.
     *
     * @param entityname
@@ -159,9 +143,9 @@ object EntityHandler {
     val entity = EntityLRUCache.get(entityname)
 
     if (cache) {
-      entity.get.getFeaturedata.rdd.setName(entityname + "_feature").cache()
+      entity.get.featureData.rdd.setName(entityname + "_feature").cache()
 
-      val meta = entity.get.getMetadata
+      val meta = entity.get.metaData
 
       if (meta.isDefined) {
         meta.get.rdd.setName(entityname + "_feature").cache()
@@ -193,41 +177,10 @@ object EntityHandler {
     Success(Entity(entityname, featureStorage, entityMetadataStorage))
   }
 
-
-  /**
-    * Returns number of tuples in entity (only feature storage is considered).
-    *
-    * @param entityname
-    * @return the number of tuples in the entity
-    */
-  def countTuples(entityname: EntityName)(implicit ac: AdamContext): Try[Long] = {
-    val entity = load(entityname)
-    if (entity.isSuccess) {
-      entity.get.count
-    } else {
-      Failure(entity.failed.get)
-    }
-  }
-
   /**
     * Lists names of all entities.
     *
     * @return name of entities
     */
   def list(): Seq[EntityName] = CatalogOperator.listEntities()
-
-  /**
-    *
-    * @param entityname
-    * @return
-    */
-  def getProperties(entityname: EntityName)(implicit ac: AdamContext): Try[Map[String, String]] = {
-    val entity = load(entityname)
-
-    if (entity.isSuccess) {
-      Success(entity.get.properties)
-    } else {
-      Failure(entity.failed.get)
-    }
-  }
 }

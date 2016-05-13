@@ -32,7 +32,7 @@ class PQIndexer(nsq: Int, trainingSize: Int)(@transient implicit val ac : AdamCo
   override def index(indexname: IndexName, entityname: EntityName, data: RDD[IndexingTaskTuple[_]]): Index = {
     val entity = EntityHandler.load(entityname).get
 
-    val n = EntityHandler.countTuples(entityname).get
+    val n = entity.count
     val fraction = ADAMSamplingUtils.computeFractionForSampleSize(trainingSize, n, false)
     val trainData = data.sample(false, fraction)
     val collected = trainData.collect()

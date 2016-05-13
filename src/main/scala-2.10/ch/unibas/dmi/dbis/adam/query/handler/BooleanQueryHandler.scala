@@ -1,7 +1,7 @@
 package ch.unibas.dmi.dbis.adam.query.handler
 
 import ch.unibas.dmi.dbis.adam.main.{AdamContext, SparkStartup}
-import ch.unibas.dmi.dbis.adam.query.query.{BooleanQuery, TupleIDQuery}
+import ch.unibas.dmi.dbis.adam.query.query.{BooleanQuery, PrimaryKeyFilter}
 import org.apache.log4j.Logger
 import org.apache.spark.sql.DataFrame
 
@@ -53,19 +53,8 @@ private[query] object BooleanQueryHandler {
     * @param ac
     * @return
     */
-  def filter(data : DataFrame, pk : String, query: TupleIDQuery[_])(implicit ac: AdamContext): DataFrame = {
+  def filter(data : DataFrame, pk : String, query: PrimaryKeyFilter[_])(implicit ac: AdamContext): DataFrame = {
     import org.apache.spark.sql.functions.col
     data.filter(col(pk).isin(query.tidFilter.toSeq: _*))
-  }
-
-  /**
-    *
-    * @param data
-    * @param filter
-    * @param ac
-    * @return
-    */
-  def filter(data : DataFrame, pk : String, filter: DataFrame)(implicit ac: AdamContext): DataFrame = {
-    filter.join(data, pk)
   }
 }

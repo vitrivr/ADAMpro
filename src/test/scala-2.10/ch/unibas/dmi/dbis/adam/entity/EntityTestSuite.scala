@@ -1,7 +1,7 @@
 package ch.unibas.dmi.dbis.adam.entity
 
 import ch.unibas.dmi.dbis.adam.AdamTestBase
-import ch.unibas.dmi.dbis.adam.api.{CreateEntityOp, DropEntityOp}
+import ch.unibas.dmi.dbis.adam.api.EntityOp
 import ch.unibas.dmi.dbis.adam.datatypes.feature.{FeatureVectorWrapper, FeatureVectorWrapperUDT}
 import ch.unibas.dmi.dbis.adam.main.SparkStartup.Implicits._
 import org.apache.spark.sql.Row
@@ -55,7 +55,7 @@ class EntityTestSuite extends AdamTestBase {
         assert(EntityHandler.list().contains(entityname.toLowerCase()))
 
         When("the entity is dropped")
-        DropEntityOp(entityname)
+        EntityOp.drop(entityname)
 
         Then("the entity should no longer exist")
         assert(!EntityHandler.list().contains(entityname.toLowerCase()))
@@ -142,7 +142,7 @@ class EntityTestSuite extends AdamTestBase {
       withEntityName { entityname =>
         Given("an entity with metadata")
         val fields = Seq[FieldDefinition](FieldDefinition("idfield", FieldTypes.LONGTYPE, true), FieldDefinition("feature", FieldTypes.FEATURETYPE), FieldDefinition("stringfield", FieldTypes.STRINGTYPE))
-        CreateEntityOp(entityname, fields)
+        EntityOp(entityname, fields)
 
         val preResult = getJDBCConnection.createStatement().executeQuery("SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = '" + entityname.toLowerCase() + "'")
         var tableCount = 0
@@ -151,7 +151,7 @@ class EntityTestSuite extends AdamTestBase {
         }
 
         When("the entity is dropped")
-        DropEntityOp(entityname)
+        EntityOp.drop(entityname)
 
         Then("the metadata entity is dropped as well")
         val postResult = getJDBCConnection.createStatement().executeQuery("SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = '" + entityname.toLowerCase() + "'")
@@ -178,7 +178,7 @@ class EntityTestSuite extends AdamTestBase {
         )
 
         When("the entity is created")
-        CreateEntityOp(entityname, fields)
+        EntityOp(entityname, fields)
 
         Then("the PK should be correctly")
         val pkResult = getJDBCConnection.createStatement().executeQuery(
@@ -224,7 +224,7 @@ class EntityTestSuite extends AdamTestBase {
 
         val wrongdata = ac.sqlContext.createDataFrame(wrongrdd, wrongschema)
 
-        val wronginsert = EntityHandler.insertData(entityname, wrongdata)
+        val wronginsert = EntityOp.insert(entityname, wrongdata)
 
         Then("the data is not inserted")
         assert(wronginsert.isFailure)
@@ -241,11 +241,11 @@ class EntityTestSuite extends AdamTestBase {
         val data = ac.sqlContext.createDataFrame(rdd, schema)
 
         When("data is inserted without specifying id")
-        val insert = EntityHandler.insertData(entityname, data)
+        val insert = EntityOp.insert(entityname, data)
         assert(insert.isSuccess)
 
         Then("the data is available")
-        val counted = EntityHandler.countTuples(entityname).get
+        val counted = EntityOp.count(entityname).get
         assert(counted - ntuples == 0)
       }
     }
@@ -273,10 +273,10 @@ class EntityTestSuite extends AdamTestBase {
         val data = ac.sqlContext.createDataFrame(rdd, schema)
 
         When("data without metadata is inserted")
-        EntityHandler.insertData(entityname, data)
+        EntityOp.insert(entityname, data)
 
         Then("the data is available without metadata")
-        val counted = EntityHandler.countTuples(entityname).get
+        val counted = EntityOp.count(entityname).get
         assert(counted - ntuples == 0)
       }
     }
@@ -305,10 +305,10 @@ class EntityTestSuite extends AdamTestBase {
         val data = ac.sqlContext.createDataFrame(rdd, schema)
 
         When("data without metadata is inserted")
-        EntityHandler.insertData(entityname, data)
+        EntityOp.insert(entityname, data)
 
         Then("the data is available without metadata")
-        val counted = EntityHandler.countTuples(entityname).get
+        val counted = EntityOp.count(entityname).get
         assert(counted - ntuples == 0)
       }
     }
@@ -365,10 +365,10 @@ class EntityTestSuite extends AdamTestBase {
         val data = ac.sqlContext.createDataFrame(rdd, schema)
 
         When("data with metadata is inserted")
-        EntityHandler.insertData(entityname, data)
+        EntityOp.insert(entityname, data)
 
         Then("the data is available with metadata")
-        assert(EntityHandler.countTuples(entityname).get.toInt == ntuples)
+        assert(EntityOp.count(entityname).get.toInt == ntuples)
 
         And("all tuples are inserted")
         val countResult = getJDBCConnection.createStatement().executeQuery("SELECT COUNT(*) AS count FROM " + entityname)

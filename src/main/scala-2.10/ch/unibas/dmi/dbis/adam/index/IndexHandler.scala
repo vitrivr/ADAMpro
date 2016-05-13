@@ -8,7 +8,7 @@ import ch.unibas.dmi.dbis.adam.exception.{GeneralAdamException, IndexNotExisting
 import ch.unibas.dmi.dbis.adam.index.Index.{IndexName, IndexTypeName}
 import ch.unibas.dmi.dbis.adam.main.{AdamContext, SparkStartup}
 import ch.unibas.dmi.dbis.adam.storage.engine.CatalogOperator
-import ch.unibas.dmi.dbis.adam.storage.partitions.PartitionOptions
+
 import org.apache.log4j.Logger
 import org.apache.spark.rdd.RDD
 import org.apache.spark.sql.DataFrame
@@ -30,6 +30,9 @@ object IndexHandler {
 
   private val lock = new Object()
 
+  type PartitionID = Int
+
+
 
   /**
     * Creates an index that is unique and which folows the naming rules of indexes.
@@ -38,7 +41,7 @@ object IndexHandler {
     * @param indextype
     * @return
     */
-  private def createIndexName(entityname: EntityName, column : String, indextype: IndexTypeName): String = {
+  private def createIndexName(entityname: EntityName, column: String, indextype: IndexTypeName): String = {
     val indexes = CatalogOperator.listIndexes(entityname, indextype).map(_._1)
 
     var indexname = ""
@@ -57,26 +60,23 @@ object IndexHandler {
     * Creates an index.
     *
     * @param entity
-    * @param column the column to index
+    * @param column         the column to index
     * @param indexgenerator generator to create index
     * @return index
     */
-  def createIndex(entity: Entity, column : String, indexgenerator: IndexGenerator)(implicit ac: AdamContext): Try[Index] = {
+  def createIndex(entity: Entity, column: String, indexgenerator: IndexGenerator)(implicit ac: AdamContext): Try[Index] = {
     lock.synchronized {
-      if(!entity.schema.map(_.name).contains(column)){
+      if (!entity.schema.map(_.name).contains(column)) {
         return Failure(new GeneralAdamException("column not existing in entity " + entity.entityname + entity.schema.map(_.name).mkString("(", ",", ")")))
       }
 
       val count = entity.count
-      if(count.isFailure){
-        return Failure(count.failed.get)
-      }
-      if (count.get < MINIMUM_NUMBER_OF_TUPLE) {
+      if (count < MINIMUM_NUMBER_OF_TUPLE) {
         return Failure(new GeneralAdamException("not enough tuples for creating index, needs at least " + MINIMUM_NUMBER_OF_TUPLE + " but has only " + count))
       }
 
       val indexname = createIndexName(entity.entityname, column, indexgenerator.indextypename)
-      val rdd: RDD[IndexingTaskTuple[_]] = entity.getFeaturedata.map { x => IndexingTaskTuple(x.getAs[Any](entity.pk.name), x.getAs[FeatureVectorWrapper](column).vector) }
+      val rdd: RDD[IndexingTaskTuple[_]] = entity.featureData.map { x => IndexingTaskTuple(x.getAs[Any](entity.pk.name), x.getAs[FeatureVectorWrapper](column).vector) }
       val index = indexgenerator.index(indexname, entity.entityname, rdd)
       index.df = index
         .df
@@ -140,7 +140,7 @@ object IndexHandler {
     }
 
     val df = storage.read(CatalogOperator.getIndexPath(indexname))
-    if(df.isFailure){
+    if (df.isFailure) {
       return Failure(df.failed.get)
     }
 
@@ -188,14 +188,14 @@ object IndexHandler {
   /**
     *
     * @param index
-    * @param n
+    * @param nPartitions
     * @param join
     * @param cols
     * @param option
     * @return
     */
-  def repartition(index: Index, n: Int, join: Option[DataFrame], cols: Option[Seq[String]], option: PartitionOptions.Value)(implicit ac: AdamContext): Try[Index] = {
-    var data = index.df
+  def repartition(index: Index, nPartitions: Int, join: Option[DataFrame], cols: Option[Seq[String]], option: PartitionMode.Value)(implicit ac: AdamContext): Try[Index] = {
+    var data = index.df //TODO: join to own metadata
     //TODO: possibly add own partitioner
     //data.map(r => (r.getAs(cols.get.head), r)).partitionBy(new HashPartitioner())
 
@@ -205,14 +205,14 @@ object IndexHandler {
 
     data = if (cols.isDefined) {
       val entityColNames = EntityHandler.load(index.entityname).get.schema.map(_.name)
-      if(!cols.get.forall(name => entityColNames.contains(name))){
+      if (!cols.get.forall(name => entityColNames.contains(name))) {
         log.error("one of the columns " + cols.mkString(",") + " is not existing in entity " + index.entityname + entityColNames.mkString("(", ",", ")"))
         Failure(throw new GeneralAdamException("repartition column not existing in entity"))
       }
 
-      data.repartition(n, cols.get.map(data(_)): _*)
+      data.repartition(nPartitions, cols.get.map(data(_)): _*)
     } else {
-      data.repartition(n, data(index.pk.name))
+      data.repartition(nPartitions, data(index.pk.name))
     }
 
     if (join.isDefined) {
@@ -220,7 +220,7 @@ object IndexHandler {
     }
 
     option match {
-      case PartitionOptions.CREATE_NEW =>
+      case PartitionMode.CREATE_NEW =>
         val newName = createIndexName(index.entityname, index.column, index.indextypename)
         storage.write(newName, data)
         CatalogOperator.createIndex(newName, newName, index.entityname, index.column, index.indextypename, index.metadata)
@@ -228,7 +228,7 @@ object IndexHandler {
 
         return Success(load(newName).get)
 
-      case PartitionOptions.CREATE_TEMP =>
+      case PartitionMode.CREATE_TEMP =>
         val newName = createIndexName(index.entityname, index.column, index.indextypename)
 
         val newIndex = index.copy(Some(newName))
@@ -237,7 +237,7 @@ object IndexHandler {
         IndexLRUCache.put(newName, newIndex)
         return Success(newIndex)
 
-      case PartitionOptions.REPLACE_EXISTING =>
+      case PartitionMode.REPLACE_EXISTING =>
         val oldPath = index.path
 
         index.df = data
@@ -257,14 +257,12 @@ object IndexHandler {
     }
   }
 
-  /**
-    *
-    * @param indexname
-    * @param weight
-    */
-  def setWeight(indexname: IndexName, weight: Float): Boolean = {
-    CatalogOperator.updateIndexWeight(indexname, weight)
+  object PartitionMode extends Enumeration {
+    val CREATE_NEW = Value("create new index (materialize)")
+    val REPLACE_EXISTING = Value("replace existing index (materialize)")
+    val CREATE_TEMP = Value("create temporary index in cache")
   }
+
 
   /**
     * Resets all weights to default weight.

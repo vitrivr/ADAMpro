@@ -2,7 +2,6 @@ package ch.unibas.dmi.dbis.adam.entity
 
 import ch.unibas.dmi.dbis.adam.datatypes.feature.FeatureVectorWrapperUDT
 import ch.unibas.dmi.dbis.adam.entity.Entity._
-import ch.unibas.dmi.dbis.adam.entity.FieldTypes.FieldType
 import ch.unibas.dmi.dbis.adam.exception.GeneralAdamException
 import ch.unibas.dmi.dbis.adam.main.AdamContext
 import ch.unibas.dmi.dbis.adam.query.query.NearestNeighbourQuery
@@ -24,34 +23,48 @@ import scala.util.{Failure, Success, Try}
 case class Entity(val entityname: EntityName, private val featureStorage: FeatureStorage, private val metadataStorage: Option[MetadataStorage])(@transient implicit val ac: AdamContext) {
   @transient val log = Logger.getLogger(getClass.getName)
 
-  private def featureData = featureStorage.read(entityname).get
+  def featureData = featureStorage.read(entityname).get
 
-  private def metaData = if (metadataStorage.isDefined) {
+  def metaData = if (metadataStorage.isDefined) {
     Some(metadataStorage.get.read(entityname))
   } else {
     None
   }
 
   /**
-    * Returns number of elements in the entity (only feature storage is considered).
+    * Gets the data.
+    * @return
+    */
+  def data = if (metaData.isDefined) {
+    featureData.join(metaData.get, pk.name)
+  } else {
+    featureData
+  }
+
+  /**
+    * Gets the primary key.
     *
     * @return
     */
-  def count: Try[Long] = {
+  val pk = CatalogOperator.getEntityPK(entityname)
+
+
+  /**
+    * Returns number of elements in the entity (only the feature storage is considered for this).
+    *
+    * @return
+    */
+  def count: Long = {
+    //TODO: possibly switch to metadata storage?
     if (tupleCount == -1) {
       val count = featureStorage.count(entityname)
-
-      if (count.isFailure) {
-        return count
-      } else {
-        tupleCount = count.get
-      }
+      tupleCount = count.get
     }
 
-    Success(tupleCount)
+    tupleCount
   }
-
   private var tupleCount: Long = -1
+
 
   /**
     * Gives preview of entity.
@@ -59,7 +72,8 @@ case class Entity(val entityname: EntityName, private val featureStorage: Featur
     * @param k number of elements to show in preview
     * @return
     */
-  def show(k: Int) = rdd.take(k)
+  def show(k: Int) = data.limit(k)
+
 
   /**
     * Inserts data into the entity.
@@ -85,7 +99,6 @@ case class Entity(val entityname: EntityName, private val featureStorage: Featur
         } else {
           data
         }
-
 
       //TODO: check schema
 
@@ -118,7 +131,7 @@ case class Entity(val entityname: EntityName, private val featureStorage: Featur
   def properties: Map[String, String] = {
     val lb = ListBuffer[(String, String)]()
 
-    lb.append("hasMetadata" -> hasMetadata.toString)
+    lb.append("hasMetadata" -> metaData.isDefined.toString)
     lb.append("schema" -> schema.map(field => field.name + "(" + field.fieldtype.name + ")").mkString(","))
     lb.append("indexes" -> CatalogOperator.listIndexes(entityname).mkString(", "))
 
@@ -138,47 +151,7 @@ case class Entity(val entityname: EntityName, private val featureStorage: Featur
     *
     * @return
     */
-  def schema : Seq[FieldDefinition] = CatalogOperator.getFields(entityname)
-
-  /**
-    *
-    * @return
-    */
-  val pk = CatalogOperator.getEntityPK(entityname)
-
-  /**
-    *
-    * @return
-    */
-  def data = if (metaData.isDefined) {
-    featureData.join(metaData.get, pk.name)
-  } else {
-    featureData
-  }
-
-  /**
-    *
-    * @return
-    */
-  def rdd = data.rdd
-
-  /**
-    *
-    * @return
-    */
-  def getFeaturedata: DataFrame = featureData
-
-  /**
-    *
-    * @return
-    */
-  def hasMetadata: Boolean = metadataStorage.isDefined
-
-  /**
-    *
-    * @return
-    */
-  def getMetadata: Option[DataFrame] = metaData
+  def schema: Seq[FieldDefinition] = CatalogOperator.getFields(entityname)
 
   /**
     *
@@ -190,17 +163,6 @@ case class Entity(val entityname: EntityName, private val featureStorage: Featur
     true
   }
 }
-
-/**
-  *
-  * @param name
-  * @param fieldtype
-  * @param pk
-  * @param unique
-  * @param indexed
-  */
-case class FieldDefinition(name: String, fieldtype: FieldType, pk: Boolean = false, unique: Boolean = false, indexed: Boolean = false)
-
 
 object Entity {
   type EntityName = EntityNameHolder
