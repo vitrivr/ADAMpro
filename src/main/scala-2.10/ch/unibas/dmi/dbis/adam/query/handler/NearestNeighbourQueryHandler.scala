@@ -1,16 +1,15 @@
 package ch.unibas.dmi.dbis.adam.query.handler
 
+import ch.unibas.dmi.dbis.adam.entity.Entity
 import ch.unibas.dmi.dbis.adam.entity.Entity.EntityName
-import ch.unibas.dmi.dbis.adam.entity.EntityHandler
 import ch.unibas.dmi.dbis.adam.exception.QueryNotConformException
 import ch.unibas.dmi.dbis.adam.index.Index.IndexName
-import ch.unibas.dmi.dbis.adam.index.{Index, IndexHandler}
+import ch.unibas.dmi.dbis.adam.index.{Index}
 import ch.unibas.dmi.dbis.adam.main.AdamContext
 import ch.unibas.dmi.dbis.adam.query.datastructures.{ProgressiveQueryIntermediateResults, ProgressiveQueryStatus, ProgressiveQueryStatusTracker}
 import ch.unibas.dmi.dbis.adam.query.progressive._
 import ch.unibas.dmi.dbis.adam.query.query.NearestNeighbourQuery
-import ch.unibas.dmi.dbis.adam.query.scanner.{FeatureScanner, IndexScanner}
-import org.apache.log4j.Logger
+import org.apache.spark.Logging
 import org.apache.spark.sql.DataFrame
 
 import scala.collection.mutable.{Map => mMap}
@@ -25,11 +24,9 @@ import scala.concurrent.duration.Duration
   * Ivan Giangreco
   * August 2015
   */
-private[query] object NearestNeighbourQueryHandler {
-  val log = Logger.getLogger(getClass.getName)
-
+private[query] object NearestNeighbourQueryHandler extends Logging {
   private def isQueryConform(entityname: EntityName, query: NearestNeighbourQuery)(implicit ac: AdamContext): Boolean = {
-    val entity = EntityHandler.load(entityname).get
+    val entity = Entity.load(entityname).get
     entity.isQueryConform(query)
   }
 
@@ -47,7 +44,7 @@ private[query] object NearestNeighbourQueryHandler {
       throw QueryNotConformException()
     }
 
-    FeatureScanner(EntityHandler.load(entityname).get, query, filter)
+    FeatureScanner(Entity.load(entityname).get, query, filter)
   }
 
   /**
@@ -60,7 +57,7 @@ private[query] object NearestNeighbourQueryHandler {
     *         otherwise also the true data is scanned for performing the query
     */
   def indexQuery(indexname: IndexName, query: NearestNeighbourQuery, filter: Option[DataFrame])(implicit ac: AdamContext): DataFrame = {
-    indexQuery(IndexHandler.load(indexname).get, query, filter)
+    indexQuery(Index.load(indexname).get, query, filter)
   }
 
   /**
@@ -75,54 +72,23 @@ private[query] object NearestNeighbourQueryHandler {
   def indexQuery(index: Index, query: NearestNeighbourQuery, filter: Option[DataFrame])(implicit ac: AdamContext): DataFrame = {
     log.debug("performing index-based nearest neighbor scan")
 
-    if (query.indexOnly) {
-      log.debug("reading only index")
-      indexOnlyQuery(index, query, filter)
-    } else {
-      log.debug("reading index with results")
-      indexQueryWithResults(index, query, filter)
-    }
-  }
-
-  /**
-    * Performs an index-based query. Similar to traditional DBMS, a query is performed is on the index and then the true
-    * data is accessed.
-    *
-    * @param index
-    * @param query
-    * @param filter
-    * @return
-    */
-  def indexQueryWithResults(index: Index, query: NearestNeighbourQuery, filter: Option[DataFrame])(implicit ac: AdamContext): DataFrame = {
     val entityname = index.entityname
     if (!isQueryConform(entityname, query)) {
       throw QueryNotConformException()
     }
 
-    log.debug("starting index scanner")
-    val results = IndexScanner(index, query, filter)
-    val entity = EntityHandler.load(entityname).get
+    var res = index.scan(query, filter)
 
-    FeatureScanner(entity, query, Some(results))
-  }
+    if (!query.indexOnly) {
+      log.debug("starting index scanner")
+      val entity = Entity.load(entityname).get
 
-  /**
-    * Performs an index-based query. Unlike in traditional databases, this query returns result candidates, but may contain
-    * false positives as well.
-    *
-    * @param index
-    * @param query
-    * @param filter
-    * @return
-    */
-  def indexOnlyQuery(index: Index, query: NearestNeighbourQuery, filter: Option[DataFrame])(implicit ac: AdamContext): DataFrame = {
-    val entityname = index.entityname
-    if (!isQueryConform(entityname, query)) {
-      throw QueryNotConformException()
+      res = FeatureScanner(entity, query, Some(res))
     }
 
-    IndexScanner(index, query, filter)
+    res
   }
+
 
   /**
     * Performs a progressive query, i.e., all indexes and sequential search are started at the same time and results are returned as soon
@@ -145,7 +111,7 @@ private[query] object NearestNeighbourQueryHandler {
     val tracker = new ProgressiveQueryStatusTracker(query.queryID.get)
 
 
-    val indexScanFutures = paths.getPaths[U](entityname).par.map { indexname =>
+    val indexScanFutures = paths.getPaths(entityname).par.map { indexname =>
       //TODO: possibly switch between index only and full result scan (give user the option to choose!)
       val isf = new IndexScanFuture(indexname, query, onComplete, tracker)
     }

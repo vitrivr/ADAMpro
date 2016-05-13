@@ -50,16 +50,16 @@ libraryDependencies ++= Seq(
 
 //adampro core libs
 libraryDependencies ++= Seq(
-  "org.apache.spark" %% "spark-core" % "1.6.1" excludeAll ExclusionRule("org.apache.hadoop"),
-  "org.apache.spark" %% "spark-sql" % "1.6.1",
-  "org.apache.spark" %% "spark-hive" % "1.6.1",
-  "org.apache.spark" %% "spark-mllib" % "1.6.1",
+  "org.apache.spark" %% "spark-core" % "1.6.1" % "provided" excludeAll ExclusionRule("org.apache.hadoop"),
+  "org.apache.spark" %% "spark-sql" % "1.6.1" % "provided" ,
+  "org.apache.spark" %% "spark-hive" % "1.6.1" % "provided" ,
+  "org.apache.spark" %% "spark-mllib" % "1.6.1" % "provided" ,
   "org.scalanlp" %% "breeze" % "0.11.2",
   "org.scalanlp" %% "breeze-natives" % "0.11.2",
   "com.typesafe.slick" %% "slick" % "3.1.0",
   "com.h2database" % "h2" % "1.4.188" excludeAll ExclusionRule("org.mortbay.jetty"),
   "org.postgresql" % "postgresql" % "9.4.1208",
-  "org.apache.hadoop" % "hadoop-client" % "2.6.4" excludeAll ExclusionRule("javax.servlet"),
+  "org.apache.hadoop" % "hadoop-client" % "2.6.4" % "provided" excludeAll ExclusionRule("javax.servlet"),
   "org.apache.commons" % "commons-lang3" % "3.4" force(),
   "org.apache.commons" % "commons-math3" % "3.4.1" force(),
   "it.unimi.dsi" % "fastutil" % "7.0.12",

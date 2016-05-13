@@ -1,4 +1,4 @@
-package ch.unibas.dmi.dbis.adam.query.scanner
+package ch.unibas.dmi.dbis.adam.query.handler
 
 import ch.unibas.dmi.dbis.adam.config.FieldNames
 import ch.unibas.dmi.dbis.adam.datatypes.feature.FeatureVectorWrapper
@@ -33,18 +33,18 @@ object FeatureScanner {
       log.debug("scan features with pre-filter")
       ac.sc.setLocalProperty("spark.scheduler.pool", "feature")
       ac.sc.setJobGroup(query.queryID.getOrElse(""), entity.entityname, true)
-      entity.filter(filter.get)
+      filter.get.drop(FieldNames.distanceColumnName).join(entity.data, entity.pk.name) //drop distance column as true distance will be computed
     } else {
       //sequential scan
       log.debug("scan features without pre-filter")
       ac.sc.setLocalProperty("spark.scheduler.pool", "slow")
       ac.sc.setJobGroup(query.queryID.getOrElse(""), entity.entityname, true)
-      entity.featureData
+      entity.data
     }
 
     val q = ac.sc.broadcast(query.q)
 
-    import org.apache.spark.sql.functions.{udf, col}
+    import org.apache.spark.sql.functions.{col, udf}
     val distUDF = udf((c: FeatureVectorWrapper) => {
       try{
       if(c != null){
@@ -62,7 +62,6 @@ object FeatureScanner {
 
     data
       .withColumn(FieldNames.distanceColumnName, distUDF(data(query.column)))
-      .select(col(FieldNames.distanceColumnName), col(entity.pk.name))
       .orderBy(col(FieldNames.distanceColumnName))
       .limit(query.k)
   }

@@ -1,7 +1,7 @@
 package ch.unibas.dmi.dbis.adam.query.query
 
 import ch.unibas.dmi.dbis.adam.datatypes.feature.Feature._
-import ch.unibas.dmi.dbis.adam.index.IndexHandler.PartitionID
+import ch.unibas.dmi.dbis.adam.index.Index.PartitionID
 import ch.unibas.dmi.dbis.adam.query.distance.DistanceFunction
 import org.apache.spark.sql.DataFrame
 

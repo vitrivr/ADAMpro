@@ -1,9 +1,14 @@
 package ch.unibas.dmi.dbis.adam.entity
 
+import breeze.numerics.log
+import ch.unibas.dmi.dbis.adam.config.FieldNames
 import ch.unibas.dmi.dbis.adam.datatypes.feature.FeatureVectorWrapperUDT
 import ch.unibas.dmi.dbis.adam.entity.Entity._
-import ch.unibas.dmi.dbis.adam.exception.GeneralAdamException
-import ch.unibas.dmi.dbis.adam.main.AdamContext
+import ch.unibas.dmi.dbis.adam.entity.FieldTypes._
+import ch.unibas.dmi.dbis.adam.exception.{EntityNotExistingException, EntityNotProperlyDefinedException, EntityExistingException, GeneralAdamException}
+import ch.unibas.dmi.dbis.adam.index.Index
+import ch.unibas.dmi.dbis.adam.index.Index.IndexTypeName
+import ch.unibas.dmi.dbis.adam.main.{SparkStartup, AdamContext}
 import ch.unibas.dmi.dbis.adam.query.query.NearestNeighbourQuery
 import ch.unibas.dmi.dbis.adam.storage.components.{FeatureStorage, MetadataStorage}
 import ch.unibas.dmi.dbis.adam.storage.engine.CatalogOperator
@@ -33,6 +38,7 @@ case class Entity(val entityname: EntityName, private val featureStorage: Featur
 
   /**
     * Gets the data.
+    *
     * @return
     */
   def data = if (metaData.isDefined) {
@@ -47,6 +53,15 @@ case class Entity(val entityname: EntityName, private val featureStorage: Featur
     * @return
     */
   val pk = CatalogOperator.getEntityPK(entityname)
+
+
+  /**
+    *
+    * @return
+    */
+  lazy val indexes : Seq[Try[Index]] = {
+    CatalogOperator.listIndexes(entityname).map(index => Index.load(index._1))
+  }
 
 
   /**
@@ -87,9 +102,9 @@ case class Entity(val entityname: EntityName, private val featureStorage: Featur
 
     try {
       val insertion =
-        if (pk.fieldtype == FieldTypes.AUTOTYPE) {
-          if (data.schema.fieldNames.contains(pk)) {
-            return Failure(new GeneralAdamException("the field " + pk + " has been specified as auto and should therefore not be provided"))
+        if (pk.fieldtype.equals(FieldTypes.AUTOTYPE)) {
+          if (data.schema.fieldNames.contains(pk.name)) {
+            return Failure(new GeneralAdamException("the field " + pk.name + " has been specified as auto and should therefore not be provided"))
           }
 
           val rdd = data.rdd.zipWithUniqueId.map { case (r: Row, id: Long) => Row.fromSeq(id +: r.toSeq) }
@@ -140,15 +155,6 @@ case class Entity(val entityname: EntityName, private val featureStorage: Featur
 
   /**
     *
-    * @param filter
-    * @return
-    */
-  def filter(filter: DataFrame): DataFrame = {
-    featureStorage.read(entityname).get.join(filter.select(pk.name), pk.name)
-  }
-
-  /**
-    *
     * @return
     */
   def schema: Seq[FieldDefinition] = CatalogOperator.getFields(entityname)
@@ -166,4 +172,167 @@ case class Entity(val entityname: EntityName, private val featureStorage: Featur
 
 object Entity {
   type EntityName = EntityNameHolder
+
+  private val featureStorage = SparkStartup.featureStorage
+  private val metadataStorage = SparkStartup.metadataStorage
+
+  def exists(entityname: EntityName): Boolean = CatalogOperator.existsEntity(entityname)
+
+  private val lock = new Object()
+
+  /**
+    * Creates an entity.
+    *
+    * @param entityname
+    * @param fields if fields is specified, in the metadata storage a table is created with these names, specify fields
+    *               as key = name, value = SQL type, note the reserved names
+    * @return
+    */
+  def create(entityname: EntityName, fields: Seq[FieldDefinition])(implicit ac: AdamContext): Try[Entity] = {
+    try {
+      lock.synchronized {
+        //checks
+        if (exists(entityname)) {
+          return Failure(EntityExistingException())
+        }
+
+        if (fields.isEmpty) {
+          return Failure(EntityNotProperlyDefinedException(Some("Entity " + entityname + " will have no fields")))
+        }
+
+        FieldNames.reservedNames.foreach { reservedName =>
+          if (fields.contains(reservedName)) {
+            return Failure(EntityNotProperlyDefinedException(Some("Entity defined with field " + reservedName + ", but name is reserved")))
+          }
+        }
+
+        if (fields.map(_.name).distinct.length != fields.length) {
+          return Failure(EntityNotProperlyDefinedException(Some("Entity defined with duplicate fields.")))
+        }
+
+        val allowedPkTypes = Seq(INTTYPE, LONGTYPE, STRINGTYPE, AUTOTYPE)
+
+        if (fields.count(_.pk) > 1) {
+          return Failure(EntityNotProperlyDefinedException(Some("Entity defined with more than one primary key")))
+        } else if (fields.filter(_.pk).isEmpty) {
+          return Failure(EntityNotProperlyDefinedException(Some("Entity defined has no primary key.")))
+        } else if (!fields.filter(_.pk).forall(field => allowedPkTypes.contains(field.fieldtype))) {
+          return Failure(EntityNotProperlyDefinedException(Some("Entity defined needs a " + allowedPkTypes.map(_.name).mkString(", ") + " primary key")))
+        }
+
+        if (fields.count(_.fieldtype == AUTOTYPE) > 1) {
+          return Failure(EntityNotProperlyDefinedException(Some("Too many auto fields defined.")))
+        } else if (fields.count(_.fieldtype == AUTOTYPE) > 0 && !fields.filter(_.pk).forall(_.fieldtype == AUTOTYPE)) {
+          return Failure(EntityNotProperlyDefinedException(Some("Auto type only allowed in primary key.")))
+        }
+
+
+        val pk = fields.filter(_.pk).head
+        val featureFields = fields.filter(_.fieldtype == FEATURETYPE)
+
+        //perform
+        featureStorage.create(entityname, featureFields.+:(pk))
+
+        if (!fields.filterNot(_.fieldtype == FEATURETYPE).filterNot(_.pk).isEmpty) {
+          val metadataFields = fields.filterNot(_.fieldtype == FEATURETYPE)
+          metadataStorage.create(entityname, metadataFields)
+          CatalogOperator.createEntity(entityname, fields, true)
+          Success(Entity(entityname, featureStorage, Option(metadataStorage)))
+        } else {
+          CatalogOperator.createEntity(entityname, fields, false)
+          Success(Entity(entityname, featureStorage, None))
+        }
+      }
+    } catch {
+      case e: Exception => {
+        //TODO: possibly drop what has been already created
+        Failure(e)
+      }
+    }
+  }
+
+  /**
+    * Drops an entity.
+    *
+    * @param entityname
+    * @param ifExists
+    * @return
+    */
+  def drop(entityname: EntityName, ifExists: Boolean = false)(implicit ac: AdamContext): Try[Void] = {
+    lock.synchronized {
+      if (!exists(entityname)) {
+        if (!ifExists) {
+          return Failure(EntityNotExistingException())
+        } else {
+          return Success(null)
+        }
+      }
+
+      Index.dropAll(entityname)
+
+      featureStorage.drop(entityname)
+
+      if (CatalogOperator.hasEntityMetadata(entityname)) {
+        metadataStorage.drop(entityname)
+      }
+
+      CatalogOperator.dropEntity(entityname, ifExists)
+      Success(null)
+    }
+  }
+
+  /**
+    * Loads an entity.
+    *
+    * @param entityname
+    * @return
+    */
+  def load(entityname: EntityName, cache: Boolean = false)(implicit ac: AdamContext): Try[Entity] = {
+    if (!exists(entityname)) {
+      return Failure(EntityNotExistingException())
+    }
+
+    val entity = EntityLRUCache.get(entityname)
+
+    if (cache) {
+      entity.get.featureData.rdd.setName(entityname + "_feature").cache()
+
+      val meta = entity.get.metaData
+
+      if (meta.isDefined) {
+        meta.get.rdd.setName(entityname + "_feature").cache()
+      }
+    }
+
+    entity
+  }
+
+  /**
+    * Loads the entityname metadata without loading the data itself yet.
+    *
+    * @param entityname
+    * @return
+    */
+  private[entity] def loadEntityMetaData(entityname: EntityName)(implicit ac: AdamContext): Try[Entity] = {
+    if (!exists(entityname)) {
+      return Failure(EntityNotExistingException())
+    }
+
+    val entityMetadataStorage = if (CatalogOperator.hasEntityMetadata(entityname)) {
+      Option(metadataStorage)
+    } else {
+      None
+    }
+
+    val pk = CatalogOperator.getEntityPK(entityname)
+
+    Success(Entity(entityname, featureStorage, entityMetadataStorage))
+  }
+
+  /**
+    * Lists names of all entities.
+    *
+    * @return name of entities
+    */
+  def list(): Seq[EntityName] = CatalogOperator.listEntities()
 }

@@ -1,13 +1,13 @@
 package ch.unibas.dmi.dbis.adam.api
 
 import ch.unibas.dmi.dbis.adam.entity.Entity._
+import ch.unibas.dmi.dbis.adam.index.Index
 import ch.unibas.dmi.dbis.adam.index.Index.{IndexName, IndexTypeName}
-import ch.unibas.dmi.dbis.adam.index.IndexHandler
 import ch.unibas.dmi.dbis.adam.main.AdamContext
 import ch.unibas.dmi.dbis.adam.query.datastructures.{ProgressiveQueryStatus, ProgressiveQueryStatusTracker, QueryExpression}
-import ch.unibas.dmi.dbis.adam.query.handler.QueryHandler
 import ch.unibas.dmi.dbis.adam.query.handler.QueryHints._
-import ch.unibas.dmi.dbis.adam.query.progressive.ProgressivePathChooser
+import ch.unibas.dmi.dbis.adam.query.handler.internal._
+import ch.unibas.dmi.dbis.adam.query.progressive.{ProgressiveQueryHandler, ProgressivePathChooser}
 import ch.unibas.dmi.dbis.adam.query.query.{BooleanQuery, NearestNeighbourQuery}
 import org.apache.spark.Logging
 import org.apache.spark.sql.DataFrame
@@ -51,7 +51,7 @@ object QueryOp extends Logging {
   def apply(entityname: EntityName, hint: Seq[QueryHint], nnq: Option[NearestNeighbourQuery], bq: Option[BooleanQuery], withMetadata: Boolean)(implicit ac: AdamContext): Try[DataFrame] = {
     try {
       log.debug("perform standard query operation")
-      Success(QueryHandler.query(entityname, hint, nnq, bq, None, withMetadata))
+      Success(StandardQueryHolder(entityname)(hint, nnq, bq, None, withMetadata).evaluate())
     } catch {
       case e: Exception => Failure(e)
     }
@@ -69,7 +69,7 @@ object QueryOp extends Logging {
   def sequential(entityname: EntityName, nnq: NearestNeighbourQuery, bq: Option[BooleanQuery], withMetadata: Boolean)(implicit ac: AdamContext): Try[DataFrame] = {
     try {
       log.debug("perform sequential query operation")
-      Success(QueryHandler.sequentialQuery(entityname)(nnq, bq, None, withMetadata))
+      Success(SequentialQueryHolder(entityname)(nnq, bq, None, withMetadata).evaluate())
     } catch {
       case e: Exception => Failure(e)
     }
@@ -87,7 +87,7 @@ object QueryOp extends Logging {
   def index(indexname: IndexName, nnq: NearestNeighbourQuery, bq: Option[BooleanQuery], withMetadata: Boolean)(implicit ac: AdamContext): Try[DataFrame] = {
     try {
       log.debug("perform index query operation")
-      Success(QueryHandler.specifiedIndexQuery(IndexHandler.load(indexname).get)(nnq, bq, None, withMetadata))
+      Success(IndexQueryHolder(Index.load(indexname).get)(nnq, bq, None, withMetadata).evaluate())
     } catch {
       case e: Exception => Failure(e)
     }
@@ -106,7 +106,7 @@ object QueryOp extends Logging {
   def index(entityname: EntityName, indextypename: IndexTypeName, nnq: NearestNeighbourQuery, bq: Option[BooleanQuery], withMetadata: Boolean)(implicit ac: AdamContext): Try[DataFrame] = {
     try {
       log.debug("perform index query operation")
-      Success(QueryHandler.indexQuery(entityname, indextypename)(nnq, bq, None, withMetadata))
+      Success(new IndexQueryHolder(entityname, indextypename)(nnq, bq, None, withMetadata).evaluate())
     } catch {
       case e: Exception => Failure(e)
     }
@@ -126,7 +126,7 @@ object QueryOp extends Logging {
   def progressive[U](entityname: EntityName, nnq: NearestNeighbourQuery, bq: Option[BooleanQuery], paths: ProgressivePathChooser, onComplete: (ProgressiveQueryStatus.Value, DataFrame, Float, String, Map[String, String]) => U, withMetadata: Boolean)(implicit ac: AdamContext): Try[ProgressiveQueryStatusTracker] = {
     try {
       log.debug("perform progressive query operation")
-      Success(QueryHandler.progressiveQuery(entityname)(nnq, bq, None, paths, onComplete, withMetadata))
+      Success(ProgressiveQueryHandler.progressiveQuery(entityname)(nnq, bq, None, paths, onComplete, withMetadata))
     } catch {
       case e: Exception => Failure(e)
     }
@@ -147,7 +147,7 @@ object QueryOp extends Logging {
   def timedProgressive(entityname: EntityName, nnq: NearestNeighbourQuery, bq: Option[BooleanQuery], paths: ProgressivePathChooser, timelimit: Duration, withMetadata: Boolean)(implicit ac: AdamContext): Try[(DataFrame, Float, String)] = {
     try {
       log.debug("perform timed progressive query operation")
-      Success(QueryHandler.timedProgressiveQuery(entityname)(nnq, bq, None, paths, timelimit, withMetadata))
+      Success(ProgressiveQueryHandler.timedProgressiveQuery(entityname)(nnq, bq, None, paths, timelimit, withMetadata))
     } catch {
       case e: Exception => Failure(e)
     }
@@ -162,10 +162,10 @@ object QueryOp extends Logging {
     * @param withMetadata
     * @return
     */
-  def compoundQuery(entityname: EntityName, nnq: NearestNeighbourQuery, expr: QueryExpression, withMetadata: Boolean)(implicit ac: AdamContext): Try[DataFrame] = {
+  def compoundQuery(entityname: EntityName, nnq: Option[NearestNeighbourQuery], expr: QueryExpression, withMetadata: Boolean)(implicit ac: AdamContext): Try[DataFrame] = {
     try {
       log.debug("perform compound query operation")
-      Success(QueryHandler.compoundQuery(entityname)(nnq, expr, false, withMetadata))
+      Success(CompoundQueryHolder(entityname)(expr, nnq, withMetadata).evaluate())
     } catch {
       case e: Exception => Failure(e)
     }
@@ -180,7 +180,7 @@ object QueryOp extends Logging {
   def booleanQuery(entityname: EntityName, bq: Option[BooleanQuery])(implicit ac: AdamContext): Try[DataFrame] = {
     try {
       log.debug("perform boolean query operation")
-      Success(QueryHandler.booleanQuery(entityname)(bq))
+      Success(BooleanQueryHolder(entityname)(bq).evaluate())
     } catch {
       case e: Exception => Failure(e)
     }

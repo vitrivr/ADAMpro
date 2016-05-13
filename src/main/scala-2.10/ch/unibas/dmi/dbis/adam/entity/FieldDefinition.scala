@@ -7,8 +7,6 @@ import ch.unibas.dmi.dbis.adam.entity.FieldTypes.FieldType
   *
   * Ivan Giangreco
   * May 2016
-  */
-/**
   *
   * @param name
   * @param fieldtype

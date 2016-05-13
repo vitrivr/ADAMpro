@@ -2,7 +2,8 @@ package ch.unibas.dmi.dbis.adam.rpc
 
 import ch.unibas.dmi.dbis.adam.AdamTestBase
 import ch.unibas.dmi.dbis.adam.config.AdamConfig
-import ch.unibas.dmi.dbis.adam.entity.EntityHandler
+import ch.unibas.dmi.dbis.adam.entity.Entity
+import ch.unibas.dmi.dbis.adam.http.grpc.BooleanQueryMessage.WhereMessage
 import ch.unibas.dmi.dbis.adam.http.grpc.InsertMessage.TupleInsertMessage
 import ch.unibas.dmi.dbis.adam.http.grpc._
 import ch.unibas.dmi.dbis.adam.main.RPCStartup
@@ -49,7 +50,7 @@ class RPCTestSuite extends AdamTestBase with ScalaFutures {
                 FieldDefinitionMessage("feature", FieldDefinitionMessage.FieldType.FEATURE)
               )))
         Then("the entity should exist")
-        assert(EntityHandler.exists(entityname))
+        assert(Entity.exists(entityname))
       }
     }
 
@@ -140,5 +141,55 @@ class RPCTestSuite extends AdamTestBase with ScalaFutures {
         }
       }
     }
+
+
+    scenario("insert data into entity and query") {
+      withEntityName { entityname =>
+        Given("an entity")
+        val createEntityFuture = definition.createEntity(CreateEntityMessage(entityname,
+          Seq(
+            FieldDefinitionMessage("tid", FieldDefinitionMessage.FieldType.LONG, true),
+            FieldDefinitionMessage("stringfield", FieldDefinitionMessage.FieldType.STRING),
+            FieldDefinitionMessage("intfield", FieldDefinitionMessage.FieldType.INT),
+            FieldDefinitionMessage("featurefield", FieldDefinitionMessage.FieldType.FEATURE)
+          )))
+
+        val requestObserver: StreamObserver[InsertMessage] = definitionNb.insert(new StreamObserver[AckMessage]() {
+          def onNext(ack: AckMessage) {}
+
+          def onError(t: Throwable): Unit = {
+            assert(false) //should never happen
+          }
+
+          def onCompleted() {}
+        })
+
+        val ntuples = 10
+
+        When("tuples are inserted")
+        val tuples = (0 until ntuples)
+          .map(i => Map[String, InsertDataMessage](
+            "tid" -> InsertDataMessage().withLongData(Random.nextLong()),
+            "featurefield" -> InsertDataMessage().withFeatureData(FeatureVectorMessage().withDenseVector(DenseVectorMessage(Seq.fill(10)(Random.nextFloat())))),
+            "intfield" -> InsertDataMessage().withIntData(Random.nextInt(10)),
+            "stringfield" -> InsertDataMessage().withStringData(getRandomName(10))
+          ))
+        requestObserver.onNext(InsertMessage(entityname, tuples.map(tuple => TupleInsertMessage(tuple))))
+        requestObserver.onCompleted()
+
+        Then("the tuples should eventually be available")
+        eventually {
+          val inserted = definition.count(EntityNameMessage(entityname)).message.toInt == ntuples
+          assert(inserted)
+
+          if(inserted){
+            val results = search.doBooleanQuery(SimpleBooleanQueryMessage("", entityname, Some(BooleanQueryMessage(Seq(WhereMessage("tid", tuples.head("tid").getLongData.toString))))))
+            assert(results.ack.get.code == AckMessage.Code.OK)
+          }
+        }
+
+      }
+    }
+
   }
 }

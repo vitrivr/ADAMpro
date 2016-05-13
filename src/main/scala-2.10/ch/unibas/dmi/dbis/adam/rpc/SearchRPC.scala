@@ -7,14 +7,13 @@ import ch.unibas.dmi.dbis.adam.config.FieldNames
 import ch.unibas.dmi.dbis.adam.exception.QueryNotCachedException
 import ch.unibas.dmi.dbis.adam.http.grpc._
 import ch.unibas.dmi.dbis.adam.main.AdamContext
-import ch.unibas.dmi.dbis.adam.query.datastructures.ProgressiveQueryStatus
-import ch.unibas.dmi.dbis.adam.query.handler.QueryHandler.CompoundQueryHolder
-import ch.unibas.dmi.dbis.adam.query.handler.{QueryHandler, QueryHints}
+import ch.unibas.dmi.dbis.adam.query.datastructures.{ProgressiveQueryStatus, QueryLRUCache}
+import ch.unibas.dmi.dbis.adam.query.handler.QueryHints
+import ch.unibas.dmi.dbis.adam.query.handler.internal.CompoundQueryHolder
 import ch.unibas.dmi.dbis.adam.query.progressive.{QueryHintsProgressivePathChooser, SimpleProgressivePathChooser}
 import io.grpc.stub.StreamObserver
 import org.apache.log4j.Logger
 import org.apache.spark.sql.DataFrame
-import org.apache.spark.sql.types.StringType
 
 import scala.collection.mutable.ListBuffer
 import scala.concurrent.Future
@@ -70,7 +69,7 @@ class SearchRPC(implicit ac: AdamContext) extends AdamSearchGrpc.AdamSearch {
   override def doStandardQuery(request: SimpleQueryMessage): Future[QueryResponseInfoMessage] = {
     log.debug("rpc call for standard query operation")
     val expression = RPCHelperMethods.toExpression(request)
-    if (expression.isFailure){
+    if (expression.isFailure) {
       Future.successful(QueryResponseInfoMessage(Some(AckMessage(code = AckMessage.Code.ERROR, message = expression.failed.get.getMessage))))
     }
     val res = QueryOp(expression.get)
@@ -92,7 +91,7 @@ class SearchRPC(implicit ac: AdamContext) extends AdamSearchGrpc.AdamSearch {
   override def doSequentialQuery(request: SimpleSequentialQueryMessage): Future[QueryResponseInfoMessage] = {
     log.debug("rpc call for sequential query operation")
     val expression = RPCHelperMethods.toExpression(request)
-    if (expression.isFailure){
+    if (expression.isFailure) {
       Future.successful(QueryResponseInfoMessage(Some(AckMessage(code = AckMessage.Code.ERROR, message = expression.failed.get.getMessage))))
     }
     val res = QueryOp(expression.get)
@@ -114,7 +113,7 @@ class SearchRPC(implicit ac: AdamContext) extends AdamSearchGrpc.AdamSearch {
   override def doIndexQuery(request: SimpleIndexQueryMessage): Future[QueryResponseInfoMessage] = {
     log.debug("rpc call for index query operation")
     val expression = RPCHelperMethods.toExpression(request)
-    if (expression.isFailure){
+    if (expression.isFailure) {
       Future.successful(QueryResponseInfoMessage(Some(AckMessage(code = AckMessage.Code.ERROR, message = expression.failed.get.getMessage))))
     }
     val res = QueryOp(expression.get)
@@ -136,7 +135,7 @@ class SearchRPC(implicit ac: AdamContext) extends AdamSearchGrpc.AdamSearch {
   override def doSpecifiedIndexQuery(request: SimpleSpecifiedIndexQueryMessage): Future[QueryResponseInfoMessage] = {
     log.debug("rpc call for index query operation")
     val expression = RPCHelperMethods.toExpression(request)
-    if (expression.isFailure){
+    if (expression.isFailure) {
       Future.successful(QueryResponseInfoMessage(Some(AckMessage(code = AckMessage.Code.ERROR, message = expression.failed.get.getMessage))))
     }
     val res = QueryOp(expression.get)
@@ -218,7 +217,7 @@ class SearchRPC(implicit ac: AdamContext) extends AdamSearchGrpc.AdamSearch {
     log.debug("rpc call for chained query operation")
     try {
       val expression = RPCHelperMethods.toExpression(request)
-      if (expression.isFailure){
+      if (expression.isFailure) {
         Future.successful(QueryResponseInfoMessage(Some(AckMessage(code = AckMessage.Code.ERROR, message = expression.failed.get.getMessage))))
       }
       val res = QueryOp(expression.get)
@@ -253,7 +252,7 @@ class SearchRPC(implicit ac: AdamContext) extends AdamSearchGrpc.AdamSearch {
   override def doBooleanQuery(request: SimpleBooleanQueryMessage): Future[QueryResponseInfoMessage] = {
     log.debug("rpc call for Boolean query operation")
     val expression = RPCHelperMethods.toExpression(request)
-    if (expression.isFailure){
+    if (expression.isFailure) {
       Future.successful(QueryResponseInfoMessage(Some(AckMessage(code = AckMessage.Code.ERROR, message = expression.failed.get.getMessage))))
     }
 
@@ -274,7 +273,7 @@ class SearchRPC(implicit ac: AdamContext) extends AdamSearchGrpc.AdamSearch {
     */
   override def getCachedResults(request: CachedResultsMessage): Future[QueryResponseInfoMessage] = {
     log.debug("rpc call for cached query results")
-    val res = QueryHandler.getFromQueryCache(Option(request.queryid))
+    val res = QueryLRUCache.get(request.queryid)
 
     if (res.isSuccess) {
       Future.successful(prepareResults(request.queryid, 0.0, 0, "cache", res.get))
@@ -294,34 +293,20 @@ class SearchRPC(implicit ac: AdamContext) extends AdamSearchGrpc.AdamSearch {
     * @return
     */
   private def prepareResults(queryid: String, confidence: Double, time: Long, source: String, df: DataFrame): QueryResponseInfoMessage = {
-    import org.apache.spark.sql.functions.{array, col, lit, udf}
 
-    //TODO: catch if null?
-    val asMap = udf((keys: Seq[String], values: Seq[Any]) =>
-      keys.zip(values.map(_.toString)).filter {
-        case (k, null) => false
-        case _ => true
-      }.toMap)
+    val cols = df.schema.map(_.name)
 
-    val cols = df.dtypes.map(_._1)
-
-    val keys = array(cols.map(lit): _*)
-    val values = array(cols.map(col(_).cast(StringType)): _*)
-
-    val results = if (!cols.isEmpty) {
-      df.withColumn("metadata", asMap(keys, values))
-        .collect().map(row =>
-        QueryResultMessage(
-          row.getAs[Float](FieldNames.distanceColumnName),
-          row.getAs[Map[String, String]]("metadata").toMap
-        ))
-    } else {
-      df
-        .collect().map(row => QueryResultMessage(
-        row.getAs[Float](FieldNames.distanceColumnName),
-        Map[String, String]()
-      ))
-    }
+    val results = df.collect().map(row => {
+      val distance = row.getAs[Float](FieldNames.distanceColumnName)
+      val metadata = cols.map(col => {
+        try {
+          col -> row.getAs(col).toString
+        } catch {
+          case e: Exception => col -> ""
+        }
+      }).toMap
+      QueryResultMessage(distance, metadata)
+    })
 
     QueryResponseInfoMessage(Some(AckMessage(AckMessage.Code.OK)), queryid, confidence, time, source, results)
   }

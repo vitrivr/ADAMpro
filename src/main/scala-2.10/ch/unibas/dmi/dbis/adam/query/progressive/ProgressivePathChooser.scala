@@ -1,8 +1,8 @@
 package ch.unibas.dmi.dbis.adam.query.progressive
 
 import ch.unibas.dmi.dbis.adam.entity.Entity.EntityName
+import ch.unibas.dmi.dbis.adam.index.Index
 import ch.unibas.dmi.dbis.adam.index.Index._
-import ch.unibas.dmi.dbis.adam.index.IndexHandler
 import ch.unibas.dmi.dbis.adam.index.structures.IndexTypes
 import ch.unibas.dmi.dbis.adam.main.AdamContext
 import ch.unibas.dmi.dbis.adam.query.handler.QueryHints.{IndexQueryHint, QueryHint}
@@ -20,7 +20,7 @@ import org.apache.log4j.Logger
 trait ProgressivePathChooser {
   val log = Logger.getLogger(getClass.getName)
 
-  def getPaths[U](entityname: EntityName): Seq[IndexName]
+  def getPaths(entityname: EntityName): Seq[IndexName]
 }
 
 /**
@@ -29,11 +29,11 @@ trait ProgressivePathChooser {
   * @param ac
   */
 class SimpleProgressivePathChooser()(implicit ac: AdamContext) extends ProgressivePathChooser {
-  override def getPaths[U](entityname: EntityName): Seq[IndexName] = {
+  override def getPaths(entityname: EntityName): Seq[IndexName] = {
     //TODO: choose better default
     IndexTypes.values
-      .map(indextypename => IndexHandler.list(entityname, indextypename).sortBy(-_._3).head)
-      .map(_._1)
+      .map(indextypename => Index.list(entityname, indextypename).filter(_.isSuccess).sortBy(-_.get.weight).head)
+      .map(_.get.indexname)
   }
 }
 
@@ -43,8 +43,8 @@ class SimpleProgressivePathChooser()(implicit ac: AdamContext) extends Progressi
   * @param ac
   */
 class AllProgressivePathChooser(implicit ac: AdamContext) extends ProgressivePathChooser {
-  override def getPaths[U](entityname: EntityName): Seq[IndexName] = {
-    IndexHandler.list(entityname).map(_._1)
+  override def getPaths(entityname: EntityName): Seq[IndexName] = {
+    Index.list(entityname).map(_.get.indexname)
   }
 }
 
@@ -55,10 +55,10 @@ class AllProgressivePathChooser(implicit ac: AdamContext) extends ProgressivePat
   * @param ac
   */
 class IndexTypeProgressivePathChooser(indextypenames: Seq[IndexTypeName])(implicit ac: AdamContext) extends ProgressivePathChooser {
-  override def getPaths[U](entityname: EntityName): Seq[IndexName] = {
+  override def getPaths(entityname: EntityName): Seq[IndexName] = {
     indextypenames
-      .map(indextypename => IndexHandler.list(entityname, indextypename).sortBy(-_._3).head)
-      .map(_._1)
+      .map(indextypename => Index.list(entityname, indextypename).filter(_.isSuccess).sortBy(-_.get.weight).head)
+      .map(_.get.indexname)
   }
 }
 
@@ -69,15 +69,16 @@ class IndexTypeProgressivePathChooser(indextypenames: Seq[IndexTypeName])(implic
   * @param ac
   */
 class QueryHintsProgressivePathChooser(hints: Seq[QueryHint])(implicit ac: AdamContext) extends ProgressivePathChooser {
-  override def getPaths[U](entityname: EntityName): Seq[IndexName] = {
+  override def getPaths(entityname: EntityName): Seq[IndexName] = {
     hints.map(choosePlan(entityname, _)).filterNot(_ == null)
   }
 
   private def choosePlan(entityname: EntityName, hint: QueryHint)(implicit ac: AdamContext) = {
     if (hint.isInstanceOf[IndexQueryHint]) {
-      IndexHandler.list(entityname, hint.asInstanceOf[IndexQueryHint].structureType)
-        .sortBy(-_._3)
-        .map(_._1)
+      Index.list(entityname, hint.asInstanceOf[IndexQueryHint].structureType)
+        .filter(_.isSuccess)
+        .sortBy(-_.get.weight)
+        .map(_.get.indexname)
         .head
     } else {
       log.error("only query hints of the type IndexQueryHint are accepted")
@@ -93,5 +94,5 @@ class QueryHintsProgressivePathChooser(hints: Seq[QueryHint])(implicit ac: AdamC
   * @param ac
   */
 class IndexnameSpecifiedProgressivePathChooser(indexnames: Seq[IndexName])(implicit ac: AdamContext) extends ProgressivePathChooser {
-  override def getPaths[U](entityname: EntityName): Seq[IndexName] = indexnames
+  override def getPaths(entityname: EntityName): Seq[IndexName] = indexnames
 }

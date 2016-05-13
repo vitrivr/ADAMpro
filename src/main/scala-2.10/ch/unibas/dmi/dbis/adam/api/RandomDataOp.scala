@@ -1,8 +1,8 @@
 package ch.unibas.dmi.dbis.adam.api
 
 import ch.unibas.dmi.dbis.adam.datatypes.feature.FeatureVectorWrapper
+import ch.unibas.dmi.dbis.adam.entity.Entity
 import ch.unibas.dmi.dbis.adam.entity.Entity.EntityName
-import ch.unibas.dmi.dbis.adam.entity.EntityHandler
 import ch.unibas.dmi.dbis.adam.main.SparkStartup.Implicits._
 import org.apache.spark.Logging
 import org.apache.spark.sql.types.{DataType, StructField, StructType, UserDefinedType}
@@ -29,7 +29,7 @@ object RandomDataOp extends Logging {
     try {
       log.debug("perform generate data operation")
 
-      val entity = EntityHandler.load(entityname)
+      val entity = Entity.load(entityname)
       if (entity.isFailure) {
         Failure(entity.failed.get)
       }

@@ -30,7 +30,7 @@ object IndexLRUCache {
       new CacheLoader[IndexName, Index]() {
         def load(indexname: IndexName): Index = {
           import SparkStartup.Implicits._
-          val index = IndexHandler.loadIndexMetaData(indexname).get
+          val index = Index.loadIndexMetaData(indexname).get
           index
         }
       }

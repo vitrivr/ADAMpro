@@ -29,13 +29,13 @@ class EntityTestSuite extends AdamTestBase {
     scenario("create an entity") {
       withEntityName { entityname =>
         Given("a database with a few elements already")
-        val givenEntities = EntityHandler.list()
+        val givenEntities = Entity.list()
 
         When("a new random entity (without any metadata) is created")
-        EntityHandler.create(entityname, Seq(FieldDefinition("idfield", FieldTypes.LONGTYPE, true), FieldDefinition("feature", FieldTypes.FEATURETYPE)))
+        Entity.create(entityname, Seq(FieldDefinition("idfield", FieldTypes.LONGTYPE, true), FieldDefinition("feature", FieldTypes.FEATURETYPE)))
 
         Then("one entity should be created")
-        val finalEntities = EntityHandler.list()
+        val finalEntities = Entity.list()
         eventually {
           finalEntities.size shouldBe givenEntities.size + 1
         }
@@ -51,14 +51,14 @@ class EntityTestSuite extends AdamTestBase {
     scenario("drop an existing entity") {
       withEntityName { entityname =>
         Given("there exists one entity")
-        EntityHandler.create(entityname, Seq(FieldDefinition("idfield", FieldTypes.LONGTYPE, true), FieldDefinition("feature", FieldTypes.FEATURETYPE)))
-        assert(EntityHandler.list().contains(entityname.toLowerCase()))
+        Entity.create(entityname, Seq(FieldDefinition("idfield", FieldTypes.LONGTYPE, true), FieldDefinition("feature", FieldTypes.FEATURETYPE)))
+        assert(Entity.list().contains(entityname.toLowerCase()))
 
         When("the entity is dropped")
         EntityOp.drop(entityname)
 
         Then("the entity should no longer exist")
-        assert(!EntityHandler.list().contains(entityname.toLowerCase()))
+        assert(!Entity.list().contains(entityname.toLowerCase()))
       }
     }
 
@@ -68,13 +68,13 @@ class EntityTestSuite extends AdamTestBase {
     scenario("create an entity with multiple feature fields") {
       withEntityName { entityname =>
         Given("a database with a few elements already")
-        val givenEntities = EntityHandler.list()
+        val givenEntities = Entity.list()
 
         When("a new random entity (without any metadata) is created")
-        EntityHandler.create(entityname, Seq(FieldDefinition("idfield", FieldTypes.LONGTYPE, true), FieldDefinition("feature1", FieldTypes.FEATURETYPE), FieldDefinition("feature2", FieldTypes.FEATURETYPE)))
+        Entity.create(entityname, Seq(FieldDefinition("idfield", FieldTypes.LONGTYPE, true), FieldDefinition("feature1", FieldTypes.FEATURETYPE), FieldDefinition("feature2", FieldTypes.FEATURETYPE)))
 
         Then("one entity should be created")
-        val finalEntities = EntityHandler.list()
+        val finalEntities = Entity.list()
         eventually {
           finalEntities.size shouldBe givenEntities.size + 1
         }
@@ -90,7 +90,7 @@ class EntityTestSuite extends AdamTestBase {
     scenario("create an entity with metadata") {
       withEntityName { entityname =>
         Given("a database with a few elements already")
-        val givenEntities = EntityHandler.list()
+        val givenEntities = Entity.list()
 
         When("a new random entity with metadata is created")
         val fieldTemplate = Seq(
@@ -104,11 +104,11 @@ class EntityTestSuite extends AdamTestBase {
           TemplateFieldDefinition("booleanfield", FieldTypes.BOOLEANTYPE, false, "boolean")
         )
 
-        val entity = EntityHandler.create(entityname, fieldTemplate.map(ft => FieldDefinition(ft.name, ft.fieldType, ft.pk)))
+        val entity = Entity.create(entityname, fieldTemplate.map(ft => FieldDefinition(ft.name, ft.fieldType, ft.pk)))
 
         Then("the entity should be created")
-        val entities = EntityHandler.list()
-        val finalEntities = EntityHandler.list()
+        val entities = Entity.list()
+        val finalEntities = Entity.list()
         assert(finalEntities.size == givenEntities.size + 1)
         assert(finalEntities.contains(entityname.toLowerCase()))
 
@@ -207,7 +207,7 @@ class EntityTestSuite extends AdamTestBase {
       */
     scenario("insert data in an entity with auto-increment metadata") {
       withEntityName { entityname =>
-        EntityHandler.create(entityname, Seq(FieldDefinition("idfield", FieldTypes.AUTOTYPE, true), FieldDefinition("featurefield", FieldTypes.FEATURETYPE, false, false, false)))
+        Entity.create(entityname, Seq(FieldDefinition("idfield", FieldTypes.AUTOTYPE, true), FieldDefinition("featurefield", FieldTypes.FEATURETYPE, false, false, false)))
 
         val ntuples = Random.nextInt(1000)
         val ndims = 100
@@ -256,7 +256,7 @@ class EntityTestSuite extends AdamTestBase {
     scenario("insert data in an entity without metadata") {
       withEntityName { entityname =>
         Given("an entity without metadata")
-        EntityHandler.create(entityname, Seq(FieldDefinition("idfield", FieldTypes.LONGTYPE, true), FieldDefinition("featurefield", FieldTypes.FEATURETYPE, false, false, false)))
+        Entity.create(entityname, Seq(FieldDefinition("idfield", FieldTypes.LONGTYPE, true), FieldDefinition("featurefield", FieldTypes.FEATURETYPE, false, false, false)))
 
         val ntuples = Random.nextInt(1000)
         val ndims = 100
@@ -287,7 +287,7 @@ class EntityTestSuite extends AdamTestBase {
     scenario("insert data in an entity with multiple feature fields without metadata") {
       withEntityName { entityname =>
         Given("an entity without metadata")
-        EntityHandler.create(entityname, Seq(FieldDefinition("idfield", FieldTypes.LONGTYPE, true), FieldDefinition("featurefield1", FieldTypes.FEATURETYPE), FieldDefinition("featurefield2", FieldTypes.FEATURETYPE)))
+        Entity.create(entityname, Seq(FieldDefinition("idfield", FieldTypes.LONGTYPE, true), FieldDefinition("featurefield1", FieldTypes.FEATURETYPE), FieldDefinition("featurefield2", FieldTypes.FEATURETYPE)))
 
         val ntuples = Random.nextInt(1000)
         val ndims = 100
@@ -338,7 +338,7 @@ class EntityTestSuite extends AdamTestBase {
           TemplateFieldDefinition("booleanfieldunfilled", FieldTypes.BOOLEANTYPE, false, "boolean")
         )
 
-        val entity = EntityHandler.create(entityname, fieldTemplate.map(x => FieldDefinition(x.name, x.fieldType, x.pk)))
+        val entity = Entity.create(entityname, fieldTemplate.map(x => FieldDefinition(x.name, x.fieldType, x.pk)))
 
         val ntuples = Random.nextInt(1000)
         val ndims = 100

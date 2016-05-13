@@ -2,7 +2,7 @@ package ch.unibas.dmi.dbis.adam.query.progressive
 
 import ch.unibas.dmi.dbis.adam.entity.Entity._
 import ch.unibas.dmi.dbis.adam.index.Index.IndexName
-import ch.unibas.dmi.dbis.adam.index.IndexHandler
+import ch.unibas.dmi.dbis.adam.index.Index
 import ch.unibas.dmi.dbis.adam.main.AdamContext
 import ch.unibas.dmi.dbis.adam.query.datastructures.{ProgressiveQueryStatus, ProgressiveQueryStatusTracker}
 import ch.unibas.dmi.dbis.adam.query.handler.NearestNeighbourQueryHandler
@@ -35,7 +35,7 @@ abstract class ScanFuture(tracker: ProgressiveQueryStatusTracker) {
   */
 class IndexScanFuture[U](indexname: IndexName, query: NearestNeighbourQuery, onComplete: (ProgressiveQueryStatus.Value, DataFrame, Float, String, Map[String, String]) => U, val tracker: ProgressiveQueryStatusTracker)(implicit ac: AdamContext) extends ScanFuture(tracker) {
   tracker.register(this)
-  val index = IndexHandler.load(indexname).get
+  val index = Index.load(indexname).get
 
   val typename = index.indextypename.name
   val info = Map[String, String]("name" -> indexname, "type" -> ("index: " + indexname), "index" -> indexname, "qid" -> query.queryID.get)

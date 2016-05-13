@@ -7,11 +7,11 @@ import ch.unibas.dmi.dbis.adam.api._
 import ch.unibas.dmi.dbis.adam.config.FieldNames
 import ch.unibas.dmi.dbis.adam.index.structures.IndexTypes
 import ch.unibas.dmi.dbis.adam.main.SparkStartup
+import ch.unibas.dmi.dbis.adam.main.SparkStartup.Implicits._
 import ch.unibas.dmi.dbis.adam.query.datastructures.CompoundQueryExpressions.{ExpressionEvaluationOrder, IntersectExpression}
-import ch.unibas.dmi.dbis.adam.query.datastructures.{QueryCacheOptions, ProgressiveQueryStatus}
+import ch.unibas.dmi.dbis.adam.query.datastructures.{ProgressiveQueryStatus, QueryCacheOptions}
 import ch.unibas.dmi.dbis.adam.query.distance.EuclideanDistance
-import ch.unibas.dmi.dbis.adam.query.handler.CompoundQueryHandler
-import ch.unibas.dmi.dbis.adam.query.handler.QueryHandler.SpecifiedIndexQueryHolder
+import ch.unibas.dmi.dbis.adam.query.handler.internal.{CompoundQueryHolder, IndexQueryHolder}
 import ch.unibas.dmi.dbis.adam.query.progressive.AllProgressivePathChooser
 import ch.unibas.dmi.dbis.adam.query.query.{BooleanQuery, NearestNeighbourQuery}
 import org.apache.log4j.Logger
@@ -19,8 +19,6 @@ import org.apache.spark.sql.DataFrame
 import org.scalatest.concurrent.ScalaFutures
 
 import scala.concurrent.duration.Duration
-
-import SparkStartup.Implicits._
 
 
 /**
@@ -422,11 +420,11 @@ class QueryTestSuite extends AdamTestBase with ScalaFutures {
         //nnq has numOfQ  = 0 to avoid that by the various randomized q's the results get different
         val nnq = NearestNeighbourQuery("featurefield", es.feature.vector, es.distance, es.k, false, Map("numOfQ" -> "0"), None)
 
-        val shqh = new SpecifiedIndexQueryHolder(shidx.get.indexname, nnq, None, None, None, Some(QueryCacheOptions()))
-        val vhqh = new SpecifiedIndexQueryHolder(vaidx.get.indexname, nnq, None, None, None, Some(QueryCacheOptions()))
+        val shqh = new IndexQueryHolder(shidx.get.indexname)(nnq, None, None, false, None, Some(QueryCacheOptions()))
+        val vhqh = new IndexQueryHolder(vaidx.get.indexname)(nnq, None, None, false, None, Some(QueryCacheOptions()))
 
         val results = time {
-          CompoundQueryHandler.indexOnlyQuery(es.entity.entityname)(new IntersectExpression(shqh, vhqh), false)
+          new CompoundQueryHolder(es.entity.entityname)(new IntersectExpression(shqh, vhqh), Some(nnq)).evaluate()
             .map(r => (r.getAs[Long]("tid"))).collect().sorted
         }
 
@@ -458,11 +456,11 @@ class QueryTestSuite extends AdamTestBase with ScalaFutures {
         //nnq has numOfQ  = 0 to avoid that by the various randomized q's the results get different
         val nnq = NearestNeighbourQuery("featurefield", es.feature.vector, es.distance, es.k, false, Map("numOfQ" -> "0"), None)
 
-        val va1qh = new SpecifiedIndexQueryHolder(vaidx1.get.indexname, nnq, None, None, None, Some(QueryCacheOptions()))
-        val va2qh = new SpecifiedIndexQueryHolder(vaidx2.get.indexname, nnq, None, None, None, Some(QueryCacheOptions()))
+        val va1qh = new IndexQueryHolder(vaidx1.get.indexname)(nnq, None, None, false, None, Some(QueryCacheOptions()))
+        val va2qh = new IndexQueryHolder(vaidx2.get.indexname)(nnq, None, None, false, None, Some(QueryCacheOptions()))
 
         val results = time {
-          CompoundQueryHandler.indexOnlyQuery(es.entity.entityname)(new IntersectExpression(va1qh, va2qh, ExpressionEvaluationOrder.Parallel), false)
+          CompoundQueryHolder(es.entity.entityname)(new IntersectExpression(va1qh, va2qh, ExpressionEvaluationOrder.Parallel), Some(nnq)).evaluate()
             .map(r => (r.getAs[Long]("tid"))).collect().sorted
         }
 

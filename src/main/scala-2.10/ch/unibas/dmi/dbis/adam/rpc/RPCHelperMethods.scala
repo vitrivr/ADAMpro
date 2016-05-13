@@ -9,12 +9,12 @@ import ch.unibas.dmi.dbis.adam.main.AdamContext
 import ch.unibas.dmi.dbis.adam.query.datastructures.CompoundQueryExpressions._
 import ch.unibas.dmi.dbis.adam.query.datastructures.{QueryCacheOptions, QueryExpression}
 import ch.unibas.dmi.dbis.adam.query.distance.{DistanceFunction, NormBasedDistanceFunction}
-import ch.unibas.dmi.dbis.adam.query.handler.QueryHandler._
 import ch.unibas.dmi.dbis.adam.query.handler.QueryHints
 import ch.unibas.dmi.dbis.adam.query.handler.external.ExternalHandlers
+import ch.unibas.dmi.dbis.adam.query.handler.internal._
 import ch.unibas.dmi.dbis.adam.query.query.{BooleanQuery, NearestNeighbourQuery}
 
-import scala.util.{Success, Failure, Try}
+import scala.util.{Failure, Success, Try}
 
 /**
   * adampro
@@ -35,7 +35,7 @@ private[rpc] object RPCHelperMethods {
       val queryid = prepareQI(request.queryid)
       val cacheOptions = prepareCO(request.readFromCache, request.putInCache)
 
-      Success(StandardQueryHolder(entityname, hints, nnq, bq, None, queryid, cacheOptions))
+      Success(StandardQueryHolder(entityname)(hints, nnq, bq, None, false, queryid, cacheOptions))
     } catch {
       case e: Exception => Failure(e)
     }
@@ -50,7 +50,7 @@ private[rpc] object RPCHelperMethods {
       val queryid = prepareQI(request.queryid)
       val cacheOptions = prepareCO(request.readFromCache, request.putInCache)
 
-      Success(SequentialQueryHolder(entityname, nnq.get, bq, None, queryid, cacheOptions))
+      Success(SequentialQueryHolder(entityname)(nnq.get, bq, None, false, queryid, cacheOptions))
     } catch {
       case e: Exception => Failure(e)
     }
@@ -66,7 +66,7 @@ private[rpc] object RPCHelperMethods {
       val queryid = prepareQI(request.queryid)
       val cacheOptions = prepareCO(request.readFromCache, request.putInCache)
 
-      Success(IndexQueryHolder(entityname, indextype.get, nnq.get, bq, None, queryid, cacheOptions))
+      Success(new IndexQueryHolder(entityname, indextype.get)(nnq.get, bq, None, false, queryid, cacheOptions))
     } catch {
       case e: Exception => Failure(e)
     }
@@ -81,7 +81,7 @@ private[rpc] object RPCHelperMethods {
       val queryid = prepareQI(request.queryid)
       val cacheOptions = prepareCO(request.readFromCache, request.putInCache)
 
-      Success(new SpecifiedIndexQueryHolder(indexname, nnq.get, bq, None, queryid, cacheOptions))
+      Success(new IndexQueryHolder(indexname)(nnq.get, bq, None, false, queryid, cacheOptions))
     } catch {
       case e: Exception => Failure(e)
     }
@@ -114,7 +114,7 @@ private[rpc] object RPCHelperMethods {
       val withmetadata = request.withMetadata
       val queryid = prepareQI(request.queryid)
 
-      Success(new CompoundQueryHolder(entityname, nnq.get, subexpression.get, false, withmetadata, queryid))
+      Success(new CompoundQueryHolder(entityname)(subexpression.get, nnq, withmetadata, queryid))
     } catch {
       case e: Exception => Failure(e)
     }
@@ -127,7 +127,7 @@ private[rpc] object RPCHelperMethods {
       val queryid = prepareQI(request.queryid)
       val cacheOptions = prepareCO(request.readFromCache, request.putInCache)
 
-      Success(new BooleanQueryHolder(entityname, bq, queryid, cacheOptions))
+      Success(new BooleanQueryHolder(entityname)(bq, queryid, cacheOptions))
 
     } catch {
       case e: Exception => Failure(e)

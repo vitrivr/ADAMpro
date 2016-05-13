@@ -3,6 +3,7 @@ package ch.unibas.dmi.dbis.adam.query.datastructures
 import java.util.concurrent.TimeUnit
 
 import ch.unibas.dmi.dbis.adam.main.AdamContext
+import org.apache.spark.Logging
 import org.apache.spark.sql.DataFrame
 
 import scala.collection.mutable.ListBuffer
@@ -14,9 +15,9 @@ import scala.concurrent.duration.Duration
   * Ivan Giangreco
   * April 2016
   */
-abstract class QueryExpression(id: Option[String]) {
+abstract class QueryExpression(id: Option[String]) extends Serializable with Logging {
   private var time: Duration = null
-  private var results : DataFrame = null
+  private var results: DataFrame = null
 
   /**
     *
@@ -46,7 +47,7 @@ abstract class QueryExpression(id: Option[String]) {
     * @param info
     * @return
     */
-  private[query] def getRunDetails(info : ListBuffer[RunDetails]) = {
+  private[query] def getRunDetails(info: ListBuffer[RunDetails]) = {
     info += RunDetails(id.getOrElse(""), time, this.getClass.getName, results)
   }
 }

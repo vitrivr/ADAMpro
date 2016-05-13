@@ -1,8 +1,8 @@
 package ch.unibas.dmi.dbis.adam.index.structures.pq
 
 import ch.unibas.dmi.dbis.adam.config.FieldNames
+import ch.unibas.dmi.dbis.adam.entity.Entity
 import ch.unibas.dmi.dbis.adam.entity.Entity.EntityName
-import ch.unibas.dmi.dbis.adam.entity.EntityHandler
 import ch.unibas.dmi.dbis.adam.index.Index.{IndexName, IndexTypeName}
 import ch.unibas.dmi.dbis.adam.index._
 import ch.unibas.dmi.dbis.adam.index.structures.IndexTypes
@@ -30,7 +30,7 @@ class PQIndexer(nsq: Int, trainingSize: Int)(@transient implicit val ac : AdamCo
   override def indextypename : IndexTypeName = IndexTypes.PQINDEX
 
   override def index(indexname: IndexName, entityname: EntityName, data: RDD[IndexingTaskTuple[_]]): Index = {
-    val entity = EntityHandler.load(entityname).get
+    val entity = Entity.load(entityname).get
 
     val n = entity.count
     val fraction = ADAMSamplingUtils.computeFractionForSampleSize(trainingSize, n, false)

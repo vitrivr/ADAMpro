@@ -2,10 +2,9 @@ package ch.unibas.dmi.dbis.adam.storage.engine
 
 import java.io._
 
-import ch.unibas.dmi.dbis.adam.config.{FieldNames, AdamConfig}
+import ch.unibas.dmi.dbis.adam.config.AdamConfig
 import ch.unibas.dmi.dbis.adam.entity.Entity.EntityName
-import ch.unibas.dmi.dbis.adam.entity.FieldTypes.FieldType
-import ch.unibas.dmi.dbis.adam.entity.{FieldTypes, FieldDefinition, EntityNameHolder}
+import ch.unibas.dmi.dbis.adam.entity.{EntityNameHolder, FieldDefinition, FieldTypes}
 import ch.unibas.dmi.dbis.adam.exception.{EntityExistingException, EntityNotExistingException, IndexExistingException, IndexNotExistingException}
 import ch.unibas.dmi.dbis.adam.index.Index.{IndexName, IndexTypeName}
 import ch.unibas.dmi.dbis.adam.index.structures.IndexTypes
@@ -391,7 +390,7 @@ object CatalogOperator {
     val query = indexes.filter(_.entityname === entityname.toString()).map(_.uptodate)
 
     val update = DBIO.seq(
-      query.update(false)
+      query.update(false) //TODO: possibly also change weight
     )
     Await.result(db.run(update), MAX_WAITING_TIME)
 

@@ -1,12 +1,11 @@
 package ch.unibas.dmi.dbis.adam.api
 
+import ch.unibas.dmi.dbis.adam.entity.Entity
 import ch.unibas.dmi.dbis.adam.entity.Entity._
-import ch.unibas.dmi.dbis.adam.entity.EntityHandler
 import ch.unibas.dmi.dbis.adam.exception.GeneralAdamException
 import ch.unibas.dmi.dbis.adam.index.Index._
-import ch.unibas.dmi.dbis.adam.index.IndexHandler.PartitionMode
 import ch.unibas.dmi.dbis.adam.index.structures.IndexTypes
-import ch.unibas.dmi.dbis.adam.index.{Index, IndexHandler}
+import ch.unibas.dmi.dbis.adam.index.{Index, PartitionMode}
 import ch.unibas.dmi.dbis.adam.main.AdamContext
 import ch.unibas.dmi.dbis.adam.query.distance.DistanceFunction
 import org.apache.spark.Logging
@@ -50,7 +49,7 @@ object IndexOp extends Logging {
   def apply(entityname: EntityName, column: String, indextypename: IndexTypeName, distance: DistanceFunction, properties: Map[String, String] = Map())(implicit ac: AdamContext): Try[Index] = {
     try {
       log.debug("perform create index operation")
-      IndexHandler.createIndex(EntityHandler.load(entityname).get, column, indextypename.indexer(distance, properties))
+      Index.createIndex(Entity.load(entityname).get, column, indextypename.indexer(distance, properties))
     } catch {
       case e: Exception => Failure(e)
     }
@@ -83,7 +82,7 @@ object IndexOp extends Logging {
         .map(_.get.indexname)
         .foreach {
           indexname =>
-            IndexHandler.drop(indexname)
+            Index.drop(indexname)
         }
 
       return Failure(new GeneralAdamException("Some indexes were not created properly."))
@@ -101,7 +100,7 @@ object IndexOp extends Logging {
   def exists(indexname: IndexName)(implicit ac: AdamContext): Try[Boolean] = {
     try {
       log.debug("perform index exists operation")
-      Success(IndexHandler.exists(indexname))
+      Success(Index.exists(indexname))
     } catch {
       case e: Exception => Failure(e)
     }
@@ -117,7 +116,7 @@ object IndexOp extends Logging {
     */
   def setWeight(indexname: IndexName, weight: Float)(implicit ac: AdamContext): Try[Void] = {
     try {
-      IndexHandler.load(indexname).get.setWeight(weight)
+      Index.load(indexname).get.setWeight(weight)
       Success(null)
     } catch {
       case e: Exception => Failure(e)
@@ -132,7 +131,7 @@ object IndexOp extends Logging {
     */
   def cache(indexname: IndexName)(implicit ac: AdamContext): Try[Index] = {
     try {
-      IndexHandler.load(indexname, true)
+      Index.load(indexname, true)
     } catch {
       case e: Exception => Failure(e)
     }
@@ -149,7 +148,7 @@ object IndexOp extends Logging {
     */
   def partition(indexname: IndexName, nPartitions: Int, joins: Option[DataFrame], cols: Option[Seq[String]], mode: PartitionMode.Value)(implicit ac: AdamContext): Try[Index] = {
     try {
-      IndexHandler.repartition(IndexHandler.load(indexname).get, nPartitions, joins, cols, mode)
+      Index.repartition(Index.load(indexname).get, nPartitions, joins, cols, mode)
     } catch {
       case e: Exception => Failure(e)
     }
@@ -164,7 +163,7 @@ object IndexOp extends Logging {
   def drop(indexname: IndexName)(implicit ac: AdamContext): Try[Void] = {
     try {
       log.debug("perform drop index operation")
-      IndexHandler.drop(indexname)
+      Index.drop(indexname)
     } catch {
       case e: Exception => Failure(e)
     }

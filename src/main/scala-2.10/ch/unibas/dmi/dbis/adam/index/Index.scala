@@ -1,18 +1,23 @@
 package ch.unibas.dmi.dbis.adam.index
 
+import ch.unibas.dmi.dbis.adam.config.{AdamConfig, FieldNames}
 import ch.unibas.dmi.dbis.adam.datatypes.feature.Feature._
+import ch.unibas.dmi.dbis.adam.datatypes.feature.FeatureVectorWrapper
 import ch.unibas.dmi.dbis.adam.entity.Entity._
-import ch.unibas.dmi.dbis.adam.entity.EntityHandler
-import ch.unibas.dmi.dbis.adam.index.Index.{IndexName, IndexTypeName}
-import ch.unibas.dmi.dbis.adam.index.IndexHandler.PartitionID
+import ch.unibas.dmi.dbis.adam.entity.Entity
+import ch.unibas.dmi.dbis.adam.exception.{GeneralAdamException, IndexNotExistingException}
+import ch.unibas.dmi.dbis.adam.index.Index.{IndexName, IndexTypeName, PartitionID}
 import ch.unibas.dmi.dbis.adam.index.structures.IndexTypes
-import ch.unibas.dmi.dbis.adam.main.AdamContext
+import ch.unibas.dmi.dbis.adam.main.{AdamContext, SparkStartup}
 import ch.unibas.dmi.dbis.adam.query.Result
 import ch.unibas.dmi.dbis.adam.query.distance.DistanceFunction
 import ch.unibas.dmi.dbis.adam.query.query.NearestNeighbourQuery
 import ch.unibas.dmi.dbis.adam.storage.engine.CatalogOperator
-import org.apache.log4j.Logger
-import org.apache.spark.sql.DataFrame
+import org.apache.spark.Logging
+import org.apache.spark.rdd.RDD
+import org.apache.spark.sql.{Row, DataFrame}
+
+import scala.util.{Failure, Random, Success, Try}
 
 /**
   * adamtwo
@@ -20,14 +25,13 @@ import org.apache.spark.sql.DataFrame
   * Ivan Giangreco
   * August 2015
   */
-abstract class Index extends Serializable {
-  @transient lazy val log = Logger.getLogger(getClass.getName)
+abstract class Index extends Serializable with Logging {
 
   def indexname: IndexName
 
   def indextypename: IndexTypeName
 
-  def entity(implicit ac: AdamContext) = EntityHandler.load(entityname)
+  def entity(implicit ac: AdamContext) = Entity.load(entityname)
   def entityname: EntityName
 
   /**
@@ -109,6 +113,24 @@ abstract class Index extends Serializable {
     */
   lazy val pk = CatalogOperator.getEntityPK(entityname)
 
+
+  /**
+    * Scans the index.
+    *
+    * @param query
+    * @param filter
+    * @param ac
+    * @return
+    */
+  def scan(query: NearestNeighbourQuery, filter: Option[DataFrame])(implicit ac : AdamContext): DataFrame = {
+    log.debug("scan index")
+    val results = scan(query.q, query.distance, query.options, query.k, filter, query.partitions, query.queryID)
+    val rdd = ac.sc.parallelize(results.map(result => Row(result.distance, result.tid)).toSeq)
+    val fields = Result.resultSchema(pk.name)
+    ac.sqlContext.createDataFrame(rdd, fields)
+  }
+
+
   /**
     * Scans the index.
     *
@@ -120,7 +142,7 @@ abstract class Index extends Serializable {
     * @param queryID  optional query id
     * @return a set of candidate tuple ids, possibly together with a tentative score (the number of tuples will be greater than k)
     */
-  def scan(q: FeatureVector, distance: DistanceFunction, options: Map[String, String], k: Int, filter: Option[DataFrame], partitions: Option[Set[PartitionID]], queryID: Option[String] = None)(implicit ac: AdamContext): Set[Result] = {
+  def scan(q: FeatureVector, distance: DistanceFunction, options: Map[String, String] = Map(), k: Int, filter: Option[DataFrame], partitions: Option[Set[PartitionID]], queryID: Option[String] = None)(implicit ac: AdamContext): Set[Result] = {
     log.debug("started scanning index")
 
     if(isStale){
@@ -145,7 +167,7 @@ abstract class Index extends Serializable {
       data = ac.sqlContext.createDataFrame(rdd, df.schema)
     }
 
-    scan(data, q, distance, options, k)
+   scan(data, q, distance, options, k)
   }
 
   /**
@@ -188,9 +210,256 @@ abstract class Index extends Serializable {
   }
 }
 
-object Index {
+object Index extends Logging {
   type IndexName = String
   type IndexTypeName = IndexTypes.IndexType
+
+  private val storage = SparkStartup.indexStorage
+
+  private val MINIMUM_NUMBER_OF_TUPLE = 10
+
+  private val lock = new Object()
+
+  type PartitionID = Int
+
+
+
+  /**
+    * Creates an index that is unique and which folows the naming rules of indexes.
+    *
+    * @param entityname
+    * @param indextype
+    * @return
+    */
+  private def createIndexName(entityname: EntityName, column: String, indextype: IndexTypeName): String = {
+    val indexes = CatalogOperator.listIndexes(entityname, indextype).map(_._1)
+
+    var indexname = ""
+
+    var i = indexes.length
+    do {
+      indexname = entityname + "_" + column + "_" + indextype.name + "_" + i
+      i += 1
+    } while (indexes.contains(indexname))
+
+    indexname
+  }
+
+
+  /**
+    * Creates an index.
+    *
+    * @param entity
+    * @param column         the column to index
+    * @param indexgenerator generator to create index
+    * @return index
+    */
+  def createIndex(entity: Entity, column: String, indexgenerator: IndexGenerator)(implicit ac: AdamContext): Try[Index] = {
+    lock.synchronized {
+      if (!entity.schema.map(_.name).contains(column)) {
+        return Failure(new GeneralAdamException("column not existing in entity " + entity.entityname + entity.schema.map(_.name).mkString("(", ",", ")")))
+      }
+
+      val count = entity.count
+      if (count < MINIMUM_NUMBER_OF_TUPLE) {
+        return Failure(new GeneralAdamException("not enough tuples for creating index, needs at least " + MINIMUM_NUMBER_OF_TUPLE + " but has only " + count))
+      }
+
+      val indexname = createIndexName(entity.entityname, column, indexgenerator.indextypename)
+      val rdd: RDD[IndexingTaskTuple[_]] = entity.featureData.map { x => IndexingTaskTuple(x.getAs[Any](entity.pk.name), x.getAs[FeatureVectorWrapper](column).vector) }
+      val index = indexgenerator.index(indexname, entity.entityname, rdd)
+      index.df = index
+        .df
+        .repartition(AdamConfig.defaultNumberOfPartitions)
+        .withColumnRenamed("id", entity.pk.name)
+        .withColumnRenamed("value", FieldNames.featureIndexColumnName)
+      storage.write(indexname, index.df)
+      CatalogOperator.createIndex(indexname, indexname, entity.entityname, column, indexgenerator.indextypename, index.metadata)
+      Success(index)
+    }
+  }
+
+  /**
+    * Checks whether index exists.
+    *
+    * @param indexname
+    * @return
+    */
+  def exists(indexname: IndexName)(implicit ac: AdamContext): Boolean = CatalogOperator.existsIndex(indexname)
+
+  /**
+    * Lists indexes.
+    *
+    * @param entityname
+    * @param indextypename
+    * @return
+    */
+  def list(entityname: EntityName = null, indextypename: IndexTypeName = null)(implicit ac: AdamContext): Seq[Try[Index]] = {
+    CatalogOperator.listIndexes(entityname, indextypename).map(index => load(index._1))
+  }
+
+  /**
+    * Loads index into cache.
+    *
+    * @param indexname
+    * @return
+    */
+  def load(indexname: IndexName, cache: Boolean = false)(implicit ac: AdamContext): Try[Index] = {
+    if (!IndexLRUCache.contains(indexname) && !exists(indexname)) {
+      Failure(new IndexNotExistingException())
+    }
+
+    val index = IndexLRUCache.get(indexname)
+
+    if (cache) {
+      index.get.df.rdd.setName(indexname).cache()
+    }
+
+    index
+  }
+
+  /**
+    * Loads the index metadata without loading the data itself yet.
+    *
+    * @param indexname
+    * @return
+    */
+  private[index] def loadIndexMetaData(indexname: IndexName)(implicit ac: AdamContext): Try[Index] = {
+    if (!exists(indexname)) {
+      Failure(IndexNotExistingException())
+    }
+
+    val df = storage.read(CatalogOperator.getIndexPath(indexname))
+    if (df.isFailure) {
+      return Failure(df.failed.get)
+    }
+
+    val entityname = CatalogOperator.getEntitynameFromIndex(indexname)
+    val meta = CatalogOperator.getIndexMeta(indexname)
+
+    val indextypename = CatalogOperator.getIndexTypeName(indexname)
+
+    val index = indextypename.index(indexname, entityname, df.get, meta)
+
+    Success(index)
+  }
+
+  /**
+    * Drops an index.
+    *
+    * @param indexname
+    * @return true if index was dropped
+    */
+  def drop(indexname: IndexName)(implicit ac: AdamContext): Try[Void] = {
+    lock.synchronized {
+      CatalogOperator.dropIndex(indexname)
+      storage.drop(indexname)
+      Success(null)
+    }
+  }
+
+  /**
+    * Drops all indexes for a given entity.
+    *
+    * @param entityname
+    * @return
+    */
+  def dropAll(entityname: EntityName)(implicit ac: AdamContext): Try[Void] = {
+    val indexes = CatalogOperator.dropAllIndexes(entityname)
+
+    indexes.foreach {
+      index => storage.drop(index)
+    }
+
+    Success(null)
+  }
+
+
+  /**
+    *
+    * @param index
+    * @param nPartitions
+    * @param join
+    * @param cols
+    * @param option
+    * @return
+    */
+  def repartition(index: Index, nPartitions: Int, join: Option[DataFrame], cols: Option[Seq[String]], option: PartitionMode.Value)(implicit ac: AdamContext): Try[Index] = {
+    var data = index.df //TODO: join to own metadata
+    //TODO: possibly add own partitioner
+    //data.map(r => (r.getAs(cols.get.head), r)).partitionBy(new HashPartitioner())
+
+    if (join.isDefined) {
+      data = data.join(join.get, index.pk.name)
+    }
+
+    data = if (cols.isDefined) {
+      val entityColNames = Entity.load(index.entityname).get.schema.map(_.name)
+      if (!cols.get.forall(name => entityColNames.contains(name))) {
+        Failure(throw new GeneralAdamException("one of the columns " + cols.mkString(",") + " is not existing in entity " + index.entityname + entityColNames.mkString("(", ",", ")")))
+      }
+
+      data.repartition(nPartitions, cols.get.map(data(_)): _*)
+    } else {
+      data.repartition(nPartitions, data(index.pk.name))
+    }
+
+    if (join.isDefined) {
+      data = data.select(index.pk.name, FieldNames.featureIndexColumnName)
+    }
+
+    option match {
+      case PartitionMode.CREATE_NEW =>
+        val newName = createIndexName(index.entityname, index.column, index.indextypename)
+        storage.write(newName, data)
+        CatalogOperator.createIndex(newName, newName, index.entityname, index.column, index.indextypename, index.metadata)
+        IndexLRUCache.invalidate(newName)
+
+        return Success(load(newName).get)
+
+      case PartitionMode.CREATE_TEMP =>
+        val newName = createIndexName(index.entityname, index.column, index.indextypename)
+
+        val newIndex = index.copy(Some(newName))
+        newIndex.df = data
+
+        IndexLRUCache.put(newName, newIndex)
+        return Success(newIndex)
+
+      case PartitionMode.REPLACE_EXISTING =>
+        val oldPath = index.path
+
+        index.df = data
+        var newPath = ""
+
+        do {
+          newPath = index.indexname + "-rep" + Random.nextInt
+        } while (SparkStartup.indexStorage.exists(newPath).get)
+
+        SparkStartup.indexStorage.write(newPath, data)
+        CatalogOperator.updateIndexPath(index.indexname, newPath)
+        SparkStartup.indexStorage.drop(oldPath)
+
+        IndexLRUCache.invalidate(index.indexname)
+
+        return Success(index)
+    }
+  }
+
+  /**
+    * Resets all weights to default weight.
+    *
+    * @param entityname
+    */
+  def resetAllWeights(entityname: EntityName): Boolean = {
+    CatalogOperator.resetIndexWeight(entityname)
+  }
+}
+
+object PartitionMode extends Enumeration {
+  val CREATE_NEW = Value("create new index (materialize)")
+  val REPLACE_EXISTING = Value("replace existing index (materialize)")
+  val CREATE_TEMP = Value("create temporary index in cache")
 }
 
 

@@ -1,7 +1,7 @@
 package ch.unibas.dmi.dbis.adam.query.handler.external
 
+import ch.unibas.dmi.dbis.adam.entity.Entity
 import ch.unibas.dmi.dbis.adam.entity.Entity.EntityName
-import ch.unibas.dmi.dbis.adam.entity.EntityHandler
 import ch.unibas.dmi.dbis.adam.main.AdamContext
 import ch.unibas.dmi.dbis.adam.query.datastructures.QueryExpression
 import org.apache.http.impl.client.SystemDefaultHttpClient
@@ -26,7 +26,7 @@ import org.apache.spark.sql.{DataFrame, Row}
 
   //TODO: possibly add a join field
   def query(entityname: EntityName, query: Map[String, String]): DataFrame = {
-    val entity = EntityHandler.load(entityname).get
+    val entity = Entity.load(entityname).get
     val pk = entity.pk
 
     val solrQuery = new SolrQuery();

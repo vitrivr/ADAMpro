@@ -1,8 +1,8 @@
 package ch.unibas.dmi.dbis.adam.index.structures.ecp
 
 import ch.unibas.dmi.dbis.adam.config.FieldNames
+import ch.unibas.dmi.dbis.adam.entity.Entity
 import ch.unibas.dmi.dbis.adam.entity.Entity.EntityName
-import ch.unibas.dmi.dbis.adam.entity.EntityHandler
 import ch.unibas.dmi.dbis.adam.index.Index.{IndexName, IndexTypeName}
 import ch.unibas.dmi.dbis.adam.index._
 import ch.unibas.dmi.dbis.adam.index.structures.IndexTypes
@@ -33,7 +33,7 @@ class ECPIndexer(trainingSize: Int = -1, distance: DistanceFunction)(@transient 
     * @return
     */
   override def index(indexname: IndexName, entityname: EntityName, data: RDD[IndexingTaskTuple[_]]): Index = {
-    val entity = EntityHandler.load(entityname).get
+    val entity = Entity.load(entityname).get
 
     val n = entity.count
     val ntuples = if (trainingSize == -1) {

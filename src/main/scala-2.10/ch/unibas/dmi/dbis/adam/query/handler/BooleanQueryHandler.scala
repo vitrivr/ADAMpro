@@ -1,5 +1,7 @@
 package ch.unibas.dmi.dbis.adam.query.handler
 
+import ch.unibas.dmi.dbis.adam.entity.Entity
+import ch.unibas.dmi.dbis.adam.entity.Entity._
 import ch.unibas.dmi.dbis.adam.main.{AdamContext, SparkStartup}
 import ch.unibas.dmi.dbis.adam.query.query.{BooleanQuery, PrimaryKeyFilter}
 import org.apache.log4j.Logger
@@ -13,6 +15,35 @@ import org.apache.spark.sql.DataFrame
   */
 private[query] object BooleanQueryHandler {
   val log = Logger.getLogger(getClass.getName)
+
+
+  /**
+    * Creates a filter that is applied on the nearest neighbour search based on the Boolean query.
+    *
+    * @param entityname
+    * @param bq
+    * @return
+    */
+  def getFilter(entityname: EntityName, bq: Option[BooleanQuery], tiq: Option[PrimaryKeyFilter[_]])(implicit ac: AdamContext): Option[DataFrame] = {
+    if (bq.isEmpty && tiq.isEmpty) {
+      return None
+    }
+
+    val entity = Entity.load(entityname).get
+    var data = entity.data
+    var pk = entity.pk
+
+
+    if (bq.isDefined) {
+      data = BooleanQueryHandler.filter(data, bq.get)
+    }
+
+    if (tiq.isDefined) {
+      data = BooleanQueryHandler.filter(data, pk.name, tiq.get)
+    }
+
+    Some(data.select(pk.name))
+  }
 
   /**
     *

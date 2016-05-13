@@ -2,11 +2,11 @@ package ch.unibas.dmi.dbis.adam.rpc
 
 import ch.unibas.dmi.dbis.adam.api._
 import ch.unibas.dmi.dbis.adam.datatypes.feature.{FeatureVectorWrapper, FeatureVectorWrapperUDT}
-import ch.unibas.dmi.dbis.adam.entity.{EntityHandler, FieldDefinition, FieldTypes}
+import ch.unibas.dmi.dbis.adam.entity.{Entity, FieldDefinition, FieldTypes}
 import ch.unibas.dmi.dbis.adam.exception.GeneralAdamException
 import ch.unibas.dmi.dbis.adam.http.grpc.FieldDefinitionMessage.FieldType
 import ch.unibas.dmi.dbis.adam.http.grpc.{AckMessage, CreateEntityMessage, _}
-import ch.unibas.dmi.dbis.adam.index.IndexHandler.PartitionMode
+import ch.unibas.dmi.dbis.adam.index.PartitionMode
 import ch.unibas.dmi.dbis.adam.index.structures.IndexTypes
 import ch.unibas.dmi.dbis.adam.main.AdamContext
 import io.grpc.stub.StreamObserver
@@ -85,7 +85,7 @@ class DataDefinitionRPC(implicit ac: AdamContext) extends AdamDefinitionGrpc.Ada
     new StreamObserver[InsertMessage]() {
 
       def onNext(insert: InsertMessage) {
-        val entity = EntityHandler.load(insert.entity)
+        val entity = Entity.load(insert.entity)
 
         if (entity.isFailure) {
           return onError(new GeneralAdamException("cannot load entity"))

@@ -29,7 +29,13 @@ case class FeatureVectorWrapper(vector: FeatureVector) extends Serializable {
     *
     * @return
     */
-  def toSeq() : Seq[VectorBase] = vector.toDenseVector.toArray
+  def toSeq : Seq[VectorBase] = vector.toDenseVector.toArray
+
+  /**
+    *
+    * @return
+    */
+  override def toString : String = toSeq.mkString(",")
 }
 
 

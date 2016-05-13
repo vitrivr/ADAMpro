@@ -30,7 +30,7 @@ object EntityLRUCache {
       new CacheLoader[EntityName, Entity]() {
         def load(entityname: EntityName): Entity = {
           import SparkStartup.Implicits._
-          val entity = EntityHandler.loadEntityMetaData(entityname)
+          val entity = Entity.loadEntityMetaData(entityname)
           entity.get
         }
       }

@@ -5,7 +5,7 @@ import java.util.concurrent.TimeUnit
 import ch.unibas.dmi.dbis.adam.config.AdamConfig
 import ch.unibas.dmi.dbis.adam.exception.QueryNotCachedException
 import com.google.common.cache.{CacheBuilder, CacheLoader}
-import org.apache.log4j.Logger
+import org.apache.spark.Logging
 import org.apache.spark.sql.DataFrame
 
 import scala.util.{Failure, Success, Try}
@@ -16,9 +16,7 @@ import scala.util.{Failure, Success, Try}
   * Ivan Giangreco
   * April 2016
   */
-private[query] object QueryLRUCache {
-  val log = Logger.getLogger(getClass.getName)
-
+object QueryLRUCache extends Logging {
   private val maximumCacheSize = AdamConfig.maximumCacheSizeQueryResults
   private val expireAfterAccess = AdamConfig.expireAfterAccessQueryResults
 
@@ -43,13 +41,13 @@ private[query] object QueryLRUCache {
     try {
       val result = queryCache.getIfPresent(queryid)
       if (result != null) {
+        log.debug("getting query results from log")
         Success(result)
       } else {
         Failure(QueryNotCachedException())
       }
     } catch {
       case e: Exception =>
-        log.error(e.getMessage)
         Failure(e)
     }
   }
@@ -66,4 +64,3 @@ private[query] object QueryLRUCache {
 }
 
 case class QueryCacheOptions(useCached: Boolean = false, putInCache: Boolean = false)
-

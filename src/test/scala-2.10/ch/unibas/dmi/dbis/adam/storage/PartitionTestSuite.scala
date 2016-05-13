@@ -3,9 +3,8 @@ package ch.unibas.dmi.dbis.adam.storage
 import ch.unibas.dmi.dbis.adam.AdamTestBase
 import ch.unibas.dmi.dbis.adam.api.{IndexOp, QueryOp}
 import ch.unibas.dmi.dbis.adam.config.FieldNames
-import ch.unibas.dmi.dbis.adam.index.IndexHandler.PartitionMode
 import ch.unibas.dmi.dbis.adam.index.structures.IndexTypes
-import ch.unibas.dmi.dbis.adam.index.{IndexHandler, IndexLRUCache}
+import ch.unibas.dmi.dbis.adam.index.{PartitionMode, Index, IndexLRUCache}
 import ch.unibas.dmi.dbis.adam.main.SparkStartup.Implicits._
 import ch.unibas.dmi.dbis.adam.query.distance.EuclideanDistance
 import ch.unibas.dmi.dbis.adam.query.query.NearestNeighbourQuery
@@ -70,7 +69,7 @@ class PartitionTestSuite extends AdamTestBase {
         IndexLRUCache.empty()
 
         Then("the index should be gone")
-        val loadedIndex = IndexHandler.load(partindex.get.indexname)
+        val loadedIndex = Index.load(partindex.get.indexname)
         assert(loadedIndex.isFailure)
       }
     }
@@ -90,7 +89,7 @@ class PartitionTestSuite extends AdamTestBase {
         IndexLRUCache.empty()
 
         Then("we should be able to load the index")
-        val loadedIndex = IndexHandler.load(partindex.get.indexname)
+        val loadedIndex = Index.load(partindex.get.indexname)
         assert(loadedIndex.isSuccess)
 
         val partresults = QueryOp.index(partindex.get.indexname, partnnq, None, false).get
@@ -117,7 +116,7 @@ class PartitionTestSuite extends AdamTestBase {
         IndexLRUCache.empty()
 
         Then("we should be able to load the index")
-        val loadedIndex = IndexHandler.load(partindex.get.indexname)
+        val loadedIndex = Index.load(partindex.get.indexname)
         assert(loadedIndex.isSuccess)
 
         val partresults = QueryOp.index(partindex.get.indexname, partnnq, None, true).get
