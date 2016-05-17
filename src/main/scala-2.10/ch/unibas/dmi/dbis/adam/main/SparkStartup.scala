@@ -1,6 +1,8 @@
 package ch.unibas.dmi.dbis.adam.main
 
 import ch.unibas.dmi.dbis.adam.config.AdamConfig
+import ch.unibas.dmi.dbis.adam.datatypes.bitString.BitStringUDT
+import ch.unibas.dmi.dbis.adam.datatypes.feature.FeatureVectorWrapperUDT
 import ch.unibas.dmi.dbis.adam.storage.components.{FeatureStorage, IndexStorage, MetadataStorage}
 import ch.unibas.dmi.dbis.adam.storage.engine.{ParquetFeatureStorage, ParquetIndexStorage, PostgresqlMetadataStorage}
 import org.apache.log4j.Logger
@@ -24,10 +26,8 @@ object SparkStartup {
     .set("spark.kryoserializer.buffer", "2047")
     .set("spark.akka.frameSize", "1024")
     .set("spark.scheduler.mode", "FAIR")
-    .set("parquet.enable.summary-metadata", "false")
-  //TODO: add kryo serializer back, but check with deployment to yarn
-  //.set("spark.serializer", "org.apache.spark.serializer.KryoSerializer")
-  //.registerKryoClasses(Array(classOf[BitString[_]], classOf[MinimalBitString], classOf[FeatureVectorWrapper]))
+    .set("spark.serializer", "org.apache.spark.serializer.KryoSerializer")
+    .registerKryoClasses(Array(classOf[BitStringUDT], classOf[FeatureVectorWrapperUDT]))
 
   if (AdamConfig.master.isDefined) {
     sparkConfig.setMaster(AdamConfig.master.get)
@@ -37,6 +37,7 @@ object SparkStartup {
     implicit lazy val ac = this
 
     @transient implicit lazy val sc = new SparkContext(sparkConfig)
+    sc.hadoopConfiguration.set("parquet.enable.summary-metadata", "false")
     sc.setLogLevel(AdamConfig.loglevel)
     //TODO: possibly switch to a jobserver (https://github.com/spark-jobserver/spark-jobserver), pass sqlcontext around
     @transient implicit lazy val sqlContext = new HiveContext(sc)

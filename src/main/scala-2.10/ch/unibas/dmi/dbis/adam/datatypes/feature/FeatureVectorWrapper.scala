@@ -38,7 +38,7 @@ case class FeatureVectorWrapper(vector: FeatureVector) extends Serializable {
   override def toString : String = toSeq.mkString(",")
 }
 
-
+@SerialVersionUID(1L)
 class FeatureVectorWrapperUDT extends UserDefinedType[FeatureVectorWrapper] {
   override def sqlType: DataType = {
     StructType(Seq(

@@ -136,6 +136,7 @@ trait BitStringFactory {
 /**
   * UDT class for storing bit strings in Spark.
   */
+@SerialVersionUID(1L)
 class BitStringUDT extends UserDefinedType[BitString[_]] {
   override def sqlType: DataType = BinaryType
 

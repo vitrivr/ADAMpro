@@ -1,4 +1,4 @@
-FROM sequenceiq/spark:v1.6.0onHadoop2.6.0
+FROM sequenceiq/spark:v1.6.1onHadoop2.6.0
 
 ADD mapred-site.xml $HADOOP_PREFIX/etc/hadoop/mapred-site.xml
 ADD yarn-site.xml $HADOOP_PREFIX/etc/hadoop/yarn-site.xml
