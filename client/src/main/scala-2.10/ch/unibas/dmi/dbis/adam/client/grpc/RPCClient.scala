@@ -115,7 +115,9 @@ class RPCClient(channel: ManagedChannel, definer: AdamDefinitionBlockingStub, se
     log.info("retrieving entity details")
 
     try {
-      Success(definer.getEntityProperties(EntityNameMessage(entityname)).properties)
+      val count = definer.count(EntityNameMessage(entityname))
+      val properties = definer.getEntityProperties(EntityNameMessage(entityname)).properties
+      Success(properties.+("count" -> "not counted"))
     } catch {
       case e: Exception => Failure(e)
     }
@@ -182,7 +184,12 @@ class RPCClient(channel: ManagedChannel, definer: AdamDefinitionBlockingStub, se
 
     try {
       val res = searcherBlocking.doCompoundQuery(request.toRPCMessage())
-      Success(new CompoundQueryDetails(res))
+      if (res.ack.get.code == AckMessage.Code.OK) {
+        return Success(new CompoundQueryDetails(res))
+      } else {
+        return Failure(new Exception(res.ack.get.message))
+      }
+
     } catch {
       case e: Exception => Failure(e)
     }
@@ -195,7 +202,8 @@ class RPCClient(channel: ManagedChannel, definer: AdamDefinitionBlockingStub, se
     log.info("progressive query start")
 
     try {
-      val nnq = NearestNeighbourQueryMessage(column, Some(FeatureVectorMessage(query)), Option(DistanceMessage(DistanceType.minkowski, Map("norm" -> "2"))), k)
+      val fv = FeatureVectorMessage().withDenseVector(DenseVectorMessage(query))
+      val nnq = NearestNeighbourQueryMessage(column, Some(fv), Option(DistanceMessage(DistanceType.minkowski, Map("norm" -> "2"))), k)
       val request = SimpleQueryMessage(entity = entityname, hints = hints, nnq = Option(nnq))
 
       val so = new StreamObserver[QueryResponseInfoMessage]() {
@@ -232,7 +240,7 @@ class RPCClient(channel: ManagedChannel, definer: AdamDefinitionBlockingStub, se
     * @param partitions
     * @return
     */
-  def repartition(index: String, partitions: Int, useMetadata: Boolean = false, cols: Seq[String] = Seq(), materialize: Boolean, replace: Boolean): Try[String] = {
+  def repartition(index: String, partitions: Int, cols: Seq[String] = Seq(), materialize: Boolean, replace: Boolean): Try[String] = {
     log.info("repartitioning index")
 
     try {
@@ -246,7 +254,7 @@ class RPCClient(channel: ManagedChannel, definer: AdamDefinitionBlockingStub, se
         PartitionOptions.CREATE_NEW
       }
 
-      Success(definer.repartitionIndexData(RepartitionMessage(index, partitions, useMetadata, cols, option)).message)
+      Success(definer.repartitionIndexData(RepartitionMessage(index, partitions, cols, option)).message)
     } catch {
       case e: Exception => Failure(e)
     }

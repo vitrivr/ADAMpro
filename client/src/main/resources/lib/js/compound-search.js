@@ -46,21 +46,21 @@ var initNode = function (el) {
     });
 };
 
-var newNode = function (x, y, fields, frontname, backname) {
+var newNode = function (x, y, frontname, operation, subtype, fields) {
     var d = document.createElement("div");
     var id = jsPlumbUtil.uuid();
     d.className = "w";
-    d.id = "box-" + backname + "-" + id;
+    d.id = "box-" + subtype + "-" + id;
 
     var innerhtml = "";
     innerhtml += "<div class=\"btnClose\"><i class=\"material-icons tiny\">close</i></div>";
     innerhtml += "<div style=\"height:20px\">";
-    if (fields.length > 0) {
+    if (fields != null && fields.length > 0) {
         innerhtml += "<div class=\"btnSettings\" style=\"float:left\"><i class=\"tiny material-icons\">mode_edit</i></div>&nbsp;&nbsp;";
     }
     innerhtml += frontname;
     innerhtml += "</div>";
-    if (fields.length > 0) {
+    if (fields != null && fields.length > 0) {
         innerhtml += "<div class=\"settings\" style=\"display:none\">";
         innerhtml += fields;
         innerhtml += "</div>";
@@ -72,11 +72,13 @@ var newNode = function (x, y, fields, frontname, backname) {
     d.innerHTML = innerhtml;
     d.style.left = x + "px";
     d.style.top = y + "px";
-    d.setAttribute("data-adamtype", backname);
+    d.setAttribute("data-operation", operation);
+    d.setAttribute("data-subtype", subtype);
+
     document.getElementById("canvas").appendChild(d);
     initNode(d);
 
-    if (fields.length > 0) {
+    if (fields != null && fields.length > 0) {
         $("#" + d.id + " > div > .btnSettings").click(function () {
             $("#" + d.id + " > .settings").toggle("slow");
         });
@@ -98,20 +100,24 @@ for (var i = 0; i < windows.length; i++) {
 
 //add index
 $("#btnAddIndex").click(function () {
-    var innerhtml = "";
-    innerhtml += "<input type=\"text\" class=\"form-control\" name=\"indexname\" placeholder=\"indexname\">";
-    innerhtml += "<input type=\"text\" class=\"form-control\" name=\"partitions\" placeholder=\"all partitions\">";
-
-    newNode(0, 0, innerhtml, $("#indextype option:selected").text(), $("#indextype").val());
+    var option = $("#indextype option[value=" + $("#indextype").val() + "]");
+    var frontname = option.text();
+    var operation = option.data("operation");
+    var subtype = option.data("subtype");
+    var details = option.data("details");
+    newNode(0, 0, frontname, operation, subtype, details);
 });
 
 //add operation
 $("#btnAddOperation").click(function () {
-    var innerhtml = "";
-    innerhtml += "<div class=\"input-field\"><select name=\"operationorder\" class=\"browser-default\"><option value=\"parallel\" selected=\"selected\">parallel</option><option value=\"left\">left first</option><option value=\"right\">right first</option> </select></div>";
-
-    newNode(0, 0, innerhtml, $("#indexoperation option:selected").text(), $("#indexoperation").val());
+    var option = $("#indexoperation option[value=" + $("#indextype").val() + "]");
+    var frontname = option.text();
+    var operation = option.data("operation");
+    var subtype = option.data("subtype");
+    var details = option.data("details");
+    newNode(0, 0, frontname, operation, subtype, details);
 });
+
 
 //submit operation
 $("#btnSubmit").click(function () {
@@ -166,100 +172,51 @@ $("#btnSubmit").click(function () {
 
 //evaluate canvas
 var evaluate = function (id) {
-    var type = $("#" + id).attr("data-adamtype");
+    var operation = $("#" + id).data("operation");
 
-    switch (type) {
-        case "start":
-            var result = {};
+    var result = {};
+    result.id = id;
+    result.operation = operation;
 
-            var targets = getTargets(id); //TODO: only one target allowed!
+    result.options = {};
+    result.options.subtype = $("#" + id).data("subtype");
 
-            result.id = id;
-            result.operation = "start";
-            result.options = {};
-            result.options.entityname = $("#entityname").val();
-            result.options.column = $("#column").val();
-
-            if ($("#k").val().length > 0) {
-                result.options.k = $("#k").val();
-            }
-
-            result.options.query = $("#query").val();
-            result.targets = $.map(targets, function (val, i) {
-                return evaluate(val)
-            });
-
-            return result;
-            break;
-        case "ecp":
-        case "lsh":
-        case "pq":
-        case "sh":
-        case "vaf":
-        case "vav":
-            var result = {};
-
-            result.id = id;
-            result.operation = "indexscan";
-            result.options = {};
-
-            result.options.indextype = type;
-            $("#" + id + " > .settings").find(":input").each(function () {
-                if ($(this).val().length > 0) {
-                    result.options[$(this).attr('name')] = $(this).val();
-                }
-            });
-
-            var targets = getTargets(id); //TODO: only one target allowed!
-
-            if (targets.length > 0) {
-                result.targets = $.map(targets, function (val, i) {
-                    return evaluate(val)
-                });
-            }
-
-            //TODO: possibly switch to "local" information
-            result.options.entityname = $("#entityname").val();
-            result.options.query = $("#query").val();
-            if ($("#k").val().length > 0) {
-                result.options.k = $("#k").val();
-            }
-
-            return result;
-            break;
-        case "union":
-        case "intersect":
-        case "except":
-            var result = {};
-
-            var targets = getTargets(id); //TODO: only two targets allowed!
-
-            result.id = id;
-            result.operation = "aggregate";
-            result.options = {};
-            result.options.aggregation = type;
-            $("#" + id + " > .settings").find(":input").each(function () {
-                if ($(this).val().length > 0) {
-                    result.options[$(this).attr('name')] = $(this).val();
-                }
-            });
-            result.targets = $.map(targets, function (val, i) {
-                return evaluate(val)
-            });
-
-            return result;
-            break;
-        default:
-            return {};
+    result.options.entityname = $("#entityname").val();
+    result.options.column = $("#column").val();
+    result.options.query = $("#query").val();
+    if ($("#k").val().length > 0) {
+        result.options.k = $("#k").val();
     }
+    $("#" + id + " > .settings").find(":input").each(function () {
+        if ($(this).val().length > 0) {
+            result.options[$(this).attr('name')] = $(this).val();
+        }
+    });
+
+    var targets = getTargets(id);
+    if (targets.length > 0) {
+        result.targets = $.map(targets, function (val, i) {
+            clearRes(val)
+            return evaluate(val)
+        });
+    }
+
+    if (operation === "start") {
+        clearRes("box-start");
+    }
+
+    return result;
 };
 
 var getTargets = function (id) {
-    var connections = instance.getConnections({source: id});
+    var connections = instance.getConnections({target: id});
     var targets = $.map(connections, function (val, i) {
-        return val.targetId
+        return val.sourceId
     });
     return targets;
 };
 
+var clearRes = function (id) {
+    $('#' + id + ' > div.res').html("");
+};
 

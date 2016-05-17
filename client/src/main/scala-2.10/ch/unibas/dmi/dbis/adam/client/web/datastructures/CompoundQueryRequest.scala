@@ -21,6 +21,8 @@ case class CompoundQueryRequest(var id: String, var operation: String, var optio
 
   private def entity = options.get("entityname").get
 
+  private def subtype = options.get("subtype").getOrElse("")
+
   private def query = options.get("query").get.split(",").map(_.toFloat)
 
   private def nnq = {
@@ -35,7 +37,7 @@ case class CompoundQueryRequest(var id: String, var operation: String, var optio
       Seq[Int]()
     }
 
-    val nnq = NearestNeighbourQueryMessage(options.getOrElse("column", "feature"), Some(FeatureVectorMessage(query)),
+    val nnq = NearestNeighbourQueryMessage(options.getOrElse("column", "feature"), Some(FeatureVectorMessage().withDenseVector(DenseVectorMessage(query))),
       Some(DistanceMessage(DistanceMessage.DistanceType.minkowski, Map("norm" -> "1"))),
       options.get("k").getOrElse("100").toInt,
       true,
@@ -49,13 +51,13 @@ case class CompoundQueryRequest(var id: String, var operation: String, var optio
     *
     */
   private def prepare(): Unit = {
-    if (operation == "indexscan" && targets.isDefined && targets.get.length > 0) {
+    if ((operation == "index" || operation == "sequential" || operation == "external") && targets.isDefined && !targets.get.isEmpty) {
       val from = CompoundQueryRequest(id, operation, options, None)
       val to = targets.get.head
 
       id = id + "-intersectfilter"
-      operation = "aggregate"
-      options = Map("aggregation" -> "intersect", "operationorder" -> "right")
+      operation = "aggregation"
+      options = Map("subtype" -> "intersect", "operationorder" -> "right")
       targets = Option(Seq(from, to))
     } else if (targets.isDefined) {
       targets.get.foreach { t =>
@@ -70,24 +72,14 @@ case class CompoundQueryRequest(var id: String, var operation: String, var optio
     * @return
     */
   private def cqm(): CompoundQueryMessage = {
-    if (targets.get.isEmpty) {
+    if (targets.isEmpty || targets.get.isEmpty) {
       val sqm = SubExpressionQueryMessage().withSsqm(SimpleSequentialQueryMessage("sequential", entity, Option(nnq), None, true))
       return CompoundQueryMessage(id, entity, Option(nnq), None, Option(sqm), true, true);
     }
 
     val node = targets.get.head
 
-    var sqm = SubExpressionQueryMessage().withQueryid(node.id)
-
-    if (node.operation == "aggregate") {
-      sqm = sqm.withEqm(node.eqm())
-    } else if (node.options.get("indexname").isDefined) {
-      sqm = sqm.withSsiqm(node.ssiqm())
-    } else {
-      sqm = sqm.withSiqm(node.siqm())
-    }
-
-    CompoundQueryMessage(id, entity, Option(nnq), None, Option(sqm), true, true)
+    CompoundQueryMessage(id, entity, Option(nnq), None, Option(node.seqm()), true, true)
   }
 
   /**
@@ -95,14 +87,16 @@ case class CompoundQueryRequest(var id: String, var operation: String, var optio
     * @return
     */
   private def eqm(): ExpressionQueryMessage = {
-    val op = options.get("aggregation").get match {
+    assert(operation == "aggregation")
+
+    val op = options.get("subtype").get match {
       case "union" => ExpressionQueryMessage.Operation.UNION
       case "intersect" => ExpressionQueryMessage.Operation.INTERSECT
       case "except" => ExpressionQueryMessage.Operation.EXCEPT
     }
 
-    val lsqm = seqm(targets.get(0))
-    val rsqm = seqm(targets.get(1))
+    val lsqm = targets.get(0).seqm()
+    val rsqm = targets.get(1).seqm()
 
     val order = options.get("operationorder").get match {
       case "parallel" => ExpressionQueryMessage.OperationOrder.PARALLEL
@@ -114,16 +108,30 @@ case class CompoundQueryRequest(var id: String, var operation: String, var optio
     ExpressionQueryMessage(id, Option(lsqm), op, order, Option(rsqm))
   }
 
-  private def seqm(cqr: CompoundQueryRequest): SubExpressionQueryMessage = {
-    var sqm = SubExpressionQueryMessage().withQueryid(cqr.id)
+  /**
+    *
+    * @return
+    */
+  private def seqm(): SubExpressionQueryMessage = {
+    var sqm = SubExpressionQueryMessage().withQueryid(id)
 
-    if (cqr.operation == "aggregate") {
-      sqm = sqm.withEqm(cqr.eqm())
-    } else if (cqr.options.get("indexname").isDefined) {
-      sqm = sqm.withSsiqm(cqr.ssiqm())
-    } else {
-      sqm = sqm.withSiqm(cqr.siqm())
+    operation match {
+      case "aggregation" =>
+        sqm = sqm.withEqm(eqm())
+
+      case "index" =>
+        if (options.get("indexname").isDefined) {
+          sqm = sqm.withSsiqm(ssiqm())
+        } else {
+          sqm = sqm.withSiqm(siqm())
+        }
+      case "sequential" =>
+        sqm = sqm.withSsqm(ssqm())
+
+      case "external" =>
+        sqm = sqm.withEhqm(ehqm())
     }
+
     sqm
   }
 
@@ -132,8 +140,20 @@ case class CompoundQueryRequest(var id: String, var operation: String, var optio
     * @return
     */
   private def ssiqm(): SimpleSpecifiedIndexQueryMessage = {
+    assert(operation == "index")
+
     val indexname = options.get("indexname").get
-    SimpleSpecifiedIndexQueryMessage(id, indexname, Option(nnq), None, false)
+    SimpleSpecifiedIndexQueryMessage(id, indexname, Option(nnq), None)
+  }
+
+  /**
+    *
+    * @return
+    */
+  private def ssqm(): SimpleSequentialQueryMessage = {
+    assert(operation == "sequential")
+
+    SimpleSequentialQueryMessage(id, entity, Option(nnq), None)
   }
 
 
@@ -142,7 +162,9 @@ case class CompoundQueryRequest(var id: String, var operation: String, var optio
     * @return
     */
   private def siqm(): SimpleIndexQueryMessage = {
-    val indextype = options.get("indextype").get match {
+    assert(operation == "index")
+
+    val indextype = subtype match {
       case "ecp" => IndexType.ecp
       case "lsh" => IndexType.lsh
       case "pq" => IndexType.pq
@@ -150,7 +172,15 @@ case class CompoundQueryRequest(var id: String, var operation: String, var optio
       case "vaf" => IndexType.vaf
       case "vav" => IndexType.vav
     }
-    SimpleIndexQueryMessage(id, entity, indextype, Option(nnq), None, false)
+    SimpleIndexQueryMessage(id, entity, indextype, Option(nnq), None)
+  }
+
+  /**
+    *
+    * @return
+    */
+  private def ehqm(): ExternalHandlerQueryMessage = {
+    ExternalHandlerQueryMessage(id, entity, subtype, options)
   }
 }
 

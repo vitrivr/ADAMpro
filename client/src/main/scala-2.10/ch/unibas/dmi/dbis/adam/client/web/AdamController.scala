@@ -11,6 +11,7 @@ import scala.collection.mutable
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.duration._
 import scala.concurrent.{Await, Future}
+import scala.util.Success
 
 /**
   * adampro
@@ -34,26 +35,48 @@ class AdamController(rpcClient: RPCClient) extends Controller {
     *
     */
   get("/entity/list") { request: Request =>
-    log.info("listing data")
-    val res = rpcClient.listEntities()
+    val filter = request.params.get("filter")
 
-    if (res.isSuccess) {
-      val entities = res.get.map(entity => EntityDetailResponse(entity, rpcClient.getDetails(entity).get))
-      response.ok.json(EntityListResponse(200, entities))
+    val entities = if (filter.isEmpty) {
+      rpcClient.listEntities()
     } else {
-      response.ok.json(GeneralResponse(500, res.failed.get.getMessage))
+      Success(Seq(filter.get))
+    }
+
+    if (entities.isSuccess) {
+      response.ok.json(EntityListResponse(200, entities.get))
+    } else {
+      response.ok.json(GeneralResponse(500, entities.failed.get.getMessage))
     }
   }
 
-  case class EntityListResponse(code: Int, entities: Seq[EntityDetailResponse])
+  case class EntityListResponse(code: Int, entities: Seq[String])
 
-  case class EntityDetailResponse(entityname: String, details: Map[String, String])
+  /**
+    *
+    */
+  get("/entity/details") { request: Request =>
+    val entityname = request.params.get("entityname")
+
+    if (entityname.isEmpty) {
+      response.ok.json(GeneralResponse(500, "entity not specified"))
+    }
+
+    val details = rpcClient.getDetails(entityname.get)
+
+    if (details.isSuccess) {
+      response.ok.json(EntityDetailResponse(200, entityname.get, details.get))
+    } else {
+      response.ok.json(GeneralResponse(500, details.failed.get.getMessage))
+    }
+  }
+
+  case class EntityDetailResponse(code: Int, entity : String, details : Map[String, String])
 
   /**
     *
     */
   post("/entity/add") { request: EntityCreationRequest =>
-    log.info("creating entity")
     val res = rpcClient.createEntity(request.entityname, request.fields)
 
     if (res.isSuccess) {
@@ -67,7 +90,6 @@ class AdamController(rpcClient: RPCClient) extends Controller {
     *
     */
   post("/entity/insertdemo") { request: InsertDataRequest =>
-    log.info("inserting data into entity")
     val res = rpcClient.prepareDemo(request.entityname, request.ntuples, request.ndims, request.fields)
 
     if (res.isSuccess) {
@@ -81,7 +103,6 @@ class AdamController(rpcClient: RPCClient) extends Controller {
     *
     */
   post("/entity/indexall") { request: IndexAllRequest =>
-    log.info("index all")
     val res = rpcClient.addAllIndex(request.entityname, request.fields, 2)
 
 
@@ -96,8 +117,6 @@ class AdamController(rpcClient: RPCClient) extends Controller {
     *
     */
   post("/index/add") { request: IndexRequest =>
-    log.info("creating index")
-
     val indextype = request.indextype match {
       case "ecp" => IndexType.ecp
       case "lsh" => IndexType.lsh
@@ -122,8 +141,7 @@ class AdamController(rpcClient: RPCClient) extends Controller {
     *
     */
   post("/index/repartition") { request: RepartitionRequest =>
-    log.info("repartitioning index")
-    val res = rpcClient.repartition(request.indexname, request.partitions, request.usemetadata, request.columns.filter(_.length > 0), request.materialize, request.replace)
+    val res = rpcClient.repartition(request.indexname, request.partitions, request.columns.filter(_.length > 0), request.materialize, request.replace)
 
     if (res.isSuccess) {
       response.ok.json(GeneralResponse(200, res.get))
@@ -136,7 +154,6 @@ class AdamController(rpcClient: RPCClient) extends Controller {
     *
     */
   post("/query/compound") { request: CompoundQueryRequest =>
-    log.info("compound query: " + request)
     val res = rpcClient.compoundQuery(request)
     if (res.isSuccess) {
       response.ok.json(CompoundQueryResponse(200, res.get))
@@ -152,7 +169,6 @@ class AdamController(rpcClient: RPCClient) extends Controller {
     *
     */
   post("/query/progressive") { request: ProgressiveQueryRequest =>
-    log.info("progressive query start: " + request)
     val res = rpcClient.progressiveQuery(request.id, request.entityname, request.q, request.column, request.hints, request.k, processProgressiveResults, completedProgressiveResults)
 
     progTempResults.synchronized {
@@ -173,13 +189,13 @@ class AdamController(rpcClient: RPCClient) extends Controller {
     val sourcetype = source.substring(0, source.indexOf("(")).toLowerCase.trim
     progTempResults.get(id).get += ProgressiveTempResponse(id, confidence, source, sourcetype, time, results, ProgressiveQueryStatus.RUNNING)
   }
+
   case class ProgressiveTempResponse(id: String, confidence: Double, source: String, sourcetype: String, time: Long, results: Seq[(Float, Map[String, String])], status: ProgressiveQueryStatus.Value)
 
   val progTempResults = mutable.HashMap[String, mutable.Queue[ProgressiveTempResponse]]()
 
   private def completedProgressiveResults(id: String): Unit = {
     progTempResults.get(id).get += ProgressiveTempResponse(id, 0.0, "", "", 0, Seq(), ProgressiveQueryStatus.FINISHED)
-    log.info("completed progressive query, deleting results in 10 seconds")
     lazy val f = Future {
       Thread.sleep(10000);
       true
@@ -193,8 +209,6 @@ class AdamController(rpcClient: RPCClient) extends Controller {
     *
     */
   post("/query/progressive/temp") { request: ProgressiveQueryTemporaryResultsRequest =>
-    log.info("progressive query temporary results: " + request)
-
     progTempResults.synchronized {
       if (progTempResults.get(request.id).isDefined && !progTempResults.get(request.id).get.isEmpty) {
         val result = progTempResults.get(request.id).get.dequeue()
