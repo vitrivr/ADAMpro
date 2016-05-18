@@ -2,7 +2,7 @@ package ch.unibas.dmi.dbis.adam.rpc
 
 import ch.unibas.dmi.dbis.adam.AdamTestBase
 import ch.unibas.dmi.dbis.adam.config.AdamConfig
-import ch.unibas.dmi.dbis.adam.entity.Entity
+import ch.unibas.dmi.dbis.adam.entity.{Entity, FieldDefinition, FieldTypes}
 import ch.unibas.dmi.dbis.adam.http.grpc.BooleanQueryMessage.WhereMessage
 import ch.unibas.dmi.dbis.adam.http.grpc.InsertMessage.TupleInsertMessage
 import ch.unibas.dmi.dbis.adam.http.grpc._
@@ -10,6 +10,7 @@ import ch.unibas.dmi.dbis.adam.main.RPCStartup
 import io.grpc.ManagedChannelBuilder
 import io.grpc.stub.StreamObserver
 import org.scalatest.concurrent.ScalaFutures
+import ch.unibas.dmi.dbis.adam.main.SparkStartup.Implicits._
 
 import scala.concurrent.duration._
 import scala.util.Random
@@ -58,13 +59,8 @@ class RPCTestSuite extends AdamTestBase with ScalaFutures {
     scenario("insert feature data into entity") {
       withEntityName { entityname =>
         Given("an entity")
-        val createEntityFuture =
-          definition.createEntity(
-            CreateEntityMessage(entityname,
-              Seq(
-                FieldDefinitionMessage("tid", FieldDefinitionMessage.FieldType.LONG, true),
-                FieldDefinitionMessage("feature", FieldDefinitionMessage.FieldType.FEATURE)
-              )))
+        val entity = Entity.create(entityname, Seq(FieldDefinition("tid", FieldTypes.LONGTYPE, true), FieldDefinition("feature", FieldTypes.FEATURETYPE)))
+        assert(entity.isSuccess)
 
         val requestObserver: StreamObserver[InsertMessage] = definitionNb.insert(new StreamObserver[AckMessage]() {
           def onNext(ack: AckMessage) {}
@@ -102,13 +98,12 @@ class RPCTestSuite extends AdamTestBase with ScalaFutures {
     scenario("insert data (feature and metadata) into entity") {
       withEntityName { entityname =>
         Given("an entity")
-        val createEntityFuture = definition.createEntity(CreateEntityMessage(entityname,
-          Seq(
-            FieldDefinitionMessage("tid", FieldDefinitionMessage.FieldType.LONG, true),
-            FieldDefinitionMessage("stringfield", FieldDefinitionMessage.FieldType.STRING),
-            FieldDefinitionMessage("intfield", FieldDefinitionMessage.FieldType.INT),
-            FieldDefinitionMessage("featurefield", FieldDefinitionMessage.FieldType.FEATURE)
-          )))
+        val entity = Entity.create(entityname, Seq(
+          FieldDefinition("tid", FieldTypes.LONGTYPE, true), FieldDefinition("feature", FieldTypes.FEATURETYPE),
+          FieldDefinition("stringfield", FieldTypes.STRINGTYPE, true), FieldDefinition("intfield", FieldTypes.INTTYPE)
+        ))
+        assert(entity.isSuccess)
+
 
         val requestObserver: StreamObserver[InsertMessage] = definitionNb.insert(new StreamObserver[AckMessage]() {
           def onNext(ack: AckMessage) {}
