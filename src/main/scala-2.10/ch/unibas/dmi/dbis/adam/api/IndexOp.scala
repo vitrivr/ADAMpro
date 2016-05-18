@@ -20,7 +20,7 @@ import scala.util.{Failure, Success, Try}
   * Ivan Giangreco
   * August 2015
   */
-object IndexOp extends APIHandler {
+object IndexOp extends GenericOp {
 
   /**
     * Creates an index.

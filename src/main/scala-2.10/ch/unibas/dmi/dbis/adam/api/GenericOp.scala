@@ -10,7 +10,7 @@ import scala.util.{Failure, Try}
   * Ivan Giangreco
   * May 2016
   */
-abstract class APIHandler extends Logging {
+abstract class GenericOp extends Logging {
   def execute[T](desc: String)(op: => Try[T]): Try[T] = {
     try {
       log.debug("starting " + desc)

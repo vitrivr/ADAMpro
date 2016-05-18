@@ -21,7 +21,7 @@ import scala.util.{Success, Try}
   * Ivan Giangreco
   * November 2015
   */
-object QueryOp extends APIHandler {
+object QueryOp extends GenericOp {
   /**
     * Executes a query expression.
     *

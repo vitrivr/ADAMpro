@@ -13,7 +13,7 @@ import scala.util.{Success, Try}
   * Ivan Giangreco
   * May 2016
   */
-object EntityOp extends APIHandler {
+object EntityOp extends GenericOp {
   /**
     * Lists names of all entities.
     *
