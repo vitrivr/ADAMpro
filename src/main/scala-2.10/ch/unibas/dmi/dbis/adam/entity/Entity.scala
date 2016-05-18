@@ -184,7 +184,7 @@ object Entity extends Logging {
 
   def exists(entityname: EntityName): Boolean = CatalogOperator.existsEntity(entityname)
 
-  private val lock = new Object()
+  private val lock = new Object() //TODO: make entities singleton? lock on entity?
 
   /**
     * Creates an entity.

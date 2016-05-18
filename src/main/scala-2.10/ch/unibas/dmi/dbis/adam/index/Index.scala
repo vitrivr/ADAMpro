@@ -227,7 +227,7 @@ object Index extends Logging {
 
   private val storage = SparkStartup.indexStorage
 
-  private val lock = new Object()
+  private val lock = new Object() //TODO: make indexes singleton? lock on entity?
 
   type PartitionID = Int
 
