@@ -8,7 +8,6 @@ import ch.unibas.dmi.dbis.adam.index._
 import ch.unibas.dmi.dbis.adam.index.structures.IndexTypes
 import ch.unibas.dmi.dbis.adam.main.AdamContext
 import ch.unibas.dmi.dbis.adam.query.distance.DistanceFunction
-import org.apache.log4j.Logger
 import org.apache.spark.mllib.clustering.{KMeans, KMeansModel}
 import org.apache.spark.mllib.linalg.Vectors
 import org.apache.spark.rdd.RDD
@@ -24,10 +23,8 @@ import scala.collection.immutable.IndexedSeq
   * Ivan Giangreco
   * April 2016
   */
-class PQIndexer(nsq: Int, trainingSize: Int)(@transient implicit val ac : AdamContext) extends IndexGenerator with Serializable {
-  @transient lazy val log = Logger.getLogger(getClass.getName)
-
-  override def indextypename : IndexTypeName = IndexTypes.PQINDEX
+class PQIndexer(nsq: Int, trainingSize: Int)(@transient implicit val ac: AdamContext) extends IndexGenerator {
+  override def indextypename: IndexTypeName = IndexTypes.PQINDEX
 
   override def index(indexname: IndexName, entityname: EntityName, data: RDD[IndexingTaskTuple[_]]): Index = {
     val entity = Entity.load(entityname).get
@@ -47,7 +44,7 @@ class PQIndexer(nsq: Int, trainingSize: Int)(@transient implicit val ac : AdamCo
         val hash = datum.feature.toArray
           .grouped(math.max(1, d / nsq)).toSeq
           .zipWithIndex
-          .map{case(split,idx) => indexMetaData.models(idx).predict(Vectors.dense(split.map(_.toDouble))).toByte}
+          .map { case (split, idx) => indexMetaData.models(idx).predict(Vectors.dense(split.map(_.toDouble))).toByte }
         Row(datum.id, hash)
       })
 
@@ -68,8 +65,8 @@ class PQIndexer(nsq: Int, trainingSize: Int)(@transient implicit val ac : AdamCo
     */
   private def train(trainData: Array[IndexingTaskTuple[_]]): PQIndexMetaData = {
     val numIterations = 100
-    val nsqbits : Int = 8 //index produces a byte array index tuple
-    val numClusters : Int = 2 ^ nsqbits
+    val nsqbits: Int = 8 //index produces a byte array index tuple
+    val numClusters: Int = 2 ^ nsqbits
 
     val d = trainData.head.feature.size
 
@@ -97,7 +94,7 @@ object PQIndexer {
     *
     * @param properties
     */
-  def apply(distance: DistanceFunction, properties : Map[String, String] = Map[String, String]())(implicit ac : AdamContext) : IndexGenerator = {
+  def apply(distance: DistanceFunction, properties: Map[String, String] = Map[String, String]())(implicit ac: AdamContext): IndexGenerator = {
     val nsq = properties.getOrElse("nsq", "8").toInt
     val trainingSize = properties.getOrElse("ntraining", "500").toInt
 

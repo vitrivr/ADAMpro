@@ -20,23 +20,21 @@ import org.apache.spark.util.random.ADAMSamplingUtils
 
 
 /**
- * adamtwo
- *
- * Ivan Giangreco
- * August 2015
- */
-class SHIndexer(nbits : Option[Int], trainingSize : Int)(@transient implicit val ac : AdamContext) extends IndexGenerator with Serializable {
-  @transient lazy val log = Logger.getLogger(getClass.getName)
-
+  * adamtwo
+  *
+  * Ivan Giangreco
+  * August 2015
+  */
+class SHIndexer(nbits: Option[Int], trainingSize: Int)(@transient implicit val ac: AdamContext) extends IndexGenerator {
   override val indextypename: IndexTypeName = IndexTypes.SHINDEX
 
 
   /**
-   *
-   * @param data
-   * @return
-   */
-  override def index(indexname : IndexName, entityname : EntityName, data: RDD[IndexingTaskTuple[_]]): Index = {
+    *
+    * @param data
+    * @return
+    */
+  override def index(indexname: IndexName, entityname: EntityName, data: RDD[IndexingTaskTuple[_]]): Index = {
     val entity = Entity.load(entityname).get
 
     val n = entity.count
@@ -63,17 +61,17 @@ class SHIndexer(nbits : Option[Int], trainingSize : Int)(@transient implicit val
   }
 
   /**
-   *
-   * @param trainData
-   * @return
-   */
-  private def train(trainData : Array[IndexingTaskTuple[_]]) : SHIndexMetaData = {
+    *
+    * @param trainData
+    * @return
+    */
+  private def train(trainData: Array[IndexingTaskTuple[_]]): SHIndexMetaData = {
     log.debug("SH started training")
 
     val dTrainData = trainData.map(x => x.feature.map(x => x.toDouble).toArray)
-    val dataMatrix = DenseMatrix(dTrainData.toList : _*)
+    val dataMatrix = DenseMatrix(dTrainData.toList: _*)
 
-    val nfeatures =  dTrainData.head.length
+    val nfeatures = dTrainData.head.length
 
     val numComponents = math.min(nfeatures, nbits.getOrElse(nfeatures * 2))
 
@@ -82,10 +80,15 @@ class SHIndexer(nbits : Option[Int], trainingSize : Int)(@transient implicit val
     val eig = eigSym(covs)
     val cols = ((eig.eigenvalues.length - numComponents) until (eig.eigenvalues.length))
     val eigv = eig.eigenvectors(::, cols)
-    val reorderPerm = DenseMatrix.tabulate(numComponents, numComponents){case (i, j) => {
-      if(i == numComponents - 1 - j) { 1.toDouble }
-      else { 0.toDouble }
-    }}
+    val reorderPerm = DenseMatrix.tabulate(numComponents, numComponents) { case (i, j) => {
+      if (i == numComponents - 1 - j) {
+        1.toDouble
+      }
+      else {
+        0.toDouble
+      }
+    }
+    }
     val reorderEigv = eigv * reorderPerm
     val feigv = new DenseMatrix[Float](reorderEigv.rows, reorderEigv.cols, reorderEigv.toArray.map(_.toFloat))
     val projected = (dataMatrix.*(reorderEigv)).asInstanceOf[DenseMatrix[Double]]
@@ -111,26 +114,26 @@ class SHIndexer(nbits : Option[Int], trainingSize : Int)(@transient implicit val
 
 
   /**
-   *
-   * @param min
-   * @param max
-   * @param bits
-   * @return
-   */
-  private def computeShareOfBits(min : Vector[VectorBase], max : Vector[VectorBase], bits : Int) : Array[Int] = {
+    *
+    * @param min
+    * @param max
+    * @param bits
+    * @return
+    */
+  private def computeShareOfBits(min: Vector[VectorBase], max: Vector[VectorBase], bits: Int): Array[Int] = {
     val range = max - min
     (range * ((bits + 1) / breeze.linalg.max(range))).map(x => math.ceil(x).toInt - 1).toArray
   }
 
   /**
-   *
-   * @param maxMode
-   * @param numComponents
-   * @return
-   */
-  private def getAllModes(maxMode : Array[Int], numComponents : Int) : DenseMatrix[VectorBase] = {
+    *
+    * @param maxMode
+    * @param numComponents
+    * @return
+    */
+  private def getAllModes(maxMode: Array[Int], numComponents: Int): DenseMatrix[VectorBase] = {
     val modesNum = sum(maxMode) + 1
-    val modes : DenseMatrix[VectorBase] = DenseMatrix.zeros[VectorBase](modesNum, numComponents)
+    val modes: DenseMatrix[VectorBase] = DenseMatrix.zeros[VectorBase](modesNum, numComponents)
 
     var pos = 0
     (0 until numComponents).foreach { nc =>
@@ -144,14 +147,14 @@ class SHIndexer(nbits : Option[Int], trainingSize : Int)(@transient implicit val
   }
 
   /**
-   *
-   * @param modes
-   * @param min
-   * @param max
-   * @param bits
-   * @return
-   */
-  private def getSortedModes(modes : DenseMatrix[VectorBase], min : Vector[VectorBase], max : Vector[VectorBase], bits : Int) : Matrix[VectorBase] = {
+    *
+    * @param modes
+    * @param min
+    * @param max
+    * @param bits
+    * @return
+    */
+  private def getSortedModes(modes: DenseMatrix[VectorBase], min: Vector[VectorBase], max: Vector[VectorBase], bits: Int): Matrix[VectorBase] = {
     val range = max - min
     val omega0 = range.mapValues(r => conv_double2vectorBase(math.Pi / math.abs(r))) //abs() added
     val omegas = modes(*, ::).:*(omega0)
@@ -160,7 +163,7 @@ class SHIndexer(nbits : Option[Int], trainingSize : Int)(@transient implicit val
 
     val sortOrder = eigVal.toArray.zipWithIndex.sortBy(x => x._1).map(x => x._2) //removed reverse
 
-    val selectedModes : DenseMatrix[VectorBase] = DenseMatrix.zeros[VectorBase](bits, modes.cols)
+    val selectedModes: DenseMatrix[VectorBase] = DenseMatrix.zeros[VectorBase](bits, modes.cols)
     sortOrder.drop(1).take(bits).zipWithIndex.foreach {
       case (so, idx) =>
         selectedModes(idx, ::).:=(modes(so, ::))
@@ -172,13 +175,13 @@ class SHIndexer(nbits : Option[Int], trainingSize : Int)(@transient implicit val
 
 object SHIndexer {
   /**
-   *
-   * @param properties
-   */
-  def apply(distance: DistanceFunction, properties : Map[String, String] = Map[String, String]())(implicit ac : AdamContext) : IndexGenerator = {
-    val nbits = if(properties.get("nbits").isDefined){
-        Some(properties.get("nbits").get.toInt)
-      } else {
+    *
+    * @param properties
+    */
+  def apply(distance: DistanceFunction, properties: Map[String, String] = Map[String, String]())(implicit ac: AdamContext): IndexGenerator = {
+    val nbits = if (properties.get("nbits").isDefined) {
+      Some(properties.get("nbits").get.toInt)
+    } else {
       None
     }
     val trainingSize = properties.getOrElse("ntraining", "500").toInt

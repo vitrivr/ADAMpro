@@ -6,7 +6,7 @@ import ch.unibas.dmi.dbis.adam.config.AdamConfig
 import ch.unibas.dmi.dbis.adam.index.Index.IndexName
 import ch.unibas.dmi.dbis.adam.main.SparkStartup
 import com.google.common.cache.{CacheBuilder, CacheLoader}
-import org.apache.log4j.Logger
+import org.apache.spark.Logging
 
 import scala.util.{Failure, Success, Try}
 
@@ -16,8 +16,7 @@ import scala.util.{Failure, Success, Try}
   * Ivan Giangreco
   * April 2016
   */
-object IndexLRUCache {
-  val log = Logger.getLogger(getClass.getName)
+object IndexLRUCache extends Logging {
 
   private val maximumCacheSize = AdamConfig.maximumCacheSizeIndex
   private val expireAfterAccess = AdamConfig.expireAfterAccessIndex

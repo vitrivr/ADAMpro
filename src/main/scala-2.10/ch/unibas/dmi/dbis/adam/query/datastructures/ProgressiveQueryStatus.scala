@@ -3,7 +3,7 @@ package ch.unibas.dmi.dbis.adam.query.datastructures
 import ch.unibas.dmi.dbis.adam.config.AdamConfig
 import ch.unibas.dmi.dbis.adam.main.AdamContext
 import ch.unibas.dmi.dbis.adam.query.progressive.ScanFuture
-import org.apache.log4j.Logger
+import org.apache.spark.Logging
 import org.apache.spark.sql.DataFrame
 
 import scala.collection.mutable.ListBuffer
@@ -28,9 +28,7 @@ case class ProgressiveQueryIntermediateResults(confidence: Float, results: DataF
 }
 
 
-class ProgressiveQueryStatusTracker(queryID: String)(implicit ac : AdamContext) extends Future[ProgressiveQueryIntermediateResults] {
-  val log = Logger.getLogger(getClass.getName)
-
+class ProgressiveQueryStatusTracker(queryID: String)(implicit ac : AdamContext) extends Future[ProgressiveQueryIntermediateResults] with Logging {
   private val futures = ListBuffer[ScanFuture]()
   private val runningStatusLock = new Object()
   @volatile private var runningStatus = ProgressiveQueryStatus.RUNNING

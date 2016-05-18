@@ -323,7 +323,7 @@ object Entity {
 
       val pk = CatalogOperator.getEntityPK(entityname)
 
-      Success(Entity(entityname, featureStorage, entityMetadataStorage))
+      Success(Entity(entityname, featureStorage, entityMetadataStorage)(ac))
     } catch {
       case e: Exception => Failure(e)
     }

@@ -4,6 +4,7 @@ import ch.unibas.dmi.dbis.adam.entity.Entity.EntityName
 import ch.unibas.dmi.dbis.adam.entity.FieldDefinition
 import ch.unibas.dmi.dbis.adam.main.AdamContext
 import ch.unibas.dmi.dbis.adam.main.SparkStartup.Implicits._
+import org.apache.spark.Logging
 import org.apache.spark.sql.types._
 import org.apache.spark.sql.{DataFrame, Row, SaveMode}
 
@@ -15,7 +16,7 @@ import scala.util.{Failure, Try}
   * Ivan Giangreco
   * August 2015
   */
-trait FeatureStorage extends Serializable {
+trait FeatureStorage extends Serializable with Logging {
   /**
     *
     * @param entityname
@@ -38,7 +39,7 @@ trait FeatureStorage extends Serializable {
       val df = sqlContext.createDataFrame(sc.emptyRDD[Row], StructType(structFields))
       write(entityname, fields.filter(_.pk).head.name, df, SaveMode.Overwrite)
     } catch {
-      case e : Exception => Failure(e)
+      case e: Exception => Failure(e)
     }
   }
 

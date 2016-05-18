@@ -8,7 +8,6 @@ import ch.unibas.dmi.dbis.adam.index._
 import ch.unibas.dmi.dbis.adam.index.structures.IndexTypes
 import ch.unibas.dmi.dbis.adam.main.AdamContext
 import ch.unibas.dmi.dbis.adam.query.distance.DistanceFunction
-import org.apache.log4j.Logger
 import org.apache.spark.rdd.RDD
 import org.apache.spark.sql.Row
 import org.apache.spark.sql.types.{StructField, StructType}
@@ -20,9 +19,7 @@ import org.apache.spark.util.random.ADAMSamplingUtils
   * Ivan Giangreco
   * October 2015
   */
-class ECPIndexer(trainingSize: Int = -1, distance: DistanceFunction)(@transient implicit val ac : AdamContext) extends IndexGenerator with Serializable {
-  @transient lazy val log = Logger.getLogger(getClass.getName)
-
+class ECPIndexer(trainingSize: Int = -1, distance: DistanceFunction)(@transient implicit val ac: AdamContext) extends IndexGenerator {
   override val indextypename: IndexTypeName = IndexTypes.ECPINDEX
 
   /**
@@ -69,7 +66,7 @@ class ECPIndexer(trainingSize: Int = -1, distance: DistanceFunction)(@transient 
 }
 
 object ECPIndexer {
-  def apply(distance: DistanceFunction, properties : Map[String, String] = Map[String, String]())(implicit ac : AdamContext): IndexGenerator = {
+  def apply(distance: DistanceFunction, properties: Map[String, String] = Map[String, String]())(implicit ac: AdamContext): IndexGenerator = {
     val trainingSize = properties.getOrElse("ntraining", "-1").toInt
     new ECPIndexer(trainingSize, distance)
   }

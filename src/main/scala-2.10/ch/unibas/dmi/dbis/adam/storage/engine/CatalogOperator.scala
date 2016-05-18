@@ -10,6 +10,7 @@ import ch.unibas.dmi.dbis.adam.index.Index.{IndexName, IndexTypeName}
 import ch.unibas.dmi.dbis.adam.index.structures.IndexTypes
 import org.apache.commons.io.FileUtils
 import org.apache.log4j.Logger
+import org.apache.spark.Logging
 import slick.driver.H2Driver.api._
 import slick.jdbc.meta.MTable
 
@@ -23,9 +24,7 @@ import scala.concurrent.duration._
   * Ivan Giangreco
   * August 2015
   */
-object CatalogOperator {
-  val log = Logger.getLogger(getClass.getName)
-
+object CatalogOperator extends Logging {
   private val MAX_WAITING_TIME: Duration = 100.seconds
 
   private val db = Database.forURL("jdbc:h2:" + (AdamConfig.catalogPath + "/" + "catalog"), driver = "org.h2.Driver")

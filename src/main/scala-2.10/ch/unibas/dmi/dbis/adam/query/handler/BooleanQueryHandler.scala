@@ -4,7 +4,7 @@ import ch.unibas.dmi.dbis.adam.entity.Entity
 import ch.unibas.dmi.dbis.adam.entity.Entity._
 import ch.unibas.dmi.dbis.adam.main.{AdamContext, SparkStartup}
 import ch.unibas.dmi.dbis.adam.query.query.{BooleanQuery, PrimaryKeyFilter}
-import org.apache.log4j.Logger
+import org.apache.spark.Logging
 import org.apache.spark.sql.DataFrame
 
 /**
@@ -13,9 +13,7 @@ import org.apache.spark.sql.DataFrame
   * Ivan Giangreco
   * November 2015
   */
-private[query] object BooleanQueryHandler {
-  val log = Logger.getLogger(getClass.getName)
-
+private[query] object BooleanQueryHandler extends Logging {
 
   /**
     * Creates a filter that is applied on the nearest neighbour search based on the Boolean query.
@@ -52,8 +50,8 @@ private[query] object BooleanQueryHandler {
     * @param ac
     * @return
     */
-  def filter(data : DataFrame, query: BooleanQuery)(implicit ac: AdamContext): DataFrame = {
-    var df : DataFrame = data
+  def filter(data: DataFrame, query: BooleanQuery)(implicit ac: AdamContext): DataFrame = {
+    var df: DataFrame = data
 
     if (query.join.isDefined) {
       log.debug("join tables to results")
@@ -84,7 +82,7 @@ private[query] object BooleanQueryHandler {
     * @param ac
     * @return
     */
-  def filter(data : DataFrame, pk : String, query: PrimaryKeyFilter[_])(implicit ac: AdamContext): DataFrame = {
+  def filter(data: DataFrame, pk: String, query: PrimaryKeyFilter[_])(implicit ac: AdamContext): DataFrame = {
     import org.apache.spark.sql.functions.col
     data.filter(col(pk).isin(query.tidFilter.toSeq: _*))
   }

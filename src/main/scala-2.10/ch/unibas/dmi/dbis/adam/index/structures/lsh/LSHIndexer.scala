@@ -10,16 +10,13 @@ import ch.unibas.dmi.dbis.adam.index.structures.IndexTypes
 import ch.unibas.dmi.dbis.adam.index.structures.lsh.hashfunction.{EuclideanHashFunction, Hasher, ManhattanHashFunction}
 import ch.unibas.dmi.dbis.adam.main.AdamContext
 import ch.unibas.dmi.dbis.adam.query.distance.{DistanceFunction, EuclideanDistance, ManhattanDistance}
-import org.apache.log4j.Logger
 import org.apache.spark.rdd.RDD
 import org.apache.spark.sql.Row
 import org.apache.spark.sql.types.{StructField, StructType}
 import org.apache.spark.util.random.ADAMSamplingUtils
 
 
-class LSHIndexer(numHashTables: Int, numHashes: Int, distance: DistanceFunction, trainingSize: Int)(@transient implicit val ac: AdamContext) extends IndexGenerator with Serializable {
-  @transient lazy val log = Logger.getLogger(getClass.getName)
-
+class LSHIndexer(numHashTables: Int, numHashes: Int, distance: DistanceFunction, trainingSize: Int)(@transient implicit val ac: AdamContext) extends IndexGenerator {
   override val indextypename: IndexTypeName = IndexTypes.LSHINDEX
 
   /**

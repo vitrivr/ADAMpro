@@ -3,10 +3,9 @@ package ch.unibas.dmi.dbis.adam.api
 import ch.unibas.dmi.dbis.adam.entity.Entity._
 import ch.unibas.dmi.dbis.adam.entity.{Entity, FieldDefinition}
 import ch.unibas.dmi.dbis.adam.main.AdamContext
-import org.apache.spark.Logging
 import org.apache.spark.sql.DataFrame
 
-import scala.util.{Failure, Success, Try}
+import scala.util.{Success, Try}
 
 /**
   * adamtwo
@@ -14,18 +13,15 @@ import scala.util.{Failure, Success, Try}
   * Ivan Giangreco
   * May 2016
   */
-object EntityOp extends Logging {
+object EntityOp extends APIHandler {
   /**
     * Lists names of all entities.
     *
     * @return
     */
   def list(): Try[Seq[EntityName]] = {
-    try {
-      log.debug("perform list entities operation")
+    execute("list entities operation") {
       Success(Entity.list)
-    } catch {
-      case e: Exception => Failure(e)
     }
   }
 
@@ -37,11 +33,8 @@ object EntityOp extends Logging {
     * @return
     */
   def apply(entityname: EntityName, fields: Seq[FieldDefinition])(implicit ac: AdamContext): Try[Entity] = {
-    try {
-      log.debug("perform create entity operation")
+    execute("create entity " + entityname + " operation") {
       Entity.create(entityname, fields)
-    } catch {
-      case e: Exception => Failure(e)
     }
   }
 
@@ -52,11 +45,8 @@ object EntityOp extends Logging {
     * @return
     */
   def exists(entityname: EntityName)(implicit ac: AdamContext): Try[Boolean] = {
-    try {
-      log.debug("perform entity exists operation")
+    execute("check entity " + entityname + " exists operation") {
       Success(Entity.exists(entityname))
-    } catch {
-      case e: Exception => Failure(e)
     }
   }
 
@@ -67,11 +57,8 @@ object EntityOp extends Logging {
     * @return
     */
   def count(entityname: EntityName)(implicit ac: AdamContext): Try[Long] = {
-    try {
-      log.debug("perform count operation")
+    execute("count tuples in entity " + entityname + " operation") {
       Success(Entity.load(entityname).get.count)
-    } catch {
-      case e: Exception => Failure(e)
     }
   }
 
@@ -83,11 +70,8 @@ object EntityOp extends Logging {
     *
     */
   def insert(entityname: EntityName, df: DataFrame)(implicit ac: AdamContext): Try[Void] = {
-    try {
-      log.debug("perform insert data operation")
+    execute("insert data into entity " + entityname + " operation") {
       Entity.load(entityname).get.insert(df)
-    } catch {
-      case e: Exception => Failure(e)
     }
   }
 
@@ -100,11 +84,8 @@ object EntityOp extends Logging {
     * @return
     */
   def preview(entityname: EntityName, k: Int = 100)(implicit ac: AdamContext): Try[DataFrame] = {
-    try {
-      log.debug("perform preview entity operation")
+    execute("preview entity " + entityname + " operation") {
       Success(Entity.load(entityname).get.show(k))
-    } catch {
-      case e: Exception => Failure(e)
     }
   }
 
@@ -116,11 +97,8 @@ object EntityOp extends Logging {
     * @return
     */
   def properties(entityname: EntityName)(implicit ac: AdamContext): Try[Map[String, String]] = {
-    try {
-      log.debug("perform properties operation")
+    execute("load properties of entity " + entityname + " operation") {
       Success(Entity.load(entityname).get.properties)
-    } catch {
-      case e: Exception => Failure(e)
     }
   }
 
@@ -133,11 +111,8 @@ object EntityOp extends Logging {
     * @return
     */
   def drop(entityname: EntityName, ifExists: Boolean = false)(implicit ac: AdamContext): Try[Void] = {
-    try {
-      log.debug("perform drop entity operation")
+    execute("drop entity " + entityname + " operation") {
       Entity.drop(entityname, ifExists)
-    } catch {
-      case e: Exception => Failure(e)
     }
   }
 }

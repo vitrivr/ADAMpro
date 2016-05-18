@@ -8,7 +8,6 @@ import ch.unibas.dmi.dbis.adam.entity.Entity.EntityName
 import ch.unibas.dmi.dbis.adam.entity.FieldDefinition
 import ch.unibas.dmi.dbis.adam.main.SparkStartup
 import ch.unibas.dmi.dbis.adam.storage.components.MetadataStorage
-import org.apache.log4j.Logger
 import org.apache.spark.sql.jdbc.AdamDialectRegistrar
 import org.apache.spark.sql.types.{StructField, StructType}
 import org.apache.spark.sql.{DataFrame, Row, SaveMode}
@@ -20,8 +19,6 @@ import org.apache.spark.sql.{DataFrame, Row, SaveMode}
   * October 2015
   */
 object PostgresqlMetadataStorage extends MetadataStorage {
-  @transient val log = Logger.getLogger(getClass.getName)
-
   Class.forName("org.postgresql.Driver")
 
   val url = AdamConfig.jdbcUrl

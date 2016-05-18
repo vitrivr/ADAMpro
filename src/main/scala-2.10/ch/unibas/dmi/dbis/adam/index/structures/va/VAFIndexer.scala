@@ -21,17 +21,15 @@ import org.apache.spark.util.random.ADAMSamplingUtils
 
 
 /**
- *
- */
-class VAFIndexer(maxMarks: Int = 64, marksGenerator: MarksGenerator, bitsPerDimension : Int, trainingSize : Int, distance : MinkowskiDistance)(@transient implicit val ac : AdamContext) extends IndexGenerator with Serializable {
-  @transient lazy val log = Logger.getLogger(getClass.getName)
-
+  *
+  */
+class VAFIndexer(maxMarks: Int = 64, marksGenerator: MarksGenerator, bitsPerDimension: Int, trainingSize: Int, distance: MinkowskiDistance)(@transient implicit val ac: AdamContext) extends IndexGenerator {
   override val indextypename: IndexTypeName = IndexTypes.VAFINDEX
 
   /**
-   *
-   */
-  override def index(indexname : IndexName, entityname : EntityName, data: RDD[IndexingTaskTuple[_]]): Index = {
+    *
+    */
+  override def index(indexname: IndexName, entityname: EntityName, data: RDD[IndexingTaskTuple[_]]): Index = {
     val entity = Entity.load(entityname).get
 
     val n = entity.count
@@ -62,16 +60,16 @@ class VAFIndexer(maxMarks: Int = 64, marksGenerator: MarksGenerator, bitsPerDime
   }
 
   /**
-   *
-   * @param trainData
-   * @return
-   */
-  private def train(trainData : Array[IndexingTaskTuple[_]]) : VAIndexMetaData = {
+    *
+    * @param trainData
+    * @return
+    */
+  private def train(trainData: Array[IndexingTaskTuple[_]]): VAIndexMetaData = {
     log.debug("VA-File (fixed) started training")
 
     val dim = trainData.head.feature.length
 
-    val signatureGenerator =  new FixedSignatureGenerator(dim, bitsPerDimension)
+    val signatureGenerator = new FixedSignatureGenerator(dim, bitsPerDimension)
     val marks = marksGenerator.getMarks(trainData, maxMarks)
 
     log.debug("VA-File (fixed) finished training")
@@ -81,8 +79,8 @@ class VAFIndexer(maxMarks: Int = 64, marksGenerator: MarksGenerator, bitsPerDime
 
 
   /**
-   * 
-   */
+    *
+    */
   @inline private def getCells(f: FeatureVector, marks: Seq[Seq[VectorBase]]): Seq[Int] = {
     f.toArray.zip(marks).map {
       case (x, l) =>
@@ -96,13 +94,13 @@ object VAFIndexer {
   lazy val log = Logger.getLogger(getClass.getName)
 
   /**
-   *
-   * @param properties
-   */
-  def apply(distance : DistanceFunction, properties : Map[String, String] = Map[String, String]())(implicit ac : AdamContext) : IndexGenerator = {
+    *
+    * @param properties
+    */
+  def apply(distance: DistanceFunction, properties: Map[String, String] = Map[String, String]())(implicit ac: AdamContext): IndexGenerator = {
     val maxMarks = properties.getOrElse("nmarks", "64").toInt
 
-    if(!distance.isInstanceOf[MinkowskiDistance]){
+    if (!distance.isInstanceOf[MinkowskiDistance]) {
       log.error("only Minkowski distances allowed for VAF Indexer")
       throw new QueryNotConformException()
     }

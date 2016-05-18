@@ -9,7 +9,6 @@ import ch.unibas.dmi.dbis.adam.storage.components.IndexStorage
 import org.apache.commons.io.FileUtils
 import org.apache.hadoop.conf.Configuration
 import org.apache.hadoop.fs.{FileSystem, Path}
-import org.apache.log4j.Logger
 import org.apache.spark.sql.{DataFrame, SaveMode}
 
 import scala.util.{Failure, Success, Try}
@@ -22,7 +21,6 @@ import scala.util.{Failure, Success, Try}
   * August 2015
   */
 object ParquetIndexStorage extends IndexStorage {
-  val log = Logger.getLogger(getClass.getName)
 
   val storage: GenericIndexStorage = if (AdamConfig.isBaseOnHadoop) {
     log.debug("storing index on Hadoop")
@@ -61,6 +59,7 @@ object ParquetIndexStorage extends IndexStorage {
     override def write(indexname: IndexName, df: DataFrame)(implicit ac: AdamContext): Try[Void] = {
       try {
         df
+          .repartition(AdamConfig.defaultNumberOfPartitions)
           .write.mode(SaveMode.Overwrite).parquet(AdamConfig.indexPath + "/" + indexname + ".parquet")
         Success(null)
       } catch {

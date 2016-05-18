@@ -3,13 +3,12 @@ package ch.unibas.dmi.dbis.adam.api
 import ch.unibas.dmi.dbis.adam.entity.Entity
 import ch.unibas.dmi.dbis.adam.entity.Entity._
 import ch.unibas.dmi.dbis.adam.exception.GeneralAdamException
+import ch.unibas.dmi.dbis.adam.index.Index
 import ch.unibas.dmi.dbis.adam.index.Index._
 import ch.unibas.dmi.dbis.adam.index.structures.IndexTypes
-import ch.unibas.dmi.dbis.adam.index.Index
 import ch.unibas.dmi.dbis.adam.main.AdamContext
 import ch.unibas.dmi.dbis.adam.query.distance.DistanceFunction
 import ch.unibas.dmi.dbis.adam.storage.partition.PartitionMode
-import org.apache.spark.Logging
 import org.apache.spark.sql.DataFrame
 
 import scala.util.{Failure, Success, Try}
@@ -21,7 +20,7 @@ import scala.util.{Failure, Success, Try}
   * Ivan Giangreco
   * August 2015
   */
-object IndexOp extends Logging {
+object IndexOp extends APIHandler {
 
   /**
     * Creates an index.
@@ -31,13 +30,7 @@ object IndexOp extends Logging {
     * @param distance   distance function to use
     * @param properties further index specific properties
     */
-  def apply(entityname: EntityName, column: String, indextype: String, distance: DistanceFunction, properties: Map[String, String])(implicit ac: AdamContext): Try[Index] = {
-    try {
-      apply(entityname, column, IndexTypes.withName(indextype).get, distance, properties)
-    } catch {
-      case e: Exception => Failure(e)
-    }
-  }
+  def apply(entityname: EntityName, column: String, indextype: String, distance: DistanceFunction, properties: Map[String, String])(implicit ac: AdamContext): Try[Index] = apply(entityname, column, IndexTypes.withName(indextype).get, distance, properties)
 
   /**
     * Creates an index.
@@ -48,11 +41,8 @@ object IndexOp extends Logging {
     * @param properties    further index specific properties
     */
   def apply(entityname: EntityName, column: String, indextypename: IndexTypeName, distance: DistanceFunction, properties: Map[String, String] = Map())(implicit ac: AdamContext): Try[Index] = {
-    try {
-      log.debug("perform create index operation")
+    execute("create index for " + entityname) {
       Index.createIndex(Entity.load(entityname).get, column, indextypename.indexer(distance, properties))
-    } catch {
-      case e: Exception => Failure(e)
     }
   }
 
@@ -64,9 +54,7 @@ object IndexOp extends Logging {
     * @param properties further index specific properties
     */
   def generateAll(entityname: EntityName, column: String, distance: DistanceFunction, properties: Map[String, String] = Map())(implicit ac: AdamContext): Try[Void] = {
-    try {
-      log.debug("perform generate all indexes operation")
-
+    execute("create all indexes for " + entityname) {
       val indexes = IndexTypes.values.map {
         apply(entityname, column, _, distance, properties)
       }
@@ -77,6 +65,8 @@ object IndexOp extends Logging {
         return Success(null)
       }
 
+      log.error("not all indexes were created")
+
       //not all indexes were created, delete the ones that were successfull too
       indexes
         .filter(_.isSuccess)
@@ -86,9 +76,7 @@ object IndexOp extends Logging {
             Index.drop(indexname)
         }
 
-      return Failure(new GeneralAdamException("Some indexes were not created properly."))
-    } catch {
-      case e: Exception => Failure(e)
+      return Failure(new GeneralAdamException("some indexes were not created properly."))
     }
   }
 
@@ -99,11 +87,8 @@ object IndexOp extends Logging {
     * @return
     */
   def exists(indexname: IndexName)(implicit ac: AdamContext): Try[Boolean] = {
-    try {
-      log.debug("perform index exists operation")
+    execute("check index " + indexname + " exists operation") {
       Success(Index.exists(indexname))
-    } catch {
-      case e: Exception => Failure(e)
     }
   }
 
@@ -116,11 +101,9 @@ object IndexOp extends Logging {
     * @return
     */
   def setWeight(indexname: IndexName, weight: Float)(implicit ac: AdamContext): Try[Void] = {
-    try {
+    execute("set index weight for " + indexname + " operation") {
       Index.load(indexname).get.setWeight(weight)
       Success(null)
-    } catch {
-      case e: Exception => Failure(e)
     }
   }
 
@@ -131,10 +114,8 @@ object IndexOp extends Logging {
     * @return
     */
   def cache(indexname: IndexName)(implicit ac: AdamContext): Try[Index] = {
-    try {
+    execute("cache index " + indexname + " operation") {
       Index.load(indexname, true)
-    } catch {
-      case e: Exception => Failure(e)
     }
   }
 
@@ -148,10 +129,8 @@ object IndexOp extends Logging {
     * @return
     */
   def partition(indexname: IndexName, nPartitions: Int, joins: Option[DataFrame], cols: Option[Seq[String]], mode: PartitionMode.Value)(implicit ac: AdamContext): Try[Index] = {
-    try {
+    execute("repartition index " + indexname + " operation") {
       Index.repartition(Index.load(indexname).get, nPartitions, joins, cols, mode)
-    } catch {
-      case e: Exception => Failure(e)
     }
   }
 
@@ -162,11 +141,8 @@ object IndexOp extends Logging {
     * @return
     */
   def drop(indexname: IndexName)(implicit ac: AdamContext): Try[Void] = {
-    try {
-      log.debug("perform drop index operation")
+    execute("drop index " + indexname + " operation") {
       Index.drop(indexname)
-    } catch {
-      case e: Exception => Failure(e)
     }
   }
 }

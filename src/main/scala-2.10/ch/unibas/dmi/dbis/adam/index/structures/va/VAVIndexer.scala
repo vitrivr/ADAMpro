@@ -21,20 +21,18 @@ import org.apache.spark.sql.types.{StructField, StructType}
 import org.apache.spark.util.random.ADAMSamplingUtils
 
 /**
- * adamtwo
- *
- * Ivan Giangreco
- * September 2015
- */
-class VAVIndexer (nbits : Option[Int], marksGenerator: MarksGenerator, trainingSize : Int, distance : MinkowskiDistance)(@transient implicit val ac : AdamContext) extends IndexGenerator with Serializable {
-  @transient lazy val log = Logger.getLogger(getClass.getName)
-
+  * adamtwo
+  *
+  * Ivan Giangreco
+  * September 2015
+  */
+class VAVIndexer(nbits: Option[Int], marksGenerator: MarksGenerator, trainingSize: Int, distance: MinkowskiDistance)(@transient implicit val ac: AdamContext) extends IndexGenerator {
   override val indextypename: IndexTypeName = IndexTypes.VAVINDEX
 
   /**
-   *
-   */
-  override def index(indexname : IndexName, entityname : EntityName, data: RDD[IndexingTaskTuple[_]]): Index = {
+    *
+    */
+  override def index(indexname: IndexName, entityname: EntityName, data: RDD[IndexingTaskTuple[_]]): Index = {
     val entity = Entity.load(entityname).get
 
     val n = entity.count
@@ -63,19 +61,19 @@ class VAVIndexer (nbits : Option[Int], marksGenerator: MarksGenerator, trainingS
   }
 
   /**
-   *
-   * @param trainData
-   * @return
-   */
-  private def train(trainData : Array[IndexingTaskTuple[_]]) : VAIndexMetaData = {
+    *
+    * @param trainData
+    * @return
+    */
+  private def train(trainData: Array[IndexingTaskTuple[_]]): VAIndexMetaData = {
     log.debug("VA-File (variable) started training")
 
     //data
     val dTrainData = trainData.map(x => x.feature.map(x => x.toDouble).toArray)
 
-    val dataMatrix = DenseMatrix(dTrainData.toList : _*)
+    val dataMatrix = DenseMatrix(dTrainData.toList: _*)
 
-    val nfeatures =  dTrainData.head.length
+    val nfeatures = dTrainData.head.length
     val numComponents = math.min(nfeatures, nbits.getOrElse(nfeatures * 8))
 
     // pca
@@ -85,7 +83,7 @@ class VAVIndexer (nbits : Option[Int], marksGenerator: MarksGenerator, trainingS
     // compute shares of bits
     val modes = variance.map(variance => (variance / sumVariance * nbits.getOrElse(nfeatures * 8)).toInt)
 
-    val signatureGenerator =  new VariableSignatureGenerator(modes)
+    val signatureGenerator = new VariableSignatureGenerator(modes)
     val marks = marksGenerator.getMarks(trainData, modes.map(x => 2 << (x - 1)))
 
     log.debug("VA-File (variable) finished training")
@@ -95,8 +93,8 @@ class VAVIndexer (nbits : Option[Int], marksGenerator: MarksGenerator, trainingS
 
 
   /**
-   *
-   */
+    *
+    */
   @inline private def getCells(f: FeatureVector, marks: Seq[Seq[VectorBase]]): Seq[Int] = {
     f.toArray.zip(marks).map {
       case (x, l) =>
@@ -111,22 +109,22 @@ object VAVIndexer {
   lazy val log = Logger.getLogger(getClass.getName)
 
   /**
-   *
-   * @param properties
-   */
-  def apply(distance : DistanceFunction, properties : Map[String, String] = Map[String, String]())(implicit ac : AdamContext) : IndexGenerator = {
+    *
+    * @param properties
+    */
+  def apply(distance: DistanceFunction, properties: Map[String, String] = Map[String, String]())(implicit ac: AdamContext): IndexGenerator = {
     val marksGeneratorDescription = properties.getOrElse("marktype", "equifrequent")
     val marksGenerator = marksGeneratorDescription.toLowerCase match {
       case "equifrequent" => EquifrequentMarksGenerator
       case "equidistant" => EquidistantMarksGenerator
     }
 
-    if(!distance.isInstanceOf[MinkowskiDistance]){
+    if (!distance.isInstanceOf[MinkowskiDistance]) {
       log.error("only Minkowski distances allowed for VAV Indexer")
       throw new QueryNotConformException()
     }
 
-    val totalNumBits = if(properties.get("signature-nbits").isDefined){
+    val totalNumBits = if (properties.get("signature-nbits").isDefined) {
       Some(properties.get("signature-nbits").get.toInt)
     } else {
       None

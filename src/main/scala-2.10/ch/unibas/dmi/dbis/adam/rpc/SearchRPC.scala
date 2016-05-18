@@ -26,8 +26,22 @@ import scala.concurrent.duration.Duration
   * March 2016
   */
 class SearchRPC(implicit ac: AdamContext) extends AdamSearchGrpc.AdamSearch with Logging {
-
   //TODO: possibly start new 'lightweight' AdamContext with each new query
+
+  /**
+    *
+    * @param thunk
+    * @tparam T
+    * @return
+    */
+  def time[T](desc: String)(thunk: => T): T = {
+    val t1 = System.currentTimeMillis
+    val x = thunk
+    val t2 = System.currentTimeMillis
+    log.info(desc + " : " + (t2 - t1) + " msecs")
+    x
+  }
+
 
   /**
     *
@@ -35,14 +49,15 @@ class SearchRPC(implicit ac: AdamContext) extends AdamSearchGrpc.AdamSearch with
     * @return
     */
   override def cacheIndex(request: IndexNameMessage): Future[AckMessage] = {
-    log.debug("rpc call to cache index")
-    val res = IndexOp.cache(request.index)
+    time("rpc call to cache index") {
+      val res = IndexOp.cache(request.index)
 
-    if (res.isSuccess) {
-      Future.successful(AckMessage(code = AckMessage.Code.OK, res.get.entityname))
-    } else {
-      log.error(res.failed.get.getMessage)
-      Future.successful(AckMessage(code = AckMessage.Code.ERROR, message = res.failed.get.getMessage))
+      if (res.isSuccess) {
+        Future.successful(AckMessage(code = AckMessage.Code.OK, res.get.entityname))
+      } else {
+        log.error(res.failed.get.getMessage)
+        Future.successful(AckMessage(code = AckMessage.Code.ERROR, message = res.failed.get.getMessage))
+      }
     }
   }
 
@@ -53,9 +68,10 @@ class SearchRPC(implicit ac: AdamContext) extends AdamSearchGrpc.AdamSearch with
     * @return
     */
   override def cacheEntity(request: EntityNameMessage): Future[AckMessage] = {
-    log.debug("rpc call to cache entity")
-    log.error("caching entity not yet implemented")
-    Future.successful(AckMessage(code = AckMessage.Code.ERROR, message = "not implemented yet"))
+    time("rpc call to cache entity") {
+      log.error("caching entity not yet implemented")
+      Future.successful(AckMessage(code = AckMessage.Code.ERROR, message = "not implemented yet"))
+    }
   }
 
 
@@ -65,18 +81,19 @@ class SearchRPC(implicit ac: AdamContext) extends AdamSearchGrpc.AdamSearch with
     * @return
     */
   override def doStandardQuery(request: SimpleQueryMessage): Future[QueryResponseInfoMessage] = {
-    log.debug("rpc call for standard query operation")
-    val expression = RPCHelperMethods.toExpression(request)
-    if (expression.isFailure) {
-      Future.successful(QueryResponseInfoMessage(Some(AckMessage(code = AckMessage.Code.ERROR, message = expression.failed.get.getMessage))))
-    }
-    val res = QueryOp(expression.get)
+    time("rpc call for standard query operation") {
+      val expression = RPCHelperMethods.toExpression(request)
+      if (expression.isFailure) {
+        Future.successful(QueryResponseInfoMessage(Some(AckMessage(code = AckMessage.Code.ERROR, message = expression.failed.get.getMessage))))
+      }
+      val res = QueryOp(expression.get)
 
-    if (res.isSuccess) {
-      Future.successful(prepareResults(request.queryid, 0.0, 0, "", res.get))
-    } else {
-      log.error(res.failed.get.getMessage)
-      Future.successful(QueryResponseInfoMessage(Some(AckMessage(code = AckMessage.Code.ERROR, message = res.failed.get.getMessage))))
+      if (res.isSuccess) {
+        Future.successful(prepareResults(request.queryid, 0.0, 0, "", res.get))
+      } else {
+        log.error(res.failed.get.getMessage)
+        Future.successful(QueryResponseInfoMessage(Some(AckMessage(code = AckMessage.Code.ERROR, message = res.failed.get.getMessage))))
+      }
     }
   }
 
@@ -87,18 +104,19 @@ class SearchRPC(implicit ac: AdamContext) extends AdamSearchGrpc.AdamSearch with
     * @return
     */
   override def doSequentialQuery(request: SimpleSequentialQueryMessage): Future[QueryResponseInfoMessage] = {
-    log.debug("rpc call for sequential query operation")
-    val expression = RPCHelperMethods.toExpression(request)
-    if (expression.isFailure) {
-      Future.successful(QueryResponseInfoMessage(Some(AckMessage(code = AckMessage.Code.ERROR, message = expression.failed.get.getMessage))))
-    }
-    val res = QueryOp(expression.get)
+    time("rpc call for sequential query operation") {
+      val expression = RPCHelperMethods.toExpression(request)
+      if (expression.isFailure) {
+        Future.successful(QueryResponseInfoMessage(Some(AckMessage(code = AckMessage.Code.ERROR, message = expression.failed.get.getMessage))))
+      }
+      val res = QueryOp(expression.get)
 
-    if (res.isSuccess) {
-      Future.successful(prepareResults(request.queryid, 0.0, 0, "", res.get))
-    } else {
-      log.error(res.failed.get.getMessage)
-      Future.successful(QueryResponseInfoMessage(Some(AckMessage(code = AckMessage.Code.ERROR, message = res.failed.get.getMessage))))
+      if (res.isSuccess) {
+        Future.successful(prepareResults(request.queryid, 0.0, 0, "", res.get))
+      } else {
+        log.error(res.failed.get.getMessage)
+        Future.successful(QueryResponseInfoMessage(Some(AckMessage(code = AckMessage.Code.ERROR, message = res.failed.get.getMessage))))
+      }
     }
   }
 
@@ -109,18 +127,19 @@ class SearchRPC(implicit ac: AdamContext) extends AdamSearchGrpc.AdamSearch with
     * @return
     */
   override def doIndexQuery(request: SimpleIndexQueryMessage): Future[QueryResponseInfoMessage] = {
-    log.debug("rpc call for index query operation")
-    val expression = RPCHelperMethods.toExpression(request)
-    if (expression.isFailure) {
-      Future.successful(QueryResponseInfoMessage(Some(AckMessage(code = AckMessage.Code.ERROR, message = expression.failed.get.getMessage))))
-    }
-    val res = QueryOp(expression.get)
+    time("rpc call for index query operation") {
+      val expression = RPCHelperMethods.toExpression(request)
+      if (expression.isFailure) {
+        Future.successful(QueryResponseInfoMessage(Some(AckMessage(code = AckMessage.Code.ERROR, message = expression.failed.get.getMessage))))
+      }
+      val res = QueryOp(expression.get)
 
-    if (res.isSuccess) {
-      Future.successful(prepareResults(request.queryid, 0.0, 0, "", res.get))
-    } else {
-      log.error(res.failed.get.getMessage)
-      Future.successful(QueryResponseInfoMessage(Some(AckMessage(code = AckMessage.Code.ERROR, message = res.failed.get.getMessage))))
+      if (res.isSuccess) {
+        Future.successful(prepareResults(request.queryid, 0.0, 0, "", res.get))
+      } else {
+        log.error(res.failed.get.getMessage)
+        Future.successful(QueryResponseInfoMessage(Some(AckMessage(code = AckMessage.Code.ERROR, message = res.failed.get.getMessage))))
+      }
     }
   }
 
@@ -131,18 +150,19 @@ class SearchRPC(implicit ac: AdamContext) extends AdamSearchGrpc.AdamSearch with
     * @return
     */
   override def doSpecifiedIndexQuery(request: SimpleSpecifiedIndexQueryMessage): Future[QueryResponseInfoMessage] = {
-    log.debug("rpc call for index query operation")
-    val expression = RPCHelperMethods.toExpression(request)
-    if (expression.isFailure) {
-      Future.successful(QueryResponseInfoMessage(Some(AckMessage(code = AckMessage.Code.ERROR, message = expression.failed.get.getMessage))))
-    }
-    val res = QueryOp(expression.get)
+    time("rpc call for index query operation") {
+      val expression = RPCHelperMethods.toExpression(request)
+      if (expression.isFailure) {
+        Future.successful(QueryResponseInfoMessage(Some(AckMessage(code = AckMessage.Code.ERROR, message = expression.failed.get.getMessage))))
+      }
+      val res = QueryOp(expression.get)
 
-    if (res.isSuccess) {
-      Future.successful(prepareResults(request.queryid, 0.0, 0, "", res.get))
-    } else {
-      log.error(res.failed.get.getMessage)
-      Future.successful(QueryResponseInfoMessage(Some(AckMessage(code = AckMessage.Code.ERROR, message = res.failed.get.getMessage))))
+      if (res.isSuccess) {
+        Future.successful(prepareResults(request.queryid, 0.0, 0, "", res.get))
+      } else {
+        log.error(res.failed.get.getMessage)
+        Future.successful(QueryResponseInfoMessage(Some(AckMessage(code = AckMessage.Code.ERROR, message = res.failed.get.getMessage))))
+      }
     }
   }
 
@@ -153,35 +173,35 @@ class SearchRPC(implicit ac: AdamContext) extends AdamSearchGrpc.AdamSearch with
     * @param responseObserver
     */
   override def doProgressiveQuery(request: SimpleQueryMessage, responseObserver: StreamObserver[QueryResponseInfoMessage]): Unit = {
-    log.debug("rpc call for progressive query operation")
+    time("rpc call for progressive query operation") {
+      try {
+        //track on next
+        val onComplete =
+          (status: ProgressiveQueryStatus.Value, df: DataFrame, confidence: Float, source: String, info: Map[String, String]) => ({
+            responseObserver.onNext(prepareResults(request.queryid, confidence, 0, source + " (" + info.get("name").getOrElse("no details") + ")", df))
+          })
 
-    try {
-      //track on next
-      val onComplete =
-        (status: ProgressiveQueryStatus.Value, df: DataFrame, confidence: Float, source: String, info: Map[String, String]) => ({
-          responseObserver.onNext(prepareResults(request.queryid, confidence, 0, source + " (" + info.get("name").getOrElse("no details") + ")", df))
-        })
+        val pathChooser = if (request.hints.isEmpty) {
+          new SimpleProgressivePathChooser()
+        } else {
+          new QueryHintsProgressivePathChooser(request.hints.map(QueryHints.withName(_).get))
+        }
 
-      val pathChooser = if (request.hints.isEmpty) {
-        new SimpleProgressivePathChooser()
-      } else {
-        new QueryHintsProgressivePathChooser(request.hints.map(QueryHints.withName(_).get))
-      }
+        val tracker = QueryOp.progressive(request.entity, RPCHelperMethods.prepareNNQ(request.nnq).get, RPCHelperMethods.prepareBQ(request.bq), pathChooser, onComplete, request.withMetadata)
 
-      val tracker = QueryOp.progressive(request.entity, RPCHelperMethods.prepareNNQ(request.nnq).get, RPCHelperMethods.prepareBQ(request.bq), pathChooser, onComplete, request.withMetadata)
+        //track on completed
+        while (!tracker.get.isCompleted) {
+          Thread.sleep(1000)
+        }
 
-      //track on completed
-      while (!tracker.get.isCompleted) {
-        Thread.sleep(1000)
-      }
-
-      if (tracker.get.isCompleted) {
-        responseObserver.onCompleted()
-      }
-    } catch {
-      case e: Exception => {
-        log.error(e.getMessage)
-        responseObserver.onNext(QueryResponseInfoMessage(ack = Some(AckMessage(code = AckMessage.Code.ERROR, message = e.getMessage))))
+        if (tracker.get.isCompleted) {
+          responseObserver.onCompleted()
+        }
+      } catch {
+        case e: Exception => {
+          log.error(e.getMessage)
+          responseObserver.onNext(QueryResponseInfoMessage(ack = Some(AckMessage(code = AckMessage.Code.ERROR, message = e.getMessage))))
+        }
       }
     }
   }
@@ -193,15 +213,16 @@ class SearchRPC(implicit ac: AdamContext) extends AdamSearchGrpc.AdamSearch with
     * @return
     */
   override def doTimedProgressiveQuery(request: TimedQueryMessage): Future[QueryResponseInfoMessage] = {
-    log.debug("rpc call for timed progressive query operation")
-    val res = QueryOp.timedProgressive(request.entity, RPCHelperMethods.prepareNNQ(request.nnq).get, RPCHelperMethods.prepareBQ(request.bq), new SimpleProgressivePathChooser(), Duration(request.time, TimeUnit.MILLISECONDS), request.withMetadata)
+    time ("rpc call for timed progressive query operation") {
+      val res = QueryOp.timedProgressive(request.entity, RPCHelperMethods.prepareNNQ(request.nnq).get, RPCHelperMethods.prepareBQ(request.bq), new SimpleProgressivePathChooser(), Duration(request.time, TimeUnit.MILLISECONDS), request.withMetadata)
 
-    if (res.isSuccess) {
-      val (df, confidence, source) = res.get
-      Future.successful(prepareResults(request.queryid, confidence, 0, source, df))
-    } else {
-      log.error(res.failed.get.getMessage)
-      Future.successful(QueryResponseInfoMessage(Some(AckMessage(code = AckMessage.Code.ERROR, message = res.failed.get.getMessage))))
+      if (res.isSuccess) {
+        val (df, confidence, source) = res.get
+        Future.successful(prepareResults(request.queryid, confidence, 0, source, df))
+      } else {
+        log.error(res.failed.get.getMessage)
+        Future.successful(QueryResponseInfoMessage(Some(AckMessage(code = AckMessage.Code.ERROR, message = res.failed.get.getMessage))))
+      }
     }
   }
 
@@ -212,54 +233,56 @@ class SearchRPC(implicit ac: AdamContext) extends AdamSearchGrpc.AdamSearch with
     * @return
     */
   override def doCompoundQuery(request: CompoundQueryMessage): Future[CompoundQueryResponseInfoMessage] = {
-    log.debug("rpc call for chained query operation")
-    try {
-      val expression = RPCHelperMethods.toExpression(request)
-      if (expression.isFailure) {
-        Future.successful(QueryResponseInfoMessage(Some(AckMessage(code = AckMessage.Code.ERROR, message = expression.failed.get.getMessage))))
-      }
-      val res = QueryOp(expression.get)
-
-      if (res.isSuccess) {
-        val resultInfos = if (request.withIntermediateResults) {
-          expression.get.asInstanceOf[CompoundQueryHolder].provideRunInfo()
-        } else {
-          expression.get.asInstanceOf[CompoundQueryHolder].getRunDetails(new ListBuffer())
+    time("rpc call for chained query operation") {
+      try {
+        val expression = RPCHelperMethods.toExpression(request)
+        if (expression.isFailure) {
+          Future.successful(QueryResponseInfoMessage(Some(AckMessage(code = AckMessage.Code.ERROR, message = expression.failed.get.getMessage))))
         }
+        val res = QueryOp(expression.get)
 
-        val results = resultInfos.map(res =>
-          prepareResults(res.id, 0.0, res.time.toMillis, res.source, res.results)
-        )
+        if (res.isSuccess) {
+          val resultInfos = if (request.withIntermediateResults) {
+            expression.get.asInstanceOf[CompoundQueryHolder].provideRunInfo()
+          } else {
+            expression.get.asInstanceOf[CompoundQueryHolder].getRunDetails(new ListBuffer())
+          }
 
-        Future.successful(CompoundQueryResponseInfoMessage(
-          Some(AckMessage(AckMessage.Code.OK)),
-          results
-        ))
-      } else {
-        log.error(res.failed.get.getMessage)
-        Future.successful(CompoundQueryResponseInfoMessage(Some(AckMessage(code = AckMessage.Code.ERROR, message = res.failed.get.getMessage))))
-      }
-    } catch {
-      case e: Exception => {
-        log.error(e.getMessage)
-        Future.successful(CompoundQueryResponseInfoMessage(ack = Some(AckMessage(code = AckMessage.Code.ERROR, message = e.getMessage))))
+          val results = resultInfos.map(res =>
+            prepareResults(res.id, 0.0, res.time.toMillis, res.source, res.results)
+          )
+
+          Future.successful(CompoundQueryResponseInfoMessage(
+            Some(AckMessage(AckMessage.Code.OK)),
+            results
+          ))
+        } else {
+          log.error(res.failed.get.getMessage)
+          Future.successful(CompoundQueryResponseInfoMessage(Some(AckMessage(code = AckMessage.Code.ERROR, message = res.failed.get.getMessage))))
+        }
+      } catch {
+        case e: Exception => {
+          log.error(e.getMessage)
+          Future.successful(CompoundQueryResponseInfoMessage(ack = Some(AckMessage(code = AckMessage.Code.ERROR, message = e.getMessage))))
+        }
       }
     }
   }
 
   override def doBooleanQuery(request: SimpleBooleanQueryMessage): Future[QueryResponseInfoMessage] = {
-    log.debug("rpc call for Boolean query operation")
-    val expression = RPCHelperMethods.toExpression(request)
-    if (expression.isFailure) {
-      Future.successful(QueryResponseInfoMessage(Some(AckMessage(code = AckMessage.Code.ERROR, message = expression.failed.get.getMessage))))
-    }
+    time("rpc call for Boolean query operation") {
+      val expression = RPCHelperMethods.toExpression(request)
+      if (expression.isFailure) {
+        Future.successful(QueryResponseInfoMessage(Some(AckMessage(code = AckMessage.Code.ERROR, message = expression.failed.get.getMessage))))
+      }
 
-    val res = QueryOp(expression.get)
-    if (res.isSuccess) {
-      Future.successful(prepareResults(request.queryid, 0.0, 0, "metadata", res.get))
-    } else {
-      log.error(res.failed.get.getMessage)
-      Future.successful(QueryResponseInfoMessage(Some(AckMessage(code = AckMessage.Code.ERROR, message = res.failed.get.getMessage))))
+      val res = QueryOp(expression.get)
+      if (res.isSuccess) {
+        Future.successful(prepareResults(request.queryid, 0.0, 0, "metadata", res.get))
+      } else {
+        log.error(res.failed.get.getMessage)
+        Future.successful(QueryResponseInfoMessage(Some(AckMessage(code = AckMessage.Code.ERROR, message = res.failed.get.getMessage))))
+      }
     }
   }
 
@@ -270,14 +293,15 @@ class SearchRPC(implicit ac: AdamContext) extends AdamSearchGrpc.AdamSearch with
     * @return
     */
   override def getCachedResults(request: CachedResultsMessage): Future[QueryResponseInfoMessage] = {
-    log.debug("rpc call for cached query results")
-    val res = QueryLRUCache.get(request.queryid)
+    time("rpc call for cached query results") {
+      val res = QueryLRUCache.get(request.queryid)
 
-    if (res.isSuccess) {
-      Future.successful(prepareResults(request.queryid, 0.0, 0, "cache", res.get))
-    } else {
-      log.error(res.failed.get.getMessage)
-      Future.failed(QueryNotCachedException())
+      if (res.isSuccess) {
+        Future.successful(prepareResults(request.queryid, 0.0, 0, "cache", res.get))
+      } else {
+        log.error(res.failed.get.getMessage)
+        Future.failed(QueryNotCachedException())
+      }
     }
   }
 
@@ -291,7 +315,6 @@ class SearchRPC(implicit ac: AdamContext) extends AdamSearchGrpc.AdamSearch with
     * @return
     */
   private def prepareResults(queryid: String, confidence: Double, time: Long, source: String, df: DataFrame): QueryResponseInfoMessage = {
-
     val cols = df.schema.map(_.name)
 
     val results = df.collect().map(row => {

@@ -10,7 +10,6 @@ import ch.unibas.dmi.dbis.adam.storage.components.FeatureStorage
 import org.apache.commons.io.FileUtils
 import org.apache.hadoop.conf.Configuration
 import org.apache.hadoop.fs.{FileSystem, Path}
-import org.apache.log4j.Logger
 import org.apache.spark.sql.{DataFrame, SaveMode}
 
 import scala.util.{Failure, Success, Try}
@@ -22,8 +21,6 @@ import scala.util.{Failure, Success, Try}
   * April 2016
   */
 object ParquetFeatureStorage extends FeatureStorage {
-  @transient val log = Logger.getLogger(getClass.getName)
-
   val storage: GenericFeatureStorage = if (AdamConfig.isBaseOnHadoop) {
     log.debug("storing data on Hadoop")
     new HadoopStorage()
@@ -52,7 +49,7 @@ object ParquetFeatureStorage extends FeatureStorage {
           Failure(throw EntityNotExistingException())
         }
 
-        var df = ac.sqlContext.read.parquet(AdamConfig.dataPath + "/" + entityname + ".parquet")
+        var df = ac.sqlContext.read.parquet(AdamConfig.dataPath + "/" + entityname + ".parquet").coalesce(AdamConfig.defaultNumberOfPartitions)
 
         Success(df)
       } catch {
@@ -63,7 +60,7 @@ object ParquetFeatureStorage extends FeatureStorage {
     override def write(entityname: EntityName, pk: String, df: DataFrame, mode: SaveMode)(implicit ac: AdamContext): Try[Void] = {
       try {
         df
-          .repartition(AdamConfig.defaultNumberOfPartitions, df(pk)) //hack? remove?
+          .repartition(AdamConfig.defaultNumberOfPartitions)
           .write.mode(mode).parquet(AdamConfig.dataPath + "/" + entityname + ".parquet")
         Success(null)
       } catch {

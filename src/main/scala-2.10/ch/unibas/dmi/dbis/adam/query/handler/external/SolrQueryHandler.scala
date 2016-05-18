@@ -5,9 +5,9 @@ import ch.unibas.dmi.dbis.adam.entity.Entity.EntityName
 import ch.unibas.dmi.dbis.adam.main.AdamContext
 import ch.unibas.dmi.dbis.adam.query.datastructures.QueryExpression
 import org.apache.http.impl.client.SystemDefaultHttpClient
-import org.apache.log4j.Logger
 import org.apache.solr.client.solrj.SolrQuery
 import org.apache.solr.client.solrj.impl.HttpSolrClient
+import org.apache.spark.Logging
 import org.apache.spark.annotation.Experimental
 import org.apache.spark.sql.types.{StringType, StructField, StructType}
 import org.apache.spark.sql.{DataFrame, Row}
@@ -18,9 +18,7 @@ import org.apache.spark.sql.{DataFrame, Row}
   * Ivan Giangreco
   * May 2016
   */
-@Experimental class SolrQueryHandler(url: String)(@transient implicit val ac: AdamContext) {
-  @transient lazy val log = Logger.getLogger(getClass.getName)
-
+@Experimental class SolrQueryHandler(url: String)(@transient implicit val ac: AdamContext) extends Logging {
   val httpClient = new SystemDefaultHttpClient()
   val client = new HttpSolrClient(url, httpClient)
 

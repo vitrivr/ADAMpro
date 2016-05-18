@@ -5,9 +5,8 @@ import ch.unibas.dmi.dbis.adam.datatypes.bitString.BitStringUDT
 import ch.unibas.dmi.dbis.adam.datatypes.feature.FeatureVectorWrapperUDT
 import ch.unibas.dmi.dbis.adam.storage.components.{FeatureStorage, IndexStorage, MetadataStorage}
 import ch.unibas.dmi.dbis.adam.storage.engine.{ParquetFeatureStorage, ParquetIndexStorage, PostgresqlMetadataStorage}
-import org.apache.log4j.Logger
 import org.apache.spark.sql.hive.HiveContext
-import org.apache.spark.{SparkConf, SparkContext}
+import org.apache.spark.{Logging, SparkConf, SparkContext}
 
 /**
   * adamtwo
@@ -15,11 +14,7 @@ import org.apache.spark.{SparkConf, SparkContext}
   * Ivan Giangreco
   * August 2015
   */
-object SparkStartup {
-  val log = Logger.getLogger(getClass.getName)
-
-  log.debug("Spark starting up")
-
+object SparkStartup extends Logging {
   val sparkConfig = new SparkConf().setAppName("ADAMpro")
     .set("spark.driver.maxResultSize", "1000m")
     .set("spark.kryoserializer.buffer.max", "2047m")

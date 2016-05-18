@@ -5,7 +5,7 @@ import ch.unibas.dmi.dbis.adam.http.grpc.{AdamDefinitionGrpc, AdamSearchGrpc}
 import ch.unibas.dmi.dbis.adam.rpc.{DataDefinitionRPC, SearchRPC}
 import io.grpc.Server
 import io.grpc.netty.NettyServerBuilder
-import org.apache.log4j.Logger
+import org.apache.spark.Logging
 
 import scala.concurrent.ExecutionContext
 
@@ -15,9 +15,7 @@ import scala.concurrent.ExecutionContext
   * Ivan Giangreco
   * March 2016
   */
-class RPCStartup extends Thread {
-  val log = Logger.getLogger(getClass.getName)
-
+class RPCStartup extends Thread with Logging {
   override def run() : Unit = {
     log.debug("RPC server starting up")
 
