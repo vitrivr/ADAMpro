@@ -35,7 +35,7 @@ private[rpc] object RPCHelperMethods {
       val queryid = prepareQI(request.queryid)
       val cacheOptions = prepareCO(request.readFromCache, request.putInCache)
 
-      Success(StandardQueryHolder(entityname)(hints, nnq, bq, None, false, queryid, cacheOptions))
+      Success(StandardQueryHolder(entityname)(hints, nnq, bq, None, queryid, cacheOptions))
     } catch {
       case e: Exception => Failure(e)
     }
@@ -50,7 +50,7 @@ private[rpc] object RPCHelperMethods {
       val queryid = prepareQI(request.queryid)
       val cacheOptions = prepareCO(request.readFromCache, request.putInCache)
 
-      Success(SequentialQueryHolder(entityname)(nnq.get, bq, None, false, queryid, cacheOptions))
+      Success(SequentialQueryHolder(entityname)(nnq.get, bq, None, queryid, cacheOptions))
     } catch {
       case e: Exception => Failure(e)
     }
@@ -66,7 +66,7 @@ private[rpc] object RPCHelperMethods {
       val queryid = prepareQI(request.queryid)
       val cacheOptions = prepareCO(request.readFromCache, request.putInCache)
 
-      Success(new IndexQueryHolder(entityname, indextype.get)(nnq.get, bq, None, false, queryid, cacheOptions))
+      Success(new IndexQueryHolder(entityname, indextype.get)(nnq.get, bq, None, queryid, cacheOptions))
     } catch {
       case e: Exception => Failure(e)
     }
@@ -81,7 +81,7 @@ private[rpc] object RPCHelperMethods {
       val queryid = prepareQI(request.queryid)
       val cacheOptions = prepareCO(request.readFromCache, request.putInCache)
 
-      Success(new IndexQueryHolder(indexname)(nnq.get, bq, None, false, queryid, cacheOptions))
+      Success(new IndexQueryHolder(indexname)(nnq.get, bq, None, queryid, cacheOptions))
     } catch {
       case e: Exception => Failure(e)
     }
@@ -104,17 +104,15 @@ private[rpc] object RPCHelperMethods {
   implicit def toExpression(request: CompoundQueryMessage)(implicit ac: AdamContext): Try[QueryExpression] = {
     try {
       val entityname = request.entity
-      val nnq = prepareNNQ(request.nnq)
       val subexpression = toExpression(request.indexFilterExpression)
 
       if(subexpression.isFailure){
         return subexpression
       }
 
-      val withmetadata = request.withMetadata
       val queryid = prepareQI(request.queryid)
 
-      Success(new CompoundQueryHolder(entityname)(subexpression.get, nnq, withmetadata, queryid))
+      Success(new CompoundQueryHolder(entityname)(subexpression.get, queryid))
     } catch {
       case e: Exception => Failure(e)
     }
@@ -173,10 +171,12 @@ private[rpc] object RPCHelperMethods {
       }
 
       seqm.get.submessage match {
-        case SubExpressionQueryMessage.Submessage.Eqm(x) => toExpression(x)
+        case SubExpressionQueryMessage.Submessage.Eqm(request) => toExpression(request)
         case SubExpressionQueryMessage.Submessage.Ssiqm(request) => toExpression(request)
         case SubExpressionQueryMessage.Submessage.Siqm(request) => toExpression(request)
         case SubExpressionQueryMessage.Submessage.Ssqm(request) => toExpression(request)
+        case SubExpressionQueryMessage.Submessage.Ehqm(request) => toExpression(request)
+        case SubExpressionQueryMessage.Submessage.Sbqm(request) => toExpression(request)
         case _ => Success(EmptyQueryExpression())
       }
     } catch {

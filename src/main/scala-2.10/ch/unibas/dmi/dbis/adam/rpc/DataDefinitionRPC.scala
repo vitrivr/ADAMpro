@@ -10,7 +10,7 @@ import ch.unibas.dmi.dbis.adam.index.structures.IndexTypes
 import ch.unibas.dmi.dbis.adam.main.AdamContext
 import ch.unibas.dmi.dbis.adam.storage.partition.PartitionMode
 import io.grpc.stub.StreamObserver
-import org.apache.log4j.Logger
+import org.apache.spark.Logging
 import org.apache.spark.sql.types.{StructField, StructType, DataType}
 import org.apache.spark.sql.{Row, types}
 
@@ -22,8 +22,7 @@ import scala.concurrent.Future
   * Ivan Giangreco
   * March 2016
   */
-class DataDefinitionRPC(implicit ac: AdamContext) extends AdamDefinitionGrpc.AdamDefinition {
-  val log = Logger.getLogger(getClass.getName)
+class DataDefinitionRPC(implicit ac: AdamContext) extends AdamDefinitionGrpc.AdamDefinition with Logging {
 
   override def createEntity(request: CreateEntityMessage): Future[AckMessage] = {
     log.debug("rpc call for create entity operation")
@@ -36,7 +35,7 @@ class DataDefinitionRPC(implicit ac: AdamContext) extends AdamDefinitionGrpc.Ada
     if (res.isSuccess) {
       Future.successful(AckMessage(code = AckMessage.Code.OK, res.get.entityname))
     } else {
-      log.error(res.failed.get)
+      log.error(res.failed.get.getMessage)
       Future.successful(AckMessage(code = AckMessage.Code.ERROR, message = res.failed.get.getMessage))
     }
   }
@@ -75,7 +74,7 @@ class DataDefinitionRPC(implicit ac: AdamContext) extends AdamDefinitionGrpc.Ada
     if (res.isSuccess) {
       Future.successful(AckMessage(code = AckMessage.Code.OK, res.get.toString))
     } else {
-      log.error(res.failed.get)
+      log.error(res.failed.get.getMessage)
       Future.successful(AckMessage(code = AckMessage.Code.ERROR, message = res.failed.get.getMessage))
     }
   }
@@ -118,7 +117,7 @@ class DataDefinitionRPC(implicit ac: AdamContext) extends AdamDefinitionGrpc.Ada
       }
 
       def onError(t: Throwable) = {
-        log.error(t)
+        log.error(t.getMessage)
         responseObserver.onNext(AckMessage(code = AckMessage.Code.ERROR, message = t.getMessage))
       }
 
@@ -142,7 +141,7 @@ class DataDefinitionRPC(implicit ac: AdamContext) extends AdamDefinitionGrpc.Ada
     if (res.isSuccess) {
       Future.successful(AckMessage(code = AckMessage.Code.OK, message = res.get.indexname))
     } else {
-      log.error(res.failed.get)
+      log.error(res.failed.get.getMessage)
       Future.successful(AckMessage(code = AckMessage.Code.ERROR, message = res.failed.get.getMessage))
     }
   }
@@ -154,7 +153,7 @@ class DataDefinitionRPC(implicit ac: AdamContext) extends AdamDefinitionGrpc.Ada
     if (res.isSuccess) {
       Future.successful(AckMessage(code = AckMessage.Code.OK))
     } else {
-      log.error(res.failed.get)
+      log.error(res.failed.get.getMessage)
       Future.successful(AckMessage(code = AckMessage.Code.ERROR, message = res.failed.get.getMessage))
     }
   }
@@ -167,7 +166,7 @@ class DataDefinitionRPC(implicit ac: AdamContext) extends AdamDefinitionGrpc.Ada
     if (res.isSuccess) {
       Future.successful(AckMessage(code = AckMessage.Code.OK))
     } else {
-      log.error(res.failed.get)
+      log.error(res.failed.get.getMessage)
       Future.successful(AckMessage(code = AckMessage.Code.ERROR, message = res.failed.get.getMessage))
     }
   }
@@ -180,7 +179,7 @@ class DataDefinitionRPC(implicit ac: AdamContext) extends AdamDefinitionGrpc.Ada
     if (res.isSuccess) {
       Future.successful(AckMessage(code = AckMessage.Code.OK))
     } else {
-      log.error(res.failed.get)
+      log.error(res.failed.get.getMessage)
       Future.successful(AckMessage(code = AckMessage.Code.ERROR, message = res.failed.get.getMessage))
     }
   }
@@ -193,7 +192,7 @@ class DataDefinitionRPC(implicit ac: AdamContext) extends AdamDefinitionGrpc.Ada
     if (res.isSuccess) {
       Future.successful(EntitiesMessage(Some(AckMessage(AckMessage.Code.OK)), res.get.map(_.toString())))
     } else {
-      log.error(res.failed.get)
+      log.error(res.failed.get.getMessage)
       Future.successful(EntitiesMessage(Some(AckMessage(code = AckMessage.Code.ERROR, message = res.failed.get.getMessage))))
     }
   }
@@ -206,7 +205,7 @@ class DataDefinitionRPC(implicit ac: AdamContext) extends AdamDefinitionGrpc.Ada
     if (res.isSuccess) {
       Future.successful(EntityPropertiesMessage(Some(AckMessage(AckMessage.Code.OK)), request.entity, res.get))
     } else {
-      log.error(res.failed.get)
+      log.error(res.failed.get.getMessage)
       Future.successful(EntityPropertiesMessage(Some(AckMessage(AckMessage.Code.ERROR, res.failed.get.getMessage))))
     }
   }
@@ -232,7 +231,7 @@ class DataDefinitionRPC(implicit ac: AdamContext) extends AdamDefinitionGrpc.Ada
     if (res.isSuccess) {
       Future.successful(AckMessage(AckMessage.Code.OK, res.get.indexname))
     } else {
-      log.error(res.failed.get)
+      log.error(res.failed.get.getMessage)
       Future.successful(AckMessage(code = AckMessage.Code.ERROR, message = res.failed.get.getMessage))
     }
   }
@@ -244,7 +243,7 @@ class DataDefinitionRPC(implicit ac: AdamContext) extends AdamDefinitionGrpc.Ada
     if (res.isSuccess) {
       Future.successful(AckMessage(AckMessage.Code.OK, request.index))
     } else {
-      log.error(res.failed.get)
+      log.error(res.failed.get.getMessage)
       Future.successful(AckMessage(code = AckMessage.Code.ERROR, message = "please re-try"))
     }
   }
@@ -255,7 +254,7 @@ class DataDefinitionRPC(implicit ac: AdamContext) extends AdamDefinitionGrpc.Ada
     if (res.isSuccess) {
       Future.successful(AckMessage(AckMessage.Code.OK))
     } else {
-      log.error(res.failed.get)
+      log.error(res.failed.get.getMessage)
       Future.successful(AckMessage(AckMessage.Code.ERROR))
     }
   }

@@ -12,7 +12,7 @@ import ch.unibas.dmi.dbis.adam.query.handler.QueryHints
 import ch.unibas.dmi.dbis.adam.query.handler.internal.CompoundQueryHolder
 import ch.unibas.dmi.dbis.adam.query.progressive.{QueryHintsProgressivePathChooser, SimpleProgressivePathChooser}
 import io.grpc.stub.StreamObserver
-import org.apache.log4j.Logger
+import org.apache.spark.Logging
 import org.apache.spark.sql.DataFrame
 
 import scala.collection.mutable.ListBuffer
@@ -25,9 +25,7 @@ import scala.concurrent.duration.Duration
   * Ivan Giangreco
   * March 2016
   */
-class SearchRPC(implicit ac: AdamContext) extends AdamSearchGrpc.AdamSearch {
-  val log = Logger.getLogger(getClass.getName)
-
+class SearchRPC(implicit ac: AdamContext) extends AdamSearchGrpc.AdamSearch with Logging {
 
   //TODO: possibly start new 'lightweight' AdamContext with each new query
 
@@ -43,7 +41,7 @@ class SearchRPC(implicit ac: AdamContext) extends AdamSearchGrpc.AdamSearch {
     if (res.isSuccess) {
       Future.successful(AckMessage(code = AckMessage.Code.OK, res.get.entityname))
     } else {
-      log.error(res.failed.get)
+      log.error(res.failed.get.getMessage)
       Future.successful(AckMessage(code = AckMessage.Code.ERROR, message = res.failed.get.getMessage))
     }
   }
@@ -77,7 +75,7 @@ class SearchRPC(implicit ac: AdamContext) extends AdamSearchGrpc.AdamSearch {
     if (res.isSuccess) {
       Future.successful(prepareResults(request.queryid, 0.0, 0, "", res.get))
     } else {
-      log.error(res.failed.get)
+      log.error(res.failed.get.getMessage)
       Future.successful(QueryResponseInfoMessage(Some(AckMessage(code = AckMessage.Code.ERROR, message = res.failed.get.getMessage))))
     }
   }
@@ -99,7 +97,7 @@ class SearchRPC(implicit ac: AdamContext) extends AdamSearchGrpc.AdamSearch {
     if (res.isSuccess) {
       Future.successful(prepareResults(request.queryid, 0.0, 0, "", res.get))
     } else {
-      log.error(res.failed.get)
+      log.error(res.failed.get.getMessage)
       Future.successful(QueryResponseInfoMessage(Some(AckMessage(code = AckMessage.Code.ERROR, message = res.failed.get.getMessage))))
     }
   }
@@ -121,7 +119,7 @@ class SearchRPC(implicit ac: AdamContext) extends AdamSearchGrpc.AdamSearch {
     if (res.isSuccess) {
       Future.successful(prepareResults(request.queryid, 0.0, 0, "", res.get))
     } else {
-      log.error(res.failed.get)
+      log.error(res.failed.get.getMessage)
       Future.successful(QueryResponseInfoMessage(Some(AckMessage(code = AckMessage.Code.ERROR, message = res.failed.get.getMessage))))
     }
   }
@@ -143,7 +141,7 @@ class SearchRPC(implicit ac: AdamContext) extends AdamSearchGrpc.AdamSearch {
     if (res.isSuccess) {
       Future.successful(prepareResults(request.queryid, 0.0, 0, "", res.get))
     } else {
-      log.error(res.failed.get)
+      log.error(res.failed.get.getMessage)
       Future.successful(QueryResponseInfoMessage(Some(AckMessage(code = AckMessage.Code.ERROR, message = res.failed.get.getMessage))))
     }
   }
@@ -182,7 +180,7 @@ class SearchRPC(implicit ac: AdamContext) extends AdamSearchGrpc.AdamSearch {
       }
     } catch {
       case e: Exception => {
-        log.error(e)
+        log.error(e.getMessage)
         responseObserver.onNext(QueryResponseInfoMessage(ack = Some(AckMessage(code = AckMessage.Code.ERROR, message = e.getMessage))))
       }
     }
@@ -202,7 +200,7 @@ class SearchRPC(implicit ac: AdamContext) extends AdamSearchGrpc.AdamSearch {
       val (df, confidence, source) = res.get
       Future.successful(prepareResults(request.queryid, confidence, 0, source, df))
     } else {
-      log.error(res.failed.get)
+      log.error(res.failed.get.getMessage)
       Future.successful(QueryResponseInfoMessage(Some(AckMessage(code = AckMessage.Code.ERROR, message = res.failed.get.getMessage))))
     }
   }
@@ -238,12 +236,12 @@ class SearchRPC(implicit ac: AdamContext) extends AdamSearchGrpc.AdamSearch {
           results
         ))
       } else {
-        log.error(res.failed.get)
+        log.error(res.failed.get.getMessage)
         Future.successful(CompoundQueryResponseInfoMessage(Some(AckMessage(code = AckMessage.Code.ERROR, message = res.failed.get.getMessage))))
       }
     } catch {
       case e: Exception => {
-        log.error(e)
+        log.error(e.getMessage)
         Future.successful(CompoundQueryResponseInfoMessage(ack = Some(AckMessage(code = AckMessage.Code.ERROR, message = e.getMessage))))
       }
     }
@@ -260,7 +258,7 @@ class SearchRPC(implicit ac: AdamContext) extends AdamSearchGrpc.AdamSearch {
     if (res.isSuccess) {
       Future.successful(prepareResults(request.queryid, 0.0, 0, "metadata", res.get))
     } else {
-      log.error(res.failed.get)
+      log.error(res.failed.get.getMessage)
       Future.successful(QueryResponseInfoMessage(Some(AckMessage(code = AckMessage.Code.ERROR, message = res.failed.get.getMessage))))
     }
   }
@@ -278,7 +276,7 @@ class SearchRPC(implicit ac: AdamContext) extends AdamSearchGrpc.AdamSearch {
     if (res.isSuccess) {
       Future.successful(prepareResults(request.queryid, 0.0, 0, "cache", res.get))
     } else {
-      log.error(res.failed.get)
+      log.error(res.failed.get.getMessage)
       Future.failed(QueryNotCachedException())
     }
   }
