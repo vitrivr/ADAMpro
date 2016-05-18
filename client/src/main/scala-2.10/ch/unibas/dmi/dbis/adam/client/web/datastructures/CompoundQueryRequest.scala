@@ -1,5 +1,6 @@
 package ch.unibas.dmi.dbis.adam.client.web.datastructures
 
+import ch.unibas.dmi.dbis.adam.http.grpc.BooleanQueryMessage.WhereMessage
 import ch.unibas.dmi.dbis.adam.http.grpc._
 
 /**
@@ -128,6 +129,9 @@ case class CompoundQueryRequest(var id: String, var operation: String, var optio
       case "sequential" =>
         sqm = sqm.withSsqm(ssqm())
 
+      case "boolean" =>
+        sqm = sqm.withSbqm(sbqm())
+
       case "external" =>
         sqm = sqm.withEhqm(ehqm())
     }
@@ -182,5 +186,10 @@ case class CompoundQueryRequest(var id: String, var operation: String, var optio
   private def ehqm(): ExternalHandlerQueryMessage = {
     ExternalHandlerQueryMessage(id, entity, subtype, options)
   }
+
+  private def sbqm() : SimpleBooleanQueryMessage = {
+    SimpleBooleanQueryMessage(id, entity, Some(BooleanQueryMessage(Seq(WhereMessage(options.get("field").get, options.get("value").get)))))
+  }
+
 }
 

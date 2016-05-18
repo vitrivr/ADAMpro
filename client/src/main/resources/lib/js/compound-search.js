@@ -110,7 +110,7 @@ $("#btnAddIndex").click(function () {
 
 //add operation
 $("#btnAddOperation").click(function () {
-    var option = $("#indexoperation option[value=" + $("#indextype").val() + "]");
+    var option = $("#indexoperation option[value=" + $("#indexoperation").val() + "]");
     var frontname = option.text();
     var operation = option.data("operation");
     var subtype = option.data("subtype");

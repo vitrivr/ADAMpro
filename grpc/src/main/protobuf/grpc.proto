@@ -308,6 +308,7 @@ message SubExpressionQueryMessage {
        SimpleIndexQueryMessage siqm = 4;
        ExpressionQueryMessage eqm = 5;
        ExternalHandlerQueryMessage ehqm = 6;
+       SimpleBooleanQueryMessage sbqm = 7;
      }
 }
 

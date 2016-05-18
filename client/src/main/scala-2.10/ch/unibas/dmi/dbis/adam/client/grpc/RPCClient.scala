@@ -117,7 +117,7 @@ class RPCClient(channel: ManagedChannel, definer: AdamDefinitionBlockingStub, se
     try {
       val count = definer.count(EntityNameMessage(entityname))
       val properties = definer.getEntityProperties(EntityNameMessage(entityname)).properties
-      Success(properties.+("count" -> "not counted"))
+      Success(properties.+("count" -> definer.count(EntityNameMessage(entityname)).message))
     } catch {
       case e: Exception => Failure(e)
     }
