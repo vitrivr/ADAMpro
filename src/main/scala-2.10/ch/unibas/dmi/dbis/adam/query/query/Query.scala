@@ -44,7 +44,7 @@ case class BooleanQuery(
     where.get.map { case (field, value) =>
       val regex(prefix, suffix) = value
 
-      //if a sqlOperator was found then keep the SQL operator, otherwise add a '='
+      //if a sqlOperator was found in the value field then keep the SQL operator, otherwise add a '='
       (prefix, suffix) match {
         case (null, s) => field + " = " + " '" + value + "'"
         case _ => field + " " + value

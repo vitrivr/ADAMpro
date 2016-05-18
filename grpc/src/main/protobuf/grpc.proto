@@ -336,8 +336,8 @@ message BooleanQueryMessage {
   repeated JoinMessage joins = 2;
 
   message WhereMessage {
-    //if field ends on certain operators (e.g., != or IN), then the operation used in query is adapted, otherwise equality is used
     string field = 1;
+    //if value starts on certain operators (e.g., != or IN), then the operation used in query is adapted, otherwise equality is used
     string value = 2;
   }
 
