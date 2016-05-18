@@ -8,6 +8,7 @@ import ch.unibas.dmi.dbis.adam.entity.{Entity, FieldDefinition, FieldTypes}
 import ch.unibas.dmi.dbis.adam.main.SparkStartup
 import ch.unibas.dmi.dbis.adam.main.SparkStartup.Implicits._
 import ch.unibas.dmi.dbis.adam.query.distance.{ManhattanDistance, MinkowskiDistance}
+import org.apache.spark.Logging
 import org.apache.spark.sql.types.{LongType, StructField, StructType}
 import org.apache.spark.sql.{DataFrame, Row, types}
 import org.scalatest.concurrent.{Eventually, IntegrationPatience}
@@ -22,7 +23,7 @@ import scala.util.Random
   * Ivan Giangreco
   * March 2016
   */
-class AdamTestBase extends FeatureSpec with GivenWhenThen with Eventually with IntegrationPatience {
+class AdamTestBase extends FeatureSpec with GivenWhenThen with Eventually with IntegrationPatience with Logging {
   val startup = SparkStartup
 
   /**
@@ -281,7 +282,7 @@ class AdamTestBase extends FeatureSpec with GivenWhenThen with Eventually with I
     val t1 = System.currentTimeMillis
     val x = thunk
     val t2 = System.currentTimeMillis
-    println((t2 - t1) + " msecs")
+    log.info((t2 - t1) + " msecs")
     x
   }
 }

@@ -16,3 +16,7 @@ trait IndexGenerator extends Serializable with Logging {
   def indextypename: IndexTypes.IndexType
   def index(indexname : IndexName, entityname : EntityName, data: RDD[IndexingTaskTuple[_]]):  Index
 }
+
+object IndexGenerator {
+  private[index] val MINIMUM_NUMBER_OF_TUPLE = 10
+}

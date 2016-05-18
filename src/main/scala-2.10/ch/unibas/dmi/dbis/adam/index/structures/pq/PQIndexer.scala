@@ -30,12 +30,15 @@ class PQIndexer(nsq: Int, trainingSize: Int)(@transient implicit val ac: AdamCon
     val entity = Entity.load(entityname).get
 
     val n = entity.count
-    val fraction = ADAMSamplingUtils.computeFractionForSampleSize(trainingSize, n, false)
-    val trainData = data.sample(false, fraction)
-    val collected = trainData.collect()
-    val indexMetaData = train(collected)
+    val fraction = ADAMSamplingUtils.computeFractionForSampleSize(math.max(trainingSize, IndexGenerator.MINIMUM_NUMBER_OF_TUPLE), n, false)
+    var trainData = data.sample(false, fraction).collect()
+    if(trainData.length < IndexGenerator.MINIMUM_NUMBER_OF_TUPLE){
+      trainData = data.take(IndexGenerator.MINIMUM_NUMBER_OF_TUPLE)
+    }
 
-    val d = collected.head.feature.size
+    val indexMetaData = train(trainData)
+
+    val d = trainData.head.feature.size
 
     log.debug("PQ indexing...")
 

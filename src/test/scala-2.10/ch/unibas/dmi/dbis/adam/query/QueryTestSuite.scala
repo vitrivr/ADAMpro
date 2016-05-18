@@ -14,7 +14,6 @@ import ch.unibas.dmi.dbis.adam.query.distance.EuclideanDistance
 import ch.unibas.dmi.dbis.adam.query.handler.internal.{CompoundQueryHolder, IndexQueryHolder}
 import ch.unibas.dmi.dbis.adam.query.progressive.AllProgressivePathChooser
 import ch.unibas.dmi.dbis.adam.query.query.{BooleanQuery, NearestNeighbourQuery}
-import org.apache.log4j.Logger
 import org.apache.spark.sql.DataFrame
 import org.scalatest.concurrent.ScalaFutures
 
@@ -28,9 +27,6 @@ import scala.concurrent.duration.Duration
   * March 2016
   */
 class QueryTestSuite extends AdamTestBase with ScalaFutures {
-  val log = Logger.getLogger(getClass.getName)
-
-
   feature("standard query") {
     /**
       *

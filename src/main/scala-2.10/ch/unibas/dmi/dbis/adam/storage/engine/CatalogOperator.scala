@@ -9,7 +9,6 @@ import ch.unibas.dmi.dbis.adam.exception.{EntityExistingException, EntityNotExis
 import ch.unibas.dmi.dbis.adam.index.Index.{IndexName, IndexTypeName}
 import ch.unibas.dmi.dbis.adam.index.structures.IndexTypes
 import org.apache.commons.io.FileUtils
-import org.apache.log4j.Logger
 import org.apache.spark.Logging
 import slick.driver.H2Driver.api._
 import slick.jdbc.meta.MTable
@@ -50,13 +49,13 @@ object CatalogOperator extends Logging {
     * @param withMetadata
     * @return
     */
-  def createEntity(entityname: EntityName, fields: Seq[FieldDefinition], withMetadata: Boolean = false): Boolean = {
+  def createEntity(entityname: EntityName, featurepath : String, metadatapath : String, fields: Seq[FieldDefinition], withMetadata: Boolean = false): Boolean = {
     if (existsEntity(entityname)) {
       throw new EntityExistingException()
     }
 
     val setup = DBIO.seq(
-      entities.+=(entityname, withMetadata)
+      entities.+=(entityname, featurepath, metadatapath, withMetadata)
     )
 
     Await.result(db.run(setup), MAX_WAITING_TIME)
@@ -67,6 +66,44 @@ object CatalogOperator extends Logging {
     }
 
     log.debug("created entity in catalog")
+    true
+  }
+
+  /**
+    *
+    * @param entityname
+    * @return
+    */
+  def getEntityFeaturePath(entityname: EntityName): String = {
+    val query = entities.filter(_.entityname === entityname.toString()).map(_.featurepath).result.head
+    Await.result(db.run(query), MAX_WAITING_TIME)
+  }
+
+  /**
+    *
+    * @param entityname
+    * @return
+    */
+  def getEntityMetadataPath(entityname: EntityName): String = {
+    val query = entities.filter(_.entityname === entityname.toString()).map(_.metadatapath).result.head
+    Await.result(db.run(query), MAX_WAITING_TIME)
+  }
+
+  /**
+    *
+    * @param entityname
+    * @param newPath
+    * @return
+    */
+  def updateEntityFeaturePath(entityname: EntityName, newPath: String): Boolean = {
+    val query = entities.filter(_.entityname === entityname.toString()).map(_.featurepath)
+
+    val update = DBIO.seq(
+      query.update(newPath)
+    )
+    Await.result(db.run(update), MAX_WAITING_TIME)
+
+    log.debug("updated entity path in catalog")
     true
   }
 
@@ -171,7 +208,7 @@ object CatalogOperator extends Logging {
     * @param entityname
     * @param indexmeta
     */
-  def createIndex(indexname: IndexName, filename: String, entityname: EntityName, column: String, indextypename: IndexTypeName, indexmeta: Serializable): Boolean = {
+  def createIndex(indexname: IndexName, path: String, entityname: EntityName, column: String, indextypename: IndexTypeName, indexmeta: Serializable): Boolean = {
     if (!existsEntity(entityname)) {
       throw new EntityNotExistingException()
     }
@@ -180,7 +217,7 @@ object CatalogOperator extends Logging {
       throw new IndexExistingException()
     }
 
-    val metaPath = AdamConfig.indexMetaCatalogPath + "/" + indexname + "/"
+    val metaPath = AdamConfig.indexMetaCatalogPath + "/" + indexname + "/" //TODO: change this
     val metaFilePath = metaPath + "_adam_metadata"
 
     new File(metaPath).mkdirs()
@@ -190,7 +227,7 @@ object CatalogOperator extends Logging {
     oos.close
 
     val setup = DBIO.seq(
-      indexes.+=((indexname, entityname, column, indextypename.name, filename, metaFilePath, true, DEFAULT_INDEX_WEIGHT))
+      indexes.+=((indexname, entityname, column, indextypename.name, path, metaFilePath, true, DEFAULT_INDEX_WEIGHT))
     )
 
     Await.result(db.run(setup), MAX_WAITING_TIME)
@@ -210,7 +247,7 @@ object CatalogOperator extends Logging {
       throw new IndexNotExistingException()
     }
 
-    val metaPath = AdamConfig.indexMetaCatalogPath + "/" + indexname + "/"
+    val metaPath = AdamConfig.indexMetaCatalogPath + "/" + indexname + "/" //TODO: change this
     FileUtils.deleteDirectory(new File(metaPath))
 
     val query = indexes.filter(_.indexname === indexname).delete
@@ -297,6 +334,7 @@ object CatalogOperator extends Logging {
   /**
     *
     * @param indexname
+    * @param newPath
     * @return
     */
   def updateIndexPath(indexname: IndexName, newPath: String): Boolean = {

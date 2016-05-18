@@ -2,20 +2,22 @@ package ch.unibas.dmi.dbis.adam.entity
 
 import ch.unibas.dmi.dbis.adam.config.FieldNames
 import ch.unibas.dmi.dbis.adam.datatypes.feature.FeatureVectorWrapperUDT
-import ch.unibas.dmi.dbis.adam.entity.Entity._
+import ch.unibas.dmi.dbis.adam.entity.Entity.EntityName
 import ch.unibas.dmi.dbis.adam.entity.FieldTypes._
-import ch.unibas.dmi.dbis.adam.exception.{EntityNotExistingException, EntityNotProperlyDefinedException, EntityExistingException, GeneralAdamException}
+import ch.unibas.dmi.dbis.adam.exception.{EntityExistingException, EntityNotExistingException, EntityNotProperlyDefinedException, GeneralAdamException}
 import ch.unibas.dmi.dbis.adam.index.Index
-import ch.unibas.dmi.dbis.adam.main.{SparkStartup, AdamContext}
+import ch.unibas.dmi.dbis.adam.main.{AdamContext, SparkStartup}
 import ch.unibas.dmi.dbis.adam.query.query.NearestNeighbourQuery
 import ch.unibas.dmi.dbis.adam.storage.components.{FeatureStorage, MetadataStorage}
 import ch.unibas.dmi.dbis.adam.storage.engine.CatalogOperator
+import ch.unibas.dmi.dbis.adam.storage.partition.PartitionMode
 import org.apache.spark.Logging
 import org.apache.spark.sql.types.{StructField, StructType}
 import org.apache.spark.sql.{DataFrame, Row, SaveMode}
+import org.apache.spark.sql.functions.col
 
 import scala.collection.mutable.ListBuffer
-import scala.util.{Failure, Success, Try}
+import scala.util.{Failure, Random, Success, Try}
 
 /**
   * adamtwo
@@ -24,9 +26,9 @@ import scala.util.{Failure, Success, Try}
   * October 2015
   */
 case class Entity(val entityname: EntityName, private val featureStorage: FeatureStorage, private val metadataStorage: Option[MetadataStorage])(@transient implicit val ac: AdamContext) extends Logging {
-  def featureData = featureStorage.read(entityname).get
-
-  def metaData = if (metadataStorage.isDefined) {
+  private[entity] def featureData = featureStorage.read(featurePath).get
+  private[adam] def getIndexableFeature(column : String) = featureData.select(col(pk.name), col(column))
+  private[entity] def metaData = if (metadataStorage.isDefined) {
     Some(metadataStorage.get.read(entityname))
   } else {
     None
@@ -52,6 +54,15 @@ case class Entity(val entityname: EntityName, private val featureStorage: Featur
 
 
   /**
+    * Gets path of the entity.
+    *
+    * @return
+    */
+  private[entity] def featurePath: String = CatalogOperator.getEntityFeaturePath(entityname)
+  private[entity] def meatadataPath : String = CatalogOperator.getEntityMetadataPath(entityname)
+
+
+  /**
     *
     * @return
     */
@@ -68,7 +79,7 @@ case class Entity(val entityname: EntityName, private val featureStorage: Featur
   def count: Long = {
     //TODO: possibly switch to metadata storage?
     if (tupleCount == -1) {
-      val count = featureStorage.count(entityname)
+      val count = featureStorage.count(featurePath)
       tupleCount = count.get
     }
 
@@ -85,7 +96,6 @@ case class Entity(val entityname: EntityName, private val featureStorage: Featur
     * @return
     */
   def show(k: Int) = data.limit(k)
-
 
   /**
     * Inserts data into the entity.
@@ -115,7 +125,7 @@ case class Entity(val entityname: EntityName, private val featureStorage: Featur
       //TODO: check schema
 
       val featureFieldNames = insertion.schema.fields.filter(_.dataType == new FeatureVectorWrapperUDT).map(_.name)
-      featureStorage.write(entityname, pk.name, insertion.select(pk.name, featureFieldNames.toSeq: _*), SaveMode.Append)
+      featureStorage.write(entityname, insertion.select(pk.name, featureFieldNames.toSeq: _*), SaveMode.Append)
 
       val metadataFieldNames = insertion.schema.fields.filterNot(_.dataType == new FeatureVectorWrapperUDT).map(_.name)
       if (metadataStorage.isDefined) {
@@ -166,7 +176,7 @@ case class Entity(val entityname: EntityName, private val featureStorage: Featur
   }
 }
 
-object Entity {
+object Entity extends Logging {
   type EntityName = EntityNameHolder
 
   private val featureStorage = SparkStartup.featureStorage
@@ -227,16 +237,20 @@ object Entity {
         val featureFields = fields.filter(_.fieldtype == FEATURETYPE)
 
         //perform
-        featureStorage.create(entityname, featureFields.+:(pk))
+        val featurepath = featureStorage.create(entityname, featureFields.+:(pk))
 
-        if (!fields.filterNot(_.fieldtype == FEATURETYPE).filterNot(_.pk).isEmpty) {
-          val metadataFields = fields.filterNot(_.fieldtype == FEATURETYPE)
-          metadataStorage.create(entityname, metadataFields)
-          CatalogOperator.createEntity(entityname, fields, true)
-          Success(Entity(entityname, featureStorage, Option(metadataStorage))(ac))
+        if (featurepath.isSuccess) {
+          if (!fields.filterNot(_.fieldtype == FEATURETYPE).filterNot(_.pk).isEmpty) {
+            val metadataFields = fields.filterNot(_.fieldtype == FEATURETYPE)
+            metadataStorage.create(entityname, metadataFields)
+            CatalogOperator.createEntity(entityname, featurepath.get, entityname, fields, true)
+            Success(Entity(entityname, featureStorage, Option(metadataStorage))(ac))
+          } else {
+            CatalogOperator.createEntity(entityname, featurepath.get, entityname, fields, false)
+            Success(Entity(entityname, featureStorage, None)(ac))
+          }
         } else {
-          CatalogOperator.createEntity(entityname, fields, false)
-          Success(Entity(entityname, featureStorage, None)(ac))
+          Failure(featurepath.failed.get)
         }
       }
     } catch {
@@ -266,10 +280,10 @@ object Entity {
 
       Index.dropAll(entityname)
 
-      featureStorage.drop(entityname)
+      featureStorage.drop(CatalogOperator.getEntityFeaturePath(entityname))
 
       if (CatalogOperator.hasEntityMetadata(entityname)) {
-        metadataStorage.drop(entityname)
+        metadataStorage.drop(CatalogOperator.getEntityMetadataPath(entityname))
       }
 
       CatalogOperator.dropEntity(entityname, ifExists)
@@ -329,7 +343,58 @@ object Entity {
     }
   }
 
-  //TODO: add repartition of data
+  /**
+    * Repartition data.
+    *
+    * @param entity
+    * @param nPartitions
+    * @param join
+    * @param cols
+    * @param option
+    * @return
+    */
+  def repartition(entity: Entity, nPartitions: Int, join: Option[DataFrame], cols: Option[Seq[String]], option: PartitionMode.Value)(implicit ac: AdamContext): Try[Entity] = {
+    var data = entity.data
+
+    //TODO: possibly add own partitioner
+    //data.map(r => (r.getAs(cols.get.head), r)).partitionBy(new HashPartitioner())
+
+    if (join.isDefined) {
+      data = data.join(join.get, entity.pk.name)
+    }
+
+    data = if (cols.isDefined) {
+      val entityColNames = data.schema.map(_.name)
+      if (!cols.get.forall(name => entityColNames.contains(name))) {
+        Failure(throw new GeneralAdamException("one of the columns " + cols.mkString(",") + " is not existing in entity " + entity.entityname + entityColNames.mkString("(", ",", ")")))
+      }
+
+      data.repartition(nPartitions, cols.get.map(data(_)): _*)
+    } else {
+      data.repartition(nPartitions, data(entity.pk.name))
+    }
+
+    data = data.select(entity.featureData.columns.map(col) : _*)
+
+    option match {
+      case PartitionMode.REPLACE_EXISTING =>
+        val oldPath = entity.featurePath
+
+        var newPath = ""
+
+        do {
+          newPath = entity.featurePath + "-rep" + Random.nextInt
+        } while (SparkStartup.featureStorage.exists(newPath).get)
+
+        SparkStartup.featureStorage.write(entity.entityname, data, SaveMode.ErrorIfExists, Some(newPath))
+        CatalogOperator.updateEntityFeaturePath(entity.entityname, newPath)
+        SparkStartup.featureStorage.drop(oldPath)
+
+        return Success(entity)
+
+      case _ => Failure(new GeneralAdamException("partitioning mode unknown"))
+    }
+  }
 
   /**
     * Lists names of all entities.

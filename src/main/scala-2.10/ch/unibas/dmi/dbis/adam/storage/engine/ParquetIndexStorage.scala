@@ -21,50 +21,52 @@ import scala.util.{Failure, Success, Try}
   * August 2015
   */
 object ParquetIndexStorage extends IndexStorage {
+  private def getPath(filename : String): String  = AdamConfig.indexPath + "/" + filename
 
   val storage: GenericIndexStorage = if (AdamConfig.isBaseOnHadoop) {
-    log.info("storing index on Hadoop")
+    log.debug("storing index on Hadoop")
     new HadoopStorage()
   } else {
-    log.info("storing index locally")
+    log.debug("storing index locally")
     new LocalStorage()
   }
 
-  override def read(indexName: IndexName)(implicit ac: AdamContext): Try[DataFrame] = {
-    log.info("reading index from storage")
-    storage.read(indexName)
+  override def read(path: String)(implicit ac: AdamContext): Try[DataFrame] = {
+    log.debug("reading index from storage")
+    storage.read(path)
   }
 
-  override def drop(indexName: IndexName)(implicit ac: AdamContext): Try[Void] = {
-    log.info("dropping index from storage")
-    storage.drop(indexName)
+  override def drop(path: String)(implicit ac: AdamContext): Try[Void] = {
+    log.debug("dropping index from storage")
+    storage.drop(path)
   }
 
-  override def write(indexName: IndexName, index: DataFrame)(implicit ac: AdamContext): Try[Void] = {
-    log.info("writing index to storage")
-    storage.write(indexName, index)
+  override def write(indexName: IndexName, index: DataFrame, path: Option[String] = None)(implicit ac: AdamContext): Try[String] = {
+    log.debug("writing index to storage")
+    storage.write(indexName, index, path)
   }
 
-  override def exists(indexname: IndexName): Try[Boolean] = {
-    log.info("checking index exists in storage")
-    storage.exists(indexname)
+  override def exists(path: String): Try[Boolean] = {
+    log.debug("checking index exists in storage")
+    storage.exists(path)
   }
 
   private[engine] trait GenericIndexStorage extends IndexStorage {
-    override def read(indexname: IndexName)(implicit ac: AdamContext): Try[DataFrame] = {
+    override def read(path: String)(implicit ac: AdamContext): Try[DataFrame] = {
       try {
-        Success(ac.sqlContext.read.parquet(AdamConfig.indexPath + "/" + indexname + ".parquet"))
+        Success(ac.sqlContext.read.parquet(path))
       } catch {
         case e: Exception => Failure(e)
       }
     }
 
-    override def write(indexname: IndexName, df: DataFrame)(implicit ac: AdamContext): Try[Void] = {
+    override def write(indexname: IndexName, df: DataFrame, path: Option[String] = None)(implicit ac: AdamContext): Try[String] = {
       try {
+        val filepath = path.getOrElse(getPath(indexname.toString))
         df
           .repartition(AdamConfig.defaultNumberOfPartitions)
-          .write.mode(SaveMode.Overwrite).parquet(AdamConfig.indexPath + "/" + indexname + ".parquet")
-        Success(null)
+          .write.mode(SaveMode.Overwrite).parquet(filepath)
+        Success(filepath)
       } catch {
         case e: Exception => Failure(e)
       }
@@ -83,9 +85,8 @@ object ParquetIndexStorage extends IndexStorage {
       FileSystem.get(new Path("/").toUri, hadoopConf).mkdirs(new Path(AdamConfig.indexPath))
     }
 
-    override def drop(indexname: IndexName)(implicit ac: AdamContext): Try[Void] = {
+    override def drop(path: String)(implicit ac: AdamContext): Try[Void] = {
       try {
-        val path = AdamConfig.indexPath + "/" + indexname + ".parquet"
         val hadoopConf = new Configuration()
         hadoopConf.set("fs.defaultFS", AdamConfig.basePath)
         val hdfs = FileSystem.get(new Path(AdamConfig.indexPath).toUri, hadoopConf)
@@ -104,12 +105,11 @@ object ParquetIndexStorage extends IndexStorage {
 
     /**
       *
-      * @param indexname
+      * @param path
       * @return
       */
-    override def exists(indexname: IndexName): Try[Boolean] = {
+    override def exists(path: String): Try[Boolean] = {
       try {
-        val path = AdamConfig.indexPath + "/" + indexname + ".parquet"
         Success(FileSystem.get(new Path(AdamConfig.indexPath).toUri, hadoopConf).exists(new org.apache.hadoop.fs.Path(path)))
       } catch {
         case e: Exception => Failure(e)
@@ -122,16 +122,15 @@ object ParquetIndexStorage extends IndexStorage {
     */
   private class LocalStorage extends GenericIndexStorage {
     val indexFolder = new File(AdamConfig.indexPath)
-    log.info("storing indexes to: " + indexFolder.toPath.toAbsolutePath.toString)
+    log.debug("storing indexes to: " + indexFolder.toPath.toAbsolutePath.toString)
 
     if (!indexFolder.exists()) {
       indexFolder.mkdirs
     }
 
-
-    override def drop(indexname: IndexName)(implicit ac: AdamContext): Try[Void] = {
+    override def drop(path: String)(implicit ac: AdamContext): Try[Void] = {
       try {
-        FileUtils.deleteDirectory(new File(AdamConfig.indexPath + "/" + indexname + ".parquet"))
+        FileUtils.deleteDirectory(new File(path))
         Success(null)
       } catch {
         case e: Exception => Failure(e)
@@ -140,12 +139,12 @@ object ParquetIndexStorage extends IndexStorage {
 
     /**
       *
-      * @param indexname
+      * @param path
       * @return
       */
-    override def exists(indexname: IndexName): Try[Boolean] = {
+    override def exists(path: String): Try[Boolean] = {
       try {
-        Success(new File(AdamConfig.indexPath + "/" + indexname + ".parquet").exists())
+        Success(new File(path).exists())
       } catch {
         case e: Exception => Failure(e)
       }

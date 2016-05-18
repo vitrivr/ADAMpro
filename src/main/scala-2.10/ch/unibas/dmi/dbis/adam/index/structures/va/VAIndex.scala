@@ -23,7 +23,7 @@ import org.apache.spark.sql.DataFrame
   * Ivan Giangreco
   * August 2015
   */
-class VAIndex(val indexname: IndexName, val entityname: EntityName, override private[index] var df : DataFrame, private[index] val metadata: VAIndexMetaData)(@transient implicit val ac : AdamContext)
+class VAIndex(val indexname: IndexName, val entityname: EntityName, override private[index] var data : DataFrame, private[index] val metadata: VAIndexMetaData)(@transient implicit val ac : AdamContext)
   extends Index with Serializable {
 
   override val indextypename: IndexTypeName = metadata.signatureGenerator match {

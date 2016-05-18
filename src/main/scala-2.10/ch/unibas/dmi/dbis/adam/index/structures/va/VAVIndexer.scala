@@ -36,10 +36,13 @@ class VAVIndexer(nbits: Option[Int], marksGenerator: MarksGenerator, trainingSiz
     val entity = Entity.load(entityname).get
 
     val n = entity.count
-    val fraction = ADAMSamplingUtils.computeFractionForSampleSize(trainingSize, n, false)
-    val trainData = data.sample(false, fraction)
+    val fraction = ADAMSamplingUtils.computeFractionForSampleSize(math.max(trainingSize, IndexGenerator.MINIMUM_NUMBER_OF_TUPLE), n, false)
+    var trainData = data.sample(false, fraction).collect()
+    if(trainData.length < IndexGenerator.MINIMUM_NUMBER_OF_TUPLE){
+      trainData = data.take(IndexGenerator.MINIMUM_NUMBER_OF_TUPLE)
+    }
 
-    val indexMetaData = train(trainData.collect())
+    val indexMetaData = train(trainData)
 
     log.debug("VA-File (variable) indexing...")
 

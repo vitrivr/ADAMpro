@@ -9,7 +9,6 @@ import ch.unibas.dmi.dbis.adam.main.SparkStartup.Implicits._
 import ch.unibas.dmi.dbis.adam.query.distance.EuclideanDistance
 import ch.unibas.dmi.dbis.adam.query.query.NearestNeighbourQuery
 import ch.unibas.dmi.dbis.adam.storage.partition.PartitionMode
-import org.apache.log4j.Logger
 
 /**
   * adampro
@@ -18,8 +17,6 @@ import org.apache.log4j.Logger
   * April 2016
   */
 class PartitionTestSuite extends AdamTestBase {
-  val log = Logger.getLogger(getClass.getName)
-
   val nPartitions = 8
 
 

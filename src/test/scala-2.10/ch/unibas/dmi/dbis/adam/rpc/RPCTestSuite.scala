@@ -9,7 +9,6 @@ import ch.unibas.dmi.dbis.adam.http.grpc._
 import ch.unibas.dmi.dbis.adam.main.RPCStartup
 import io.grpc.ManagedChannelBuilder
 import io.grpc.stub.StreamObserver
-import org.apache.log4j.Logger
 import org.scalatest.concurrent.ScalaFutures
 
 import scala.concurrent.duration._
@@ -22,7 +21,6 @@ import scala.util.Random
   * May 2016
   */
 class RPCTestSuite extends AdamTestBase with ScalaFutures {
-  val log = Logger.getLogger(getClass.getName)
   private val MAX_WAITING_TIME: Duration = 100.seconds
   new Thread(new RPCStartup()).start
   Thread.sleep(5000)

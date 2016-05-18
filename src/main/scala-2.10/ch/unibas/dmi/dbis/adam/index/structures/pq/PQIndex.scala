@@ -19,7 +19,7 @@ import org.apache.spark.sql.DataFrame
   * Ivan Giangreco
   * April 2016
   */
-class PQIndex(val indexname: IndexName, val entityname: EntityName, override private[index] var df : DataFrame, private[index] val metadata: PQIndexMetaData)(@transient implicit val ac : AdamContext)
+class PQIndex(val indexname: IndexName, val entityname: EntityName, override private[index] var data : DataFrame, private[index] val metadata: PQIndexMetaData)(@transient implicit val ac : AdamContext)
   extends Index {
   override val indextypename: IndexTypeName = IndexTypes.PQINDEX
 
@@ -50,8 +50,8 @@ class PQIndex(val indexname: IndexName, val entityname: EntityName, override pri
       sum
     })
 
-    val ids = df
-      .withColumn(FieldNames.distanceColumnName, distUDF(df(FieldNames.featureIndexColumnName)))
+    val ids = data
+      .withColumn(FieldNames.distanceColumnName, distUDF(data(FieldNames.featureIndexColumnName)))
       .map(r => Result(r.getAs[Float](FieldNames.distanceColumnName), r.getAs[Any](this.pk.name)))
       .takeOrdered(k)
 

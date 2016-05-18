@@ -22,7 +22,6 @@ import SparkStartup.Implicits._
   * March 2016
   */
 class IndexTestSuite extends AdamTestBase {
-  SparkStartup
 
   val ntuples = Random.nextInt(1000)
   val ndims = 100
@@ -197,7 +196,6 @@ class IndexTestSuite extends AdamTestBase {
       */
     scenario("create SH index") {
       withSimpleEntity(ntuples, ndims) { entityname =>
-
         Given("an entity without metadata")
         val entity = Entity.load(entityname)
         assert(entity.isSuccess)

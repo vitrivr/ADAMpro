@@ -21,48 +21,50 @@ import scala.util.{Failure, Success, Try}
   * April 2016
   */
 object ParquetFeatureStorage extends FeatureStorage {
+  private def getPath(filename : String): String  = AdamConfig.dataPath + "/" + filename
+
   val storage: GenericFeatureStorage = if (AdamConfig.isBaseOnHadoop) {
-    log.info("storing data on Hadoop")
+    log.debug("storing data on Hadoop")
     new HadoopStorage()
   } else {
-    log.info("storing data locally")
+    log.debug("storing data locally")
     new LocalStorage()
   }
 
-  override def exists(entityname: EntityName): Try[Boolean] = {
-    log.info("checking data exists in storage")
-    storage.exists(entityname)
+  override def exists(path: String): Try[Boolean] = {
+    log.debug("checking data exists in storage")
+    storage.exists(path)
   }
 
-  override def count(entityname: EntityName)(implicit ac: AdamContext): Try[Long] = {
-    log.info("counting data from storage")
-    storage.count(entityname)
+  override def count(path: String)(implicit ac: AdamContext): Try[Long] = {
+    log.debug("counting data from storage")
+    storage.count(path)
   }
 
-  override def drop(entityname: EntityName)(implicit ac: AdamContext): Try[Void] = {
-    log.info("dropping data from storage")
-    storage.drop(entityname)
+  override def drop(path: String)(implicit ac: AdamContext): Try[Void] = {
+    log.debug("dropping data from storage")
+    storage.drop(path)
   }
 
-  override def write(entityname: EntityName, pk: String, df: DataFrame, mode: SaveMode)(implicit ac: AdamContext): Try[Void] = {
-    log.info("writing data to storage")
-    storage.write(entityname, pk, df, mode)
+  override def write(entityname: EntityName, df: DataFrame, mode: SaveMode, path : Option[String] = None)(implicit ac: AdamContext): Try[String] = {
+    log.debug("writing data to storage")
+    storage.write(entityname, df, mode, path)
   }
 
-  override def read(entityname: EntityName)(implicit ac: AdamContext): Try[DataFrame] = {
-    log.info("reading data from storage")
-    storage.read(entityname)
+  override def read(path: String)(implicit ac: AdamContext): Try[DataFrame] = {
+    log.debug("reading data from storage")
+    storage.read(path)
   }
 
 
   protected trait GenericFeatureStorage extends FeatureStorage {
-    override def read(entityname: EntityName)(implicit ac: AdamContext): Try[DataFrame] = {
+    override def read(path: String)(implicit ac: AdamContext): Try[DataFrame] = {
       try {
-        if (!exists(entityname).get) {
+        if (!exists(path).get) {
           Failure(throw EntityNotExistingException())
         }
 
-        var df = ac.sqlContext.read.parquet(AdamConfig.dataPath + "/" + entityname + ".parquet").coalesce(AdamConfig.defaultNumberOfPartitions)
+        var df = ac.sqlContext.read.parquet(path).coalesce(AdamConfig.defaultNumberOfPartitions)
 
         Success(df)
       } catch {
@@ -70,21 +72,21 @@ object ParquetFeatureStorage extends FeatureStorage {
       }
     }
 
-    override def write(entityname: EntityName, pk: String, df: DataFrame, mode: SaveMode)(implicit ac: AdamContext): Try[Void] = {
+    override def write(entityname: EntityName, df: DataFrame, mode: SaveMode, path : Option[String] = None)(implicit ac: AdamContext): Try[String] = {
       try {
+        val filepath = path.getOrElse(getPath(entityname.toString))
         df
           .repartition(AdamConfig.defaultNumberOfPartitions)
-          .write.mode(mode).parquet(AdamConfig.dataPath + "/" + entityname + ".parquet")
-        Success(null)
+          .write.mode(mode).parquet(filepath)
+        Success(filepath)
       } catch {
         case e: Exception => Failure(e)
       }
     }
 
-
-    override def count(entityname: EntityName)(implicit ac: AdamContext): Try[Long] = {
+    override def count(path: String)(implicit ac: AdamContext): Try[Long] = {
       try{
-        Success(read(entityname).get.count())
+        Success(read(path).get.count())
       } catch {
         case e : Exception => Failure(e)
       }
@@ -102,9 +104,8 @@ object ParquetFeatureStorage extends FeatureStorage {
       FileSystem.get(new Path("/").toUri, hadoopConf).mkdirs(new Path(AdamConfig.dataPath))
     }
 
-    def drop(entityname: EntityName)(implicit ac: AdamContext): Try[Void] = {
+    def drop(path: String)(implicit ac: AdamContext): Try[Void] = {
       try {
-        val path = AdamConfig.dataPath + "/" + entityname + ".parquet"
         val hadoopConf = new Configuration()
         hadoopConf.set("fs.defaultFS", AdamConfig.basePath)
         val hdfs = FileSystem.get(new Path(AdamConfig.dataPath).toUri, hadoopConf)
@@ -122,12 +123,11 @@ object ParquetFeatureStorage extends FeatureStorage {
 
     /**
       *
-      * @param entityname
+      * @param path
       * @return
       */
-    override def exists(entityname: EntityName): Try[Boolean] = {
+    override def exists(path: String): Try[Boolean] = {
       try {
-        val path = AdamConfig.dataPath + "/" + entityname + ".parquet"
         Success(FileSystem.get(new Path(AdamConfig.dataPath).toUri, hadoopConf).exists(new org.apache.hadoop.fs.Path(path)))
       } catch {
         case e: Exception => Failure(e)
@@ -140,16 +140,16 @@ object ParquetFeatureStorage extends FeatureStorage {
     */
   class LocalStorage extends GenericFeatureStorage {
     val dataFolder = new File(AdamConfig.dataPath)
-    log.info("storing data to: " + dataFolder.toPath.toAbsolutePath.toString)
+    log.debug("storing data to: " + dataFolder.toPath.toAbsolutePath.toString)
 
     if (!dataFolder.exists()) {
       dataFolder.mkdirs
     }
 
 
-    def drop(entityname: EntityName)(implicit ac: AdamContext): Try[Void] = {
+    def drop(path: String)(implicit ac: AdamContext): Try[Void] = {
       try {
-        FileUtils.deleteDirectory(new File(AdamConfig.dataPath + "/" + entityname + ".parquet"))
+        FileUtils.deleteDirectory(new File(path))
         Success(null)
       } catch {
         case e: Exception => Failure(e)
@@ -158,12 +158,12 @@ object ParquetFeatureStorage extends FeatureStorage {
 
     /**
       *
-      * @param entityname
+      * @param path
       * @return
       */
-    override def exists(entityname: EntityName): Try[Boolean] = {
+    override def exists(path: String): Try[Boolean] = {
       try {
-        Success(new File(AdamConfig.dataPath + "/" + entityname + ".parquet").exists())
+        Success(new File(path).exists())
       } catch {
         case e: Exception => Failure(e)
       }

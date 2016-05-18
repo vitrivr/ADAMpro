@@ -23,7 +23,7 @@ import scala.collection.mutable.ListBuffer
  * Ivan Giangreco
  * August 2015
  */
-class SHIndex(val indexname: IndexName, val entityname: EntityName, override private[index] var df : DataFrame,  private[index] val metadata: SHIndexMetaData)(@transient implicit val ac : AdamContext)
+class SHIndex(val indexname: IndexName, val entityname: EntityName, override private[index] var data : DataFrame, private[index] val metadata: SHIndexMetaData)(@transient implicit val ac : AdamContext)
   extends Index {
 
   override val indextypename: IndexTypeName = IndexTypes.SHINDEX
@@ -58,7 +58,7 @@ class SHIndex(val indexname: IndexName, val entityname: EntityName, override pri
     val ids = ListBuffer[Result]()
 
     val localResults = data
-      .withColumn(FieldNames.distanceColumnName, distUDF(df(FieldNames.featureIndexColumnName)))
+      .withColumn(FieldNames.distanceColumnName, distUDF(data(FieldNames.featureIndexColumnName)))
       .rdd
       .mapPartitions { items =>
         val handler = new SHResultHandler(k)

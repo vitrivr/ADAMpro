@@ -19,10 +19,10 @@ import scala.util.{Failure, Try}
 trait FeatureStorage extends Serializable with Logging {
   /**
     *
-    * @param entityname
+    * @param path
     * @return
     */
-  def exists(entityname: EntityName): Try[Boolean]
+  def exists(path: String): Try[Boolean]
 
   /**
     * Create the entity in the feature storage.
@@ -30,14 +30,14 @@ trait FeatureStorage extends Serializable with Logging {
     * @param entityname
     * @return true on success
     */
-  def create(entityname: EntityName, fields: Seq[FieldDefinition])(implicit ac: AdamContext): Try[Void] = {
+  def create(entityname: EntityName, fields: Seq[FieldDefinition])(implicit ac: AdamContext): Try[String] = {
     try {
       val structFields = fields.map {
         field => StructField(field.name, field.fieldtype.datatype)
       }
 
       val df = sqlContext.createDataFrame(sc.emptyRDD[Row], StructType(structFields))
-      write(entityname, fields.filter(_.pk).head.name, df, SaveMode.Overwrite)
+      write(entityname, df, SaveMode.Overwrite)
     } catch {
       case e: Exception => Failure(e)
     }
@@ -46,35 +46,35 @@ trait FeatureStorage extends Serializable with Logging {
   /**
     * Read entity from feature storage.
     *
-    * @param entityname
+    * @param path
     * @return
     */
-  def read(entityname: EntityName)(implicit ac: AdamContext): Try[DataFrame]
+  def read(path : String)(implicit ac: AdamContext): Try[DataFrame]
 
   /**
     * Count the number of tuples in the feature storage.
     *
-    * @param entityname
+    * @param path
     * @return
     */
-  def count(entityname: EntityName)(implicit ac: AdamContext): Try[Long]
+  def count(path : String)(implicit ac: AdamContext): Try[Long]
 
   /**
     * Write entity to the feature storage.
     *
-    * @param entityname
+    * @param path
     * @param df
     * @param mode
     * @return true on success
     */
-  def write(entityname: EntityName, pk: String, df: DataFrame, mode: SaveMode = SaveMode.Append)(implicit ac: AdamContext): Try[Void]
+  def write(entityname : EntityName, df: DataFrame, mode: SaveMode = SaveMode.Append, path : Option[String] = None)(implicit ac: AdamContext): Try[String]
 
   /**
     * Drop the entity from the feature storage
     *
-    * @param entityname
+    * @param path
     * @return true on success
     */
-  def drop(entityname: EntityName)(implicit ac: AdamContext): Try[Void]
+  def drop(path : String)(implicit ac: AdamContext): Try[Void]
 }
 

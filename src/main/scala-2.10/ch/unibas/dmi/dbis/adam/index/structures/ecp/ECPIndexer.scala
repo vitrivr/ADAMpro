@@ -19,7 +19,7 @@ import org.apache.spark.util.random.ADAMSamplingUtils
   * Ivan Giangreco
   * October 2015
   */
-class ECPIndexer(trainingSize: Int = -1, distance: DistanceFunction)(@transient implicit val ac: AdamContext) extends IndexGenerator {
+class ECPIndexer(trainingSize: Option[Int], distance: DistanceFunction)(@transient implicit val ac: AdamContext) extends IndexGenerator {
   override val indextypename: IndexTypeName = IndexTypes.ECPINDEX
 
   /**
@@ -33,15 +33,13 @@ class ECPIndexer(trainingSize: Int = -1, distance: DistanceFunction)(@transient 
     val entity = Entity.load(entityname).get
 
     val n = entity.count
-    val ntuples = if (trainingSize == -1) {
-      math.sqrt(n)
-    } else {
-      trainingSize
+    val fraction = ADAMSamplingUtils.computeFractionForSampleSize(math.max(trainingSize.getOrElse(math.sqrt(n).toInt), IndexGenerator.MINIMUM_NUMBER_OF_TUPLE), n, false)
+    var trainData = data.sample(false, fraction).collect()
+    if(trainData.length < IndexGenerator.MINIMUM_NUMBER_OF_TUPLE){
+      trainData = data.take(IndexGenerator.MINIMUM_NUMBER_OF_TUPLE)
     }
 
-    val fraction = ADAMSamplingUtils.computeFractionForSampleSize(ntuples.toInt, n, false)
-
-    val leaders = ac.sc.broadcast(data.sample(true, fraction).collect)
+    val leaders = ac.sc.broadcast(trainData)
     log.debug("eCP index leaders chosen and broadcasted")
 
     log.debug("eCP indexing...")
@@ -67,7 +65,7 @@ class ECPIndexer(trainingSize: Int = -1, distance: DistanceFunction)(@transient 
 
 object ECPIndexer {
   def apply(distance: DistanceFunction, properties: Map[String, String] = Map[String, String]())(implicit ac: AdamContext): IndexGenerator = {
-    val trainingSize = properties.getOrElse("ntraining", "-1").toInt
+    val trainingSize = properties.get("ntraining").map(_.toInt)
     new ECPIndexer(trainingSize, distance)
   }
 }
