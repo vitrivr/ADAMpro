@@ -7,7 +7,7 @@ import com.typesafe.config.ConfigFactory
   * Ivan Giangreco
   * August 2015
   */
-object AdamConfig{
+object AdamConfig extends Serializable {
   val config = {
     val defaultConfig = ConfigFactory.load()
 
@@ -58,7 +58,7 @@ object AdamConfig{
     None
   }
 
-  val defaultNumberOfPartitions = 10
+  val defaultNumberOfPartitions = 8
 
   val localNodes = if(config.hasPath("adampro.localNodes")){
     Option(config.getInt("adampro.localNodes"))
