@@ -4,10 +4,11 @@ import ch.unibas.dmi.dbis.adam.AdamTestBase
 import ch.unibas.dmi.dbis.adam.api.{IndexOp, QueryOp}
 import ch.unibas.dmi.dbis.adam.config.FieldNames
 import ch.unibas.dmi.dbis.adam.index.structures.IndexTypes
-import ch.unibas.dmi.dbis.adam.index.{PartitionMode, Index, IndexLRUCache}
+import ch.unibas.dmi.dbis.adam.index.{Index, IndexLRUCache}
 import ch.unibas.dmi.dbis.adam.main.SparkStartup.Implicits._
 import ch.unibas.dmi.dbis.adam.query.distance.EuclideanDistance
 import ch.unibas.dmi.dbis.adam.query.query.NearestNeighbourQuery
+import ch.unibas.dmi.dbis.adam.storage.partition.PartitionMode
 import org.apache.log4j.Logger
 
 /**

@@ -6,9 +6,9 @@ import ch.unibas.dmi.dbis.adam.entity.{Entity, FieldDefinition, FieldTypes}
 import ch.unibas.dmi.dbis.adam.exception.GeneralAdamException
 import ch.unibas.dmi.dbis.adam.http.grpc.FieldDefinitionMessage.FieldType
 import ch.unibas.dmi.dbis.adam.http.grpc.{AckMessage, CreateEntityMessage, _}
-import ch.unibas.dmi.dbis.adam.index.PartitionMode
 import ch.unibas.dmi.dbis.adam.index.structures.IndexTypes
 import ch.unibas.dmi.dbis.adam.main.AdamContext
+import ch.unibas.dmi.dbis.adam.storage.partition.PartitionMode
 import io.grpc.stub.StreamObserver
 import org.apache.log4j.Logger
 import org.apache.spark.sql.types.{StructField, StructType, DataType}

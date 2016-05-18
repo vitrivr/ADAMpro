@@ -13,6 +13,7 @@ import ch.unibas.dmi.dbis.adam.query.Result
 import ch.unibas.dmi.dbis.adam.query.distance.DistanceFunction
 import ch.unibas.dmi.dbis.adam.query.query.NearestNeighbourQuery
 import ch.unibas.dmi.dbis.adam.storage.engine.CatalogOperator
+import ch.unibas.dmi.dbis.adam.storage.partition.PartitionMode
 import org.apache.spark.Logging
 import org.apache.spark.rdd.RDD
 import org.apache.spark.sql.{Row, DataFrame}
@@ -456,10 +457,6 @@ object Index extends Logging {
   }
 }
 
-object PartitionMode extends Enumeration {
-  val CREATE_NEW = Value("create new index (materialize)")
-  val REPLACE_EXISTING = Value("replace existing index (materialize)")
-  val CREATE_TEMP = Value("create temporary index in cache")
-}
+
 
 
