@@ -23,29 +23,32 @@ import scala.util.{Failure, Success, Try}
 object ParquetIndexStorage extends IndexStorage {
 
   val storage: GenericIndexStorage = if (AdamConfig.isBaseOnHadoop) {
-    log.debug("storing index on Hadoop")
+    log.info("storing index on Hadoop")
     new HadoopStorage()
   } else {
-    log.debug("storing index locally")
+    log.info("storing index locally")
     new LocalStorage()
   }
 
   override def read(indexName: IndexName)(implicit ac: AdamContext): Try[DataFrame] = {
-    log.debug("reading index from harddisk")
+    log.info("reading index from storage")
     storage.read(indexName)
   }
 
   override def drop(indexName: IndexName)(implicit ac: AdamContext): Try[Void] = {
-    log.debug("dropping index from harddisk")
+    log.info("dropping index from storage")
     storage.drop(indexName)
   }
 
   override def write(indexName: IndexName, index: DataFrame)(implicit ac: AdamContext): Try[Void] = {
-    log.debug("writing index to harddisk")
+    log.info("writing index to storage")
     storage.write(indexName, index)
   }
 
-  override def exists(indexname: IndexName): Try[Boolean] = storage.exists(indexname)
+  override def exists(indexname: IndexName): Try[Boolean] = {
+    log.info("checking index exists in storage")
+    storage.exists(indexname)
+  }
 
   private[engine] trait GenericIndexStorage extends IndexStorage {
     override def read(indexname: IndexName)(implicit ac: AdamContext): Try[DataFrame] = {
@@ -119,6 +122,7 @@ object ParquetIndexStorage extends IndexStorage {
     */
   private class LocalStorage extends GenericIndexStorage {
     val indexFolder = new File(AdamConfig.indexPath)
+    log.info("storing indexes to: " + indexFolder.toPath.toAbsolutePath.toString)
 
     if (!indexFolder.exists()) {
       indexFolder.mkdirs

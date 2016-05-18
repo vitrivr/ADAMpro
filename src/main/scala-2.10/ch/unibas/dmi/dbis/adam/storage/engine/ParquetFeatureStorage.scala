@@ -22,24 +22,37 @@ import scala.util.{Failure, Success, Try}
   */
 object ParquetFeatureStorage extends FeatureStorage {
   val storage: GenericFeatureStorage = if (AdamConfig.isBaseOnHadoop) {
-    log.debug("storing data on Hadoop")
+    log.info("storing data on Hadoop")
     new HadoopStorage()
   } else {
-    log.debug("storing data locally")
+    log.info("storing data locally")
     new LocalStorage()
   }
 
   override def exists(entityname: EntityName): Try[Boolean] = {
+    log.info("checking data exists in storage")
     storage.exists(entityname)
   }
 
-  override def count(entityname: EntityName)(implicit ac: AdamContext): Try[Long] = storage.count(entityname)
+  override def count(entityname: EntityName)(implicit ac: AdamContext): Try[Long] = {
+    log.info("counting data from storage")
+    storage.count(entityname)
+  }
 
-  override def drop(entityname: EntityName)(implicit ac: AdamContext): Try[Void] = storage.drop(entityname)
+  override def drop(entityname: EntityName)(implicit ac: AdamContext): Try[Void] = {
+    log.info("dropping data from storage")
+    storage.drop(entityname)
+  }
 
-  override def write(entityname: EntityName, pk: String, df: DataFrame, mode: SaveMode)(implicit ac: AdamContext): Try[Void] = storage.write(entityname, pk, df, mode)
+  override def write(entityname: EntityName, pk: String, df: DataFrame, mode: SaveMode)(implicit ac: AdamContext): Try[Void] = {
+    log.info("writing data to storage")
+    storage.write(entityname, pk, df, mode)
+  }
 
-  override def read(entityname: EntityName)(implicit ac: AdamContext): Try[DataFrame] = storage.read(entityname)
+  override def read(entityname: EntityName)(implicit ac: AdamContext): Try[DataFrame] = {
+    log.info("reading data from storage")
+    storage.read(entityname)
+  }
 
 
   protected trait GenericFeatureStorage extends FeatureStorage {
@@ -127,6 +140,7 @@ object ParquetFeatureStorage extends FeatureStorage {
     */
   class LocalStorage extends GenericFeatureStorage {
     val dataFolder = new File(AdamConfig.dataPath)
+    log.info("storing data to: " + dataFolder.toPath.toAbsolutePath.toString)
 
     if (!dataFolder.exists()) {
       dataFolder.mkdirs

@@ -1,5 +1,6 @@
 package ch.unibas.dmi.dbis.adam.config
 import com.typesafe.config.ConfigFactory
+import org.apache.spark.Logging
 
 /**
   * adamtwo
@@ -7,22 +8,25 @@ import com.typesafe.config.ConfigFactory
   * Ivan Giangreco
   * August 2015
   */
-object AdamConfig extends Serializable {
+object AdamConfig extends Serializable with Logging {
   val config = {
     val defaultConfig = ConfigFactory.load()
 
     if(!defaultConfig.hasPath("adampro")){
       //this is somewhat a hack to have different configurations depending on whether we have an assembly-jar or we
       //run the application "locally"
+      log.info("using assembly.conf")
       ConfigFactory.load("assembly.conf")
     } else {
       defaultConfig
     }
   }
+  log.debug(config.toString)
   config.checkValid(ConfigFactory.defaultReference(), "adampro")
 
   val basePath = config.getString("adampro.basePath")
   val isBaseOnHadoop = basePath.startsWith("hdfs")
+  log.info("storing to hdfs: " + isBaseOnHadoop.toString)
 
   val dataPath = config.getString("adampro.dataPath")
   val indexPath = config.getString("adampro.indexPath")
