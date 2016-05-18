@@ -30,6 +30,9 @@ object AdamConfig extends Serializable {
   val catalogPath = config.getString("adampro.catalogPath")
   val indexMetaCatalogPath = catalogPath + "/" + "indexmeta"
 
+  val internalsPath = config.getString("adampro.internalsPath")
+  val schedulerFile = internalsPath + "/" + "scheduler.xml"
+
   val jdbcUrl =  config.getString("adampro.jdbc.url")
   val jdbcUser = config.getString("adampro.jdbc.user")
   val jdbcPassword = config.getString("adampro.jdbc.password")

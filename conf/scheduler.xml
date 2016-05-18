@@ -12,7 +12,7 @@
   </pool>
   <pool name="slow">
     <schedulingMode>FAIR</schedulingMode>
-    <weight>1</weight>
+    <weight>500</weight>
     <minShare>1</minShare>
   </pool>
 </allocations>
