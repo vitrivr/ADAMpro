@@ -166,14 +166,13 @@ message IndexMessage {
 message RepartitionMessage {
   string index = 1;
   int32 numberOfPartitions = 2;
-  bool useMetadataForPartitioning = 3;
-  repeated string columns = 4;
+  repeated string columns = 3;
   enum PartitionOptions {
       CREATE_NEW = 0;
       REPLACE_EXISTING = 1;
       CREATE_TEMP = 2;
     }
-  PartitionOptions option = 5;
+  PartitionOptions option = 4;
 }
 
 message IndexWeightMessage {
