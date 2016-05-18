@@ -1,18 +1,16 @@
 package ch.unibas.dmi.dbis.adam.entity
 
-import breeze.numerics.log
 import ch.unibas.dmi.dbis.adam.config.FieldNames
 import ch.unibas.dmi.dbis.adam.datatypes.feature.FeatureVectorWrapperUDT
 import ch.unibas.dmi.dbis.adam.entity.Entity._
 import ch.unibas.dmi.dbis.adam.entity.FieldTypes._
 import ch.unibas.dmi.dbis.adam.exception.{EntityNotExistingException, EntityNotProperlyDefinedException, EntityExistingException, GeneralAdamException}
 import ch.unibas.dmi.dbis.adam.index.Index
-import ch.unibas.dmi.dbis.adam.index.Index.IndexTypeName
 import ch.unibas.dmi.dbis.adam.main.{SparkStartup, AdamContext}
 import ch.unibas.dmi.dbis.adam.query.query.NearestNeighbourQuery
 import ch.unibas.dmi.dbis.adam.storage.components.{FeatureStorage, MetadataStorage}
 import ch.unibas.dmi.dbis.adam.storage.engine.CatalogOperator
-import org.apache.log4j.Logger
+import org.apache.spark.Logging
 import org.apache.spark.sql.types.{StructField, StructType}
 import org.apache.spark.sql.{DataFrame, Row, SaveMode}
 
@@ -25,9 +23,7 @@ import scala.util.{Failure, Success, Try}
   * Ivan Giangreco
   * October 2015
   */
-case class Entity(val entityname: EntityName, private val featureStorage: FeatureStorage, private val metadataStorage: Option[MetadataStorage])(@transient implicit val ac: AdamContext) {
-  @transient val log = Logger.getLogger(getClass.getName)
-
+case class Entity(val entityname: EntityName, private val featureStorage: FeatureStorage, private val metadataStorage: Option[MetadataStorage])(@transient implicit val ac: AdamContext) extends Logging {
   def featureData = featureStorage.read(entityname).get
 
   def metaData = if (metadataStorage.isDefined) {
@@ -59,7 +55,7 @@ case class Entity(val entityname: EntityName, private val featureStorage: Featur
     *
     * @return
     */
-  lazy val indexes : Seq[Try[Index]] = {
+  lazy val indexes: Seq[Try[Index]] = {
     CatalogOperator.listIndexes(entityname).map(index => Index.load(index._1))
   }
 
@@ -78,6 +74,7 @@ case class Entity(val entityname: EntityName, private val featureStorage: Featur
 
     tupleCount
   }
+
   private var tupleCount: Long = -1
 
 
@@ -146,8 +143,7 @@ case class Entity(val entityname: EntityName, private val featureStorage: Featur
   def properties: Map[String, String] = {
     val lb = ListBuffer[(String, String)]()
 
-    lb.append("hasMetadata" -> metaData.isDefined.toString)
-    lb.append("schema" -> schema.map(field => field.name + "(" + field.fieldtype.name + ")").mkString(","))
+    lb.append("schema" -> CatalogOperator.getFields(entityname).map(field => field.name + "(" + field.fieldtype.name + ")").mkString(","))
     lb.append("indexes" -> CatalogOperator.listIndexes(entityname).mkString(", "))
 
     lb.toMap
@@ -237,10 +233,10 @@ object Entity {
           val metadataFields = fields.filterNot(_.fieldtype == FEATURETYPE)
           metadataStorage.create(entityname, metadataFields)
           CatalogOperator.createEntity(entityname, fields, true)
-          Success(Entity(entityname, featureStorage, Option(metadataStorage)))
+          Success(Entity(entityname, featureStorage, Option(metadataStorage))(ac))
         } else {
           CatalogOperator.createEntity(entityname, fields, false)
-          Success(Entity(entityname, featureStorage, None))
+          Success(Entity(entityname, featureStorage, None)(ac))
         }
       }
     } catch {
@@ -318,16 +314,22 @@ object Entity {
       return Failure(EntityNotExistingException())
     }
 
-    val entityMetadataStorage = if (CatalogOperator.hasEntityMetadata(entityname)) {
-      Option(metadataStorage)
-    } else {
-      None
+    try {
+      val entityMetadataStorage = if (CatalogOperator.hasEntityMetadata(entityname)) {
+        Option(metadataStorage)
+      } else {
+        None
+      }
+
+      val pk = CatalogOperator.getEntityPK(entityname)
+
+      Success(Entity(entityname, featureStorage, entityMetadataStorage))
+    } catch {
+      case e: Exception => Failure(e)
     }
-
-    val pk = CatalogOperator.getEntityPK(entityname)
-
-    Success(Entity(entityname, featureStorage, entityMetadataStorage))
   }
+
+  //TODO: add repartition of data
 
   /**
     * Lists names of all entities.
