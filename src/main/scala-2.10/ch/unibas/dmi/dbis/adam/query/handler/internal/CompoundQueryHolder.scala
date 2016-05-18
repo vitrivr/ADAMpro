@@ -17,27 +17,13 @@ import scala.collection.mutable.ListBuffer
   * Ivan Giangreco
   * May 2016
   */
-case class CompoundQueryHolder(entityname: EntityName)(expr: QueryExpression, nnq: Option[NearestNeighbourQuery], withMetadata: Boolean = true, id: Option[String] = None, cache: Option[QueryCacheOptions] = Some(QueryCacheOptions())) extends QueryExpression(id) {
+case class CompoundQueryHolder(entityname: EntityName)(expr: QueryExpression, id: Option[String] = None) extends QueryExpression(id) {
   private var run = false
 
   override protected def run(filter: Option[DataFrame])(implicit ac: AdamContext): DataFrame = {
     val entity = Entity.load(entityname).get
 
     var res = expr.evaluate()
-
-    if (nnq.isDefined) {
-      res = FeatureScanner(Entity.load(entityname).get, nnq.get, Some(res))
-    }
-
-    if (withMetadata) {
-      log.debug("join metadata to results of index query")
-      val entity = Entity.load(entityname).get
-      var data = entity.data
-      var pk = entity.pk
-
-      res = res.join(data, pk.name)
-    }
-
 
     if (filter.isDefined) {
       res.join(filter.get, entity.pk.name)

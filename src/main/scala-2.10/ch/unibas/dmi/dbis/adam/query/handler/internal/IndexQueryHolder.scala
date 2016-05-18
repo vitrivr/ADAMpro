@@ -16,17 +16,17 @@ import org.apache.spark.sql.DataFrame
   * Ivan Giangreco
   * May 2016
   */
-case class IndexQueryHolder(index: Index)(nnq: NearestNeighbourQuery, bq: Option[BooleanQuery], tiq: Option[PrimaryKeyFilter[_]], withMetadata: Boolean, id: Option[String] = None, cache: Option[QueryCacheOptions] = Some(QueryCacheOptions())) extends QueryExpression(id) {
-  def this(indexname: IndexName)(nnq: NearestNeighbourQuery, bq: Option[BooleanQuery], tiq: Option[PrimaryKeyFilter[_]], withMetadata: Boolean, id: Option[String], cache: Option[QueryCacheOptions])(implicit ac: AdamContext) {
-    this(Index.load(indexname).get)(nnq, bq, tiq, withMetadata, id, cache)
+case class IndexQueryHolder(index: Index)(nnq: NearestNeighbourQuery, bq: Option[BooleanQuery], tiq: Option[PrimaryKeyFilter[_]], id: Option[String] = None, cache: Option[QueryCacheOptions] = Some(QueryCacheOptions())) extends QueryExpression(id) {
+  def this(indexname: IndexName)(nnq: NearestNeighbourQuery, bq: Option[BooleanQuery], tiq: Option[PrimaryKeyFilter[_]], id: Option[String], cache: Option[QueryCacheOptions])(implicit ac: AdamContext) {
+    this(Index.load(indexname).get)(nnq, bq, tiq, id, cache)
   }
 
-  def this(entityname: EntityName, indextypename: IndexTypeName)(nnq: NearestNeighbourQuery, bq: Option[BooleanQuery], tiq: Option[PrimaryKeyFilter[_]], withMetadata: Boolean, id: Option[String] = None, cache: Option[QueryCacheOptions] = Some(QueryCacheOptions()))(implicit ac: AdamContext) {
+  def this(entityname: EntityName, indextypename: IndexTypeName)(nnq: NearestNeighbourQuery, bq: Option[BooleanQuery], tiq: Option[PrimaryKeyFilter[_]], id: Option[String] = None, cache: Option[QueryCacheOptions] = Some(QueryCacheOptions()))(implicit ac: AdamContext) {
     //TODO: throw error if not head possible
     this(Entity.load(entityname).get.indexes
         .filter(_.isSuccess).map(_.get)
         .filter(_.isQueryConform(nnq)) //choose only indexes that are conform to query
-        .sortBy(-_.weight).head)(nnq, bq, tiq, withMetadata, id, cache)
+        .sortBy(-_.weight).head)(nnq, bq, tiq, id, cache)
   }
 
   override protected def run(filter: Option[DataFrame])(implicit ac: AdamContext): DataFrame = {
@@ -40,7 +40,7 @@ case class IndexQueryHolder(index: Index)(nnq: NearestNeighbourQuery, bq: Option
         None
       }
     }
-    query(index)(annq, bq, atiq, false, id, cache)
+    query(index)(annq, bq, atiq, id, cache)
   }
 
   /**
@@ -49,12 +49,11 @@ case class IndexQueryHolder(index: Index)(nnq: NearestNeighbourQuery, bq: Option
     * @param index
     * @param nnq
     * @param bq
-    * @param withMetadata
     * @param id
     * @param cache
     * @return
     */
-  def query(index: Index)(nnq: NearestNeighbourQuery, bq: Option[BooleanQuery], tiq: Option[PrimaryKeyFilter[_]], withMetadata: Boolean, id: Option[String] = None, cache: Option[QueryCacheOptions] = Some(QueryCacheOptions()))(implicit ac: AdamContext): DataFrame = {
+  def query(index: Index)(nnq: NearestNeighbourQuery, bq: Option[BooleanQuery], tiq: Option[PrimaryKeyFilter[_]], id: Option[String] = None, cache: Option[QueryCacheOptions] = Some(QueryCacheOptions()))(implicit ac: AdamContext): DataFrame = {
     if (cache.isDefined && cache.get.useCached && id.isDefined) {
       val cached = QueryLRUCache.get(id.get)
       if (cached.isSuccess) {
@@ -73,15 +72,6 @@ case class IndexQueryHolder(index: Index)(nnq: NearestNeighbourQuery, bq: Option
 
     log.debug("index query performs kNN query")
     var res = NearestNeighbourQueryHandler.indexQuery(index, nnq, filter)
-
-    if (withMetadata) {
-      log.debug("join metadata to results of index query")
-      val entity = Entity.load(entityname).get
-      var data = entity.data
-      var pk = entity.pk
-
-      res = res.join(data, pk.name)
-    }
 
     if (id.isDefined && cache.isDefined && cache.get.putInCache) {
       QueryLRUCache.put(id.get, res)

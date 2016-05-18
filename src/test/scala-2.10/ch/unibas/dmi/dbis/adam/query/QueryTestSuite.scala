@@ -420,11 +420,11 @@ class QueryTestSuite extends AdamTestBase with ScalaFutures {
         //nnq has numOfQ  = 0 to avoid that by the various randomized q's the results get different
         val nnq = NearestNeighbourQuery("featurefield", es.feature.vector, es.distance, es.k, false, Map("numOfQ" -> "0"), None)
 
-        val shqh = new IndexQueryHolder(shidx.get.indexname)(nnq, None, None, false, None, Some(QueryCacheOptions()))
-        val vhqh = new IndexQueryHolder(vaidx.get.indexname)(nnq, None, None, false, None, Some(QueryCacheOptions()))
+        val shqh = new IndexQueryHolder(shidx.get.indexname)(nnq, None, None, None, Some(QueryCacheOptions()))
+        val vhqh = new IndexQueryHolder(vaidx.get.indexname)(nnq, None, None, None, Some(QueryCacheOptions()))
 
         val results = time {
-          new CompoundQueryHolder(es.entity.entityname)(new IntersectExpression(shqh, vhqh), Some(nnq)).evaluate()
+          new CompoundQueryHolder(es.entity.entityname)(new IntersectExpression(shqh, vhqh)).evaluate()
             .map(r => (r.getAs[Long]("tid"))).collect().sorted
         }
 
@@ -456,11 +456,11 @@ class QueryTestSuite extends AdamTestBase with ScalaFutures {
         //nnq has numOfQ  = 0 to avoid that by the various randomized q's the results get different
         val nnq = NearestNeighbourQuery("featurefield", es.feature.vector, es.distance, es.k, false, Map("numOfQ" -> "0"), None)
 
-        val va1qh = new IndexQueryHolder(vaidx1.get.indexname)(nnq, None, None, false, None, Some(QueryCacheOptions()))
-        val va2qh = new IndexQueryHolder(vaidx2.get.indexname)(nnq, None, None, false, None, Some(QueryCacheOptions()))
+        val va1qh = new IndexQueryHolder(vaidx1.get.indexname)(nnq, None, None, None, Some(QueryCacheOptions()))
+        val va2qh = new IndexQueryHolder(vaidx2.get.indexname)(nnq, None, None, None, Some(QueryCacheOptions()))
 
         val results = time {
-          CompoundQueryHolder(es.entity.entityname)(new IntersectExpression(va1qh, va2qh, ExpressionEvaluationOrder.Parallel), Some(nnq)).evaluate()
+          CompoundQueryHolder(es.entity.entityname)(new IntersectExpression(va1qh, va2qh, ExpressionEvaluationOrder.Parallel)).evaluate()
             .map(r => (r.getAs[Long]("tid"))).collect().sorted
         }
 

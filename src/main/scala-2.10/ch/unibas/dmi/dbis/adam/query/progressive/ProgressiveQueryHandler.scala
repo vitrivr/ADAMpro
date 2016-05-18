@@ -79,6 +79,7 @@ object ProgressiveQueryHandler extends Logging {
     log.debug("timed progressive query performs kNN query")
     val results = NearestNeighbourQueryHandler.timedProgressiveQuery(entityname, nnq, filter, paths, timelimit)
     var res = results.results
+
     if (withMetadata) {
       log.debug("join metadata to results of timed progressive query")
       res = joinWithMetadata(entityname, res)

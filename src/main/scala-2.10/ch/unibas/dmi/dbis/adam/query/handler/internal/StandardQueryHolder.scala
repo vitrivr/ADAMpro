@@ -18,7 +18,7 @@ import org.apache.spark.sql.DataFrame
   * Ivan Giangreco
   * May 2016
   */
-case class StandardQueryHolder(entityname: EntityName)(hint: Seq[QueryHint], nnq: Option[NearestNeighbourQuery], bq: Option[BooleanQuery], tiq: Option[PrimaryKeyFilter[_]], withMetadata : Boolean, id: Option[String] = None, cache: Option[QueryCacheOptions] = Some(QueryCacheOptions())) extends QueryExpression(id) {
+case class StandardQueryHolder(entityname: EntityName)(hint: Seq[QueryHint], nnq: Option[NearestNeighbourQuery], bq: Option[BooleanQuery], tiq: Option[PrimaryKeyFilter[_]], id: Option[String] = None, cache: Option[QueryCacheOptions] = Some(QueryCacheOptions())) extends QueryExpression(id) {
   override protected def run(filter: Option[DataFrame])(implicit ac: AdamContext): DataFrame = {
     val annq = if (nnq.isDefined) {
       Option(NearestNeighbourQuery(nnq.get.column, nnq.get.q, nnq.get.distance, nnq.get.k, nnq.get.indexOnly, nnq.get.options, nnq.get.partitions, nnq.get.queryID))
@@ -34,7 +34,7 @@ case class StandardQueryHolder(entityname: EntityName)(hint: Seq[QueryHint], nnq
         None
       }
     }
-    query(entityname, hint, annq, bq, atiq, withMetadata, id, cache)
+    query(entityname, hint, annq, bq, atiq, id, cache)
   }
 
 
@@ -45,12 +45,11 @@ case class StandardQueryHolder(entityname: EntityName)(hint: Seq[QueryHint], nnq
     * @param hint         query hint, for the executor to know which query path to take (e.g., sequential query or index query)
     * @param nnq          information for nearest neighbour query
     * @param bq           information for boolean query
-    * @param withMetadata whether or not to retrieve corresponding metadata
     * @param id           query id
     * @param cache        caching options
     * @return
     */
-  def query(entityname: EntityName, hint: Seq[QueryHint], nnq: Option[NearestNeighbourQuery], bq: Option[BooleanQuery], tiq: Option[PrimaryKeyFilter[_]], withMetadata: Boolean, id: Option[String] = None, cache: Option[QueryCacheOptions] = Some(QueryCacheOptions()))(implicit ac: AdamContext): DataFrame = {
+  def query(entityname: EntityName, hint: Seq[QueryHint], nnq: Option[NearestNeighbourQuery], bq: Option[BooleanQuery], tiq: Option[PrimaryKeyFilter[_]], id: Option[String] = None, cache: Option[QueryCacheOptions] = Some(QueryCacheOptions()))(implicit ac: AdamContext): DataFrame = {
     if (cache.isDefined && cache.get.useCached && id.isDefined) {
       val cached = QueryLRUCache.get(id.get)
       if (cached.isSuccess) {
@@ -78,7 +77,7 @@ case class StandardQueryHolder(entityname: EntityName)(hint: Seq[QueryHint], nnq
       plan = choosePlan(entityname, indexes, Seq(QueryHints.FALLBACK_HINTS), nnq)
     }
 
-    val res = plan.get(nnq.get, bq, tiq, withMetadata, id, cache).evaluate()
+    val res = plan.get(nnq.get, bq, tiq, id, cache).evaluate()
 
     if (id.isDefined && cache.isDefined && cache.get.putInCache) {
       QueryLRUCache.put(id.get, res)
@@ -95,7 +94,7 @@ case class StandardQueryHolder(entityname: EntityName)(hint: Seq[QueryHint], nnq
     * @param hints
     * @return
     */
-  private def choosePlan(entityname: EntityName, indexes: Map[IndexTypeName, Seq[IndexName]], hints: Seq[QueryHint], nnq: Option[NearestNeighbourQuery])(implicit ac: AdamContext) : Option[(NearestNeighbourQuery, Option[BooleanQuery], Option[PrimaryKeyFilter[_]], Boolean, Option[String], Option[QueryCacheOptions]) => QueryExpression] = {
+  private def choosePlan(entityname: EntityName, indexes: Map[IndexTypeName, Seq[IndexName]], hints: Seq[QueryHint], nnq: Option[NearestNeighbourQuery])(implicit ac: AdamContext) : Option[(NearestNeighbourQuery, Option[BooleanQuery], Option[PrimaryKeyFilter[_]], Option[String], Option[QueryCacheOptions]) => QueryExpression] = {
 
 
     if (hints.isEmpty) {
