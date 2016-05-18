@@ -17,6 +17,7 @@ import ch.unibas.dmi.dbis.adam.storage.partition.PartitionMode
 import org.apache.spark.Logging
 import org.apache.spark.rdd.RDD
 import org.apache.spark.sql.{Row, DataFrame}
+import org.apache.spark.sql.functions.col
 
 import scala.util.{Failure, Random, Success, Try}
 
@@ -281,7 +282,7 @@ object Index extends Logging {
         .repartition(AdamConfig.defaultNumberOfPartitions)
         .withColumnRenamed("id", entity.pk.name)
         .withColumnRenamed("value", FieldNames.featureIndexColumnName)
-      val path = storage.write(indexname, index.data)
+      val path = storage.write(indexname, index.data, None, true)
       if (path.isSuccess) {
         CatalogOperator.createIndex(indexname, path.get, entity.entityname, column, indexgenerator.indextypename, index.metadata)
         Success(index)
@@ -416,7 +417,7 @@ object Index extends Logging {
         Failure(throw new GeneralAdamException("one of the columns " + cols.mkString(",") + " is not existing in entity " + index.entityname + entityColNames.mkString("(", ",", ")")))
       }
 
-      data.repartition(nPartitions, cols.get.map(data(_)): _*)
+      data.repartition(nPartitions, cols.get.map(col(_)): _*)
     } else {
       data.repartition(nPartitions, data(index.pk.name))
     }
@@ -426,8 +427,8 @@ object Index extends Logging {
     option match {
       case PartitionMode.CREATE_NEW =>
         val newName = createIndexName(index.entityname, index.column, index.indextypename)
-        storage.write(newName, data)
-        CatalogOperator.createIndex(newName, newName, index.entityname, index.column, index.indextypename, index.metadata)
+        val path = storage.write(newName, data)
+        CatalogOperator.createIndex(newName, path.get, index.entityname, index.column, index.indextypename, index.metadata)
         IndexLRUCache.invalidate(newName)
 
         return Success(load(newName).get)

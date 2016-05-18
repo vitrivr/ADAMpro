@@ -45,7 +45,7 @@ trait IndexStorage extends Serializable with Logging {
     * @param index
     * @return true on success
     */
-  def write(indexName: IndexName, index: DataFrame, path : Option[String] = None)(implicit ac: AdamContext): Try[String]
+  def write(indexName: IndexName, index: DataFrame, path : Option[String] = None, allowRepartitioning : Boolean = false)(implicit ac: AdamContext): Try[String]
 
   /**
     * Drop the index from the index storage.

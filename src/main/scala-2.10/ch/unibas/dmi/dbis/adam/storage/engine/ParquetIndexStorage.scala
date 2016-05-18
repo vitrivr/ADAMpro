@@ -21,7 +21,8 @@ import scala.util.{Failure, Success, Try}
   * August 2015
   */
 object ParquetIndexStorage extends IndexStorage {
-  private def getPath(filename : String): String  = AdamConfig.indexPath + "/" + filename
+  //TODO: refactor with ParquetFeatureStorage
+  private def getPath(filename: String): String = AdamConfig.indexPath + "/" + filename
 
   val storage: GenericIndexStorage = if (AdamConfig.isBaseOnHadoop) {
     log.debug("storing index on Hadoop")
@@ -41,9 +42,9 @@ object ParquetIndexStorage extends IndexStorage {
     storage.drop(path)
   }
 
-  override def write(indexName: IndexName, index: DataFrame, path: Option[String] = None)(implicit ac: AdamContext): Try[String] = {
+  override def write(indexName: IndexName, index: DataFrame, path: Option[String] = None, allowRepartitioning: Boolean)(implicit ac: AdamContext): Try[String] = {
     log.debug("writing index to storage")
-    storage.write(indexName, index, path)
+    storage.write(indexName, index, path, allowRepartitioning)
   }
 
   override def exists(path: String): Try[Boolean] = {
@@ -60,12 +61,16 @@ object ParquetIndexStorage extends IndexStorage {
       }
     }
 
-    override def write(indexname: IndexName, df: DataFrame, path: Option[String] = None)(implicit ac: AdamContext): Try[String] = {
+    override def write(indexname: IndexName, df: DataFrame, path: Option[String] = None, allowRepartitioning: Boolean = false)(implicit ac: AdamContext): Try[String] = {
       try {
         val filepath = path.getOrElse(getPath(indexname.toString))
-        df
-          .repartition(AdamConfig.defaultNumberOfPartitions)
-          .write.mode(SaveMode.Overwrite).parquet(filepath)
+        var data = df
+
+        if (allowRepartitioning) {
+          data = data.repartition(AdamConfig.defaultNumberOfPartitions)
+        }
+
+        data.write.mode(SaveMode.Overwrite).parquet(filepath)
         Success(filepath)
       } catch {
         case e: Exception => Failure(e)

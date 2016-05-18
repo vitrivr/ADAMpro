@@ -67,7 +67,7 @@ trait FeatureStorage extends Serializable with Logging {
     * @param mode
     * @return true on success
     */
-  def write(entityname : EntityName, df: DataFrame, mode: SaveMode = SaveMode.Append, path : Option[String] = None)(implicit ac: AdamContext): Try[String]
+  def write(entityname : EntityName, df: DataFrame, mode: SaveMode = SaveMode.Append, path : Option[String] = None, allowRepartitioning : Boolean = false)(implicit ac: AdamContext): Try[String]
 
   /**
     * Drop the entity from the feature storage

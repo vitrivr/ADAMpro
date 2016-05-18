@@ -21,6 +21,7 @@ import scala.util.{Failure, Success, Try}
   * April 2016
   */
 object ParquetFeatureStorage extends FeatureStorage {
+  //TODO: refactor with ParquetIndexStorage
   private def getPath(filename : String): String  = AdamConfig.dataPath + "/" + filename
 
   val storage: GenericFeatureStorage = if (AdamConfig.isBaseOnHadoop) {
@@ -46,9 +47,9 @@ object ParquetFeatureStorage extends FeatureStorage {
     storage.drop(path)
   }
 
-  override def write(entityname: EntityName, df: DataFrame, mode: SaveMode, path : Option[String] = None)(implicit ac: AdamContext): Try[String] = {
+  override def write(entityname: EntityName, df: DataFrame, mode: SaveMode, path : Option[String] = None, allowRepartitioning: Boolean)(implicit ac: AdamContext): Try[String] = {
     log.debug("writing data to storage")
-    storage.write(entityname, df, mode, path)
+    storage.write(entityname, df, mode, path, allowRepartitioning)
   }
 
   override def read(path: String)(implicit ac: AdamContext): Try[DataFrame] = {
@@ -64,7 +65,7 @@ object ParquetFeatureStorage extends FeatureStorage {
           Failure(throw EntityNotExistingException())
         }
 
-        var df = ac.sqlContext.read.parquet(path).coalesce(AdamConfig.defaultNumberOfPartitions)
+        var df = ac.sqlContext.read.parquet(path)
 
         Success(df)
       } catch {
@@ -72,12 +73,16 @@ object ParquetFeatureStorage extends FeatureStorage {
       }
     }
 
-    override def write(entityname: EntityName, df: DataFrame, mode: SaveMode, path : Option[String] = None)(implicit ac: AdamContext): Try[String] = {
+    override def write(entityname: EntityName, df: DataFrame, mode: SaveMode, path : Option[String] = None, allowRepartitioning : Boolean)(implicit ac: AdamContext): Try[String] = {
       try {
         val filepath = path.getOrElse(getPath(entityname.toString))
-        df
-          .repartition(AdamConfig.defaultNumberOfPartitions)
-          .write.mode(mode).parquet(filepath)
+        var data = df
+
+        if (allowRepartitioning) {
+          data = data.repartition(AdamConfig.defaultNumberOfPartitions)
+        }
+
+        data.write.mode(SaveMode.Overwrite).parquet(filepath)
         Success(filepath)
       } catch {
         case e: Exception => Failure(e)

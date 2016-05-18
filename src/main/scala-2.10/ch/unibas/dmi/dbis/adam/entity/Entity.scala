@@ -125,7 +125,7 @@ case class Entity(val entityname: EntityName, private val featureStorage: Featur
       //TODO: check schema
 
       val featureFieldNames = insertion.schema.fields.filter(_.dataType == new FeatureVectorWrapperUDT).map(_.name)
-      featureStorage.write(entityname, insertion.select(pk.name, featureFieldNames.toSeq: _*), SaveMode.Append)
+      featureStorage.write(entityname, insertion.select(pk.name, featureFieldNames.toSeq: _*), SaveMode.Append, None, true)
 
       val metadataFieldNames = insertion.schema.fields.filterNot(_.dataType == new FeatureVectorWrapperUDT).map(_.name)
       if (metadataStorage.isDefined) {
