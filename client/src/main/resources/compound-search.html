@@ -66,7 +66,7 @@
         <div class="col s3">
             <div class="input-field col s10">
                 <select id="indextype">
-                    <option value="sequential" data-operation="sequential" data-subtype="sequential">sequential</option>
+                    <option value="sequential" data-operation="sequential" data-subtype="sequential">Sequential</option>
                     <option value="ecp" data-operation="index" data-subtype="ecp"
                             data-details="<input type='text' class='form-control' name='indexname' placeholder='indexname'><input type='text' class='form-control' name='partitions' placeholder='all partitions'>">eCP Index</option>
                     <option value="lsh" data-operation="index" data-subtype="lsh"
@@ -82,7 +82,7 @@
                     <option value="bq" data-operation="boolean" data-subtype="bq"
                             data-details="<input type='text' class='form-control' name='field' placeholder='field'><input type='text' class='form-control' name='value' placeholder='value'>">Boolan Query</option>
                     <option value="solr" data-operation="external" data-subtype="solr"
-                            data-details="<input type='text' class='form-control' name='url' placeholder='url (http://192.168.99.100:32769/solr/adampro)'><input type='text' class='form-control' name='query' placeholder='query'><input type='text' class='form-control' name='filter' placeholder='filter (cat:electronics)'><input type='text' class='form-control' name='fields' placeholder='fields (id,company,cat)'><input type='text' class='form-control' name='pk' placeholder='primary key (pk)'>">solr</option>
+                            data-details="<input type='text' class='form-control' name='url' placeholder='url (http://192.168.99.100:32769/solr/adampro)'><input type='text' class='form-control' name='query' placeholder='query'><input type='text' class='form-control' name='filter' placeholder='filter (cat:electronics)'><input type='text' class='form-control' name='fields' placeholder='fields (id,company,cat)'><input type='text' class='form-control' name='pk' placeholder='primary key (pk)'>">Solr</option>
                 </select>
                 <label>scan type</label>
             </div>
@@ -95,11 +95,11 @@
             <div class="input-field col s10">
                 <select id="indexoperation">
                     <option value="union" data-operation="aggregation" data-subtype="union"
-                            data-details="<div class='input-field'><select name='operationorder' class='browser-default'><option value='parallel' selected='selected'>parallel</option><option value='left'>left first</option><option value='right'>right first</option> </select></div>">UNION</option>
+                            data-details="<div class='input-field'><select name='operationorder' class='browser-default'><option value='parallel' selected='selected'>parallel</option><option value='left'>left first</option><option value='right'>right first</option> </select></div>">Union</option>
                     <option value="intersect" data-operation="aggregation" data-subtype="intersect"
-                            data-details="<div class='input-field'><select name='operationorder' class='browser-default'><option value='parallel' selected='selected'>parallel</option><option value='left'>left first</option><option value='right'>right first</option> </select></div>">INTERSECT</option>
+                            data-details="<div class='input-field'><select name='operationorder' class='browser-default'><option value='parallel' selected='selected'>parallel</option><option value='left'>left first</option><option value='right'>right first</option> </select></div>">Intersect</option>
                     <option value="except" data-operation="aggregation" data-subtype="except"
-                            data-details="<div class='input-field'><select name='operationorder' class='browser-default'><option value='parallel' selected='selected'>parallel</option><option value='left'>left first</option><option value='right'>right first</option> </select></div>">EXCEPT</option>
+                            data-details="<div class='input-field'><select name='operationorder' class='browser-default'><option value='parallel' selected='selected'>parallel</option><option value='left'>left first</option><option value='right'>right first</option> </select></div>">Except</option>
                 </select>
                 <label>aggregation</label>
             </div>
@@ -115,7 +115,7 @@
 
         <div class="jtk-demo-canvas canvas-wide statemachine-demo jtk-surface jtk-surface-nopan" id="canvas">
             <div class="w" id="box-start" style="right: 20em; top: 20em;" data-operation="start" data-subtype="start">
-                QUERY
+                Results
                 <div class="res"></div>
                 <div class="ep" action="start"></div>
             </div>
