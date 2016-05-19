@@ -1,7 +1,7 @@
 package ch.unibas.dmi.dbis.adam.main
 
 import org.apache.spark.SparkContext
-import org.apache.spark.sql.hive.HiveContext
+import org.apache.spark.sql.SQLContext
 
 import scala.annotation.implicitNotFound
 
@@ -14,5 +14,5 @@ import scala.annotation.implicitNotFound
 @implicitNotFound("Cannot find an implicit AdamContext, either import SparkStartup.Implicits._ or use a custom one")
 trait AdamContext {
   def sc : SparkContext
-  def sqlContext : HiveContext
+  def sqlContext : SQLContext
 }
