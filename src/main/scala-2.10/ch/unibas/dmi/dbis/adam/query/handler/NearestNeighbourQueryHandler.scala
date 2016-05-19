@@ -111,7 +111,7 @@ private[query] object NearestNeighbourQueryHandler extends Logging {
     val tracker = new ProgressiveQueryStatusTracker(query.queryID.get)
 
 
-    val indexScanFutures = paths.getPaths(entityname).par.map { indexname =>
+    val indexScanFutures = paths.getPaths(entityname).map { indexname =>
       //TODO: possibly switch between index only and full result scan (give user the option to choose!)
       val isf = new IndexScanFuture(indexname, query, onComplete, tracker)
     }
