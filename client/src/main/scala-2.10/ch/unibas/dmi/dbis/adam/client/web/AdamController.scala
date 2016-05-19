@@ -186,7 +186,11 @@ class AdamController(rpcClient: RPCClient) extends Controller {
   case class ProgressiveStartResponse(id: String)
 
   private def processProgressiveResults(id: String, confidence: Double, source: String, time: Long, results: Seq[(Float, Map[String, String])]): Unit = {
-    val sourcetype = source.substring(0, source.indexOf("(")).toLowerCase.trim
+    val sourcetype = if(source.length > 0){
+      source.substring(0, source.indexOf("(")).toLowerCase.trim
+    } else {
+      ""
+    }
     progTempResults.get(id).get += ProgressiveTempResponse(id, confidence, source, sourcetype, time, results, ProgressiveQueryStatus.RUNNING)
   }
 

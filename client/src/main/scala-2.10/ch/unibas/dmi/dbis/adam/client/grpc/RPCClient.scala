@@ -219,12 +219,16 @@ class RPCClient(channel: ManagedChannel, definer: AdamDefinitionBlockingStub, se
         override def onNext(v: QueryResponseInfoMessage): Unit = {
           log.info("new progressive results arrived")
 
-          val confidence = v.confidence
-          val source = v.source
-          val time = v.time
-          val results = v.results.map(x => (x.distance, x.metadata))
+          if(v.ack.get.code == AckMessage.Code.OK) {
+            val confidence = v.confidence
+            val source = v.source
+            val time = v.time
+            val results = v.results.map(x => (x.distance, x.metadata))
 
-          next(id, confidence, source, time, results)
+            next(id, confidence, source, time, results)
+          } else {
+            throw new Exception(v.ack.get.message)
+          }
         }
       }
 
