@@ -35,6 +35,14 @@ object SparkStartup extends Logging {
     sc.hadoopConfiguration.set("parquet.enable.summary-metadata", "false")
     sc.setLogLevel(AdamConfig.loglevel)
     //TODO: possibly switch to a jobserver (https://github.com/spark-jobserver/spark-jobserver), pass sqlcontext around
+
+    //TODO: possibly adjust block and page size
+    // val blockSize = 1024 * 1024 * 16      // 16MB
+    // sc.hadoopConfiguration.setInt( "dfs.blocksize", blockSize )
+    // sc.hadoopConfiguration.setInt( "parquet.block.size", blockSize )
+    //also consider: https://issues.apache.org/jira/browse/SPARK-7263
+
+
     @transient implicit lazy val sqlContext = new HiveContext(sc)
   }
 
