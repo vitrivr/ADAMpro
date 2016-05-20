@@ -3,8 +3,8 @@ package ch.unibas.dmi.dbis.adam.index
 import ch.unibas.dmi.dbis.adam.config.{AdamConfig, FieldNames}
 import ch.unibas.dmi.dbis.adam.datatypes.feature.Feature._
 import ch.unibas.dmi.dbis.adam.datatypes.feature.FeatureVectorWrapper
-import ch.unibas.dmi.dbis.adam.entity.Entity._
 import ch.unibas.dmi.dbis.adam.entity.Entity
+import ch.unibas.dmi.dbis.adam.entity.Entity._
 import ch.unibas.dmi.dbis.adam.exception.{GeneralAdamException, IndexNotExistingException}
 import ch.unibas.dmi.dbis.adam.index.Index.{IndexName, IndexTypeName, PartitionID}
 import ch.unibas.dmi.dbis.adam.index.structures.IndexTypes
@@ -16,8 +16,8 @@ import ch.unibas.dmi.dbis.adam.storage.engine.CatalogOperator
 import ch.unibas.dmi.dbis.adam.storage.partition.PartitionMode
 import org.apache.spark.Logging
 import org.apache.spark.rdd.RDD
-import org.apache.spark.sql.{Row, DataFrame}
 import org.apache.spark.sql.functions.col
+import org.apache.spark.sql.{DataFrame, Row}
 
 import scala.util.{Failure, Random, Success, Try}
 
@@ -406,6 +406,10 @@ object Index extends Logging {
 
     //TODO: possibly add own partitioner
     //data.map(r => (r.getAs(cols.get.head), r)).partitionBy(new HashPartitioner())
+
+    //TODO: possibly consider replication
+    //http://stackoverflow.com/questions/31624622/is-there-a-way-to-change-the-replication-factor-of-rdds-in-spark
+    //data.persist(StorageLevel.MEMORY_ONLY_2) new StorageLevel(...., N)
 
     if (join.isDefined) {
       data = data.join(join.get, index.pk.name)
