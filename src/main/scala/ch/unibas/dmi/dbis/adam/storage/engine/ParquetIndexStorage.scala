@@ -32,24 +32,24 @@ object ParquetIndexStorage extends IndexStorage {
     new LocalStorage()
   }
 
+
+  override def exists(path: String): Try[Boolean] = {
+    log.debug("checking index exists in " + path)
+    storage.exists(path)
+  }
+
   override def read(path: String)(implicit ac: AdamContext): Try[DataFrame] = {
-    log.debug("reading index from storage")
+    log.debug("reading index from " + path)
     storage.read(path)
   }
 
   override def drop(path: String)(implicit ac: AdamContext): Try[Void] = {
-    log.debug("dropping index from storage")
+    log.debug("dropping index from " + path)
     storage.drop(path)
   }
 
   override def write(indexName: IndexName, index: DataFrame, path: Option[String] = None, allowRepartitioning: Boolean)(implicit ac: AdamContext): Try[String] = {
-    log.debug("writing index to storage")
     storage.write(indexName, index, path, allowRepartitioning)
-  }
-
-  override def exists(path: String): Try[Boolean] = {
-    log.debug("checking index exists in storage")
-    storage.exists(path)
   }
 
   private[engine] trait GenericIndexStorage extends IndexStorage {
@@ -64,6 +64,8 @@ object ParquetIndexStorage extends IndexStorage {
     override def write(indexname: IndexName, df: DataFrame, path: Option[String] = None, allowRepartitioning: Boolean = false)(implicit ac: AdamContext): Try[String] = {
       try {
         val filepath = path.getOrElse(getPath(indexname.toString))
+        log.debug("writing data to " + filepath)
+
         var data = df
 
         if (allowRepartitioning) {

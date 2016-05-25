@@ -47,18 +47,18 @@ object ParquetFeatureStorage extends FeatureStorage {
     storage.count(path)
   }
 
-  override def drop(path: String)(implicit ac: AdamContext): Try[Void] = {
-    log.debug("dropping data from " + path)
-    storage.drop(path)
+  override def read(path: String)(implicit ac: AdamContext): Try[DataFrame] = {
+    log.debug("reading data from " + path)
+    storage.read(path)
   }
 
   override def write(entityname: EntityName, df: DataFrame, mode: SaveMode, path: Option[String] = None, allowRepartitioning: Boolean)(implicit ac: AdamContext): Try[String] = {
     storage.write(entityname, df, mode, path, allowRepartitioning)
   }
 
-  override def read(path: String)(implicit ac: AdamContext): Try[DataFrame] = {
-    log.debug("reading data from " + path)
-    storage.read(path)
+  override def drop(path: String)(implicit ac: AdamContext): Try[Void] = {
+    log.debug("dropping data from " + path)
+    storage.drop(path)
   }
 
 
