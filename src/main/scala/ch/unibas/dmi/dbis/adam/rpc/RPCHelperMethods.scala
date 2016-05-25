@@ -37,7 +37,6 @@ private[rpc] object RPCHelperMethods {
       val entityname = request.from.get.submessage.entity
       val indexname = request.from.get.submessage.index
       val subexpression = request.from.get.submessage.expression
-      val indexonly = request.indexOnly
       val bq = prepareBQ(request.bq)
       val nnq = prepareNNQ(request.nnq)
       val time = request.time

@@ -43,7 +43,7 @@ case class CompoundQueryRequest(var id: String, var operation: String, var optio
       Some(DistanceMessage(DistanceMessage.DistanceType.minkowski, Map("norm" -> "1"))),
       options.get("k").getOrElse("100").toInt,
       Map(),
-      false,
+      true,
       partitions)
 
     nnq
