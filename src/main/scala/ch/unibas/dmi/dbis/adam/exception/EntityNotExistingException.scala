@@ -6,6 +6,6 @@ package ch.unibas.dmi.dbis.adam.exception
  * Ivan Giangreco
  * August 2015
  */
-case class EntityNotExistingException()  extends GeneralAdamException("Entity not existing.")
+case class EntityNotExistingException(message : String = "Entity not existing.")  extends GeneralAdamException(message)
 
 

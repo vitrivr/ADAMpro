@@ -56,7 +56,7 @@ class DataDefinitionRPC(implicit ac: AdamContext) extends AdamDefinitionGrpc.Ada
     case _ => FieldTypes.UNRECOGNIZEDTYPE
   }
 
-  private def converter(datatype: DataType): (InsertDataMessage) => (Any) = datatype match {
+  private def converter(datatype: DataType): (DataMessage) => (Any) = datatype match {
     case types.BooleanType => (x) => x.getBooleanData
     case types.DoubleType => (x) => x.getBooleanData
     case types.FloatType => (x) => x.getFloatData
@@ -226,10 +226,36 @@ class DataDefinitionRPC(implicit ac: AdamContext) extends AdamDefinitionGrpc.Ada
       case _ => PartitionMode.CREATE_NEW
     }
 
-    val res = IndexOp.partition(request.index, request.numberOfPartitions, None, cols, option)
+    val res = IndexOp.partition(request.entity, request.numberOfPartitions, None, cols, option)
 
     if (res.isSuccess) {
       Future.successful(AckMessage(AckMessage.Code.OK, res.get.indexname))
+    } else {
+      log.error(res.failed.get.getMessage)
+      Future.successful(AckMessage(code = AckMessage.Code.ERROR, message = res.failed.get.getMessage))
+    }
+  }
+
+  override def repartitionEntityData(request: RepartitionMessage): Future[AckMessage] = {
+    log.debug("rpc call for repartitioning entity")
+
+    val cols = if (request.columns.isEmpty) {
+      None
+    } else {
+      Some(request.columns)
+    }
+
+    val option = request.option match {
+      case RepartitionMessage.PartitionOptions.CREATE_NEW => PartitionMode.CREATE_NEW
+      case RepartitionMessage.PartitionOptions.CREATE_TEMP => PartitionMode.CREATE_TEMP
+      case RepartitionMessage.PartitionOptions.REPLACE_EXISTING => PartitionMode.REPLACE_EXISTING
+      case _ => PartitionMode.CREATE_NEW
+    }
+
+    val res = EntityOp.partition(request.entity, request.numberOfPartitions, None, cols, option)
+
+    if (res.isSuccess) {
+      Future.successful(AckMessage(AckMessage.Code.OK, res.get.entityname))
     } else {
       log.error(res.failed.get.getMessage)
       Future.successful(AckMessage(code = AckMessage.Code.ERROR, message = res.failed.get.getMessage))
