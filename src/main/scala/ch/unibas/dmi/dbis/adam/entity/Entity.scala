@@ -2,7 +2,7 @@ package ch.unibas.dmi.dbis.adam.entity
 
 import ch.unibas.dmi.dbis.adam.config.FieldNames
 import ch.unibas.dmi.dbis.adam.datatypes.FieldTypes
-import ch.unibas.dmi.dbis.adam.datatypes.feature.FeatureVectorWrapperUDT
+import ch.unibas.dmi.dbis.adam.datatypes.feature.{FeatureVectorWrapper, FeatureVectorWrapperUDT}
 import ch.unibas.dmi.dbis.adam.entity.Entity.EntityName
 import FieldTypes._
 import ch.unibas.dmi.dbis.adam.exception.{EntityExistingException, EntityNotExistingException, EntityNotProperlyDefinedException, GeneralAdamException}
@@ -271,8 +271,16 @@ case class Entity(val entityname: EntityName)(@transient implicit val ac: AdamCo
     * @return
     */
   def isQueryConform(query: NearestNeighbourQuery): Boolean = {
-    //TODO: check dimensionality of field and compare to dimensionality of query
-    true
+    if (featureData.isDefined) {
+      try {
+        featureData.get.first().getAs[FeatureVectorWrapper](query.column).vector.length == query.q.length
+      } catch {
+        case e : Exception => log.error("query not conform with entity", e)
+          false
+      }
+    } else {
+      false
+    }
   }
 }
 
