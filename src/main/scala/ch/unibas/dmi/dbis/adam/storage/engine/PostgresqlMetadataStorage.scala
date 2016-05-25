@@ -12,6 +12,8 @@ import org.apache.spark.sql.jdbc.AdamDialectRegistrar
 import org.apache.spark.sql.types.{StructField, StructType}
 import org.apache.spark.sql.{DataFrame, Row, SaveMode}
 
+import scala.util.{Success, Failure, Try}
+
 /**
   * adamtwo
   *
@@ -33,74 +35,96 @@ object PostgresqlMetadataStorage extends MetadataStorage {
     DriverManager.getConnection(AdamConfig.jdbcUrl, AdamConfig.jdbcUser, AdamConfig.jdbcPassword)
   }
 
-  override def create(tablename: EntityName, fields: Seq[FieldDefinition]): Boolean = {
-    log.debug("postgresql create operation")
-    val structFields = fields.map {
-      field => StructField(field.name, field.fieldtype.datatype)
-    }.toSeq
+  override def create(entityname: EntityName, fields: Seq[FieldDefinition]): Try[Option[String]] = {
+    try {
+      log.debug("postgresql create operation")
+      val structFields = fields.map {
+        field => StructField(field.name, field.fieldtype.datatype)
+      }.toSeq
 
-    import SparkStartup.Implicits._
-    val df = sqlContext.createDataFrame(sc.emptyRDD[Row], StructType(structFields))
+      import SparkStartup.Implicits._
+      val df = sqlContext.createDataFrame(sc.emptyRDD[Row], StructType(structFields))
 
-    write(tablename, df, SaveMode.ErrorIfExists)
+      val tablename = write(entityname, df, SaveMode.ErrorIfExists)
 
-    //make fields unique
-    val uniqueStmt = fields.filter(_.unique).map {
-      field =>
-        val fieldname = field.name
-        s"""ALTER TABLE $tablename ADD UNIQUE ($fieldname)""".stripMargin
-    }.mkString("; ")
+      if(tablename.isFailure){
+        return Failure(tablename.failed.get)
+      }
 
-    //add index to table
-    val indexedStmt = fields.filter (_.indexed).map {
-      field =>
-        val fieldname = field.name
-        s"""CREATE INDEX ON $tablename ($fieldname)""".stripMargin
-    }.mkString("; ")
+      //make fields unique
+      val uniqueStmt = fields.filter(_.unique).map {
+        field =>
+          val fieldname = field.name
+          s"""ALTER TABLE $entityname ADD UNIQUE ($fieldname)""".stripMargin
+      }.mkString("; ")
 
-    //add primary key
-    val pkfield = fields.filter (_.pk)
-    assert(pkfield.size <= 1)
-    val pkStmt = pkfield.map {
-      case field =>
-        val fieldname = field.name
-        s"""ALTER TABLE $tablename ADD PRIMARY KEY ($fieldname)""".stripMargin
-    }.mkString("; ")
+      //add index to table
+      val indexedStmt = fields.filter(_.indexed).map {
+        field =>
+          val fieldname = field.name
+          s"""CREATE INDEX ON $entityname ($fieldname)""".stripMargin
+      }.mkString("; ")
 
-    val connection = openConnection()
+      //add primary key
+      val pkfield = fields.filter(_.pk)
+      assert(pkfield.size <= 1)
+      val pkStmt = pkfield.map {
+        case field =>
+          val fieldname = field.name
+          s"""ALTER TABLE $entityname ADD PRIMARY KEY ($fieldname)""".stripMargin
+      }.mkString("; ")
 
-    connection.createStatement().executeUpdate(uniqueStmt)
-    connection.createStatement().executeUpdate(indexedStmt)
-    connection.createStatement().executeUpdate(pkStmt)
+      val connection = openConnection()
 
-    true
+      connection.createStatement().executeUpdate(uniqueStmt)
+      connection.createStatement().executeUpdate(indexedStmt)
+      connection.createStatement().executeUpdate(pkStmt)
+
+      Success(Some(tablename.get))
+    } catch {
+      case e: Exception => Failure(e)
+    }
   }
 
-  override def read(tablename: EntityName): DataFrame = {
-    log.debug("postgresql count operation")
+  override def read(tablename: EntityName): Try[DataFrame] = {
+    log.debug("postgresql read operation")
 
-    import SparkStartup.Implicits._
-    sqlContext.read.format("jdbc").options(
-      Map("url" -> url, "dbtable" -> tablename.toString(), "user" -> AdamConfig.jdbcUser, "password" -> AdamConfig.jdbcPassword, "driver" -> "org.postgresql.Driver")
-    ).load()
+    try {
+      import SparkStartup.Implicits._
+      val df = sqlContext.read.format("jdbc").options(
+        Map("url" -> url, "dbtable" -> tablename.toString(), "user" -> AdamConfig.jdbcUser, "password" -> AdamConfig.jdbcPassword, "driver" -> "org.postgresql.Driver")
+      ).load()
+      Success(df)
+    } catch {
+      case e: Exception => Failure(e)
+    }
   }
 
-  override def write(tablename: EntityName, df: DataFrame, mode: SaveMode = SaveMode.Append): Boolean = {
+  override def write(tablename: EntityName, df: DataFrame, mode: SaveMode = SaveMode.Append): Try[String] = {
     log.debug("postgresql write operation")
 
-    val props = new Properties()
-    props.put("user", AdamConfig.jdbcUser)
-    props.put("password", AdamConfig.jdbcPassword)
-    props.put("driver", "org.postgresql.Driver")
-    df.write.mode(mode).jdbc(url, tablename, props)
-    true
+    try {
+      val props = new Properties()
+      props.put("user", AdamConfig.jdbcUser)
+      props.put("password", AdamConfig.jdbcPassword)
+      props.put("driver", "org.postgresql.Driver")
+      df.write.mode(mode).jdbc(url, tablename, props)
+
+      Success(tablename)
+    } catch {
+      case e: Exception => Failure(e)
+    }
   }
 
-  override def drop(tablename: EntityName): Boolean = {
+  override def drop(tablename: EntityName): Try[Void] = {
     log.debug("postgresql drop operation")
 
-    val dropTableSql = s"""DROP TABLE $tablename""".stripMargin
-    openConnection().createStatement().executeUpdate(dropTableSql)
-    true
+    try {
+      val dropTableSql = s"""DROP TABLE $tablename""".stripMargin
+      openConnection().createStatement().executeUpdate(dropTableSql)
+      Success(null)
+    } catch {
+      case e: Exception => Failure(e)
+    }
   }
 }

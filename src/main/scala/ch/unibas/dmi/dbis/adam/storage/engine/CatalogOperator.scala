@@ -49,13 +49,13 @@ object CatalogOperator extends Logging {
     * @param withMetadata
     * @return
     */
-  def createEntity(entityname: EntityName, featurepath : String, metadatapath : String, fields: Seq[FieldDefinition], withMetadata: Boolean = false): Boolean = {
+  def createEntity(entityname: EntityName, featurepath : Option[String], metadatapath : Option[String], fields: Seq[FieldDefinition], withMetadata: Boolean = false): Boolean = {
     if (existsEntity(entityname)) {
       throw new EntityExistingException()
     }
 
     val setup = DBIO.seq(
-      entities.+=(entityname, featurepath, metadatapath, withMetadata)
+      entities.+=(entityname, featurepath.getOrElse(""), metadatapath.getOrElse(""), withMetadata)
     )
 
     Await.result(db.run(setup), MAX_WAITING_TIME)

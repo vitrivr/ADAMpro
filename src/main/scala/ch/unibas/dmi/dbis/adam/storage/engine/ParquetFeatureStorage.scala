@@ -4,7 +4,8 @@ import java.io.File
 
 import ch.unibas.dmi.dbis.adam.config.AdamConfig
 import ch.unibas.dmi.dbis.adam.entity.Entity.EntityName
-import ch.unibas.dmi.dbis.adam.exception.EntityNotExistingException
+import ch.unibas.dmi.dbis.adam.entity.FieldDefinition
+import ch.unibas.dmi.dbis.adam.exception.GeneralAdamException
 import ch.unibas.dmi.dbis.adam.main.AdamContext
 import ch.unibas.dmi.dbis.adam.storage.components.FeatureStorage
 import org.apache.commons.io.FileUtils
@@ -22,7 +23,7 @@ import scala.util.{Failure, Success, Try}
   */
 object ParquetFeatureStorage extends FeatureStorage {
   //TODO: refactor with ParquetIndexStorage
-  private def getPath(filename : String): String  = AdamConfig.dataPath + "/" + filename
+  private def getPath(filename: String): String = AdamConfig.dataPath + "/" + filename
 
   val storage: GenericFeatureStorage = if (AdamConfig.isBaseOnHadoop) {
     log.debug("storing data on Hadoop")
@@ -32,28 +33,31 @@ object ParquetFeatureStorage extends FeatureStorage {
     new LocalStorage()
   }
 
+  override def create(entityname: EntityName, fields: Seq[FieldDefinition])(implicit ac: AdamContext): Try[Option[String]] = {
+    Success(None)
+  }
+
   override def exists(path: String): Try[Boolean] = {
-    log.debug("checking data exists in storage")
+    log.debug("checking data exists in " + path)
     storage.exists(path)
   }
 
   override def count(path: String)(implicit ac: AdamContext): Try[Long] = {
-    log.debug("counting data from storage")
+    log.debug("counting data from " + path)
     storage.count(path)
   }
 
   override def drop(path: String)(implicit ac: AdamContext): Try[Void] = {
-    log.debug("dropping data from storage")
+    log.debug("dropping data from " + path)
     storage.drop(path)
   }
 
-  override def write(entityname: EntityName, df: DataFrame, mode: SaveMode, path : Option[String] = None, allowRepartitioning: Boolean)(implicit ac: AdamContext): Try[String] = {
-    log.debug("writing data to storage")
+  override def write(entityname: EntityName, df: DataFrame, mode: SaveMode, path: Option[String] = None, allowRepartitioning: Boolean)(implicit ac: AdamContext): Try[String] = {
     storage.write(entityname, df, mode, path, allowRepartitioning)
   }
 
   override def read(path: String)(implicit ac: AdamContext): Try[DataFrame] = {
-    log.debug("reading data from storage")
+    log.debug("reading data from " + path)
     storage.read(path)
   }
 
@@ -62,7 +66,7 @@ object ParquetFeatureStorage extends FeatureStorage {
     override def read(path: String)(implicit ac: AdamContext): Try[DataFrame] = {
       try {
         if (!exists(path).get) {
-          Failure(throw EntityNotExistingException())
+          Failure(throw new GeneralAdamException("no file found at " + path))
         }
 
         var df = ac.sqlContext.read.parquet(path)
@@ -73,9 +77,11 @@ object ParquetFeatureStorage extends FeatureStorage {
       }
     }
 
-    override def write(entityname: EntityName, df: DataFrame, mode: SaveMode, path : Option[String] = None, allowRepartitioning : Boolean)(implicit ac: AdamContext): Try[String] = {
+    override def write(entityname: EntityName, df: DataFrame, mode: SaveMode, path: Option[String] = None, allowRepartitioning: Boolean)(implicit ac: AdamContext): Try[String] = {
       try {
         val filepath = path.getOrElse(getPath(entityname.toString))
+        log.debug("writing data  to " + filepath)
+
         var data = df
 
         if (allowRepartitioning) {
@@ -90,10 +96,10 @@ object ParquetFeatureStorage extends FeatureStorage {
     }
 
     override def count(path: String)(implicit ac: AdamContext): Try[Long] = {
-      try{
+      try {
         Success(read(path).get.count())
       } catch {
-        case e : Exception => Failure(e)
+        case e: Exception => Failure(e)
       }
     }
   }

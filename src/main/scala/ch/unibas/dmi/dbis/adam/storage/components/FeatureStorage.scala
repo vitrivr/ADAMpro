@@ -3,12 +3,10 @@ package ch.unibas.dmi.dbis.adam.storage.components
 import ch.unibas.dmi.dbis.adam.entity.Entity.EntityName
 import ch.unibas.dmi.dbis.adam.entity.FieldDefinition
 import ch.unibas.dmi.dbis.adam.main.AdamContext
-import ch.unibas.dmi.dbis.adam.main.SparkStartup.Implicits._
 import org.apache.spark.Logging
-import org.apache.spark.sql.types._
-import org.apache.spark.sql.{DataFrame, Row, SaveMode}
+import org.apache.spark.sql.{DataFrame, SaveMode}
 
-import scala.util.{Failure, Try}
+import scala.util.{Success, Try}
 
 /**
   * adamtwo
@@ -30,18 +28,7 @@ trait FeatureStorage extends Serializable with Logging {
     * @param entityname
     * @return true on success
     */
-  def create(entityname: EntityName, fields: Seq[FieldDefinition])(implicit ac: AdamContext): Try[String] = {
-    try {
-      val structFields = fields.map {
-        field => StructField(field.name, field.fieldtype.datatype)
-      }
-
-      val df = sqlContext.createDataFrame(sc.emptyRDD[Row], StructType(structFields))
-      write(entityname, df, SaveMode.Overwrite)
-    } catch {
-      case e: Exception => Failure(e)
-    }
-  }
+  def create(entityname: EntityName, fields: Seq[FieldDefinition])(implicit ac: AdamContext): Try[Option[String]] = Success(None)
 
   /**
     * Read entity from feature storage.

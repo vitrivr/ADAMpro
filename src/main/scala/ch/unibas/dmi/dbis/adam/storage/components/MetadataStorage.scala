@@ -5,6 +5,8 @@ import ch.unibas.dmi.dbis.adam.entity.FieldDefinition
 import org.apache.spark.Logging
 import org.apache.spark.sql.{DataFrame, SaveMode}
 
+import scala.util.{Success, Try}
+
 /**
   * adamtwo
   *
@@ -18,7 +20,7 @@ trait MetadataStorage extends Serializable with Logging {
     * @param entityname
     * @param fields
     */
-  def create(entityname: EntityName, fields: Seq[FieldDefinition]): Boolean
+  def create(entityname: EntityName, fields: Seq[FieldDefinition]): Try[Option[String]] = Success(None)
 
   /**
     * Read data from metadata storage.
@@ -26,7 +28,7 @@ trait MetadataStorage extends Serializable with Logging {
     * @param tablename
     * @return
     */
-  def read(tablename: EntityName): DataFrame
+  def read(tablename: EntityName): Try[DataFrame]
 
   /**
     * Write data to metadata storage.
@@ -36,7 +38,7 @@ trait MetadataStorage extends Serializable with Logging {
     * @param mode
     * @return
     */
-  def write(tablename: EntityName, data: DataFrame, mode: SaveMode = SaveMode.Append): Boolean
+  def write(tablename: EntityName, data: DataFrame, mode: SaveMode = SaveMode.Append): Try[String]
 
   /**
     * Drop data from the metadata storage.
@@ -44,5 +46,5 @@ trait MetadataStorage extends Serializable with Logging {
     * @param tablename
     * @return
     */
-  def drop(tablename: EntityName): Boolean
+  def drop(tablename: EntityName): Try[Void]
 }
