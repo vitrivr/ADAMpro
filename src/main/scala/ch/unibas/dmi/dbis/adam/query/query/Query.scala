@@ -93,17 +93,15 @@ case class NearestNeighbourQuery(
 
 /**
   *
-  * @param tidFilter
+  * @param filter
   * @tparam A
   */
-case class PrimaryKeyFilter[A](tidFilter: Set[A]) {
-  def this(filter: DataFrame) = {
-    this(filter.collect().map(_.getAs[A](0)).toSet)
-  }
-
-  def +:(filter: Option[DataFrame]): PrimaryKeyFilter[A] = {
-    if (filter.isDefined) {
-      PrimaryKeyFilter(tidFilter ++ filter.get.collect().map(_.getAs[A](0)))
+case class PrimaryKeyFilter[A](filter: DataFrame) {
+  def +:(newFilter: Option[DataFrame]): PrimaryKeyFilter[A] = {
+    if (newFilter.isDefined) {
+      import org.apache.spark.sql.functions.col
+      val fields = filter.schema.fieldNames.intersect(newFilter.get.schema.fieldNames)
+      new PrimaryKeyFilter(filter.select(fields.map(col(_)) : _*).unionAll(newFilter.get.select(fields.map(col(_)) : _*)))
     } else {
       this
     }

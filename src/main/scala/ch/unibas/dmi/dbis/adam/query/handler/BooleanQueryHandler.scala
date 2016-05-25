@@ -86,7 +86,7 @@ private[query] object BooleanQueryHandler extends Logging {
     * @return
     */
   def filter(data: DataFrame, pk: String, query: PrimaryKeyFilter[_])(implicit ac: AdamContext): DataFrame = {
-    import org.apache.spark.sql.functions.col
-    data.filter(col(pk).isin(query.tidFilter.toSeq: _*))
+    log.debug("filter using primary key filter")
+    query.filter.select(pk).join(data, pk)
   }
 }
