@@ -80,7 +80,7 @@ object ParquetFeatureStorage extends FeatureStorage {
     override def write(entityname: EntityName, df: DataFrame, mode: SaveMode, path: Option[String] = None, allowRepartitioning: Boolean)(implicit ac: AdamContext): Try[String] = {
       try {
         val filepath = path.getOrElse(getPath(entityname.toString))
-        log.debug("writing data  to " + filepath)
+        log.debug("writing data to " + filepath)
 
         var data = df
 

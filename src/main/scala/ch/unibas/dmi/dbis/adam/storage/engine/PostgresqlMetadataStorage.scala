@@ -8,11 +8,10 @@ import ch.unibas.dmi.dbis.adam.entity.Entity.EntityName
 import ch.unibas.dmi.dbis.adam.entity.FieldDefinition
 import ch.unibas.dmi.dbis.adam.main.SparkStartup
 import ch.unibas.dmi.dbis.adam.storage.components.MetadataStorage
-import org.apache.spark.sql.jdbc.AdamDialectRegistrar
 import org.apache.spark.sql.types.{StructField, StructType}
 import org.apache.spark.sql.{DataFrame, Row, SaveMode}
 
-import scala.util.{Success, Failure, Try}
+import scala.util.{Failure, Success, Try}
 
 /**
   * adamtwo
@@ -24,7 +23,6 @@ object PostgresqlMetadataStorage extends MetadataStorage {
   Class.forName("org.postgresql.Driver")
 
   val url = AdamConfig.jdbcUrl
-  AdamDialectRegistrar.register(url)
 
   /**
     * Opens a connection to the PostgreSQL database.

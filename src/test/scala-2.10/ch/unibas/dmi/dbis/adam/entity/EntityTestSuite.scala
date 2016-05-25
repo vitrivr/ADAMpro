@@ -185,7 +185,8 @@ class EntityTestSuite extends AdamTestBase {
         val pkResult = getJDBCConnection.createStatement().executeQuery(
           "SELECT a.attname FROM pg_index i JOIN   pg_attribute a ON a.attrelid = i.indrelid AND a.attnum = ANY(i.indkey) WHERE  i.indrelid = '" + entityname.toLowerCase() + "'::regclass AND i.indisprimary;")
         pkResult.next()
-        assert(pkResult.getString(1) == "pkfield")
+        val pk = pkResult.getString(1)
+        assert(pk == "pkfield")
 
         And("the unique and indexed fields should be set correctly")
         val indexesResult = getJDBCConnection.createStatement().executeQuery("SELECT t.relname AS table, i.relname AS index, a.attname AS column FROM pg_class t, pg_class i, pg_index ix, pg_attribute a WHERE t.oid = ix.indrelid AND i.oid = ix.indexrelid AND a.attrelid = t.oid AND a.attnum = ANY(ix.indkey) AND t.relkind = 'r' AND t.relname = '" + entityname.toLowerCase() + "'")
