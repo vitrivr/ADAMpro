@@ -18,6 +18,7 @@ import scala.concurrent.duration.Duration
 abstract class QueryExpression(id: Option[String]) extends Serializable with Logging {
   private var time: Duration = null
   private var results: DataFrame = null
+  private var run = false
 
   /**
     *
@@ -27,6 +28,7 @@ abstract class QueryExpression(id: Option[String]) extends Serializable with Log
   def evaluate(filter: Option[DataFrame] = None)(implicit ac: AdamContext): DataFrame = {
     val t1 = System.currentTimeMillis
     results = run(filter)
+    run = true
     val t2 = System.currentTimeMillis
 
     time = Duration(t2 - t1, TimeUnit.MILLISECONDS)
@@ -47,7 +49,13 @@ abstract class QueryExpression(id: Option[String]) extends Serializable with Log
     * @param info
     * @return
     */
-  private[query] def getRunDetails(info: ListBuffer[RunDetails]) = {
-    info += RunDetails(id.getOrElse(""), time, this.getClass.getName, results)
+  def getRunDetails(info: ListBuffer[RunDetails]) : ListBuffer[RunDetails] = {
+    if (!run) {
+      log.warn("please run compound query before collecting run information")
+    } else {
+      info += RunDetails(id.getOrElse(""), time, this.getClass.getName, results)
+    }
+
+    info
   }
 }

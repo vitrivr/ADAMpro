@@ -420,7 +420,7 @@ class QueryTestSuite extends AdamTestBase with ScalaFutures {
         val vhqh = new IndexQueryHolder(vaidx.get.indexname)(nnq, None, None, None, Some(QueryCacheOptions()))
 
         val results = time {
-          new CompoundQueryHolder(es.entity.entityname)(new IntersectExpression(shqh, vhqh)).evaluate()
+          new CompoundQueryHolder(new IntersectExpression(shqh, vhqh)).evaluate()
             .map(r => (r.getAs[Long]("tid"))).collect().sorted
         }
 
@@ -456,7 +456,7 @@ class QueryTestSuite extends AdamTestBase with ScalaFutures {
         val va2qh = new IndexQueryHolder(vaidx2.get.indexname)(nnq, None, None, None, Some(QueryCacheOptions()))
 
         val results = time {
-          CompoundQueryHolder(es.entity.entityname)(new IntersectExpression(va1qh, va2qh, ExpressionEvaluationOrder.Parallel)).evaluate()
+          CompoundQueryHolder(new IntersectExpression(va1qh, va2qh, ExpressionEvaluationOrder.Parallel)).evaluate()
             .map(r => (r.getAs[Long]("tid"))).collect().sorted
         }
 

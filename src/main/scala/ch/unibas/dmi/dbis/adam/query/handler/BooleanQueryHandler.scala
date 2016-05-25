@@ -61,7 +61,10 @@ private[query] object BooleanQueryHandler extends Logging {
         val join = joins(i)
         log.debug("join " + join._1 + " on " + join._2.mkString("(", ", ", ")"))
         val newDF = SparkStartup.metadataStorage.read(join._1)
-        df = df.join(newDF, join._2)
+
+        if (newDF.isSuccess) {
+          df = df.join(newDF.get, join._2)
+        }
       }
     }
 

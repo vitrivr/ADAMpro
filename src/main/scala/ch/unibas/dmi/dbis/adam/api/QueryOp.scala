@@ -135,14 +135,13 @@ object QueryOp extends GenericOp {
   /**
     * Performs a query which uses index compounding for pre-filtering.
     *
-    * @param entityname
     * @param expr
     * @param withMetadata
     * @return
     */
-  def compoundQuery(entityname: EntityName, expr: QueryExpression, withMetadata: Boolean)(implicit ac: AdamContext): Try[DataFrame] = {
+  def compoundQuery(expr: QueryExpression, withMetadata: Boolean)(implicit ac: AdamContext): Try[DataFrame] = {
     execute("compound query operation") {
-      Success(CompoundQueryHolder(entityname)(expr).evaluate())
+      Success(CompoundQueryHolder(expr).evaluate())
     }
   }
 

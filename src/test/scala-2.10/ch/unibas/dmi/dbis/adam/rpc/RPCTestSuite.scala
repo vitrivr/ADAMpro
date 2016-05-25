@@ -76,9 +76,9 @@ class RPCTestSuite extends AdamTestBase with ScalaFutures {
 
         When("tuples are inserted")
         val tuples = (0 until ntuples)
-          .map(i => Map[String, InsertDataMessage](
-            "tid" -> InsertDataMessage().withLongData(Random.nextLong()),
-            "feature" -> InsertDataMessage().withFeatureData(FeatureVectorMessage().withDenseVector(DenseVectorMessage(Seq.fill(10)(Random.nextFloat()))))
+          .map(i => Map[String, DataMessage](
+            "tid" -> DataMessage().withLongData(Random.nextLong()),
+            "feature" -> DataMessage().withFeatureData(FeatureVectorMessage().withDenseVector(DenseVectorMessage(Seq.fill(10)(Random.nextFloat()))))
           ))
 
         requestObserver.onNext(InsertMessage(entityname, tuples.map(tuple => TupleInsertMessage(tuple))))
@@ -100,10 +100,10 @@ class RPCTestSuite extends AdamTestBase with ScalaFutures {
         Given("an entity")
         val entity = Entity.create(entityname, Seq(
           FieldDefinition("tid", FieldTypes.LONGTYPE, true), FieldDefinition("feature", FieldTypes.FEATURETYPE),
-          FieldDefinition("stringfield", FieldTypes.STRINGTYPE, true), FieldDefinition("intfield", FieldTypes.INTTYPE)
+          FieldDefinition("stringfield", FieldTypes.STRINGTYPE), FieldDefinition("intfield", FieldTypes.INTTYPE)
         ))
-        assert(entity.isSuccess)
 
+        assert(entity.isSuccess)
 
         val requestObserver: StreamObserver[InsertMessage] = definitionNb.insert(new StreamObserver[AckMessage]() {
           def onNext(ack: AckMessage) {}
@@ -119,11 +119,11 @@ class RPCTestSuite extends AdamTestBase with ScalaFutures {
 
         When("tuples are inserted")
         val tuples = (0 until ntuples)
-          .map(i => Map[String, InsertDataMessage](
-            "tid" -> InsertDataMessage().withLongData(Random.nextLong()),
-            "featurefield" -> InsertDataMessage().withFeatureData(FeatureVectorMessage().withDenseVector(DenseVectorMessage(Seq.fill(10)(Random.nextFloat())))),
-            "intfield" -> InsertDataMessage().withIntData(Random.nextInt(10)),
-            "stringfield" -> InsertDataMessage().withStringData(getRandomName(10))
+          .map(i => Map[String, DataMessage](
+            "tid" -> DataMessage().withLongData(Random.nextLong()),
+            "featurefield" -> DataMessage().withFeatureData(FeatureVectorMessage().withDenseVector(DenseVectorMessage(Seq.fill(10)(Random.nextFloat())))),
+            "intfield" -> DataMessage().withIntData(Random.nextInt(10)),
+            "stringfield" -> DataMessage().withStringData(getRandomName(10))
           ))
         requestObserver.onNext(InsertMessage(entityname, tuples.map(tuple => TupleInsertMessage(tuple))))
         requestObserver.onCompleted()
@@ -161,11 +161,11 @@ class RPCTestSuite extends AdamTestBase with ScalaFutures {
 
         When("tuples are inserted")
         val tuples = (0 until ntuples)
-          .map(i => Map[String, InsertDataMessage](
-            "tid" -> InsertDataMessage().withLongData(Random.nextLong()),
-            "featurefield" -> InsertDataMessage().withFeatureData(FeatureVectorMessage().withDenseVector(DenseVectorMessage(Seq.fill(10)(Random.nextFloat())))),
-            "intfield" -> InsertDataMessage().withIntData(Random.nextInt(10)),
-            "stringfield" -> InsertDataMessage().withStringData(getRandomName(10))
+          .map(i => Map[String, DataMessage](
+            "tid" -> DataMessage().withLongData(Random.nextLong()),
+            "featurefield" -> DataMessage().withFeatureData(FeatureVectorMessage().withDenseVector(DenseVectorMessage(Seq.fill(10)(Random.nextFloat())))),
+            "intfield" -> DataMessage().withIntData(Random.nextInt(10)),
+            "stringfield" -> DataMessage().withStringData(getRandomName(10))
           ))
         requestObserver.onNext(InsertMessage(entityname, tuples.map(tuple => TupleInsertMessage(tuple))))
         requestObserver.onCompleted()
@@ -176,7 +176,7 @@ class RPCTestSuite extends AdamTestBase with ScalaFutures {
           assert(inserted)
 
           if(inserted){
-            val results = search.doBooleanQuery(SimpleBooleanQueryMessage("", entityname, Some(BooleanQueryMessage(Seq(WhereMessage("tid", tuples.head("tid").getLongData.toString))))))
+            val results = search.doQuery(QueryMessage(queryid = "", from = Some(FromMessage().withEntity(entityname)), bq = Some(BooleanQueryMessage(Seq(WhereMessage("tid", tuples.head("tid").getLongData.toString))))))
             assert(results.ack.get.code == AckMessage.Code.OK)
           }
         }

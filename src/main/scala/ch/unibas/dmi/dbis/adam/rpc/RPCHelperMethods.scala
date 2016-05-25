@@ -1,10 +1,11 @@
 package ch.unibas.dmi.dbis.adam.rpc
 
+import java.util.concurrent.TimeUnit
+
 import ch.unibas.dmi.dbis.adam.datatypes.feature.Feature._
 import ch.unibas.dmi.dbis.adam.datatypes.feature.FeatureVectorWrapper
 import ch.unibas.dmi.dbis.adam.http.grpc.DistanceMessage.DistanceType
 import ch.unibas.dmi.dbis.adam.http.grpc._
-import ch.unibas.dmi.dbis.adam.index.structures.IndexTypes
 import ch.unibas.dmi.dbis.adam.main.AdamContext
 import ch.unibas.dmi.dbis.adam.query.datastructures.CompoundQueryExpressions._
 import ch.unibas.dmi.dbis.adam.query.datastructures.{QueryCacheOptions, QueryExpression}
@@ -12,8 +13,12 @@ import ch.unibas.dmi.dbis.adam.query.distance.{DistanceFunction, NormBasedDistan
 import ch.unibas.dmi.dbis.adam.query.handler.QueryHints
 import ch.unibas.dmi.dbis.adam.query.handler.external.ExternalHandlers
 import ch.unibas.dmi.dbis.adam.query.handler.internal._
+import ch.unibas.dmi.dbis.adam.query.progressive.{QueryHintsProgressivePathChooser, SimpleProgressivePathChooser}
 import ch.unibas.dmi.dbis.adam.query.query.{BooleanQuery, NearestNeighbourQuery}
+import org.apache.spark.sql.types.{BooleanType, LongType, StructField, StructType}
+import org.apache.spark.sql.{DataFrame, Row}
 
+import scala.concurrent.duration.Duration
 import scala.util.{Failure, Success, Try}
 
 /**
@@ -25,67 +30,36 @@ import scala.util.{Failure, Success, Try}
 private[rpc] object RPCHelperMethods {
 
 
-  implicit def toExpression(request: SimpleQueryMessage) : Try[QueryExpression] = {
+  implicit def toExpression(request: QueryMessage)(implicit ac: AdamContext): Try[QueryExpression] = {
     try {
-      val entityname = request.entity
-      val hints = QueryHints.withName(request.hints)
-      val nnq = prepareNNQ(request.nnq)
-      val bq = prepareBQ(request.bq)
-      val tiq = None
       val queryid = prepareQI(request.queryid)
+      val projection = preparePJ(request.projection)
+      val entityname = request.from.get.submessage.entity
+      val indexname = request.from.get.submessage.index
+      val subexpression = request.from.get.submessage.expression
+      val indexonly = request.indexOnly
+      val bq = prepareBQ(request.bq)
+      val nnq = prepareNNQ(request.nnq)
+      val time = request.time
+      val tiq = None
       val cacheOptions = prepareCO(request.readFromCache, request.putInCache)
 
-      Success(StandardQueryHolder(entityname)(hints, nnq, bq, None, queryid, cacheOptions))
+      if (time > 0) {
+        Success(new TimedProgressiveQueryHolder(entityname.get, nnq.get, bq, tiq, preparePaths(request.hints), Duration(time, TimeUnit.MILLISECONDS), false, queryid, cacheOptions))
+      } else if (nnq.isEmpty) {
+        Success(new BooleanQueryHolder(entityname.get)(bq, queryid, cacheOptions))
+      } else if (indexname.isDefined) {
+        Success(new IndexQueryHolder(indexname.get)(nnq.get, bq, tiq, queryid, cacheOptions))
+      } else if (subexpression.isDefined){
+        Success(new CompoundQueryHolder(toExpression(subexpression).get, queryid))
+      } else {
+        Success(StandardQueryHolder(entityname.get)(QueryHints.withName(request.hints), nnq, bq, None, queryid, cacheOptions))
+      }
     } catch {
       case e: Exception => Failure(e)
     }
   }
 
-  implicit def toExpression(request: SimpleSequentialQueryMessage)(implicit ac: AdamContext): Try[QueryExpression] = {
-    try {
-      val entityname = request.entity
-      val nnq = prepareNNQ(request.nnq)
-      val bq = prepareBQ(request.bq)
-      val tiq = None
-      val queryid = prepareQI(request.queryid)
-      val cacheOptions = prepareCO(request.readFromCache, request.putInCache)
-
-      Success(SequentialQueryHolder(entityname)(nnq.get, bq, None, queryid, cacheOptions))
-    } catch {
-      case e: Exception => Failure(e)
-    }
-  }
-
-  implicit def toExpression(request: SimpleIndexQueryMessage)(implicit ac: AdamContext): Try[QueryExpression] = {
-    try {
-      val entityname = request.entity
-      val indextype = IndexTypes.withIndextype(request.indextype)
-      val nnq = prepareNNQ(request.nnq)
-      val bq = prepareBQ(request.bq)
-      val tiq = None
-      val queryid = prepareQI(request.queryid)
-      val cacheOptions = prepareCO(request.readFromCache, request.putInCache)
-
-      Success(new IndexQueryHolder(entityname, indextype.get)(nnq.get, bq, None, queryid, cacheOptions))
-    } catch {
-      case e: Exception => Failure(e)
-    }
-  }
-
-  implicit def toExpression(request: SimpleSpecifiedIndexQueryMessage)(implicit ac: AdamContext): Try[QueryExpression] = {
-    try {
-      val indexname = request.index
-      val nnq = prepareNNQ(request.nnq)
-      val bq = prepareBQ(request.bq)
-      val tiq = None
-      val queryid = prepareQI(request.queryid)
-      val cacheOptions = prepareCO(request.readFromCache, request.putInCache)
-
-      Success(new IndexQueryHolder(indexname)(nnq.get, bq, None, queryid, cacheOptions))
-    } catch {
-      case e: Exception => Failure(e)
-    }
-  }
 
   implicit def toExpression(request: ExternalHandlerQueryMessage)(implicit ac: AdamContext): Try[QueryExpression] = {
     try {
@@ -100,37 +74,6 @@ private[rpc] object RPCHelperMethods {
     }
   }
 
-
-  implicit def toExpression(request: CompoundQueryMessage)(implicit ac: AdamContext): Try[QueryExpression] = {
-    try {
-      val entityname = request.entity
-      val subexpression = toExpression(request.indexFilterExpression)
-
-      if(subexpression.isFailure){
-        return subexpression
-      }
-
-      val queryid = prepareQI(request.queryid)
-
-      Success(new CompoundQueryHolder(entityname)(subexpression.get, queryid))
-    } catch {
-      case e: Exception => Failure(e)
-    }
-  }
-
-  implicit def toExpression(request: SimpleBooleanQueryMessage)(implicit ac: AdamContext): Try[QueryExpression] = {
-    try {
-      val entityname = request.entity
-      val bq = prepareBQ(request.bq)
-      val queryid = prepareQI(request.queryid)
-      val cacheOptions = prepareCO(request.readFromCache, request.putInCache)
-
-      Success(new BooleanQueryHolder(entityname)(bq, queryid, cacheOptions))
-
-    } catch {
-      case e: Exception => Failure(e)
-    }
-  }
 
   implicit def toExpression(request: ExpressionQueryMessage)(implicit ac: AdamContext): Try[QueryExpression] = {
     try {
@@ -172,11 +115,8 @@ private[rpc] object RPCHelperMethods {
 
       seqm.get.submessage match {
         case SubExpressionQueryMessage.Submessage.Eqm(request) => toExpression(request)
-        case SubExpressionQueryMessage.Submessage.Ssiqm(request) => toExpression(request)
-        case SubExpressionQueryMessage.Submessage.Siqm(request) => toExpression(request)
-        case SubExpressionQueryMessage.Submessage.Ssqm(request) => toExpression(request)
+        case SubExpressionQueryMessage.Submessage.Qm(request) => toExpression(request)
         case SubExpressionQueryMessage.Submessage.Ehqm(request) => toExpression(request)
-        case SubExpressionQueryMessage.Submessage.Sbqm(request) => toExpression(request)
         case _ => Success(EmptyQueryExpression())
       }
     } catch {
@@ -190,8 +130,8 @@ private[rpc] object RPCHelperMethods {
     * @return
     */
   def prepareNNQ(option: Option[NearestNeighbourQueryMessage]): Option[NearestNeighbourQuery] = {
-    if (option.isEmpty) {
-      throw new Exception("No kNN query specified.")
+    if(option.isEmpty){
+      return None
     }
 
     val nnq = option.get
@@ -235,16 +175,59 @@ private[rpc] object RPCHelperMethods {
   def prepareBQ(option: Option[BooleanQueryMessage]): Option[BooleanQuery] = {
     if (option.isDefined) {
       val bq = option.get
-      Some(BooleanQuery(Option(bq.where.map(bqm => (bqm.field, bqm.value))), Option(bq.joins.map(x => (x.table, x.columns)))))
+      val where = if (!bq.where.isEmpty) {
+        Some(bq.where.map(bqm => (bqm.field, bqm.value)))
+      } else {
+        None
+      }
+      val joins = if (!bq.joins.isEmpty) {
+        Some(bq.joins.map(x => (x.table, x.columns)))
+      } else {
+        None
+      }
+      Some(BooleanQuery(where, joins))
     } else {
       None
     }
+  }
+
+  def preparePJ(pm: Option[ProjectionMessage])(implicit ac: AdamContext): (DataFrame => DataFrame) = {
+    if (pm.isEmpty) {
+      return (df: DataFrame) => df
+    }
+
+    if (pm.get.submessage.isField) {
+      val fields = pm.get.getField.field
+
+      if (fields.isEmpty) {
+        return (df: DataFrame) => df
+      } else {
+        import org.apache.spark.sql.functions.col
+        (df: DataFrame) => (df.select(fields.map(col(_)): _*))
+      }
+    }
+
+    if (pm.get.submessage.isOp) {
+      pm.get.getOp match {
+        case ProjectionMessage.Operation.COUNT => return (df: DataFrame) => ac.sqlContext.createDataFrame(ac.sc.makeRDD(Seq(Row(df.count()))), StructType(Seq(StructField("count", LongType))))
+        case ProjectionMessage.Operation.EXISTS => return (df: DataFrame) => ac.sqlContext.createDataFrame(ac.sc.makeRDD(Seq(Row(df.count() > 1))), StructType(Seq(StructField("exists", BooleanType))))
+        case _ => return (df: DataFrame) => df
+      }
+    }
+
+    (df: DataFrame) => df
   }
 
   def prepareQI(queryid: String) = if (queryid != "" && queryid != null) {
     Some(queryid)
   } else {
     None
+  }
+
+  def preparePaths(hints: Seq[String])(implicit ac: AdamContext) = if (hints.isEmpty) {
+    new SimpleProgressivePathChooser()
+  } else {
+    new QueryHintsProgressivePathChooser(hints.map(QueryHints.withName(_).get))
   }
 
   private def prepareCO(readFromCache: Boolean, putInCache: Boolean) = Some(QueryCacheOptions(readFromCache, putInCache))

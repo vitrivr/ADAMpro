@@ -37,8 +37,7 @@ case class BooleanQueryHolder(entityname: EntityName)(bq: Option[BooleanQuery], 
     */
   def query(entityname: EntityName)(bq: Option[BooleanQuery], id: Option[String] = None, cache: Option[QueryCacheOptions] = Some(QueryCacheOptions()))(implicit ac: AdamContext): DataFrame = {
     val entity = Entity.load(entityname).get
-    var data = entity.data
-    var pk = entity.pk
+    var data = entity.metaData.getOrElse(entity.data)
 
     val res = if (bq.isDefined) {
       Some(BooleanQueryHandler.filter(data, bq.get))

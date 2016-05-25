@@ -1,6 +1,7 @@
 package ch.unibas.dmi.dbis.adam.client.web.datastructures
 
 import ch.unibas.dmi.dbis.adam.http.grpc.BooleanQueryMessage.WhereMessage
+import ch.unibas.dmi.dbis.adam.http.grpc.QueryMessage.DetailLevel
 import ch.unibas.dmi.dbis.adam.http.grpc._
 
 /**
@@ -15,7 +16,7 @@ case class CompoundQueryRequest(var id: String, var operation: String, var optio
   /**
     *
     */
-  def toRPCMessage(): CompoundQueryMessage = {
+  def toRPCMessage(): QueryMessage = {
     this.prepare()
     this.cqm()
   }
@@ -41,8 +42,8 @@ case class CompoundQueryRequest(var id: String, var operation: String, var optio
     val nnq = NearestNeighbourQueryMessage(options.getOrElse("column", "feature"), Some(FeatureVectorMessage().withDenseVector(DenseVectorMessage(query))),
       Some(DistanceMessage(DistanceMessage.DistanceType.minkowski, Map("norm" -> "1"))),
       options.get("k").getOrElse("100").toInt,
-      true,
       Map(),
+      false,
       partitions)
 
     nnq
@@ -72,15 +73,14 @@ case class CompoundQueryRequest(var id: String, var operation: String, var optio
     *
     * @return
     */
-  private def cqm(): CompoundQueryMessage = {
-    if (targets.isEmpty || targets.get.isEmpty) {
-      val sqm = SubExpressionQueryMessage().withSsqm(SimpleSequentialQueryMessage("sequential", entity, Option(nnq), None, true))
-      return CompoundQueryMessage(id, entity, Option(nnq), None, Option(sqm), true, true);
+  private def cqm(): QueryMessage = {
+    val query = if (targets.isEmpty || targets.get.isEmpty) {
+      SubExpressionQueryMessage().withQm(QueryMessage(queryid = "sequential", from = Some(FromMessage().withEntity(entity)), nnq = Option(nnq), hints = Seq("sequential")))
+    } else {
+      targets.get.head.seqm()
     }
 
-    val node = targets.get.head
-
-    CompoundQueryMessage(id, entity, Option(nnq), None, Option(node.seqm()), true, true)
+    QueryMessage(queryid = id, from = Some(FromMessage().withExpression(query)), details = DetailLevel.WITH_INTERMEDIATE_RESULTS)
   }
 
   /**
@@ -122,15 +122,15 @@ case class CompoundQueryRequest(var id: String, var operation: String, var optio
 
       case "index" =>
         if (options.get("indexname").isDefined) {
-          sqm = sqm.withSsiqm(ssiqm())
+          sqm = sqm.withQm(ssiqm())
         } else {
-          sqm = sqm.withSiqm(siqm())
+          sqm = sqm.withQm(siqm())
         }
       case "sequential" =>
-        sqm = sqm.withSsqm(ssqm())
+        sqm = sqm.withQm(ssqm())
 
       case "boolean" =>
-        sqm = sqm.withSbqm(sbqm())
+        sqm = sqm.withQm(sbqm())
 
       case "external" =>
         sqm = sqm.withEhqm(ehqm())
@@ -143,21 +143,19 @@ case class CompoundQueryRequest(var id: String, var operation: String, var optio
     *
     * @return
     */
-  private def ssiqm(): SimpleSpecifiedIndexQueryMessage = {
+  private def ssiqm(): QueryMessage = {
     assert(operation == "index")
-
     val indexname = options.get("indexname").get
-    SimpleSpecifiedIndexQueryMessage(id, indexname, Option(nnq), None)
+    QueryMessage(queryid = id, from = Some(FromMessage().withIndex(indexname)), nnq = Option(nnq))
   }
 
   /**
     *
     * @return
     */
-  private def ssqm(): SimpleSequentialQueryMessage = {
+  private def ssqm(): QueryMessage = {
     assert(operation == "sequential")
-
-    SimpleSequentialQueryMessage(id, entity, Option(nnq), None)
+    QueryMessage(queryid = id, from = Some(FromMessage().withEntity(entity)), nnq = Option(nnq), hints = Seq("sequential"))
   }
 
 
@@ -165,18 +163,9 @@ case class CompoundQueryRequest(var id: String, var operation: String, var optio
     *
     * @return
     */
-  private def siqm(): SimpleIndexQueryMessage = {
+  private def siqm(): QueryMessage = {
     assert(operation == "index")
-
-    val indextype = subtype match {
-      case "ecp" => IndexType.ecp
-      case "lsh" => IndexType.lsh
-      case "pq" => IndexType.pq
-      case "sh" => IndexType.sh
-      case "vaf" => IndexType.vaf
-      case "vav" => IndexType.vav
-    }
-    SimpleIndexQueryMessage(id, entity, indextype, Option(nnq), None)
+    QueryMessage(queryid = id, from = Some(FromMessage().withEntity(entity)), hints = Seq(subtype), nnq = Option(nnq))
   }
 
   /**
@@ -187,8 +176,12 @@ case class CompoundQueryRequest(var id: String, var operation: String, var optio
     ExternalHandlerQueryMessage(id, entity, subtype, options)
   }
 
-  private def sbqm() : SimpleBooleanQueryMessage = {
-    SimpleBooleanQueryMessage(id, entity, Some(BooleanQueryMessage(Seq(WhereMessage(options.get("field").get, options.get("value").get)))))
+  /**
+    *
+    * @return
+    */
+  private def sbqm() : QueryMessage = {
+    QueryMessage(queryid = id, from = Some(FromMessage().withEntity(entity)), bq = Some(BooleanQueryMessage(Seq(WhereMessage(options.get("field").get, options.get("value").get)))))
   }
 
 }

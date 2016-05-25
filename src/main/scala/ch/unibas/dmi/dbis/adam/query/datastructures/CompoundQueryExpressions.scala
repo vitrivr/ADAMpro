@@ -86,7 +86,7 @@ object CompoundQueryExpressions {
       * @param info
       * @return
       */
-    override private[query] def getRunDetails(info : ListBuffer[RunDetails]) = {
+    override def getRunDetails(info : ListBuffer[RunDetails]) = {
       super.getRunDetails(info)
       l.getRunDetails(info)
       r.getRunDetails(info)
@@ -173,7 +173,7 @@ object CompoundQueryExpressions {
       * @param info
       * @return
       */
-    override private[query] def getRunDetails(info : ListBuffer[RunDetails]) = {
+    override def getRunDetails(info : ListBuffer[RunDetails]) = {
       super.getRunDetails(info)
       l.getRunDetails(info)
       r.getRunDetails(info)
@@ -260,7 +260,7 @@ object CompoundQueryExpressions {
       * @param info
       * @return
       */
-    override private[query] def getRunDetails(info : ListBuffer[RunDetails]) = {
+    override def getRunDetails(info : ListBuffer[RunDetails]) = {
       super.getRunDetails(info)
       l.getRunDetails(info)
       r.getRunDetails(info)

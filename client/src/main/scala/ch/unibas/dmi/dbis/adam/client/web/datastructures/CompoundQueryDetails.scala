@@ -1,6 +1,6 @@
 package ch.unibas.dmi.dbis.adam.client.web.datastructures
 
-import ch.unibas.dmi.dbis.adam.http.grpc.{CompoundQueryResponseInfoMessage, QueryResponseInfoMessage}
+import ch.unibas.dmi.dbis.adam.http.grpc.{QueryResultsMessage, QueryResultInfoMessage}
 
 /**
   * adampro
@@ -13,7 +13,7 @@ import ch.unibas.dmi.dbis.adam.http.grpc.{CompoundQueryResponseInfoMessage, Quer
   * @param intermediateResponses
   */
 case class CompoundQueryDetails(intermediateResponses : Seq[QueryResponseInfo]) {
-  def this(msg : CompoundQueryResponseInfoMessage){
+  def this(msg : QueryResultsMessage){
     this(msg.responses.map(ir => new QueryResponseInfo(ir)))
   }
 }
@@ -25,7 +25,7 @@ case class CompoundQueryDetails(intermediateResponses : Seq[QueryResponseInfo]) 
   * @param length
   */
 case class QueryResponseInfo(id : String, time : Long, length : Int) {
-  def this(msg : QueryResponseInfoMessage){
+  def this(msg : QueryResultInfoMessage){
     this(msg.queryid, msg.time, msg.results.length)
   }
 }

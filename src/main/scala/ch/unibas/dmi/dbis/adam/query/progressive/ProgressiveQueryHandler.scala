@@ -18,6 +18,8 @@ import scala.concurrent.duration.Duration
   * November 2015
   */
 object ProgressiveQueryHandler extends Logging {
+  //TODO: generalize
+
   /**
     * Performs a progressive query, i.e., all indexes and sequential search are started at the same time and results are returned as soon
     * as they are available. When a precise result is returned, the whole query is stopped.

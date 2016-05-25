@@ -184,7 +184,7 @@ class RPCClient(channel: ManagedChannel, definer: AdamDefinitionBlockingStub, se
     log.info("compound query start")
 
     try {
-      val res = searcherBlocking.doCompoundQuery(request.toRPCMessage())
+      val res = searcherBlocking.doQuery(request.toRPCMessage())
       if (res.ack.get.code == AckMessage.Code.OK) {
         return Success(new CompoundQueryDetails(res))
       } else {
@@ -205,9 +205,9 @@ class RPCClient(channel: ManagedChannel, definer: AdamDefinitionBlockingStub, se
     try {
       val fv = FeatureVectorMessage().withDenseVector(DenseVectorMessage(query))
       val nnq = NearestNeighbourQueryMessage(column, Some(fv), Option(DistanceMessage(DistanceType.minkowski, Map("norm" -> "2"))), k)
-      val request = SimpleQueryMessage(entity = entityname, hints = hints, nnq = Option(nnq))
+      val request = QueryMessage(from = Some(FromMessage().withEntity(entityname)), hints = hints, nnq = Option(nnq))
 
-      val so = new StreamObserver[QueryResponseInfoMessage]() {
+      val so = new StreamObserver[QueryResultsMessage]() {
         override def onError(throwable: Throwable): Unit = {
           log.error(throwable)
         }
@@ -216,18 +216,20 @@ class RPCClient(channel: ManagedChannel, definer: AdamDefinitionBlockingStub, se
           completed(id)
         }
 
-        override def onNext(v: QueryResponseInfoMessage): Unit = {
+        override def onNext(qr: QueryResultsMessage): Unit = {
           log.info("new progressive results arrived")
 
-          if(v.ack.get.code == AckMessage.Code.OK) {
-            val confidence = v.confidence
-            val source = v.source
-            val time = v.time
-            val results = v.results.map(x => (x.distance, x.metadata))
+          if(qr.ack.get.code == AckMessage.Code.OK && !qr.responses.isEmpty) {
+            val head = qr.responses.head
 
-            next(id, confidence, source, time, results)
+            val confidence = head.confidence
+            val source = head.source
+            val time = head.time
+            val results = head.results.map(x => x.data.mapValues(x => ""))
+
+            next(id, confidence, source, time, null) //possibly remove null and use results
           } else {
-            throw new Exception(v.ack.get.message)
+            throw new Exception(qr.ack.get.message)
           }
         }
       }
