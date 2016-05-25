@@ -239,13 +239,40 @@ class RPCClient(channel: ManagedChannel, definer: AdamDefinitionBlockingStub, se
     }
   }
 
+
+  /**
+    *
+    * @param entity
+    * @param partitions
+    * @return
+    */
+  def repartitionEntity(entity: String, partitions: Int, cols: Seq[String] = Seq(), materialize: Boolean, replace: Boolean): Try[String] = {
+    log.info("repartitioning entity")
+
+    try {
+      val option = if (replace) {
+        PartitionOptions.REPLACE_EXISTING
+      } else if (materialize) {
+        PartitionOptions.CREATE_NEW
+      } else if (!materialize) {
+        PartitionOptions.CREATE_TEMP
+      } else {
+        PartitionOptions.CREATE_NEW
+      }
+
+      Success(definer.repartitionEntityData(RepartitionMessage(entity, partitions, cols, option)).message)
+    } catch {
+      case e: Exception => Failure(e)
+    }
+  }
+
   /**
     *
     * @param index
     * @param partitions
     * @return
     */
-  def repartition(index: String, partitions: Int, cols: Seq[String] = Seq(), materialize: Boolean, replace: Boolean): Try[String] = {
+  def repartitionIndex(index: String, partitions: Int, cols: Seq[String] = Seq(), materialize: Boolean, replace: Boolean): Try[String] = {
     log.info("repartitioning index")
 
     try {

@@ -22,7 +22,7 @@
             <li><a href="overview.html"><i class="material-icons left">explore</i>Overview</a></li>
             <li><a href="add-entity.html"><i class="material-icons left">playlist_add</i>Create Entity</a></li>
             <li><a href="add-index.html"><i class="material-icons left">filter_list</i>Add Index</a></li>
-            <li class="active"><a href="partition.html"><i class="material-icons left">view_quilt</i>Partition Index</a></li>
+            <li class="active"><a href="partition.html"><i class="material-icons left">view_quilt</i>Re-Partition</a></li>
             <li><a href="compound-search.html"><i class="material-icons left">search</i>Compound Search</a></li>
             <li><a href="progressive-search.html"><i class="material-icons left">youtube_searched_for</i>Progressive Search</a></li>
         </ul>
@@ -30,6 +30,42 @@
 </nav>
 
 <div class="container" style="width:90%">
+    <div class="row">
+        <h1>Repartition Entity.</h1>
+    </div>
+    <div class="row">
+        <div class="row">
+            <div class="input-field col s6">
+                <input id="entityname" type="text">
+                <label for="entityname">name of entity</label>
+            </div>
+        </div>
+        <div class="row">
+            <div class="input-field col s6">
+                <input id="entitypartitions" type="text">
+                <label for="entitypartitions">number of partitions</label>
+            </div>
+        </div>
+        <div class="row">
+            <div class="input-field col s4">
+                <input id="entitycolumns" type="text">
+                <label for="entitycolumns">partition columns</label>
+            </div>
+            <div class="input-field col s2">
+                    <input id="entityjoin" disabled="disabled"/>
+                    <label for="entityjoin">join table</label>
+            </div>
+        </div>
+        <div class="row" style="padding-top: 40px;">
+            <button class="btn waves-effect waves-light red" name="action" id="btnSubmitEntity">
+                Repartition Entity
+            </button>
+        </div>
+    </div>
+
+
+
+
     <div class="row">
         <h1>Repartition Index.</h1>
     </div>
@@ -42,35 +78,35 @@
         </div>
         <div class="row">
             <div class="input-field col s6">
-                <input id="partitions" type="text">
-                <label for="partitions">number of partitions</label>
+                <input id="indexpartitions" type="text">
+                <label for="indexpartitions">number of partitions</label>
             </div>
         </div>
         <div class="row">
             <div class="input-field col s4">
-                <input id="columns" type="text">
-                <label for="columns">partition columns</label>
+                <input id="indexcolumns" type="text">
+                <label for="indexcolumns">partition columns</label>
             </div>
             <div class="input-field col s2">
-                    <input id="join" disabled="disabled"/>
-                    <label for="join">join table</label>
+                <input id="indexjoin" disabled="disabled"/>
+                <label for="indexjoin">join table</label>
             </div>
         </div>
         <div class="row">
             <div class="input-field col s6">
                 <p>
-                    <input type="checkbox" id="materialize" checked="checked"/>
-                    <label for="materialize">materialize</label>
+                    <input type="checkbox" id="indexmaterialize" checked="checked"/>
+                    <label for="indexmaterialize">materialize</label>
                 </p>
                 <p>
-                    <input type="checkbox" id="replace" disabled="disabled"/>
-                    <label for="replace">replace</label>
+                    <input type="checkbox" id="indexreplace" disabled="disabled"/>
+                    <label for="indexreplace">replace</label>
                 </p>
             </div>
         </div>
         <div class="row" style="padding-top: 40px;">
-            <button class="btn waves-effect waves-light red" name="action" id="btnSubmit">
-                Repartition
+            <button class="btn waves-effect waves-light red" name="action" id="btnSubmitIndex">
+                Repartition Index
             </button>
         </div>
     </div>

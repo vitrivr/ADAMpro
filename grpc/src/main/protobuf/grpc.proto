@@ -22,6 +22,7 @@ service AdamDefinition {
   rpc GenerateRandomData(GenerateRandomDataMessage) returns (AckMessage) {}
   rpc ListEntities(EmptyMessage) returns (EntitiesMessage) {}
   rpc GetEntityProperties(EntityNameMessage) returns (EntityPropertiesMessage) {}
+  rpc RepartitionEntityData(RepartitionMessage) returns (AckMessage) {}
   rpc RepartitionIndexData(RepartitionMessage) returns (AckMessage) {}
   rpc SetIndexWeight(IndexWeightMessage) returns (AckMessage) {}
 }

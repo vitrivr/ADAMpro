@@ -3,6 +3,7 @@ package ch.unibas.dmi.dbis.adam.api
 import ch.unibas.dmi.dbis.adam.entity.Entity._
 import ch.unibas.dmi.dbis.adam.entity.{Entity, FieldDefinition}
 import ch.unibas.dmi.dbis.adam.main.AdamContext
+import ch.unibas.dmi.dbis.adam.storage.partition.PartitionMode
 import org.apache.spark.sql.DataFrame
 
 import scala.util.{Success, Try}
@@ -99,6 +100,21 @@ object EntityOp extends GenericOp {
   def properties(entityname: EntityName)(implicit ac: AdamContext): Try[Map[String, String]] = {
     execute("load properties of entity " + entityname + " operation") {
       Success(Entity.load(entityname).get.properties)
+    }
+  }
+
+  /**
+    * Repartitions the entity.
+    *
+    * @param entityname  name of entity
+    * @param nPartitions number of partitions
+    * @param cols        columns to partition after
+    * @param mode        partition mode (e.g., create new index, replace current index, etc.)
+    * @return
+    */
+  def partition(entityname: EntityName, nPartitions: Int, joins: Option[DataFrame], cols: Option[Seq[String]], mode: PartitionMode.Value)(implicit ac: AdamContext): Try[Entity] = {
+    execute("repartition entity " + entityname + " operation") {
+      Entity.repartition(Entity.load(entityname).get, nPartitions, joins, cols, mode)
     }
   }
 

@@ -1,27 +1,26 @@
-$("#btnSubmit").click(function () {
+$("#btnSubmitIndex").click(function () {
     if ($("#indexname").val().length === 0) {
         showAlert(" Please specify an index.");
         return;
     }
 
-    if ($("#partitions").val().length === 0) {
+    if ($("#indexpartitions").val().length === 0) {
         showAlert(" Please specify the number of partitions.");
         return;
     }
 
 
-    $("#btnSubmit").addClass('disabled');
-    $("#btnSubmit").prop('disabled', true);
+    $("#btnSubmitIndex").addClass('disabled');
+    $("#btnSubmitIndex").prop('disabled', true);
 
     $("#progress").show();
 
     var result = {};
-    result.indexname = $("#indexname").val();
-    result.partitions = $("#partitions").val();
-    result.columns = $("#columns").val().split(",");
-    result.materialize = $('#materialize').is(':checked');
-    result.replace = $('#replace').is(':checked');
-    result.usemetadata = $('#metadata').is(':checked');
+    result.entity = $("#indexname").val();
+    result.partitions = $("#indexpartitions").val();
+    result.columns = $("#indexcolumns").val().split(",");
+    result.materialize = $('#indexmaterialize').is(':checked');
+    result.replace = $('#indexreplace').is(':checked');
 
 
     $.ajax("/index/repartition", {
@@ -35,14 +34,64 @@ $("#btnSubmit").click(function () {
                 showAlert("Error in request: " + data.message);
             }
             $("#progress").hide()
-            $("#btnSubmit").removeClass('disabled');
-            $("#btnSubmit").prop('disabled', false);
+            $("#btnSubmitIndex").removeClass('disabled');
+            $("#btnSubmitIndex").prop('disabled', false);
         },
         error : function() {
             $("#progress").hide()
-            $("#btnSubmit").removeClass('disabled');
-            $("#btnSubmit").prop('disabled', false);
+            $("#btnSubmitIndex").removeClass('disabled');
+            $("#btnSubmitIndex").prop('disabled', false);
             showAlert("Unspecified error in request.");
         }
     });
 });
+
+
+$("#btnSubmitEntity").click(function () {
+    if ($("#entityname").val().length === 0) {
+        showAlert(" Please specify an entity.");
+        return;
+    }
+
+    if ($("#entitypartitions").val().length === 0) {
+        showAlert(" Please specify the number of partitions.");
+        return;
+    }
+
+
+    $("#btnSubmitEntity").addClass('disabled');
+    $("#btnSubmitEntity").prop('disabled', true);
+
+    $("#progress").show();
+
+    var result = {};
+    result.entity = $("#entityname").val();
+    result.partitions = $("#entitypartitions").val();
+    result.columns = $("#entitycolumns").val().split(",");
+    result.materialize = $('#entitymaterialize').is(':checked');
+    result.replace = $('#entityreplace').is(':checked');
+
+
+    $.ajax("/entity/repartition", {
+        data: JSON.stringify(result),
+        contentType: 'application/json',
+        type: 'POST',
+        success: function (data) {
+            if (data.code === 200) {
+                showAlert("index repartitioned to " + data.message);
+            } else {
+                showAlert("Error in request: " + data.message);
+            }
+            $("#progress").hide()
+            $("#btnSubmitEntity").removeClass('disabled');
+            $("#btnSubmitEntity").prop('disabled', false);
+        },
+        error : function() {
+            $("#progress").hide()
+            $("#btnSubmitEntity").removeClass('disabled');
+            $("#btnSubmitEntity").prop('disabled', false);
+            showAlert("Unspecified error in request.");
+        }
+    });
+});
+

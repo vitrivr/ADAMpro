@@ -113,6 +113,20 @@ class AdamController(rpcClient: RPCClient) extends Controller {
     }
   }
 
+
+  /**
+    *
+    */
+  post("/entity/repartition") { request: RepartitionRequest =>
+    val res = rpcClient.repartitionEntity(request.entity, request.partitions, request.columns.filter(_.length > 0), request.materialize, request.replace)
+
+    if (res.isSuccess) {
+      response.ok.json(GeneralResponse(200, res.get))
+    } else {
+      response.ok.json(GeneralResponse(500, res.failed.get.getMessage))
+    }
+  }
+
   /**
     *
     */
@@ -141,7 +155,7 @@ class AdamController(rpcClient: RPCClient) extends Controller {
     *
     */
   post("/index/repartition") { request: RepartitionRequest =>
-    val res = rpcClient.repartition(request.indexname, request.partitions, request.columns.filter(_.length > 0), request.materialize, request.replace)
+    val res = rpcClient.repartitionIndex(request.entity, request.partitions, request.columns.filter(_.length > 0), request.materialize, request.replace)
 
     if (res.isSuccess) {
       response.ok.json(GeneralResponse(200, res.get))
