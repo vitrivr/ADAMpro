@@ -2,13 +2,14 @@ package ch.unibas.dmi.dbis.adam.utils
 
 import java.sql.{Connection, DriverManager}
 
-import ch.unibas.dmi.dbis.adam.api.EntityOp
+import ch.unibas.dmi.dbis.adam.api.{IndexOp, EntityOp}
 import ch.unibas.dmi.dbis.adam.config.AdamConfig
 import ch.unibas.dmi.dbis.adam.datatypes.FieldTypes
 import ch.unibas.dmi.dbis.adam.datatypes.FieldTypes.FEATURETYPE
 import ch.unibas.dmi.dbis.adam.datatypes.feature.FeatureVectorWrapper
 import ch.unibas.dmi.dbis.adam.entity.FieldDefinition
 import ch.unibas.dmi.dbis.adam.main.SparkStartup
+import ch.unibas.dmi.dbis.adam.query.distance.NormBasedDistanceFunction
 import org.apache.spark.Logging
 import org.apache.spark.annotation.Experimental
 import org.apache.spark.sql.jdbc.AdamDialectRegistrar
@@ -112,6 +113,10 @@ class Importer(url: String, user: String, password: String) extends Logging {
         }
         log.info("successfully imported data into entity " + entityname + "; in df: " + insertDFcount + ", inserted: " + entitycount)
         assert(insertDFcount == entitycount)
+
+        featureFields.foreach{ featureField =>
+          IndexOp.create(entityname, featureField, "vaf", NormBasedDistanceFunction(2))
+        }
       } else {
         log.error("entity not created", entity.failed.get)
       }
