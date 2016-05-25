@@ -79,9 +79,8 @@ class Importer(url: String, user: String, password: String) extends Logging {
       df.schema.fields.filter(x => featureFields.contains(x.name)).map { field =>
         val newName = field.name + "__" + math.abs(Random.nextInt)
         insertDF = insertDF
-          .withColumn(newName, toFeatureVectorWrapper(insertDF(field.name)))
+          .withColumn("feature", toFeatureVectorWrapper(insertDF(field.name)))
           .drop(field.name)
-          .withColumnRenamed(newName, field.name)
       }
 
       renamingRules.foreach{
@@ -89,12 +88,13 @@ class Importer(url: String, user: String, password: String) extends Logging {
       }
 
       val schema = insertDF.schema.fields.map(field => {
-        val fieldType = if(featureFields.contains(field.name)){
-          FEATURETYPE
+        if(featureFields.contains(field.name)){
+          FieldDefinition("feature", FEATURETYPE, field.name.equals(pk))
         } else {
-          FieldTypes.fromDataType(field.dataType)
+          val fieldType =  FieldTypes.fromDataType(field.dataType)
+          FieldDefinition(field.name, fieldType, field.name.equals(pk))
+
         }
-        FieldDefinition(field.name, fieldType, field.name.equals(pk))
       })
 
 
@@ -114,9 +114,7 @@ class Importer(url: String, user: String, password: String) extends Logging {
         log.info("successfully imported data into entity " + entityname + "; in df: " + insertDFcount + ", inserted: " + entitycount)
         assert(insertDFcount == entitycount)
 
-        featureFields.foreach{ featureField =>
-          IndexOp.create(entityname, featureField, "vaf", NormBasedDistanceFunction(2))
-        }
+        IndexOp.create(entityname, "feature", "vaf", NormBasedDistanceFunction(2))
       } else {
         log.error("entity not created", entity.failed.get)
       }
