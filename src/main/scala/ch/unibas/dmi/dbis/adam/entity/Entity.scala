@@ -27,75 +27,9 @@ import scala.util.{Failure, Random, Success, Try}
   * October 2015
   */
 case class Entity(val entityname: EntityName)(@transient implicit val ac: AdamContext) extends Logging {
-  def featureData: Option[DataFrame] = {
-    if (featurePath.isDefined) {
-      val data = Entity.featureStorage.read(featurePath.get)
-
-      if (data.isSuccess) {
-        Some(data.get)
-      } else {
-        None
-      }
-    } else {
-      None
-    }
-  }
-
-  private[adam] def getIndexableFeature(column: String) = {
-    if (featureData.isDefined) {
-      featureData.get.select(col(pk.name), col(column))
-    } else {
-      val structFields = StructType(Seq(
-        StructField(pk.name, pk.fieldtype.datatype),
-        StructField(column, FieldTypes.FEATURETYPE.datatype)
-      ))
-      sqlContext.createDataFrame(sc.emptyRDD[Row], structFields)
-    }
-  }
-
-  def metaData: Option[DataFrame] = {
-    if (metadataPath.isDefined) {
-      val data = Entity.metadataStorage.read(metadataPath.get)
-
-      if (data.isSuccess) {
-        Some(data.get)
-      } else {
-        None
-      }
-
-    } else {
-      None
-    }
-  }
-
-  /**
-    * Gets the data.
-    *
-    * @return
-    */
-  def data = {
-    if (featureData.isDefined && metaData.isDefined) {
-      featureData.get.join(metaData.get, pk.name)
-    } else if (featureData.isDefined) {
-      featureData.get
-    } else if (metaData.isDefined) {
-      metaData.get
-    } else {
-      val structFields = schema.map {
-        field => StructField(field.name, field.fieldtype.datatype)
-      }
-
-      sqlContext.createDataFrame(sc.emptyRDD[Row], StructType(structFields))
-    }
-  }
-
-  /**
-    * Gets the primary key.
-    *
-    * @return
-    */
-  val pk = CatalogOperator.getEntityPK(entityname)
-
+  var _featureData: Option[DataFrame] = None
+  var _metaData: Option[DataFrame] = None
+  var _join: Option[DataFrame] = None
 
   /**
     * Gets path of the entity.
@@ -111,6 +45,41 @@ case class Entity(val entityname: EntityName)(@transient implicit val ac: AdamCo
     }
   }
 
+  /**
+    *
+    * @return
+    */
+  def featureData: Option[DataFrame] = {
+    if (_featureData.isEmpty) {
+      if (featurePath.isDefined) {
+        val data = Entity.featureStorage.read(featurePath.get)
+
+        if (data.isSuccess) {
+          _featureData = Some(data.get)
+        }
+      }
+    }
+
+    _featureData
+  }
+
+  /**
+    *
+    * @param column
+    * @return
+    */
+  private[adam] def getIndexableFeature(column: String) = {
+    if (featureData.isDefined) {
+      featureData.get.select(col(pk.name), col(column))
+    } else {
+      val structFields = StructType(Seq(
+        StructField(pk.name, pk.fieldtype.datatype),
+        StructField(column, FieldTypes.FEATURETYPE.datatype)
+      ))
+      sqlContext.createDataFrame(sc.emptyRDD[Row], structFields)
+    }
+  }
+
   private[entity] def metadataPath: Option[String] = {
     val path = CatalogOperator.getEntityMetadataPath(entityname)
     if (path != null && path.length > 0) {
@@ -119,6 +88,59 @@ case class Entity(val entityname: EntityName)(@transient implicit val ac: AdamCo
       None
     }
   }
+
+  /**
+    *
+    * @return
+    */
+  def metaData: Option[DataFrame] = {
+    if (_metaData.isEmpty) {
+      if (metadataPath.isDefined) {
+        val data = Entity.metadataStorage.read(metadataPath.get)
+
+        if (data.isSuccess) {
+          _metaData = Some(data.get)
+        }
+      }
+    }
+
+    _metaData
+  }
+
+  /**
+    * Gets the data.
+    *
+    * @return
+    */
+  def data: Option[DataFrame] = {
+    if (_join.isEmpty) {
+      if (featureData.isDefined && metaData.isDefined) {
+        _join = Some(featureData.get.join(metaData.get, pk.name))
+      } else if (featureData.isDefined) {
+        _join = Some(featureData.get)
+      } else if (metaData.isDefined) {
+        _join = Some(metaData.get)
+      }
+    }
+
+    _join
+  }
+
+  /**
+    *
+    */
+  private def markStale(): Unit = {
+    _featureData = None
+    _metaData = None
+    _join = None
+  }
+
+  /**
+    * Gets the primary key.
+    *
+    * @return
+    */
+  val pk = CatalogOperator.getEntityPK(entityname)
 
 
   /**
@@ -157,7 +179,13 @@ case class Entity(val entityname: EntityName)(@transient implicit val ac: AdamCo
     * @param k number of elements to show in preview
     * @return
     */
-  def show(k: Int) = data.limit(k)
+  def show(k: Int): Option[DataFrame] = {
+    if (data.isDefined) {
+      Some(data.get.limit(k))
+    } else {
+      None
+    }
+  }
 
   /**
     * Inserts data into the entity.
@@ -313,7 +341,7 @@ object Entity extends Logging {
 
           val path = featureStorage.create(entityname, featureFields)
 
-          if(path.isFailure){
+          if (path.isFailure) {
             throw path.failed.get
           }
 
@@ -326,7 +354,7 @@ object Entity extends Logging {
           val metadataFields = fields.filterNot(_.fieldtype == FEATURETYPE)
           val path = metadataStorage.create(entityname, metadataFields)
 
-          if(path.isFailure){
+          if (path.isFailure) {
             throw path.failed.get
           }
 
@@ -439,7 +467,7 @@ object Entity extends Logging {
       return Failure(new GeneralAdamException("no feature data available for performing repartitioning"))
     }
 
-    var data = entity.data
+    var data = entity.data.get
 
     //TODO: possibly add own partitioner
     //data.map(r => (r.getAs(cols.get.head), r)).partitionBy(new HashPartitioner())

@@ -18,6 +18,7 @@ case class CompoundQueryHolder(expr: QueryExpression, id: Option[String] = None)
   }
 
   override def getRunDetails(info: ListBuffer[RunDetails]) = {
+    super.getRunDetails(info)
     expr.getRunDetails(info)
   }
 }

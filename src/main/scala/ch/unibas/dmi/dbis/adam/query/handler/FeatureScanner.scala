@@ -33,13 +33,13 @@ object FeatureScanner {
       log.debug("scan features with pre-filter")
       ac.sc.setLocalProperty("spark.scheduler.pool", "feature")
       ac.sc.setJobGroup(query.queryID.getOrElse(""), entity.entityname, true)
-      filter.get.drop(FieldNames.distanceColumnName).join(entity.data, entity.pk.name) //drop distance column as true distance will be computed
+      filter.get.drop(FieldNames.distanceColumnName).join(entity.data.get, entity.pk.name) //drop distance column as true distance will be computed
     } else {
       //sequential scan
       log.debug("scan features without pre-filter")
       ac.sc.setLocalProperty("spark.scheduler.pool", "slow")
       ac.sc.setJobGroup(query.queryID.getOrElse(""), entity.entityname, true)
-      entity.data
+      entity.data.get
     }
 
     val q = ac.sc.broadcast(query.q)

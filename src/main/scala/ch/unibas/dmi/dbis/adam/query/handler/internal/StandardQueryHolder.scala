@@ -61,7 +61,7 @@ case class StandardQueryHolder(entityname: EntityName)(hint: Seq[QueryHint], nnq
 
     if (nnq.isEmpty) {
       if (bq.isDefined) {
-        BooleanQueryHandler.filter(entity.data, bq.get)
+        BooleanQueryHandler.filter(entity.data.get, bq.get)
       } else {
         entity.data
       }

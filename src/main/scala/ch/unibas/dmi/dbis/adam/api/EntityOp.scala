@@ -97,7 +97,7 @@ object EntityOp extends GenericOp {
     */
   def preview(entityname: EntityName, k: Int = 100)(implicit ac: AdamContext): Try[DataFrame] = {
     execute("preview entity " + entityname + " operation") {
-      Success(Entity.load(entityname).get.show(k))
+      Success(Entity.load(entityname).get.show(k).get)
     }
   }
 

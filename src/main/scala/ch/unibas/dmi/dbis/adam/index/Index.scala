@@ -402,7 +402,7 @@ object Index extends Logging {
     * @return
     */
   def repartition(index: Index, nPartitions: Int, join: Option[DataFrame], cols: Option[Seq[String]], option: PartitionMode.Value)(implicit ac: AdamContext): Try[Index] = {
-    var data = index.data.join(index.entity.get.data, index.pk.name)
+    var data = index.data.join(index.entity.get.data.get, index.pk.name)
 
     //TODO: possibly add own partitioner
     //data.map(r => (r.getAs(cols.get.head), r)).partitionBy(new HashPartitioner())

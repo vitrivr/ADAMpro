@@ -28,7 +28,7 @@ private[query] object BooleanQueryHandler extends Logging {
     }
 
     val entity = Entity.load(entityname).get
-    var data = entity.data
+    var data = entity.data.get
     var pk = entity.pk
 
 

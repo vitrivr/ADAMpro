@@ -99,6 +99,6 @@ object ProgressiveQueryHandler extends Logging {
     var data = entity.data
     var pk = entity.pk
 
-    res.join(data, pk.name)
+    res.join(data.get, pk.name)
   }
 }
