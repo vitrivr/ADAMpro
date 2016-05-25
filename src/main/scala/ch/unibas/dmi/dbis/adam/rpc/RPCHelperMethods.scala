@@ -46,12 +46,12 @@ private[rpc] object RPCHelperMethods {
 
       if (time > 0) {
         Success(new TimedProgressiveQueryHolder(entityname.get, nnq.get, bq, tiq, preparePaths(request.hints), Duration(time, TimeUnit.MILLISECONDS), false, queryid, cacheOptions))
-      } else if (nnq.isEmpty) {
+      } else if (subexpression.isDefined){
+        Success(new CompoundQueryHolder(toExpression(subexpression).get, queryid))
+      } else if (nnq.isEmpty && bq.isDefined) {
         Success(new BooleanQueryHolder(entityname.get)(bq, queryid, cacheOptions))
       } else if (indexname.isDefined) {
         Success(new IndexQueryHolder(indexname.get)(nnq.get, bq, tiq, queryid, cacheOptions))
-      } else if (subexpression.isDefined){
-        Success(new CompoundQueryHolder(toExpression(subexpression).get, queryid))
       } else {
         Success(StandardQueryHolder(entityname.get)(QueryHints.withName(request.hints), nnq, bq, None, queryid, cacheOptions))
       }
