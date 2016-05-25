@@ -3,8 +3,9 @@ package ch.unibas.dmi.dbis.adam
 import java.sql.DriverManager
 import ch.unibas.dmi.dbis.adam.api.EntityOp
 import ch.unibas.dmi.dbis.adam.config.AdamConfig
+import ch.unibas.dmi.dbis.adam.datatypes.FieldTypes
 import ch.unibas.dmi.dbis.adam.datatypes.feature.{FeatureVectorWrapper, FeatureVectorWrapperUDT}
-import ch.unibas.dmi.dbis.adam.entity.{Entity, FieldDefinition, FieldTypes}
+import ch.unibas.dmi.dbis.adam.entity.{Entity, FieldDefinition}
 import ch.unibas.dmi.dbis.adam.main.SparkStartup
 import ch.unibas.dmi.dbis.adam.main.SparkStartup.Implicits._
 import ch.unibas.dmi.dbis.adam.query.distance.{ManhattanDistance, MinkowskiDistance}

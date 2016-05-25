@@ -3,8 +3,9 @@ package ch.unibas.dmi.dbis.adam.storage.engine
 import java.io._
 
 import ch.unibas.dmi.dbis.adam.config.AdamConfig
+import ch.unibas.dmi.dbis.adam.datatypes.FieldTypes
 import ch.unibas.dmi.dbis.adam.entity.Entity.EntityName
-import ch.unibas.dmi.dbis.adam.entity.{EntityNameHolder, FieldDefinition, FieldTypes}
+import ch.unibas.dmi.dbis.adam.entity.{EntityNameHolder, FieldDefinition}
 import ch.unibas.dmi.dbis.adam.exception.{EntityExistingException, EntityNotExistingException, IndexExistingException, IndexNotExistingException}
 import ch.unibas.dmi.dbis.adam.index.Index.{IndexName, IndexTypeName}
 import ch.unibas.dmi.dbis.adam.index.structures.IndexTypes

@@ -1,4 +1,4 @@
-package ch.unibas.dmi.dbis.adam.entity
+package ch.unibas.dmi.dbis.adam.datatypes
 
 import ch.unibas.dmi.dbis.adam.datatypes.feature.FeatureVectorWrapperUDT
 import org.apache.spark.sql.types

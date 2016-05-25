@@ -2,7 +2,8 @@ package ch.unibas.dmi.dbis.adam.rpc
 
 import ch.unibas.dmi.dbis.adam.AdamTestBase
 import ch.unibas.dmi.dbis.adam.config.AdamConfig
-import ch.unibas.dmi.dbis.adam.entity.{Entity, FieldDefinition, FieldTypes}
+import ch.unibas.dmi.dbis.adam.datatypes.FieldTypes
+import ch.unibas.dmi.dbis.adam.entity.{Entity, FieldDefinition}
 import ch.unibas.dmi.dbis.adam.http.grpc.BooleanQueryMessage.WhereMessage
 import ch.unibas.dmi.dbis.adam.http.grpc.InsertMessage.TupleInsertMessage
 import ch.unibas.dmi.dbis.adam.http.grpc._

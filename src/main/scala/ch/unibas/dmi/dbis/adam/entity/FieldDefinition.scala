@@ -1,6 +1,7 @@
 package ch.unibas.dmi.dbis.adam.entity
 
-import ch.unibas.dmi.dbis.adam.entity.FieldTypes.FieldType
+import ch.unibas.dmi.dbis.adam.datatypes.FieldTypes
+import FieldTypes.FieldType
 
 /**
   * adamtwo

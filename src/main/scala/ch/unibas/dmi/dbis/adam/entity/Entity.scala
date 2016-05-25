@@ -1,9 +1,10 @@
 package ch.unibas.dmi.dbis.adam.entity
 
 import ch.unibas.dmi.dbis.adam.config.FieldNames
+import ch.unibas.dmi.dbis.adam.datatypes.FieldTypes
 import ch.unibas.dmi.dbis.adam.datatypes.feature.FeatureVectorWrapperUDT
 import ch.unibas.dmi.dbis.adam.entity.Entity.EntityName
-import ch.unibas.dmi.dbis.adam.entity.FieldTypes._
+import FieldTypes._
 import ch.unibas.dmi.dbis.adam.exception.{EntityExistingException, EntityNotExistingException, EntityNotProperlyDefinedException, GeneralAdamException}
 import ch.unibas.dmi.dbis.adam.index.Index
 import ch.unibas.dmi.dbis.adam.main.SparkStartup.Implicits._
