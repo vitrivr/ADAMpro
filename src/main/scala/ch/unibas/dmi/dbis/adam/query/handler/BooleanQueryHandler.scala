@@ -51,6 +51,8 @@ private[query] object BooleanQueryHandler extends Logging {
     * @return
     */
   def filter(data: DataFrame, query: BooleanQuery)(implicit ac: AdamContext): DataFrame = {
+    log.debug("filter using boolean query filter")
+
     var df: DataFrame = data
 
     if (query.join.isDefined) {

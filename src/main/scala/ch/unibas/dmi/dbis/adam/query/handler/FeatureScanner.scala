@@ -54,7 +54,7 @@ object FeatureScanner {
       }
       } catch {
         case e : Exception => {
-          log.error("error when computing distance")
+          log.error("error when computing distance", e)
           Float.MaxValue
         }
       }
