@@ -34,6 +34,17 @@ object EntityOp extends GenericOp {
     * @return
     */
   def apply(entityname: EntityName, fields: Seq[FieldDefinition])(implicit ac: AdamContext): Try[Entity] = {
+      create(entityname, fields)(ac)
+  }
+
+    /**
+    * Creates an entity.
+    *
+    * @param entityname name of entity
+    * @param fields     fields of the entity to create
+    * @return
+    */
+  def create(entityname: EntityName, fields: Seq[FieldDefinition])(implicit ac: AdamContext): Try[Entity] = {
     execute("create entity " + entityname + " operation") {
       Entity.create(entityname, fields)
     }

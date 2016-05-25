@@ -63,4 +63,11 @@ object IndexTypes {
     */
   //TODO: checks
   def withIndextype(indextype: grpc.IndexType): Option[IndexType] = values.map(value => value.indextype -> value).toMap.get(indextype)
+
+  /**
+    *
+    * @param s
+    * @return
+    */
+  implicit def fromString(s : String) : IndexType = IndexTypes.withName(s).get
 }

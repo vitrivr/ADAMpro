@@ -25,12 +25,14 @@ object IndexOp extends GenericOp {
   /**
     * Creates an index.
     *
-    * @param entityname name of entity
-    * @param indextype  string representation of index type to use for indexing
-    * @param distance   distance function to use
-    * @param properties further index specific properties
+    * @param entityname    name of entity
+    * @param indextypename index type to use for indexing
+    * @param distance      distance function to use
+    * @param properties    further index specific properties
     */
-  def apply(entityname: EntityName, column: String, indextype: String, distance: DistanceFunction, properties: Map[String, String])(implicit ac: AdamContext): Try[Index] = apply(entityname, column, IndexTypes.withName(indextype).get, distance, properties)
+  def apply(entityname: EntityName, column: String, indextypename: IndexTypeName, distance: DistanceFunction, properties: Map[String, String] = Map())(implicit ac: AdamContext): Try[Index] = {
+    create(entityname, column, indextypename, distance, properties)
+  }
 
   /**
     * Creates an index.
@@ -40,7 +42,7 @@ object IndexOp extends GenericOp {
     * @param distance      distance function to use
     * @param properties    further index specific properties
     */
-  def apply(entityname: EntityName, column: String, indextypename: IndexTypeName, distance: DistanceFunction, properties: Map[String, String] = Map())(implicit ac: AdamContext): Try[Index] = {
+  def create(entityname: EntityName, column: String, indextypename: IndexTypeName, distance: DistanceFunction, properties: Map[String, String] = Map())(implicit ac: AdamContext): Try[Index] = {
     execute("create index for " + entityname) {
       Index.createIndex(Entity.load(entityname).get, column, indextypename.indexer(distance, properties))
     }
