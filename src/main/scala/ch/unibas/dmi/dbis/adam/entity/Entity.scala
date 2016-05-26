@@ -311,33 +311,33 @@ object Entity extends Logging {
         }
 
         if (fields.isEmpty) {
-          return Failure(EntityNotProperlyDefinedException(Some("Entity " + entityname + " will have no fields")))
+          return Failure(EntityNotProperlyDefinedException("Entity " + entityname + " will have no fields"))
         }
 
         FieldNames.reservedNames.foreach { reservedName =>
           if (fields.contains(reservedName)) {
-            return Failure(EntityNotProperlyDefinedException(Some("Entity defined with field " + reservedName + ", but name is reserved")))
+            return Failure(EntityNotProperlyDefinedException("Entity defined with field " + reservedName + ", but name is reserved"))
           }
         }
 
         if (fields.map(_.name).distinct.length != fields.length) {
-          return Failure(EntityNotProperlyDefinedException(Some("Entity defined with duplicate fields.")))
+          return Failure(EntityNotProperlyDefinedException("Entity defined with duplicate fields."))
         }
 
         val allowedPkTypes = Seq(INTTYPE, LONGTYPE, STRINGTYPE, AUTOTYPE)
 
         if (fields.count(_.pk) > 1) {
-          return Failure(EntityNotProperlyDefinedException(Some("Entity defined with more than one primary key")))
+          return Failure(EntityNotProperlyDefinedException("Entity defined with more than one primary key"))
         } else if (fields.filter(_.pk).isEmpty) {
-          return Failure(EntityNotProperlyDefinedException(Some("Entity defined has no primary key.")))
+          return Failure(EntityNotProperlyDefinedException("Entity defined has no primary key."))
         } else if (!fields.filter(_.pk).forall(field => allowedPkTypes.contains(field.fieldtype))) {
-          return Failure(EntityNotProperlyDefinedException(Some("Entity defined needs a " + allowedPkTypes.map(_.name).mkString(", ") + " primary key")))
+          return Failure(EntityNotProperlyDefinedException("Entity defined needs a " + allowedPkTypes.map(_.name).mkString(", ") + " primary key"))
         }
 
         if (fields.count(_.fieldtype == AUTOTYPE) > 1) {
-          return Failure(EntityNotProperlyDefinedException(Some("Too many auto fields defined.")))
+          return Failure(EntityNotProperlyDefinedException("Too many auto fields defined."))
         } else if (fields.count(_.fieldtype == AUTOTYPE) > 0 && !fields.filter(_.pk).forall(_.fieldtype == AUTOTYPE)) {
-          return Failure(EntityNotProperlyDefinedException(Some("Auto type only allowed in primary key.")))
+          return Failure(EntityNotProperlyDefinedException("Auto type only allowed in primary key."))
         }
 
 

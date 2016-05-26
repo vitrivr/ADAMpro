@@ -6,4 +6,4 @@ package ch.unibas.dmi.dbis.adam.exception
  * Ivan Giangreco
  * August 2015
  */
-case class IndexExistingException()  extends GeneralAdamException("Index exists already.")
+case class IndexExistingException(message : String = "Index exists already.")  extends GeneralAdamException(message)

@@ -6,4 +6,4 @@ package ch.unibas.dmi.dbis.adam.exception
   * Ivan Giangreco
   * April 2016
   */
-case class QueryNotConformException()  extends GeneralAdamException("Query does not correspond to entity.")
+case class QueryNotConformException(message : String = "Query does not correspond to entity.")  extends GeneralAdamException(message)
