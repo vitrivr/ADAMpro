@@ -24,7 +24,7 @@ import scala.util.Random
   * May 2016
   */
 @Experimental
-class Importer(url: String, user: String, password: String) extends Logging {
+class AdamImporter(url: String, user: String, password: String) extends Logging {
   AdamDialectRegistrar.register(url)
 
   private def openConnection(): Connection = {
@@ -124,7 +124,7 @@ class Importer(url: String, user: String, password: String) extends Logging {
   }
 }
 
-object Importer {
+object AdamImporter {
   def main(args: Array[String]): Unit = {
     SparkStartup
 
@@ -133,7 +133,7 @@ object Importer {
     val username = "docker"
     val password = "docker"
 
-    val importer = new Importer("jdbc:postgresql://" + host + "/" + database, username, password)
+    val importer = new AdamImporter("jdbc:postgresql://" + host + "/" + database, username, password)
 
     //tables to import
 
