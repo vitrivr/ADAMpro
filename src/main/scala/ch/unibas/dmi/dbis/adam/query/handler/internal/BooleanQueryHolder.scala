@@ -17,11 +17,11 @@ import org.apache.spark.sql.{Row, DataFrame}
   * May 2016
   */
 case class BooleanQueryHolder(entityname: EntityName)(bq: Option[BooleanQuery], id: Option[String] = None, cache: Option[QueryCacheOptions] = Some(QueryCacheOptions())) extends QueryExpression(id) {
-  override protected def run(filter: Option[DataFrame])(implicit ac: AdamContext): DataFrame = {
+  override protected def run(input: Option[DataFrame])(implicit ac: AdamContext): DataFrame = {
     var res = query(entityname)(bq, id, cache)
 
-    if(filter.isDefined){
-      res.join(filter.get, Entity.load(entityname).get.pk.name)
+    if(input.isDefined){
+      res.join(input.get, Entity.load(entityname).get.pk.name)
     }
 
     res

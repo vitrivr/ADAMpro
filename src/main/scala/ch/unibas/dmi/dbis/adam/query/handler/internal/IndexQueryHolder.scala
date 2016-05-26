@@ -29,13 +29,13 @@ case class IndexQueryHolder(index: Index)(nnq: NearestNeighbourQuery, bq: Option
         .sortBy(-_.weight).head)(nnq, bq, tiq, id, cache)
   }
 
-  override protected def run(filter: Option[DataFrame])(implicit ac: AdamContext): DataFrame = {
+  override protected def run(input: Option[DataFrame])(implicit ac: AdamContext): DataFrame = {
     val annq = NearestNeighbourQuery(nnq.column, nnq.q, nnq.distance, nnq.k, nnq.indexOnly, nnq.options, nnq.partitions, nnq.queryID)
     val atiq = if (tiq.isDefined) {
-      Some(tiq.get.+:(filter))
+      Some(tiq.get.+:(input))
     } else {
-      if (filter.isDefined) {
-        Some(new PrimaryKeyFilter(filter.get))
+      if (input.isDefined) {
+        Some(new PrimaryKeyFilter(input.get))
       } else {
         None
       }

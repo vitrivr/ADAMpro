@@ -19,17 +19,17 @@ import org.apache.spark.sql.DataFrame
   * May 2016
   */
 case class StandardQueryHolder(entityname: EntityName)(hint: Seq[QueryHint], nnq: Option[NearestNeighbourQuery], bq: Option[BooleanQuery], tiq: Option[PrimaryKeyFilter[_]], id: Option[String] = None, cache: Option[QueryCacheOptions] = Some(QueryCacheOptions())) extends QueryExpression(id) {
-  override protected def run(filter: Option[DataFrame])(implicit ac: AdamContext): DataFrame = {
+  override protected def run(input: Option[DataFrame])(implicit ac: AdamContext): DataFrame = {
     val annq = if (nnq.isDefined) {
       Option(NearestNeighbourQuery(nnq.get.column, nnq.get.q, nnq.get.distance, nnq.get.k, nnq.get.indexOnly, nnq.get.options, nnq.get.partitions, nnq.get.queryID))
     } else {
       None
     }
     val atiq = if (tiq.isDefined) {
-      Some(tiq.get.+:(filter))
+      Some(tiq.get.+:(input))
     } else {
-      if (filter.isDefined) {
-        Some(new PrimaryKeyFilter(filter.get))
+      if (input.isDefined) {
+        Some(new PrimaryKeyFilter(input.get))
       } else {
         None
       }

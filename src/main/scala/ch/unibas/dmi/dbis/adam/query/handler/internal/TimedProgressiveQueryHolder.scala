@@ -22,10 +22,10 @@ class TimedProgressiveQueryHolder(entityname: EntityName,
   timelimit: Duration, withMetadata: Boolean, id: Option[String] = None, cache: Option[QueryCacheOptions] = Some(QueryCacheOptions())) extends QueryExpression(id) {
   /**
     *
-    * @param filter
+    * @param input
     * @return
     */
-  override protected def run(filter: Option[DataFrame])(implicit ac: AdamContext): DataFrame = {
+  override protected def run(input: Option[DataFrame])(implicit ac: AdamContext): DataFrame = {
     val filter = BooleanQueryHandler.getFilter(entityname, bq, tiq)
     ProgressiveQueryHandler.timedProgressiveQuery(entityname)(nnq, bq, tiq, paths, timelimit, withMetadata, id, cache)._1
   }

@@ -22,12 +22,12 @@ abstract class QueryExpression(id: Option[String]) extends Serializable with Log
 
   /**
     *
-    * @param filter
+    * @param input
     * @return
     */
-  def evaluate(filter: Option[DataFrame] = None)(implicit ac: AdamContext): DataFrame = {
+  def evaluate(input: Option[DataFrame] = None)(implicit ac: AdamContext): DataFrame = {
     val t1 = System.currentTimeMillis
-    results = run(filter)
+    results = run(input)
     run = true
     val t2 = System.currentTimeMillis
 

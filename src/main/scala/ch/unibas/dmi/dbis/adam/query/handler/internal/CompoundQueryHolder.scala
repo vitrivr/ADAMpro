@@ -13,8 +13,8 @@ import scala.collection.mutable.ListBuffer
   * May 2016
   */
 case class CompoundQueryHolder(expr: QueryExpression, id: Option[String] = None) extends QueryExpression(id) {
-  override protected def run(filter: Option[DataFrame])(implicit ac: AdamContext): DataFrame = {
-    expr.evaluate(filter)
+  override protected def run(input: Option[DataFrame])(implicit ac: AdamContext): DataFrame = {
+    expr.evaluate(input)
   }
 
   override def getRunDetails(info: ListBuffer[RunDetails]) = {
