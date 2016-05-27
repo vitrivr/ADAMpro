@@ -199,7 +199,7 @@ class AdamController(rpcClient: RPCClient) extends Controller {
 
   case class ProgressiveStartResponse(id: String)
 
-  private def processProgressiveResults(id: String, confidence: Double, source: String, time: Long, results: Seq[(Float, Map[String, String])]): Unit = {
+  private def processProgressiveResults(id: String, confidence: Double, source: String, time: Long, results: Seq[Map[String, String]]): Unit = {
     val sourcetype = if(source.length > 0){
       source.substring(0, source.indexOf("(")).toLowerCase.trim
     } else {
@@ -208,7 +208,7 @@ class AdamController(rpcClient: RPCClient) extends Controller {
     progTempResults.get(id).get += ProgressiveTempResponse(id, confidence, source, sourcetype, time, results, ProgressiveQueryStatus.RUNNING)
   }
 
-  case class ProgressiveTempResponse(id: String, confidence: Double, source: String, sourcetype: String, time: Long, results: Seq[(Float, Map[String, String])], status: ProgressiveQueryStatus.Value)
+  case class ProgressiveTempResponse(id: String, confidence: Double, source: String, sourcetype: String, time: Long, results: Seq[Map[String, String]], status: ProgressiveQueryStatus.Value)
 
   val progTempResults = mutable.HashMap[String, mutable.Queue[ProgressiveTempResponse]]()
 

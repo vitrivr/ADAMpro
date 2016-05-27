@@ -10,5 +10,5 @@ import scala.concurrent.duration.Duration
   * Ivan Giangreco
   * April 2016
   */
-case class RunDetails(id : String, time : Duration, source : String, results : DataFrame)
+case class RunDetails(id : String, time : Duration, source : String, results : Option[DataFrame])
 

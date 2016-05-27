@@ -1,15 +1,18 @@
 package ch.unibas.dmi.dbis.adam.query.progressive
 
-import ch.unibas.dmi.dbis.adam.entity.Entity
-import ch.unibas.dmi.dbis.adam.entity.Entity._
+import ch.unibas.dmi.dbis.adam.entity.Entity.EntityName
+import ch.unibas.dmi.dbis.adam.exception.GeneralAdamException
 import ch.unibas.dmi.dbis.adam.main.AdamContext
 import ch.unibas.dmi.dbis.adam.query.datastructures._
-import ch.unibas.dmi.dbis.adam.query.handler.{BooleanQueryHandler, NearestNeighbourQueryHandler}
-import ch.unibas.dmi.dbis.adam.query.query.{BooleanQuery, NearestNeighbourQuery, PrimaryKeyFilter}
+import ch.unibas.dmi.dbis.adam.query.handler.generic.QueryExpression
+import ch.unibas.dmi.dbis.adam.query.handler.internal.BooleanFilterExpression.BooleanFilterScanExpression
+import ch.unibas.dmi.dbis.adam.query.query.{BooleanQuery, NearestNeighbourQuery}
 import org.apache.spark.Logging
 import org.apache.spark.sql.DataFrame
 
+import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.duration.Duration
+import scala.concurrent.{Await, Future}
 
 /**
   * adamtwo
@@ -18,87 +21,95 @@ import scala.concurrent.duration.Duration
   * November 2015
   */
 object ProgressiveQueryHandler extends Logging {
-  //TODO: generalize
+  /**
+    *
+    * @param entityname
+    * @param nnq
+    * @param bq
+    * @param pathChooser
+    * @param onComplete
+    * @param id
+    * @return
+    */
+  def progressiveQuery[U](entityname: EntityName, nnq: NearestNeighbourQuery, bq: Option[BooleanQuery], pathChooser: ProgressivePathChooser, onComplete: ProgressiveObservation => U, id: Option[String] = None)(implicit ac: AdamContext): ProgressiveQueryStatusTracker = {
+    val filter = if (bq.isDefined) {
+      new BooleanFilterScanExpression(entityname)(bq.get)().prepareTree().evaluate()
+    } else {
+      None
+    }
+    progressiveQuery(pathChooser.getPaths(entityname, nnq), filter, onComplete, id)
+  }
+
 
   /**
     * Performs a progressive query, i.e., all indexes and sequential search are started at the same time and results are returned as soon
     * as they are available. When a precise result is returned, the whole query is stopped.
     *
-    * @param entityname
-    * @param nnq          information for nearest neighbour query
-    * @param bq           information for boolean query
-    * @param onComplete   operation to perform as soon as one index returns results
-    *                     (the operation takes parameters:
-    *                     - status value
-    *                     - result (as DataFrame)
-    *                     - confidence score denoting how confident you can be in the results
-    *                     - further information (key-value)
-    * @param withMetadata whether or not to retrieve corresponding metadata
+    * @param exprs query expressions to execute
+    * @param onComplete
+    * @param id
     * @return a tracker for the progressive query
     */
-  def progressiveQuery[U](entityname: EntityName)(
-    nnq: NearestNeighbourQuery, bq: Option[BooleanQuery], tiq: Option[PrimaryKeyFilter[_]],
-    paths: ProgressivePathChooser,
-    onComplete: (ProgressiveQueryStatus.Value, DataFrame, Float, String, Map[String, String]) => U,
-    withMetadata: Boolean, id: Option[String] = None)(implicit ac: AdamContext)
-  : ProgressiveQueryStatusTracker = {
-    //TODO: use cache
+  def progressiveQuery[U](exprs: Seq[QueryExpression], filter: Option[DataFrame], onComplete: ProgressiveObservation => U, id: Option[String] = None)(implicit ac: AdamContext): ProgressiveQueryStatusTracker = {
+    val tracker = new ProgressiveQueryStatusTracker(id.getOrElse(""))
+    log.debug("performing progressive query with " + exprs.length + " paths: " + exprs.map(expr => expr.info.scantype.getOrElse("<missing scantype>") + " (" + expr.info.source.getOrElse("<missing source>") + ")").mkString(", "))
 
-    val onCompleteFunction = if (withMetadata) {
-      log.debug("join metadata to results of progressive query")
-      (pqs: ProgressiveQueryStatus.Value, res: DataFrame, conf: Float, source: String, info: Map[String, String]) => onComplete(pqs, joinWithMetadata(entityname, res), conf, source, info)
-    } else {
-      onComplete
+    if(exprs.isEmpty){
+      //TODO: check that errors are sent back to client
+      throw new GeneralAdamException("no paths for progressive query set; possible causes: is the entity or the attribute existing?")
     }
 
-    log.debug("progressive query gets filter")
-    val filter = BooleanQueryHandler.getFilter(entityname, bq, tiq)
-
-    log.debug("progressive query performs kNN query")
-    NearestNeighbourQueryHandler.progressiveQuery(entityname, nnq, filter, paths, onCompleteFunction)
+    val scanFutures = exprs.map(expr => new ScanFuture(expr, filter, onComplete, tracker))
+    tracker
   }
+
+
+  /**
+    *
+    * @param entityname
+    * @param nnq
+    * @param bq
+    * @param pathChooser
+    * @param timelimit
+    * @param id
+    * @return
+    */
+  def timedProgressiveQuery[U](entityname: EntityName, nnq: NearestNeighbourQuery, bq: Option[BooleanQuery], pathChooser: ProgressivePathChooser, timelimit: Duration, id: Option[String] = None)(implicit ac: AdamContext): ProgressiveObservation = {
+    val filter = if (bq.isDefined) {
+      new BooleanFilterScanExpression(entityname)(bq.get)().prepareTree().evaluate()
+    } else {
+      None
+    }
+    timedProgressiveQuery(pathChooser.getPaths(entityname, nnq), timelimit, filter, id)
+  }
+
 
   /**
     * Performs a timed progressive query, i.e., it performs the query for a maximum of the given time limit and returns then the best possible
     * available results.
     *
-    * @param entityname
-    * @param nnq          information for nearest neighbour query
-    * @param bq           information for boolean query
-    * @param timelimit    maximum time to wait
-    * @param withMetadata whether or not to retrieve corresponding metadata
+    * @param exprs     query expressions to execute
+    * @param timelimit maximum time to wait
+    * @param id
     * @return the results available together with a confidence score
     */
-  def timedProgressiveQuery(entityname: EntityName)(
-    nnq: NearestNeighbourQuery, bq: Option[BooleanQuery], tiq: Option[PrimaryKeyFilter[_]],
-    paths: ProgressivePathChooser,
-    timelimit: Duration, withMetadata: Boolean, id: Option[String] = None, cache: Option[QueryCacheOptions] = Some(QueryCacheOptions()))(implicit ac: AdamContext): (DataFrame, Float, String) = {
-    log.debug("timed progressive query gets filter")
-    //TODO: use cache
-
-    val filter = BooleanQueryHandler.getFilter(entityname, bq, tiq)
-
+  def timedProgressiveQuery(exprs: Seq[QueryExpression], timelimit: Duration, filter: Option[DataFrame], id: Option[String] = None)(implicit ac: AdamContext): ProgressiveObservation = {
     log.debug("timed progressive query performs kNN query")
-    val results = NearestNeighbourQueryHandler.timedProgressiveQuery(entityname, nnq, filter, paths, timelimit)
-    var res = results.results
+    val tracker = progressiveQuery[Unit](exprs, filter, (observation: ProgressiveObservation) => ())
 
-    if (withMetadata) {
-      log.debug("join metadata to results of timed progressive query")
-      res = joinWithMetadata(entityname, res)
+    val timerFuture = Future {
+      val sleepTime = Duration(500.toLong, "millis")
+      var nSleep = (timelimit / sleepTime).toInt
+
+      while (tracker.status != ProgressiveQueryStatus.FINISHED && nSleep > 0) {
+        nSleep -= 1
+        Thread.sleep(sleepTime.toMillis)
+      }
     }
 
-    (res, results.confidence, results.source)
-  }
+    Await.result(timerFuture, timelimit)
+    tracker.stop()
 
-
-
-
-
-  private def joinWithMetadata(entityname: EntityName, res: DataFrame)(implicit ac: AdamContext) : DataFrame = {
-    val entity = Entity.load(entityname).get
-    var data = entity.data
-    var pk = entity.pk
-
-    res.join(data.get, pk.name)
+    tracker.results.observation
   }
 }

@@ -199,7 +199,7 @@ class RPCClient(channel: ManagedChannel, definer: AdamDefinitionBlockingStub, se
   /**
     *
     */
-  def progressiveQuery(id: String, entityname: String, query: Seq[Float], column: String, hints: Seq[String], k: Int, next: (String, Double, String, Long, Seq[(Float, Map[String, String])]) => (Unit), completed: (String) => (Unit)): Try[Void] = {
+  def progressiveQuery(id: String, entityname: String, query: Seq[Float], column: String, hints: Seq[String], k: Int, next: (String, Double, String, Long, Seq[Map[String, String]]) => (Unit), completed: (String) => (Unit)): Try[Void] = {
     log.info("progressive query start")
 
     try {
@@ -227,9 +227,9 @@ class RPCClient(channel: ManagedChannel, definer: AdamDefinitionBlockingStub, se
             val time = head.time
             val results = head.results.map(x => x.data.mapValues(x => ""))
 
-            next(id, confidence, source, time, null) //possibly remove null and use results
+            next(id, confidence, source, time, results)
           } else {
-            throw new Exception(qr.ack.get.message)
+            Failure(new Exception(qr.ack.get.message))
           }
         }
       }
@@ -262,7 +262,13 @@ class RPCClient(channel: ManagedChannel, definer: AdamDefinitionBlockingStub, se
         PartitionOptions.CREATE_NEW
       }
 
-      Success(definer.repartitionEntityData(RepartitionMessage(entity, partitions, cols, option)).message)
+      val res = definer.repartitionEntityData(RepartitionMessage(entity, partitions, cols, option))
+
+      if(res.code == AckMessage.Code.OK){
+        Success(res.message)
+      } else {
+        Failure(throw new Exception(res.message))
+      }
     } catch {
       case e: Exception => Failure(e)
     }
@@ -288,7 +294,13 @@ class RPCClient(channel: ManagedChannel, definer: AdamDefinitionBlockingStub, se
         PartitionOptions.CREATE_NEW
       }
 
-      Success(definer.repartitionIndexData(RepartitionMessage(index, partitions, cols, option)).message)
+      val res = definer.repartitionIndexData(RepartitionMessage(index, partitions, cols, option))
+
+      if(res.code == AckMessage.Code.OK){
+        Success(res.message)
+      } else {
+        Failure(throw new Exception(res.message))
+      }
     } catch {
       case e: Exception => Failure(e)
     }

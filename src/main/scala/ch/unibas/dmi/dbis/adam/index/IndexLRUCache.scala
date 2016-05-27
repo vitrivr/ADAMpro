@@ -45,7 +45,7 @@ object IndexLRUCache extends Logging {
       Success(indexCache.get(indexname))
     } catch {
       case e: Exception =>
-        log.error(e.getMessage)
+        log.error("error when loading index from cache", e)
         Failure(e)
     }
   }

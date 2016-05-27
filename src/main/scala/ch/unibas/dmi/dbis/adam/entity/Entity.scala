@@ -273,7 +273,13 @@ case class Entity(val entityname: EntityName)(@transient implicit val ac: AdamCo
   def isQueryConform(query: NearestNeighbourQuery): Boolean = {
     if (featureData.isDefined) {
       try {
-        featureData.get.first().getAs[FeatureVectorWrapper](query.column).vector.length == query.q.length
+        val length = featureData.get.first().getAs[FeatureVectorWrapper](query.column).vector.length
+
+        if(length != query.q.length){
+          log.error("expected vector of length " + length + ", but received " + query.q.length)
+        }
+
+        (length == query.q.length)
       } catch {
         case e : Exception => log.error("query not conform with entity", e)
           false

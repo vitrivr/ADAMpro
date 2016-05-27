@@ -319,7 +319,7 @@ object Index extends Logging {
     */
   def load(indexname: IndexName, cache: Boolean = false)(implicit ac: AdamContext): Try[Index] = {
     if (!IndexLRUCache.contains(indexname) && !exists(indexname)) {
-      Failure(new IndexNotExistingException())
+      return Failure(new IndexNotExistingException())
     }
 
     val index = IndexLRUCache.get(indexname)

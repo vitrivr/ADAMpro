@@ -2,9 +2,8 @@ package ch.unibas.dmi.dbis.adam.query.datastructures
 
 import ch.unibas.dmi.dbis.adam.config.AdamConfig
 import ch.unibas.dmi.dbis.adam.main.AdamContext
-import ch.unibas.dmi.dbis.adam.query.progressive.ScanFuture
+import ch.unibas.dmi.dbis.adam.query.progressive.{ProgressiveObservation, ScanFuture}
 import org.apache.spark.Logging
-import org.apache.spark.sql.DataFrame
 
 import scala.collection.mutable.ListBuffer
 import scala.concurrent.duration.Duration
@@ -20,26 +19,23 @@ import scala.util.{Success, Try}
   * Ivan Giangreco
   * September 2015
   */
-//TODO: add time
-case class ProgressiveQueryIntermediateResults(confidence: Float, results: DataFrame, source: String) {
-  def this(future: ScanFuture, results: DataFrame) {
-    this(future.confidence, results, future.typename)
-  }
+case class ProgressiveQueryIntermediateResults(future : ScanFuture[_], observation: ProgressiveObservation) {
+  val confidence = observation.confidence
 }
 
 
-class ProgressiveQueryStatusTracker(queryID: String)(implicit ac : AdamContext) extends Future[ProgressiveQueryIntermediateResults] with Logging {
-  private val futures = ListBuffer[ScanFuture]()
+class ProgressiveQueryStatusTracker(queryID: String)(implicit ac: AdamContext) extends Future[ProgressiveQueryIntermediateResults] with Logging {
+  private val futures = ListBuffer[ScanFuture[_]]()
   private val runningStatusLock = new Object()
   @volatile private var runningStatus = ProgressiveQueryStatus.RUNNING
-  private var intermediateResult = ProgressiveQueryIntermediateResults(0, null, "empty")
+  private var intermediateResult = ProgressiveQueryIntermediateResults(null, ProgressiveObservation(ProgressiveQueryStatus.RUNNING, None, Float.NegativeInfinity, "", Map[String, String](), 0, 0))
 
   /**
     * Register a scan future.
     *
     * @param future
     */
-  def register(future: ScanFuture): Unit = {
+  def register(future: ScanFuture[_]): Unit = {
     log.debug("registered new scan future")
     futures.synchronized(futures += future)
   }
@@ -49,18 +45,16 @@ class ProgressiveQueryStatusTracker(queryID: String)(implicit ac : AdamContext) 
     *
     * @param future
     */
-  def notifyCompletion(future: ScanFuture, results: DataFrame): Unit = {
-    log.debug("scanning completed")
-
+  def notifyCompletion(future: ScanFuture[_], observation: ProgressiveObservation): Unit = {
     futures.synchronized({
-      if (future.confidence > intermediateResult.confidence && runningStatus == ProgressiveQueryStatus.RUNNING) {
-        intermediateResult = new ProgressiveQueryIntermediateResults(future, results)
+      if (future.confidence.getOrElse(0.toFloat) > intermediateResult.observation.confidence && runningStatus == ProgressiveQueryStatus.RUNNING) {
+        intermediateResult = new ProgressiveQueryIntermediateResults(future, observation)
       }
 
       if (!AdamConfig.evaluation) {
         // in evaluation mode we want to keep all results and do not stop, as to be able to measure how
         // much time each index would run
-        if (math.abs(intermediateResult.confidence - 1.0) < 0.000001) {
+        if (math.abs(intermediateResult.observation.confidence - 1.0) < 0.000001) {
           log.debug("confident results retrieved")
           stop(ProgressiveQueryStatus.FINISHED)
         }
@@ -134,6 +128,7 @@ class ProgressiveQueryStatusTracker(queryID: String)(implicit ac : AdamContext) 
   override def isCompleted: Boolean = (status != ProgressiveQueryStatus.RUNNING)
 
   val observers = ListBuffer[(Try[ProgressiveQueryIntermediateResults]) => _]()
+
   override def onComplete[U](func: (Try[ProgressiveQueryIntermediateResults]) => U)(implicit executor: ExecutionContext): Unit = {
     observers.+=(func)
   }

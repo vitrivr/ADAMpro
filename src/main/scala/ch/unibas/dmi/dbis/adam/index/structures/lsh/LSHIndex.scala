@@ -23,7 +23,7 @@ import scala.collection.mutable.ListBuffer
   * Ivan Giangreco
   * August 2015
   */
-class LSHIndex(val indexname: IndexName, val entityname: EntityName, override private[index] var data : DataFrame, private[index] val metadata: LSHIndexMetaData)(@transient implicit val ac: AdamContext)
+class LSHIndex(val indexname: IndexName, val entityname: EntityName, override private[index] var data: DataFrame, private[index] val metadata: LSHIndexMetaData)(@transient implicit val ac: AdamContext)
   extends Index {
 
   override val indextypename: IndexTypeName = IndexTypes.LSHINDEX
@@ -77,7 +77,7 @@ class LSHIndex(val indexname: IndexName, val entityname: EntityName, override pr
     while (it.hasNext && ids.length < k) {
       val id = it.next()
       val res = localResults(id)
-      ids.append(localResults(id).map(res => Result(res.score.toFloat / maxScore, res.tid)).toSeq : _*)
+      ids.append(localResults(id).map(res => Result(res.score.toFloat / maxScore, res.tid)).toSeq: _*)
     }
 
     log.debug("LSH index returning " + ids.length + " tuples")
@@ -85,11 +85,7 @@ class LSHIndex(val indexname: IndexName, val entityname: EntityName, override pr
   }
 
   override def isQueryConform(nnq: NearestNeighbourQuery): Boolean = {
-    if (nnq.distance.isInstanceOf[metadata.distance.type]) {
-      return true
-    }
-
-    false
+    (nnq.distance.getClass == metadata.distance.getClass)
   }
 }
 

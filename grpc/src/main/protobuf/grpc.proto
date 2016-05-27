@@ -245,7 +245,7 @@ message ProjectionMessage {
 }
 
 message FromMessage {
-  oneof submessage {
+  oneof source {
     string entity = 1;
     string index = 2;
     SubExpressionQueryMessage expression = 3;

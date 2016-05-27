@@ -34,7 +34,7 @@ class PartitionTestSuite extends AdamTestBase {
 
         val partnnq = NearestNeighbourQuery("featurefield", es.feature.vector, es.distance, es.k, false, Map[String, String](), Some(Set(0)))
 
-        val partresults = QueryOp.index(index.get.indexname, partnnq, None, false).get
+        val partresults = QueryOp.index(index.get.indexname, partnnq, None).get.get
           .map(r => (r.getAs[Float](FieldNames.distanceColumnName), r.getAs[Long]("tid"))).collect()
           .sortBy(_._1).toSeq
 
@@ -56,7 +56,7 @@ class PartitionTestSuite extends AdamTestBase {
         val partindex = IndexOp.partition(index.get.indexname, nPartitions, None, Some(Seq("tid")), PartitionMode.CREATE_TEMP)
         val partnnq = NearestNeighbourQuery("featurefield", es.feature.vector, es.distance, es.k, false, Map[String, String](), Some(Set(0)))
 
-        val partresults = QueryOp.index(partindex.get.indexname, partnnq, None, false).get
+        val partresults = QueryOp.index(partindex.get.indexname, partnnq, None).get.get
           .map(r => (r.getAs[Float](FieldNames.distanceColumnName), r.getAs[Long]("tid"))).collect()
           .sortBy(_._1).toSeq
 
@@ -90,7 +90,7 @@ class PartitionTestSuite extends AdamTestBase {
         val loadedIndex = Index.load(partindex.get.indexname)
         assert(loadedIndex.isSuccess)
 
-        val partresults = QueryOp.index(partindex.get.indexname, partnnq, None, false).get
+        val partresults = QueryOp.index(partindex.get.indexname, partnnq, None).get.get
           .map(r => (r.getAs[Float](FieldNames.distanceColumnName), r.getAs[Long]("tid"))).collect()
           .sortBy(_._1).toSeq
 
@@ -117,7 +117,7 @@ class PartitionTestSuite extends AdamTestBase {
         val loadedIndex = Index.load(partindex.get.indexname)
         assert(loadedIndex.isSuccess)
 
-        val partresults = QueryOp.index(partindex.get.indexname, partnnq, None, true).get
+        val partresults = QueryOp.index(partindex.get.indexname, partnnq, None).get.get
           .map(r => (r.getAs[Float](FieldNames.distanceColumnName), r.getAs[Long]("tid"))).collect() //get here TID of metadata
           .sortBy(_._1).toSeq
 

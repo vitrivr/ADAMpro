@@ -1,4 +1,4 @@
-package ch.unibas.dmi.dbis.adam.query.handler
+package ch.unibas.dmi.dbis.adam.query.handler.internal
 
 import ch.unibas.dmi.dbis.adam.index.Index.IndexTypeName
 import ch.unibas.dmi.dbis.adam.index.structures.IndexTypes._

@@ -3,7 +3,7 @@ package ch.unibas.dmi.dbis.adam.query.handler.external
 import ch.unibas.dmi.dbis.adam.entity.Entity
 import ch.unibas.dmi.dbis.adam.entity.Entity.EntityName
 import ch.unibas.dmi.dbis.adam.main.AdamContext
-import ch.unibas.dmi.dbis.adam.query.datastructures.QueryExpression
+import ch.unibas.dmi.dbis.adam.query.handler.generic.{ExpressionDetails, QueryExpression}
 import org.apache.http.impl.client.SystemDefaultHttpClient
 import org.apache.solr.client.solrj.SolrQuery
 import org.apache.solr.client.solrj.impl.HttpSolrClient
@@ -107,10 +107,13 @@ import org.apache.spark.sql.{DataFrame, Row}
   *               - defType
   * @param id
   */
-case class SolrQueryHolder(entityname: EntityName, params: Map[String, String], id: Option[String] = None) extends QueryExpression(id) {
-  override protected def run(filter: Option[DataFrame])(implicit ac: AdamContext): DataFrame = {
+case class SolrScanExpression(entityname: EntityName, params: Map[String, String], id: Option[String] = None) extends QueryExpression(id) {
+  override val info = ExpressionDetails(None, Some("Solr Scan Expression"), id, None)
+
+  override protected def run(filter : Option[DataFrame] = None)(implicit ac: AdamContext): Option[DataFrame] = {
+    //TODO: use filter?
     val url = params.get("url").get
     val client = new SolrQueryHandler(url) //possibly cache solr client
-    client.query(entityname, params)
+    Some(client.query(entityname, params))
   }
 }

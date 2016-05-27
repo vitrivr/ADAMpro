@@ -7,16 +7,17 @@ import ch.unibas.dmi.dbis.adam.datatypes.feature.FeatureVectorWrapper
 import ch.unibas.dmi.dbis.adam.http.grpc.DistanceMessage.DistanceType
 import ch.unibas.dmi.dbis.adam.http.grpc._
 import ch.unibas.dmi.dbis.adam.main.AdamContext
-import ch.unibas.dmi.dbis.adam.query.datastructures.CompoundQueryExpressions._
-import ch.unibas.dmi.dbis.adam.query.datastructures.{QueryCacheOptions, QueryExpression}
+import ch.unibas.dmi.dbis.adam.query.handler.generic.QueryExpression
+import ch.unibas.dmi.dbis.adam.query.handler.internal.BooleanFilterExpression.BooleanFilterScanExpression
+import ch.unibas.dmi.dbis.adam.query.handler.internal.ProjectionExpression.{ExistsOperationProjection, CountOperationProjection, FieldNameProjection, ProjectionField}
+import ch.unibas.dmi.dbis.adam.query.handler.internal._
+import AggregationExpression._
+import ch.unibas.dmi.dbis.adam.query.datastructures.QueryCacheOptions
 import ch.unibas.dmi.dbis.adam.query.distance.{DistanceFunction, NormBasedDistanceFunction}
-import ch.unibas.dmi.dbis.adam.query.handler.QueryHints
-import ch.unibas.dmi.dbis.adam.query.handler.external.ExternalHandlers
+import ch.unibas.dmi.dbis.adam.query.handler.external.ExternalScanExpressions
 import ch.unibas.dmi.dbis.adam.query.handler.internal._
 import ch.unibas.dmi.dbis.adam.query.progressive.{QueryHintsProgressivePathChooser, SimpleProgressivePathChooser}
 import ch.unibas.dmi.dbis.adam.query.query.{BooleanQuery, NearestNeighbourQuery}
-import org.apache.spark.sql.types.{BooleanType, LongType, StructField, StructType}
-import org.apache.spark.sql.{DataFrame, Row}
 
 import scala.concurrent.duration.Duration
 import scala.util.{Failure, Success, Try}
@@ -32,28 +33,52 @@ private[rpc] object RPCHelperMethods {
 
   implicit def toExpression(request: QueryMessage)(implicit ac: AdamContext): Try[QueryExpression] = {
     try {
-      val queryid = prepareQI(request.queryid)
-      val projection = preparePJ(request.projection)
-      val entityname = request.from.get.submessage.entity
-      val indexname = request.from.get.submessage.index
-      val subexpression = request.from.get.submessage.expression
+      val queryid = prepareQueryId(request.queryid)
+
+      val entityname = request.from.get.source.entity
+      val indexname = request.from.get.source.index
+      val subexpression = request.from.get.source.expression
+
       val bq = prepareBQ(request.bq)
       val nnq = prepareNNQ(request.nnq)
-      val time = request.time
-      val tiq = None
-      val cacheOptions = prepareCO(request.readFromCache, request.putInCache)
 
-      if (time > 0) {
-        Success(new TimedProgressiveQueryHolder(entityname.get, nnq.get, bq, tiq, preparePaths(request.hints), Duration(time, TimeUnit.MILLISECONDS), false, queryid, cacheOptions))
-      } else if (subexpression.isDefined){
-        Success(new CompoundQueryHolder(toExpression(subexpression).get, queryid))
-      } else if (nnq.isEmpty && bq.isDefined) {
-        Success(new BooleanQueryHolder(entityname.get)(bq, queryid, cacheOptions))
+      val hints = QueryHints.withName(request.hints)
+
+      val time = request.time
+
+      //TODO: add cache options
+      val cacheOptions = prepareCacheExpression(request.readFromCache, request.putInCache)
+
+
+
+      var scan: QueryExpression = null
+
+      scan = if (time > 0) {
+        new TimedScanExpression(entityname.get, nnq.get, preparePaths(request.hints), Duration(time, TimeUnit.MILLISECONDS), queryid)()
+      } else if (subexpression.isDefined) {
+        new CompoundQueryExpression(toExpression(subexpression).get, queryid)
+      } else if (entityname.isDefined) {
+        HintBasedScanExpression(entityname.get, nnq, bq, hints, queryid)()
       } else if (indexname.isDefined) {
-        Success(new IndexQueryHolder(indexname.get)(nnq.get, bq, tiq, queryid, cacheOptions))
+
+        var scan: Option[QueryExpression] = None
+
+        if (bq.isDefined) {
+          scan = Some(new BooleanFilterScanExpression(entityname.get)(bq.get)(scan))
+        }
+
+        if (nnq.isDefined) {
+          scan = Some(new IndexScanExpression(indexname.get)(nnq.get, queryid)(scan))
+        }
+
+        scan.get
       } else {
-        Success(StandardQueryHolder(entityname.get)(QueryHints.withName(request.hints), nnq, bq, None, queryid, cacheOptions))
+        null
       }
+
+      scan = prepareProjectionExpression(request.projection, scan, queryid).getOrElse(scan)
+
+      Success(scan)
     } catch {
       case e: Exception => Failure(e)
     }
@@ -65,9 +90,9 @@ private[rpc] object RPCHelperMethods {
       val handler = request.handler
       val entityname = request.entity
       val params = request.params
-      val queryid = prepareQI(request.queryid)
+      val queryid = prepareQueryId(request.queryid)
 
-      Success(ExternalHandlers.toQueryExpression(handler, entityname, request.params, queryid))
+      Success(ExternalScanExpressions.toQueryExpression(handler, entityname, request.params, queryid))
     } catch {
       case e: Exception => Failure(e)
     }
@@ -83,7 +108,7 @@ private[rpc] object RPCHelperMethods {
         case _ => null
       }
 
-      val queryid = prepareQI(request.queryid)
+      val queryid = prepareQueryId(request.queryid)
 
       val left = toExpression(request.left)
       if (left.isFailure) {
@@ -109,19 +134,55 @@ private[rpc] object RPCHelperMethods {
   implicit def toExpression(seqm: Option[SubExpressionQueryMessage])(implicit ac: AdamContext): Try[QueryExpression] = {
     try {
       if (seqm.isEmpty) {
-        return Success(EmptyQueryExpression())
+        return Success(EmptyExpression())
       }
 
       seqm.get.submessage match {
         case SubExpressionQueryMessage.Submessage.Eqm(request) => toExpression(request)
         case SubExpressionQueryMessage.Submessage.Qm(request) => toExpression(request)
         case SubExpressionQueryMessage.Submessage.Ehqm(request) => toExpression(request)
-        case _ => Success(EmptyQueryExpression())
+        case _ => Success(EmptyExpression())
       }
     } catch {
       case e: Exception => Failure(e)
     }
   }
+
+
+  /**
+    *
+    * @param pm
+    * @param ac
+    * @return
+    */
+  def prepareProjectionExpression(pm: Option[ProjectionMessage], qe: QueryExpression, queryid : Option[String])(implicit ac: AdamContext): Option[QueryExpression] = {
+    val projection: Option[ProjectionField] = if (pm.isEmpty) {
+      None
+    } else if (pm.get.submessage.isField) {
+      val fields = pm.get.getField.field
+
+      if (fields.isEmpty) {
+        None
+      } else {
+        Some(FieldNameProjection(fields))
+      }
+    } else if (pm.get.submessage.isOp) {
+      pm.get.getOp match {
+        case ProjectionMessage.Operation.COUNT => Some(CountOperationProjection())
+        case ProjectionMessage.Operation.EXISTS => Some(ExistsOperationProjection())
+        case _ => None
+      }
+    } else {
+      None
+    }
+
+    if (projection.isDefined) {
+      Some(ProjectionExpression(projection.get, qe, queryid))
+    } else {
+      None
+    }
+  }
+
 
   /**
     *
@@ -129,7 +190,7 @@ private[rpc] object RPCHelperMethods {
     * @return
     */
   def prepareNNQ(option: Option[NearestNeighbourQueryMessage]): Option[NearestNeighbourQuery] = {
-    if(option.isEmpty){
+    if (option.isEmpty) {
       return None
     }
 
@@ -190,34 +251,8 @@ private[rpc] object RPCHelperMethods {
     }
   }
 
-  def preparePJ(pm: Option[ProjectionMessage])(implicit ac: AdamContext): (DataFrame => DataFrame) = {
-    if (pm.isEmpty) {
-      return (df: DataFrame) => df
-    }
 
-    if (pm.get.submessage.isField) {
-      val fields = pm.get.getField.field
-
-      if (fields.isEmpty) {
-        return (df: DataFrame) => df
-      } else {
-        import org.apache.spark.sql.functions.col
-        (df: DataFrame) => (df.select(fields.map(col(_)): _*))
-      }
-    }
-
-    if (pm.get.submessage.isOp) {
-      pm.get.getOp match {
-        case ProjectionMessage.Operation.COUNT => return (df: DataFrame) => ac.sqlContext.createDataFrame(ac.sc.makeRDD(Seq(Row(df.count()))), StructType(Seq(StructField("count", LongType))))
-        case ProjectionMessage.Operation.EXISTS => return (df: DataFrame) => ac.sqlContext.createDataFrame(ac.sc.makeRDD(Seq(Row(df.count() > 1))), StructType(Seq(StructField("exists", BooleanType))))
-        case _ => return (df: DataFrame) => df
-      }
-    }
-
-    (df: DataFrame) => df
-  }
-
-  def prepareQI(queryid: String) = if (queryid != "" && queryid != null) {
+  def prepareQueryId(queryid: String) = if (queryid != "" && queryid != null) {
     Some(queryid)
   } else {
     None
@@ -229,7 +264,7 @@ private[rpc] object RPCHelperMethods {
     new QueryHintsProgressivePathChooser(hints.map(QueryHints.withName(_).get))
   }
 
-  private def prepareCO(readFromCache: Boolean, putInCache: Boolean) = Some(QueryCacheOptions(readFromCache, putInCache))
+  private def prepareCacheExpression(readFromCache: Boolean, putInCache: Boolean) = Some(QueryCacheOptions(readFromCache, putInCache))
 }
 
 

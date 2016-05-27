@@ -5,15 +5,14 @@ import ch.unibas.dmi.dbis.adam.datatypes.feature.{FeatureVectorWrapper, FeatureV
 import ch.unibas.dmi.dbis.adam.exception.QueryNotCachedException
 import ch.unibas.dmi.dbis.adam.http.grpc._
 import ch.unibas.dmi.dbis.adam.main.AdamContext
-import ch.unibas.dmi.dbis.adam.query.datastructures.{ProgressiveQueryStatus, QueryLRUCache}
-import ch.unibas.dmi.dbis.adam.query.handler.QueryHints
-import ch.unibas.dmi.dbis.adam.query.progressive.{QueryHintsProgressivePathChooser, SimpleProgressivePathChooser}
+import ch.unibas.dmi.dbis.adam.query.datastructures.QueryLRUCache
+import ch.unibas.dmi.dbis.adam.query.handler.internal.QueryHints
+import ch.unibas.dmi.dbis.adam.query.progressive.{ProgressiveObservation, QueryHintsProgressivePathChooser, SimpleProgressivePathChooser}
 import io.grpc.stub.StreamObserver
 import org.apache.spark.Logging
 import org.apache.spark.sql.DataFrame
 import org.apache.spark.sql.types._
 
-import scala.collection.mutable.ListBuffer
 import scala.concurrent.Future
 
 /**
@@ -89,11 +88,13 @@ class SearchRPC(implicit ac: AdamContext) extends AdamSearchGrpc.AdamSearch with
 
       val res = QueryOp(expression.get)
 
+      log.debug("\n ------------------- \n" + expression.get.mkString(0) + "\n ------------------- \n")
+
       if (res.isSuccess) {
-        val resultInfos = expression.get.getRunDetails(new ListBuffer())
+        val resultInfos = expression.get.information()
 
         val results = resultInfos.map(res =>
-          prepareResults(res.id, 0.0, res.time.toMillis, res.source, res.results)
+          prepareResults(res.id.getOrElse(""), res.confidence.getOrElse(0), res.time.toMillis, res.source.getOrElse(""), res.results)
         )
 
         Future.successful(QueryResultsMessage(
@@ -118,10 +119,10 @@ class SearchRPC(implicit ac: AdamContext) extends AdamSearchGrpc.AdamSearch with
       try {
         //track on next
         val onComplete =
-          (status: ProgressiveQueryStatus.Value, df: DataFrame, confidence: Float, source: String, info: Map[String, String]) => ({
+          (po: ProgressiveObservation) => ({
             responseObserver.onNext(
               QueryResultsMessage(Some(AckMessage(AckMessage.Code.OK)),
-                Seq(prepareResults(request.queryid, confidence, 0, source + " (" + info.get("name").getOrElse("no details") + ")", df))))
+                Seq(prepareResults(request.queryid, po.confidence, po.t2 - po.t1, po.source + " (" + po.info.get("name").getOrElse("no details") + ")", po.results))))
           })
 
         val pathChooser = if (request.hints.isEmpty) {
@@ -130,7 +131,7 @@ class SearchRPC(implicit ac: AdamContext) extends AdamSearchGrpc.AdamSearch with
           new QueryHintsProgressivePathChooser(request.hints.map(QueryHints.withName(_).get))
         }
 
-        val tracker = QueryOp.progressive(request.from.get.getEntity, RPCHelperMethods.prepareNNQ(request.nnq).get, RPCHelperMethods.prepareBQ(request.bq), pathChooser, onComplete, false)
+        val tracker = QueryOp.progressive(request.from.get.getEntity, RPCHelperMethods.prepareNNQ(request.nnq).get, RPCHelperMethods.prepareBQ(request.bq), pathChooser, onComplete)
 
         //track on completed
         while (!tracker.get.isCompleted) {
@@ -142,6 +143,7 @@ class SearchRPC(implicit ac: AdamContext) extends AdamSearchGrpc.AdamSearch with
         }
       } catch {
         case e: Exception => {
+          e.printStackTrace()
           log.error(e.getMessage)
           responseObserver.onNext(QueryResultsMessage(ack = Some(AckMessage(code = AckMessage.Code.ERROR, message = e.getMessage))))
         }
@@ -160,7 +162,7 @@ class SearchRPC(implicit ac: AdamContext) extends AdamSearchGrpc.AdamSearch with
       val res = QueryLRUCache.get(request.queryid)
 
       if (res.isSuccess) {
-        Future.successful(QueryResultsMessage(Some(AckMessage(code = AckMessage.Code.OK)), Seq(prepareResults(request.queryid, 0.0, 0, "cache", res.get))))
+        Future.successful(QueryResultsMessage(Some(AckMessage(code = AckMessage.Code.OK)), Seq(prepareResults(request.queryid, 0, 0, "cache", Some(res.get)))))
       } else {
         log.error(res.failed.get.getMessage)
         Future.failed(QueryNotCachedException())
@@ -178,31 +180,35 @@ class SearchRPC(implicit ac: AdamContext) extends AdamSearchGrpc.AdamSearch with
     * @param df
     * @return
     */
-  private def prepareResults(queryid: String, confidence: Double, time: Long, source: String, df: DataFrame): QueryResultInfoMessage = {
-    val cols = df.schema
+  private def prepareResults(queryid: String, confidence: Float, time: Long, source: String, df: Option[DataFrame]): QueryResultInfoMessage = {
+    val results: Seq[QueryResultTupleMessage] = if (df.isDefined) {
+      val cols = df.get.schema
 
-    val results = df.collect().map(row => {
-      val metadata = cols.map(col => {
-        try {
-          col.name -> {
-            col.dataType match {
-              case BooleanType => DataMessage().withBooleanData(row.getAs[Boolean](col.name))
-              case DoubleType => DataMessage().withDoubleData(row.getAs[Double](col.name))
-              case FloatType => DataMessage().withFloatData(row.getAs[Float](col.name))
-              case IntegerType => DataMessage().withIntData(row.getAs[Integer](col.name))
-              case LongType => DataMessage().withLongData(row.getAs[Long](col.name))
-              case StringType => DataMessage().withStringData(row.getAs[String](col.name))
-              case x: FeatureVectorWrapperUDT => DataMessage().withFeatureData(FeatureVectorMessage().withDenseVector(DenseVectorMessage(row.getAs[FeatureVectorWrapper](col.name).toSeq)))
-              case _ => DataMessage().withStringData("")
+      df.get.collect().map(row => {
+        val metadata = cols.map(col => {
+          try {
+            col.name -> {
+              col.dataType match {
+                case BooleanType => DataMessage().withBooleanData(row.getAs[Boolean](col.name))
+                case DoubleType => DataMessage().withDoubleData(row.getAs[Double](col.name))
+                case FloatType => DataMessage().withFloatData(row.getAs[Float](col.name))
+                case IntegerType => DataMessage().withIntData(row.getAs[Integer](col.name))
+                case LongType => DataMessage().withLongData(row.getAs[Long](col.name))
+                case StringType => DataMessage().withStringData(row.getAs[String](col.name))
+                case x: FeatureVectorWrapperUDT => DataMessage().withFeatureData(FeatureVectorMessage().withDenseVector(DenseVectorMessage(row.getAs[FeatureVectorWrapper](col.name).toSeq)))
+                case _ => DataMessage().withStringData("")
+              }
             }
+          } catch {
+            case e: Exception => col.name -> DataMessage().withStringData("")
           }
-        } catch {
-          case e: Exception => col.name -> DataMessage().withStringData("")
-        }
-      }).toMap
+        }).toMap
 
-      QueryResultTupleMessage(metadata)
-    })
+        QueryResultTupleMessage(metadata)
+      })
+    } else {
+      Seq()
+    }
 
     QueryResultInfoMessage(Some(AckMessage(AckMessage.Code.OK)), queryid, confidence, time, source, results)
   }

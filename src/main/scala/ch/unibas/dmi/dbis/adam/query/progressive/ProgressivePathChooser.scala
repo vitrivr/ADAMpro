@@ -5,7 +5,10 @@ import ch.unibas.dmi.dbis.adam.index.Index
 import ch.unibas.dmi.dbis.adam.index.Index._
 import ch.unibas.dmi.dbis.adam.index.structures.IndexTypes
 import ch.unibas.dmi.dbis.adam.main.AdamContext
-import ch.unibas.dmi.dbis.adam.query.handler.QueryHints.{IndexQueryHint, QueryHint}
+import ch.unibas.dmi.dbis.adam.query.handler.generic.QueryExpression
+import ch.unibas.dmi.dbis.adam.query.handler.internal.QueryHints.QueryHint
+import ch.unibas.dmi.dbis.adam.query.handler.internal.{HintBasedScanExpression, IndexScanExpression, SequentialScanExpression}
+import ch.unibas.dmi.dbis.adam.query.query.NearestNeighbourQuery
 import org.apache.log4j.Logger
 
 /**
@@ -15,84 +18,77 @@ import org.apache.log4j.Logger
   * April 2016
   */
 /**
-  * Specifies which indexes to use in progressive querying
+  * Specifies which query paths to use in progressive querying
   */
 trait ProgressivePathChooser {
   val log = Logger.getLogger(getClass.getName)
 
-  def getPaths(entityname: EntityName): Seq[IndexName]
+  def getPaths(entityname: EntityName, nnq: NearestNeighbourQuery): Seq[QueryExpression]
 }
 
 /**
-  * Chooses from all index types one.
+  * Chooses from all index types one (with sequential scan after index scan).
   *
   * @param ac
   */
 class SimpleProgressivePathChooser()(implicit ac: AdamContext) extends ProgressivePathChooser {
-  override def getPaths(entityname: EntityName): Seq[IndexName] = {
+  override def getPaths(entityname: EntityName, nnq: NearestNeighbourQuery): Seq[QueryExpression] = {
     //TODO: choose better default
     IndexTypes.values
-      .map(indextypename => Index.list(entityname, indextypename).filter(_.isSuccess).sortBy(-_.get.weight).head)
-      .map(_.get.indexname)
+      .map(indextypename => Index.list(entityname, indextypename).filter(_.isSuccess).sortBy(-_.get.weight))
+      .filterNot(_.isEmpty)
+      .map(_.head)
+      .map(index => {IndexScanExpression(index.get)(nnq)()})
   }
 }
 
 /**
-  * Chooses all index paths for progressive query.
+  * Chooses all paths (index (without sequential scan) + sequential) for progressive query.
   *
   * @param ac
   */
 class AllProgressivePathChooser(implicit ac: AdamContext) extends ProgressivePathChooser {
-  override def getPaths(entityname: EntityName): Seq[IndexName] = {
-    Index.list(entityname).map(_.get.indexname)
+  override def getPaths(entityname: EntityName, nnq: NearestNeighbourQuery): Seq[QueryExpression] = {
+    Index.list(entityname)
+      .map(index => IndexScanExpression(index.get)(nnq)()).+:(SequentialScanExpression(entityname)(nnq)())
   }
 }
 
 /**
-  * Chooses first index based on given index types.
+  * Chooses first index based on given index types (without sequential scan).
   *
   * @param indextypenames
   * @param ac
   */
 class IndexTypeProgressivePathChooser(indextypenames: Seq[IndexTypeName])(implicit ac: AdamContext) extends ProgressivePathChooser {
-  override def getPaths(entityname: EntityName): Seq[IndexName] = {
+  override def getPaths(entityname: EntityName, nnq: NearestNeighbourQuery): Seq[QueryExpression] = {
     indextypenames
       .map(indextypename => Index.list(entityname, indextypename).filter(_.isSuccess).sortBy(-_.get.weight).head)
-      .map(_.get.indexname)
+      .map(index => IndexScanExpression(index.get)(nnq)())
   }
 }
 
 /**
-  * Chooses first index based on hints given.
+  * Chooses first index based on hints given (without sequential scan).
   *
   * @param hints list of QueryHints, note that only IndexQueryHints are accepted at the moment
   * @param ac
   */
 class QueryHintsProgressivePathChooser(hints: Seq[QueryHint])(implicit ac: AdamContext) extends ProgressivePathChooser {
-  override def getPaths(entityname: EntityName): Seq[IndexName] = {
-    hints.map(choosePlan(entityname, _)).filterNot(_ == null)
-  }
-
-  private def choosePlan(entityname: EntityName, hint: QueryHint)(implicit ac: AdamContext) = {
-    if (hint.isInstanceOf[IndexQueryHint]) {
-      Index.list(entityname, hint.asInstanceOf[IndexQueryHint].structureType)
-        .filter(_.isSuccess)
-        .sortBy(-_.get.weight)
-        .map(_.get.indexname)
-        .head
-    } else {
-      log.error("only query hints of the type IndexQueryHint are accepted")
-      null
-    }
+  override def getPaths(entityname: EntityName, nnq: NearestNeighbourQuery): Seq[QueryExpression] = {
+    hints.map(hint => HintBasedScanExpression.startPlanSearch(entityname, Some(nnq), None, Seq(hint))()).filterNot(_ == null)
   }
 }
 
 /**
-  * Chooses index based on names in given list.
+  * Chooses index based on names in given list (without sequential scan).
   *
   * @param indexnames
   * @param ac
   */
 class IndexnameSpecifiedProgressivePathChooser(indexnames: Seq[IndexName])(implicit ac: AdamContext) extends ProgressivePathChooser {
-  override def getPaths(entityname: EntityName): Seq[IndexName] = indexnames
+  override def getPaths(entityname: EntityName, nnq: NearestNeighbourQuery): Seq[QueryExpression] = {
+    indexnames.map(Index.load(_)).filter(_.isSuccess)
+      .map(index => IndexScanExpression(index.get)(nnq)())
+  }
 }

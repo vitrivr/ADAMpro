@@ -18,9 +18,9 @@ $("#btnSubmitIndex").click(function () {
     var result = {};
     result.entity = $("#indexname").val();
     result.partitions = $("#indexpartitions").val();
-    result.columns = $("#indexcolumns").val().split(",");
     result.materialize = $('#indexmaterialize').is(':checked');
     result.replace = $('#indexreplace').is(':checked');
+    result.columns = $("#indexcolumns").val().split(",");
 
 
     $.ajax("/index/repartition", {
@@ -67,10 +67,9 @@ $("#btnSubmitEntity").click(function () {
     var result = {};
     result.entity = $("#entityname").val();
     result.partitions = $("#entitypartitions").val();
+    result.materialize = true;
+    result.replace = true;
     result.columns = $("#entitycolumns").val().split(",");
-    result.materialize = $('#entitymaterialize').is(':checked');
-    result.replace = $('#entityreplace').is(':checked');
-
 
     $.ajax("/entity/repartition", {
         data: JSON.stringify(result),
