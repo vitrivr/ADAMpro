@@ -206,7 +206,7 @@ private[rpc] object RPCHelperMethods {
 
     val fv = prepareFeatureVector(nnq.query.get)
 
-    Some(NearestNeighbourQuery(nnq.column, fv, distance, nnq.k, nnq.indexOnly, nnq.options, partitions))
+    Some(NearestNeighbourQuery(nnq.column, fv, nnq.weights.map(prepareFeatureVector(_)), distance, nnq.k, nnq.indexOnly, nnq.options, partitions))
   }
 
   def prepareFeatureVector(fv: FeatureVectorMessage): FeatureVector = fv.feature match {

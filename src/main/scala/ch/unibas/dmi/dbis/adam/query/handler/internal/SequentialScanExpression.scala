@@ -58,7 +58,7 @@ object SequentialScanExpression extends Logging {
     val distUDF = udf((c: FeatureVectorWrapper) => {
       try {
         if (c != null) {
-          nnq.distance(q.value, c.vector)
+          nnq.distance(q.value, c.vector, nnq.weights)
         } else {
           Float.MaxValue
         }

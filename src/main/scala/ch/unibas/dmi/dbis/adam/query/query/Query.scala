@@ -84,6 +84,7 @@ case class BooleanQuery(
 case class NearestNeighbourQuery(
                                   column: String,
                                   q: FeatureVector,
+                                  weights : Option[FeatureVector],
                                   distance: DistanceFunction,
                                   k: Int,
                                   indexOnly: Boolean = false,

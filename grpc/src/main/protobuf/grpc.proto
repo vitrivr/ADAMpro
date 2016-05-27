@@ -255,12 +255,13 @@ message FromMessage {
 message NearestNeighbourQueryMessage {
   string column = 1;
   FeatureVectorMessage query = 2;
-  DistanceMessage distance = 3;
-  int32 k = 4;
-  map<string, string> options = 5;
+  FeatureVectorMessage weights = 3;
+  DistanceMessage distance = 4;
+  int32 k = 5;
+  map<string, string> options = 6;
   //specifies whether only the candidates from the index search are returned and no exact distance computation is performed
-  bool indexOnly = 6;
-  repeated int32 partitions = 7;
+  bool indexOnly = 7;
+  repeated int32 partitions = 8;
 }
 
 message DistanceMessage {

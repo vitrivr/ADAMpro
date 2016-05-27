@@ -11,5 +11,5 @@ import ch.unibas.dmi.dbis.adam.query.distance.Distance._
  */
 @SerialVersionUID(100L)
 trait DistanceFunction {
-  def apply(v1: FeatureVector, v2: FeatureVector): Distance
+  def apply(v1: FeatureVector, v2: FeatureVector, weights : Option[FeatureVector] = None): Distance
 }

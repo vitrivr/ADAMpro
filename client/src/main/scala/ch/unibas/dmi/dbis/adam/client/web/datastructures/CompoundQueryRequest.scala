@@ -40,6 +40,7 @@ case class CompoundQueryRequest(var id: String, var operation: String, var optio
     }
 
     val nnq = NearestNeighbourQueryMessage(options.getOrElse("column", "feature"), Some(FeatureVectorMessage().withDenseVector(DenseVectorMessage(query))),
+      None,
       Some(DistanceMessage(DistanceMessage.DistanceType.minkowski, Map("norm" -> "1"))),
       options.get("k").getOrElse("100").toInt,
       Map(),

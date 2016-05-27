@@ -32,7 +32,7 @@ class PartitionTestSuite extends AdamTestBase {
         When("performing a repartitioning with replacement")
         IndexOp.partition(index.get.indexname, nPartitions, None, Some(Seq("tid")), PartitionMode.REPLACE_EXISTING)
 
-        val partnnq = NearestNeighbourQuery("featurefield", es.feature.vector, es.distance, es.k, false, Map[String, String](), Some(Set(0)))
+        val partnnq = NearestNeighbourQuery("featurefield", es.feature.vector, None, es.distance, es.k, false, Map[String, String](), Some(Set(0)))
 
         val partresults = QueryOp.index(index.get.indexname, partnnq, None).get.get
           .map(r => (r.getAs[Float](FieldNames.distanceColumnName), r.getAs[Long]("tid"))).collect()
@@ -54,7 +54,7 @@ class PartitionTestSuite extends AdamTestBase {
 
         When("performing a repartitioning with replacement")
         val partindex = IndexOp.partition(index.get.indexname, nPartitions, None, Some(Seq("tid")), PartitionMode.CREATE_TEMP)
-        val partnnq = NearestNeighbourQuery("featurefield", es.feature.vector, es.distance, es.k, false, Map[String, String](), Some(Set(0)))
+        val partnnq = NearestNeighbourQuery("featurefield", es.feature.vector, None, es.distance, es.k, false, Map[String, String](), Some(Set(0)))
 
         val partresults = QueryOp.index(partindex.get.indexname, partnnq, None).get.get
           .map(r => (r.getAs[Float](FieldNames.distanceColumnName), r.getAs[Long]("tid"))).collect()
@@ -82,7 +82,7 @@ class PartitionTestSuite extends AdamTestBase {
 
         When("performing a repartitioning, creating new")
         val partindex = IndexOp.partition(index.get.indexname, nPartitions, None, Some(Seq("tid")), PartitionMode.CREATE_NEW)
-        val partnnq = NearestNeighbourQuery("featurefield", es.feature.vector, es.distance, es.k, false, Map[String, String](), Some(Set(0)))
+        val partnnq = NearestNeighbourQuery("featurefield", es.feature.vector, None, es.distance, es.k, false, Map[String, String](), Some(Set(0)))
 
         IndexLRUCache.empty()
 
@@ -109,7 +109,7 @@ class PartitionTestSuite extends AdamTestBase {
 
         When("performing a repartitioning, creating new")
         val partindex = IndexOp.partition(index.get.indexname, nPartitions, None, Some(Seq("tid")), PartitionMode.CREATE_NEW)
-        val partnnq = NearestNeighbourQuery("featurefield", es.feature.vector, es.distance, es.k, false, Map[String, String](), Some(Set(0)))
+        val partnnq = NearestNeighbourQuery("featurefield", es.feature.vector, None, es.distance, es.k, false, Map[String, String](), Some(Set(0)))
 
         IndexLRUCache.empty()
 
