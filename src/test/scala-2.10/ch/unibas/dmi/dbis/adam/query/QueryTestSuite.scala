@@ -428,7 +428,7 @@ class QueryTestSuite extends AdamTestBase with ScalaFutures {
 
         When("performing a kNN query of two indices and performing the intersect")
         //nnq has numOfQ  = 0 to avoid that by the various randomized q's the results get different
-        val nnq = NearestNeighbourQuery("featurefield", es.feature.vector, None, es.distance, es.k, false, Map("numOfQ" -> "0"), None)
+        val nnq = NearestNeighbourQuery("featurefield", es.feature.vector, None, es.distance, es.k, true, Map("numOfQ" -> "0"), None)
 
         val shqh = new IndexScanExpression(shidx.get.indexname)(nnq)()
         val vhqh = new IndexScanExpression(vaidx.get.indexname)(nnq)()
@@ -464,7 +464,7 @@ class QueryTestSuite extends AdamTestBase with ScalaFutures {
 
         When("performing a kNN query of two indices and performing the intersect")
         //nnq has numOfQ  = 0 to avoid that by the various randomized q's the results get different
-        val nnq = NearestNeighbourQuery("featurefield", es.feature.vector, None, es.distance, es.k, false, Map("numOfQ" -> "0"), None)
+        val nnq = NearestNeighbourQuery("featurefield", es.feature.vector, None, es.distance, es.k, true, Map("numOfQ" -> "0"), None)
 
         val va1qh = new IndexScanExpression(vaidx1.get.indexname)(nnq)()
         val va2qh = new IndexScanExpression(vaidx2.get.indexname)(nnq)()
