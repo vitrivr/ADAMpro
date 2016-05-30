@@ -36,30 +36,35 @@ mainClass in(Compile, run) := Some("ch.unibas.dmi.dbis.adam.main.Startup")
 unmanagedResourceDirectories in Compile += baseDirectory.value / "conf"
 scalacOptions ++= Seq("-target:jvm-1.7")
 
-//libs
+//lib resolvers
 resolvers ++= Seq(
   "Sonatype Releases" at "https://oss.sonatype.org/content/repositories/releases/"
 )
 resolvers += Resolver.sonatypeRepo("snapshots")
 
 //base libs
-libraryDependencies ++= Seq(
+val baseLibs = Seq(
   "org.scala-lang" % "scala-compiler" % "2.10.6",
   "org.scala-lang" % "scala-reflect" % "2.10.6"
 )
 
 //adampro core libs
-libraryDependencies ++= Seq(
-  "org.apache.spark" %% "spark-core" % "1.6.1" excludeAll ExclusionRule("org.apache.hadoop"),  //make sure that you use the same spark version as in your deployment!
+val coreLibs = Seq(
+  "org.apache.spark" %% "spark-core" % "1.6.1" excludeAll ExclusionRule("org.apache.hadoop"), //make sure that you use the same spark version as in your deployment!
   "org.apache.spark" %% "spark-sql" % "1.6.1",
   "org.apache.spark" %% "spark-hive" % "1.6.1",
   "org.apache.spark" %% "spark-mllib" % "1.6.1",
+  "org.apache.hadoop" % "hadoop-client" % "2.6.0" excludeAll ExclusionRule("javax.servlet") //make sure that you use the same hadoop version as in your deployment!
+)
+//TODO: add multiple configurations to sbt, one which has coreLibs as provided (as they do not have to be submitted to spark)
+
+//secondary libs
+val secondaryLibs = Seq(
   "org.scalanlp" %% "breeze" % "0.11.2",
   "org.scalanlp" %% "breeze-natives" % "0.11.2",
   "com.typesafe.slick" %% "slick" % "3.1.0",
   "com.h2database" % "h2" % "1.4.188" excludeAll ExclusionRule("org.mortbay.jetty"),
   "org.postgresql" % "postgresql" % "9.4.1208",
-  "org.apache.hadoop" % "hadoop-client" % "2.6.0" excludeAll ExclusionRule("javax.servlet"),  //make sure that you use the same hadoop version as in your deployment!
   "org.apache.commons" % "commons-lang3" % "3.4" force(),
   "org.apache.commons" % "commons-math3" % "3.4.1" force(),
   "it.unimi.dsi" % "fastutil" % "7.0.12",
@@ -71,14 +76,14 @@ libraryDependencies ++= Seq(
   )
 )
 
-//slf4j
-libraryDependencies ++= Seq(
+//log libs
+val logLibs = Seq(
   "org.slf4j" % "slf4j-api" % "1.7.5" force(),
   "org.slf4j" % "slf4j-log4j12" % "1.7.5" force()
 )
 
-//externals
-libraryDependencies ++= Seq(
+//tertiary libs
+val tertiaryLibs = Seq(
   "org.apache.solr" % "solr-solrj" % "5.5.0"
 ).map(
   _.excludeAll(
@@ -86,6 +91,18 @@ libraryDependencies ++= Seq(
     ExclusionRule("org.slf4j", "slf4j-api")
   )
 )
+
+//test libs
+val testLibs = Seq(
+  "org.scalatest" % "scalatest_2.10" % "3.0.0-M15"
+).map(
+  _.excludeAll(
+    ExclusionRule("org.scala-lang"),
+    ExclusionRule("org.slf4j", "slf4j-api")
+  )
+)
+
+libraryDependencies := baseLibs ++ coreLibs ++ secondaryLibs ++ logLibs ++ tertiaryLibs ++ testLibs
 
 unmanagedBase <<= baseDirectory { base => base / "lib" }
 unmanagedResourceDirectories in Compile += baseDirectory.value / "conf"
@@ -116,20 +133,8 @@ test in assembly := {}
 //provided libraries should be included in "run"
 run in Compile <<= Defaults.runTask(fullClasspath in Compile, mainClass in(Compile, run), runner in(Compile, run))
 
-
-//test
-libraryDependencies ++= Seq(
-  "org.scalatest" % "scalatest_2.10" % "3.0.0-M15"
-).map(
-  _.excludeAll(
-    ExclusionRule("org.scala-lang"),
-    ExclusionRule("org.slf4j", "slf4j-api")
-  )
-)
-
 parallelExecution in Test := false
 concurrentRestrictions in Global += Tags.limit(Tags.Test, 1)
-
 
 //custom commands
 addCommandAlias("proto", "; grpc/assembly")
@@ -156,7 +161,7 @@ stopDocker := {
 
 lazy val runADAM = taskKey[Unit]("Runs ADAMpro in docker container.")
 runADAM := {
-  //TODO: check that docker is running
+  //TODO: check that docker is running before running assembly and submitting
   assembly.value
   "./scripts/docker-runADAM.sh" !
 }
