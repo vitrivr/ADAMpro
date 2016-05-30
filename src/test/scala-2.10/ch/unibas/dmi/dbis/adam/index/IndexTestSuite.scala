@@ -4,7 +4,7 @@ import ch.unibas.dmi.dbis.adam.AdamTestBase
 import ch.unibas.dmi.dbis.adam.api.{EntityOp, IndexOp}
 import ch.unibas.dmi.dbis.adam.datatypes.FieldTypes
 import ch.unibas.dmi.dbis.adam.datatypes.feature.{FeatureVectorWrapper, FeatureVectorWrapperUDT}
-import ch.unibas.dmi.dbis.adam.entity.{Entity, FieldDefinition}
+import ch.unibas.dmi.dbis.adam.entity.{Entity, AttributeDefinition}
 import ch.unibas.dmi.dbis.adam.index.structures.IndexTypes
 import ch.unibas.dmi.dbis.adam.main.SparkStartup
 import ch.unibas.dmi.dbis.adam.query.distance.EuclideanDistance
@@ -58,7 +58,7 @@ class IndexTestSuite extends AdamTestBase {
     scenario("create and drop indexes of entity with multiple features") {
       Given("an entity with multiple feature vector fields without metadata")
       withEntityName { entityname =>
-        Entity.create(entityname, Seq(FieldDefinition("idfield", FieldTypes.LONGTYPE, true), FieldDefinition("feature1", FieldTypes.FEATURETYPE), FieldDefinition("feature2", FieldTypes.FEATURETYPE)))
+        Entity.create(entityname, Seq(AttributeDefinition("idfield", FieldTypes.LONGTYPE, true), AttributeDefinition("feature1", FieldTypes.FEATURETYPE), AttributeDefinition("feature2", FieldTypes.FEATURETYPE)))
 
         val schema = StructType(Seq(
           StructField("idfield", LongType, false),

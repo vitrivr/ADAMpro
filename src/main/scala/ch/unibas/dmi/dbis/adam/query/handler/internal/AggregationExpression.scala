@@ -23,6 +23,7 @@ abstract class AggregationExpression(left: QueryExpression, right: QueryExpressi
   children ++= Seq(left, right)
 
   override protected def run(filter: Option[DataFrame] = None)(implicit ac: AdamContext): Option[DataFrame] = {
+    log.debug("run aggregation operation")
     val result = order match {
       case ExpressionEvaluationOrder.LeftFirst => asymmetric(left, right, filter)
       case ExpressionEvaluationOrder.RightFirst => asymmetric(right, left, filter)

@@ -1,7 +1,7 @@
 package ch.unibas.dmi.dbis.adam.api
 
 import ch.unibas.dmi.dbis.adam.entity.Entity._
-import ch.unibas.dmi.dbis.adam.entity.{Entity, FieldDefinition}
+import ch.unibas.dmi.dbis.adam.entity.{Entity, AttributeDefinition}
 import ch.unibas.dmi.dbis.adam.main.AdamContext
 import ch.unibas.dmi.dbis.adam.storage.partition.PartitionMode
 import org.apache.spark.sql.DataFrame
@@ -33,7 +33,7 @@ object EntityOp extends GenericOp {
     * @param fields     fields of the entity to create
     * @return
     */
-  def apply(entityname: EntityName, fields: Seq[FieldDefinition])(implicit ac: AdamContext): Try[Entity] = {
+  def apply(entityname: EntityName, fields: Seq[AttributeDefinition])(implicit ac: AdamContext): Try[Entity] = {
       create(entityname, fields)(ac)
   }
 
@@ -44,7 +44,7 @@ object EntityOp extends GenericOp {
     * @param fields     fields of the entity to create
     * @return
     */
-  def create(entityname: EntityName, fields: Seq[FieldDefinition])(implicit ac: AdamContext): Try[Entity] = {
+  def create(entityname: EntityName, fields: Seq[AttributeDefinition])(implicit ac: AdamContext): Try[Entity] = {
     execute("create entity " + entityname + " operation") {
       Entity.create(entityname, fields)
     }

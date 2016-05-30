@@ -37,6 +37,8 @@ case class IndexScanExpression(index: Index)(nnq: NearestNeighbourQuery, id: Opt
   }
 
   override protected def run(filter: Option[DataFrame] = None)(implicit ac: AdamContext): Option[DataFrame] = {
+    log.debug("performing index scan operation")
+
     if (!index.isQueryConform(nnq)) {
       throw QueryNotConformException()
     }

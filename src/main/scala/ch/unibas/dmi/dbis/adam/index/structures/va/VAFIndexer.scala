@@ -66,14 +66,14 @@ class VAFIndexer(maxMarks: Int = 64, marksGenerator: MarksGenerator, bitsPerDime
     * @return
     */
   private def train(trainData: Array[IndexingTaskTuple[_]]): VAIndexMetaData = {
-    log.debug("VA-File (fixed) started training")
+    log.trace("VA-File (fixed) started training")
 
     val dim = trainData.head.feature.length
 
     val signatureGenerator = new FixedSignatureGenerator(dim, bitsPerDimension)
     val marks = marksGenerator.getMarks(trainData, maxMarks)
 
-    log.debug("VA-File (fixed) finished training")
+    log.trace("VA-File (fixed) finished training")
 
     VAIndexMetaData(marks, signatureGenerator, distance)
   }

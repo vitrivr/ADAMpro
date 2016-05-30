@@ -29,6 +29,8 @@ case class TimedScanExpression(exprs: Seq[QueryExpression], timelimit: Duration,
     * @return
     */
   override protected def run(filter: Option[DataFrame] = None)(implicit ac: AdamContext): Option[DataFrame] = {
+    log.debug("perform time-limited evaluation")
+
     val prefilter = if (filter.isDefined && filterExpr.isDefined) {
       Some(filter.get.join(filterExpr.get.evaluate().get))
     } else if (filter.isDefined) {

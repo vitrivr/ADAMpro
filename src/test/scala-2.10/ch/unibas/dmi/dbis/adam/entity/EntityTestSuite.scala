@@ -33,7 +33,7 @@ class EntityTestSuite extends AdamTestBase {
         val givenEntities = Entity.list()
 
         When("a new random entity (without any metadata) is created")
-        Entity.create(entityname, Seq(FieldDefinition("idfield", FieldTypes.LONGTYPE, true), FieldDefinition("feature", FieldTypes.FEATURETYPE)))
+        Entity.create(entityname, Seq(AttributeDefinition("idfield", FieldTypes.LONGTYPE, true), AttributeDefinition("feature", FieldTypes.FEATURETYPE)))
 
         Then("one entity should be created")
         val finalEntities = Entity.list()
@@ -52,7 +52,7 @@ class EntityTestSuite extends AdamTestBase {
     scenario("drop an existing entity") {
       withEntityName { entityname =>
         Given("there exists one entity")
-        Entity.create(entityname, Seq(FieldDefinition("idfield", FieldTypes.LONGTYPE, true), FieldDefinition("feature", FieldTypes.FEATURETYPE)))
+        Entity.create(entityname, Seq(AttributeDefinition("idfield", FieldTypes.LONGTYPE, true), AttributeDefinition("feature", FieldTypes.FEATURETYPE)))
         assert(Entity.list().contains(entityname.toLowerCase()))
 
         When("the entity is dropped")
@@ -72,7 +72,7 @@ class EntityTestSuite extends AdamTestBase {
         val givenEntities = Entity.list()
 
         When("a new random entity (without any metadata) is created")
-        Entity.create(entityname, Seq(FieldDefinition("idfield", FieldTypes.LONGTYPE, true), FieldDefinition("feature1", FieldTypes.FEATURETYPE), FieldDefinition("feature2", FieldTypes.FEATURETYPE)))
+        Entity.create(entityname, Seq(AttributeDefinition("idfield", FieldTypes.LONGTYPE, true), AttributeDefinition("feature1", FieldTypes.FEATURETYPE), AttributeDefinition("feature2", FieldTypes.FEATURETYPE)))
 
         Then("one entity should be created")
         val finalEntities = Entity.list()
@@ -105,7 +105,7 @@ class EntityTestSuite extends AdamTestBase {
           TemplateFieldDefinition("booleanfield", FieldTypes.BOOLEANTYPE, false, "boolean")
         )
 
-        val entity = Entity.create(entityname, fieldTemplate.map(ft => FieldDefinition(ft.name, ft.fieldType, ft.pk)))
+        val entity = Entity.create(entityname, fieldTemplate.map(ft => AttributeDefinition(ft.name, ft.fieldType, ft.pk)))
 
         Then("the entity should be created")
         val entities = Entity.list()
@@ -142,7 +142,7 @@ class EntityTestSuite extends AdamTestBase {
     scenario("drop an entity with metadata") {
       withEntityName { entityname =>
         Given("an entity with metadata")
-        val fields = Seq[FieldDefinition](FieldDefinition("idfield", FieldTypes.LONGTYPE, true), FieldDefinition("feature", FieldTypes.FEATURETYPE), FieldDefinition("stringfield", FieldTypes.STRINGTYPE))
+        val fields = Seq[AttributeDefinition](AttributeDefinition("idfield", FieldTypes.LONGTYPE, true), AttributeDefinition("feature", FieldTypes.FEATURETYPE), AttributeDefinition("stringfield", FieldTypes.STRINGTYPE))
         EntityOp(entityname, fields)
 
         val preResult = getJDBCConnection.createStatement().executeQuery("SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = '" + entityname.toLowerCase() + "'")
@@ -171,11 +171,11 @@ class EntityTestSuite extends AdamTestBase {
     scenario("create an entity with very specified metadata (indexed, unique, primary key)") {
       withEntityName { entityname =>
         Given("an entity with metadata")
-        val fields = Seq[FieldDefinition](
-          FieldDefinition("pkfield", FieldTypes.LONGTYPE, true),
-          FieldDefinition("uniquefield", FieldTypes.INTTYPE, false, true),
-          FieldDefinition("indexedfield", FieldTypes.INTTYPE, false, false, true),
-          FieldDefinition("feature", FieldTypes.FEATURETYPE)
+        val fields = Seq[AttributeDefinition](
+          AttributeDefinition("pkfield", FieldTypes.LONGTYPE, true),
+          AttributeDefinition("uniquefield", FieldTypes.INTTYPE, false, true),
+          AttributeDefinition("indexedfield", FieldTypes.INTTYPE, false, false, true),
+          AttributeDefinition("feature", FieldTypes.FEATURETYPE)
         )
 
         When("the entity is created")
@@ -209,7 +209,7 @@ class EntityTestSuite extends AdamTestBase {
       */
     scenario("insert data in an entity with auto-increment metadata") {
       withEntityName { entityname =>
-        Entity.create(entityname, Seq(FieldDefinition("idfield", FieldTypes.AUTOTYPE, true), FieldDefinition("featurefield", FieldTypes.FEATURETYPE, false, false, false)))
+        Entity.create(entityname, Seq(AttributeDefinition("idfield", FieldTypes.AUTOTYPE, true), AttributeDefinition("featurefield", FieldTypes.FEATURETYPE, false, false, false)))
 
         val ntuples = Random.nextInt(1000)
         val ndims = 100
@@ -258,7 +258,7 @@ class EntityTestSuite extends AdamTestBase {
     scenario("insert data in an entity without metadata") {
       withEntityName { entityname =>
         Given("an entity without metadata")
-        Entity.create(entityname, Seq(FieldDefinition("idfield", FieldTypes.LONGTYPE, true), FieldDefinition("featurefield", FieldTypes.FEATURETYPE, false, false, false)))
+        Entity.create(entityname, Seq(AttributeDefinition("idfield", FieldTypes.LONGTYPE, true), AttributeDefinition("featurefield", FieldTypes.FEATURETYPE, false, false, false)))
 
         val ntuples = Random.nextInt(1000)
         val ndims = 100
@@ -289,7 +289,7 @@ class EntityTestSuite extends AdamTestBase {
     scenario("insert data in an entity with multiple feature fields without metadata") {
       withEntityName { entityname =>
         Given("an entity without metadata")
-        Entity.create(entityname, Seq(FieldDefinition("idfield", FieldTypes.LONGTYPE, true), FieldDefinition("featurefield1", FieldTypes.FEATURETYPE), FieldDefinition("featurefield2", FieldTypes.FEATURETYPE)))
+        Entity.create(entityname, Seq(AttributeDefinition("idfield", FieldTypes.LONGTYPE, true), AttributeDefinition("featurefield1", FieldTypes.FEATURETYPE), AttributeDefinition("featurefield2", FieldTypes.FEATURETYPE)))
 
         val ntuples = Random.nextInt(1000)
         val ndims = 100
@@ -340,7 +340,7 @@ class EntityTestSuite extends AdamTestBase {
           TemplateFieldDefinition("booleanfieldunfilled", FieldTypes.BOOLEANTYPE, false, "boolean")
         )
 
-        val entity = Entity.create(entityname, fieldTemplate.map(x => FieldDefinition(x.name, x.fieldType, x.pk)))
+        val entity = Entity.create(entityname, fieldTemplate.map(x => AttributeDefinition(x.name, x.fieldType, x.pk)))
 
         val ntuples = Random.nextInt(1000)
         val ndims = 100

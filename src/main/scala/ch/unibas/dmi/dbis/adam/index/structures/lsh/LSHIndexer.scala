@@ -61,7 +61,7 @@ class LSHIndexer(numHashTables: Int, numHashes: Int, distance: DistanceFunction,
     * @return
     */
   private def train(trainData: Array[IndexingTaskTuple[_]]): LSHIndexMetaData = {
-    log.debug("LSH started training")
+    log.trace("LSH started training")
 
     //data
     val dims = trainData.head.feature.size
@@ -79,7 +79,7 @@ class LSHIndexer(numHashTables: Int, numHashes: Int, distance: DistanceFunction,
     }
     val hashTables = (0 until numHashTables).map(i => new Hasher(hashFamily, numHashes))
 
-    log.debug("LSH finished training")
+    log.trace("LSH finished training")
 
     LSHIndexMetaData(hashTables, radius.toFloat, distance)
   }

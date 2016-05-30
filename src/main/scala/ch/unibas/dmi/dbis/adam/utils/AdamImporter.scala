@@ -7,7 +7,7 @@ import ch.unibas.dmi.dbis.adam.config.AdamConfig
 import ch.unibas.dmi.dbis.adam.datatypes.FieldTypes
 import ch.unibas.dmi.dbis.adam.datatypes.FieldTypes.FEATURETYPE
 import ch.unibas.dmi.dbis.adam.datatypes.feature.FeatureVectorWrapper
-import ch.unibas.dmi.dbis.adam.entity.FieldDefinition
+import ch.unibas.dmi.dbis.adam.entity.AttributeDefinition
 import ch.unibas.dmi.dbis.adam.main.SparkStartup
 import ch.unibas.dmi.dbis.adam.query.distance.NormBasedDistanceFunction
 import org.apache.spark.Logging
@@ -89,10 +89,10 @@ class AdamImporter(url: String, user: String, password: String) extends Logging 
 
       val schema = insertDF.schema.fields.map(field => {
         if(featureFields.contains(field.name)){
-          FieldDefinition("feature", FEATURETYPE, field.name.equals(pk))
+          AttributeDefinition("feature", FEATURETYPE, field.name.equals(pk))
         } else {
           val fieldType =  FieldTypes.fromDataType(field.dataType)
-          FieldDefinition(field.name, fieldType, field.name.equals(pk))
+          AttributeDefinition(field.name, fieldType, field.name.equals(pk))
 
         }
       })

@@ -14,7 +14,9 @@ case class Result(distance: Distance, tid: Any) extends Ordered[Result] {
   override def compare(that: Result): Int = distance compare that.distance
 }
 
-
+/**
+  *
+  */
 object Result {
   def resultSchema(pk : String) = StructType(Seq(
     StructField(FieldNames.distanceColumnName, FloatType, true),

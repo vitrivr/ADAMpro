@@ -274,7 +274,7 @@ case class Entity(val entityname: EntityName)(@transient implicit val ac: AdamCo
     *
     * @return
     */
-  def schema: Seq[FieldDefinition] = CatalogOperator.getFields(entityname)
+  def schema: Seq[AttributeDefinition] = CatalogOperator.getFields(entityname)
 
   /**
     * Checks whether query is conform to entity.
@@ -319,7 +319,7 @@ object Entity extends Logging {
     * @param attributes attributes of entity
     * @return
     */
-  def create(entityname: EntityName, attributes: Seq[FieldDefinition])(implicit ac: AdamContext): Try[Entity] = {
+  def create(entityname: EntityName, attributes: Seq[AttributeDefinition])(implicit ac: AdamContext): Try[Entity] = {
     try {
       lock.synchronized {
         //checks

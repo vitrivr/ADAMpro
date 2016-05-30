@@ -27,6 +27,7 @@ object QueryLRUCache extends Logging {
     build(
       new CacheLoader[String, DataFrame]() {
         def load(queryid: String): DataFrame = {
+          log.trace("cache miss for query " + queryid)
           null
         }
       }
@@ -41,7 +42,7 @@ object QueryLRUCache extends Logging {
     try {
       val result = queryCache.getIfPresent(queryid)
       if (result != null) {
-        log.debug("getting query results from log")
+        log.debug("getting query results from cache")
         Success(result)
       } else {
         Failure(QueryNotCachedException())
@@ -59,6 +60,7 @@ object QueryLRUCache extends Logging {
     * @param data
     */
   def put(queryid : String, data : DataFrame): Unit ={
+    log.debug("putting query results into cache")
     queryCache.put(queryid, data)
   }
 }

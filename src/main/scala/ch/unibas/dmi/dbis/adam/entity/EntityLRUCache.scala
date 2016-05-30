@@ -29,6 +29,7 @@ object EntityLRUCache extends Logging {
       new CacheLoader[EntityName, Entity]() {
         def load(entityname: EntityName): Entity = {
           import SparkStartup.Implicits._
+          log.trace("cache miss for entity " + entityname + "; loading from disk")
           val entity = Entity.loadEntityMetaData(entityname)
           entity.get
         }
@@ -42,10 +43,10 @@ object EntityLRUCache extends Logging {
     */
   def get(entityname: EntityName): Try[Entity] = {
     try {
+      log.trace("getting entity " + entityname + " from cache")
       Success(entityCache.get(entityname))
     } catch {
       case e: Exception =>
-        log.error(e.getMessage)
         Failure(e)
     }
   }

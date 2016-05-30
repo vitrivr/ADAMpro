@@ -25,6 +25,7 @@ case class HintBasedScanExpression(entityname: EntityName, nnq: Option[NearestNe
   children ++= Seq(expr) ++ filterExpr.map(Seq(_)).getOrElse(Seq())
 
   override protected def run(filter: Option[DataFrame] = None)(implicit ac: AdamContext): Option[DataFrame] = {
+    log.debug("evaluate hint-based expression, scanning " + expr.info.scantype)
     expr.evaluate()
   }
 }

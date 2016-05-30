@@ -69,7 +69,7 @@ class VAVIndexer(nbits: Option[Int], marksGenerator: MarksGenerator, trainingSiz
     * @return
     */
   private def train(trainData: Array[IndexingTaskTuple[_]]): VAIndexMetaData = {
-    log.debug("VA-File (variable) started training")
+    log.trace("VA-File (variable) started training")
 
     //data
     val dTrainData = trainData.map(x => x.feature.map(x => x.toDouble).toArray)
@@ -89,7 +89,7 @@ class VAVIndexer(nbits: Option[Int], marksGenerator: MarksGenerator, trainingSiz
     val signatureGenerator = new VariableSignatureGenerator(modes)
     val marks = marksGenerator.getMarks(trainData, modes.map(x => 2 << (x - 1)))
 
-    log.debug("VA-File (variable) finished training")
+    log.trace("VA-File (variable) finished training")
 
     VAIndexMetaData(marks, signatureGenerator, distance)
   }

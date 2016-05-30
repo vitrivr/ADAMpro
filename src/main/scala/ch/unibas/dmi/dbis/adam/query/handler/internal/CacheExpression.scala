@@ -16,6 +16,7 @@ case class CacheExpression(expr: QueryExpression, cache: QueryCacheOptions = Que
   children ++= Seq(expr)
 
   override protected def run(filter: Option[DataFrame] = None)(implicit ac: AdamContext): Option[DataFrame] = {
+    log.debug("run cache operation")
     if (cache.useCached && id.isDefined) {
       val cached = QueryLRUCache.get(id.get)
       if (cached.isSuccess) {

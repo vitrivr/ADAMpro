@@ -5,7 +5,7 @@ import java.io._
 import ch.unibas.dmi.dbis.adam.config.AdamConfig
 import ch.unibas.dmi.dbis.adam.datatypes.FieldTypes
 import ch.unibas.dmi.dbis.adam.entity.Entity.EntityName
-import ch.unibas.dmi.dbis.adam.entity.{EntityNameHolder, FieldDefinition}
+import ch.unibas.dmi.dbis.adam.entity.{EntityNameHolder, AttributeDefinition}
 import ch.unibas.dmi.dbis.adam.exception.{EntityExistingException, EntityNotExistingException, IndexExistingException, IndexNotExistingException}
 import ch.unibas.dmi.dbis.adam.index.Index.{IndexName, IndexTypeName}
 import ch.unibas.dmi.dbis.adam.index.structures.IndexTypes
@@ -50,7 +50,7 @@ object CatalogOperator extends Logging {
     * @param withMetadata
     * @return
     */
-  def createEntity(entityname: EntityName, featurepath : Option[String], metadatapath : Option[String], fields: Seq[FieldDefinition], withMetadata: Boolean = false): Boolean = {
+  def createEntity(entityname: EntityName, featurepath : Option[String], metadatapath : Option[String], fields: Seq[AttributeDefinition], withMetadata: Boolean = false): Boolean = {
     if (existsEntity(entityname)) {
       throw new EntityExistingException()
     }
@@ -149,11 +149,11 @@ object CatalogOperator extends Logging {
     * @param entityname
     * @return
     */
-  def getEntityPK(entityname: EntityName) : FieldDefinition = {
+  def getEntityPK(entityname: EntityName) : AttributeDefinition = {
     val query = entityfields.filter(_.entityname === entityname.toString()).filter(_.pk).result
     val fields = Await.result(db.run(query), MAX_WAITING_TIME)
 
-    fields.map(x => FieldDefinition(x._1, FieldTypes.fromString(x._2), x._3, x._4, x._5)).head
+    fields.map(x => AttributeDefinition(x._1, FieldTypes.fromString(x._2), x._3, x._4, x._5)).head
   }
 
   /**
@@ -161,11 +161,11 @@ object CatalogOperator extends Logging {
     * @param entityname
     * @return
     */
-  def getFields(entityname : EntityName) : Seq[FieldDefinition] = {
+  def getFields(entityname : EntityName) : Seq[AttributeDefinition] = {
     val query = entityfields.filter(_.entityname === entityname.toString()).result
     val fields = Await.result(db.run(query), MAX_WAITING_TIME)
 
-    fields.map(x => FieldDefinition(x._1, FieldTypes.fromString(x._2), x._3, x._4, x._5))
+    fields.map(x => AttributeDefinition(x._1, FieldTypes.fromString(x._2), x._3, x._4, x._5))
   }
 
   /**

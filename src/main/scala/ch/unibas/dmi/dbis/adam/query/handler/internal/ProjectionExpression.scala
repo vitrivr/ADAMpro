@@ -18,6 +18,7 @@ case class ProjectionExpression(projection: ProjectionField, expr : QueryExpress
   children ++= Seq(expr)
 
   override protected def run(filter: Option[DataFrame] = None)(implicit ac: AdamContext): Option[DataFrame] = {
+    log.debug("performing projection on data")
     expr.evaluate().map(projection.f(_))
   }
 }

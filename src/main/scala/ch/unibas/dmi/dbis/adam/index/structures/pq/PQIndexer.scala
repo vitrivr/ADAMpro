@@ -67,6 +67,8 @@ class PQIndexer(nsq: Int, trainingSize: Int)(@transient implicit val ac: AdamCon
     * @return
     */
   private def train(trainData: Array[IndexingTaskTuple[_]]): PQIndexMetaData = {
+    log.trace("PQ started training")
+
     val numIterations = 100
     val nsqbits: Int = 8 //index produces a byte array index tuple
     val numClusters: Int = 2 ^ nsqbits
@@ -87,6 +89,8 @@ class PQIndexer(nsq: Int, trainingSize: Int)(@transient implicit val ac: AdamCon
     val clusters: IndexedSeq[KMeansModel] = rdds.map { rdd =>
       KMeans.train(rdd, numClusters, numIterations)
     }
+
+    log.trace("PQ finished training")
 
     PQIndexMetaData(clusters, nsq)
   }

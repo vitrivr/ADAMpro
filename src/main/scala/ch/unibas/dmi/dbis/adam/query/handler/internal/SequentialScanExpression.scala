@@ -22,6 +22,8 @@ case class SequentialScanExpression(entityname: EntityName)(nnq: NearestNeighbou
   children ++= filterExpr.map(Seq(_)).getOrElse(Seq())
 
   override protected def run(filter: Option[DataFrame] = None)(implicit ac: AdamContext): Option[DataFrame] = {
+    log.debug("perform sequential scan")
+
     val entity = Entity.load(entityname).get
     if (!entity.isQueryConform(nnq)) {
       throw QueryNotConformException()

@@ -27,10 +27,12 @@ class MinkowskiDistance(val n: Double) extends DistanceFunction with Logging wit
   override def apply(v1: FeatureVector, v2: FeatureVector, weights: Option[FeatureVector] = None): Distance = {
     var cum = 0.0
     if (weights.isEmpty) {
+      log.trace("compute distance")
       zipValues(v1, v2).foreach { (a, b) =>
         cum += Math.pow(math.abs(a - b), n)
       }
     } else {
+      log.trace("compute distance with weights")
       val itv1 = v1.valuesIterator
       val itv2 = v2.valuesIterator
       val itw = weights.get.valuesIterator

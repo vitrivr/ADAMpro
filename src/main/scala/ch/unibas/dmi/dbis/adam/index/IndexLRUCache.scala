@@ -29,6 +29,7 @@ object IndexLRUCache extends Logging {
       new CacheLoader[IndexName, Index]() {
         def load(indexname: IndexName): Index = {
           import SparkStartup.Implicits._
+          log.trace("cache miss for index " + indexname + "; loading from disk")
           val index = Index.loadIndexMetaData(indexname).get
           index
         }
@@ -42,10 +43,10 @@ object IndexLRUCache extends Logging {
     */
   def get(indexname: IndexName): Try[Index] = {
     try {
+      log.trace("getting index " + indexname + " from cache")
       Success(indexCache.get(indexname))
     } catch {
       case e: Exception =>
-        log.error("error when loading index from cache", e)
         Failure(e)
     }
   }
@@ -66,6 +67,7 @@ object IndexLRUCache extends Logging {
     * @return
     */
   def put(indexname : IndexName, index : Index) : Unit = {
+    log.debug("putting index " + indexname + " manually into cache")
     indexCache.put(indexname, index)
   }
 

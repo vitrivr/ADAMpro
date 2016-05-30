@@ -19,7 +19,6 @@ abstract class Query(queryID: Option[String] = Some(java.util.UUID.randomUUID().
   * @param where a where 'clause' in form of (String, String), if the first string ends with '!=' or 'IN' the
   *              operator is used in the query, otherwise a '=' is added in between; AND-ing is assumed
   * @param join  Seq of (table, columns to join on)
-  * @param queryID
   */
 case class BooleanQuery(
                          where: Option[Seq[(String, String)]] = None,
@@ -71,20 +70,19 @@ case class BooleanQuery(
 /**
   * Nearest neighbour query parameters.
   *
-  * @param column    name of column to perform query on
-  * @param q
-  * @param distance
-  * @param k
-  * @param indexOnly if set to true, then only the index is scanned and the results are result candidates only
-  *                  and may contain false positives
-  * @param partitions
-  * @param options
-  * @param queryID
+  * @param column     name of column to perform query on
+  * @param q          query vector
+  * @param distance   distance function
+  * @param k          number of elements to retrieve
+  * @param indexOnly  if set to true, then only the index is scanned and the results are result candidates only
+  *                   and may contain false positives
+  * @param partitions partitions to query (if not set all partitions are queried)
+  * @param options    options to pass to handler
   */
 case class NearestNeighbourQuery(
                                   column: String,
                                   q: FeatureVector,
-                                  weights : Option[FeatureVector],
+                                  weights: Option[FeatureVector],
                                   distance: DistanceFunction,
                                   k: Int,
                                   indexOnly: Boolean = false,
@@ -95,15 +93,14 @@ case class NearestNeighbourQuery(
 
 /**
   *
-  * @param filter
-  * @tparam A
+  * @param filter id filter
   */
 case class PrimaryKeyFilter[A](filter: DataFrame) {
   def +:(newFilter: Option[DataFrame]): PrimaryKeyFilter[A] = {
     if (newFilter.isDefined) {
       import org.apache.spark.sql.functions.col
       val fields = filter.schema.fieldNames.intersect(newFilter.get.schema.fieldNames)
-      new PrimaryKeyFilter(filter.select(fields.map(col(_)) : _*).unionAll(newFilter.get.select(fields.map(col(_)) : _*)))
+      new PrimaryKeyFilter(filter.select(fields.map(col(_)): _*).unionAll(newFilter.get.select(fields.map(col(_)): _*)))
     } else {
       this
     }

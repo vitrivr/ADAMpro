@@ -40,7 +40,7 @@ class ECPIndexer(trainingSize: Option[Int], distance: DistanceFunction)(@transie
     }
 
     val leaders = ac.sc.broadcast(trainData)
-    log.debug("eCP index leaders chosen and broadcasted")
+    log.trace("eCP index chosen " + trainData.length + " leaders")
 
     log.debug("eCP indexing...")
 

@@ -18,14 +18,16 @@ object BooleanFilterExpression extends Logging {
 
   /**
     *
-    * @param entityname
-    * @param bq
+    * @param entityname name of entity
+    * @param bq boolean query
     */
   case class BooleanFilterScanExpression(entityname: EntityName)(bq: BooleanQuery, id: Option[String] = None)(filterExpr: Option[QueryExpression] = None)(implicit ac: AdamContext) extends QueryExpression(id) {
     override val info = ExpressionDetails(Some(entityname), Some("Table Boolean-Scan Expression"), id, None)
     children ++= filterExpr.map(Seq(_)).getOrElse(Seq())
 
     override protected def run(filter: Option[DataFrame] = None)(implicit ac: AdamContext): Option[DataFrame] = {
+      log.debug("run boolean filter operation on entity")
+
       val entity = Entity.load(entityname).get
       var df = entity.data
 
@@ -45,14 +47,15 @@ object BooleanFilterExpression extends Logging {
 
   /**
     *
-    * @param bq
-    * @param id
+    * @param bq boolean query
     */
   case class BooleanFilterAdHocExpression(expr: QueryExpression, bq: BooleanQuery, id: Option[String] = None)(implicit ac: AdamContext) extends QueryExpression(id) {
     override val info = ExpressionDetails(None, Some("Ad-Hoc Boolean-Scan Expression"), id, None)
     children ++= Seq(expr)
 
     override protected def run(filter: Option[DataFrame] = None)(implicit ac: AdamContext): Option[DataFrame] = {
+      log.debug("run boolean filter operation on data")
+
       var df = expr.evaluate()
 
       if (filter.isDefined) {
@@ -78,7 +81,7 @@ object BooleanFilterExpression extends Logging {
       log.debug("join tables to results")
       val joins = bq.join.get
 
-      for (i <- (0 until joins.length)) {
+      for (i <- joins.indices) {
         val join = joins(i)
         log.debug("join " + join._1 + " on " + join._2.mkString("(", ", ", ")"))
         val newDF = SparkStartup.metadataStorage.read(join._1)

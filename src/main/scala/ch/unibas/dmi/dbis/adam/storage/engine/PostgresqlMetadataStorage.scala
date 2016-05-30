@@ -5,7 +5,7 @@ import java.util.Properties
 
 import ch.unibas.dmi.dbis.adam.config.AdamConfig
 import ch.unibas.dmi.dbis.adam.entity.Entity.EntityName
-import ch.unibas.dmi.dbis.adam.entity.FieldDefinition
+import ch.unibas.dmi.dbis.adam.entity.AttributeDefinition
 import ch.unibas.dmi.dbis.adam.main.SparkStartup
 import ch.unibas.dmi.dbis.adam.storage.components.MetadataStorage
 import org.apache.spark.sql.types.{StructField, StructType}
@@ -33,7 +33,7 @@ object PostgresqlMetadataStorage extends MetadataStorage {
     DriverManager.getConnection(AdamConfig.jdbcUrl, AdamConfig.jdbcUser, AdamConfig.jdbcPassword)
   }
 
-  override def create(entityname: EntityName, fields: Seq[FieldDefinition]): Try[Option[String]] = {
+  override def create(entityname: EntityName, fields: Seq[AttributeDefinition]): Try[Option[String]] = {
     try {
       log.debug("postgresql create operation")
       val structFields = fields.map {

@@ -1,7 +1,7 @@
 package ch.unibas.dmi.dbis.adam.storage.components
 
 import ch.unibas.dmi.dbis.adam.entity.Entity.EntityName
-import ch.unibas.dmi.dbis.adam.entity.FieldDefinition
+import ch.unibas.dmi.dbis.adam.entity.AttributeDefinition
 import ch.unibas.dmi.dbis.adam.main.AdamContext
 import org.apache.spark.Logging
 import org.apache.spark.sql.{DataFrame, SaveMode}
@@ -28,7 +28,7 @@ trait FeatureStorage extends Serializable with Logging {
     * @param entityname
     * @return true on success
     */
-  def create(entityname: EntityName, fields: Seq[FieldDefinition])(implicit ac: AdamContext): Try[Option[String]] = Success(None)
+  def create(entityname: EntityName, fields: Seq[AttributeDefinition])(implicit ac: AdamContext): Try[Option[String]] = Success(None)
 
   /**
     * Read entity from feature storage.

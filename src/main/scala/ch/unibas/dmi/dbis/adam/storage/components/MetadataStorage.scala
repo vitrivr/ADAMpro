@@ -1,7 +1,7 @@
 package ch.unibas.dmi.dbis.adam.storage.components
 
 import ch.unibas.dmi.dbis.adam.entity.Entity._
-import ch.unibas.dmi.dbis.adam.entity.FieldDefinition
+import ch.unibas.dmi.dbis.adam.entity.AttributeDefinition
 import org.apache.spark.Logging
 import org.apache.spark.sql.{DataFrame, SaveMode}
 
@@ -20,7 +20,7 @@ trait MetadataStorage extends Serializable with Logging {
     * @param entityname
     * @param fields
     */
-  def create(entityname: EntityName, fields: Seq[FieldDefinition]): Try[Option[String]] = Success(None)
+  def create(entityname: EntityName, fields: Seq[AttributeDefinition]): Try[Option[String]] = Success(None)
 
   /**
     * Read data from metadata storage.

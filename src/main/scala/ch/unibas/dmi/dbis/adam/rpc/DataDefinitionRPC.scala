@@ -3,7 +3,7 @@ package ch.unibas.dmi.dbis.adam.rpc
 import ch.unibas.dmi.dbis.adam.api._
 import ch.unibas.dmi.dbis.adam.datatypes.FieldTypes
 import ch.unibas.dmi.dbis.adam.datatypes.feature.{FeatureVectorWrapper, FeatureVectorWrapperUDT}
-import ch.unibas.dmi.dbis.adam.entity.{Entity, FieldDefinition}
+import ch.unibas.dmi.dbis.adam.entity.{Entity, AttributeDefinition}
 import ch.unibas.dmi.dbis.adam.exception.GeneralAdamException
 import ch.unibas.dmi.dbis.adam.http.grpc.FieldDefinitionMessage.FieldType
 import ch.unibas.dmi.dbis.adam.http.grpc.{AckMessage, CreateEntityMessage, _}
@@ -29,7 +29,7 @@ class DataDefinitionRPC(implicit ac: AdamContext) extends AdamDefinitionGrpc.Ada
     log.debug("rpc call for create entity operation")
     val entityname = request.entity
     val fields = request.fields.map(field => {
-      FieldDefinition(field.name, matchFields(field.fieldtype), field.pk, field.unique, field.indexed)
+      AttributeDefinition(field.name, matchFields(field.fieldtype), field.pk, field.unique, field.indexed)
     })
     val res = EntityOp(entityname, fields)
 

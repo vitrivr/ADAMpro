@@ -5,7 +5,7 @@ import ch.unibas.dmi.dbis.adam.api.EntityOp
 import ch.unibas.dmi.dbis.adam.config.AdamConfig
 import ch.unibas.dmi.dbis.adam.datatypes.FieldTypes
 import ch.unibas.dmi.dbis.adam.datatypes.feature.{FeatureVectorWrapper, FeatureVectorWrapperUDT}
-import ch.unibas.dmi.dbis.adam.entity.{Entity, FieldDefinition}
+import ch.unibas.dmi.dbis.adam.entity.{Entity, AttributeDefinition}
 import ch.unibas.dmi.dbis.adam.main.SparkStartup
 import ch.unibas.dmi.dbis.adam.main.SparkStartup.Implicits._
 import ch.unibas.dmi.dbis.adam.query.distance.{ManhattanDistance, MinkowskiDistance}
@@ -84,8 +84,8 @@ class AdamTestBase extends FeatureSpec with GivenWhenThen with Eventually with I
     try {
       Entity.create(entityname,
         Seq(
-          FieldDefinition("tid", FieldTypes.LONGTYPE, true),
-          FieldDefinition("feature", FieldTypes.FEATURETYPE, false, false, false)
+          AttributeDefinition("tid", FieldTypes.LONGTYPE, true),
+          AttributeDefinition("feature", FieldTypes.FEATURETYPE, false, false, false)
         ))
 
       val schema = StructType(Seq(
@@ -230,7 +230,7 @@ class AdamTestBase extends FeatureSpec with GivenWhenThen with Eventually with I
       ("booleanfield", FieldTypes.BOOLEANTYPE, false, "boolean")
     )
 
-    val entity = Entity.create(entityname, fieldTemplate.map(ft => FieldDefinition(ft._1, ft._2, ft._3)))
+    val entity = Entity.create(entityname, fieldTemplate.map(ft => AttributeDefinition(ft._1, ft._2, ft._3)))
     assert(entity.isSuccess)
     entity.get.insert(data.drop("gtdistance"))
 

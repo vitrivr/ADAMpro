@@ -35,6 +35,7 @@ class ECPIndex(val indexname: IndexName, val entityname: EntityName, override pr
       (l.id, metadata.distance(q, l.feature))
     }).sortBy(_._2))
 
+    log.trace("centroids prepared")
 
     var results = ListBuffer[Result]()
     var i = 0

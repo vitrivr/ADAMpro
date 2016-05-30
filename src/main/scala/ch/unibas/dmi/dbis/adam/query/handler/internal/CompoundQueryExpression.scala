@@ -15,6 +15,7 @@ case class CompoundQueryExpression(expr : QueryExpression, id: Option[String] = 
   children ++= Seq(expr)
 
   override protected def run(filter : Option[DataFrame] = None)(implicit ac: AdamContext): Option[DataFrame] = {
+    log.debug("evaluate compound query")
     expr.evaluate()
   }
 }

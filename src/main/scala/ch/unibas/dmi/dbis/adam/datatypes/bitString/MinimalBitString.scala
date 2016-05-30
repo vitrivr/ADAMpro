@@ -1,6 +1,7 @@
 package ch.unibas.dmi.dbis.adam.datatypes.bitString
 
 import ch.unibas.dmi.dbis.adam.util.BitSet
+import org.apache.spark.Logging
 
 /**
   * adamtwo
@@ -10,7 +11,7 @@ import ch.unibas.dmi.dbis.adam.util.BitSet
   * Ivan Giangreco
   * September 2015
   */
-class MinimalBitString(private val values: BitSet) extends BitString[MinimalBitString] with Serializable {
+class MinimalBitString(private val values: BitSet) extends BitString[MinimalBitString] with Serializable with Logging {
   override def intersectionCount(other: MinimalBitString): Int = values.intersectCount(other.values)
 
   override def getBitIndexes: Seq[Int] = values.getAll

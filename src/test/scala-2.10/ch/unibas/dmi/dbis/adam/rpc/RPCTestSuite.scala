@@ -3,7 +3,7 @@ package ch.unibas.dmi.dbis.adam.rpc
 import ch.unibas.dmi.dbis.adam.AdamTestBase
 import ch.unibas.dmi.dbis.adam.config.AdamConfig
 import ch.unibas.dmi.dbis.adam.datatypes.FieldTypes
-import ch.unibas.dmi.dbis.adam.entity.{Entity, FieldDefinition}
+import ch.unibas.dmi.dbis.adam.entity.{Entity, AttributeDefinition}
 import ch.unibas.dmi.dbis.adam.http.grpc.BooleanQueryMessage.WhereMessage
 import ch.unibas.dmi.dbis.adam.http.grpc.InsertMessage.TupleInsertMessage
 import ch.unibas.dmi.dbis.adam.http.grpc._
@@ -60,7 +60,7 @@ class RPCTestSuite extends AdamTestBase with ScalaFutures {
     scenario("insert feature data into entity") {
       withEntityName { entityname =>
         Given("an entity")
-        val entity = Entity.create(entityname, Seq(FieldDefinition("tid", FieldTypes.LONGTYPE, true), FieldDefinition("feature", FieldTypes.FEATURETYPE)))
+        val entity = Entity.create(entityname, Seq(AttributeDefinition("tid", FieldTypes.LONGTYPE, true), AttributeDefinition("feature", FieldTypes.FEATURETYPE)))
         assert(entity.isSuccess)
 
         val requestObserver: StreamObserver[InsertMessage] = definitionNb.insert(new StreamObserver[AckMessage]() {
@@ -100,8 +100,8 @@ class RPCTestSuite extends AdamTestBase with ScalaFutures {
       withEntityName { entityname =>
         Given("an entity")
         val entity = Entity.create(entityname, Seq(
-          FieldDefinition("tid", FieldTypes.LONGTYPE, true), FieldDefinition("feature", FieldTypes.FEATURETYPE),
-          FieldDefinition("stringfield", FieldTypes.STRINGTYPE), FieldDefinition("intfield", FieldTypes.INTTYPE)
+          AttributeDefinition("tid", FieldTypes.LONGTYPE, true), AttributeDefinition("feature", FieldTypes.FEATURETYPE),
+          AttributeDefinition("stringfield", FieldTypes.STRINGTYPE), AttributeDefinition("intfield", FieldTypes.INTTYPE)
         ))
 
         assert(entity.isSuccess)

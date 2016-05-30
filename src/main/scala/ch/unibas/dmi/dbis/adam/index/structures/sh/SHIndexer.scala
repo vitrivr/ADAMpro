@@ -69,7 +69,7 @@ class SHIndexer(nbits: Option[Int], trainingSize: Int)(@transient implicit val a
     * @return
     */
   private def train(trainData: Array[IndexingTaskTuple[_]]): SHIndexMetaData = {
-    log.debug("SH started training")
+    log.trace("SH started training")
 
     val dTrainData = trainData.map(x => x.feature.map(x => x.toDouble).toArray)
     val dataMatrix = DenseMatrix(dTrainData.toList: _*)
@@ -110,7 +110,7 @@ class SHIndexer(nbits: Option[Int], trainingSize: Int)(@transient implicit val a
     val max = breeze.linalg.max(dataMatrix(*, ::)).toDenseVector
     val radius = 0.1 * (max - min)
 
-    log.debug("SH finished training")
+    log.trace("SH finished training")
 
     SHIndexMetaData(feigv, minProj, maxProj, modes.toDenseMatrix, radius)
   }
