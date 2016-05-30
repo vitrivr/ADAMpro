@@ -1,11 +1,12 @@
 package ch.unibas.dmi.dbis.adam.index
 
 import ch.unibas.dmi.dbis.adam.config.{AdamConfig, FieldNames}
+import ch.unibas.dmi.dbis.adam.datatypes.FieldTypes.FEATURETYPE
 import ch.unibas.dmi.dbis.adam.datatypes.feature.Feature._
 import ch.unibas.dmi.dbis.adam.datatypes.feature.FeatureVectorWrapper
 import ch.unibas.dmi.dbis.adam.entity.Entity
 import ch.unibas.dmi.dbis.adam.entity.Entity._
-import ch.unibas.dmi.dbis.adam.exception.{GeneralAdamException, IndexNotExistingException}
+import ch.unibas.dmi.dbis.adam.exception.{IndexNotProperlyDefinedException, GeneralAdamException, IndexNotExistingException}
 import ch.unibas.dmi.dbis.adam.index.Index.{IndexName, IndexTypeName, PartitionID}
 import ch.unibas.dmi.dbis.adam.index.structures.IndexTypes
 import ch.unibas.dmi.dbis.adam.main.{AdamContext, SparkStartup}
@@ -265,12 +266,17 @@ object Index extends Logging {
   def createIndex(entity: Entity, column: String, indexgenerator: IndexGenerator)(implicit ac: AdamContext): Try[Index] = {
     lock.synchronized {
       if (!entity.schema.map(_.name).contains(column)) {
-        return Failure(new GeneralAdamException("column not existing in entity " + entity.entityname + entity.schema.map(_.name).mkString("(", ",", ")")))
+        return Failure(new IndexNotProperlyDefinedException("column not existing in entity " + entity.entityname + entity.schema.map(_.name).mkString("(", ",", ")")))
+      }
+
+      val columnFieldtype = entity.schema.filter(_.name == column).map(_.fieldtype).head
+      if (columnFieldtype != FEATURETYPE) {
+        return Failure(new IndexNotProperlyDefinedException(column + " is of type " + columnFieldtype.name + ", not feature"))
       }
 
       val count = entity.count
       if (count < IndexGenerator.MINIMUM_NUMBER_OF_TUPLE) {
-        return Failure(new GeneralAdamException("not enough tuples for creating index, needs at least " + IndexGenerator.MINIMUM_NUMBER_OF_TUPLE + " but has only " + count))
+        return Failure(new IndexNotProperlyDefinedException("not enough tuples for creating index, needs at least " + IndexGenerator.MINIMUM_NUMBER_OF_TUPLE + " but has only " + count))
       }
 
       val indexname = createIndexName(entity.entityname, column, indexgenerator.indextypename)
