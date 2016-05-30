@@ -9,6 +9,6 @@
     </property>
     <property>
         <name>mapreduce.reduce.java.opts</name>
-        <value>-Xmx8000m</value> <!-- increase of memory -->
+        <value>-Xmx4000m</value> <!-- increase of memory -->
     </property>
 </configuration>
