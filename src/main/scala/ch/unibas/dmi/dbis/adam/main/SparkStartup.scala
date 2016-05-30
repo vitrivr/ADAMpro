@@ -17,10 +17,10 @@ import org.apache.spark.{Logging, SparkConf, SparkContext}
 object SparkStartup extends Logging {
   val sparkConfig = new SparkConf().setAppName("ADAMpro")
     .set("spark.driver.maxResultSize", "1000m")
-    .set("spark.kryoserializer.buffer.max", "2047m")
-    .set("spark.kryoserializer.buffer", "2047")
     .set("spark.akka.frameSize", "1024")
     .set("spark.serializer", "org.apache.spark.serializer.KryoSerializer")
+    .set("spark.kryoserializer.buffer.max", "2047m")
+    .set("spark.kryoserializer.buffer", "2047")
     .registerKryoClasses(Array(classOf[BitStringUDT], classOf[FeatureVectorWrapperUDT]))
     .set("spark.scheduler.allocation.file", AdamConfig.schedulerFile)
 
