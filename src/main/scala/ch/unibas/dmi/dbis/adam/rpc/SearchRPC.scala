@@ -195,7 +195,7 @@ class SearchRPC(implicit ac: AdamContext) extends AdamSearchGrpc.AdamSearch with
                 case IntegerType => DataMessage().withIntData(row.getAs[Integer](col.name))
                 case LongType => DataMessage().withLongData(row.getAs[Long](col.name))
                 case StringType => DataMessage().withStringData(row.getAs[String](col.name))
-                case x: FeatureVectorWrapperUDT => DataMessage().withFeatureData(FeatureVectorMessage().withDenseVector(DenseVectorMessage(row.getAs[FeatureVectorWrapper](col.name).toSeq)))
+                case _ : FeatureVectorWrapperUDT => DataMessage().withFeatureData(FeatureVectorMessage().withDenseVector(DenseVectorMessage(row.getAs[FeatureVectorWrapper](col.name).toSeq)))
                 case _ => DataMessage().withStringData("")
               }
             }

@@ -2,7 +2,7 @@ package ch.unibas.dmi.dbis.adam.datatypes
 
 import ch.unibas.dmi.dbis.adam.datatypes.feature.FeatureVectorWrapperUDT
 import org.apache.spark.sql.types
-import org.apache.spark.sql.types.DataType
+import org.apache.spark.sql.types.{ArrayType, DataType}
 
 /**
   * adamtwo
@@ -39,8 +39,8 @@ object FieldTypes {
   implicit def fromString(s: String): FieldType = values.filter(x => x.name == s).head
 
   implicit def fromDataType(d: DataType): FieldType = {
-    val suggestion = values.filter(x => x.datatype == d)
-    if (d == types.ArrayType(types.FloatType)) {
+    val suggestion = values.filter(x => x.datatype.isInstanceOf[d.type])
+    if (d .isInstanceOf[ArrayType]) {
       FEATURETYPE
     } else {
       suggestion.head

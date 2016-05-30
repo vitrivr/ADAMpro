@@ -214,7 +214,7 @@ case class Entity(val entityname: EntityName)(@transient implicit val ac: AdamCo
 
       //TODO: check schema
 
-      val featureFieldNames = insertion.schema.fields.filter(_.dataType == new FeatureVectorWrapperUDT).map(_.name)
+      val featureFieldNames = insertion.schema.fields.filter(_.dataType.isInstanceOf[FeatureVectorWrapperUDT]).map(_.name)
       val newFeaturePath = Entity.featureStorage.write(entityname, insertion.select(pk.name, featureFieldNames.toSeq: _*), SaveMode.Append, featurePath, true)
 
       if (featurePath.isEmpty) {
@@ -227,7 +227,7 @@ case class Entity(val entityname: EntityName)(@transient implicit val ac: AdamCo
         return Failure(newFeaturePath.failed.get)
       }
 
-      val metadataFieldNames = insertion.schema.fields.filterNot(_.dataType == new FeatureVectorWrapperUDT).map(_.name)
+      val metadataFieldNames = insertion.schema.fields.filterNot(!_.dataType.isInstanceOf[FeatureVectorWrapperUDT]).map(_.name)
       if (metadataPath.isDefined) {
         log.debug("metadata storage is defined: inserting data also into metadata storage")
         Entity.metadataStorage.write(entityname, insertion.select(pk.name, metadataFieldNames.filterNot(x => x == pk.name).toSeq: _*), SaveMode.Append)
