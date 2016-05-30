@@ -64,6 +64,7 @@ object RandomDataOp extends Logging {
         log.debug("inserting data batch")
         entity.get.insert(data, true)
       }
+      log.debug("finished inserting")
       Success(null)
     } catch {
       case e: Exception => Failure(e)

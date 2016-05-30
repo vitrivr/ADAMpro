@@ -49,6 +49,7 @@ object QueryOp extends GenericOp {
       var scan : Option[QueryExpression] = None
 
       if (bq.isDefined) {
+        log.trace("boolean query is defined")
         scan = Some(BooleanFilterScanExpression(entityname)(bq.get)(scan))
       }
 
@@ -72,6 +73,7 @@ object QueryOp extends GenericOp {
       var scan : Option[QueryExpression] = None
 
       if (bq.isDefined) {
+        log.trace("boolean query is defined")
         scan = Some(BooleanFilterScanExpression(index.entityname)(bq.get)(scan))
       }
 
@@ -94,6 +96,7 @@ object QueryOp extends GenericOp {
       var scan : Option[QueryExpression] = None
 
       if (bq.isDefined) {
+        log.trace("boolean query is defined")
         scan = Some(BooleanFilterScanExpression(entityname)(bq.get)(scan))
       }
 
@@ -157,6 +160,7 @@ object QueryOp extends GenericOp {
       var scan : Option[QueryExpression] = None
 
       if (bq.isDefined) {
+        log.trace("boolean query is defined")
         scan = Some(BooleanFilterScanExpression(entityname)(bq.get)(scan))
       }
 

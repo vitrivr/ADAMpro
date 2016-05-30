@@ -47,17 +47,17 @@ object AdamConfig extends Serializable with Logging {
 
   val loglevel = config.getString("adampro.loglevel")
 
-  val maximumCacheSizeEntity = 10
-  val expireAfterAccessEntity = 10 //in minutes
+  val maximumCacheSizeEntity = 1000
+  val expireAfterAccessEntity = 60 //in minutes
 
-  val maximumCacheSizeIndex = 10
-  val expireAfterAccessIndex = 10 //in minutes
+  val maximumCacheSizeIndex = 1000
+  val expireAfterAccessIndex = 60 //in minutes
 
-  val maximumCacheSizeBooleanQuery = 100
-  val expireAfterAccessBooleanQuery = 1 //in minutes
+  val maximumCacheSizeBooleanQuery = 1000
+  val expireAfterAccessBooleanQuery = 60 //in minutes
 
-  val maximumCacheSizeQueryResults = 100
-  val expireAfterAccessQueryResults = 30 //in minutes
+  val maximumCacheSizeQueryResults = 1000
+  val expireAfterAccessQueryResults = 60 //in minutes
 
   val master = if(config.hasPath("adampro.master")){
     Option(config.getString("adampro.master"))

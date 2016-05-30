@@ -32,7 +32,7 @@ case class Entity(val entityname: EntityName)(@transient implicit val ac: AdamCo
   var _join: Option[DataFrame] = None
 
   /**
-    * Gets path of the entity.
+    * Gets path of feature data.
     *
     * @return
     */
@@ -46,6 +46,7 @@ case class Entity(val entityname: EntityName)(@transient implicit val ac: AdamCo
   }
 
   /**
+    * Gets feature data.
     *
     * @return
     */
@@ -64,22 +65,28 @@ case class Entity(val entityname: EntityName)(@transient implicit val ac: AdamCo
   }
 
   /**
+    * Gets feature column and pk column; use this for indexing purposes.
     *
-    * @param column
+    * @param attribute attribute that is indexed
     * @return
     */
-  private[adam] def getIndexableFeature(column: String) = {
+  private[adam] def getIndexableFeature(attribute: String) = {
     if (featureData.isDefined) {
-      featureData.get.select(col(pk.name), col(column))
+      featureData.get.select(col(pk.name), col(attribute))
     } else {
       val structFields = StructType(Seq(
         StructField(pk.name, pk.fieldtype.datatype),
-        StructField(column, FieldTypes.FEATURETYPE.datatype)
+        StructField(attribute, FieldTypes.FEATURETYPE.datatype)
       ))
       sqlContext.createDataFrame(sc.emptyRDD[Row], structFields)
     }
   }
 
+  /**
+    * Gets path of metadata.
+    *
+    * @return
+    */
   private[entity] def metadataPath: Option[String] = {
     val path = CatalogOperator.getEntityMetadataPath(entityname)
     if (path != null && path.length > 0) {
@@ -90,6 +97,7 @@ case class Entity(val entityname: EntityName)(@transient implicit val ac: AdamCo
   }
 
   /**
+    * Gets feature data.
     *
     * @return
     */
@@ -108,7 +116,7 @@ case class Entity(val entityname: EntityName)(@transient implicit val ac: AdamCo
   }
 
   /**
-    * Gets the data.
+    * Gets the full entity data.
     *
     * @return
     */
@@ -127,12 +135,13 @@ case class Entity(val entityname: EntityName)(@transient implicit val ac: AdamCo
   }
 
   /**
-    *
+    * Marks the data stale (e.g., if new data has been inserted to entity).
     */
   private def markStale(): Unit = {
     _featureData = None
     _metaData = None
     _join = None
+    tupleCount = None
   }
 
   /**
@@ -152,6 +161,9 @@ case class Entity(val entityname: EntityName)(@transient implicit val ac: AdamCo
   }
 
 
+  private var tupleCount: Option[Long] = None
+
+
   /**
     * Returns number of elements in the entity (only the feature storage is considered for this).
     *
@@ -169,8 +181,6 @@ case class Entity(val entityname: EntityName)(@transient implicit val ac: AdamCo
 
     tupleCount.get
   }
-
-  private var tupleCount: Option[Long] = None
 
 
   /**
@@ -212,7 +222,7 @@ case class Entity(val entityname: EntityName)(@transient implicit val ac: AdamCo
           data
         }
 
-      //TODO: check schema
+      //TODO: check that schema of data inserted and schema of entity are equal
 
       val featureFieldNames = insertion.schema.fields.filter(_.dataType.isInstanceOf[FeatureVectorWrapperUDT]).map(_.name)
       val newFeaturePath = Entity.featureStorage.write(entityname, insertion.select(pk.name, featureFieldNames.toSeq: _*), SaveMode.Append, featurePath, true)
@@ -238,12 +248,12 @@ case class Entity(val entityname: EntityName)(@transient implicit val ac: AdamCo
         CatalogOperator.updateIndexesToStale(entityname)
       }
 
-      //reset count
-      tupleCount = None
-
       Success(null)
     } catch {
       case e: Exception => Failure(e)
+    } finally {
+      //mark entity stale
+      markStale()
     }
   }
 
@@ -260,14 +270,16 @@ case class Entity(val entityname: EntityName)(@transient implicit val ac: AdamCo
   }
 
   /**
+    * Schema of the entity.
     *
     * @return
     */
   def schema: Seq[FieldDefinition] = CatalogOperator.getFields(entityname)
 
   /**
+    * Checks whether query is conform to entity.
     *
-    * @param query
+    * @param query the query to be performed
     * @return
     */
   def isQueryConform(query: NearestNeighbourQuery): Boolean = {
@@ -275,13 +287,13 @@ case class Entity(val entityname: EntityName)(@transient implicit val ac: AdamCo
       try {
         val length = featureData.get.first().getAs[FeatureVectorWrapper](query.column).vector.length
 
-        if(length != query.q.length){
+        if (length != query.q.length) {
           log.error("expected vector of length " + length + ", but received " + query.q.length)
         }
 
-        (length == query.q.length)
+        length == query.q.length
       } catch {
-        case e : Exception => log.error("query not conform with entity", e)
+        case e: Exception => log.error("query not conform with entity", e)
           false
       }
     } else {
@@ -298,17 +310,16 @@ object Entity extends Logging {
 
   def exists(entityname: EntityName): Boolean = CatalogOperator.existsEntity(entityname)
 
-  private val lock = new Object() //TODO: make entities singleton? lock on entity?
+  private val lock = new Object() //TODO: make entities singleton in whole application? lock on entity?
 
   /**
     * Creates an entity.
     *
-    * @param entityname
-    * @param fields if fields is specified, in the metadata storage a table is created with these names, specify fields
-    *               as key = name, value = SQL type, note the reserved names
+    * @param entityname name of the entity
+    * @param attributes attributes of entity
     * @return
     */
-  def create(entityname: EntityName, fields: Seq[FieldDefinition])(implicit ac: AdamContext): Try[Entity] = {
+  def create(entityname: EntityName, attributes: Seq[FieldDefinition])(implicit ac: AdamContext): Try[Entity] = {
     try {
       lock.synchronized {
         //checks
@@ -316,42 +327,42 @@ object Entity extends Logging {
           return Failure(EntityExistingException())
         }
 
-        if (fields.isEmpty) {
-          return Failure(EntityNotProperlyDefinedException("Entity " + entityname + " will have no fields"))
+        if (attributes.isEmpty) {
+          return Failure(EntityNotProperlyDefinedException("Entity " + entityname + " will have no attributes"))
         }
 
         FieldNames.reservedNames.foreach { reservedName =>
-          if (fields.contains(reservedName)) {
+          if (attributes.contains(reservedName)) {
             return Failure(EntityNotProperlyDefinedException("Entity defined with field " + reservedName + ", but name is reserved"))
           }
         }
 
-        if (fields.map(_.name).distinct.length != fields.length) {
+        if (attributes.map(_.name).distinct.length != attributes.length) {
           return Failure(EntityNotProperlyDefinedException("Entity defined with duplicate fields."))
         }
 
         val allowedPkTypes = Seq(INTTYPE, LONGTYPE, STRINGTYPE, AUTOTYPE)
 
-        if (fields.count(_.pk) > 1) {
+        if (attributes.count(_.pk) > 1) {
           return Failure(EntityNotProperlyDefinedException("Entity defined with more than one primary key"))
-        } else if (fields.filter(_.pk).isEmpty) {
+        } else if (attributes.filter(_.pk).isEmpty) {
           return Failure(EntityNotProperlyDefinedException("Entity defined has no primary key."))
-        } else if (!fields.filter(_.pk).forall(field => allowedPkTypes.contains(field.fieldtype))) {
+        } else if (!attributes.filter(_.pk).forall(field => allowedPkTypes.contains(field.fieldtype))) {
           return Failure(EntityNotProperlyDefinedException("Entity defined needs a " + allowedPkTypes.map(_.name).mkString(", ") + " primary key"))
         }
 
-        if (fields.count(_.fieldtype == AUTOTYPE) > 1) {
-          return Failure(EntityNotProperlyDefinedException("Too many auto fields defined."))
-        } else if (fields.count(_.fieldtype == AUTOTYPE) > 0 && !fields.filter(_.pk).forall(_.fieldtype == AUTOTYPE)) {
+        if (attributes.count(_.fieldtype == AUTOTYPE) > 1) {
+          return Failure(EntityNotProperlyDefinedException("Too many auto attributes defined."))
+        } else if (attributes.count(_.fieldtype == AUTOTYPE) > 0 && !attributes.filter(_.pk).forall(_.fieldtype == AUTOTYPE)) {
           return Failure(EntityNotProperlyDefinedException("Auto type only allowed in primary key."))
         }
 
 
-        val pk = fields.filter(_.pk).head
+        val pk = attributes.filter(_.pk).head
 
         //perform
-        val featurePath = if (!fields.filter(_.fieldtype == FEATURETYPE).isEmpty) {
-          val featureFields = fields.filter(_.fieldtype == FEATURETYPE)
+        val featurePath = if (!attributes.filter(_.fieldtype == FEATURETYPE).isEmpty) {
+          val featureFields = attributes.filter(_.fieldtype == FEATURETYPE)
 
           val path = featureStorage.create(entityname, featureFields)
 
@@ -364,8 +375,8 @@ object Entity extends Logging {
           None
         }
 
-        val metadataPath = if (!fields.filterNot(_.fieldtype == FEATURETYPE).filterNot(_.pk).isEmpty) {
-          val metadataFields = fields.filterNot(_.fieldtype == FEATURETYPE)
+        val metadataPath = if (!attributes.filterNot(_.fieldtype == FEATURETYPE).filterNot(_.pk).isEmpty) {
+          val metadataFields = attributes.filterNot(_.fieldtype == FEATURETYPE)
           val path = metadataStorage.create(entityname, metadataFields)
 
           if (path.isFailure) {
@@ -377,7 +388,7 @@ object Entity extends Logging {
           None
         }
 
-        CatalogOperator.createEntity(entityname, featurePath, metadataPath, fields, !fields.filterNot(_.fieldtype == FEATURETYPE).filterNot(_.pk).isEmpty)
+        CatalogOperator.createEntity(entityname, featurePath, metadataPath, attributes, !attributes.filterNot(_.fieldtype == FEATURETYPE).filterNot(_.pk).isEmpty)
 
         Success(Entity(entityname)(ac))
       }
@@ -392,8 +403,8 @@ object Entity extends Logging {
   /**
     * Drops an entity.
     *
-    * @param entityname
-    * @param ifExists
+    * @param entityname name of entity
+    * @param ifExists if set to true, no error is raised if entity does not exist
     * @return
     */
   def drop(entityname: EntityName, ifExists: Boolean = false)(implicit ac: AdamContext): Try[Void] = {
@@ -422,7 +433,7 @@ object Entity extends Logging {
   /**
     * Loads an entity.
     *
-    * @param entityname
+    * @param entityname name of entity
     * @return
     */
   def load(entityname: EntityName, cache: Boolean = false)(implicit ac: AdamContext): Try[Entity] = {
@@ -449,7 +460,7 @@ object Entity extends Logging {
   /**
     * Loads the entityname metadata without loading the data itself yet.
     *
-    * @param entityname
+    * @param entityname name of entity
     * @return
     */
   private[entity] def loadEntityMetaData(entityname: EntityName)(implicit ac: AdamContext): Try[Entity] = {
@@ -469,14 +480,14 @@ object Entity extends Logging {
   /**
     * Repartition data.
     *
-    * @param entity
-    * @param nPartitions
-    * @param join
-    * @param cols
-    * @param option
+    * @param entity entity
+    * @param nPartitions number of partitions
+    * @param join other dataframes to join on, on which the partitioning is performed
+    * @param cols columns to partition on, if not specified the primary key is used
+    * @param mode partition mode
     * @return
     */
-  def repartition(entity: Entity, nPartitions: Int, join: Option[DataFrame], cols: Option[Seq[String]], option: PartitionMode.Value)(implicit ac: AdamContext): Try[Entity] = {
+  def repartition(entity: Entity, nPartitions: Int, join: Option[DataFrame], cols: Option[Seq[String]], mode: PartitionMode.Value)(implicit ac: AdamContext): Try[Entity] = {
     if (entity.featurePath.isEmpty) {
       return Failure(new GeneralAdamException("no feature data available for performing repartitioning"))
     }
@@ -503,7 +514,7 @@ object Entity extends Logging {
 
     data = data.select(entity.featureData.get.columns.map(col): _*)
 
-    option match {
+    mode match {
       case PartitionMode.REPLACE_EXISTING =>
         val oldPath = entity.featurePath.get
 
