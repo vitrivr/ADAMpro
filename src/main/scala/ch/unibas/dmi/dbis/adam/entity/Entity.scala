@@ -317,14 +317,19 @@ object Entity extends Logging {
     *
     * @param entityname name of the entity
     * @param attributes attributes of entity
+    * @param ifNotExists if set to true and the entity exists, the entity is just returned; otherwise an error is thrown
     * @return
     */
-  def create(entityname: EntityName, attributes: Seq[AttributeDefinition])(implicit ac: AdamContext): Try[Entity] = {
+  def create(entityname: EntityName, attributes: Seq[AttributeDefinition], ifNotExists: Boolean = false)(implicit ac: AdamContext): Try[Entity] = {
     try {
       lock.synchronized {
         //checks
         if (exists(entityname)) {
-          return Failure(EntityExistingException())
+          if (!ifNotExists) {
+            return Failure(EntityExistingException())
+          } else {
+            return load(entityname)
+          }
         }
 
         if (attributes.isEmpty) {
@@ -404,7 +409,7 @@ object Entity extends Logging {
     * Drops an entity.
     *
     * @param entityname name of entity
-    * @param ifExists if set to true, no error is raised if entity does not exist
+    * @param ifExists   if set to true, no error is raised if entity does not exist
     * @return
     */
   def drop(entityname: EntityName, ifExists: Boolean = false)(implicit ac: AdamContext): Try[Void] = {
@@ -480,11 +485,11 @@ object Entity extends Logging {
   /**
     * Repartition data.
     *
-    * @param entity entity
+    * @param entity      entity
     * @param nPartitions number of partitions
-    * @param join other dataframes to join on, on which the partitioning is performed
-    * @param cols columns to partition on, if not specified the primary key is used
-    * @param mode partition mode
+    * @param join        other dataframes to join on, on which the partitioning is performed
+    * @param cols        columns to partition on, if not specified the primary key is used
+    * @param mode        partition mode
     * @return
     */
   def repartition(entity: Entity, nPartitions: Int, join: Option[DataFrame], cols: Option[Seq[String]], mode: PartitionMode.Value)(implicit ac: AdamContext): Try[Entity] = {

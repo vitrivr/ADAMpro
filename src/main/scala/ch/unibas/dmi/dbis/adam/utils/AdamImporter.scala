@@ -100,7 +100,7 @@ class AdamImporter(url: String, user: String, password: String) extends Logging 
 
       val entityname = schemaname + "_" + tablename
       log.info("creating new entity " + entityname + " with schema: " + schema.map(field => field.name + "(" + field.fieldtype.name + ")").mkString(", "))
-      val entity = EntityOp.create(entityname, schema)
+      val entity = EntityOp.create(entityname, schema, true)
 
       if (entity.isSuccess) {
         log.info("importing to new entity " + entityname + " with schema: " + insertDF.schema.toString())

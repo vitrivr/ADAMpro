@@ -34,19 +34,20 @@ object EntityOp extends GenericOp {
     * @return
     */
   def apply(entityname: EntityName, fields: Seq[AttributeDefinition])(implicit ac: AdamContext): Try[Entity] = {
-      create(entityname, fields)(ac)
+    create(entityname, fields)(ac)
   }
 
-    /**
+  /**
     * Creates an entity.
     *
-    * @param entityname name of entity
-    * @param fields     fields of the entity to create
+    * @param entityname  name of entity
+    * @param fields      fields of the entity to create
+    * @param ifNotExists if set to true and the entity exists, the entity is just returned; otherwise an error is thrown
     * @return
     */
-  def create(entityname: EntityName, fields: Seq[AttributeDefinition])(implicit ac: AdamContext): Try[Entity] = {
+  def create(entityname: EntityName, fields: Seq[AttributeDefinition], ifNotExists: Boolean = false)(implicit ac: AdamContext): Try[Entity] = {
     execute("create entity " + entityname + " operation") {
-      Entity.create(entityname, fields)
+      Entity.create(entityname, fields, ifNotExists)
     }
   }
 
