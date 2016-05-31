@@ -39,7 +39,7 @@ object FieldTypes {
   implicit def fromString(s: String): FieldType = values.filter(x => x.name == s).head
 
   implicit def fromDataType(d: DataType): FieldType = {
-    val suggestion = values.filter(x => x.datatype.isInstanceOf[d.type])
+    val suggestion = values.filter(x => d == x.datatype)
     if (d .isInstanceOf[ArrayType]) {
       FEATURETYPE
     } else {
