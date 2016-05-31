@@ -26,7 +26,7 @@ import scala.util.{Failure, Random, Success, Try}
   * Ivan Giangreco
   * October 2015
   */
-case class Entity(val entityname: EntityName)(@transient implicit val ac: AdamContext) extends Logging {
+case class Entity(val entityname: EntityName)(@transient implicit val ac: AdamContext) extends Serializable with Logging {
   var _featureData: Option[DataFrame] = None
   var _metaData: Option[DataFrame] = None
   var _join: Option[DataFrame] = None

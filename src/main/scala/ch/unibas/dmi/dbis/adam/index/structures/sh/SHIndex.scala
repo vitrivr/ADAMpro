@@ -23,7 +23,7 @@ import scala.collection.mutable.ListBuffer
  * Ivan Giangreco
  * August 2015
  */
-class SHIndex(val indexname: IndexName, val entityname: EntityName, override private[index] var data : DataFrame, private[index] val metadata: SHIndexMetaData)(@transient implicit val ac : AdamContext)
+class SHIndex(val indexname: IndexName, val entityname: EntityName, override private[index] var data : DataFrame, private[index] val metadata: SHIndexMetaData)(@transient override implicit val ac : AdamContext)
   extends Index {
 
   override val indextypename: IndexTypeName = IndexTypes.SHINDEX

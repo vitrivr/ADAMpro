@@ -28,7 +28,7 @@ import scala.util.{Failure, Random, Success, Try}
   * Ivan Giangreco
   * August 2015
   */
-abstract class Index(implicit ac: AdamContext) extends Serializable with Logging {
+abstract class Index(@transient implicit val ac: AdamContext) extends Serializable with Logging {
 
   val indexname: IndexName
 

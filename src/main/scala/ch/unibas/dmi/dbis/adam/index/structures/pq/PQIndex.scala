@@ -19,7 +19,7 @@ import org.apache.spark.sql.DataFrame
   * Ivan Giangreco
   * April 2016
   */
-class PQIndex(val indexname: IndexName, val entityname: EntityName, override private[index] var data : DataFrame, private[index] val metadata: PQIndexMetaData)(@transient implicit val ac : AdamContext)
+class PQIndex(val indexname: IndexName, val entityname: EntityName, override private[index] var data : DataFrame, private[index] val metadata: PQIndexMetaData)(@transient override implicit val ac : AdamContext)
   extends Index {
   override val indextypename: IndexTypeName = IndexTypes.PQINDEX
 
