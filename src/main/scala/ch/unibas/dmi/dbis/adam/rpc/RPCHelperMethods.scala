@@ -221,7 +221,7 @@ private[rpc] object RPCHelperMethods {
   def prepareDistance(dm: DistanceMessage): DistanceFunction = {
     dm.distancetype match {
       case DistanceType.minkowski => {
-        return NormBasedDistanceFunction(dm.options.get("norm").get.toDouble)
+        NormBasedDistanceFunction(dm.options.get("norm").get.toDouble)
       }
       case _ => NormBasedDistanceFunction(2)
     }

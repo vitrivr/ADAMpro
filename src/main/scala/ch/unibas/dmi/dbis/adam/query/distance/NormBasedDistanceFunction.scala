@@ -1,8 +1,6 @@
 package ch.unibas.dmi.dbis.adam.query.distance
 
-import breeze.linalg.functions._
-import breeze.linalg.functions.minkowskiDistance._
-import breeze.linalg.{DenseVector, zipValues}
+import breeze.linalg.{zipValues, DenseVector}
 import ch.unibas.dmi.dbis.adam.datatypes.feature.Feature.{FeatureVector, VectorBase}
 import ch.unibas.dmi.dbis.adam.query.distance.Distance.Distance
 import org.apache.spark.Logging
@@ -13,14 +11,13 @@ import org.apache.spark.Logging
   * Ivan Giangreco
   * August 2015
   */
-object NormBasedDistanceFunction {
+object NormBasedDistanceFunction extends Serializable {
   def apply(n: Double) = n match {
     case x if math.abs(n - 1) < 0.00001 => ManhattanDistance
     case x if math.abs(n - 2) < 0.00001 => EuclideanDistance
     case n => new MinkowskiDistance(n)
   }
 }
-
 
 @SerialVersionUID(100L)
 class MinkowskiDistance(val n: Double) extends DistanceFunction with Logging with Serializable {
@@ -45,9 +42,11 @@ class MinkowskiDistance(val n: Double) extends DistanceFunction with Logging wit
     Math.pow(cum, 1 / n).toFloat
   }
 
-  def apply(v1: VectorBase, v2: VectorBase): Distance = minkowskiDistance(DenseVector(v1), DenseVector(v2), n).toFloat
+  def apply(v1: VectorBase, v2: VectorBase): Distance = apply(DenseVector(v1), DenseVector(v2))
 }
 
+@SerialVersionUID(100L)
 object ManhattanDistance extends MinkowskiDistance(1) with Logging with Serializable {}
 
+@SerialVersionUID(100L)
 object EuclideanDistance extends MinkowskiDistance(2) with Logging with Serializable {}
