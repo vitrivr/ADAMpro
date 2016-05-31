@@ -3,6 +3,7 @@ package ch.unibas.dmi.dbis.adam.query.handler.generic
 import java.util.concurrent.TimeUnit
 
 import ch.unibas.dmi.dbis.adam.main.AdamContext
+import ch.unibas.dmi.dbis.adam.query.information.InformationLevels._
 import org.apache.spark.Logging
 import org.apache.spark.sql.DataFrame
 
@@ -20,6 +21,7 @@ abstract class QueryExpression(id: Option[String]) extends Serializable with Log
   private var run = false
   private val lock = new Object()
 
+  private var results : Option[DataFrame] = None
   val info = ExpressionDetails(None, None, id, None)
   protected var children: Seq[QueryExpression] = Seq()
 
@@ -54,7 +56,7 @@ abstract class QueryExpression(id: Option[String]) extends Serializable with Log
 
     val t1 = System.currentTimeMillis
     lock.synchronized {
-      info.results = run(filter)
+      results = run(filter)
       run = true
     }
     val t2 = System.currentTimeMillis
@@ -62,7 +64,7 @@ abstract class QueryExpression(id: Option[String]) extends Serializable with Log
 
     info.time = Duration(t2 - t1, TimeUnit.MILLISECONDS)
 
-    info.results
+    results
   }
 
   /**
@@ -72,15 +74,34 @@ abstract class QueryExpression(id: Option[String]) extends Serializable with Log
   protected def run(filter: Option[DataFrame])(implicit ac: AdamContext): Option[DataFrame]
 
 
+
+  /**
+    *
+    * @param il degree of detail in collecting information
+    * @return
+    */
+  def information(il : InformationLevel): ListBuffer[ExpressionDetails] = {
+    il match {
+      case FULL_TREE_NO_INTERMEDIATE_RESULTS => information(withResults = false)
+      case FULL_TREE_INTERMEDIATE_RESULTS => information()
+      case LAST_STEP_ONLY => information(0)
+      case _ => information()
+    }
+  }
+
   /**
     *
     * @param level how many levels of depth to consider for collecting information
     * @param lb
     * @return
     */
-  def information(level: Int = Int.MaxValue, lb: ListBuffer[ExpressionDetails] = new ListBuffer[ExpressionDetails]()): ListBuffer[ExpressionDetails] = {
+  private def information(level: Int = Int.MaxValue, withResults : Boolean = true, lb: ListBuffer[ExpressionDetails] = new ListBuffer[ExpressionDetails]()): ListBuffer[ExpressionDetails] = {
     if (!run) {
       log.warn("expression should be run before trying to receive information")
+    }
+
+    if(withResults) {
+      info.results = results
     }
 
     lb += info
@@ -90,7 +111,7 @@ abstract class QueryExpression(id: Option[String]) extends Serializable with Log
     }
 
     children.foreach {
-      child => child.information(level - 1, lb)
+      child => child.information(level - 1, withResults, lb)
     }
 
     lb
