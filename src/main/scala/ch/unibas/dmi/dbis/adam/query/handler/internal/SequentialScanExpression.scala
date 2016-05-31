@@ -37,7 +37,7 @@ case class SequentialScanExpression(entityname: EntityName)(nnq: NearestNeighbou
 
     if(filterExpr.isDefined){
       filterExpr.get.filter = filter
-      df = df.map(_.join(filterExpr.get.evaluate().get, entity.pk.name).select(entity.pk.name).join(entity.data.get, entity.pk.name))
+      df = df.map(_.join(filterExpr.get.evaluate().get, entity.pk.name).select(entity.pk.name))
     }
 
     df.map(SequentialScanExpression.scan(_, nnq))
@@ -55,12 +55,13 @@ object SequentialScanExpression extends Logging {
     */
   def scan(df : DataFrame, nnq: NearestNeighbourQuery)(implicit ac: AdamContext): DataFrame = {
     val q = ac.sc.broadcast(nnq.q)
+    val weights = ac.sc.broadcast(nnq.weights)
 
     import org.apache.spark.sql.functions.{col, udf}
     val distUDF = udf((c: FeatureVectorWrapper) => {
       try {
         if (c != null) {
-          nnq.distance(q.value, c.vector, nnq.weights)
+          nnq.distance(q.value, c.vector, weights.value)
         } else {
           Float.MaxValue
         }
