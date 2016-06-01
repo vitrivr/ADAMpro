@@ -502,7 +502,7 @@ object Entity extends Logging {
     var data = entity.data.get
 
     //TODO: possibly add own partitioner
-    //data.map(r => (r.getAs(cols.get.head), r)).partitionBy(new HashPartitioner())
+    //data.map(r => (r.getAs[Any](cols.get.head), r)).partitionBy(new HashPartitioner())
 
     if (join.isDefined) {
       data = data.join(join.get, entity.pk.name)

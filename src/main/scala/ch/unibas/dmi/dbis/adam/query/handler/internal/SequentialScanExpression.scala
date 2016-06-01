@@ -40,13 +40,13 @@ case class SequentialScanExpression(entityname: EntityName)(nnq: NearestNeighbou
 
     if (filterExpr.isDefined) {
       filterExpr.get.filter = filter
-      ids ++= filterExpr.get.evaluate().get.select(entity.pk.name).collect().map(_.getAs(entity.pk.name))
+      ids ++= filterExpr.get.evaluate().get.select(entity.pk.name).collect().map(_.getAs[Any](entity.pk.name))
     }
 
     if (ids.nonEmpty) {
       val idsbc = ac.sc.broadcast(ids)
       df = df.map(d => {
-        val rdd = d.rdd.filter(x => idsbc.value.contains(x.getAs(entity.pk.name)))
+        val rdd = d.rdd.filter(x => idsbc.value.contains(x.getAs[Any](entity.pk.name)))
         ac.sqlContext.createDataFrame(rdd, d.schema)
       })
     }

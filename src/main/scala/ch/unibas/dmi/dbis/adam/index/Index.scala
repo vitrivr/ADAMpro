@@ -166,7 +166,7 @@ abstract class Index(@transient implicit val ac: AdamContext) extends Serializab
 
     if (ids.nonEmpty) {
       val idsbc = ac.sc.broadcast(ids)
-      df = ac.sqlContext.createDataFrame(df.rdd.filter(x => idsbc.value.contains(x.getAs(pk.name))), df.schema)
+      df = ac.sqlContext.createDataFrame(df.rdd.filter(x => idsbc.value.contains(x.getAs[Any](pk.name))), df.schema)
     }
 
     //choose specific partition
@@ -421,7 +421,7 @@ object Index extends Logging {
     var data = index.data.join(index.entity.get.data.get, index.pk.name)
 
     //TODO: possibly add own partitioner
-    //data.map(r => (r.getAs(cols.get.head), r)).partitionBy(new HashPartitioner())
+    //data.map(r => (r.getAs[Any](cols.get.head), r)).partitionBy(new HashPartitioner())
 
     //TODO: possibly consider replication
     //http://stackoverflow.com/questions/31624622/is-there-a-way-to-change-the-replication-factor-of-rdds-in-spark
