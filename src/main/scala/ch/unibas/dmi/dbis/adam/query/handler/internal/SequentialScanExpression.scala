@@ -32,12 +32,12 @@ case class SequentialScanExpression(entityname: EntityName)(nnq: NearestNeighbou
     var df = entity.data
 
     if (filter.isDefined) {
-      df = df.map(_.join(filter.get, entity.pk.name).select(entity.pk.name).join(entity.data.get, entity.pk.name))
+      df = df.map(_.join(filter.get, entity.pk.name))
     }
 
     if(filterExpr.isDefined){
       filterExpr.get.filter = filter
-      df = df.map(_.join(filterExpr.get.evaluate().get, entity.pk.name).select(entity.pk.name))
+      df = df.map(_.join(filterExpr.get.evaluate().get, entity.pk.name))
     }
 
     df.map(SequentialScanExpression.scan(_, nnq))
