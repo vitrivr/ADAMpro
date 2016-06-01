@@ -11,13 +11,15 @@ import ch.unibas.dmi.dbis.adam.query.query.NearestNeighbourQuery
 import org.apache.spark.Logging
 import org.apache.spark.sql.DataFrame
 
+import scala.collection.mutable
+
 /**
   * adamtwo
   *
   * Ivan Giangreco
   * May 2016
   */
-case class SequentialScanExpression(entityname: EntityName)(nnq: NearestNeighbourQuery, id: Option[String] = None)(filterExpr : Option[QueryExpression] = None)(implicit ac: AdamContext) extends QueryExpression(id) {
+case class SequentialScanExpression(entityname: EntityName)(nnq: NearestNeighbourQuery, id: Option[String] = None)(filterExpr: Option[QueryExpression] = None)(implicit ac: AdamContext) extends QueryExpression(id) {
   override val info = ExpressionDetails(Some(entityname), Some("Sequential Scan Expression"), id, None)
   children ++= filterExpr.map(Seq(_)).getOrElse(Seq())
 
@@ -30,14 +32,23 @@ case class SequentialScanExpression(entityname: EntityName)(nnq: NearestNeighbou
     }
 
     var df = entity.data
+    var ids = mutable.Set[Any]()
 
     if (filter.isDefined) {
-      df = df.map(_.join(filter.get, entity.pk.name))
+      ids ++= filter.get.select(entity.pk.name).collect().map(_.getAs[Any](entity.pk.name))
     }
 
-    if(filterExpr.isDefined){
+    if (filterExpr.isDefined) {
       filterExpr.get.filter = filter
-      df = df.map(_.join(filterExpr.get.evaluate().get, entity.pk.name))
+      ids ++= filterExpr.get.evaluate().get.select(entity.pk.name).collect().map(_.getAs(entity.pk.name))
+    }
+
+    if (ids.nonEmpty) {
+      val idsbc = ac.sc.broadcast(ids)
+      df = df.map(d => {
+        val rdd = d.rdd.filter(x => idsbc.value.contains(x.getAs(entity.pk.name)))
+        ac.sqlContext.createDataFrame(rdd, d.schema)
+      })
     }
 
     df.map(SequentialScanExpression.scan(_, nnq))
@@ -49,11 +60,11 @@ object SequentialScanExpression extends Logging {
   /**
     * Scans the feature data based on a nearest neighbour query.
     *
-    * @param df data frame
+    * @param df  data frame
     * @param nnq nearest neighbour query
     * @return
     */
-  def scan(df : DataFrame, nnq: NearestNeighbourQuery)(implicit ac: AdamContext): DataFrame = {
+  def scan(df: DataFrame, nnq: NearestNeighbourQuery)(implicit ac: AdamContext): DataFrame = {
     val q = ac.sc.broadcast(nnq.q)
     val weights = ac.sc.broadcast(nnq.weights)
 

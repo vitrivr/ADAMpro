@@ -20,6 +20,7 @@ import org.apache.spark.rdd.RDD
 import org.apache.spark.sql.functions.col
 import org.apache.spark.sql.{DataFrame, Row}
 
+import scala.collection.mutable
 import scala.util.{Failure, Random, Success, Try}
 
 /**
@@ -156,8 +157,15 @@ abstract class Index(@transient implicit val ac: AdamContext) extends Serializab
     var df = data
 
     //apply pre-filter
+    var ids = mutable.Set[Any]()
+
     if (filter.isDefined) {
-      df = data.join(filter.get.select(pk.name), pk.name)
+      ids ++= filter.get.select(pk.name).collect().map(_.getAs[Any](pk.name))
+    }
+
+    if (ids.nonEmpty) {
+      val idsbc = ac.sc.broadcast(ids)
+      df = ac.sqlContext.createDataFrame(df.rdd.filter(x => idsbc.value.contains(x.getAs(pk.name))), df.schema)
     }
 
     //TODO: possibly join on other sources and keep all data
@@ -171,7 +179,7 @@ abstract class Index(@transient implicit val ac: AdamContext) extends Serializab
     val results = scan(df, q, distance, options, k)
     val t2 = System.currentTimeMillis
 
-    log.debug(indexname + "returning " + results.count() + " tuples in " + (t2 - t1) + " msecs")
+    log.debug(indexname + "returning tuples in " + (t2 - t1) + " msecs")
 
     results
   }

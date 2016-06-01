@@ -41,7 +41,7 @@ abstract class AggregationExpression(left: QueryExpression, right: QueryExpressi
     second.filter = firstResult.map(_.select(pk))
     val secondResult = second.evaluate()
 
-    aggregate(firstResult.get, secondResult.get, pk)
+    secondResult.get
   }
 
   private def symmetric(first: QueryExpression, second: QueryExpression, filter: Option[DataFrame] = None): DataFrame = {
@@ -80,12 +80,11 @@ object AggregationExpression {
     override val info = ExpressionDetails(None, Some("Aggregation Expression (" + "UNION" + ")"), id, None)
 
     override protected def aggregate(leftResult: DataFrame, rightResult: DataFrame, pk: String): DataFrame = {
-      val left = leftResult.map(r => r.getAs[Long](pk)).collect()
-      val right = rightResult.map(r => r.getAs[Long](pk)).collect()
-      val result = left.union(right).map(id => new Result(0.toFloat, id))
+      val left = leftResult.select(pk)
+      val right = rightResult.select(pk)
 
-      val rdd = ac.sc.parallelize(result.map(res => Row(res.tid, res.distance)))
-      ac.sqlContext.createDataFrame(rdd, Result.resultSchema(pk))
+      import org.apache.spark.sql.functions.lit
+      left.unionAll(right).withColumn(FieldNames.distanceColumnName, lit(0.toFloat))
     }
   }
 
@@ -99,12 +98,11 @@ object AggregationExpression {
     override val info = ExpressionDetails(None, Some("Aggregation Expression (" + "INTERSECT" + ")"), id, None)
 
     override protected def aggregate(leftResult: DataFrame, rightResult: DataFrame, pk: String): DataFrame = {
-      val left = leftResult.map(r => r.getAs[Long](pk)).collect()
-      val right = rightResult.map(r => r.getAs[Long](pk)).collect()
-      val result = left.intersect(right).map(id => new Result(0.toFloat, id))
+      val left = leftResult.select(pk)
+      val right = rightResult.select(pk)
 
-      val rdd = ac.sc.parallelize(result.map(res => Row(res.tid, res.distance)))
-      ac.sqlContext.createDataFrame(rdd, Result.resultSchema(pk))
+      import org.apache.spark.sql.functions.lit
+      left.intersect(right).withColumn(FieldNames.distanceColumnName, lit(0.toFloat))
     }
   }
 
@@ -118,12 +116,11 @@ object AggregationExpression {
     override val info = ExpressionDetails(None, Some("Aggregation Expression (" + "EXCEPT" + ")"), id, None)
 
     override protected def aggregate(leftResult: DataFrame, rightResult: DataFrame, pk: String): DataFrame = {
-      val left = leftResult.map(r => r.getAs[Long](pk)).collect()
-      val right = rightResult.map(r => r.getAs[Long](pk)).collect()
-      val result = (left.toSet -- right.toSet).map(id => new Result(0.toFloat, id)).toSeq
+      val left = leftResult.select(pk)
+      val right = rightResult.select(pk)
 
-      val rdd = ac.sc.parallelize(result.map(res => Row(res.tid, res.distance)))
-      ac.sqlContext.createDataFrame(rdd, Result.resultSchema(pk))
+      import org.apache.spark.sql.functions.lit
+      left.except(right).withColumn(FieldNames.distanceColumnName, lit(0.toFloat))
     }
   }
 

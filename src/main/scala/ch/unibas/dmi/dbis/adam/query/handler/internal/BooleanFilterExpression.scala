@@ -8,6 +8,8 @@ import ch.unibas.dmi.dbis.adam.query.query.BooleanQuery
 import org.apache.spark.Logging
 import org.apache.spark.sql.DataFrame
 
+import scala.collection.mutable
+
 /**
   * adamtwo
   *
@@ -31,13 +33,23 @@ object BooleanFilterExpression extends Logging {
       val entity = Entity.load(entityname).get
       var df = entity.data
 
+      var ids = mutable.Set[Any]()
+
       if (filter.isDefined) {
-        df = df.map(_.join(filter.get, entity.pk.name))
+        ids ++= filter.get.select(entity.pk.name).collect().map(_.getAs[Any](entity.pk.name))
       }
 
       if (filterExpr.isDefined) {
         filterExpr.get.filter = filter
-        df = df.map(_.join(filterExpr.get.evaluate().get, entity.pk.name))
+        ids ++= filterExpr.get.evaluate().get.select(entity.pk.name).collect().map(_.getAs(entity.pk.name))
+      }
+
+      if (ids.nonEmpty) {
+        val idsbc = ac.sc.broadcast(ids)
+        df = df.map(d => {
+          val rdd = d.rdd.filter(x => idsbc.value.contains(x.getAs(entity.pk.name)))
+          ac.sqlContext.createDataFrame(rdd, d.schema)
+        })
       }
 
       df.map(BooleanFilterExpression.filter(_, bq))
