@@ -276,6 +276,7 @@ case class Entity(val entityname: EntityName)(@transient implicit val ac: AdamCo
     */
   def schema: Seq[AttributeDefinition] = CatalogOperator.getFields(entityname)
 
+
   /**
     * Checks whether query is conform to entity.
     *
@@ -285,8 +286,7 @@ case class Entity(val entityname: EntityName)(@transient implicit val ac: AdamCo
   def isQueryConform(query: NearestNeighbourQuery): Boolean = {
     if (featureData.isDefined) {
       try {
-        val length = featureData.get.first().getAs[FeatureVectorWrapper](query.column).vector.length
-
+        val length = featureLength(query.column)
         if (length != query.q.length) {
           log.error("expected vector of length " + length + ", but received " + query.q.length)
         }
@@ -300,6 +300,8 @@ case class Entity(val entityname: EntityName)(@transient implicit val ac: AdamCo
       false
     }
   }
+
+  lazy val featureLength = schema.filter(_.fieldtype == FEATURETYPE).map(attribute => attribute.name -> featureData.get.first().getAs[FeatureVectorWrapper](attribute.name).vector.length).toMap
 }
 
 object Entity extends Logging {
