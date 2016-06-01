@@ -184,6 +184,9 @@ var evaluate = function (id) {
     result.options.entityname = $("#entityname").val();
     result.options.column = $("#column").val();
     result.options.query = $("#query").val();
+
+    result.options.informationlevel = $("#informationlevel").val();
+
     if ($("#k").val().length > 0) {
         result.options.k = $("#k").val();
     }

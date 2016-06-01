@@ -3,7 +3,6 @@ package ch.unibas.dmi.dbis.adam.query.progressive
 import ch.unibas.dmi.dbis.adam.main.AdamContext
 import ch.unibas.dmi.dbis.adam.query.datastructures.{ProgressiveQueryStatus, ProgressiveQueryStatusTracker}
 import ch.unibas.dmi.dbis.adam.query.handler.generic.QueryExpression
-import ch.unibas.dmi.dbis.adam.query.information.InformationLevels.LAST_STEP_ONLY
 import org.apache.spark.Logging
 import org.apache.spark.sql.DataFrame
 
@@ -29,8 +28,8 @@ class ScanFuture[U](expression: QueryExpression, filter : Option[DataFrame], onC
     case res =>
       tracker.synchronized {
 
-        val information = expression.information(LAST_STEP_ONLY)
-        val typename = information.head.source
+        val information = expression.information()
+        val typename = information.source
         val info = Map[String, String]()
 
         val observation = ProgressiveObservation(tracker.status, res, confidence.getOrElse(0), typename.getOrElse(""), info, t1, System.currentTimeMillis())

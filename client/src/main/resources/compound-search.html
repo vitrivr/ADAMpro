@@ -37,7 +37,7 @@
     </div>
     <div class="row" style="margin-top: 20px;">
         <div class="col s12">
-            <div class="input-field col s3">
+            <div class="input-field col s2">
                 <input type="text" class="form-control" id="entityname" placeholder="entity">
             </div>
 
@@ -45,9 +45,18 @@
                 <input type="text" class="form-control" id="column" placeholder="attribute">
             </div>
 
-            <div class="input-field col s4">
+            <div class="input-field col s3">
                 <input type="text" class="form-control" id="query" placeholder="query">
             </div>
+
+            <div class="input-field col s2">
+                <select id="informationlevel">
+                    <option selected="selected" value="full_tree">all information</option>
+                    <option value="final_only">final result only</option>
+                </select>
+                <label>level of information</label>
+            </div>
+
 
             <div class="input-field col s1">
                 <input type="text" class="form-control" id="k" placeholder="k" style="text-align:right;">

@@ -21,7 +21,7 @@ abstract class QueryExpression(id: Option[String]) extends Serializable with Log
   private var run = false
   private val lock = new Object()
 
-  private var results : Option[DataFrame] = None
+  private var results: Option[DataFrame] = None
   val info = ExpressionDetails(None, None, id, None)
   protected var children: Seq[QueryExpression] = Seq()
 
@@ -74,44 +74,55 @@ abstract class QueryExpression(id: Option[String]) extends Serializable with Log
   protected def run(filter: Option[DataFrame])(implicit ac: AdamContext): Option[DataFrame]
 
 
-
   /**
     *
-    * @param il degree of detail in collecting information
+    * @param levels degree of detail in collecting information
     * @return
     */
-  def information(il : InformationLevel): ListBuffer[ExpressionDetails] = {
-    il match {
-      case FULL_TREE_NO_INTERMEDIATE_RESULTS => information(withResults = false)
-      case FULL_TREE_INTERMEDIATE_RESULTS => information()
-      case LAST_STEP_ONLY => information(0)
-      case _ => information()
-    }
+  def information(levels: Seq[InformationLevel]): ListBuffer[ExpressionDetails] = {
+    var withResults: Boolean = true
+    var maxDepth: Int = Int.MaxValue
+
+    levels.foreach(level =>
+      level match {
+        case FULL_TREE => maxDepth = Int.MaxValue
+        case INTERMEDIATE_RESULTS => withResults = true
+        case LAST_STEP_ONLY => maxDepth = 0
+      })
+
+    information(0, maxDepth, withResults)
+  }
+
+
+  def information() : ExpressionDetails = {
+    information(0, 0, true).head
   }
 
   /**
     *
-    * @param level how many levels of depth to consider for collecting information
+    * @param currentDepth
+    * @param maxDepth
+    * @param withResults
     * @param lb
     * @return
     */
-  private def information(level: Int = Int.MaxValue, withResults : Boolean = true, lb: ListBuffer[ExpressionDetails] = new ListBuffer[ExpressionDetails]()): ListBuffer[ExpressionDetails] = {
+  private def information(currentDepth: Int = 0, maxDepth: Int = Int.MaxValue, withResults: Boolean, lb: ListBuffer[ExpressionDetails] = new ListBuffer[ExpressionDetails]()): ListBuffer[ExpressionDetails] = {
     if (!run) {
       log.warn("expression should be run before trying to receive information")
     }
 
-    if(withResults) {
+    if (withResults || currentDepth == 0) {
       info.results = results
     }
 
     lb += info
 
-    if (level == 0) {
+    if (maxDepth == 0) {
       return lb
     }
 
     children.foreach {
-      child => child.information(level - 1, withResults, lb)
+      child => child.information(currentDepth + 1, maxDepth, withResults, lb)
     }
 
     lb

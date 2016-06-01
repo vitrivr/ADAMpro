@@ -1,7 +1,8 @@
 package ch.unibas.dmi.dbis.adam.client.web.datastructures
 
 import ch.unibas.dmi.dbis.adam.http.grpc.BooleanQueryMessage.WhereMessage
-import ch.unibas.dmi.dbis.adam.http.grpc.QueryMessage.DetailLevel
+import ch.unibas.dmi.dbis.adam.http.grpc.QueryMessage.InformationLevel.{INFORMATION_INTERMEDIATE_RESULTS, INFORMATION_FULL_TREE, INFORMATION_LAST_STEP_ONLY}
+import ch.unibas.dmi.dbis.adam.http.grpc.QueryMessage.{InformationLevel}
 import ch.unibas.dmi.dbis.adam.http.grpc._
 
 /**
@@ -81,7 +82,21 @@ case class CompoundQueryRequest(var id: String, var operation: String, var optio
       targets.get.head.seqm()
     }
 
-    QueryMessage(queryid = id, from = Some(FromMessage().withExpression(query)), details = DetailLevel.WITH_INTERMEDIATE_RESULTS)
+    QueryMessage(
+      queryid = id,
+      projection = Some(ProjectionMessage().withField(ProjectionMessage.FieldnameMessage.apply(Seq("id", "adamprodistance")))),
+      from = Some(FromMessage().withExpression(query)),
+      information = informationLevel())
+  }
+
+  private def informationLevel() : Seq[InformationLevel] = {
+    val option = options.getOrElse("informationlevel", "full_tree")
+
+    option match {
+      case "full_tree" => Seq(INFORMATION_FULL_TREE, INFORMATION_INTERMEDIATE_RESULTS)
+      case "final_only" => Seq(INFORMATION_LAST_STEP_ONLY)
+      case _ => Seq(INFORMATION_FULL_TREE, INFORMATION_INTERMEDIATE_RESULTS)
+    }
   }
 
   /**

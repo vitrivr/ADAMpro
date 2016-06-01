@@ -16,6 +16,8 @@ import ch.unibas.dmi.dbis.adam.query.datastructures.QueryCacheOptions
 import ch.unibas.dmi.dbis.adam.query.distance.{DistanceFunction, NormBasedDistanceFunction}
 import ch.unibas.dmi.dbis.adam.query.handler.external.ExternalScanExpressions
 import ch.unibas.dmi.dbis.adam.query.handler.internal._
+import ch.unibas.dmi.dbis.adam.query.information.InformationLevels
+import ch.unibas.dmi.dbis.adam.query.information.InformationLevels.{INTERMEDIATE_RESULTS, FULL_TREE, InformationLevel}
 import ch.unibas.dmi.dbis.adam.query.progressive.{QueryHintsProgressivePathChooser, SimpleProgressivePathChooser}
 import ch.unibas.dmi.dbis.adam.query.query.{BooleanQuery, NearestNeighbourQuery}
 
@@ -48,8 +50,6 @@ private[rpc] object RPCHelperMethods {
 
       //TODO: add cache options
       val cacheOptions = prepareCacheExpression(request.readFromCache, request.putInCache)
-
-
 
       var scan: QueryExpression = null
 
@@ -155,7 +155,7 @@ private[rpc] object RPCHelperMethods {
     * @param ac
     * @return
     */
-  def prepareProjectionExpression(pm: Option[ProjectionMessage], qe: QueryExpression, queryid : Option[String])(implicit ac: AdamContext): Option[QueryExpression] = {
+  def prepareProjectionExpression(pm: Option[ProjectionMessage], qe: QueryExpression, queryid: Option[String])(implicit ac: AdamContext): Option[QueryExpression] = {
     val projection: Option[ProjectionField] = if (pm.isEmpty) {
       None
     } else if (pm.get.submessage.isField) {
@@ -265,6 +265,24 @@ private[rpc] object RPCHelperMethods {
   }
 
   private def prepareCacheExpression(readFromCache: Boolean, putInCache: Boolean) = Some(QueryCacheOptions(readFromCache, putInCache))
+
+
+  def prepareInformationLevel(message: Seq[QueryMessage.InformationLevel]): Seq[InformationLevel] = {
+    val levels = message.map { level =>
+      level match {
+        case QueryMessage.InformationLevel.INFORMATION_FULL_TREE => InformationLevels.FULL_TREE
+        case QueryMessage.InformationLevel.INFORMATION_LAST_STEP_ONLY => InformationLevels.LAST_STEP_ONLY
+        case QueryMessage.InformationLevel.INFORMATION_INTERMEDIATE_RESULTS => InformationLevels.INTERMEDIATE_RESULTS
+        case _ => null
+      }
+    }.filterNot(_ == null)
+
+    if(levels.isEmpty){
+      Seq(FULL_TREE, INTERMEDIATE_RESULTS)
+    } else {
+      levels
+    }
+  }
 }
 
 

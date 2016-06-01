@@ -7,7 +7,6 @@ import ch.unibas.dmi.dbis.adam.http.grpc._
 import ch.unibas.dmi.dbis.adam.main.AdamContext
 import ch.unibas.dmi.dbis.adam.query.datastructures.QueryLRUCache
 import ch.unibas.dmi.dbis.adam.query.handler.internal.QueryHints
-import ch.unibas.dmi.dbis.adam.query.information.InformationLevels.FULL_TREE_INTERMEDIATE_RESULTS
 import ch.unibas.dmi.dbis.adam.query.progressive.{ProgressiveObservation, QueryHintsProgressivePathChooser, SimpleProgressivePathChooser}
 import io.grpc.stub.StreamObserver
 import org.apache.spark.Logging
@@ -82,6 +81,7 @@ class SearchRPC(implicit ac: AdamContext) extends AdamSearchGrpc.AdamSearch with
   override def doQuery(request: QueryMessage): Future[QueryResultsMessage] = {
     time("rpc call for query operation") {
       val expression = RPCHelperMethods.toExpression(request)
+      val informationLevel = RPCHelperMethods.prepareInformationLevel(request.information)
 
       if (expression.isFailure) {
         Future.successful(QueryResultsMessage(Some(AckMessage(code = AckMessage.Code.ERROR, message = expression.failed.get.getMessage))))
@@ -92,7 +92,7 @@ class SearchRPC(implicit ac: AdamContext) extends AdamSearchGrpc.AdamSearch with
       log.debug("\n ------------------- \n" + expression.get.mkString(0) + "\n ------------------- \n")
 
       if (res.isSuccess) {
-        val results = expression.get.information(FULL_TREE_INTERMEDIATE_RESULTS).map(res =>
+        val results = expression.get.information(informationLevel).map(res =>
           prepareResults(res.id.getOrElse(""), res.confidence.getOrElse(0), res.time.toMillis, res.source.getOrElse(""), res.results)
         )
 

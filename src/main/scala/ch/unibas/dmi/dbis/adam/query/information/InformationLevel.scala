@@ -12,8 +12,8 @@ object InformationLevels {
     def equals(other: InformationLevel): Boolean = (other.name.equals(name))
   }
 
-  case object FULL_TREE_NO_INTERMEDIATE_RESULTS extends InformationLevel("full tree, no intermediate results")
-  case object FULL_TREE_INTERMEDIATE_RESULTS extends InformationLevel("full tree with intermediate results")
+  case object FULL_TREE extends InformationLevel("full tree")
   case object LAST_STEP_ONLY extends InformationLevel("only last results")
+  case object INTERMEDIATE_RESULTS extends InformationLevel("with intermediate results")
 
 }

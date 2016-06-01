@@ -191,14 +191,14 @@ message QueryMessage {
   bool readFromCache = 10;
   bool putInCache = 11;
 
-  enum DetailLevel {
-      NO_INTERMEDIATE_RESULTS = 0;
-      WITH_INTERMEDIATE_RESULTS = 1;
+  enum InformationLevel {
+      INFORMATION_FULL_TREE = 0;
+      INFORMATION_LAST_STEP_ONLY = 1;
+      INFORMATION_INTERMEDIATE_RESULTS = 2;
       //WITH_PROVENANCE_PARTITION_INFORMATION = 2;
       //WITH_PROVENANCE_INDEX_INFORMATION = 3;
-      //WITH_FULL_DETAILS = 4;
     }
-  DetailLevel details = 12;
+  repeated InformationLevel information = 12;
 }
 
 message ExpressionQueryMessage {
