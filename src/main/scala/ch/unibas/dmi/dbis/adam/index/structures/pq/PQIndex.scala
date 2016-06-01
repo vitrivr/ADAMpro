@@ -23,7 +23,7 @@ class PQIndex(val indexname: IndexName, val entityname: EntityName, override pri
   extends Index {
   override val indextypename: IndexTypeName = IndexTypes.PQINDEX
 
-  override def scan(data : DataFrame, q : FeatureVector, distance : DistanceFunction, options : Map[String, Any], k : Int): Set[Result] = {
+  override def scan(data : DataFrame, q : FeatureVector, distance : DistanceFunction, options : Map[String, Any], k : Int): DataFrame = {
     log.debug("scanning PQ index " + indexname)
 
     //precompute distance
@@ -50,14 +50,10 @@ class PQIndex(val indexname: IndexName, val entityname: EntityName, override pri
       sum
     })
 
-    val ids = data
+    data
       .withColumn(FieldNames.distanceColumnName, distUDF(data(FieldNames.featureIndexColumnName)))
-      .map(r => Result(r.getAs[Float](FieldNames.distanceColumnName), r.getAs[Any](this.pk.name)))
-      .takeOrdered(k)
-
-    log.debug("PQ index returning " + ids.length + " tuples")
-
-    ids.toSet
+      .sort(FieldNames.distanceColumnName)
+      .limit(k)
   }
 
   override def isQueryConform(nnq: NearestNeighbourQuery): Boolean = {

@@ -15,7 +15,7 @@ import ch.unibas.dmi.dbis.adam.query.distance.Distance._
 import ch.unibas.dmi.dbis.adam.query.distance.{DistanceFunction, MinkowskiDistance}
 import ch.unibas.dmi.dbis.adam.query.query.NearestNeighbourQuery
 import org.apache.spark.broadcast.Broadcast
-import org.apache.spark.sql.DataFrame
+import org.apache.spark.sql.{Row, DataFrame}
 
 /**
   * adamtwo
@@ -34,7 +34,7 @@ class VAIndex(val indexname: IndexName, val entityname: EntityName, override pri
   override val lossy: Boolean = false
   override val confidence = 1.toFloat
 
-  override def scan(data: DataFrame, q: FeatureVector, distance: DistanceFunction, options: Map[String, Any], k: Int): Set[Result] = {
+  override def scan(data: DataFrame, q: FeatureVector, distance: DistanceFunction, options: Map[String, Any], k: Int): DataFrame = {
     log.debug("scanning VA-File index " + indexname)
 
     val bounds = computeBounds(q, metadata.marks, distance.asInstanceOf[MinkowskiDistance])
@@ -56,7 +56,7 @@ class VAIndex(val indexname: IndexName, val entityname: EntityName, override pri
       bound
     })
 
-    val results = data
+    val rddResults = data
       .withColumn("lbound", distUDF(lbounds)(data(FieldNames.featureIndexColumnName)))
       .withColumn("ubound", distUDF(ubounds)(data(FieldNames.featureIndexColumnName)))
         .mapPartitions(p => {
@@ -67,17 +67,10 @@ class VAIndex(val indexname: IndexName, val entityname: EntityName, override pri
             localRh.offer(current, this.pk.name)
           }
 
-          localRh.results.iterator
-        }).collect()
+          localRh.results.map(x => Row(x.tid, x.lower)).iterator
+        })
 
-    val globalResultHandler = new VAResultHandler(k)
-    results.sortBy(- _.upper).foreach(result => globalResultHandler.offer(result))
-
-    val ids = globalResultHandler.results
-
-    log.debug("VA-File returning " + ids.length + " tuples")
-
-    ids.map(result => Result(result.lower, result.tid)).toSet
+    ac.sqlContext.createDataFrame(rddResults,  Result.resultSchema(pk.name))
   }
 
   override def isQueryConform(nnq: NearestNeighbourQuery): Boolean = {

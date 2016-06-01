@@ -127,10 +127,7 @@ abstract class Index(@transient implicit val ac: AdamContext) extends Serializab
     */
   def scan(nnq: NearestNeighbourQuery, filter: Option[DataFrame])(implicit ac: AdamContext): DataFrame = {
     log.debug("scan index")
-    val results = scan(nnq.q, nnq.distance, nnq.options, nnq.k, filter, nnq.partitions, nnq.queryID)
-    val rdd = ac.sc.parallelize(results.map(result => Row(result.distance, result.tid)).toSeq)
-    val fields = Result.resultSchema(pk.name)
-    ac.sqlContext.createDataFrame(rdd, fields)
+    scan(nnq.q, nnq.distance, nnq.options, nnq.k, filter, nnq.partitions, nnq.queryID)
   }
 
 
@@ -145,7 +142,8 @@ abstract class Index(@transient implicit val ac: AdamContext) extends Serializab
     * @param queryID  optional query id
     * @return a set of candidate tuple ids, possibly together with a tentative score (the number of tuples will be greater than k)
     */
-  def scan(q: FeatureVector, distance: DistanceFunction, options: Map[String, String] = Map(), k: Int, filter: Option[DataFrame], partitions: Option[Set[PartitionID]], queryID: Option[String] = None)(implicit ac: AdamContext): Set[Result] = {
+  def scan(q: FeatureVector, distance: DistanceFunction, options: Map[String, String] = Map(), k: Int, filter: Option[DataFrame], partitions: Option[Set[PartitionID]], queryID: Option[String] = None)(implicit ac: AdamContext): DataFrame = {
+    val t1 = System.currentTimeMillis
     log.debug("started scanning index")
 
     if (isStale) {
@@ -170,7 +168,12 @@ abstract class Index(@transient implicit val ac: AdamContext) extends Serializab
       df = ac.sqlContext.createDataFrame(rdd, df.schema)
     }
 
-    scan(df, q, distance, options, k)
+    val results = scan(df, q, distance, options, k)
+    val t2 = System.currentTimeMillis
+
+    log.debug(indexname + "returning " + results.count() + " tuples in " + (t2 - t1) + " msecs")
+
+    results
   }
 
   /**
@@ -183,7 +186,7 @@ abstract class Index(@transient implicit val ac: AdamContext) extends Serializab
     * @param k        number of elements to retrieve (of the k nearest neighbor search), possibly more than k elements are returned
     * @return a set of candidate tuple ids, possibly together with a tentative score (the number of tuples will be greater than k)
     */
-  protected def scan(data: DataFrame, q: FeatureVector, distance: DistanceFunction, options: Map[String, Any], k: Int): Set[Result]
+  protected def scan(data: DataFrame, q: FeatureVector, distance: DistanceFunction, options: Map[String, Any], k: Int): DataFrame
 
   /**
     * Copies the index structure. Note that this is a volatile operation and no data is stored on disk. Note also

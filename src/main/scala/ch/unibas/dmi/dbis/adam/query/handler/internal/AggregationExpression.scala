@@ -84,7 +84,7 @@ object AggregationExpression {
       val right = rightResult.map(r => r.getAs[Long](pk)).collect()
       val result = left.union(right).map(id => new Result(0.toFloat, id))
 
-      val rdd = ac.sc.parallelize(result.map(res => Row(res.distance, res.tid)))
+      val rdd = ac.sc.parallelize(result.map(res => Row(res.tid, res.distance)))
       ac.sqlContext.createDataFrame(rdd, Result.resultSchema(pk))
     }
   }
@@ -103,7 +103,7 @@ object AggregationExpression {
       val right = rightResult.map(r => r.getAs[Long](pk)).collect()
       val result = left.intersect(right).map(id => new Result(0.toFloat, id))
 
-      val rdd = ac.sc.parallelize(result.map(res => Row(res.distance, res.tid)))
+      val rdd = ac.sc.parallelize(result.map(res => Row(res.tid, res.distance)))
       ac.sqlContext.createDataFrame(rdd, Result.resultSchema(pk))
     }
   }
@@ -122,7 +122,7 @@ object AggregationExpression {
       val right = rightResult.map(r => r.getAs[Long](pk)).collect()
       val result = (left.toSet -- right.toSet).map(id => new Result(0.toFloat, id)).toSeq
 
-      val rdd = ac.sc.parallelize(result.map(res => Row(res.distance, res.tid)))
+      val rdd = ac.sc.parallelize(result.map(res => Row(res.tid, res.distance)))
       ac.sqlContext.createDataFrame(rdd, Result.resultSchema(pk))
     }
   }
