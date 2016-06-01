@@ -154,6 +154,7 @@ abstract class Index(@transient implicit val ac: AdamContext) extends Serializab
     ac.sc.setLocalProperty("spark.scheduler.pool", "index")
     ac.sc.setJobGroup(queryID.getOrElse(""), indextypename.name, interruptOnCancel = true)
 
+    //TODO: possibly join on other sources and keep all data
     var df = data
 
     //apply pre-filter
@@ -167,8 +168,6 @@ abstract class Index(@transient implicit val ac: AdamContext) extends Serializab
       val idsbc = ac.sc.broadcast(ids)
       df = ac.sqlContext.createDataFrame(df.rdd.filter(x => idsbc.value.contains(x.getAs(pk.name))), df.schema)
     }
-
-    //TODO: possibly join on other sources and keep all data
 
     //choose specific partition
     if (partitions.isDefined) {
@@ -297,6 +296,8 @@ object Index extends Logging {
         .repartition(AdamConfig.defaultNumberOfPartitions)
         .withColumnRenamed("id", entity.pk.name)
         .withColumnRenamed("value", FieldNames.featureIndexColumnName)
+        //TODO: possibly store data with index?
+
       val path = storage.write(indexname, index.data, None, allowRepartitioning = true)
       if (path.isSuccess) {
         CatalogOperator.createIndex(indexname, path.get, entity.entityname, attribute, indexgenerator.indextypename, index.metadata)
