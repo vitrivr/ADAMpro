@@ -47,7 +47,19 @@ class RPCClient(channel: ManagedChannel, definer: AdamDefinitionBlockingStub, se
         return Failure(new Exception(res.message))
       }
     } catch {
+      case e: Exception => Failure(e)
+    }
+  }
 
+  /**
+    *
+    * @param entityname
+    */
+  def dropEntity(entityname: String): Try[Void] = {
+    try {
+      definer.dropEntity(EntityNameMessage(entityname))
+      Success(null)
+    } catch {
       case e: Exception => Failure(e)
     }
   }
