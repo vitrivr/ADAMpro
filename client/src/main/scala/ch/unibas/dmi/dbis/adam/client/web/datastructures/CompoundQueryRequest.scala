@@ -22,12 +22,28 @@ case class CompoundQueryRequest(var id: String, var operation: String, var optio
     this.cqm()
   }
 
+  /**
+    * 
+    * @return
+    */
   private def entity = options.get("entityname").get
 
+  /**
+    *
+    * @return
+    */
   private def subtype = options.get("subtype").getOrElse("")
 
+  /**
+    *
+    * @return
+    */
   private def query = options.get("query").get.split(",").map(_.toFloat)
 
+  /**
+    *
+    * @return
+    */
   private def nnq = {
     val partitions = if (options.get("partitions").isDefined) {
       val s = options.get("partitions").get
@@ -89,6 +105,10 @@ case class CompoundQueryRequest(var id: String, var operation: String, var optio
       information = informationLevel())
   }
 
+  /**
+    *
+    * @return
+    */
   private def informationLevel() : Seq[InformationLevel] = {
     val option = options.getOrElse("informationlevel", "full_tree")
 
