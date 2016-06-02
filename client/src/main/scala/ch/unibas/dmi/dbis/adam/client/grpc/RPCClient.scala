@@ -1,9 +1,11 @@
 package ch.unibas.dmi.dbis.adam.client.grpc
 
 import java.util.concurrent.TimeUnit
-import ch.unibas.dmi.dbis.adam.client.web.datastructures.{EntityField, CompoundQueryDetails, CompoundQueryRequest}
+
+import ch.unibas.dmi.dbis.adam.client.web.datastructures.{CompoundQueryDetails, CompoundQueryRequest, EntityField}
 import ch.unibas.dmi.dbis.adam.http.grpc.AdamDefinitionGrpc.AdamDefinitionBlockingStub
 import ch.unibas.dmi.dbis.adam.http.grpc.AdamSearchGrpc.{AdamSearchBlockingStub, AdamSearchStub}
+import ch.unibas.dmi.dbis.adam.http.grpc.DataMessage.Datatype
 import ch.unibas.dmi.dbis.adam.http.grpc.DistanceMessage.DistanceType
 import ch.unibas.dmi.dbis.adam.http.grpc.FieldDefinitionMessage.FieldType
 import ch.unibas.dmi.dbis.adam.http.grpc.RepartitionMessage.PartitionOptions
@@ -177,6 +179,37 @@ class RPCClient(channel: ManagedChannel, definer: AdamDefinitionBlockingStub, se
 
   /**
     *
+    * @param entityname
+    */
+  def preview(entityname: String): Try[Seq[Map[String, String]]] = {
+    try {
+      val res = searcherBlocking.preview(EntityNameMessage(entityname))
+
+      val readable = res.responses.head.results.map(tuple => {
+        tuple.data.map(attribute => {
+          val key = attribute._1
+          val value = attribute._2.datatype match {
+            case Datatype.IntData(x) => x.toInt.toString
+            case Datatype.LongData(x) => x.toLong.toString
+            case Datatype.FloatData(x) => x.toFloat.toString
+            case Datatype.DoubleData(x) => x.toDouble.toString
+            case Datatype.StringData(x) => x.toString
+            case Datatype.BooleanData(x) => x.toString
+            case Datatype.FeatureData(x) => x.feature.denseVector.get.vector.mkString("[", ",", "]")
+            case _ => ""
+          }
+          key -> value
+        })
+      })
+
+      Success(readable)
+    } catch {
+      case e: Exception => Failure(e)
+    }
+  }
+
+  /**
+    *
     * @param request
     * @return
     */
@@ -219,7 +252,7 @@ class RPCClient(channel: ManagedChannel, definer: AdamDefinitionBlockingStub, se
         override def onNext(qr: QueryResultsMessage): Unit = {
           log.info("new progressive results arrived")
 
-          if(qr.ack.get.code == AckMessage.Code.OK && !qr.responses.isEmpty) {
+          if (qr.ack.get.code == AckMessage.Code.OK && !qr.responses.isEmpty) {
             val head = qr.responses.head
 
             val confidence = head.confidence
@@ -264,7 +297,7 @@ class RPCClient(channel: ManagedChannel, definer: AdamDefinitionBlockingStub, se
 
       val res = definer.repartitionEntityData(RepartitionMessage(entity, partitions, cols, option))
 
-      if(res.code == AckMessage.Code.OK){
+      if (res.code == AckMessage.Code.OK) {
         Success(res.message)
       } else {
         Failure(throw new Exception(res.message))
@@ -296,7 +329,7 @@ class RPCClient(channel: ManagedChannel, definer: AdamDefinitionBlockingStub, se
 
       val res = definer.repartitionIndexData(RepartitionMessage(index, partitions, cols, option))
 
-      if(res.code == AckMessage.Code.OK){
+      if (res.code == AckMessage.Code.OK) {
         Success(res.message)
       } else {
         Failure(throw new Exception(res.message))

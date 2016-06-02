@@ -1,6 +1,6 @@
 package ch.unibas.dmi.dbis.adam.rpc
 
-import ch.unibas.dmi.dbis.adam.api.{IndexOp, QueryOp}
+import ch.unibas.dmi.dbis.adam.api.{EntityOp, IndexOp, QueryOp}
 import ch.unibas.dmi.dbis.adam.datatypes.feature.{FeatureVectorWrapper, FeatureVectorWrapperUDT}
 import ch.unibas.dmi.dbis.adam.exception.QueryNotCachedException
 import ch.unibas.dmi.dbis.adam.http.grpc._
@@ -71,6 +71,23 @@ class SearchRPC(implicit ac: AdamContext) extends AdamSearchGrpc.AdamSearch with
       Future.successful(AckMessage(code = AckMessage.Code.ERROR, message = "not implemented yet"))
     }
   }
+
+
+  /**
+    *
+    * @param request
+    * @return
+    */
+  override def preview(request: EntityNameMessage): Future[QueryResultsMessage] = {
+    time("rpc call to preview entity") {
+      val entityname = request.entity
+      Future.successful(QueryResultsMessage(
+        Some(AckMessage(AckMessage.Code.OK)),
+        Seq((prepareResults("", 1.toFloat, 0, "sequential scan", Some(EntityOp.preview(entityname, 100).get))))
+      ))
+    }
+  }
+
 
 
   /**

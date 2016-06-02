@@ -73,6 +73,29 @@ class AdamController(rpcClient: RPCClient) extends Controller {
 
   case class EntityDetailResponse(code: Int, entity : String, details : Map[String, String])
 
+
+  /**
+    *
+    */
+  get("/entity/preview") { request: Request =>
+    val entityname = request.params.get("entityname")
+
+    if (entityname.isEmpty) {
+      response.ok.json(GeneralResponse(500, "entity not specified"))
+    }
+
+    val res = rpcClient.preview(entityname.get)
+
+    if (res.isSuccess) {
+      response.ok.json(EntityPreviewResponse(200, entityname.get, res.get))
+    } else {
+      response.ok.json(GeneralResponse(500, res.failed.get.getMessage))
+    }
+  }
+
+  case class EntityPreviewResponse(code: Int, entity : String, details : Seq[Map[String, String]])
+
+
   /**
     *
     */
