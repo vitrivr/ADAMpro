@@ -8,19 +8,25 @@ $(document).ready(function () {
             if (data.code === 200) {
                 jQuery.each(data.entities, function (index, value) {
                     var innerhtml = '';
-                    innerhtml += "<li id='" + value + "' data-entityname='" + value + "'>";
-                    innerhtml += "<div class='collapsible-header'>" + value + "</div>";
-                    innerhtml += "<div class='collapsible-body'>";
+                    innerhtml += "<li id='" + value + "' data-entityname='" + value + "' class='collection-item avatar' '>";
+                    innerhtml += "<i class='material-icons circle'>view_list</i>";
+                    innerhtml += "<span class='title'>" + value + "</span>";
+                    innerhtml += "<div class='details' style='display:none'>";
                     innerhtml += "<table class='striped'>";
                     innerhtml += "<thead><tr><th>option</th><th>value</th></tr></thead>";
                     innerhtml += "<tbody>";
                     innerhtml += "</tbody>";
                     innerhtml += "</table>";
                     innerhtml += "</div>";
+                    innerhtml += "<div class='secondary-content'>";
+                    innerhtml += "<a href='#!' class='btndelete'><i class='material-icons'>delete</i></a>";
+                    innerhtml += "<a href='#!' class='btninfo'><i class='material-icons'>info</i></a>";
+                    innerhtml += "</div>";
                     innerhtml += "</li>";
                     $("#info").append(innerhtml);
 
                     var handler = function () {
+                        $('#' + value + ' > div.details').show();
                         $("#progress").show();
                         $.ajax("/entity/details?entityname=" + value, {
                             data: "",
@@ -51,8 +57,8 @@ $(document).ready(function () {
                         });
                     };
 
-
-                    $('#' + value + ' > div.collapsible-header').bind("click", handler);
+                    $('#' + value + ' > div > a.btndelete').bind("click", function(){showAlert("Not implemented yet.")});
+                    $('#' + value + ' > div > a.btninfo').bind("click", handler);
 
                     $('.collapsible').collapsible({
                         accordion: false
