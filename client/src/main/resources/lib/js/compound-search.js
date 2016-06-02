@@ -159,8 +159,8 @@ $("#btnSubmit").click(function () {
                             $("#resultbox").show();
                             var results = $("#" + val.id).data("results");
 
-                            if (results.length > 0) {
-                                var innerhtml = '';
+                            var innerhtml = '';
+                            if (results != null && results.length > 0) {
                                 innerhtml += '<table class="striped highlight">';
                                 innerhtml += '<thead><tr>';
 
