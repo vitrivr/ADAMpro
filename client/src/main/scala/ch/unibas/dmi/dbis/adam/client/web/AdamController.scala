@@ -112,6 +112,19 @@ class AdamController(rpcClient: RPCClient) extends Controller {
   /**
     *
     */
+  post("/import") { request: ImportRequest =>
+    val res = rpcClient.importData(request.host, request.database, request.username, request.password)
+
+    if (res.isSuccess) {
+      response.ok.json(GeneralResponse(200))
+    } else {
+      response.ok.json(GeneralResponse(500, res.failed.get.getMessage))
+    }
+  }
+
+  /**
+    *
+    */
   post("/entity/insertdemo") { request: InsertDataRequest =>
     val res = rpcClient.prepareDemo(request.entityname, request.ntuples, request.ndims, request.fields)
 

@@ -341,6 +341,23 @@ class RPCClient(channel: ManagedChannel, definer: AdamDefinitionBlockingStub, se
 
   /**
     *
+    * @param host
+    * @param database
+    * @param username
+    * @param password
+    * @return
+    */
+  def importData(host: String, database: String, username: String, password: String): Try[Void] = {
+    try {
+      definer.importData(ImportMessage(host, database, username, password))
+      Success(null)
+    } catch {
+      case e: Exception => Failure(e)
+    }
+  }
+
+  /**
+    *
     */
   def shutdown(): Unit = {
     channel.shutdown.awaitTermination(5, TimeUnit.SECONDS)
