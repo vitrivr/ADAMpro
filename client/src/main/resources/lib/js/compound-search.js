@@ -150,7 +150,44 @@ $("#btnSubmit").click(function () {
             if (data.code === 200) {
                 $.each(data.details.intermediate_responses, function (idx, val) {
                     if (val.id.length > 0) {
-                        $("#" + val.id + " > .res").html("execution time: " + val.time + "ms" + "<br/>" + "results: " + val.length);
+                        $("#" + val.id + " > .res").html("execution time: " + val.time + "ms" + "<br/>" + "results: " + val.results.length);
+
+                        var slicedData = val.results.slice(0, Math.min(150, val.results.length));
+                        $("#" + val.id).data("results", slicedData);
+
+                        $("#" + val.id).click(function () {
+                            $("#resultbox").show();
+                            var results = $("#" + val.id).data("results");
+
+                            if (results.length > 0) {
+                                var innerhtml = '';
+                                innerhtml += '<table class="striped highlight">';
+                                innerhtml += '<thead><tr>';
+
+                                $.each(results[0], function (key, value) {
+                                    innerhtml += "<th>" + key + "</th>"
+                                });
+
+                                innerhtml += '</tr></thead>';
+                                innerhtml += '<tbody>';
+
+
+                                $.each(results, function (key, value) {
+                                    innerhtml += "<tr>";
+                                    $.each(value, function (attributekey, attributevalue) {
+                                        innerhtml += "<td>" + attributevalue + "</td>"
+                                    });
+                                    innerhtml += "</tr>";
+                                });
+
+                                innerhtml += '</tbody>';
+
+                                innerhtml += '</table>';
+                            }
+
+
+                            $("#results").html(innerhtml);
+                        });
                     }
                 });
             } else {
@@ -173,6 +210,8 @@ $("#btnSubmit").click(function () {
 //evaluate canvas
 var evaluate = function (id) {
     var operation = $("#" + id).data("operation");
+    $("#" + id).data("results", null);
+
 
     var result = {};
     result.id = id;
