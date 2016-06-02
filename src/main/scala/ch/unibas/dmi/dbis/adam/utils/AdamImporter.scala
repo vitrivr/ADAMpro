@@ -31,12 +31,11 @@ class AdamImporter(url: String, user: String, password: String) extends Logging 
     DriverManager.getConnection(url, user, password)
   }
 
-  def importTable(schemaname: String, tablename: String) {
+  def importTable(schemaname: String, tablename: String, newtablename : String) {
     try {
       log.info("importing table " + tablename)
 
-      val renamingRules = Seq(("shotid" -> "id"))
-
+      val attributeRenamingRules = Seq(("shotid" -> "id"))
 
       import SparkStartup.Implicits._
       val df = sqlContext.read.format("jdbc").options(
@@ -51,7 +50,7 @@ class AdamImporter(url: String, user: String, password: String) extends Logging 
       val pk = {
         val adamPK = pkResult.getString(1)
 
-        val renamedPK = renamingRules.filter(_._1 == adamPK)
+        val renamedPK = attributeRenamingRules.filter(_._1 == adamPK)
         if(!renamedPK.isEmpty){
           renamedPK.head._2
         } else {
@@ -83,7 +82,7 @@ class AdamImporter(url: String, user: String, password: String) extends Logging 
           .drop(field.name)
       }
 
-      renamingRules.foreach{
+      attributeRenamingRules.foreach{
         rule => insertDF = insertDF.withColumnRenamed(rule._1, rule._2)
       }
 
@@ -98,7 +97,7 @@ class AdamImporter(url: String, user: String, password: String) extends Logging 
       })
 
 
-      val entityname = schemaname + "_" + tablename
+      val entityname = schemaname + "_" + newtablename
       log.info("creating new entity " + entityname + " with schema: " + schema.map(field => field.name + "(" + field.fieldtype.name + ")").mkString(", "))
       val entity = EntityOp.create(entityname, schema, true)
 
@@ -135,12 +134,16 @@ object AdamImporter {
 
     val importer = new AdamImporter("jdbc:postgresql://" + host + "/" + database, username, password)
 
+
+    val entityRenamingRules = Seq(("shots" -> "segment")).toMap
+
+
     //tables to import
 
     val cineast = Seq("representativeframes", "resultcachenames", "shots", "videos")
-    cineast.map(table => importer.importTable("cineast", table))
+    cineast.map(table => importer.importTable("cineast", table, entityRenamingRules.getOrElse(table, table)))
 
     val features = Seq("averagecolor", "averagecolorarp44", "averagecolorarp44normalized", "averagecolorcld", "averagecolorcldnormalized", "averagecolorgrid8", "averagecolorgrid8normalized", "averagecolorraster", "averagefuzzyhist", "averagefuzzyhistnormalized", "chromagrid8", "cld", "cldnormalized", "contrast", "dominantcolors", "dominantedgegrid16", "dominantedgegrid8", "edgearp88", "edgearp88full", "edgegrid16", "edgegrid16full", "ehd", "huevaluevariancegrid8", "mediancolor", "mediancolorarp44", "mediancolorarp44normalized", "mediancolorgrid8", "mediancolorgrid8normalized", "mediancolorraster", "medianfuzzyhist", "medianfuzzyhistnormalized", "motionhistogram", "saturationandchroma", "saturationgrid8", "simpleperceptualhash", "stmp7eh", "subdivaveragefuzzycolor", "subdivmedianfuzzycolor", "subdivmotionhistogram2", "subdivmotionhistogram3", "subdivmotionhistogram4", "subdivmotionhistogram5", "surf", "surffull")
-    features.map(table => importer.importTable("features", table))
+    features.map(table => importer.importTable("features", table, entityRenamingRules.getOrElse(table, table)))
   }
 }
