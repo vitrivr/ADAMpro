@@ -1,10 +1,10 @@
-#!/bin/sh
+#!/bin/bash
 
 ####################
 # starts all docker container for ADAMpro
 ####################
 
-eval "$(docker-machine env default)"
+eval "$(sudo docker-machine env default)"
 
-docker start postgresql
-docker start spark
+sudo docker start postgresql
+sudo docker start spark
