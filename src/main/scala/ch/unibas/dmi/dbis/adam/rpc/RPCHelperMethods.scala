@@ -31,7 +31,11 @@ import scala.util.{Failure, Success, Try}
   */
 private[rpc] object RPCHelperMethods {
 
-
+  /**
+    *
+    * @param request
+    * @return
+    */
   implicit def toExpression(request: QueryMessage)(implicit ac: AdamContext): Try[QueryExpression] = {
     try {
       val queryid = prepareQueryId(request.queryid)
@@ -83,7 +87,11 @@ private[rpc] object RPCHelperMethods {
     }
   }
 
-
+  /**
+    *
+    * @param request
+    * @return
+    */
   implicit def toExpression(request: ExternalHandlerQueryMessage)(implicit ac: AdamContext): Try[QueryExpression] = {
     try {
       val handler = request.handler
@@ -97,7 +105,11 @@ private[rpc] object RPCHelperMethods {
     }
   }
 
-
+  /**
+    *
+    * @param request
+    * @return
+    */
   implicit def toExpression(request: ExpressionQueryMessage)(implicit ac: AdamContext): Try[QueryExpression] = {
     try {
       val order = request.order match {
@@ -130,6 +142,11 @@ private[rpc] object RPCHelperMethods {
     }
   }
 
+  /**
+    *
+    * @param seqm
+    * @return
+    */
   implicit def toExpression(seqm: Option[SubExpressionQueryMessage])(implicit ac: AdamContext): Try[QueryExpression] = {
     try {
       if (seqm.isEmpty) {
@@ -151,7 +168,6 @@ private[rpc] object RPCHelperMethods {
   /**
     *
     * @param pm
-    * @param ac
     * @return
     */
   def prepareProjectionExpression(pm: Option[ProjectionMessage], qe: QueryExpression, queryid: Option[String])(implicit ac: AdamContext): Option[QueryExpression] = {
@@ -208,6 +224,12 @@ private[rpc] object RPCHelperMethods {
     Some(NearestNeighbourQuery(nnq.column, fv, nnq.weights.map(prepareFeatureVector(_)), distance, nnq.k, nnq.indexOnly, nnq.options, partitions))
   }
 
+
+  /**
+    *
+    * @param fv
+    * @return
+    */
   def prepareFeatureVector(fv: FeatureVectorMessage): FeatureVector = fv.feature match {
     //TODO: adjust here to use sparse vector too
     case FeatureVectorMessage.Feature.DenseVector(request) => FeatureVectorWrapper(request.vector).vector
@@ -217,6 +239,11 @@ private[rpc] object RPCHelperMethods {
   }
 
 
+  /**
+    *
+    * @param dm
+    * @return
+    */
   def prepareDistance(dm: DistanceMessage): DistanceFunction = {
     dm.distancetype match {
       case DistanceType.minkowski => {
@@ -251,21 +278,42 @@ private[rpc] object RPCHelperMethods {
   }
 
 
+  /**
+    *
+    * @param queryid
+    * @return
+    */
   def prepareQueryId(queryid: String) = if (queryid != "" && queryid != null) {
     Some(queryid)
   } else {
     None
   }
 
+  /**
+    *
+    * @param hints
+    * @return
+    */
   def preparePaths(hints: Seq[String])(implicit ac: AdamContext) = if (hints.isEmpty) {
     new SimpleProgressivePathChooser()
   } else {
     new QueryHintsProgressivePathChooser(hints.map(QueryHints.withName(_).get))
   }
 
+  /**
+    *
+    * @param readFromCache
+    * @param putInCache
+    * @return
+    */
   private def prepareCacheExpression(readFromCache: Boolean, putInCache: Boolean) = Some(QueryCacheOptions(readFromCache, putInCache))
 
 
+  /**
+    *
+    * @param message
+    * @return
+    */
   def prepareInformationLevel(message: Seq[QueryMessage.InformationLevel]): Seq[InformationLevel] = {
     val levels = message.map { level =>
       level match {

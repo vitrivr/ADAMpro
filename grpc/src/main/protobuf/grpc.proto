@@ -81,14 +81,14 @@ message IntVectorMessage {
 
 message DataMessage {
   oneof datatype {
-        int64 longData = 1;
-        int32 intData = 2;
-        float floatData = 3;
-        double doubleData = 4;
-        string stringData = 5;
-        bool booleanData = 6;
-        FeatureVectorMessage featureData = 7;
-       }
+     int64 longData = 1;
+     int32 intData = 2;
+     float floatData = 3;
+     double doubleData = 4;
+     string stringData = 5;
+     bool booleanData = 6;
+     FeatureVectorMessage featureData = 7;
+  }
 }
 
 

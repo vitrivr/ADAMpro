@@ -25,6 +25,11 @@ import scala.concurrent.Future
   */
 class DataDefinitionRPC(implicit ac: AdamContext) extends AdamDefinitionGrpc.AdamDefinition with Logging {
 
+  /**
+    *
+    * @param request
+    * @return
+    */
   override def createEntity(request: CreateEntityMessage): Future[AckMessage] = {
     log.debug("rpc call for create entity operation")
     val entityname = request.entity
@@ -57,6 +62,11 @@ class DataDefinitionRPC(implicit ac: AdamContext) extends AdamDefinitionGrpc.Ada
     case _ => FieldTypes.UNRECOGNIZEDTYPE
   }
 
+  /**
+    *
+    * @param datatype
+    * @return
+    */
   private def converter(datatype: DataType): (DataMessage) => (Any) = datatype match {
     case types.BooleanType => (x) => x.getBooleanData
     case types.DoubleType => (x) => x.getBooleanData
@@ -67,7 +77,11 @@ class DataDefinitionRPC(implicit ac: AdamContext) extends AdamDefinitionGrpc.Ada
     case _: FeatureVectorWrapperUDT => (x) => FeatureVectorWrapper(RPCHelperMethods.prepareFeatureVector(x.getFeatureData))
   }
 
-
+  /**
+    *
+    * @param request
+    * @return
+    */
   override def count(request: EntityNameMessage): Future[AckMessage] = {
     log.debug("rpc call for count entity operation")
     val res = EntityOp.count(request.entity)
@@ -80,7 +94,11 @@ class DataDefinitionRPC(implicit ac: AdamContext) extends AdamDefinitionGrpc.Ada
     }
   }
 
-
+  /**
+    *
+    * @param responseObserver
+    * @return
+    */
   override def insert(responseObserver: StreamObserver[AckMessage]): StreamObserver[InsertMessage] = {
     new StreamObserver[InsertMessage]() {
 
@@ -128,7 +146,11 @@ class DataDefinitionRPC(implicit ac: AdamContext) extends AdamDefinitionGrpc.Ada
     }
   }
 
-
+  /**
+    *
+    * @param request
+    * @return
+    */
   override def index(request: IndexMessage): Future[AckMessage] = {
     log.debug("rpc call for indexing operation")
     val indextypename = IndexTypes.withIndextype(request.indextype)
@@ -147,6 +169,11 @@ class DataDefinitionRPC(implicit ac: AdamContext) extends AdamDefinitionGrpc.Ada
     }
   }
 
+  /**
+    *
+    * @param request
+    * @return
+    */
   override def dropEntity(request: EntityNameMessage): Future[AckMessage] = {
     log.debug("rpc call for dropping entity operation")
     val res = EntityOp.drop(request.entity)
@@ -159,7 +186,11 @@ class DataDefinitionRPC(implicit ac: AdamContext) extends AdamDefinitionGrpc.Ada
     }
   }
 
-
+  /**
+    *
+    * @param request
+    * @return
+    */
   override def dropIndex(request: IndexNameMessage): Future[AckMessage] = {
     log.debug("rpc call for dropping index operation")
     val res = IndexOp.drop(request.index)
@@ -172,7 +203,11 @@ class DataDefinitionRPC(implicit ac: AdamContext) extends AdamDefinitionGrpc.Ada
     }
   }
 
-
+  /**
+    *
+    * @param request
+    * @return
+    */
   override def generateRandomData(request: GenerateRandomDataMessage): Future[AckMessage] = {
     log.debug("rpc call for creating random data")
     val res = RandomDataOp(request.entity, request.ntuples, request.ndims)
@@ -185,7 +220,11 @@ class DataDefinitionRPC(implicit ac: AdamContext) extends AdamDefinitionGrpc.Ada
     }
   }
 
-
+  /**
+    *
+    * @param request
+    * @return
+    */
   override def listEntities(request: EmptyMessage): Future[EntitiesMessage] = {
     log.debug("rpc call for listing entities")
     val res = EntityOp.list()
@@ -198,7 +237,11 @@ class DataDefinitionRPC(implicit ac: AdamContext) extends AdamDefinitionGrpc.Ada
     }
   }
 
-
+  /**
+    *
+    * @param request
+    * @return
+    */
   override def getEntityProperties(request: EntityNameMessage): Future[EntityPropertiesMessage] = {
     log.debug("rpc call for returning entity properties")
     val res = EntityOp.properties(request.entity)
@@ -211,6 +254,11 @@ class DataDefinitionRPC(implicit ac: AdamContext) extends AdamDefinitionGrpc.Ada
     }
   }
 
+  /**
+    *
+    * @param request
+    * @return
+    */
   override def repartitionIndexData(request: RepartitionMessage): Future[AckMessage] = {
     log.debug("rpc call for repartitioning index")
 
@@ -237,6 +285,11 @@ class DataDefinitionRPC(implicit ac: AdamContext) extends AdamDefinitionGrpc.Ada
     }
   }
 
+  /**
+    *
+    * @param request
+    * @return
+    */
   override def repartitionEntityData(request: RepartitionMessage): Future[AckMessage] = {
     log.debug("rpc call for repartitioning entity")
 
@@ -263,6 +316,11 @@ class DataDefinitionRPC(implicit ac: AdamContext) extends AdamDefinitionGrpc.Ada
     }
   }
 
+  /**
+    *
+    * @param request
+    * @return
+    */
   override def setIndexWeight(request: IndexWeightMessage): Future[AckMessage] = {
     log.debug("rpc call for changing weight of index")
     val res = IndexOp.setWeight(request.index, request.weight)
@@ -275,7 +333,13 @@ class DataDefinitionRPC(implicit ac: AdamContext) extends AdamDefinitionGrpc.Ada
     }
   }
 
+  /**
+    *
+    * @param request
+    * @return
+    */
   override def generateAllIndexes(request: IndexMessage): Future[AckMessage] = {
+    log.debug("rpc call for generating all indexes")
     val res = IndexOp.generateAll(request.entity, request.column, RPCHelperMethods.prepareDistance(request.distance.get))
 
     if (res.isSuccess) {
