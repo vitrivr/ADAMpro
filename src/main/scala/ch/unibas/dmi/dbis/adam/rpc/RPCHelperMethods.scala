@@ -7,17 +7,16 @@ import ch.unibas.dmi.dbis.adam.datatypes.feature.FeatureVectorWrapper
 import ch.unibas.dmi.dbis.adam.http.grpc.DistanceMessage.DistanceType
 import ch.unibas.dmi.dbis.adam.http.grpc._
 import ch.unibas.dmi.dbis.adam.main.AdamContext
-import ch.unibas.dmi.dbis.adam.query.handler.generic.QueryExpression
-import ch.unibas.dmi.dbis.adam.query.handler.internal.BooleanFilterExpression.BooleanFilterScanExpression
-import ch.unibas.dmi.dbis.adam.query.handler.internal.ProjectionExpression.{ExistsOperationProjection, CountOperationProjection, FieldNameProjection, ProjectionField}
-import ch.unibas.dmi.dbis.adam.query.handler.internal._
-import AggregationExpression._
 import ch.unibas.dmi.dbis.adam.query.datastructures.QueryCacheOptions
 import ch.unibas.dmi.dbis.adam.query.distance.{DistanceFunction, NormBasedDistanceFunction}
 import ch.unibas.dmi.dbis.adam.query.handler.external.ExternalScanExpressions
+import ch.unibas.dmi.dbis.adam.query.handler.generic.QueryExpression
+import ch.unibas.dmi.dbis.adam.query.handler.internal.AggregationExpression._
+import ch.unibas.dmi.dbis.adam.query.handler.internal.BooleanFilterExpression.BooleanFilterScanExpression
+import ch.unibas.dmi.dbis.adam.query.handler.internal.ProjectionExpression.{CountOperationProjection, ExistsOperationProjection, FieldNameProjection, ProjectionField}
 import ch.unibas.dmi.dbis.adam.query.handler.internal._
 import ch.unibas.dmi.dbis.adam.query.information.InformationLevels
-import ch.unibas.dmi.dbis.adam.query.information.InformationLevels.{INTERMEDIATE_RESULTS, FULL_TREE, InformationLevel}
+import ch.unibas.dmi.dbis.adam.query.information.InformationLevels.{InformationLevel, LAST_STEP_ONLY}
 import ch.unibas.dmi.dbis.adam.query.progressive.{QueryHintsProgressivePathChooser, SimpleProgressivePathChooser}
 import ch.unibas.dmi.dbis.adam.query.query.{BooleanQuery, NearestNeighbourQuery}
 
@@ -278,7 +277,7 @@ private[rpc] object RPCHelperMethods {
     }.filterNot(_ == null)
 
     if(levels.isEmpty){
-      Seq(FULL_TREE, INTERMEDIATE_RESULTS)
+      Seq(LAST_STEP_ONLY)
     } else {
       levels
     }
