@@ -11,7 +11,7 @@ import scala.util.Random
   * Ivan Giangreco
   * March 2016
   */
-@SerialVersionUID(2394132198905L)
+@SerialVersionUID(100L)
 class ManhattanHashFunction(w: Float, offset: Float, proj: FeatureVector, m: Int) extends LSHashFunction with Serializable {
   /**
     *
@@ -28,14 +28,14 @@ class ManhattanHashFunction(w: Float, offset: Float, proj: FeatureVector, m: Int
     * @param v
     * @return
     */
-  def hash(v: FeatureVector): Int = math.round(((v dot proj): Float) + offset / w.toFloat) % m
+  def hash(v: FeatureVector): Int = math.round((v dot proj: Float) + offset / w.toFloat) % m
 }
 
 
 private object CauchyDistribution {
   private val dist = new breeze.stats.distributions.CauchyDistribution(0, 1)
 
-  def getNext() = dist.sample()
+  def getNext = dist.sample()
 
   def getNext(n : Int) = dist.sample(n)
 }

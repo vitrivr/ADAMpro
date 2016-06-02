@@ -13,7 +13,7 @@ import ch.unibas.dmi.dbis.adam.index.structures.va.marks.{EquidistantMarksGenera
 import ch.unibas.dmi.dbis.adam.index.structures.va.signature.FixedSignatureGenerator
 import ch.unibas.dmi.dbis.adam.main.AdamContext
 import ch.unibas.dmi.dbis.adam.query.distance.{DistanceFunction, MinkowskiDistance}
-import org.apache.log4j.Logger
+import org.apache.spark.Logging
 import org.apache.spark.rdd.RDD
 import org.apache.spark.sql.Row
 import org.apache.spark.sql.types.{StructField, StructType}
@@ -33,7 +33,7 @@ class VAFIndexer(maxMarks: Int = 64, marksGenerator: MarksGenerator, bitsPerDime
     val entity = Entity.load(entityname).get
 
     val n = entity.count
-    val fraction = ADAMSamplingUtils.computeFractionForSampleSize(math.max(trainingSize, IndexGenerator.MINIMUM_NUMBER_OF_TUPLE), n, false)
+    val fraction = ADAMSamplingUtils.computeFractionForSampleSize(math.max(trainingSize, IndexGenerator.MINIMUM_NUMBER_OF_TUPLE), n, withReplacement = false)
     var trainData = data.sample(false, fraction).collect()
     if(trainData.length < IndexGenerator.MINIMUM_NUMBER_OF_TUPLE){
       trainData = data.take(IndexGenerator.MINIMUM_NUMBER_OF_TUPLE)
@@ -51,8 +51,8 @@ class VAFIndexer(maxMarks: Int = 64, marksGenerator: MarksGenerator, bitsPerDime
       })
 
     val schema = StructType(Seq(
-      StructField(entity.pk.name, entity.pk.fieldtype.datatype, false),
-      StructField(FieldNames.featureIndexColumnName, new BitStringUDT, false)
+      StructField(entity.pk.name, entity.pk.fieldtype.datatype, nullable = false),
+      StructField(FieldNames.featureIndexColumnName, new BitStringUDT, nullable = false)
     ))
 
     val df = ac.sqlContext.createDataFrame(indexdata, schema)
@@ -62,7 +62,7 @@ class VAFIndexer(maxMarks: Int = 64, marksGenerator: MarksGenerator, bitsPerDime
 
   /**
     *
-    * @param trainData
+    * @param trainData training data
     * @return
     */
   private def train(trainData: Array[IndexingTaskTuple[_]]): VAIndexMetaData = {
@@ -91,12 +91,10 @@ class VAFIndexer(maxMarks: Int = 64, marksGenerator: MarksGenerator, bitsPerDime
   }
 }
 
-object VAFIndexer {
-  lazy val log = Logger.getLogger(getClass.getName)
-
+object VAFIndexer extends Logging {
   /**
-    *
-    * @param properties
+    * @param distance   distance function
+    * @param properties indexing properties
     */
   def apply(distance: DistanceFunction, properties: Map[String, String] = Map[String, String]())(implicit ac: AdamContext): IndexGenerator = {
     val maxMarks = properties.getOrElse("nmarks", "64").toInt

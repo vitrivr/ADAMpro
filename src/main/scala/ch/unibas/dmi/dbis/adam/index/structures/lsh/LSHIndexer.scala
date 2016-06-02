@@ -21,18 +21,18 @@ class LSHIndexer(numHashTables: Int, numHashes: Int, distance: DistanceFunction,
 
   /**
     *
-    * @param indexname
-    * @param entityname
-    * @param data
+    * @param indexname  name of index
+    * @param entityname name of entity
+    * @param data       data to index
     * @return
     */
   override def index(indexname: IndexName, entityname: EntityName, data: RDD[IndexingTaskTuple[_]]): Index = {
     val entity = Entity.load(entityname).get
 
     val n = entity.count
-    val fraction = ADAMSamplingUtils.computeFractionForSampleSize(math.max(trainingSize, IndexGenerator.MINIMUM_NUMBER_OF_TUPLE), n, false)
+    val fraction = ADAMSamplingUtils.computeFractionForSampleSize(math.max(trainingSize, IndexGenerator.MINIMUM_NUMBER_OF_TUPLE), n, withReplacement = false)
     var trainData = data.sample(false, fraction).collect()
-    if(trainData.length < IndexGenerator.MINIMUM_NUMBER_OF_TUPLE){
+    if (trainData.length < IndexGenerator.MINIMUM_NUMBER_OF_TUPLE) {
       trainData = data.take(IndexGenerator.MINIMUM_NUMBER_OF_TUPLE)
     }
 
@@ -47,8 +47,8 @@ class LSHIndexer(numHashTables: Int, numHashes: Int, distance: DistanceFunction,
       })
 
     val schema = StructType(Seq(
-      StructField(entity.pk.name, entity.pk.fieldtype.datatype, false),
-      StructField(FieldNames.featureIndexColumnName, new BitStringUDT, false)
+      StructField(entity.pk.name, entity.pk.fieldtype.datatype, nullable = false),
+      StructField(FieldNames.featureIndexColumnName, new BitStringUDT, nullable = false)
     ))
 
     val df = ac.sqlContext.createDataFrame(indexdata, schema)
@@ -57,7 +57,7 @@ class LSHIndexer(numHashTables: Int, numHashes: Int, distance: DistanceFunction,
 
   /**
     *
-    * @param trainData
+    * @param trainData training data
     * @return
     */
   private def train(trainData: Array[IndexingTaskTuple[_]]): LSHIndexMetaData = {
@@ -88,8 +88,8 @@ class LSHIndexer(numHashTables: Int, numHashes: Int, distance: DistanceFunction,
 
 object LSHIndexer {
   /**
-    *
-    * @param properties
+    * @param distance   distance function
+    * @param properties indexing properties
     */
   def apply(distance: DistanceFunction, properties: Map[String, String] = Map[String, String]())(implicit ac: AdamContext): IndexGenerator = {
     val numHashTables = properties.getOrElse("nhashtables", "64").toInt

@@ -82,12 +82,11 @@ class FeatureVectorWrapperUDT extends UserDefinedType[FeatureVectorWrapper] {
 
     code match {
       case DenseFeatureVectorType.num => FeatureVectorWrapper(DenseVector(data))
-      case SparseFeatureVectorType.num => {
+      case SparseFeatureVectorType.num =>
         val length = row.getInt(1)
         val index = row.getArray(2).toIntArray()
 
         FeatureVectorWrapper(new SparseVector(index, data, length))
-      }
     }
   }
 }

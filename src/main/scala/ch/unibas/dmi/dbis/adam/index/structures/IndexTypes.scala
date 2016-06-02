@@ -28,7 +28,7 @@ object IndexTypes {
   sealed abstract class IndexType(val name: String,
                                   val indextype: grpc.IndexType,
                                   val index: (IndexName, EntityName, DataFrame, Any) => Index,
-                                 val indexer : (DistanceFunction, Map[String, String]) => IndexGenerator
+                                  val indexer: (DistanceFunction, Map[String, String]) => IndexGenerator
                                  ) extends Serializable
 
   case object ECPINDEX extends IndexType("ecp", grpc.IndexType.ecp, ECPIndex.apply, ECPIndexer.apply)
@@ -53,21 +53,25 @@ object IndexTypes {
     * @param s
     * @return
     */
-  //TODO: checks
-  def withName(s: String): Option[IndexType] = values.map(value => value.name -> value).toMap.get(s)
+  //TODO: add checks
+  def withName(s: String): Option[IndexType] = {
+    values.map(value => value.name -> value).toMap.get(s)
+  }
 
   /**
     *
     * @param indextype
     * @return
     */
-  //TODO: checks
-  def withIndextype(indextype: grpc.IndexType): Option[IndexType] = values.map(value => value.indextype -> value).toMap.get(indextype)
+  //TODO: add checks
+  def withIndextype(indextype: grpc.IndexType): Option[IndexType] = {
+    values.map(value => value.indextype -> value).toMap.get(indextype)
+  }
 
   /**
     *
     * @param s
     * @return
     */
-  implicit def fromString(s : String) : IndexType = IndexTypes.withName(s).get
+  implicit def fromString(s: String): IndexType = IndexTypes.withName(s).get
 }

@@ -16,42 +16,42 @@ import scala.util.Try
 trait IndexStorage extends Serializable with Logging {
   /**
     *
-    * @param path
+    * @param path path to store index to
     * @return
     */
-  def exists(path : String) : Try[Boolean]
+  def exists(path: String): Try[Boolean]
 
   /**
     * Create an index in the index storage.
     *
-    * @param indexname
-    * @param df
+    * @param indexname name of index
+    * @param df        data
     * @return
     */
-  def create(indexname: IndexName, df: DataFrame)(implicit ac: AdamContext) : Try[String] = write(indexname, df)
+  def create(indexname: IndexName, df: DataFrame)(implicit ac: AdamContext): Try[String] = write(indexname, df)
 
   /**
     * Read index from the index storage.
     *
-    * @param path
+    * @param path path to store index to
     * @return
     */
-  def read(path : String)(implicit ac : AdamContext): Try[DataFrame]
+  def read(path: String)(implicit ac: AdamContext): Try[DataFrame]
 
   /**
     * Write index to the index storage.
     *
-    * @param indexName
-    * @param index
+    * @param indexName name of index
+    * @param index     index
     * @return true on success
     */
-  def write(indexName: IndexName, index: DataFrame, path : Option[String] = None, allowRepartitioning : Boolean = false)(implicit ac: AdamContext): Try[String]
+  def write(indexName: IndexName, index: DataFrame, path: Option[String] = None, allowRepartitioning: Boolean = false)(implicit ac: AdamContext): Try[String]
 
   /**
     * Drop the index from the index storage.
     *
-    * @param path
+    * @param path path to store index to
     * @return true on success
     */
-  def drop(path : String)(implicit ac: AdamContext): Try[Void]
+  def drop(path: String)(implicit ac: AdamContext): Try[Void]
 }

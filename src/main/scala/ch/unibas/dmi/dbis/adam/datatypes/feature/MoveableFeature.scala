@@ -17,7 +17,7 @@ class MoveableFeature(val v: FeatureVector) {
   /**
     * Moves feature randomly according to the given radius (same radius for all dimensions).
     *
-    * @param radius
+    * @param radius radius which is the maximum used for moving feature around
     * @return
     */
   def move(radius: Float): FeatureVector = {
@@ -28,7 +28,7 @@ class MoveableFeature(val v: FeatureVector) {
   /**
     * Moves feature randomly according to the given radius (different radius for each dimension).
     *
-    * @param radius
+    * @param radius feature vector which contains a radius in each dimension which is the maximum used for moving feature around
     * @return
     */
   def move(radius: FeatureVector): FeatureVector = {
@@ -38,5 +38,5 @@ class MoveableFeature(val v: FeatureVector) {
 }
 
 object MovableFeature {
-  implicit def conv_feature2MovableFeature(v: FeatureVector) = new MoveableFeature(v)
+  implicit def conv_feature2MovableFeature(v: FeatureVector): MoveableFeature = new MoveableFeature(v)
 }

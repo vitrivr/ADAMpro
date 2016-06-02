@@ -30,13 +30,13 @@ class EntityTestSuite extends AdamTestBase {
     scenario("create an entity") {
       withEntityName { entityname =>
         Given("a database with a few elements already")
-        val givenEntities = Entity.list()
+        val givenEntities = Entity.list
 
         When("a new random entity (without any metadata) is created")
         Entity.create(entityname, Seq(AttributeDefinition("idfield", FieldTypes.LONGTYPE, true), AttributeDefinition("feature", FieldTypes.FEATURETYPE)))
 
         Then("one entity should be created")
-        val finalEntities = Entity.list()
+        val finalEntities = Entity.list
         eventually {
           finalEntities.size shouldBe givenEntities.size + 1
         }
@@ -53,13 +53,13 @@ class EntityTestSuite extends AdamTestBase {
       withEntityName { entityname =>
         Given("there exists one entity")
         Entity.create(entityname, Seq(AttributeDefinition("idfield", FieldTypes.LONGTYPE, true), AttributeDefinition("feature", FieldTypes.FEATURETYPE)))
-        assert(Entity.list().contains(entityname.toLowerCase()))
+        assert(Entity.list.contains(entityname.toLowerCase()))
 
         When("the entity is dropped")
         EntityOp.drop(entityname)
 
         Then("the entity should no longer exist")
-        assert(!Entity.list().contains(entityname.toLowerCase()))
+        assert(!Entity.list.contains(entityname.toLowerCase()))
       }
     }
 
@@ -69,13 +69,13 @@ class EntityTestSuite extends AdamTestBase {
     scenario("create an entity with multiple feature fields") {
       withEntityName { entityname =>
         Given("a database with a few elements already")
-        val givenEntities = Entity.list()
+        val givenEntities = Entity.list
 
         When("a new random entity (without any metadata) is created")
         Entity.create(entityname, Seq(AttributeDefinition("idfield", FieldTypes.LONGTYPE, true), AttributeDefinition("feature1", FieldTypes.FEATURETYPE), AttributeDefinition("feature2", FieldTypes.FEATURETYPE)))
 
         Then("one entity should be created")
-        val finalEntities = Entity.list()
+        val finalEntities = Entity.list
         eventually {
           finalEntities.size shouldBe givenEntities.size + 1
         }
@@ -91,7 +91,7 @@ class EntityTestSuite extends AdamTestBase {
     scenario("create an entity with metadata") {
       withEntityName { entityname =>
         Given("a database with a few elements already")
-        val givenEntities = Entity.list()
+        val givenEntities = Entity.list
 
         When("a new random entity with metadata is created")
         val fieldTemplate = Seq(
@@ -108,8 +108,8 @@ class EntityTestSuite extends AdamTestBase {
         val entity = Entity.create(entityname, fieldTemplate.map(ft => AttributeDefinition(ft.name, ft.fieldType, ft.pk)))
 
         Then("the entity should be created")
-        val entities = Entity.list()
-        val finalEntities = Entity.list()
+        val entities = Entity.list
+        val finalEntities = Entity.list
         assert(finalEntities.size == givenEntities.size + 1)
         assert(finalEntities.contains(entityname.toLowerCase()))
 

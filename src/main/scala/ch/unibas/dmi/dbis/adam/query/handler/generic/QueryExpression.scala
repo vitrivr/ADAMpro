@@ -67,8 +67,10 @@ abstract class QueryExpression(id: Option[String]) extends Serializable with Log
     results
   }
 
+
   /**
     *
+    * @param filter filter to apply to data
     * @return
     */
   protected def run(filter: Option[DataFrame])(implicit ac: AdamContext): Option[DataFrame]
@@ -83,27 +85,26 @@ abstract class QueryExpression(id: Option[String]) extends Serializable with Log
     var withResults: Boolean = true
     var maxDepth: Int = Int.MaxValue
 
-    levels.foreach(level =>
-      level match {
-        case FULL_TREE => maxDepth = Int.MaxValue
-        case INTERMEDIATE_RESULTS => withResults = true
-        case LAST_STEP_ONLY => maxDepth = 0
-      })
+    levels.foreach {
+      case FULL_TREE => maxDepth = Int.MaxValue
+      case INTERMEDIATE_RESULTS => withResults = true
+      case LAST_STEP_ONLY => maxDepth = 0
+    }
 
     information(0, maxDepth, withResults)
   }
 
 
-  def information() : ExpressionDetails = {
-    information(0, 0, true).head
+  def information(): ExpressionDetails = {
+    information(0, 0, withResults = true).head
   }
 
   /**
     *
-    * @param currentDepth
-    * @param maxDepth
-    * @param withResults
-    * @param lb
+    * @param currentDepth current depth in query expression tree
+    * @param maxDepth     maximum depth to scan to in tree
+    * @param withResults  denotes whether the results should be retrieved as well (computationally expensive!)
+    * @param lb           list buffer to write information to
     * @return
     */
   private def information(currentDepth: Int = 0, maxDepth: Int = Int.MaxValue, withResults: Boolean, lb: ListBuffer[ExpressionDetails] = new ListBuffer[ExpressionDetails]()): ListBuffer[ExpressionDetails] = {
@@ -130,7 +131,7 @@ abstract class QueryExpression(id: Option[String]) extends Serializable with Log
 
   /**
     *
-    * @param indentation
+    * @param indentation number of spaces to indent to
     * @return
     */
   def mkString(indentation: Int = 0): String = {

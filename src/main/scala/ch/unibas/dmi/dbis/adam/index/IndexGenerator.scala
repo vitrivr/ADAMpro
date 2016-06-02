@@ -13,7 +13,19 @@ import org.apache.spark.rdd.RDD
  * August 2015
  */
 trait IndexGenerator extends Serializable with Logging {
+  /**
+    *
+    * @return
+    */
   def indextypename: IndexTypes.IndexType
+
+  /**
+    *
+    * @param indexname name of index
+    * @param entityname name of entity
+    * @param data data to index
+    * @return
+    */
   def index(indexname : IndexName, entityname : EntityName, data: RDD[IndexingTaskTuple[_]]):  Index
 }
 

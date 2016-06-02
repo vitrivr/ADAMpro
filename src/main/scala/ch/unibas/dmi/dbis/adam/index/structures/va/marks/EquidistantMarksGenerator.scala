@@ -17,8 +17,8 @@ private[va] object EquidistantMarksGenerator extends MarksGenerator with Seriali
 
   /**
    *
-   * @param samples
-   * @param maxMarks
+   * @param samples training samples
+   * @param maxMarks maximal number of marks
    * @return
    */
   private[va] def getMarks(samples : Array[IndexingTaskTuple[_]], maxMarks : Seq[Int]) : Marks = {

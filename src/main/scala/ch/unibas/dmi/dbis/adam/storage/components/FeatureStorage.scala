@@ -17,7 +17,7 @@ import scala.util.{Success, Try}
 trait FeatureStorage extends Serializable with Logging {
   /**
     *
-    * @param path
+    * @param path path to store features to
     * @return
     */
   def exists(path: String): Try[Boolean]
@@ -25,7 +25,7 @@ trait FeatureStorage extends Serializable with Logging {
   /**
     * Create the entity in the feature storage.
     *
-    * @param entityname
+    * @param entityname name of entity
     * @return true on success
     */
   def create(entityname: EntityName, fields: Seq[AttributeDefinition])(implicit ac: AdamContext): Try[Option[String]] = Success(None)
@@ -33,35 +33,35 @@ trait FeatureStorage extends Serializable with Logging {
   /**
     * Read entity from feature storage.
     *
-    * @param path
+    * @param path path to store features to
     * @return
     */
-  def read(path : String)(implicit ac: AdamContext): Try[DataFrame]
+  def read(path: String)(implicit ac: AdamContext): Try[DataFrame]
 
   /**
     * Count the number of tuples in the feature storage.
     *
-    * @param path
+    * @param path path to store features to
     * @return
     */
-  def count(path : String)(implicit ac: AdamContext): Try[Long]
+  def count(path: String)(implicit ac: AdamContext): Try[Long]
 
   /**
     * Write entity to the feature storage.
     *
-    * @param path
-    * @param df
-    * @param mode
+    * @param path path to store features to
+    * @param df   data
+    * @param mode save mode (append, overwrite, ...)
     * @return true on success
     */
-  def write(entityname : EntityName, df: DataFrame, mode: SaveMode = SaveMode.Append, path : Option[String] = None, allowRepartitioning : Boolean = false)(implicit ac: AdamContext): Try[String]
+  def write(entityname: EntityName, df: DataFrame, mode: SaveMode = SaveMode.Append, path: Option[String] = None, allowRepartitioning: Boolean = false)(implicit ac: AdamContext): Try[String]
 
   /**
     * Drop the entity from the feature storage
     *
-    * @param path
+    * @param path path to store features to
     * @return true on success
     */
-  def drop(path : String)(implicit ac: AdamContext): Try[Void]
+  def drop(path: String)(implicit ac: AdamContext): Try[Void]
 }
 

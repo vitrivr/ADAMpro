@@ -57,11 +57,11 @@ case class BooleanQuery(
   }
 
   override def equals(obj: scala.Any): Boolean = {
-    if (obj.isInstanceOf[BooleanQuery]) {
-      val other = obj.asInstanceOf[BooleanQuery]
-      where.equals(other.where) && join.equals(other.join)
-    } else {
-      false
+    obj match {
+      case other: BooleanQuery =>
+        where.equals(other.where) && join.equals(other.join)
+      case _ =>
+        false
     }
   }
 }
@@ -100,7 +100,7 @@ case class PrimaryKeyFilter[A](filter: DataFrame) {
     if (newFilter.isDefined) {
       import org.apache.spark.sql.functions.col
       val fields = filter.schema.fieldNames.intersect(newFilter.get.schema.fieldNames)
-      new PrimaryKeyFilter(filter.select(fields.map(col(_)): _*).unionAll(newFilter.get.select(fields.map(col(_)): _*)))
+      new PrimaryKeyFilter(filter.select(fields.map(col): _*).unionAll(newFilter.get.select(fields.map(col): _*)))
     } else {
       this
     }

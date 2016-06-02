@@ -55,7 +55,7 @@ case class IndexScanExpression(index: Index)(nnq: NearestNeighbourQuery, id: Opt
       Some(filter.get.select(pk.name).join(filterExpr.get.evaluate().get, pk.name))
     } else if (filter.isDefined) {
       filter
-    } else if (filterExpr.isDefined){
+    } else if (filterExpr.isDefined) {
       filterExpr.get.evaluate()
     } else {
       None
@@ -64,10 +64,10 @@ case class IndexScanExpression(index: Index)(nnq: NearestNeighbourQuery, id: Opt
     Some(IndexScanExpression.scan(index)(prefilter, nnq, id))
   }
 
-  override def prepareTree() : QueryExpression = {
+  override def prepareTree(): QueryExpression = {
     super.prepareTree()
-    if(!nnq.indexOnly){
-      return SequentialScanExpression(index.entityname)(nnq, id)(Some(this)) //add sequential scan if not only scanning index
+    if (!nnq.indexOnly) {
+      SequentialScanExpression(index.entityname)(nnq, id)(Some(this)) //add sequential scan if not only scanning index
     } else {
       this
     }
@@ -78,9 +78,9 @@ object IndexScanExpression extends Logging {
   /**
     * Performs a index-based query.
     *
-    * @param index
-    * @param nnq
-    * @param id
+    * @param index index
+    * @param nnq   information on nearest neighbour query
+    * @param id    query id
     * @return
     */
   def scan(index: Index)(filter: Option[DataFrame], nnq: NearestNeighbourQuery, id: Option[String] = None)(implicit ac: AdamContext): DataFrame = {

@@ -14,8 +14,6 @@ import ch.unibas.dmi.dbis.adam.query.distance.{DistanceFunction, MinkowskiDistan
 import ch.unibas.dmi.dbis.adam.query.query.NearestNeighbourQuery
 import org.apache.spark.sql.{Row, DataFrame}
 
-import scala.collection.mutable.ListBuffer
-
 
 /**
  * adamtwo
@@ -31,6 +29,15 @@ class SHIndex(val indexname: IndexName, val entityname: EntityName, override pri
   override val lossy: Boolean = true
   override val confidence = 0.toFloat
 
+  /**
+    *
+    * @param data     rdd to scan
+    * @param q        query vector
+    * @param distance distance funciton
+    * @param options  options to be passed to the index reader
+    * @param k        number of elements to retrieve (of the k nearest neighbor search), possibly more than k elements are returned
+    * @return a set of candidate tuple ids, possibly together with a tentative score (the number of tuples will be greater than k)
+    */
   override def scan(data : DataFrame, q : FeatureVector, distance : DistanceFunction, options : Map[String, Any], k : Int): DataFrame = {
     log.debug("scanning SH index " + indexname)
 

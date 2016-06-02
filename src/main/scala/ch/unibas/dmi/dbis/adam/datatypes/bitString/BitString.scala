@@ -15,8 +15,8 @@ object BitString extends Logging {
   /**
     * Creates a new bit string of the given type in which every index specified is set to true.
     *
-    * @param indexes index positions to set to true
-    * @param bitStringType
+    * @param indexes       index positions to set to true
+    * @param bitStringType type of bitstring
     * @return
     */
   def apply(indexes: Seq[Int], bitStringType: BitStringTypes.BitStringType = BitStringTypes.MBS): BitString[_] = {
@@ -26,8 +26,8 @@ object BitString extends Logging {
   /**
     * Creates a new bit string of the given type which has been created by deserializing the bytes array given.
     *
-    * @param bytes
-    * @param bitStringType
+    * @param bytes         serialized byte array
+    * @param bitStringType type of bitstring
     * @return
     */
   def fromByteArray(bytes: Array[Byte], bitStringType: BitStringTypes.BitStringType = BitStringTypes.MBS): BitString[_] = {
@@ -45,7 +45,7 @@ trait BitString[A] extends Serializable {
   /**
     * Hamming distance between two bit strings.
     *
-    * @param other
+    * @param other bitstring to compare to
     * @return
     */
   def intersectionCount(other: A): Int
@@ -53,7 +53,7 @@ trait BitString[A] extends Serializable {
   /**
     * Hamming distance between two bit strings.
     *
-    * @param other
+    * @param other bitstring to compare to
     * @return
     */
   def intersectionCount(other: BitString[_]): Int = {
@@ -64,8 +64,8 @@ trait BitString[A] extends Serializable {
     * Splits the bit string into smaller bit strings (of length bitsPerDimension) and a total of dimensions elements,
     * then converts each element into an integer value.
     *
-    * @param dimensions
-    * @param bitsPerDimension
+    * @param dimensions       number of dimensions
+    * @param bitsPerDimension number of bits per dimensions
     * @return
     */
   def toInts(dimensions: Int, bitsPerDimension: Int): Array[Int]
@@ -126,7 +126,7 @@ trait BitStringFactory {
   /**
     * Deserializes a byte array to the bit string.
     *
-    * @param values
+    * @param values serialized byte array
     * @return
     */
   def deserialize(values: Seq[Byte]): BitString[_]

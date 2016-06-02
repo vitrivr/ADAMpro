@@ -14,7 +14,7 @@ import ch.unibas.dmi.dbis.adam.index.structures.va.signature.VariableSignatureGe
 import ch.unibas.dmi.dbis.adam.index.{Index, IndexGenerator, IndexingTaskTuple}
 import ch.unibas.dmi.dbis.adam.main.AdamContext
 import ch.unibas.dmi.dbis.adam.query.distance.{DistanceFunction, MinkowskiDistance}
-import org.apache.log4j.Logger
+import org.apache.spark.Logging
 import org.apache.spark.rdd.RDD
 import org.apache.spark.sql.Row
 import org.apache.spark.sql.types.{StructField, StructType}
@@ -65,7 +65,7 @@ class VAVIndexer(nbits: Option[Int], marksGenerator: MarksGenerator, trainingSiz
 
   /**
     *
-    * @param trainData
+    * @param trainData training data
     * @return
     */
   private def train(trainData: Array[IndexingTaskTuple[_]]): VAIndexMetaData = {
@@ -80,7 +80,7 @@ class VAVIndexer(nbits: Option[Int], marksGenerator: MarksGenerator, trainingSiz
     val numComponents = math.min(nfeatures, nbits.getOrElse(nfeatures * 8))
 
     // pca
-    val variance = diag(cov(dataMatrix, true)).toArray
+    val variance = diag(cov(dataMatrix, center = true)).toArray
     val sumVariance = variance.sum
 
     // compute shares of bits
@@ -108,12 +108,10 @@ class VAVIndexer(nbits: Option[Int], marksGenerator: MarksGenerator, trainingSiz
 }
 
 
-object VAVIndexer {
-  lazy val log = Logger.getLogger(getClass.getName)
-
+object VAVIndexer extends Logging {
   /**
-    *
-    * @param properties
+    * @param distance   distance function
+    * @param properties indexing properties
     */
   def apply(distance: DistanceFunction, properties: Map[String, String] = Map[String, String]())(implicit ac: AdamContext): IndexGenerator = {
     val marksGeneratorDescription = properties.getOrElse("marktype", "equifrequent")

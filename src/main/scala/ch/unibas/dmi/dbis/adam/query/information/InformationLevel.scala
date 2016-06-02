@@ -9,7 +9,7 @@ package ch.unibas.dmi.dbis.adam.query.information
 object InformationLevels {
 
   sealed abstract class InformationLevel(val name: String) extends Serializable {
-    def equals(other: InformationLevel): Boolean = (other.name.equals(name))
+    def equals(other: InformationLevel): Boolean = other.name.equals(name)
   }
 
   case object FULL_TREE extends InformationLevel("full tree")

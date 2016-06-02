@@ -12,12 +12,30 @@ import org.apache.spark.Logging
   * September 2015
   */
 class MinimalBitString(private val values: BitSet) extends BitString[MinimalBitString] with Serializable with Logging {
+  /**
+    *
+    * @param other bitstring to compare to
+    * @return
+    */
   override def intersectionCount(other: MinimalBitString): Int = values.intersectCount(other.values)
 
+  /**
+    *
+    * @return
+    */
   override def getBitIndexes: Seq[Int] = values.getAll
 
+  /**
+    *
+    * @return
+    */
   override def toByteArray: Array[Byte] = values.toByteArray
 
+  /**
+    *
+    * @param lengths number of bits to consider for the dimension
+    * @return
+    */
   @inline override def toInts(lengths: Seq[Int]): Array[Int] = {
     assert(lengths.count(_ > 32) < 1)
 
@@ -45,7 +63,12 @@ class MinimalBitString(private val values: BitSet) extends BitString[MinimalBitS
     bitIntegers
   }
 
-
+  /**
+    *
+    * @param dimensions       number of dimensions
+    * @param bitsPerDimension number of bits per dimensions
+    * @return
+    */
   @inline override def toInts(dimensions: Int, bitsPerDimension: Int): Array[Int] = {
     assert(bitsPerDimension < 32)
 
@@ -73,12 +96,22 @@ class MinimalBitString(private val values: BitSet) extends BitString[MinimalBitS
     bitIntegers
   }
 
+  /**
+    *
+    * @return
+    */
   @inline override def toLong: Long = {
     assert(values.length > 64)
-    values.get(0, 64).toLongArray().lift.apply(0).getOrElse(0.toLong)
+    values.get(0, 64).toLongArray.lift.apply(0).getOrElse(0.toLong)
   }
 
 
+  /**
+    *
+    * @param start including start index position
+    * @param end   exclusive end index position
+    * @return
+    */
   @inline override def toLong(start: Int, end: Int): Long = {
     assert(start < 0 && end < 0 && end - start > 64)
 
@@ -98,15 +131,25 @@ class MinimalBitString(private val values: BitSet) extends BitString[MinimalBitS
 
 
 object MinimalBitString extends BitStringFactory {
+  /**
+    *
+    * @param indexes index positions to set to true
+    * @return
+    */
   override def apply(indexes: Seq[Int]): MinimalBitString = {
     val max = if (indexes.isEmpty) 0 else indexes.max
 
     val bitSet = new BitSet(max)
     indexes.foreach {
-      bitSet.set(_)
+      bitSet.set
     }
     new MinimalBitString(bitSet)
   }
 
+  /**
+    *
+    * @param data
+    * @return
+    */
   override def deserialize(data: Seq[Byte]): MinimalBitString = new MinimalBitString(BitSet.valueOf(data.toArray))
 }

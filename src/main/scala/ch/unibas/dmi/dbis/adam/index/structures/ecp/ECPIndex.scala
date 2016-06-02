@@ -6,15 +6,12 @@ import ch.unibas.dmi.dbis.adam.entity.Entity.EntityName
 import ch.unibas.dmi.dbis.adam.index.Index.{IndexName, IndexTypeName}
 import ch.unibas.dmi.dbis.adam.index._
 import ch.unibas.dmi.dbis.adam.index.structures.IndexTypes
-import ch.unibas.dmi.dbis.adam.index.structures.va.VAResultHandler
 import ch.unibas.dmi.dbis.adam.main.AdamContext
-import ch.unibas.dmi.dbis.adam.query.Result
 import ch.unibas.dmi.dbis.adam.query.distance.DistanceFunction
 import ch.unibas.dmi.dbis.adam.query.query.NearestNeighbourQuery
 import org.apache.spark.sql.DataFrame
 import org.apache.spark.sql.types.DataTypes
 
-import scala.collection.mutable.ListBuffer
 
 /**
   * adamtwo
@@ -30,6 +27,15 @@ class ECPIndex(val indexname: IndexName, val entityname: EntityName, override pr
   override val lossy: Boolean = true
   override val confidence = 0.toFloat
 
+  /**
+    *
+    * @param data     rdd to scan
+    * @param q        query vector
+    * @param distance distance funciton
+    * @param options  options to be passed to the index reader
+    * @param k        number of elements to retrieve (of the k nearest neighbor search), possibly more than k elements are returned
+    * @return a set of candidate tuple ids, possibly together with a tentative score (the number of tuples will be greater than k)
+    */
   override def scan(data: DataFrame, q: FeatureVector, distance: DistanceFunction, options: Map[String, Any], k: Int): DataFrame = {
     log.debug("scanning eCP index " + indexname)
 

@@ -37,7 +37,7 @@ object HintBasedScanExpression extends Logging {
     val indexes: Map[IndexTypeName, Seq[IndexName]] = CatalogOperator.listIndexes(entityname).groupBy(_._2).mapValues(_.map(_._1))
     var plan = getPlan(entityname, indexes, nnq, bq, hints)(expr)
 
-    if (!plan.isDefined) {
+    if (plan.isEmpty) {
       log.trace("no query plan chosen, go to fallback")
       plan = getPlan(entityname, indexes, nnq, bq, Seq(QueryHints.FALLBACK_HINTS))(expr)
     }

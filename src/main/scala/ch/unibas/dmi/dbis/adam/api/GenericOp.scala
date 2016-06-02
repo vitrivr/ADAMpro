@@ -20,10 +20,9 @@ abstract class GenericOp extends Logging {
       log.debug("performed " + desc + " in " + (t2 - t1) + " msecs")
       result
     } catch {
-      case e: Exception => {
+      case e: Exception =>
         log.error("error in " + desc, e)
         Failure(e)
-      }
     }
   }
 }

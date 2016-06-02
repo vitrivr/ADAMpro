@@ -39,18 +39,20 @@ object CatalogOperator extends Logging {
   private val entityfields = TableQuery[EntityFieldsCatalog]
   private val indexes = TableQuery[IndexesCatalog]
 
-  private val DEFAULT_DIMENSIONALITY : Int = -1
-  private val DEFAULT_INDEX_WEIGHT : Float = 100
+  private val DEFAULT_DIMENSIONALITY: Int = -1
+  private val DEFAULT_INDEX_WEIGHT: Float = 100
 
 
   /**
-    * Creates entity in catalog.
     *
-    * @param entityname
-    * @param withMetadata
+    * @param entityname   name of entity
+    * @param featurepath  path of feature data
+    * @param metadatapath path of metadata data
+    * @param attributes   attributes
+    * @param withMetadata has metadata
     * @return
     */
-  def createEntity(entityname: EntityName, featurepath : Option[String], metadatapath : Option[String], fields: Seq[AttributeDefinition], withMetadata: Boolean = false): Boolean = {
+  def createEntity(entityname: EntityName, featurepath: Option[String], metadatapath: Option[String], attributes: Seq[AttributeDefinition], withMetadata: Boolean = false): Boolean = {
     if (existsEntity(entityname)) {
       throw new EntityExistingException()
     }
@@ -61,7 +63,7 @@ object CatalogOperator extends Logging {
 
     Await.result(db.run(setup), MAX_WAITING_TIME)
 
-    fields.foreach { field =>
+    attributes.foreach { field =>
       val setup = DBIO.seq(entityfields.+=(field.name, field.fieldtype.name, field.pk, field.unique, field.indexed, entityname, DEFAULT_DIMENSIONALITY))
       Await.result(db.run(setup), MAX_WAITING_TIME)
     }
@@ -72,7 +74,7 @@ object CatalogOperator extends Logging {
 
   /**
     *
-    * @param entityname
+    * @param entityname name of entity
     * @return
     */
   def getEntityFeaturePath(entityname: EntityName): String = {
@@ -82,7 +84,7 @@ object CatalogOperator extends Logging {
 
   /**
     *
-    * @param entityname
+    * @param entityname name of entity
     * @return
     */
   def getEntityMetadataPath(entityname: EntityName): String = {
@@ -92,8 +94,8 @@ object CatalogOperator extends Logging {
 
   /**
     *
-    * @param entityname
-    * @param newPath
+    * @param entityname name of entity
+    * @param newPath    new path
     * @return
     */
   def updateEntityFeaturePath(entityname: EntityName, newPath: String): Boolean = {
@@ -111,8 +113,8 @@ object CatalogOperator extends Logging {
   /**
     * Drops entity from catalog.
     *
-    * @param entityname
-    * @param ifExists
+    * @param entityname name of entity
+    * @param ifExists   no error if does not exist
     */
   def dropEntity(entityname: EntityName, ifExists: Boolean = false): Boolean = {
     if (!existsEntity(entityname)) {
@@ -134,22 +136,22 @@ object CatalogOperator extends Logging {
   /**
     * Checks whether entity exists in catalog.
     *
-    * @param entityname
+    * @param entityname name of entity
     * @return
     */
   def existsEntity(entityname: EntityName): Boolean = {
     val query = entities.filter(_.entityname === entityname.toString()).length.result
     val count = Await.result(db.run(query), MAX_WAITING_TIME)
 
-    (count > 0)
+    count > 0
   }
 
   /**
     *
-    * @param entityname
+    * @param entityname name of entity
     * @return
     */
-  def getEntityPK(entityname: EntityName) : AttributeDefinition = {
+  def getEntityPK(entityname: EntityName): AttributeDefinition = {
     val query = entityfields.filter(_.entityname === entityname.toString()).filter(_.pk).result
     val fields = Await.result(db.run(query), MAX_WAITING_TIME)
 
@@ -158,10 +160,10 @@ object CatalogOperator extends Logging {
 
   /**
     *
-    * @param entityname
+    * @param entityname name of entity
     * @return
     */
-  def getFields(entityname : EntityName) : Seq[AttributeDefinition] = {
+  def getFields(entityname: EntityName): Seq[AttributeDefinition] = {
     val query = entityfields.filter(_.entityname === entityname.toString()).result
     val fields = Await.result(db.run(query), MAX_WAITING_TIME)
 
@@ -171,7 +173,7 @@ object CatalogOperator extends Logging {
   /**
     * Checks whether entity has metadata.
     *
-    * @param entityname
+    * @param entityname name of entity
     * @return
     */
   def hasEntityMetadata(entityname: EntityName): Boolean = {
@@ -192,21 +194,21 @@ object CatalogOperator extends Logging {
   /**
     * Checks whether index exists in catalog.
     *
-    * @param indexname
+    * @param indexname name of index
     * @return
     */
   def existsIndex(indexname: IndexName): Boolean = {
     val query = indexes.filter(_.indexname === indexname).length.result
     val count = Await.result(db.run(query), MAX_WAITING_TIME)
 
-    (count > 0)
+    count > 0
   }
 
   /**
     * Creates index in catalog.
     *
-    * @param indexname
-    * @param entityname
+    * @param indexname  name of index
+    * @param entityname name of entity
     * @param indexmeta
     */
   def createIndex(indexname: IndexName, path: String, entityname: EntityName, column: String, indextypename: IndexTypeName, indexmeta: Serializable): Boolean = {
@@ -225,7 +227,7 @@ object CatalogOperator extends Logging {
 
     val oos = new ObjectOutputStream(new FileOutputStream(metaFilePath))
     oos.writeObject(indexmeta)
-    oos.close
+    oos.close()
 
     val setup = DBIO.seq(
       indexes.+=((indexname, entityname, column, indextypename.name, path, metaFilePath, true, DEFAULT_INDEX_WEIGHT))
@@ -240,7 +242,7 @@ object CatalogOperator extends Logging {
   /**
     * Drops index from catalog.
     *
-    * @param indexname
+    * @param indexname name of index
     * @return
     */
   def dropIndex(indexname: IndexName): Boolean = {
@@ -261,7 +263,7 @@ object CatalogOperator extends Logging {
   /**
     * Drops all indexes from catalog belonging to entity.
     *
-    * @param entityname
+    * @param entityname name of entity
     * @return names of indexes dropped
     */
   def dropAllIndexes(entityname: EntityName): Seq[IndexName] = {
@@ -301,7 +303,7 @@ object CatalogOperator extends Logging {
 
   /**
     *
-    * @param indexname
+    * @param indexname name of index
     * @return
     */
   def getIndexColumn(indexname: IndexName): String = {
@@ -312,7 +314,7 @@ object CatalogOperator extends Logging {
   /**
     * Returns meta information to a specified index.
     *
-    * @param indexname
+    * @param indexname name of index
     * @return
     */
   def getIndexMeta(indexname: IndexName): Any = {
@@ -324,7 +326,7 @@ object CatalogOperator extends Logging {
 
   /**
     *
-    * @param indexname
+    * @param indexname name of index
     * @return
     */
   def getIndexPath(indexname: IndexName): String = {
@@ -334,8 +336,8 @@ object CatalogOperator extends Logging {
 
   /**
     *
-    * @param indexname
-    * @param newPath
+    * @param indexname name of index
+    * @param newPath   new path for index
     * @return
     */
   def updateIndexPath(indexname: IndexName, newPath: String): Boolean = {
@@ -353,7 +355,7 @@ object CatalogOperator extends Logging {
   /**
     * Returns type name of index
     *
-    * @param indexname
+    * @param indexname name of index
     * @return
     */
   def getIndexTypeName(indexname: IndexName): IndexTypeName = {
@@ -365,7 +367,7 @@ object CatalogOperator extends Logging {
 
   /**
     *
-    * @param indexname
+    * @param indexname name of index
     * @return
     */
   def getIndexWeight(indexname: IndexName): Float = {
@@ -375,7 +377,7 @@ object CatalogOperator extends Logging {
 
   /**
     *
-    * @param indexname
+    * @param indexname name of index
     * @param newWeight specify the new weight for the index (the higher the more important), if no weight is
     *                  specified the default index weight is used
     * @return
@@ -394,7 +396,7 @@ object CatalogOperator extends Logging {
 
   /**
     *
-    * @param entityname
+    * @param entityname name of entity
     * @return
     */
   def resetIndexWeight(entityname: EntityName): Boolean = {
@@ -411,7 +413,7 @@ object CatalogOperator extends Logging {
 
   /**
     *
-    * @param indexname
+    * @param indexname name of index
     * @return
     */
   def isIndexUptodate(indexname: IndexName): Boolean = {
@@ -421,10 +423,10 @@ object CatalogOperator extends Logging {
 
   /**
     * Mark indexes for given entity stale.
- *
-    * @param entityname
+    *
+    * @param entityname name of entity
     */
-  def updateIndexesToStale(entityname : EntityName) : Boolean = {
+  def updateIndexesToStale(entityname: EntityName): Boolean = {
     val query = indexes.filter(_.entityname === entityname.toString()).map(_.uptodate)
 
     val update = DBIO.seq(
@@ -439,7 +441,7 @@ object CatalogOperator extends Logging {
   /**
     * Returns the name of the entity corresponding to the index name
     *
-    * @param indexname
+    * @param indexname name of index
     * @return
     */
   def getEntitynameFromIndex(indexname: IndexName): EntityName = {

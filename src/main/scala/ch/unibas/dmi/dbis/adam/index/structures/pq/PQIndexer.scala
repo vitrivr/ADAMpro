@@ -63,7 +63,7 @@ class PQIndexer(nsq: Int, trainingSize: Int)(@transient implicit val ac: AdamCon
 
   /**
     *
-    * @param trainData
+    * @param trainData training data
     * @return
     */
   private def train(trainData: Array[IndexingTaskTuple[_]]): PQIndexMetaData = {
@@ -98,8 +98,8 @@ class PQIndexer(nsq: Int, trainingSize: Int)(@transient implicit val ac: AdamCon
 
 object PQIndexer {
   /**
-    *
-    * @param properties
+    * @param distance   distance function
+    * @param properties indexing properties
     */
   def apply(distance: DistanceFunction, properties: Map[String, String] = Map[String, String]())(implicit ac: AdamContext): IndexGenerator = {
     val nsq = properties.getOrElse("nsq", "8").toInt

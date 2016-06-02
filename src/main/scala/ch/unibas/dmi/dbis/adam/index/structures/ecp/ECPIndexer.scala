@@ -24,16 +24,16 @@ class ECPIndexer(trainingSize: Option[Int], distance: DistanceFunction)(@transie
 
   /**
     *
-    * @param indexname
-    * @param entityname
-    * @param data
+    * @param indexname name of index
+    * @param entityname name of entity
+    * @param data data to index
     * @return
     */
   override def index(indexname: IndexName, entityname: EntityName, data: RDD[IndexingTaskTuple[_]]): Index = {
     val entity = Entity.load(entityname).get
 
     val n = entity.count
-    val fraction = ADAMSamplingUtils.computeFractionForSampleSize(math.max(trainingSize.getOrElse(math.sqrt(n).toInt), IndexGenerator.MINIMUM_NUMBER_OF_TUPLE), n, false)
+    val fraction = ADAMSamplingUtils.computeFractionForSampleSize(math.max(trainingSize.getOrElse(math.sqrt(n).toInt), IndexGenerator.MINIMUM_NUMBER_OF_TUPLE), n, withReplacement = false)
     var trainData = data.sample(false, fraction).collect()
     if(trainData.length < IndexGenerator.MINIMUM_NUMBER_OF_TUPLE){
       trainData = data.take(IndexGenerator.MINIMUM_NUMBER_OF_TUPLE)
@@ -53,8 +53,8 @@ class ECPIndexer(trainingSize: Option[Int], distance: DistanceFunction)(@transie
     })
 
     val schema = StructType(Seq(
-      StructField(entity.pk.name, entity.pk.fieldtype.datatype, false),
-      StructField(FieldNames.featureIndexColumnName, entity.pk.fieldtype.datatype, false)
+      StructField(entity.pk.name, entity.pk.fieldtype.datatype, nullable = false),
+      StructField(FieldNames.featureIndexColumnName, entity.pk.fieldtype.datatype, nullable = false)
     ))
 
     val df = ac.sqlContext.createDataFrame(indexdata, schema)
@@ -64,6 +64,12 @@ class ECPIndexer(trainingSize: Option[Int], distance: DistanceFunction)(@transie
 }
 
 object ECPIndexer {
+  /**
+    *
+    * @param distance distance function
+    * @param properties indexing properties
+    * @return
+    */
   def apply(distance: DistanceFunction, properties: Map[String, String] = Map[String, String]())(implicit ac: AdamContext): IndexGenerator = {
     val trainingSize = properties.get("ntraining").map(_.toInt)
     new ECPIndexer(trainingSize, distance)

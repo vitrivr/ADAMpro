@@ -34,6 +34,15 @@ class VAIndex(val indexname: IndexName, val entityname: EntityName, override pri
   override val lossy: Boolean = false
   override val confidence = 1.toFloat
 
+  /**
+    *
+    * @param data     rdd to scan
+    * @param q        query vector
+    * @param distance distance funciton
+    * @param options  options to be passed to the index reader
+    * @param k        number of elements to retrieve (of the k nearest neighbor search), possibly more than k elements are returned
+    * @return a set of candidate tuple ids, possibly together with a tentative score (the number of tuples will be greater than k)
+    */
   override def scan(data: DataFrame, q: FeatureVector, distance: DistanceFunction, options: Map[String, Any], k: Int): DataFrame = {
     log.debug("scanning VA-File index " + indexname)
 
@@ -83,9 +92,9 @@ class VAIndex(val indexname: IndexName, val entityname: EntityName, override pri
 
   /**
     *
-    * @param q
-    * @param marks
-    * @param distance
+    * @param q query vector
+    * @param marks marks
+    * @param distance distance function
     * @return
     */
   private[this] def computeBounds(q: FeatureVector, marks: => Marks, @inline distance: MinkowskiDistance): (Bounds, Bounds) = {

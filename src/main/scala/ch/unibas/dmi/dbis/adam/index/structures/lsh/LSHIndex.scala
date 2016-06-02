@@ -15,8 +15,6 @@ import ch.unibas.dmi.dbis.adam.query.distance.DistanceFunction
 import ch.unibas.dmi.dbis.adam.query.query.NearestNeighbourQuery
 import org.apache.spark.sql.{Row, DataFrame}
 
-import scala.collection.mutable.ListBuffer
-
 /**
   * adamtwo
   *
@@ -72,7 +70,7 @@ class LSHIndex(val indexname: IndexName, val entityname: EntityName, override pr
   }
 
   override def isQueryConform(nnq: NearestNeighbourQuery): Boolean = {
-    (nnq.distance.getClass == metadata.distance.getClass)
+    nnq.distance.getClass == metadata.distance.getClass
   }
 }
 

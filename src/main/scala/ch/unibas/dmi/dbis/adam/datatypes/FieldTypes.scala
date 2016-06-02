@@ -13,7 +13,7 @@ import org.apache.spark.sql.types.{ArrayType, DataType}
 object FieldTypes {
 
   sealed abstract class FieldType(val name: String, val datatype: DataType) extends Serializable {
-    def equals(other: FieldType): Boolean = (other.name.equals(name))
+    def equals(other: FieldType): Boolean = other.name.equals(name)
   }
 
   case object AUTOTYPE extends FieldType("auto", types.LongType)

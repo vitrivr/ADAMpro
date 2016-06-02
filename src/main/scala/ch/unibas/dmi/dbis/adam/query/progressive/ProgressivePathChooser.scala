@@ -29,7 +29,6 @@ trait ProgressivePathChooser {
 /**
   * Chooses from all index types one (with sequential scan after index scan).
   *
-  * @param ac
   */
 class SimpleProgressivePathChooser()(implicit ac: AdamContext) extends ProgressivePathChooser {
   override def getPaths(entityname: EntityName, nnq: NearestNeighbourQuery): Seq[QueryExpression] = {
@@ -45,7 +44,6 @@ class SimpleProgressivePathChooser()(implicit ac: AdamContext) extends Progressi
 /**
   * Chooses all paths (index (without sequential scan) + sequential) for progressive query.
   *
-  * @param ac
   */
 class AllProgressivePathChooser(implicit ac: AdamContext) extends ProgressivePathChooser {
   override def getPaths(entityname: EntityName, nnq: NearestNeighbourQuery): Seq[QueryExpression] = {
@@ -57,8 +55,7 @@ class AllProgressivePathChooser(implicit ac: AdamContext) extends ProgressivePat
 /**
   * Chooses first index based on given index types (without sequential scan).
   *
-  * @param indextypenames
-  * @param ac
+  * @param indextypenames names of indextypes
   */
 class IndexTypeProgressivePathChooser(indextypenames: Seq[IndexTypeName])(implicit ac: AdamContext) extends ProgressivePathChooser {
   override def getPaths(entityname: EntityName, nnq: NearestNeighbourQuery): Seq[QueryExpression] = {
@@ -72,7 +69,6 @@ class IndexTypeProgressivePathChooser(indextypenames: Seq[IndexTypeName])(implic
   * Chooses first index based on hints given (without sequential scan).
   *
   * @param hints list of QueryHints, note that only IndexQueryHints are accepted at the moment
-  * @param ac
   */
 class QueryHintsProgressivePathChooser(hints: Seq[QueryHint])(implicit ac: AdamContext) extends ProgressivePathChooser {
   override def getPaths(entityname: EntityName, nnq: NearestNeighbourQuery): Seq[QueryExpression] = {
@@ -83,8 +79,7 @@ class QueryHintsProgressivePathChooser(hints: Seq[QueryHint])(implicit ac: AdamC
 /**
   * Chooses index based on names in given list (without sequential scan).
   *
-  * @param indexnames
-  * @param ac
+  * @param indexnames names of indexes
   */
 class IndexnameSpecifiedProgressivePathChooser(indexnames: Seq[IndexName])(implicit ac: AdamContext) extends ProgressivePathChooser {
   override def getPaths(entityname: EntityName, nnq: NearestNeighbourQuery): Seq[QueryExpression] = {

@@ -317,8 +317,8 @@ object Entity extends Logging {
   /**
     * Creates an entity.
     *
-    * @param entityname name of the entity
-    * @param attributes attributes of entity
+    * @param entityname  name of the entity
+    * @param attributes  attributes of entity
     * @param ifNotExists if set to true and the entity exists, the entity is just returned; otherwise an error is thrown
     * @return
     */
@@ -546,5 +546,5 @@ object Entity extends Logging {
     *
     * @return name of entities
     */
-  def list(): Seq[EntityName] = CatalogOperator.listEntities()
+  def list : Seq[EntityName] = CatalogOperator.listEntities()
 }

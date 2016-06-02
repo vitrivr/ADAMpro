@@ -8,7 +8,6 @@ import ch.unibas.dmi.dbis.adam.index.Index
 import ch.unibas.dmi.dbis.adam.index.Index.{IndexName, IndexTypeName}
 import ch.unibas.dmi.dbis.adam.index.structures.IndexTypes
 import ch.unibas.dmi.dbis.adam.main.AdamContext
-import ch.unibas.dmi.dbis.adam.query.Result
 import ch.unibas.dmi.dbis.adam.query.distance.{DistanceFunction, MinkowskiDistance}
 import ch.unibas.dmi.dbis.adam.query.query.NearestNeighbourQuery
 import org.apache.spark.sql.DataFrame
@@ -31,12 +30,11 @@ class PQIndex(val indexname: IndexName, val entityname: EntityName, override pri
     val distances = ac.sc.broadcast(q.toArray
       .grouped(math.max(1, q.size / metadata.nsq)).toSeq
       .zipWithIndex
-      .map { case (split, idx) => {
+      .map { case (split, idx) =>
         val qsub = new FeatureVectorWrapper(split)
         metadata.models(idx).clusterCenters.map(center => {
           distance(new FeatureVectorWrapper(center.toArray.map(_.toFloat)).vector, qsub.vector)
         }).toIndexedSeq
-      }
       }.toIndexedSeq)
 
 

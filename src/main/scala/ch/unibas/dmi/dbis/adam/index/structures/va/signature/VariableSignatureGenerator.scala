@@ -19,7 +19,7 @@ class VariableSignatureGenerator (numberOfBitsPerDimension: Array[Int]) extends 
 
   /**
    *
-   * @param cells
+    * @param cells cell ids to translate to signature
    * @return
    */
   def toSignature(cells: Seq[Int]): BitString[_] = {
@@ -55,7 +55,7 @@ class VariableSignatureGenerator (numberOfBitsPerDimension: Array[Int]) extends 
 
   /**
    *
-   * @param signature
+    * @param signature signature to translate to cell ids
    * @return
    */
   @inline def toCells(signature: BitString[_]): Seq[Int] = signature.toInts(numberOfBitsPerDimension)

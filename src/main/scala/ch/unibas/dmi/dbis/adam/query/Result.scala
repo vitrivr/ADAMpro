@@ -19,8 +19,8 @@ case class Result(distance: Distance, tid: Any) extends Ordered[Result] {
   */
 object Result {
   def resultSchema(pk : String) = StructType(Seq(
-    StructField(pk, LongType, true),
-    StructField(FieldNames.distanceColumnName, FloatType, true)
+    StructField(pk, LongType, nullable = true),
+    StructField(FieldNames.distanceColumnName, FloatType, nullable = true)
   ))
 }
 

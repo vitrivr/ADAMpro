@@ -80,10 +80,9 @@ object SequentialScanExpression extends Logging {
           Float.MaxValue
         }
       } catch {
-        case e: Exception => {
+        case e: Exception =>
           log.error("error when computing distance", e)
           Float.MaxValue
-        }
       }
     })
 

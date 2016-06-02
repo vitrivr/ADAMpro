@@ -17,15 +17,15 @@ trait MetadataStorage extends Serializable with Logging {
   /**
     * Create entity in metadata storage.
     *
-    * @param entityname
-    * @param fields
+    * @param tablename name of table
+    * @param attributes attributes
     */
-  def create(entityname: EntityName, fields: Seq[AttributeDefinition]): Try[Option[String]] = Success(None)
+  def create(tablename: EntityName, attributes: Seq[AttributeDefinition]): Try[Option[String]] = Success(None)
 
   /**
     * Read data from metadata storage.
     *
-    * @param tablename
+    * @param tablename name of table
     * @return
     */
   def read(tablename: EntityName): Try[DataFrame]
@@ -33,9 +33,9 @@ trait MetadataStorage extends Serializable with Logging {
   /**
     * Write data to metadata storage.
     *
-    * @param tablename
-    * @param data
-    * @param mode
+    * @param tablename name of table
+    * @param data data
+    * @param mode save mode (append, overwrite, ...)
     * @return
     */
   def write(tablename: EntityName, data: DataFrame, mode: SaveMode = SaveMode.Append): Try[String]
@@ -43,7 +43,7 @@ trait MetadataStorage extends Serializable with Logging {
   /**
     * Drop data from the metadata storage.
     *
-    * @param tablename
+    * @param tablename name of table
     * @return
     */
   def drop(tablename: EntityName): Try[Void]

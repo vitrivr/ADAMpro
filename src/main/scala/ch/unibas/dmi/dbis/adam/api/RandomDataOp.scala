@@ -40,12 +40,12 @@ object RandomDataOp extends Logging {
       //generator
       def randomGenerator(datatype: DataType): () => Any = {
         datatype match {
-          case _: types.IntegerType => () => (Random.nextInt)
-          case _: types.LongType => () => (Random.nextLong)
-          case _: types.FloatType => () => (Random.nextFloat)
-          case _: types.DoubleType => () => (Random.nextDouble)
-          case _: types.StringType => () => (Random.nextString(10))
-          case _: types.BooleanType => () => (Random.nextBoolean)
+          case _: types.IntegerType => () => Random.nextInt
+          case _: types.LongType => () => Random.nextLong
+          case _: types.FloatType => () => Random.nextFloat
+          case _: types.DoubleType => () => Random.nextDouble
+          case _: types.StringType => () => Random.nextString(10)
+          case _: types.BooleanType => () => Random.nextBoolean
           case _: UserDefinedType[_] => () => new FeatureVectorWrapper(Seq.fill(vectorSize)(Random.nextFloat()))
         }
       }

@@ -178,8 +178,8 @@ class SHIndexer(nbits: Option[Int], trainingSize: Int)(@transient implicit val a
 
 object SHIndexer {
   /**
-    *
-    * @param properties
+    * @param distance   distance function
+    * @param properties indexing properties
     */
   def apply(distance: DistanceFunction, properties: Map[String, String] = Map[String, String]())(implicit ac: AdamContext): IndexGenerator = {
     val nbits = if (properties.get("nbits").isDefined) {

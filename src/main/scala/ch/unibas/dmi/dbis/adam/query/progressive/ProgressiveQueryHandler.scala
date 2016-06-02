@@ -23,12 +23,12 @@ import scala.concurrent.{Await, Future}
 object ProgressiveQueryHandler extends Logging {
   /**
     *
-    * @param entityname
-    * @param nnq
-    * @param bq
-    * @param pathChooser
-    * @param onComplete
-    * @param id
+    * @param entityname  name of entity
+    * @param nnq         information for nearest neighbour query
+    * @param bq          information for boolean query
+    * @param pathChooser progressive query path chooser
+    * @param onComplete  function to execute on complete
+    * @param id          query id
     * @return
     */
   def progressiveQuery[U](entityname: EntityName, nnq: NearestNeighbourQuery, bq: Option[BooleanQuery], pathChooser: ProgressivePathChooser, onComplete: ProgressiveObservation => U, id: Option[String] = None)(implicit ac: AdamContext): ProgressiveQueryStatusTracker = {
@@ -45,16 +45,16 @@ object ProgressiveQueryHandler extends Logging {
     * Performs a progressive query, i.e., all indexes and sequential search are started at the same time and results are returned as soon
     * as they are available. When a precise result is returned, the whole query is stopped.
     *
-    * @param exprs query expressions to execute
-    * @param onComplete
-    * @param id
+    * @param exprs      query expressions to execute
+    * @param onComplete function to execute on complete
+    * @param id         query id
     * @return a tracker for the progressive query
     */
   def progressiveQuery[U](exprs: Seq[QueryExpression], filter: Option[DataFrame], onComplete: ProgressiveObservation => U, id: Option[String] = None)(implicit ac: AdamContext): ProgressiveQueryStatusTracker = {
     val tracker = new ProgressiveQueryStatusTracker(id.getOrElse(""))
     log.debug("performing progressive query with " + exprs.length + " paths: " + exprs.map(expr => expr.info.scantype.getOrElse("<missing scantype>") + " (" + expr.info.source.getOrElse("<missing source>") + ")").mkString(", "))
 
-    if(exprs.isEmpty){
+    if (exprs.isEmpty) {
       //TODO: check that errors are sent back to client
       throw new GeneralAdamException("no paths for progressive query set; possible causes: is the entity or the attribute existing?")
     }
@@ -66,12 +66,12 @@ object ProgressiveQueryHandler extends Logging {
 
   /**
     *
-    * @param entityname
-    * @param nnq
-    * @param bq
-    * @param pathChooser
-    * @param timelimit
-    * @param id
+    * @param entityname  name of entity
+    * @param nnq         information for nearest neighbour query
+    * @param bq          information for boolean query
+    * @param pathChooser progressive query path chooser
+    * @param timelimit   maximum time to wait for results
+    * @param id          query id
     * @return
     */
   def timedProgressiveQuery[U](entityname: EntityName, nnq: NearestNeighbourQuery, bq: Option[BooleanQuery], pathChooser: ProgressivePathChooser, timelimit: Duration, id: Option[String] = None)(implicit ac: AdamContext): ProgressiveObservation = {
@@ -89,8 +89,8 @@ object ProgressiveQueryHandler extends Logging {
     * available results.
     *
     * @param exprs     query expressions to execute
-    * @param timelimit maximum time to wait
-    * @param id
+    * @param timelimit maximum time to wait  for results
+    * @param id        query id
     * @return the results available together with a confidence score
     */
   def timedProgressiveQuery(exprs: Seq[QueryExpression], timelimit: Duration, filter: Option[DataFrame], id: Option[String] = None)(implicit ac: AdamContext): ProgressiveObservation = {

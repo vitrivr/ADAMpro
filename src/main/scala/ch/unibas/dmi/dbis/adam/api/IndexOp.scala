@@ -117,7 +117,7 @@ object IndexOp extends GenericOp {
     */
   def cache(indexname: IndexName)(implicit ac: AdamContext): Try[Index] = {
     execute("cache index " + indexname + " operation") {
-      Index.load(indexname, true)
+      Index.load(indexname, cache = true)
     }
   }
 

@@ -39,7 +39,7 @@ object EntityLRUCache extends Logging {
   /**
     * Gets entity from cache. If entity is not yet in cache, it is loaded.
     *
-    * @param entityname
+    * @param entityname name of entity
     */
   def get(entityname: EntityName): Try[Entity] = {
     try {

@@ -18,8 +18,8 @@ private[va] object EquifrequentMarksGenerator extends MarksGenerator with Serial
 
   /**
     *
-    * @param samples
-    * @param maxMarks
+    * @param samples  training samples
+    * @param maxMarks maximal number of marks
     * @return
     */
   private[va] def getMarks(samples: Array[IndexingTaskTuple[_]], maxMarks: Seq[Int]): Marks = {
@@ -113,18 +113,13 @@ private[va] object EquifrequentMarksGenerator extends MarksGenerator with Serial
       val mapped = data
         .map(x => {
           var j = (((x - min) / (max - min)) * sampling_frequency).floor.toInt
-
-          if(j < 0){
-            j = 0
-          }
-
-          if(j >= sampling_frequency){
-            j = sampling_frequency - 1
-          }
+          if (j < 0) j = 0
+          if (j >= sampling_frequency) j = sampling_frequency - 1
         })
         .groupBy(x => x).map { case (key, value) => (key, value.size) }
 
       (0 until sampling_frequency).map(i => mapped.getOrElse(i, 0))
     }
   }
+
 }

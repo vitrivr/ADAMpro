@@ -39,7 +39,7 @@ object IndexLRUCache extends Logging {
   /**
     * Gets index from cache. If index is not yet in cache, it is loaded.
     *
-    * @param indexname
+    * @param indexname name of index
     */
   def get(indexname: IndexName): Try[Index] = {
     try {
@@ -53,7 +53,7 @@ object IndexLRUCache extends Logging {
 
   /**
     *
-    * @param indexname
+    * @param indexname name of index
     * @return
     */
   def contains(indexname : IndexName) : Boolean = {
@@ -62,8 +62,8 @@ object IndexLRUCache extends Logging {
 
   /**
     *
-    * @param indexname
-    * @param index
+    * @param indexname name of index
+    * @param index index
     * @return
     */
   def put(indexname : IndexName, index : Index) : Unit = {
@@ -80,7 +80,7 @@ object IndexLRUCache extends Logging {
 
   /**
     *
-    * @param indexname
+    * @param indexname name of index
     */
   def invalidate(indexname : IndexName): Unit = {
     indexCache.invalidate(indexname)
