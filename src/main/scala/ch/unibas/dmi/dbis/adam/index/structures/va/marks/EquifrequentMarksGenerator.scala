@@ -109,16 +109,18 @@ private[va] object EquifrequentMarksGenerator extends MarksGenerator with Serial
       *
       * @return
       */
-    def histogram: IndexedSeq[Int] = {
-      val mapped = data
+    def histogram : IndexedSeq[Int] = {
+      val counts = data
         .map(x => {
           var j = (((x - min) / (max - min)) * sampling_frequency).floor.toInt
           if (j < 0) j = 0
           if (j >= sampling_frequency) j = sampling_frequency - 1
+
+          j
         })
         .groupBy(x => x).map { case (key, value) => (key, value.size) }
 
-      (0 until sampling_frequency).map(i => mapped.getOrElse(i, 0))
+      (0 until sampling_frequency).map(counts.getOrElse(_, 0))
     }
   }
 
