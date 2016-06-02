@@ -14,7 +14,7 @@ import scala.collection.mutable.ListBuffer
 private[va] object EquifrequentMarksGenerator extends MarksGenerator with Serializable {
   @transient lazy val log = Logger.getLogger(getClass.getName)
 
-  val distanceSamples = 10000
+  val SAMPLING_FREQUENCY = 10000
 
   /**
     *
@@ -32,7 +32,7 @@ private[va] object EquifrequentMarksGenerator extends MarksGenerator with Serial
 
     val dimensionality = min.length
 
-    val dimData = (0 until dimensionality).map(dim => Distribution(min(dim), max(dim), distanceSamples))
+    val dimData = (0 until dimensionality).map(dim => Distribution(min(dim), max(dim), SAMPLING_FREQUENCY))
 
     samples.foreach { sample =>
       var i = 0
@@ -56,7 +56,7 @@ private[va] object EquifrequentMarksGenerator extends MarksGenerator with Serial
           k += 1
         }
 
-        marks(j) = min(dim) + k.toFloat * (max(dim) - min(dim)) / distanceSamples.toFloat
+        marks(j) = min(dim) + k.toFloat * (max(dim) - min(dim)) / SAMPLING_FREQUENCY.toFloat
       }
 
       marks(0) = min(dim)
@@ -111,7 +111,17 @@ private[va] object EquifrequentMarksGenerator extends MarksGenerator with Serial
       */
     def histogram: IndexedSeq[Int] = {
       val mapped = data
-        .map(x => (((x - min) / (max - min)) * sampling_frequency).floor.toInt)
+        .map(x => {
+          var j = (((x - min) / (max - min)) * sampling_frequency).floor.toInt
+
+          if(j < 0){
+            j = 0
+          }
+
+          if(j >= sampling_frequency){
+            j = sampling_frequency - 1
+          }
+        })
         .groupBy(x => x).map { case (key, value) => (key, value.size) }
 
       (0 until sampling_frequency).map(i => mapped.getOrElse(i, 0))
