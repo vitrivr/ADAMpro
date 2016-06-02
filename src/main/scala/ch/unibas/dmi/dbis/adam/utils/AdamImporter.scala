@@ -137,4 +137,15 @@ object AdamImporter {
     val features = Seq("averagecolor", "averagecolorarp44", "averagecolorarp44normalized", "averagecolorcld", "averagecolorcldnormalized", "averagecolorgrid8", "averagecolorgrid8normalized", "averagecolorraster", "averagefuzzyhist", "averagefuzzyhistnormalized", "chromagrid8", "cld", "cldnormalized", "contrast", "dominantcolors", "dominantedgegrid16", "dominantedgegrid8", "edgearp88", "edgearp88full", "edgegrid16", "edgegrid16full", "ehd", "huevaluevariancegrid8", "mediancolor", "mediancolorarp44", "mediancolorarp44normalized", "mediancolorgrid8", "mediancolorgrid8normalized", "mediancolorraster", "medianfuzzyhist", "medianfuzzyhistnormalized", "motionhistogram", "saturationandchroma", "saturationgrid8", "simpleperceptualhash", "stmp7eh", "subdivaveragefuzzycolor", "subdivmedianfuzzycolor", "subdivmotionhistogram2", "subdivmotionhistogram3", "subdivmotionhistogram4", "subdivmotionhistogram5", "surf", "surffull")
     features.map(table => importer.importTable("features", table, entityRenamingRules.getOrElse(table, table)))
   }
+
+  def main(args : Array[String]): Unit = {
+    //for experimental reasons only
+    SparkStartup
+
+    if(args.length != 4){
+      exit(1)
+    }
+
+    apply(args(0), args(1), args(2), args(3))
+  }
 }
