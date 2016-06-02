@@ -12,6 +12,7 @@ import ch.unibas.dmi.dbis.adam.query.Result
 import ch.unibas.dmi.dbis.adam.query.distance.{DistanceFunction, MinkowskiDistance}
 import ch.unibas.dmi.dbis.adam.query.query.NearestNeighbourQuery
 import org.apache.spark.sql.DataFrame
+import org.apache.spark.sql.types.DataTypes
 
 /**
   * adampro
@@ -51,7 +52,7 @@ class PQIndex(val indexname: IndexName, val entityname: EntityName, override pri
     })
 
     data
-      .withColumn(FieldNames.distanceColumnName, distUDF(data(FieldNames.featureIndexColumnName)))
+      .withColumn(FieldNames.distanceColumnName, distUDF(data(FieldNames.featureIndexColumnName)).cast(DataTypes.FloatType))
       .sort(FieldNames.distanceColumnName)
       .limit(k)
   }

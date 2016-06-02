@@ -67,7 +67,7 @@ class VAIndex(val indexname: IndexName, val entityname: EntityName, override pri
             localRh.offer(current, this.pk.name)
           }
 
-          localRh.results.map(x => Row(x.tid, x.lower)).iterator
+          localRh.results.map(x => Row(x.tid, x.lower.toFloat)).iterator
         })
 
     ac.sqlContext.createDataFrame(rddResults,  Result.resultSchema(pk.name))

@@ -12,6 +12,7 @@ import ch.unibas.dmi.dbis.adam.query.Result
 import ch.unibas.dmi.dbis.adam.query.distance.DistanceFunction
 import ch.unibas.dmi.dbis.adam.query.query.NearestNeighbourQuery
 import org.apache.spark.sql.DataFrame
+import org.apache.spark.sql.types.DataTypes
 
 import scala.collection.mutable.ListBuffer
 
@@ -42,7 +43,7 @@ class ECPIndex(val indexname: IndexName, val entityname: EntityName, override pr
     var results : DataFrame = null
     var i = 0
     do  {
-      val nns = data.filter(data(FieldNames.featureIndexColumnName) === centroids.value(i)._1).select(pk.name).withColumn(FieldNames.distanceColumnName, lit(centroids.value(i)._2))
+      val nns = data.filter(data(FieldNames.featureIndexColumnName) === centroids.value(i)._1).select(pk.name).withColumn(FieldNames.distanceColumnName, lit(centroids.value(i)._2).cast(DataTypes.FloatType))
       if(results != null) {
         results.unionAll(nns)
       } else {
