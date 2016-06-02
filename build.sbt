@@ -78,8 +78,7 @@ val secondaryLibs = Seq(
 
 //log libs
 val logLibs = Seq(
-  "org.slf4j" % "slf4j-api" % "1.7.5" force(),
-  "org.slf4j" % "slf4j-log4j12" % "1.7.5" force()
+  "org.slf4j" % "slf4j-log4j12" % "1.7.5"
 )
 
 //tertiary libs
