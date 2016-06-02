@@ -151,9 +151,6 @@ abstract class Index(@transient implicit val ac: AdamContext) extends Serializab
       log.warn("index is stale but still used, please re-create " + indexname)
     }
 
-    ac.sc.setLocalProperty("spark.scheduler.pool", "index")
-    ac.sc.setJobGroup(queryID.getOrElse(""), indextypename.name, interruptOnCancel = true)
-
     //TODO: possibly join on other sources and keep all data
     var df = data
 

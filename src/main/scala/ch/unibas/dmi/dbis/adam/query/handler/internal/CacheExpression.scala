@@ -17,6 +17,10 @@ case class CacheExpression(expr: QueryExpression, cache: QueryCacheOptions = Que
 
   override protected def run(filter: Option[DataFrame] = None)(implicit ac: AdamContext): Option[DataFrame] = {
     log.debug("run cache operation")
+
+    ac.sc.setLocalProperty("spark.scheduler.pool", "slow")
+    ac.sc.setJobGroup(id.getOrElse(""), "cache", interruptOnCancel = true)
+
     if (cache.useCached && id.isDefined) {
       val cached = QueryLRUCache.get(id.get)
       if (cached.isSuccess) {

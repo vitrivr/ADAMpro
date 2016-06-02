@@ -39,6 +39,9 @@ case class IndexScanExpression(index: Index)(nnq: NearestNeighbourQuery, id: Opt
   override protected def run(filter: Option[DataFrame] = None)(implicit ac: AdamContext): Option[DataFrame] = {
     log.debug("performing index scan operation")
 
+    ac.sc.setLocalProperty("spark.scheduler.pool", "index")
+    ac.sc.setJobGroup(id.getOrElse(""), "index scan: " + index.indextypename.name, interruptOnCancel = true)
+
     if (!index.isQueryConform(nnq)) {
       throw QueryNotConformException()
     }

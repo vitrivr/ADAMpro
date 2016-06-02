@@ -16,6 +16,9 @@ case class CompoundQueryExpression(expr : QueryExpression, id: Option[String] = 
 
   override protected def run(filter : Option[DataFrame] = None)(implicit ac: AdamContext): Option[DataFrame] = {
     log.debug("evaluate compound query")
+
+    ac.sc.setJobGroup(id.getOrElse(""), "compound query", interruptOnCancel = true)
+
     expr.evaluate()
   }
 }

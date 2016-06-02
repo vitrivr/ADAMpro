@@ -30,6 +30,8 @@ object BooleanFilterExpression extends Logging {
     override protected def run(filter: Option[DataFrame] = None)(implicit ac: AdamContext): Option[DataFrame] = {
       log.debug("run boolean filter operation on entity")
 
+      ac.sc.setJobGroup(id.getOrElse(""), "boolean filter scan", interruptOnCancel = true)
+
       val entity = Entity.load(entityname).get
       var df = entity.data
 
@@ -67,6 +69,8 @@ object BooleanFilterExpression extends Logging {
 
     override protected def run(filter: Option[DataFrame] = None)(implicit ac: AdamContext): Option[DataFrame] = {
       log.debug("run boolean filter operation on data")
+
+      ac.sc.setJobGroup(id.getOrElse(""), "boolean filter scan", interruptOnCancel = true)
 
       var df = expr.evaluate()
 

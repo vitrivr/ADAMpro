@@ -26,6 +26,9 @@ case class SequentialScanExpression(entityname: EntityName)(nnq: NearestNeighbou
   override protected def run(filter: Option[DataFrame] = None)(implicit ac: AdamContext): Option[DataFrame] = {
     log.debug("perform sequential scan")
 
+    ac.sc.setLocalProperty("spark.scheduler.pool", "sequential")
+    ac.sc.setJobGroup(id.getOrElse(""), "sequential scan: " + entityname.toString, interruptOnCancel = true)
+
     val entity = Entity.load(entityname).get
     if (!entity.isQueryConform(nnq)) {
       throw QueryNotConformException()
