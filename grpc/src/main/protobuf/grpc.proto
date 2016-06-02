@@ -25,6 +25,7 @@ service AdamDefinition {
   rpc RepartitionEntityData(RepartitionMessage) returns (AckMessage) {}
   rpc RepartitionIndexData(RepartitionMessage) returns (AckMessage) {}
   rpc SetIndexWeight(IndexWeightMessage) returns (AckMessage) {}
+  rpc ImportData(ImportMessage) returns (AckMessage) {}
 }
 
 service AdamSearch {
@@ -166,6 +167,14 @@ message RepartitionMessage {
 message IndexWeightMessage {
   string index = 1;
   float weight = 2;
+}
+
+message ImportMessage {
+//EXPERIMENTAL!
+  string host = 1;
+  string database = 2;
+  string username = 3;
+  string password = 4;
 }
 
 

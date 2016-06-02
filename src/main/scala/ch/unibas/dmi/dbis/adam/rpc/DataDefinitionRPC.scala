@@ -10,6 +10,7 @@ import ch.unibas.dmi.dbis.adam.http.grpc.{AckMessage, CreateEntityMessage, _}
 import ch.unibas.dmi.dbis.adam.index.structures.IndexTypes
 import ch.unibas.dmi.dbis.adam.main.AdamContext
 import ch.unibas.dmi.dbis.adam.storage.partition.PartitionMode
+import ch.unibas.dmi.dbis.adam.utils.AdamImporter
 import io.grpc.stub.StreamObserver
 import org.apache.spark.Logging
 import org.apache.spark.sql.types.{StructField, StructType, DataType}
@@ -348,5 +349,15 @@ class DataDefinitionRPC(implicit ac: AdamContext) extends AdamDefinitionGrpc.Ada
       log.error(res.failed.get.getMessage)
       Future.successful(AckMessage(AckMessage.Code.ERROR))
     }
+  }
+
+  /**
+    *
+    * @param request
+    * @return
+    */
+  override def importData(request: ImportMessage): Future[AckMessage] = {
+    AdamImporter(request.host, request.database, request.username, request.password)
+    Future.successful(AckMessage(AckMessage.Code.OK))
   }
 }

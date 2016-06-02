@@ -124,17 +124,8 @@ class AdamImporter(url: String, user: String, password: String) extends Logging 
 }
 
 object AdamImporter {
-  def main(args: Array[String]): Unit = {
-    SparkStartup
-
-    val host = "192.168.99.100" + ":" + "5433"
-    val database = "osvc"
-    val username = "docker"
-    val password = "docker"
-
+  def apply(host : String, database : String, username : String, password : String): Unit = {
     val importer = new AdamImporter("jdbc:postgresql://" + host + "/" + database, username, password)
-
-
     val entityRenamingRules = Seq(("shots" -> "segment")).toMap
 
 
