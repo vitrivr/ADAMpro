@@ -3,6 +3,8 @@ package ch.unibas.dmi.dbis.adam.query.handler.internal
 import java.util.concurrent.TimeUnit
 
 import ch.unibas.dmi.dbis.adam.config.FieldNames
+import ch.unibas.dmi.dbis.adam.datatypes.FieldTypes
+import ch.unibas.dmi.dbis.adam.entity.AttributeDefinition
 import ch.unibas.dmi.dbis.adam.main.{AdamContext, SparkStartup}
 import ch.unibas.dmi.dbis.adam.query.Result
 import ch.unibas.dmi.dbis.adam.query.handler.generic.{ExpressionDetails, QueryExpression}
@@ -137,7 +139,7 @@ object AggregationExpression {
     override protected def run(filter: Option[DataFrame] = None)(implicit ac: AdamContext): Option[DataFrame] = {
       import SparkStartup.Implicits._
       val rdd = sc.emptyRDD[Row]
-      Some(sqlContext.createDataFrame(rdd, Result.resultSchema("")))
+      Some(sqlContext.createDataFrame(rdd, Result.resultSchema(AttributeDefinition("", FieldTypes.STRINGTYPE))))
     }
   }
 

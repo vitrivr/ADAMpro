@@ -74,7 +74,7 @@ class SHIndex(val indexname: IndexName, val entityname: EntityName, override pri
         handler.results.map(x => Row(x.tid, x.score.toFloat)).iterator
       }
 
-    ac.sqlContext.createDataFrame(rddResults,  Result.resultSchema(pk.name))
+    ac.sqlContext.createDataFrame(rddResults,  Result.resultSchema(pk))
   }
 
   override def isQueryConform(nnq: NearestNeighbourQuery): Boolean = {
