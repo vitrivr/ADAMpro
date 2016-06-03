@@ -69,13 +69,13 @@ object SequentialScanExpression extends Logging {
     */
   def scan(df: DataFrame, nnq: NearestNeighbourQuery)(implicit ac: AdamContext): DataFrame = {
     val q = ac.sc.broadcast(nnq.q)
-    val weights = ac.sc.broadcast(nnq.weights)
+    val w = ac.sc.broadcast(nnq.weights)
 
     import org.apache.spark.sql.functions.{col, udf}
     val distUDF = udf((c: FeatureVectorWrapper) => {
       try {
         if (c != null) {
-          nnq.distance(q.value, c.vector, weights.value)
+          nnq.distance(q.value, c.vector, w.value).toFloat
         } else {
           Float.MaxValue
         }
