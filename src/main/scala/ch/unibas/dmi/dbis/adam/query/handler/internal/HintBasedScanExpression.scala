@@ -1,5 +1,6 @@
 package ch.unibas.dmi.dbis.adam.query.handler.internal
 
+import ch.unibas.dmi.dbis.adam.entity.Entity
 import ch.unibas.dmi.dbis.adam.entity.Entity._
 import ch.unibas.dmi.dbis.adam.exception.GeneralAdamException
 import ch.unibas.dmi.dbis.adam.index.Index
@@ -7,7 +8,7 @@ import ch.unibas.dmi.dbis.adam.index.Index._
 import ch.unibas.dmi.dbis.adam.main.AdamContext
 import ch.unibas.dmi.dbis.adam.query.handler.generic.{ExpressionDetails, QueryExpression}
 import ch.unibas.dmi.dbis.adam.query.handler.internal.BooleanFilterExpression.BooleanFilterScanExpression
-import ch.unibas.dmi.dbis.adam.query.handler.internal.QueryHints.{ComplexQueryHint, IndexQueryHint, QueryHint, SEQUENTIAL_QUERY}
+import ch.unibas.dmi.dbis.adam.query.handler.internal.QueryHints._
 import ch.unibas.dmi.dbis.adam.query.query.{BooleanQuery, NearestNeighbourQuery}
 import ch.unibas.dmi.dbis.adam.storage.engine.CatalogOperator
 import org.apache.spark.Logging
@@ -19,9 +20,9 @@ import org.apache.spark.sql.DataFrame
   * Ivan Giangreco
   * May 2016
   */
-case class HintBasedScanExpression(entityname: EntityName, nnq: Option[NearestNeighbourQuery], bq: Option[BooleanQuery], hints: Seq[QueryHint], id: Option[String] = None)(filterExpr: Option[QueryExpression] = None)(implicit ac: AdamContext) extends QueryExpression(id) {
+case class HintBasedScanExpression(entityname: EntityName, nnq: Option[NearestNeighbourQuery], bq: Option[BooleanQuery], hints: Seq[QueryHint], id: Option[String] = None)(filterExpr: Option[QueryExpression] = None)(@transient implicit val ac: AdamContext) extends QueryExpression(id) {
   val expr = HintBasedScanExpression.startPlanSearch(entityname, nnq, bq, hints)(filterExpr)
-  override val info = ExpressionDetails(expr.info.source, Some("Hint-Based Expression: " + expr.info.scantype), id,  expr.info.confidence)
+  override val info = ExpressionDetails(expr.info.source, Some("Hint-Based Expression: " + expr.info.scantype), id, expr.info.confidence)
   children ++= Seq(expr) ++ filterExpr.map(Seq(_)).getOrElse(Seq())
 
   override protected def run(filter: Option[DataFrame] = None)(implicit ac: AdamContext): Option[DataFrame] = {
@@ -63,8 +64,6 @@ object HintBasedScanExpression extends Logging {
     * @return
     */
   private def getPlan(entityname: EntityName, indexes: Map[IndexTypeName, Seq[IndexName]], nnq: Option[NearestNeighbourQuery], bq: Option[BooleanQuery], hints: Seq[QueryHint])(expr: Option[QueryExpression] = None)(implicit ac: AdamContext): Option[QueryExpression] = {
-
-
     if (hints.isEmpty) {
       log.trace("no execution plan hint")
       return None
@@ -86,7 +85,22 @@ object HintBasedScanExpression extends Logging {
       var j = 0
       while (j < hints.length) {
         hints(j) match {
-          case iqh: IndexQueryHint => {
+          case PREDICTIVE =>
+            log.trace("measurement-based execution plan hint")
+            val index = indexes.values.toSeq.flatten
+              .map(indexname => Index.load(indexname, false).get)
+              .sortBy(-_.scanweight).head
+
+            val entity = Entity.load(entityname).get
+
+            if (index.scanweight > entity.scanweight(nnq.get.column)) {
+              scan = Some(IndexScanExpression(index)(nnq.get)(scan))
+            } else {
+              scan = Some(SequentialScanExpression(entity)(nnq.get)(scan))
+            }
+
+            return scan
+          case iqh: IndexQueryHint =>
             log.trace("index execution plan hint")
             //index scan
             val indexChoice = indexes.get(iqh.structureType)
@@ -96,7 +110,7 @@ object HintBasedScanExpression extends Logging {
                 .map(indexname => Index.load(indexname, false).get)
                 .filter(_.isQueryConform(nnq.get)) //choose only indexes that are conform to query
                 .filterNot(_.isStale) //don't use stale indexes
-                .sortBy(-_.weight) //order by weight (highest weight first)
+                .sortBy(-_.scanweight) //order by weight (highest weight first)
 
               if (indexes.isEmpty) {
                 return None
@@ -107,7 +121,7 @@ object HintBasedScanExpression extends Logging {
             } else {
               return scan
             }
-          }
+
           case SEQUENTIAL_QUERY =>
             log.trace("sequential execution plan hint")
             scan = Some(new SequentialScanExpression(entityname)(nnq.get)(scan)) //sequential

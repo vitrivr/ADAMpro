@@ -1,8 +1,13 @@
 package ch.unibas.dmi.dbis.adam.api
 
+import ch.unibas.dmi.dbis.adam.api.IndexOp._
 import ch.unibas.dmi.dbis.adam.entity.Entity._
+import ch.unibas.dmi.dbis.adam.entity.Entity.create
 import ch.unibas.dmi.dbis.adam.entity.{Entity, AttributeDefinition}
+import ch.unibas.dmi.dbis.adam.index.Index
+import ch.unibas.dmi.dbis.adam.index.Index._
 import ch.unibas.dmi.dbis.adam.main.AdamContext
+import ch.unibas.dmi.dbis.adam.query.scanweight.{ScanWeightHandler, ScanWeightHandler$}
 import ch.unibas.dmi.dbis.adam.storage.partition.PartitionMode
 import org.apache.spark.sql.DataFrame
 
@@ -127,6 +132,48 @@ object EntityOp extends GenericOp {
   def partition(entityname: EntityName, nPartitions: Int, joins: Option[DataFrame], cols: Option[Seq[String]], mode: PartitionMode.Value)(implicit ac: AdamContext): Try[Entity] = {
     execute("repartition entity " + entityname + " operation") {
       Entity.repartition(Entity.load(entityname).get, nPartitions, joins, cols, mode)
+    }
+  }
+
+  /**
+    * Benchmarks entity and indexes corresponding to entity and adjusts scan weights.
+    *
+    * @param entityname name of entity
+    * @param column     name of column
+    * @return
+    */
+  def benchmarkAndSetScanWeights(entityname: EntityName, column: String)(implicit ac: AdamContext): Try[Void] = {
+    execute("benchmark entity and indexes of " + entityname + "(" + column + ")" + "and adjust weights operation") {
+      val swh = new ScanWeightHandler(entityname, column)
+      swh.benchmarkAndUpdate()
+      Success(null)
+    }
+  }
+
+  /**
+    * Sets the weight of the entity to make it more important in the search
+    *
+    * @param entityname name of entity
+    * @param column     name of column
+    * @param weight    new weight to set (the higher, the more important the index is)
+    * @return
+    */
+  def setScanWeight(entityname: EntityName, column : String, weight: Float)(implicit ac: AdamContext): Try[Void] = {
+    execute("set entity weight for " + entityname + "(" + column +")" + " operation") {
+      Entity.load(entityname).get.setScanWeight(column, Some(weight))
+      Success(null)
+    }
+  }
+
+  /**
+    * Resets all scan weights entity and indexes corresponding to entity.
+    *
+    * @param entityname name of entity
+    */
+  def resetScanWeights(entityname: EntityName)(implicit ac: AdamContext): Try[Void] = {
+    execute("reset weights of entity and indexes of " + entityname) {
+      ScanWeightHandler.resetWeights(entityname)
+      Success(null)
     }
   }
 

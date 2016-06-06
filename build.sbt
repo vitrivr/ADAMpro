@@ -99,7 +99,8 @@ val tertiaryLibs = Seq(
 
 //test libs
 val testLibs = Seq(
-  "org.scalatest" % "scalatest_2.10" % "3.0.0-M15"
+  "org.scalatest" % "scalatest_2.10" % "3.0.0-M15",
+  "io.grpc" % "grpc-okhttp" % "0.12.0"
 ).map(
   _.excludeAll(
     ExclusionRule("org.scala-lang"),

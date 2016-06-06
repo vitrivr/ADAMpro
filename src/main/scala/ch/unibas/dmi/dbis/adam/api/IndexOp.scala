@@ -102,9 +102,9 @@ object IndexOp extends GenericOp {
     * @param weight    new weight to set (the higher, the more important the index is)
     * @return
     */
-  def setWeight(indexname: IndexName, weight: Float)(implicit ac: AdamContext): Try[Void] = {
+  def setScanWeight(indexname: IndexName, weight: Float)(implicit ac: AdamContext): Try[Void] = {
     execute("set index weight for " + indexname + " operation") {
-      Index.load(indexname).get.setWeight(weight)
+      Index.load(indexname).get.setScanWeight(Some(weight))
       Success(null)
     }
   }

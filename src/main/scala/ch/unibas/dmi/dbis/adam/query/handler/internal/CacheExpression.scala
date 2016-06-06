@@ -11,7 +11,7 @@ import org.apache.spark.sql.DataFrame
   * Ivan Giangreco
   * May 2016
   */
-case class CacheExpression(expr: QueryExpression, cache: QueryCacheOptions = QueryCacheOptions(), id: Option[String])(implicit ac: AdamContext) extends QueryExpression(id) {
+case class CacheExpression(expr: QueryExpression, cache: QueryCacheOptions = QueryCacheOptions(), id: Option[String])(@transient implicit val ac: AdamContext) extends QueryExpression(id) {
   override val info = ExpressionDetails(None, Some("Cache Expression"), id, None)
   children ++= Seq(expr)
 

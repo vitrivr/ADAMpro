@@ -24,7 +24,9 @@ service AdamDefinition {
   rpc GetEntityProperties(EntityNameMessage) returns (EntityPropertiesMessage) {}
   rpc RepartitionEntityData(RepartitionMessage) returns (AckMessage) {}
   rpc RepartitionIndexData(RepartitionMessage) returns (AckMessage) {}
-  rpc SetIndexWeight(IndexWeightMessage) returns (AckMessage) {}
+  rpc BenchmarkAndUpdateScanWeights(WeightMessage) returns (AckMessage) {}
+  rpc ResetScanWeights(EntityNameMessage) returns (AckMessage) {}
+  rpc SetScanWeight(WeightMessage) returns (AckMessage) {}
   rpc ImportData(ImportMessage) returns (AckMessage) {}
 }
 
@@ -164,9 +166,15 @@ message RepartitionMessage {
   PartitionOptions option = 4;
 }
 
-message IndexWeightMessage {
-  string index = 1;
-  float weight = 2;
+message UpdateWeightsMessage {
+  string entity = 1;
+  string column = 2;
+}
+
+message WeightMessage {
+  string entity = 1; //entity or index
+  string column = 2;
+  float weight = 3;
 }
 
 message ImportMessage {
@@ -192,7 +200,7 @@ message QueryMessage {
   NearestNeighbourQueryMessage nnq = 7; //USING DISTANCE ...
 
   //for hints see  ch.unibas.dmi.dbis.adam.query.handler.QueryHints, possible values
-  //include "index", "inexact", "ecp", "lsh", "pq", "sh", "exact", "va", "vaf", "vav", "sequential"
+  //include "index", "inexact", "ecp", "lsh", "pq", "sh", "exact", "va", "vaf", "vav", "sequential", "predictive"
   repeated string hints = 8;
 
   //maximum duration of query in ms

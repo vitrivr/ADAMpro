@@ -19,7 +19,7 @@ import scala.collection.mutable
   * Ivan Giangreco
   * May 2016
   */
-case class SequentialScanExpression(entity : Entity)(nnq: NearestNeighbourQuery, id: Option[String] = None)(filterExpr: Option[QueryExpression] = None)(implicit ac: AdamContext) extends QueryExpression(id) {
+case class SequentialScanExpression(entity : Entity)(nnq: NearestNeighbourQuery, id: Option[String] = None)(filterExpr: Option[QueryExpression] = None)(@transient implicit val ac: AdamContext) extends QueryExpression(id) {
   override val info = ExpressionDetails(Some(entity.entityname), Some("Sequential Scan Expression"), id, None)
   children ++= filterExpr.map(Seq(_)).getOrElse(Seq())
 

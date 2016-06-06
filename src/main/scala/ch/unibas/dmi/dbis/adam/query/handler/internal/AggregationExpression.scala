@@ -21,7 +21,7 @@ import scala.concurrent.{Await, Future}
   * Ivan Giangreco
   * April 2016
   */
-abstract class AggregationExpression(left: QueryExpression, right: QueryExpression, order: ExpressionEvaluationOrder.Order = ExpressionEvaluationOrder.Parallel, id: Option[String] = None)(implicit ac: AdamContext) extends QueryExpression(id) {
+abstract class AggregationExpression(left: QueryExpression, right: QueryExpression, order: ExpressionEvaluationOrder.Order = ExpressionEvaluationOrder.Parallel, id: Option[String] = None)(@transient implicit val ac: AdamContext) extends QueryExpression(id) {
   children ++= Seq(left, right)
 
   override protected def run(filter: Option[DataFrame] = None)(implicit ac: AdamContext): Option[DataFrame] = {

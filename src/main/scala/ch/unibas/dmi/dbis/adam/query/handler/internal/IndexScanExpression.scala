@@ -17,23 +17,23 @@ import org.apache.spark.sql.DataFrame
   * Ivan Giangreco
   * May 2016
   */
-case class IndexScanExpression(index: Index)(nnq: NearestNeighbourQuery, id: Option[String] = None)(filterExpr: Option[QueryExpression] = None)(implicit ac: AdamContext) extends QueryExpression(id) {
+case class IndexScanExpression(index: Index)(nnq: NearestNeighbourQuery, id: Option[String] = None)(filterExpr: Option[QueryExpression] = None)(@transient implicit val ac: AdamContext) extends QueryExpression(id) {
   override val info = ExpressionDetails(Some(index.indextypename.name + " (" + index.indexname + ")"), Some("Index Scan Expression"), id, Some(index.confidence))
   children ++= filterExpr.map(Seq(_)).getOrElse(Seq())
 
-  def this(indexname: IndexName)(nnq: NearestNeighbourQuery, id: Option[String] = None)(expr: Option[QueryExpression] = None)(implicit ac: AdamContext) {
-    this(Index.load(indexname).get)(nnq, id)(expr)
+  def this(indexname: IndexName)(nnq: NearestNeighbourQuery, id: Option[String] = None)(filterExpr: Option[QueryExpression] = None)(implicit ac: AdamContext) {
+    this(Index.load(indexname).get)(nnq, id)(filterExpr)
   }
 
-  def this(entityname: EntityName, indextypename: IndexTypeName)(nnq: NearestNeighbourQuery, id: Option[String] = None)(expr: Option[QueryExpression] = None)(implicit ac: AdamContext) {
+  def this(entityname: EntityName, indextypename: IndexTypeName)(nnq: NearestNeighbourQuery, id: Option[String] = None)(filterExpr: Option[QueryExpression] = None)(implicit ac: AdamContext) {
     this(
       Entity.load(entityname).get.indexes
         .filter(_.isSuccess)
         .map(_.get)
         .filter(_.isQueryConform(nnq)) //choose only indexes that are conform to query
-        .sortBy(-_.weight)
+        .sortBy(-_.scanweight)
         .head
-    )(nnq, id)(expr)
+    )(nnq, id)(filterExpr)
   }
 
   override protected def run(filter: Option[DataFrame] = None)(implicit ac: AdamContext): Option[DataFrame] = {

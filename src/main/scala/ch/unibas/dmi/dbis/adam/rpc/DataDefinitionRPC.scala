@@ -9,6 +9,7 @@ import ch.unibas.dmi.dbis.adam.http.grpc.FieldDefinitionMessage.FieldType
 import ch.unibas.dmi.dbis.adam.http.grpc.{AckMessage, CreateEntityMessage, _}
 import ch.unibas.dmi.dbis.adam.index.structures.IndexTypes
 import ch.unibas.dmi.dbis.adam.main.AdamContext
+import ch.unibas.dmi.dbis.adam.storage.engine.CatalogOperator
 import ch.unibas.dmi.dbis.adam.storage.partition.PartitionMode
 import ch.unibas.dmi.dbis.adam.utils.AdamImporter
 import io.grpc.stub.StreamObserver
@@ -322,15 +323,55 @@ class DataDefinitionRPC(implicit ac: AdamContext) extends AdamDefinitionGrpc.Ada
     * @param request
     * @return
     */
-  override def setIndexWeight(request: IndexWeightMessage): Future[AckMessage] = {
-    log.debug("rpc call for changing weight of index")
-    val res = IndexOp.setWeight(request.index, request.weight)
+  override def setScanWeight(request: WeightMessage): Future[AckMessage] = {
+    log.debug("rpc call for changing weight of entity or index")
+
+    val res =  if(CatalogOperator.existsEntity(request.entity)){
+      EntityOp.setScanWeight(request.entity, request.column, request.weight)
+    } else {
+      IndexOp.setScanWeight(request.entity, request.weight)
+    }
 
     if (res.isSuccess) {
-      Future.successful(AckMessage(AckMessage.Code.OK, request.index))
+      Future.successful(AckMessage(AckMessage.Code.OK, request.entity))
     } else {
       log.error(res.failed.get.getMessage)
-      Future.successful(AckMessage(code = AckMessage.Code.ERROR, message = "please re-try"))
+      Future.successful(AckMessage(code = AckMessage.Code.ERROR, message = res.failed.get.getMessage))
+    }
+  }
+
+
+  /**
+    *
+    * @param request
+    * @return
+    */
+  override def benchmarkAndUpdateScanWeights(request: WeightMessage): Future[AckMessage] = {
+    log.debug("rpc call for benchmarking entity and index")
+    val res = EntityOp.benchmarkAndSetScanWeights(request.entity, request.column)
+
+    if (res.isSuccess) {
+      Future.successful(AckMessage(AckMessage.Code.OK, request.entity))
+    } else {
+      log.error(res.failed.get.getMessage)
+      Future.successful(AckMessage(code = AckMessage.Code.ERROR, message = res.failed.get.getMessage))
+    }
+  }
+
+  /**
+    *
+    * @param request
+    * @return
+    */
+  override def resetScanWeights(request: EntityNameMessage): Future[AckMessage] = {
+    log.debug("rpc call for resetting entity and index scan weights")
+    val res = EntityOp.resetScanWeights(request.entity)
+
+    if (res.isSuccess) {
+      Future.successful(AckMessage(AckMessage.Code.OK, request.entity))
+    } else {
+      log.error(res.failed.get.getMessage)
+      Future.successful(AckMessage(code = AckMessage.Code.ERROR, message = res.failed.get.getMessage))
     }
   }
 
