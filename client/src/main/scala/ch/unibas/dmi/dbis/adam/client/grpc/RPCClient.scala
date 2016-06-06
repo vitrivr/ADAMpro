@@ -64,6 +64,15 @@ class RPCClient(channel: ManagedChannel, definer: AdamDefinitionBlockingStub, se
     }
   }
 
+  def benchmarkAndAdjustWeights(entityname : String, column : String) : Try[Void] = {
+    try {
+      definer.benchmarkAndUpdateScanWeights(WeightMessage(entityname, column))
+      Success(null)
+    } catch {
+      case e: Exception => Failure(e)
+    }
+  }
+
 
   /**
     *

@@ -15,7 +15,7 @@ import scala.concurrent.duration.Duration
   * Ivan Giangreco
   * May 2016
   */
-case class TimedScanExpression(exprs: Seq[QueryExpression], timelimit: Duration, id: Option[String] = None)(filterExpr: Option[QueryExpression] = None)(implicit ac: AdamContext) extends QueryExpression(id) {
+case class TimedScanExpression(exprs: Seq[QueryExpression], timelimit: Duration, id: Option[String] = None)(filterExpr: Option[QueryExpression] = None)(@transient implicit val ac: AdamContext) extends QueryExpression(id) {
   override val info = ExpressionDetails(None, Some("Timed Scan Expression"), id, confidence)
   children ++= exprs ++ filterExpr.map(Seq(_)).getOrElse(Seq())
   var confidence : Option[Float] = None

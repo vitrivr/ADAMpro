@@ -13,7 +13,7 @@ import org.apache.spark.sql.{DataFrame, Row}
   * Ivan Giangreco
   * May 2016
   */
-case class ProjectionExpression(projection: ProjectionField, expr : QueryExpression, id: Option[String] = None)(implicit ac: AdamContext) extends QueryExpression(id) {
+case class ProjectionExpression(projection: ProjectionField, expr : QueryExpression, id: Option[String] = None)(@transient implicit val ac: AdamContext) extends QueryExpression(id) {
   override val info = ExpressionDetails(None, Some("Projection Expression"), id, None)
   children ++= Seq(expr)
 

@@ -23,7 +23,7 @@ object BooleanFilterExpression extends Logging {
     * @param entityname name of entity
     * @param bq boolean query
     */
-  case class BooleanFilterScanExpression(entityname: EntityName)(bq: BooleanQuery, id: Option[String] = None)(filterExpr: Option[QueryExpression] = None)(implicit ac: AdamContext) extends QueryExpression(id) {
+  case class BooleanFilterScanExpression(entityname: EntityName)(bq: BooleanQuery, id: Option[String] = None)(filterExpr: Option[QueryExpression] = None)(@transient implicit val ac: AdamContext) extends QueryExpression(id) {
     override val info = ExpressionDetails(Some(entityname), Some("Table Boolean-Scan Expression"), id, None)
     children ++= filterExpr.map(Seq(_)).getOrElse(Seq())
 

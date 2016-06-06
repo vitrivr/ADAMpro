@@ -53,7 +53,7 @@ object QueryOp extends GenericOp {
         scan = Some(BooleanFilterScanExpression(entityname)(bq.get)(scan))
       }
 
-      scan = Some(SequentialScanExpression(entityname)(nnq)(scan))
+      scan = Some(new SequentialScanExpression(entityname)(nnq)(scan))
 
       return Success(scan.get.prepareTree().evaluate())
     }

@@ -34,7 +34,7 @@ class SimpleProgressivePathChooser()(implicit ac: AdamContext) extends Progressi
   override def getPaths(entityname: EntityName, nnq: NearestNeighbourQuery): Seq[QueryExpression] = {
     //TODO: choose better default
     IndexTypes.values
-      .map(indextypename => Index.list(entityname, indextypename).filter(_.isSuccess).sortBy(-_.get.weight))
+      .map(indextypename => Index.list(entityname, indextypename).filter(_.isSuccess).sortBy(-_.get.scanweight))
       .filterNot(_.isEmpty)
       .map(_.head)
       .map(index => {IndexScanExpression(index.get)(nnq)()})
@@ -48,7 +48,7 @@ class SimpleProgressivePathChooser()(implicit ac: AdamContext) extends Progressi
 class AllProgressivePathChooser(implicit ac: AdamContext) extends ProgressivePathChooser {
   override def getPaths(entityname: EntityName, nnq: NearestNeighbourQuery): Seq[QueryExpression] = {
     Index.list(entityname)
-      .map(index => IndexScanExpression(index.get)(nnq)()).+:(SequentialScanExpression(entityname)(nnq)())
+      .map(index => IndexScanExpression(index.get)(nnq)()).+:(new SequentialScanExpression(entityname)(nnq)())
   }
 }
 
@@ -60,7 +60,7 @@ class AllProgressivePathChooser(implicit ac: AdamContext) extends ProgressivePat
 class IndexTypeProgressivePathChooser(indextypenames: Seq[IndexTypeName])(implicit ac: AdamContext) extends ProgressivePathChooser {
   override def getPaths(entityname: EntityName, nnq: NearestNeighbourQuery): Seq[QueryExpression] = {
     indextypenames
-      .map(indextypename => Index.list(entityname, indextypename).filter(_.isSuccess).sortBy(-_.get.weight).head)
+      .map(indextypename => Index.list(entityname, indextypename).filter(_.isSuccess).sortBy(-_.get.scanweight).head)
       .map(index => IndexScanExpression(index.get)(nnq)())
   }
 }

@@ -45,12 +45,13 @@ private[va] object EquifrequentMarksGenerator extends MarksGenerator with Serial
     (0 until dimensionality).map({ dim =>
       val hist = dimData(dim).histogram
 
-      var marks = new Array[Float](maxMarks(dim))
+      var marks = new Array[Float](maxMarks(dim) - 1)
       var k = 0
       var sum = 0
       for (j <- 1 until (maxMarks(dim) - 1)) {
-        var n = (sampleSize - sum) / (maxMarks(dim) - j)
-        while ((j % 2 == 1 && n > 0) || (j % 2 == 0 && n > hist(k))) {
+        var n = (hist.sum - sum) / (maxMarks(dim) - j)
+        
+        while ((j % 2 == 1 && k < hist.length && n > 0) || (j % 2 == 0 && k < hist.length && n > hist(k))) {
           sum += hist(k)
           n -= hist(k)
           k += 1
@@ -60,7 +61,6 @@ private[va] object EquifrequentMarksGenerator extends MarksGenerator with Serial
       }
 
       marks(0) = min(dim)
-      marks(maxMarks(dim) - 1) = max(dim)
 
       marks.toSeq
     })
@@ -109,16 +109,22 @@ private[va] object EquifrequentMarksGenerator extends MarksGenerator with Serial
       *
       * @return
       */
-    def histogram: IndexedSeq[Int] = {
-      val mapped = data
+    def histogram : IndexedSeq[Int] = {
+      val counts = data
         .map(x => {
           var j = (((x - min) / (max - min)) * sampling_frequency).floor.toInt
-          if (j < 0) j = 0
-          if (j >= sampling_frequency) j = sampling_frequency - 1
+          if (j < 0) {
+            j = 0
+          }
+          if (j >= sampling_frequency) {
+            j = sampling_frequency - 1
+          }
+
+          j
         })
         .groupBy(x => x).map { case (key, value) => (key, value.size) }
 
-      (0 until sampling_frequency).map(i => mapped.getOrElse(i, 0))
+      (0 until sampling_frequency).map(counts.getOrElse(_, 0))
     }
   }
 

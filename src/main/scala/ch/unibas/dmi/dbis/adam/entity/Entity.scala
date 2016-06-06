@@ -2,9 +2,9 @@ package ch.unibas.dmi.dbis.adam.entity
 
 import ch.unibas.dmi.dbis.adam.config.FieldNames
 import ch.unibas.dmi.dbis.adam.datatypes.FieldTypes
+import ch.unibas.dmi.dbis.adam.datatypes.FieldTypes._
 import ch.unibas.dmi.dbis.adam.datatypes.feature.{FeatureVectorWrapper, FeatureVectorWrapperUDT}
 import ch.unibas.dmi.dbis.adam.entity.Entity.EntityName
-import FieldTypes._
 import ch.unibas.dmi.dbis.adam.exception.{EntityExistingException, EntityNotExistingException, EntityNotProperlyDefinedException, GeneralAdamException}
 import ch.unibas.dmi.dbis.adam.index.Index
 import ch.unibas.dmi.dbis.adam.main.SparkStartup.Implicits._
@@ -30,6 +30,9 @@ case class Entity(val entityname: EntityName)(@transient implicit val ac: AdamCo
   var _featureData: Option[DataFrame] = None
   var _metaData: Option[DataFrame] = None
   var _join: Option[DataFrame] = None
+
+  //TODO: make entities singleton? lock on entity?
+
 
   /**
     * Gets path of feature data.
@@ -161,6 +164,20 @@ case class Entity(val entityname: EntityName)(@transient implicit val ac: AdamCo
   }
 
 
+  /**
+    * Returns the weight set to the entity scan. The weight is used at query time to choose which query path to choose.
+    */
+  def scanweight(attribute: String) = CatalogOperator.getEntityWeight(entityname, attribute)
+
+  /**
+    *
+    * @param weight new weights to set to entity scan
+    * @return
+    */
+  def setScanWeight(attribute: String, weight: Option[Float] = None): Boolean = {
+    CatalogOperator.updateEntityWeight(entityname, attribute, weight)
+  }
+
   private var tupleCount: Option[Long] = None
 
 
@@ -263,6 +280,7 @@ case class Entity(val entityname: EntityName)(@transient implicit val ac: AdamCo
   def properties: Map[String, String] = {
     val lb = ListBuffer[(String, String)]()
 
+    lb.append("scanweight" -> schema.filter(_.fieldtype == FieldTypes.FEATURETYPE).map(field => field.name -> scanweight(field.name)).map { case (name, weight) => name + "(" + weight + ")" }.mkString(","))
     lb.append("schema" -> CatalogOperator.getFields(entityname).map(field => field.name + "(" + field.fieldtype.name + ")").mkString(","))
     lb.append("indexes" -> CatalogOperator.listIndexes(entityname).mkString(", "))
 
@@ -312,8 +330,6 @@ object Entity extends Logging {
 
   def exists(entityname: EntityName): Boolean = CatalogOperator.existsEntity(entityname)
 
-  private val lock = new Object() //TODO: make entities singleton in whole application? lock on entity?
-
   /**
     * Creates an entity.
     *
@@ -324,81 +340,79 @@ object Entity extends Logging {
     */
   def create(entityname: EntityName, attributes: Seq[AttributeDefinition], ifNotExists: Boolean = false)(implicit ac: AdamContext): Try[Entity] = {
     try {
-      lock.synchronized {
-        //checks
-        if (exists(entityname)) {
-          if (!ifNotExists) {
-            return Failure(EntityExistingException())
-          } else {
-            return load(entityname)
-          }
-        }
-
-        if (attributes.isEmpty) {
-          return Failure(EntityNotProperlyDefinedException("Entity " + entityname + " will have no attributes"))
-        }
-
-        FieldNames.reservedNames.foreach { reservedName =>
-          if (attributes.contains(reservedName)) {
-            return Failure(EntityNotProperlyDefinedException("Entity defined with field " + reservedName + ", but name is reserved"))
-          }
-        }
-
-        if (attributes.map(_.name).distinct.length != attributes.length) {
-          return Failure(EntityNotProperlyDefinedException("Entity defined with duplicate fields."))
-        }
-
-        val allowedPkTypes = Seq(INTTYPE, LONGTYPE, STRINGTYPE, AUTOTYPE)
-
-        if (attributes.count(_.pk) > 1) {
-          return Failure(EntityNotProperlyDefinedException("Entity defined with more than one primary key"))
-        } else if (attributes.filter(_.pk).isEmpty) {
-          return Failure(EntityNotProperlyDefinedException("Entity defined has no primary key."))
-        } else if (!attributes.filter(_.pk).forall(field => allowedPkTypes.contains(field.fieldtype))) {
-          return Failure(EntityNotProperlyDefinedException("Entity defined needs a " + allowedPkTypes.map(_.name).mkString(", ") + " primary key"))
-        }
-
-        if (attributes.count(_.fieldtype == AUTOTYPE) > 1) {
-          return Failure(EntityNotProperlyDefinedException("Too many auto attributes defined."))
-        } else if (attributes.count(_.fieldtype == AUTOTYPE) > 0 && !attributes.filter(_.pk).forall(_.fieldtype == AUTOTYPE)) {
-          return Failure(EntityNotProperlyDefinedException("Auto type only allowed in primary key."))
-        }
-
-
-        val pk = attributes.filter(_.pk).head
-
-        //perform
-        val featurePath = if (!attributes.filter(_.fieldtype == FEATURETYPE).isEmpty) {
-          val featureFields = attributes.filter(_.fieldtype == FEATURETYPE)
-
-          val path = featureStorage.create(entityname, featureFields)
-
-          if (path.isFailure) {
-            throw path.failed.get
-          }
-
-          path.get
+      //checks
+      if (exists(entityname)) {
+        if (!ifNotExists) {
+          return Failure(EntityExistingException())
         } else {
-          None
+          return load(entityname)
         }
-
-        val metadataPath = if (!attributes.filterNot(_.fieldtype == FEATURETYPE).filterNot(_.pk).isEmpty) {
-          val metadataFields = attributes.filterNot(_.fieldtype == FEATURETYPE)
-          val path = metadataStorage.create(entityname, metadataFields)
-
-          if (path.isFailure) {
-            throw path.failed.get
-          }
-
-          path.get
-        } else {
-          None
-        }
-
-        CatalogOperator.createEntity(entityname, featurePath, metadataPath, attributes, !attributes.filterNot(_.fieldtype == FEATURETYPE).filterNot(_.pk).isEmpty)
-
-        Success(Entity(entityname)(ac))
       }
+
+      if (attributes.isEmpty) {
+        return Failure(EntityNotProperlyDefinedException("Entity " + entityname + " will have no attributes"))
+      }
+
+      FieldNames.reservedNames.foreach { reservedName =>
+        if (attributes.contains(reservedName)) {
+          return Failure(EntityNotProperlyDefinedException("Entity defined with field " + reservedName + ", but name is reserved"))
+        }
+      }
+
+      if (attributes.map(_.name).distinct.length != attributes.length) {
+        return Failure(EntityNotProperlyDefinedException("Entity defined with duplicate fields."))
+      }
+
+      val allowedPkTypes = Seq(INTTYPE, LONGTYPE, STRINGTYPE, AUTOTYPE)
+
+      if (attributes.count(_.pk) > 1) {
+        return Failure(EntityNotProperlyDefinedException("Entity defined with more than one primary key"))
+      } else if (attributes.filter(_.pk).isEmpty) {
+        return Failure(EntityNotProperlyDefinedException("Entity defined has no primary key."))
+      } else if (!attributes.filter(_.pk).forall(field => allowedPkTypes.contains(field.fieldtype))) {
+        return Failure(EntityNotProperlyDefinedException("Entity defined needs a " + allowedPkTypes.map(_.name).mkString(", ") + " primary key"))
+      }
+
+      if (attributes.count(_.fieldtype == AUTOTYPE) > 1) {
+        return Failure(EntityNotProperlyDefinedException("Too many auto attributes defined."))
+      } else if (attributes.count(_.fieldtype == AUTOTYPE) > 0 && !attributes.filter(_.pk).forall(_.fieldtype == AUTOTYPE)) {
+        return Failure(EntityNotProperlyDefinedException("Auto type only allowed in primary key."))
+      }
+
+
+      val pk = attributes.filter(_.pk).head
+
+      //perform
+      val featurePath = if (!attributes.filter(_.fieldtype == FEATURETYPE).isEmpty) {
+        val featureFields = attributes.filter(_.fieldtype == FEATURETYPE)
+
+        val path = featureStorage.create(entityname, featureFields)
+
+        if (path.isFailure) {
+          throw path.failed.get
+        }
+
+        path.get
+      } else {
+        None
+      }
+
+      val metadataPath = if (!attributes.filterNot(_.fieldtype == FEATURETYPE).filterNot(_.pk).isEmpty) {
+        val metadataFields = attributes.filterNot(_.fieldtype == FEATURETYPE)
+        val path = metadataStorage.create(entityname, metadataFields)
+
+        if (path.isFailure) {
+          throw path.failed.get
+        }
+
+        path.get
+      } else {
+        None
+      }
+
+      CatalogOperator.createEntity(entityname, featurePath, metadataPath, attributes, !attributes.filterNot(_.fieldtype == FEATURETYPE).filterNot(_.pk).isEmpty)
+
+      Success(Entity(entityname)(ac))
     } catch {
       case e: Exception => {
         //TODO: possibly drop what has been already created
@@ -415,26 +429,24 @@ object Entity extends Logging {
     * @return
     */
   def drop(entityname: EntityName, ifExists: Boolean = false)(implicit ac: AdamContext): Try[Void] = {
-    lock.synchronized {
-      if (!exists(entityname)) {
-        if (!ifExists) {
-          return Failure(EntityNotExistingException())
-        } else {
-          return Success(null)
-        }
+    if (!exists(entityname)) {
+      if (!ifExists) {
+        return Failure(EntityNotExistingException())
+      } else {
+        return Success(null)
       }
-
-      Index.dropAll(entityname)
-
-      featureStorage.drop(CatalogOperator.getEntityFeaturePath(entityname))
-
-      if (CatalogOperator.hasEntityMetadata(entityname)) {
-        metadataStorage.drop(CatalogOperator.getEntityMetadataPath(entityname))
-      }
-
-      CatalogOperator.dropEntity(entityname, ifExists)
-      Success(null)
     }
+
+    Index.dropAll(entityname)
+
+    featureStorage.drop(CatalogOperator.getEntityFeaturePath(entityname))
+
+    if (CatalogOperator.hasEntityMetadata(entityname)) {
+      metadataStorage.drop(CatalogOperator.getEntityMetadataPath(entityname))
+    }
+
+    CatalogOperator.dropEntity(entityname, ifExists)
+    Success(null)
   }
 
   /**
@@ -546,5 +558,5 @@ object Entity extends Logging {
     *
     * @return name of entities
     */
-  def list : Seq[EntityName] = CatalogOperator.listEntities()
+  def list: Seq[EntityName] = CatalogOperator.listEntities()
 }

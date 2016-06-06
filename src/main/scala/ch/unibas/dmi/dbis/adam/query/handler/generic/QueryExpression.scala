@@ -17,9 +17,10 @@ import scala.concurrent.duration.Duration
   * April 2016
   */
 abstract class QueryExpression(id: Option[String]) extends Serializable with Logging {
+  private val DEFAULT_WEIGHT = 0
+
   private var prepared = false
   private var run = false
-  private val lock = new Object()
 
   private var results: Option[DataFrame] = None
   val info = ExpressionDetails(None, None, id, None)
@@ -55,13 +56,11 @@ abstract class QueryExpression(id: Option[String]) extends Serializable with Log
     }
 
     val t1 = System.currentTimeMillis
-    lock.synchronized {
-      results = run(filter)
-      run = true
-    }
+    results = run(filter)
+    run = true
     val t2 = System.currentTimeMillis
 
-
+    //TODO: possibly log time at production time and use a command to update based on the stored logs the weights of each index
     info.time = Duration(t2 - t1, TimeUnit.MILLISECONDS)
 
     results

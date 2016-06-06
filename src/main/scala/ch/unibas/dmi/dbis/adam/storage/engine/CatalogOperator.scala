@@ -9,6 +9,7 @@ import ch.unibas.dmi.dbis.adam.entity.{EntityNameHolder, AttributeDefinition}
 import ch.unibas.dmi.dbis.adam.exception.{EntityExistingException, EntityNotExistingException, IndexExistingException, IndexNotExistingException}
 import ch.unibas.dmi.dbis.adam.index.Index.{IndexName, IndexTypeName}
 import ch.unibas.dmi.dbis.adam.index.structures.IndexTypes
+import ch.unibas.dmi.dbis.adam.query.scanweight.{ScanWeightHandler, ScanWeightHandler$}
 import org.apache.commons.io.FileUtils
 import org.apache.spark.Logging
 import slick.driver.H2Driver.api._
@@ -40,7 +41,7 @@ object CatalogOperator extends Logging {
   private val indexes = TableQuery[IndexesCatalog]
 
   private val DEFAULT_DIMENSIONALITY: Int = -1
-  private val DEFAULT_INDEX_WEIGHT: Float = 100
+  private val DEFAULT_WEIGHT: Float = ScanWeightHandler.DEFAULT_WEIGHT
 
 
   /**
@@ -64,7 +65,7 @@ object CatalogOperator extends Logging {
     Await.result(db.run(setup), MAX_WAITING_TIME)
 
     attributes.foreach { field =>
-      val setup = DBIO.seq(entityfields.+=(field.name, field.fieldtype.name, field.pk, field.unique, field.indexed, entityname, DEFAULT_DIMENSIONALITY))
+      val setup = DBIO.seq(entityfields.+=(field.name, field.fieldtype.name, field.pk, field.unique, field.indexed, entityname, DEFAULT_DIMENSIONALITY, DEFAULT_WEIGHT))
       Await.result(db.run(setup), MAX_WAITING_TIME)
     }
 
@@ -109,6 +110,38 @@ object CatalogOperator extends Logging {
     log.debug("updated entity path in catalog")
     true
   }
+
+  /**
+    *
+    * @param entityname name of entity
+    * @param attribute  name of attribute
+    * @return
+    */
+  def getEntityWeight(entityname: EntityName, attribute: String): Float = {
+    val query = entityfields.filter(_.entityname === entityname.toString).filter(_.fieldname === attribute).map(_.scanweight).result.head
+    Await.result(db.run(query), MAX_WAITING_TIME)
+  }
+
+  /**
+    *
+    * @param entityname name of entity
+    * @param attribute  name of attribute
+    * @param newWeight  specify the new weight for the entity (the higher the more important), if no weight is
+    *                   specified the default weight is used
+    * @return
+    */
+  def updateEntityWeight(entityname: EntityName, attribute: String, newWeight: Option[Float] = Some(DEFAULT_WEIGHT)): Boolean = {
+    val query = entityfields.filter(_.entityname === entityname.toString).filter(_.fieldname === attribute).map(_.scanweight)
+
+    val update = DBIO.seq(
+      query.update(newWeight.getOrElse(DEFAULT_WEIGHT))
+    )
+    Await.result(db.run(update), MAX_WAITING_TIME)
+
+    log.debug("updated weight in catalog")
+    true
+  }
+
 
   /**
     * Drops entity from catalog.
@@ -230,7 +263,7 @@ object CatalogOperator extends Logging {
     oos.close()
 
     val setup = DBIO.seq(
-      indexes.+=((indexname, entityname, column, indextypename.name, path, metaFilePath, true, DEFAULT_INDEX_WEIGHT))
+      indexes.+=((indexname, entityname, column, indextypename.name, path, metaFilePath, true, DEFAULT_WEIGHT))
     )
 
     Await.result(db.run(setup), MAX_WAITING_TIME)
@@ -297,7 +330,7 @@ object CatalogOperator extends Logging {
       catalog = catalog.filter(_.indextypename === indextypename.name)
     }
 
-    val query = catalog.map(index => (index.indexname, index.indextypename, index.indexweight)).result
+    val query = catalog.map(index => (index.indexname, index.indextypename, index.scanweight)).result
     Await.result(db.run(query), MAX_WAITING_TIME).map(index => (index._1, IndexTypes.withName(index._2).get, index._3))
   }
 
@@ -371,7 +404,7 @@ object CatalogOperator extends Logging {
     * @return
     */
   def getIndexWeight(indexname: IndexName): Float = {
-    val query = indexes.filter(_.indexname === indexname).map(_.indexweight).result.head
+    val query = indexes.filter(_.indexname === indexname).map(_.scanweight).result.head
     Await.result(db.run(query), MAX_WAITING_TIME)
   }
 
@@ -379,31 +412,14 @@ object CatalogOperator extends Logging {
     *
     * @param indexname name of index
     * @param newWeight specify the new weight for the index (the higher the more important), if no weight is
-    *                  specified the default index weight is used
+    *                  specified the default weight is used
     * @return
     */
-  def updateIndexWeight(indexname: IndexName, newWeight: Float = DEFAULT_INDEX_WEIGHT): Boolean = {
-    val query = indexes.filter(_.indexname === indexname).map(_.indexweight)
+  def updateIndexWeight(indexname: IndexName, newWeight: Option[Float] = Some(DEFAULT_WEIGHT)): Boolean = {
+    val query = indexes.filter(_.indexname === indexname).map(_.scanweight)
 
     val update = DBIO.seq(
-      query.update(newWeight)
-    )
-    Await.result(db.run(update), MAX_WAITING_TIME)
-
-    log.debug("updated weight in catalog")
-    true
-  }
-
-  /**
-    *
-    * @param entityname name of entity
-    * @return
-    */
-  def resetIndexWeight(entityname: EntityName): Boolean = {
-    val query = indexes.filter(_.entityname === entityname.toString()).map(_.indexweight)
-
-    val update = DBIO.seq(
-      query.update(DEFAULT_INDEX_WEIGHT)
+      query.update(newWeight.getOrElse(DEFAULT_WEIGHT))
     )
     Await.result(db.run(update), MAX_WAITING_TIME)
 

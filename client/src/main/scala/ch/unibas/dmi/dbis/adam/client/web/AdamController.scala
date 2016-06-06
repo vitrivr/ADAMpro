@@ -77,6 +77,25 @@ class AdamController(rpcClient: RPCClient) extends Controller {
   /**
     *
     */
+  get("/entity/benchmark") { request: Request =>
+    val entityname = request.params.get("entityname")
+
+    if (entityname.isEmpty) {
+      response.ok.json(GeneralResponse(500, "entity not specified"))
+    }
+
+    val details = rpcClient.benchmarkAndAdjustWeights(entityname.get, "feature")
+
+    if (details.isSuccess) {
+      response.ok.json(GeneralResponse(200))
+    } else {
+      response.ok.json(GeneralResponse(500, details.failed.get.getMessage))
+    }
+  }
+
+  /**
+    *
+    */
   get("/entity/drop") { request: Request =>
     val entityname = request.params.get("entityname")
 
