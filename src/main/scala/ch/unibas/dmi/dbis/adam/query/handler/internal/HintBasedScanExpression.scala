@@ -110,7 +110,7 @@ object HintBasedScanExpression extends Logging {
           }
           case SEQUENTIAL_QUERY =>
             log.trace("sequential execution plan hint")
-            scan = Some(SequentialScanExpression(entityname)(nnq.get)(scan)) //sequential
+            scan = Some(new SequentialScanExpression(entityname)(nnq.get)(scan)) //sequential
             return scan
 
           case cqh: ComplexQueryHint => {

@@ -48,7 +48,7 @@ class SimpleProgressivePathChooser()(implicit ac: AdamContext) extends Progressi
 class AllProgressivePathChooser(implicit ac: AdamContext) extends ProgressivePathChooser {
   override def getPaths(entityname: EntityName, nnq: NearestNeighbourQuery): Seq[QueryExpression] = {
     Index.list(entityname)
-      .map(index => IndexScanExpression(index.get)(nnq)()).+:(SequentialScanExpression(entityname)(nnq)())
+      .map(index => IndexScanExpression(index.get)(nnq)()).+:(new SequentialScanExpression(entityname)(nnq)())
   }
 }
 
