@@ -139,8 +139,10 @@ $("#btnSubmit").click(function () {
     $("#btnSubmit").addClass('disabled');
     $("#btnSubmit").prop('disabled', true);
 
-    $("#progress").show();
+    $('#results').html("");
+    $('#resultbox').hide();
 
+    $("#progress").show();
 
     $.ajax("/query/compound", {
         data: JSON.stringify(evaluate("box-start")),
@@ -222,7 +224,7 @@ var evaluate = function (id) {
 
     result.options.entityname = $("#entityname").val();
     result.options.column = $("#column").val();
-    result.options.query = $("#query").val();
+    result.options.query = $("#query").val().replace("[", "").replace("]", "");
 
     result.options.informationlevel = $("#informationlevel").val();
 

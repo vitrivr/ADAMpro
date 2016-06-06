@@ -10,7 +10,7 @@ import org.apache.spark.sql.DataFrame
   * Ivan Giangreco
   * May 2016
   */
-case class CompoundQueryExpression(expr : QueryExpression, id: Option[String] = None)(implicit ac: AdamContext) extends QueryExpression(id) {
+case class CompoundQueryExpression(expr : QueryExpression, id: Option[String] = None)(@transient implicit val ac: AdamContext) extends QueryExpression(id) {
   override val info = ExpressionDetails(None, Some("Compound Query Expression"), id, None)
   children ++= Seq(expr)
 

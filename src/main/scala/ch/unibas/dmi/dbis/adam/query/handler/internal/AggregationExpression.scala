@@ -3,6 +3,8 @@ package ch.unibas.dmi.dbis.adam.query.handler.internal
 import java.util.concurrent.TimeUnit
 
 import ch.unibas.dmi.dbis.adam.config.FieldNames
+import ch.unibas.dmi.dbis.adam.datatypes.FieldTypes
+import ch.unibas.dmi.dbis.adam.entity.AttributeDefinition
 import ch.unibas.dmi.dbis.adam.main.{AdamContext, SparkStartup}
 import ch.unibas.dmi.dbis.adam.query.Result
 import ch.unibas.dmi.dbis.adam.query.handler.generic.{ExpressionDetails, QueryExpression}
@@ -19,7 +21,7 @@ import scala.concurrent.{Await, Future}
   * Ivan Giangreco
   * April 2016
   */
-abstract class AggregationExpression(left: QueryExpression, right: QueryExpression, order: ExpressionEvaluationOrder.Order = ExpressionEvaluationOrder.Parallel, id: Option[String] = None)(implicit ac: AdamContext) extends QueryExpression(id) {
+abstract class AggregationExpression(left: QueryExpression, right: QueryExpression, order: ExpressionEvaluationOrder.Order = ExpressionEvaluationOrder.Parallel, id: Option[String] = None)(@transient implicit val ac: AdamContext) extends QueryExpression(id) {
   children ++= Seq(left, right)
 
   override protected def run(filter: Option[DataFrame] = None)(implicit ac: AdamContext): Option[DataFrame] = {
@@ -137,7 +139,7 @@ object AggregationExpression {
     override protected def run(filter: Option[DataFrame] = None)(implicit ac: AdamContext): Option[DataFrame] = {
       import SparkStartup.Implicits._
       val rdd = sc.emptyRDD[Row]
-      Some(sqlContext.createDataFrame(rdd, Result.resultSchema("")))
+      Some(sqlContext.createDataFrame(rdd, Result.resultSchema(AttributeDefinition("", FieldTypes.STRINGTYPE))))
     }
   }
 

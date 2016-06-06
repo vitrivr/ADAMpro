@@ -19,17 +19,20 @@ import scala.collection.mutable
   * Ivan Giangreco
   * May 2016
   */
-case class SequentialScanExpression(entityname: EntityName)(nnq: NearestNeighbourQuery, id: Option[String] = None)(filterExpr: Option[QueryExpression] = None)(implicit ac: AdamContext) extends QueryExpression(id) {
-  override val info = ExpressionDetails(Some(entityname), Some("Sequential Scan Expression"), id, None)
+case class SequentialScanExpression(entity : Entity)(nnq: NearestNeighbourQuery, id: Option[String] = None)(filterExpr: Option[QueryExpression] = None)(@transient implicit val ac: AdamContext) extends QueryExpression(id) {
+  override val info = ExpressionDetails(Some(entity.entityname), Some("Sequential Scan Expression"), id, None)
   children ++= filterExpr.map(Seq(_)).getOrElse(Seq())
+
+  def this(entityname: EntityName)(nnq: NearestNeighbourQuery, id: Option[String] = None)(filterExpr: Option[QueryExpression] = None)(implicit ac: AdamContext) {
+    this(Entity.load(entityname).get)(nnq, id)(filterExpr)
+  }
 
   override protected def run(filter: Option[DataFrame] = None)(implicit ac: AdamContext): Option[DataFrame] = {
     log.debug("perform sequential scan")
 
     ac.sc.setLocalProperty("spark.scheduler.pool", "sequential")
-    ac.sc.setJobGroup(id.getOrElse(""), "sequential scan: " + entityname.toString, interruptOnCancel = true)
+    ac.sc.setJobGroup(id.getOrElse(""), "sequential scan: " + entity.entityname.toString, interruptOnCancel = true)
 
-    val entity = Entity.load(entityname).get
     if (!entity.isQueryConform(nnq)) {
       throw QueryNotConformException()
     }
@@ -69,13 +72,13 @@ object SequentialScanExpression extends Logging {
     */
   def scan(df: DataFrame, nnq: NearestNeighbourQuery)(implicit ac: AdamContext): DataFrame = {
     val q = ac.sc.broadcast(nnq.q)
-    val weights = ac.sc.broadcast(nnq.weights)
+    val w = ac.sc.broadcast(nnq.weights)
 
     import org.apache.spark.sql.functions.{col, udf}
     val distUDF = udf((c: FeatureVectorWrapper) => {
       try {
         if (c != null) {
-          nnq.distance(q.value, c.vector, weights.value)
+          nnq.distance(q.value, c.vector, w.value).toFloat
         } else {
           Float.MaxValue
         }

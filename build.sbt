@@ -55,6 +55,11 @@ val coreLibs = Seq(
   "org.apache.spark" %% "spark-hive" % "1.6.1",
   "org.apache.spark" %% "spark-mllib" % "1.6.1",
   "org.apache.hadoop" % "hadoop-client" % "2.6.0" excludeAll ExclusionRule("javax.servlet") //make sure that you use the same hadoop version as in your deployment!
+).map(
+  _.excludeAll(
+    ExclusionRule("org.scala-lang"),
+    ExclusionRule("org.slf4j", "slf4j-api")
+  )
 )
 //TODO: add multiple configurations to sbt, one which has coreLibs as provided (as they do not have to be submitted to spark)
 
@@ -78,7 +83,8 @@ val secondaryLibs = Seq(
 
 //log libs
 val logLibs = Seq(
-  "org.slf4j" % "slf4j-log4j12" % "1.7.5"
+  "org.slf4j" % "slf4j-api" % "1.7.5" force(),
+  "org.slf4j" % "slf4j-log4j12" % "1.7.5" force()
 )
 
 //tertiary libs
@@ -93,7 +99,8 @@ val tertiaryLibs = Seq(
 
 //test libs
 val testLibs = Seq(
-  "org.scalatest" % "scalatest_2.10" % "3.0.0-M15"
+  "org.scalatest" % "scalatest_2.10" % "3.0.0-M15",
+  "io.grpc" % "grpc-okhttp" % "0.12.0"
 ).map(
   _.excludeAll(
     ExclusionRule("org.scala-lang"),

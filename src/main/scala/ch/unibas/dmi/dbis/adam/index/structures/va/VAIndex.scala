@@ -79,7 +79,7 @@ class VAIndex(val indexname: IndexName, val entityname: EntityName, override pri
           localRh.results.map(x => Row(x.tid, x.lower.toFloat)).iterator
         })
 
-    ac.sqlContext.createDataFrame(rddResults,  Result.resultSchema(pk.name))
+    ac.sqlContext.createDataFrame(rddResults,  Result.resultSchema(pk))
   }
 
   override def isQueryConform(nnq: NearestNeighbourQuery): Boolean = {

@@ -1,8 +1,9 @@
 package ch.unibas.dmi.dbis.adam.query
 
 import ch.unibas.dmi.dbis.adam.config.FieldNames
+import ch.unibas.dmi.dbis.adam.entity.AttributeDefinition
 import ch.unibas.dmi.dbis.adam.query.distance.Distance.Distance
-import org.apache.spark.sql.types.{FloatType, LongType, StructField, StructType}
+import org.apache.spark.sql.types.{FloatType, StructField, StructType}
 
 /**
   * adamtwo
@@ -18,8 +19,8 @@ case class Result(distance: Distance, tid: Any) extends Ordered[Result] {
   *
   */
 object Result {
-  def resultSchema(pk : String) = StructType(Seq(
-    StructField(pk, LongType, nullable = true),
+  def resultSchema(pk : AttributeDefinition) = StructType(Seq(
+    StructField(pk.name, pk.fieldtype.datatype, nullable = true),
     StructField(FieldNames.distanceColumnName, FloatType, nullable = true)
   ))
 }

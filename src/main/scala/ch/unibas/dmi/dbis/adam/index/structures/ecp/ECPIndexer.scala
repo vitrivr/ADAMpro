@@ -11,7 +11,7 @@ import ch.unibas.dmi.dbis.adam.query.distance.DistanceFunction
 import org.apache.spark.rdd.RDD
 import org.apache.spark.sql.Row
 import org.apache.spark.sql.types.{StructField, StructType}
-import org.apache.spark.util.random.ADAMSamplingUtils
+import org.apache.spark.util.random.Sampling
 
 /**
   * adamtwo
@@ -33,7 +33,7 @@ class ECPIndexer(trainingSize: Option[Int], distance: DistanceFunction)(@transie
     val entity = Entity.load(entityname).get
 
     val n = entity.count
-    val fraction = ADAMSamplingUtils.computeFractionForSampleSize(math.max(trainingSize.getOrElse(math.sqrt(n).toInt), IndexGenerator.MINIMUM_NUMBER_OF_TUPLE), n, withReplacement = false)
+    val fraction = Sampling.computeFractionForSampleSize(math.max(trainingSize.getOrElse(math.sqrt(n).toInt), IndexGenerator.MINIMUM_NUMBER_OF_TUPLE), n, withReplacement = false)
     var trainData = data.sample(false, fraction).collect()
     if(trainData.length < IndexGenerator.MINIMUM_NUMBER_OF_TUPLE){
       trainData = data.take(IndexGenerator.MINIMUM_NUMBER_OF_TUPLE)

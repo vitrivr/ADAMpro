@@ -20,8 +20,7 @@ resolvers ++= Seq(
 
 libraryDependencies ++= Seq(
   "io.grpc" % "grpc-all" % "0.13.1",
-  "com.trueaccord.scalapb" %% "scalapb-runtime-grpc" % (PB.scalapbVersion in PB.protobufConfig).value,
-  "com.fasterxml.jackson.core" % "jackson-core"          % "2.4.4"
+  "com.trueaccord.scalapb" %% "scalapb-runtime-grpc" % (PB.scalapbVersion in PB.protobufConfig).value
 )
 
 //assembly
@@ -35,10 +34,12 @@ assemblyShadeRules in assembly := Seq(
 assemblyOption in assembly :=
   (assemblyOption in assembly).value.copy(includeScala = false)
 
+val meta = """META.INF(.)*""".r
 assemblyMergeStrategy in assembly := {
   case PathList("javax", "servlet", xs @ _*) => MergeStrategy.first
   case PathList(ps @ _*) if ps.last endsWith ".html" => MergeStrategy.first
   case n if n.startsWith("reference.conf") => MergeStrategy.concat
   case n if n.endsWith(".conf") => MergeStrategy.concat
+  case meta(_) => MergeStrategy.discard
   case x => MergeStrategy.first
 }

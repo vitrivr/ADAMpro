@@ -240,7 +240,7 @@ class AdamTestBase extends FeatureSpec with GivenWhenThen with Eventually with I
     val where = readResourceFile("groundtruth/bquery.tsv").map(line => {
       val splitted = line.split("\t")
       splitted(0) -> splitted(1)
-    })
+    }).toList
 
 
     //100 nn results
