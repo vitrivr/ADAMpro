@@ -19,7 +19,7 @@ import org.apache.spark.util.random.Sampling
   * Ivan Giangreco
   * October 2015
   */
-class ECPIndexer(trainingSize: Option[Int], distance: DistanceFunction)(@transient implicit val ac: AdamContext) extends IndexGenerator {
+class ECPIndexer(distance: DistanceFunction, trainingSize: Option[Int])(@transient implicit val ac: AdamContext) extends IndexGenerator {
   override val indextypename: IndexTypeName = IndexTypes.ECPINDEX
 
   /**
@@ -72,6 +72,6 @@ object ECPIndexer {
     */
   def apply(distance: DistanceFunction, properties: Map[String, String] = Map[String, String]())(implicit ac: AdamContext): IndexGenerator = {
     val trainingSize = properties.get("ntraining").map(_.toInt)
-    new ECPIndexer(trainingSize, distance)
+    new ECPIndexer(distance, trainingSize)
   }
 }
