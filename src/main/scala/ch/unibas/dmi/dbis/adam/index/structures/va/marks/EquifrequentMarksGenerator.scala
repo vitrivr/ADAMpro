@@ -9,12 +9,19 @@ import org.apache.log4j.Logger
 import scala.collection.mutable.ListBuffer
 
 /**
+  * adamtwo
   *
+  * Ivan Giangreco
+  * September 2015
+  *
+  * equifrequent marks generator: all cells have about the same number of points; for this we use training data, build a histogram
+  * and try to fit approximately the same number of points in each cell; the space along each dimension is split into cells with
+  * equi-frequent points
   */
 private[va] object EquifrequentMarksGenerator extends MarksGenerator with Serializable {
   @transient lazy val log = Logger.getLogger(getClass.getName)
 
-  val SAMPLING_FREQUENCY = 10000
+  val SAMPLING_FREQUENCY = 10000 //number of buckets for the histogram (not the number of marks!)
 
   /**
     *

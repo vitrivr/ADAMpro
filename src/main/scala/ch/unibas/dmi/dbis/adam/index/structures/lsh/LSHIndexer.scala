@@ -42,6 +42,7 @@ class LSHIndexer(numHashTables: Int, numHashes: Int, distance: DistanceFunction,
 
     val indexdata = data.map(
       datum => {
+        //compute hash for each vector
         val hash = LSHUtils.hashFeature(datum.feature, indexMetaData)
         Row(datum.id, hash)
       })
@@ -66,6 +67,8 @@ class LSHIndexer(numHashTables: Int, numHashes: Int, distance: DistanceFunction,
     //data
     val dims = trainData.head.feature.size
 
+
+    //compute average radius for query
     val radiuses = {
       val res = for (a <- trainData; b <- trainData) yield (a.id, distance(a.feature, b.feature))
       res.groupBy(_._1).map(x => x._2.map(_._2).max)

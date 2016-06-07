@@ -75,6 +75,7 @@ class PQIndexer(nsq: Int, trainingSize: Int)(@transient implicit val ac: AdamCon
 
     val d = trainData.head.feature.size
 
+    //split vectors in sub-vectors and assign to part
     val rdds = trainData.map(_.feature).flatMap(t =>
       t.toArray.grouped(math.max(1, d / nsq)).toSeq.zipWithIndex)
       .groupBy(_._2)
@@ -86,6 +87,7 @@ class PQIndexer(nsq: Int, trainingSize: Int)(@transient implicit val ac: AdamCon
       .map(_._2)
 
 
+    //cluster single parts
     val clusters: IndexedSeq[KMeansModel] = rdds.map { rdd =>
       KMeans.train(rdd, numClusters, numIterations)
     }

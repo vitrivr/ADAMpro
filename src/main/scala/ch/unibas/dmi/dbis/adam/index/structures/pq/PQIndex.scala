@@ -42,6 +42,7 @@ class PQIndex(val indexname: IndexName, val entityname: EntityName, override pri
     val distUDF = udf((c: Seq[Byte]) => {
       var i : Int = 0
       var sum : Float = 0
+      //sum up distance of each part by choosing the right cluster
       while(i < c.length){
         sum += distances.value(i)(c(i))
         i += 1

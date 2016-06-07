@@ -32,6 +32,8 @@ class ECPIndexer(distance: DistanceFunction, trainingSize: Option[Int])(@transie
   override def index(indexname: IndexName, entityname: EntityName, data: RDD[IndexingTaskTuple[_]]): Index = {
     val entity = Entity.load(entityname).get
 
+
+    //randomly choose leaders
     val n = entity.count
     val fraction = Sampling.computeFractionForSampleSize(math.max(trainingSize.getOrElse(math.sqrt(n).toInt), IndexGenerator.MINIMUM_NUMBER_OF_TUPLE), n, withReplacement = false)
     var trainData = data.sample(false, fraction).collect()
@@ -48,6 +50,8 @@ class ECPIndexer(distance: DistanceFunction, trainingSize: Option[Int])(@transie
       val minTID = leaders.value.map({ l =>
         (l.id, distance.apply(datum.feature, l.feature))
       }).minBy(_._2)._1
+
+      //TODO: compute centroids and store centroids rather than leaders
 
       Row(datum.id, minTID)
     })

@@ -45,9 +45,8 @@ class SHIndex(val indexname: IndexName, val entityname: EntityName, override pri
 
     import MovableFeature.conv_feature2MovableFeature
     val originalQuery = SHUtils.hashFeature(q, metadata)
+    //move the query around by the precomuted radius
     val queries = ac.sc.broadcast(List.fill(numOfQueries)(SHUtils.hashFeature(q.move(metadata.radius), metadata)) ::: List(originalQuery))
-
-    val maxScore : Float = originalQuery.intersectionCount(originalQuery) * numOfQueries
 
     import org.apache.spark.sql.functions.udf
     val distUDF = udf((c: BitString[_]) => {
@@ -55,7 +54,7 @@ class SHIndex(val indexname: IndexName, val entityname: EntityName, override pri
       var score = 0
       while (i < queries.value.length) {
         val query = queries.value(i)
-        score += c.intersectionCount(query)
+        score += c.intersectionCount(query) //Hamming distance
         i += 1
       }
 
@@ -65,7 +64,9 @@ class SHIndex(val indexname: IndexName, val entityname: EntityName, override pri
     val rddResults = data
       .withColumn(FieldNames.distanceColumnName, distUDF(data(FieldNames.featureIndexColumnName)))
       .mapPartitions { items =>
-        val handler = new SHResultHandler(k)
+        val handler = new SHResultHandler(k)  //use handler to take closest n elements
+        //(using this handler is necessary here, as if the closest element has distance 5, we want all closes elements with distance 5;
+        //the methods provided by Spark (e.g. take) do not allow this
 
         items.foreach(item => {
           handler.offer(item, this.pk.name)

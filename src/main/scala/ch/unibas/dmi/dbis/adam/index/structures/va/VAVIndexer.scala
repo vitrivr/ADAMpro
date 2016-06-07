@@ -25,6 +25,9 @@ import org.apache.spark.util.random.Sampling
   *
   * Ivan Giangreco
   * September 2015
+  *
+  * VAV: this VA-File index will have a training phase in which we learn the number of bits per dimension (new version of VA-File)
+  * note that using VAF, we may still use both the equidistant or the equifrequent marks generator
   */
 class VAVIndexer(nbits: Option[Int], marksGenerator: MarksGenerator, trainingSize: Int, distance: MinkowskiDistance)(@transient implicit val ac: AdamContext) extends IndexGenerator {
   override val indextypename: IndexTypeName = IndexTypes.VAVINDEX

@@ -21,7 +21,13 @@ import org.apache.spark.util.random.Sampling
 
 
 /**
+  * adamtwo
   *
+  * Ivan Giangreco
+  * September 2015
+  *
+  * VAF: this VA-File index will use for every dimension the same number of bits (original implementation)
+  * note that using VAF, we may still use both the equidistant or the equifrequent marks generator
   */
 class VAFIndexer(maxMarks: Int = 64, marksGenerator: MarksGenerator, bitsPerDimension: Int, trainingSize: Int, distance: MinkowskiDistance)(@transient implicit val ac: AdamContext) extends IndexGenerator {
   override val indextypename: IndexTypeName = IndexTypes.VAFINDEX

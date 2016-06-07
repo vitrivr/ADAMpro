@@ -23,7 +23,7 @@ import org.apache.spark.sql.{Row, DataFrame}
   * Ivan Giangreco
   * August 2015
   */
-class VAIndex(val indexname: IndexName, val entityname: EntityName, override private[index] var data : DataFrame, private[index] val metadata: VAIndexMetaData)(@transient override implicit val ac : AdamContext)
+class VAIndex(val indexname: IndexName, val entityname: EntityName, override private[index] var data: DataFrame, private[index] val metadata: VAIndexMetaData)(@transient override implicit val ac: AdamContext)
   extends Index {
 
   override val indextypename: IndexTypeName = metadata.signatureGenerator match {
@@ -51,10 +51,10 @@ class VAIndex(val indexname: IndexName, val entityname: EntityName, override pri
     val ubounds = ac.sc.broadcast(bounds._2)
 
     import org.apache.spark.sql.functions.udf
-    val distUDF = (bounds : Broadcast[Bounds]) => udf((c: BitString[_]) => {
+    val distUDF = (bounds: Broadcast[Bounds]) => udf((c: BitString[_]) => {
       val cells = metadata.signatureGenerator.toCells(c)
 
-      var bound : Float = 0
+      var bound: Float = 0
 
       var idx = 0
       while (idx < cells.length) {
@@ -65,21 +65,24 @@ class VAIndex(val indexname: IndexName, val entityname: EntityName, override pri
       bound
     })
 
-    val rddResults = data
+    val results = data
       .withColumn("lbound", distUDF(lbounds)(data(FieldNames.featureIndexColumnName)))
-      .withColumn("ubound", distUDF(ubounds)(data(FieldNames.featureIndexColumnName)))
-        .mapPartitions(p => {
-          val localRh = new VAResultHandler(k)
+      .withColumn("ubound", distUDF(ubounds)(data(FieldNames.featureIndexColumnName))) //note that this is computed lazy!
+      .mapPartitions(p => {
+      //in here  we compute for each partition the k nearest neighbours and collect the results
+      val localRh = new VAResultHandler(k)
 
-          while(p.hasNext){
-            val current = p.next()
-            localRh.offer(current, this.pk.name)
-          }
+      while (p.hasNext) {
+        val current = p.next()
+        localRh.offer(current, this.pk.name)
+      }
 
-          localRh.results.map(x => Row(x.tid, x.lower.toFloat)).iterator
-        })
+      localRh.results.map(x => Row(x.tid, x.lower.toFloat)).iterator
+    })
+    //the most correct solution would be to re-do at this point the result handler with the pre-selected results again
+    //but in most cases this will be less efficient than just considering all candidates
 
-    ac.sqlContext.createDataFrame(rddResults,  Result.resultSchema(pk))
+    ac.sqlContext.createDataFrame(results, Result.resultSchema(pk))
   }
 
   override def isQueryConform(nnq: NearestNeighbourQuery): Boolean = {
@@ -92,8 +95,8 @@ class VAIndex(val indexname: IndexName, val entityname: EntityName, override pri
 
   /**
     *
-    * @param q query vector
-    * @param marks marks
+    * @param q        query vector
+    * @param marks    marks
     * @param distance distance function
     * @return
     */
@@ -141,7 +144,7 @@ object VAIndex {
   type Marks = Seq[Seq[VectorBase]]
   type Bounds = Array[Array[Distance]]
 
-  def apply(indexname: IndexName, entityname: EntityName, data: DataFrame, meta: Any)(implicit ac : AdamContext): VAIndex = {
+  def apply(indexname: IndexName, entityname: EntityName, data: DataFrame, meta: Any)(implicit ac: AdamContext): VAIndex = {
     val indexMetaData = meta.asInstanceOf[VAIndexMetaData]
     new VAIndex(indexname, entityname, data, indexMetaData)
   }

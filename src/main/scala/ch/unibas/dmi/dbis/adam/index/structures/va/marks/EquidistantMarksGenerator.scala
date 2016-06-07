@@ -7,21 +7,24 @@ import ch.unibas.dmi.dbis.adam.index.structures.va.VAIndex.Marks
 import org.apache.log4j.Logger
 
 /**
- * adamtwo
- *
- * Ivan Giangreco
- * August 2015
- */
+  * adamtwo
+  *
+  * Ivan Giangreco
+  * August 2015
+  *
+  * equidistant marks generator: all marks have the same distance from each other; for this the minimum and the maximum value per dimension
+  * is considered and the space along each dimension is split over this range in equi-distant cells
+  */
 private[va] object EquidistantMarksGenerator extends MarksGenerator with Serializable {
   @transient lazy val log = Logger.getLogger(getClass.getName)
 
   /**
-   *
-   * @param samples training samples
-   * @param maxMarks maximal number of marks
-   * @return
-   */
-  private[va] def getMarks(samples : Array[IndexingTaskTuple[_]], maxMarks : Seq[Int]) : Marks = {
+    *
+    * @param samples  training samples
+    * @param maxMarks maximal number of marks
+    * @return
+    */
+  private[va] def getMarks(samples: Array[IndexingTaskTuple[_]], maxMarks: Seq[Int]): Marks = {
     log.debug("get equidistant marks for VA-File")
     val dimensionality = maxMarks.length
 
@@ -32,26 +35,26 @@ private[va] object EquidistantMarksGenerator extends MarksGenerator with Seriali
   }
 
   /**
-   *
-   * @param data
-   * @return
-   */
-  private def getMin(data : Array[FeatureVector]) : FeatureVector = {
+    *
+    * @param data
+    * @return
+    */
+  private def getMin(data: Array[FeatureVector]): FeatureVector = {
     val dimensionality = data.head.size
-    val base : FeatureVector = Seq.fill(dimensionality)(Float.MaxValue)
+    val base: FeatureVector = Seq.fill(dimensionality)(Float.MaxValue)
 
-    data.foldLeft(base)((baseV, newV) =>  min(baseV, newV))
+    data.foldLeft(base)((baseV, newV) => min(baseV, newV))
   }
 
   /**
-   *
-   * @param data
-   * @return
-   */
-  private def getMax(data : Array[FeatureVector]) : FeatureVector = {
+    *
+    * @param data
+    * @return
+    */
+  private def getMax(data: Array[FeatureVector]): FeatureVector = {
     val dimensionality = data.head.size
-    val base : FeatureVector = Seq.fill(dimensionality)(Float.MinValue)
+    val base: FeatureVector = Seq.fill(dimensionality)(Float.MinValue)
 
-    data.foldLeft(base)((baseV, newV) =>  max(baseV, newV))
+    data.foldLeft(base)((baseV, newV) => max(baseV, newV))
   }
 }
