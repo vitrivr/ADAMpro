@@ -39,12 +39,14 @@ class ECPIndex(val indexname: IndexName, val entityname: EntityName, override pr
   override def scan(data: DataFrame, q: FeatureVector, distance: DistanceFunction, options: Map[String, Any], k: Int): DataFrame = {
     log.debug("scanning eCP index " + indexname)
 
+    //For every leader, check its distance to the query-vector. Then sort
     val centroids = ac.sc.broadcast(metadata.leaders.map(l => {
       (l.id, metadata.distance(q, l.feature))
     }).sortBy(_._2))
 
     log.trace("centroids prepared")
 
+    //Iterate over all centroids until the result-count is over k
     import org.apache.spark.sql.functions.lit
     var results : DataFrame = null
     var i = 0
