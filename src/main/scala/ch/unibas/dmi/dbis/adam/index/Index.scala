@@ -463,7 +463,7 @@ object Index extends Logging {
         var newPath = ""
 
         do {
-          newPath = index.path + "-rep" + Random.nextInt
+          newPath = oldPath + "-rep" + Random.nextInt
         } while (SparkStartup.indexStorage.exists(newPath).get)
 
         SparkStartup.indexStorage.write(index.indexname, data, Some(newPath))
