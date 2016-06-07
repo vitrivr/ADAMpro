@@ -10,7 +10,7 @@ import ch.unibas.dmi.dbis.adam.main.AdamContext
 import ch.unibas.dmi.dbis.adam.query.distance.DistanceFunction
 import org.apache.spark.rdd.RDD
 import org.apache.spark.sql.Row
-import org.apache.spark.sql.types.{StructField, StructType}
+import org.apache.spark.sql.types.{IntegerType, StructField, StructType}
 import org.apache.spark.util.random.Sampling
 
 /**
@@ -19,14 +19,14 @@ import org.apache.spark.util.random.Sampling
   * Ivan Giangreco
   * October 2015
   */
-class ECPIndexer(distance: DistanceFunction, trainingSize: Option[Int])(@transient implicit val ac: AdamContext) extends IndexGenerator {
+class ECPIndexer(centroidBasedLeaders: Boolean, distance: DistanceFunction, trainingSize: Option[Int])(@transient implicit val ac: AdamContext) extends IndexGenerator {
   override val indextypename: IndexTypeName = IndexTypes.ECPINDEX
 
   /**
     *
-    * @param indexname name of index
+    * @param indexname  name of index
     * @param entityname name of entity
-    * @param data data to index
+    * @param data       data to index
     * @return
     */
   override def index(indexname: IndexName, entityname: EntityName, data: RDD[IndexingTaskTuple[_]]): Index = {
@@ -37,45 +37,65 @@ class ECPIndexer(distance: DistanceFunction, trainingSize: Option[Int])(@transie
     val n = entity.count
     val fraction = Sampling.computeFractionForSampleSize(math.max(trainingSize.getOrElse(math.sqrt(n).toInt), IndexGenerator.MINIMUM_NUMBER_OF_TUPLE), n, withReplacement = false)
     var trainData = data.sample(false, fraction).collect()
-    if(trainData.length < IndexGenerator.MINIMUM_NUMBER_OF_TUPLE){
+    if (trainData.length < IndexGenerator.MINIMUM_NUMBER_OF_TUPLE) {
       trainData = data.take(IndexGenerator.MINIMUM_NUMBER_OF_TUPLE)
     }
 
-    val leaders = ac.sc.broadcast(trainData)
+    val bcleaders = ac.sc.broadcast(trainData.zipWithIndex.map { case (idt, idx) => IndexingTaskTuple(idx, idt.feature) }) //use own ids, not id of data
     log.trace("eCP index chosen " + trainData.length + " leaders")
 
     log.debug("eCP indexing...")
 
     val indexdata = data.map(datum => {
-      val minTID = leaders.value.map({ l =>
+      val minTID = bcleaders.value.map({ l =>
         (l.id, distance.apply(datum.feature, l.feature))
       }).minBy(_._2)._1
 
-      //TODO: compute centroids and store centroids rather than leaders
-
-      Row(datum.id, minTID)
+      (datum.id, minTID, datum.feature)
     })
 
     val schema = StructType(Seq(
       StructField(entity.pk.name, entity.pk.fieldtype.datatype, nullable = false),
-      StructField(FieldNames.featureIndexColumnName, entity.pk.fieldtype.datatype, nullable = false)
+      StructField(FieldNames.featureIndexColumnName, IntegerType, nullable = false)
     ))
 
-    val df = ac.sqlContext.createDataFrame(indexdata, schema)
+    val df = ac.sqlContext.createDataFrame(indexdata.map(x => Row(x._1, x._2)), schema)
 
-    new ECPIndex(indexname, entityname, df, ECPIndexMetaData(leaders.value.toSeq, distance))
+    log.trace("eCP index updating leaders")
+
+    val leaders = if (centroidBasedLeaders) {
+      //compute centroid
+      indexdata.groupBy(_._2).map { case (id, data) =>
+        val vectors = data.map(x => x._3).toSeq
+        val newLeader = vectors.reduce((x, y) => x + y)./=(vectors.length.toFloat)
+        IndexingTaskTuple(id, newLeader)
+      }.collect()
+    } else {
+      //use feature vector chosen in beginning as leader
+      bcleaders.value
+    }
+
+    new ECPIndex(indexname, entityname, df, ECPIndexMetaData(leaders.toSeq, distance))
   }
 }
 
 object ECPIndexer {
   /**
     *
-    * @param distance distance function
+    * @param distance   distance function
     * @param properties indexing properties
     * @return
     */
   def apply(distance: DistanceFunction, properties: Map[String, String] = Map[String, String]())(implicit ac: AdamContext): IndexGenerator = {
     val trainingSize = properties.get("ntraining").map(_.toInt)
-    new ECPIndexer(distance, trainingSize)
+
+    val leaderTypeDescription = properties.getOrElse("leadertype", "simple")
+    val leaderType = leaderTypeDescription.toLowerCase match {
+      //possibly extend with other types and introduce enum
+      case "centroid" => true
+      case "simple" => false
+    }
+
+    new ECPIndexer(leaderType, distance, trainingSize)
   }
 }
