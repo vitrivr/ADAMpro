@@ -176,7 +176,7 @@ abstract class Index(@transient implicit val ac: AdamContext) extends Serializab
     val results = scan(df, q, distance, options, k)
     val t2 = System.currentTimeMillis
 
-    log.debug(indexname + "returning tuples in " + (t2 - t1) + " msecs")
+    log.debug(indexname + " returning tuples in " + (t2 - t1) + " msecs")
 
     results
   }
