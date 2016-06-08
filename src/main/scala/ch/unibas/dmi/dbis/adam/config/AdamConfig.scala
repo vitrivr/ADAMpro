@@ -1,4 +1,7 @@
 package ch.unibas.dmi.dbis.adam.config
+
+import java.io.File
+
 import com.typesafe.config.ConfigFactory
 import org.apache.spark.Logging
 
@@ -24,17 +27,17 @@ object AdamConfig extends Serializable with Logging {
   log.debug(config.toString)
   config.checkValid(ConfigFactory.defaultReference(), "adampro")
 
-  val basePath = config.getString("adampro.basePath")
+  val basePath = cleanPath(config.getString("adampro.basePath"))
   val isBaseOnHadoop = basePath.startsWith("hdfs")
   log.info("storing to hdfs: " + isBaseOnHadoop.toString)
 
-  val dataPath = config.getString("adampro.dataPath")
-  val indexPath = config.getString("adampro.indexPath")
+  val dataPath = cleanPath(config.getString("adampro.dataPath"))
+  val indexPath = cleanPath(config.getString("adampro.indexPath"))
 
-  val catalogPath = config.getString("adampro.catalogPath")
+  val catalogPath = cleanPath(config.getString("adampro.catalogPath"))
   val indexMetaCatalogPath = catalogPath + "/" + "indexmeta"
 
-  val internalsPath = config.getString("adampro.internalsPath")
+  val internalsPath = cleanPath(config.getString("adampro.internalsPath"))
   val schedulerFile = internalsPath + "/" + "scheduler.xml"
 
   val jdbcUrl =  config.getString("adampro.jdbc.url")
@@ -71,5 +74,22 @@ object AdamConfig extends Serializable with Logging {
     Option(config.getInt("adampro.localNodes"))
   } else {
     None
+  }
+
+
+  /**
+    * Cleans paths, e.g. replaces ~ by path to home folder
+    *
+    * @param s
+    * @return
+    */
+  private def cleanPath(s : String): String = {
+    var newString = s
+
+    if (newString.startsWith("~" + File.separator)) {
+      newString = System.getProperty("user.home") + newString.substring(1);
+    }
+
+    newString
   }
 }
