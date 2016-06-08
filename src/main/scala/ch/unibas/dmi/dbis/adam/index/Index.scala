@@ -290,7 +290,6 @@ object Index extends Logging {
     val index = indexgenerator.index(indexname, entity.entityname, rdd)
     index.data = index
       .data
-      .repartition(AdamConfig.defaultNumberOfPartitions)
       .withColumnRenamed("id", entity.pk.name)
       .withColumnRenamed("value", FieldNames.featureIndexColumnName)
     //TODO: possibly store data with index?
