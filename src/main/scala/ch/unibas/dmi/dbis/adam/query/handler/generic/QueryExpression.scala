@@ -47,7 +47,7 @@ abstract class QueryExpression(id: Option[String]) extends Serializable with Log
   }
 
   /**
-    *
+    * Evaluates the query expression. Note that you should run prepareTree() before evaluating a query expression.
     * @return
     */
   def evaluate()(implicit ac: AdamContext): Option[DataFrame] = {
@@ -76,6 +76,7 @@ abstract class QueryExpression(id: Option[String]) extends Serializable with Log
 
 
   /**
+    * Returns information on the query expression (possibly on the tree)
     *
     * @param levels degree of detail in collecting information
     * @return
@@ -94,11 +95,17 @@ abstract class QueryExpression(id: Option[String]) extends Serializable with Log
   }
 
 
+  /**
+    * Returns information on the query expression (possibly on the tree).
+    *
+    * @return
+    */
   def information(): ExpressionDetails = {
     information(0, 0, withResults = true).head
   }
 
   /**
+    * Returns information on the query expression (possibly on the tree).
     *
     * @param currentDepth current depth in query expression tree
     * @param maxDepth     maximum depth to scan to in tree
@@ -129,6 +136,7 @@ abstract class QueryExpression(id: Option[String]) extends Serializable with Log
   }
 
   /**
+    * Returns string of expression and connection children.
     *
     * @param indentation number of spaces to indent to
     * @return
