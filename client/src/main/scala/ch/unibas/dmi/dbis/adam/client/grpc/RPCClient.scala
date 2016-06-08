@@ -259,7 +259,7 @@ class RPCClient(channel: ManagedChannel, definer: AdamDefinitionBlockingStub, se
 
     try {
       val fv = FeatureVectorMessage().withDenseVector(DenseVectorMessage(query))
-      val nnq = NearestNeighbourQueryMessage(column, Some(fv), None, Option(DistanceMessage(DistanceType.minkowski, Map("norm" -> "2"))), k)
+      val nnq = NearestNeighbourQueryMessage(column, Some(fv), None, Option(DistanceMessage(DistanceType.minkowski, Map("norm" -> "2"))), k, indexOnly = true)
       val request = QueryMessage(from = Some(FromMessage().withEntity(entityname)), hints = hints, nnq = Option(nnq))
 
       val so = new StreamObserver[QueryResultsMessage]() {

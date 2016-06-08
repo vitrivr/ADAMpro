@@ -58,6 +58,7 @@
                 <select id="indextype">
                     <option value="ecp">eCP Index</option>
                     <option value="lsh">LSH Index</option>
+                    <option value="mi">MI Index</option>
                     <option value="pq">PQ Index</option>
                     <option value="sh">SH Index</option>
                     <option value="vaf">VAF Index</option>
@@ -92,6 +93,20 @@
             <div class="input-field col s6">
                 <input id="lsh-ntraining" name="ntraining" type="text" placeholder="500">
                 <label for="lsh-ntraining">training size</label>
+            </div>
+        </div>
+        <div id="mi-info" class="row indexinfo" style="display:none;">
+            <div class="input-field col s6">
+                <input id="pq-ki" name="nsq" type="text" placeholder="min(100, nrefs)">
+                <label for="pq-ki">number of closest reference objects used in index</label>
+            </div>
+            <div class="input-field col s6">
+                <input id="pq-ks" name="nsq" type="text" placeholder="min(100, nrefs)">
+                <label for="pq-ks">number of closest reference objects used in the query</label>
+            </div>
+            <div class="input-field col s6">
+                <input id="mi-nrefs" name="nrefs" type="text" placeholder="2 * math.sqrt(n)">
+                <label for="mi-nrefs">number of reference objects</label>
             </div>
         </div>
         <div id="pq-info" class="row indexinfo" style="display:none;">
