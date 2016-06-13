@@ -37,7 +37,7 @@ object SilvanPlayground extends AdamParUtils{
     time("generating data")(RandomDataOp.apply(name,collectionSize,dim))
 
     //Setup Index. the val ecp should be the index that is created
-    val ecp: Index = time("Setup ECP")(IndexOp.create(name,"feature",IndexTypes.ECPINDEX,EuclideanDistance).get)
+    val ecp: Index = IndexOp.create(name,"feature",IndexTypes.ECPINDEX,EuclideanDistance).get
 
     //Generate initial NNQuery
     val initNNQuery = NearestNeighbourQuery("feature", new FeatureVectorWrapper(Seq.fill(dim)(Random.nextFloat())).vector ,weights =  None, distance = EuclideanDistance, k = 10)
@@ -56,7 +56,7 @@ object SilvanPlayground extends AdamParUtils{
     val nnQuery = NearestNeighbourQuery("feature", queryVector ,weights =  None, distance = EuclideanDistance, k = 10)
 
     var results = time("\n ECP-loadscan 2") (Index.load(ecp.indexname, false).get.scan(nnQuery,None))
-    time("Collecting scan-results")(results.rdd.collect().toSeq.map(f => System.out.println(f.toString())))
+    //time("Collecting scan-results")(results.rdd.collect().toSeq.map(f => System.out.println(f.toString())))
     time("\n val-scan 2") (ecp.scan(nnQuery, None))
   }
 
