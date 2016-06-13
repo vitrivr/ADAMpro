@@ -1,5 +1,5 @@
 //submit operation
-var indextypes = ['ecp', 'lsh', 'pq', 'sh', 'vaf', 'vav', ''].reverse();
+var indextypes = ['ecp', 'lsh', 'mi', 'pq', 'sh', 'vaf', 'vav', ''].reverse();
 
 $("#btnSubmit").click(function () {
     if ($("#entityname").val().length === 0) {

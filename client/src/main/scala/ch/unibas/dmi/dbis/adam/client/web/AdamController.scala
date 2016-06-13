@@ -209,6 +209,7 @@ class AdamController(rpcClient: RPCClient) extends Controller {
     val indextype = request.indextype match {
       case "ecp" => IndexType.ecp
       case "lsh" => IndexType.lsh
+      case "mi" => IndexType.mi
       case "pq" => IndexType.pq
       case "sh" => IndexType.sh
       case "vaf" => IndexType.vaf

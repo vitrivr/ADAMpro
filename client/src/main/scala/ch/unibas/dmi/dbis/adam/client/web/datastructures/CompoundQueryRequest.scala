@@ -100,7 +100,7 @@ case class CompoundQueryRequest(var id: String, var operation: String, var optio
 
     QueryMessage(
       queryid = id,
-      projection = Some(ProjectionMessage().withField(ProjectionMessage.FieldnameMessage.apply(Seq("id", "adamprodistance")))),
+      //projection = Some(ProjectionMessage().withField(ProjectionMessage.FieldnameMessage.apply(Seq("id", "adamprodistance")))),
       from = Some(FromMessage().withExpression(query)),
       information = informationLevel())
   }

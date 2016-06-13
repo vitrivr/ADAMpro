@@ -7,6 +7,7 @@ import ch.unibas.dmi.dbis.adam.http._
 import ch.unibas.dmi.dbis.adam.index.Index._
 import ch.unibas.dmi.dbis.adam.index.structures.ecp.{ECPIndex, ECPIndexer}
 import ch.unibas.dmi.dbis.adam.index.structures.lsh.{LSHIndex, LSHIndexer}
+import ch.unibas.dmi.dbis.adam.index.structures.mi.{MIIndexer, MIIndex}
 import ch.unibas.dmi.dbis.adam.index.structures.pq.{PQIndex, PQIndexer}
 import ch.unibas.dmi.dbis.adam.index.structures.sh.{SHIndex, SHIndexer}
 import ch.unibas.dmi.dbis.adam.index.structures.va.{VAFIndexer, VAIndex, VAVIndexer}
@@ -35,6 +36,8 @@ object IndexTypes {
 
   case object LSHINDEX extends IndexType("lsh", grpc.IndexType.lsh, LSHIndex.apply, LSHIndexer.apply)
 
+  case object MIINDEX extends IndexType("mi", grpc.IndexType.mi, MIIndex.apply, MIIndexer.apply)
+
   case object PQINDEX extends IndexType("pq", grpc.IndexType.pq, PQIndex.apply, PQIndexer.apply)
 
   case object SHINDEX extends IndexType("sh", grpc.IndexType.sh, SHIndex.apply, SHIndexer.apply)
@@ -46,7 +49,7 @@ object IndexTypes {
   /**
     *
     */
-  val values = Seq(ECPINDEX, LSHINDEX, PQINDEX, SHINDEX, VAFINDEX, VAVINDEX)
+  val values = Seq(ECPINDEX, LSHINDEX, MIINDEX, PQINDEX, SHINDEX, VAFINDEX, VAVINDEX)
 
   /**
     *

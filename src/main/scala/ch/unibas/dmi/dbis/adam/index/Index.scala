@@ -176,7 +176,7 @@ abstract class Index(@transient implicit val ac: AdamContext) extends Serializab
     val results = scan(df, q, distance, options, k)
     val t2 = System.currentTimeMillis
 
-    log.debug(indexname + "returning tuples in " + (t2 - t1) + " msecs")
+    log.debug(indexname + " returning tuples in " + (t2 - t1) + " msecs")
 
     results
   }
@@ -290,7 +290,6 @@ object Index extends Logging {
     val index = indexgenerator.index(indexname, entity.entityname, rdd)
     index.data = index
       .data
-      .repartition(AdamConfig.defaultNumberOfPartitions)
       .withColumnRenamed("id", entity.pk.name)
       .withColumnRenamed("value", FieldNames.featureIndexColumnName)
     //TODO: possibly store data with index?
