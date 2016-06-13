@@ -8,3 +8,7 @@ libraryDependencies ++= Seq(
 )
 
 unmanagedBase <<= baseDirectory { base => base / ".." / "lib" }
+
+//assembly
+assemblyOption in assembly :=
+  (assemblyOption in assembly).value.copy(includeScala = true)
