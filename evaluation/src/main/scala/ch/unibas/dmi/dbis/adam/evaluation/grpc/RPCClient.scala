@@ -24,34 +24,71 @@ class RPCClient(channel: ManagedChannel, definer: AdamDefinitionBlockingStub, se
   val noPart = 3
   val k = 100
 
-  definer.listEntities(EmptyMessage())
+  val entityList = definer.listEntities(EmptyMessage())
+  System.out.println("List of current entities: \n" + entityList.entities.toString()+"\n")
 
-  //Generate Entity
-  val entityRes = time("Creating Entity")(definer.createEntity(CreateEntityMessage.apply(eName, Seq(FieldDefinitionMessage.apply("id", FieldDefinitionMessage.FieldType.LONG, true, true, true), FieldDefinitionMessage.apply("feature", FieldDefinitionMessage.FieldType.FEATURE, false, false, true)))))
-  verifyRes(entityRes)
+  //dropAllEntities()
+  //generateEntity()
+  //time("Generating Random Data")(verifyRes(definer.generateRandomData(GenerateRandomDataMessage(eName, nTuples, nDims))))
 
-  //Generate Data
-  val dataRes= definer.generateRandomData(GenerateRandomDataMessage(eName, nTuples, nDims))
-  verifyRes(dataRes)
+  val repartitionRes = time("Repartitioning Entity")(definer.repartitionEntityData(RepartitionMessage(eName,noPart,Seq("feature"),RepartitionMessage.PartitionOptions.REPLACE_EXISTING)))
 
-  //Generate index
-  val indexMsg = IndexMessage(eName,"feature",IndexType.ecp,None,Map[String,String]())
-  val indexRes = definer.index(indexMsg)
-  verifyRes(indexRes)
-
-  definer.repartitionEntityData(RepartitionMessage(eName,noPart,Seq("feature"),RepartitionMessage.PartitionOptions.REPLACE_EXISTING))
+  System.exit(1)
 
   val featureVector = FeatureVectorMessage().withDenseVector(DenseVectorMessage(Seq.fill(nDims)(Random.nextFloat())))
-  val queryMsg = NearestNeighbourQueryMessage("feature",Some(featureVector),None,None,k,Map[String,String](),true,1 until noPart)
-  val res = searcherBlocking.doQuery(QueryMessage(nnq = Some(queryMsg)))
+  var queryMsg = NearestNeighbourQueryMessage("feature",Some(featureVector),None,None,k,Map[String,String](),true,1 until noPart)
+  //Specifies Distance-Message
+  queryMsg = NearestNeighbourQueryMessage("feature",Some(featureVector),None,getDistanceMsg,k,Map[String,String](),true,1 until noPart)
 
-  System.out.println(res.serializedSize+" Results!")
+  //TODO maybe this needs the name of the index
+  val fromMsg = FromMessage(FromMessage.Source.Entity(eName))
+  val resEntity = time("Performing nnQuery")(searcherBlocking.doQuery(QueryMessage(nnq = Some(queryMsg),from = Some(fromMsg))))
+
+  System.out.println("\n" + resEntity.serializedSize + " Results!\n")
+
+  val resIndex = time("Performing nnQuery")(searcherBlocking.doQuery(QueryMessage(nnq = Some(queryMsg),from = Some(FromMessage(FromMessage.Source.Index("silvan_feature_ecp_0"))))))
+
+  System.out.println("\n" + resIndex.serializedSize + " Results!\n")
+
+  System.out.println(definer.count(EntityNameMessage(eName)).message)
+
+  def generateECPIndex(): Unit = {
+    var indexMsg = IndexMessage(eName,"feature",IndexType.ecp,None,Map[String,String]())
+    indexMsg = IndexMessage(eName, "feature",IndexType.ecp,getDistanceMsg,Map[String,String]())
+    val indexRes = time("Building ecp Index")(definer.index(indexMsg))
+    verifyRes(indexRes)
+  }
+
+  def generateEntity(): Unit = {
+    //Generate Entity
+    val entityRes = time("Creating Entity")(definer.createEntity(CreateEntityMessage.apply(eName, Seq(FieldDefinitionMessage.apply("id", FieldDefinitionMessage.FieldType.LONG, true, true, true), FieldDefinitionMessage.apply("feature", FieldDefinitionMessage.FieldType.FEATURE, false, false, true)))))
+    verifyRes(entityRes)
+  }
+
+  def insertData(): Unit ={
+    //TODO Check if we can avoid the heap space problem
+  }
+
+  def getDistanceMsg : Option[DistanceMessage] = Some(DistanceMessage(DistanceMessage.DistanceType.minkowski,Map[String,String](("norm","2"))))
+
 
   def verifyRes (res: AckMessage) {
     if (!(res.code == AckMessage.Code.OK) ) {
       System.err.println ("Error during entity creation")
       System.err.println (res.message)
       System.exit (1)
+    }
+  }
+
+
+  def dropAllEntities() = {
+    val entityList = definer.listEntities(EmptyMessage())
+    System.out.println("List of current entities: \n" + entityList.entities.toString()+"\n")
+
+    for(entity <- entityList.entities) {
+      System.out.println("Dropping " + entity)
+      val dropEnt = definer.dropEntity(EntityNameMessage(entity))
+      verifyRes(dropEnt)
     }
   }
 
