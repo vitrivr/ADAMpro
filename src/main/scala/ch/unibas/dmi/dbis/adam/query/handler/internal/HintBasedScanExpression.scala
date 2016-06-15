@@ -20,7 +20,7 @@ import org.apache.spark.sql.DataFrame
   * Ivan Giangreco
   * May 2016
   */
-case class HintBasedScanExpression(entityname: EntityName, nnq: Option[NearestNeighbourQuery], bq: Option[BooleanQuery], hints: Seq[QueryHint], withFallback: Boolean = true, id: Option[String] = None)(filterExpr: Option[QueryExpression] = None)(@transient implicit val ac: AdamContext) extends QueryExpression(id) {
+case class HintBasedScanExpression(private val entityname: EntityName, private val nnq: Option[NearestNeighbourQuery], private val bq: Option[BooleanQuery], private val hints: Seq[QueryHint], private val withFallback: Boolean = true, id: Option[String] = None)(filterExpr: Option[QueryExpression] = None)(@transient implicit val ac: AdamContext) extends QueryExpression(id) {
   val expr = HintBasedScanExpression.startPlanSearch(entityname, nnq, bq, hints, withFallback)(filterExpr)
   override val info = ExpressionDetails(expr.info.source, Some("Hint-Based Expression: " + expr.info.scantype), id, expr.info.confidence)
   children ++= Seq(expr) ++ filterExpr.map(Seq(_)).getOrElse(Seq())
@@ -29,6 +29,27 @@ case class HintBasedScanExpression(entityname: EntityName, nnq: Option[NearestNe
     log.debug("evaluate hint-based expression, scanning " + expr.info.scantype)
     expr.filter = filter
     expr.evaluate()
+  }
+
+  override def equals(that: Any): Boolean =
+    that match {
+      case that: HintBasedScanExpression =>
+        this.entityname.equals(that.entityname) &&
+          this.nnq.isDefined == that.nnq.isDefined &&
+          this.nnq.map(nnq1 => that.nnq.map(nnq2 => nnq1.equals(nnq2)).getOrElse(false)).getOrElse(true) &&
+          this.bq.map(bq1 => that.bq.map(bq2 => bq1.equals(bq2)).getOrElse(false)).getOrElse(true) &&
+          this.expr.equals(that.expr)
+      case _ => expr.equals(that)
+    }
+
+  override def hashCode(): Int = {
+    val prime = 31
+    var result = 1
+    result = prime * result + entityname.hashCode
+    result = prime * result + nnq.map(_.hashCode).getOrElse(0)
+    result = prime * result + bq.map(_.hashCode).getOrElse(0)
+    result = prime * result + expr.hashCode
+    result
   }
 }
 
@@ -78,7 +99,7 @@ object HintBasedScanExpression extends Logging {
 
     var scan: Option[QueryExpression] = None
     if (bq.isDefined) {
-      scan = Some(BooleanFilterScanExpression(entityname)(bq.get)(expr))
+      scan = Some(new BooleanFilterScanExpression(entityname)(bq.get)(expr))
     }
 
     if (nnq.isEmpty) {

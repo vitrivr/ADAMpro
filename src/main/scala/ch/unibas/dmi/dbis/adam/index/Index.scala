@@ -225,6 +225,15 @@ abstract class Index(@transient implicit val ac: AdamContext) extends Serializab
 
     index
   }
+
+  override def equals(that: Any): Boolean =
+    that match {
+      case that: Index =>
+        this.indexname.equals(that.indexname)
+      case _ => false
+    }
+
+  override def hashCode: Int = indexname.hashCode
 }
 
 object Index extends Logging {

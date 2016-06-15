@@ -20,19 +20,22 @@ object BooleanFilterExpression extends Logging {
 
   /**
     *
-    * @param entityname name of entity
-    * @param bq boolean query
+    * @param entity entity
+    * @param bq     boolean query
     */
-  case class BooleanFilterScanExpression(entityname: EntityName)(bq: BooleanQuery, id: Option[String] = None)(filterExpr: Option[QueryExpression] = None)(@transient implicit val ac: AdamContext) extends QueryExpression(id) {
-    override val info = ExpressionDetails(Some(entityname), Some("Table Boolean-Scan Expression"), id, None)
+  case class BooleanFilterScanExpression(private val entity: Entity)(private val bq: BooleanQuery, id: Option[String] = None)(filterExpr: Option[QueryExpression] = None)(@transient implicit val ac: AdamContext) extends QueryExpression(id) {
+    override val info = ExpressionDetails(Some(entity.entityname), Some("Table Boolean-Scan Expression"), id, None)
     children ++= filterExpr.map(Seq(_)).getOrElse(Seq())
+
+    def this(entityname: EntityName)(bq: BooleanQuery, id: Option[String] = None)(filterExpr: Option[QueryExpression] = None)(implicit ac: AdamContext) {
+      this(Entity.load(entityname).get)(bq, id)(filterExpr)(ac)
+    }
 
     override protected def run(filter: Option[DataFrame] = None)(implicit ac: AdamContext): Option[DataFrame] = {
       log.debug("run boolean filter operation on entity")
 
       ac.sc.setJobGroup(id.getOrElse(""), "boolean filter scan", interruptOnCancel = true)
 
-      val entity = Entity.load(entityname).get
       var df = entity.data
 
       var ids = mutable.Set[Any]()
@@ -57,6 +60,19 @@ object BooleanFilterExpression extends Logging {
       df.map(BooleanFilterExpression.filter(_, bq))
     }
 
+    override def equals(that: Any): Boolean =
+      that match {
+        case that: BooleanFilterScanExpression => this.entity.equals(that.entity) && this.bq.equals(that.bq)
+        case _ => false
+      }
+
+    override def hashCode(): Int = {
+      val prime = 31
+      var result = 1
+      result = prime * result + entity.hashCode
+      result = prime * result + bq.hashCode
+      result
+    }
   }
 
   /**
@@ -79,6 +95,20 @@ object BooleanFilterExpression extends Logging {
       }
 
       df.map(BooleanFilterExpression.filter(_, bq))
+    }
+
+    override def equals(that: Any): Boolean =
+      that match {
+        case that: BooleanFilterAdHocExpression => this.expr.equals(that.expr) && this.bq.equals(that.bq)
+        case _ => false
+      }
+
+    override def hashCode(): Int = {
+      val prime = 31
+      var result = 1
+      result = prime * result + expr.hashCode
+      result = prime * result + bq.hashCode
+      result
     }
   }
 

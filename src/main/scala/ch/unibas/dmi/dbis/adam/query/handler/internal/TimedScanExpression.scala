@@ -15,7 +15,7 @@ import scala.concurrent.duration.Duration
   * Ivan Giangreco
   * May 2016
   */
-case class TimedScanExpression(exprs: Seq[QueryExpression], timelimit: Duration, id: Option[String] = None)(filterExpr: Option[QueryExpression] = None)(@transient implicit val ac: AdamContext) extends QueryExpression(id) {
+case class TimedScanExpression(private val exprs: Seq[QueryExpression], private val timelimit: Duration, id: Option[String] = None)(filterExpr: Option[QueryExpression] = None)(@transient implicit val ac: AdamContext) extends QueryExpression(id) {
   override val info = ExpressionDetails(None, Some("Timed Scan Expression"), id, confidence)
   children ++= exprs ++ filterExpr.map(Seq(_)).getOrElse(Seq())
   var confidence : Option[Float] = None
@@ -47,5 +47,19 @@ case class TimedScanExpression(exprs: Seq[QueryExpression], timelimit: Duration,
 
     confidence = Some(res.confidence)
     res.results
+  }
+
+  override def equals(that: Any): Boolean =
+    that match {
+      case that: TimedScanExpression => this.exprs.equals(that.exprs) && this.timelimit.equals(that.timelimit)
+      case _ => false
+    }
+
+  override def hashCode(): Int = {
+    val prime = 31
+    var result = 1
+    result = prime * result + exprs.hashCode
+    result = prime * result + timelimit.hashCode
+    result
   }
 }

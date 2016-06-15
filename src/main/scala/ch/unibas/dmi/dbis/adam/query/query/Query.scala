@@ -52,17 +52,21 @@ case class BooleanQuery(
     }.mkString("(", ") AND (", ")")
   }
 
-  override def hashCode(): Int = {
-    where.hashCode() + join.hashCode()
-  }
-
-  override def equals(obj: scala.Any): Boolean = {
-    obj match {
-      case other: BooleanQuery =>
-        where.equals(other.where) && join.equals(other.join)
+  override def equals(that: Any): Boolean = {
+    that match {
+      case that: BooleanQuery =>
+        this.where.equals(that.where) && this.join.equals(that.join)
       case _ =>
         false
     }
+  }
+
+  override def hashCode(): Int = {
+    val prime = 31
+    var result = 1
+    result = prime * result + where.hashCode()
+    result = prime * result + join.hashCode()
+    result
   }
 }
 
@@ -89,7 +93,40 @@ case class NearestNeighbourQuery(
                                   options: Map[String, String] = Map[String, String](),
                                   partitions: Option[Set[PartitionID]] = None,
                                   queryID: Option[String] = Some(java.util.UUID.randomUUID().toString))
-  extends Query(queryID) {}
+  extends Query(queryID) {
+
+  override def equals(that: Any): Boolean = {
+    that match {
+      case that: NearestNeighbourQuery =>
+        this.column.equals(that.column) &&
+        this.q.equals(that.q) &&
+        this.weights.isDefined == that.weights.isDefined &&
+        this.weights.map(w1 => that.weights.map(w2 => w1.equals(w2)).getOrElse(false)).getOrElse(true)
+        this.distance.getClass.equals(that.distance.getClass) &&
+        this.k == that.k &&
+        this.indexOnly == that.indexOnly &&
+        this.partitions.isDefined == that.partitions.isDefined &&
+        this.partitions.map(p1 => that.partitions.map(p2 => p1.equals(p2)).getOrElse(false)).getOrElse(true)
+      case _ =>
+        false
+    }
+  }
+
+  override def hashCode(): Int = {
+    val prime = 31
+    var result = 1
+    result = prime * result + column.hashCode
+    result = prime * result + q.hashCode()
+    result = prime * result + weights.map(_.hashCode()).getOrElse(0)
+    result = prime * result + distance.getClass.hashCode()
+    result = prime * result + k
+    result = prime * result + indexOnly.hashCode()
+    result = prime * result + partitions.map(_.hashCode()).getOrElse(0)
+    result
+  }
+
+
+}
 
 /**
   *
