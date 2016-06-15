@@ -13,6 +13,6 @@ object EvaluationStartup {
   val grpcPort = 5890
 
   def main(args: Array[String]): Unit = {
-    val grpc = RPCClient(grpcHost, grpcPort)
+    val grpc: RPCClient = RPCClient(grpcHost, grpcPort)
   }
 }
