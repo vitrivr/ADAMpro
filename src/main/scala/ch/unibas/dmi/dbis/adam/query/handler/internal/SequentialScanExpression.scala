@@ -19,7 +19,7 @@ import scala.collection.mutable
   * Ivan Giangreco
   * May 2016
   */
-case class SequentialScanExpression(entity : Entity)(nnq: NearestNeighbourQuery, id: Option[String] = None)(filterExpr: Option[QueryExpression] = None)(@transient implicit val ac: AdamContext) extends QueryExpression(id) {
+case class SequentialScanExpression(private val entity : Entity)(private val nnq: NearestNeighbourQuery, id: Option[String] = None)(filterExpr: Option[QueryExpression] = None)(@transient implicit val ac: AdamContext) extends QueryExpression(id) {
   override val info = ExpressionDetails(Some(entity.entityname), Some("Sequential Scan Expression"), id, None)
   children ++= filterExpr.map(Seq(_)).getOrElse(Seq())
 
@@ -58,6 +58,20 @@ case class SequentialScanExpression(entity : Entity)(nnq: NearestNeighbourQuery,
     }
 
     df.map(SequentialScanExpression.scan(_, nnq))
+  }
+
+  override def equals(other: Any): Boolean =
+    other match {
+      case that: SequentialScanExpression => this.entity.entityname.equals(that.entity.entityname) && this.nnq.equals(that.nnq)
+      case _ => false
+    }
+
+  override def hashCode(): Int = {
+    val prime = 31
+    var result = 1
+    result = prime * result + entity.hashCode
+    result = prime * result + nnq.hashCode
+    result
   }
 }
 

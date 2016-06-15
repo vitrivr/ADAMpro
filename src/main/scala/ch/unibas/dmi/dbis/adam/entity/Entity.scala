@@ -320,6 +320,15 @@ case class Entity(val entityname: EntityName)(@transient implicit val ac: AdamCo
   }
 
   lazy val featureLength = schema.filter(_.fieldtype == FEATURETYPE).map(attribute => attribute.name -> featureData.get.first().getAs[FeatureVectorWrapper](attribute.name).vector.length).toMap
+
+  override def equals(that: Any): Boolean =
+    that match {
+      case that: Entity =>
+        this.entityname.equals(that.entityname)
+      case _ => false
+    }
+
+  override def hashCode: Int = entityname.hashCode
 }
 
 object Entity extends Logging {

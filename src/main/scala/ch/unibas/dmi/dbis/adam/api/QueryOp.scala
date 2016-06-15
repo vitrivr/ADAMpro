@@ -50,7 +50,7 @@ object QueryOp extends GenericOp {
 
       if (bq.isDefined) {
         log.trace("boolean query is defined")
-        scan = Some(BooleanFilterScanExpression(entityname)(bq.get)(scan))
+        scan = Some(new BooleanFilterScanExpression(entityname)(bq.get)(scan))
       }
 
       scan = Some(new SequentialScanExpression(entityname)(nnq)(scan))
@@ -74,7 +74,7 @@ object QueryOp extends GenericOp {
 
       if (bq.isDefined) {
         log.trace("boolean query is defined")
-        scan = Some(BooleanFilterScanExpression(index.entityname)(bq.get)(scan))
+        scan = Some(new BooleanFilterScanExpression(index.entityname)(bq.get)(scan))
       }
 
       scan = Some(IndexScanExpression(index)(nnq)(scan))
@@ -97,7 +97,7 @@ object QueryOp extends GenericOp {
 
       if (bq.isDefined) {
         log.trace("boolean query is defined")
-        scan = Some(BooleanFilterScanExpression(entityname)(bq.get)(scan))
+        scan = Some(new BooleanFilterScanExpression(entityname)(bq.get)(scan))
       }
 
       scan = Some(new IndexScanExpression(entityname, indextypename)(nnq)(scan))
@@ -161,7 +161,7 @@ object QueryOp extends GenericOp {
 
       if (bq.isDefined) {
         log.trace("boolean query is defined")
-        scan = Some(BooleanFilterScanExpression(entityname)(bq.get)(scan))
+        scan = Some(new BooleanFilterScanExpression(entityname)(bq.get)(scan))
       }
 
       return Success(scan.get.evaluate())

@@ -1,3 +1,8 @@
+$(document).ready(function () {
+    getEntitySelect("centityname");
+});
+
+
 $("#btnSubmitIndex").click(function () {
     if ($("#indexname").val().length === 0) {
         showAlert(" Please specify an index.");

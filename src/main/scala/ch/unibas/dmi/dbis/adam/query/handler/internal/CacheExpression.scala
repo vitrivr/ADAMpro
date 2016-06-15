@@ -1,7 +1,7 @@
 package ch.unibas.dmi.dbis.adam.query.handler.internal
 
 import ch.unibas.dmi.dbis.adam.main.AdamContext
-import ch.unibas.dmi.dbis.adam.query.datastructures.{QueryLRUCache, QueryCacheOptions}
+import ch.unibas.dmi.dbis.adam.query.datastructures.{QueryCacheOptions, QueryLRUCache}
 import ch.unibas.dmi.dbis.adam.query.handler.generic.{ExpressionDetails, QueryExpression}
 import org.apache.spark.sql.DataFrame
 
@@ -11,7 +11,7 @@ import org.apache.spark.sql.DataFrame
   * Ivan Giangreco
   * May 2016
   */
-case class CacheExpression(expr: QueryExpression, cache: QueryCacheOptions = QueryCacheOptions(), id: Option[String])(@transient implicit val ac: AdamContext) extends QueryExpression(id) {
+case class CacheExpression(private val expr: QueryExpression, private val cache: QueryCacheOptions = QueryCacheOptions(), id: Option[String])(@transient implicit val ac: AdamContext) extends QueryExpression(id) {
   override val info = ExpressionDetails(None, Some("Cache Expression"), id, None)
   children ++= Seq(expr)
 
@@ -34,4 +34,12 @@ case class CacheExpression(expr: QueryExpression, cache: QueryCacheOptions = Que
     }
     return res
   }
+
+  override def equals(that: Any): Boolean =
+    that match {
+      case that: CacheExpression => this.expr.equals(that.expr)
+      case _ => expr.equals(that)
+    }
+
+  override def hashCode(): Int = expr.hashCode
 }

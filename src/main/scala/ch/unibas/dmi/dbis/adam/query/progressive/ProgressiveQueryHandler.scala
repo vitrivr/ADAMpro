@@ -37,7 +37,15 @@ object ProgressiveQueryHandler extends Logging {
     } else {
       None
     }
-    progressiveQuery(pathChooser.getPaths(entityname, nnq), filter, onComplete, id)
+
+    val paths = pathChooser.getPaths(entityname, nnq)
+    val distinctPaths = paths.distinct
+
+    if(paths.length != distinctPaths.length){
+      log.debug("removed " + (distinctPaths.length - paths.length) + " paths for progressive querying, which were duplicates")
+    }
+
+    progressiveQuery(distinctPaths, filter, onComplete, id)
   }
 
 
@@ -50,7 +58,7 @@ object ProgressiveQueryHandler extends Logging {
     * @param id         query id
     * @return a tracker for the progressive query
     */
-  def progressiveQuery[U](exprs: Seq[QueryExpression], filter: Option[DataFrame], onComplete: ProgressiveObservation => U, id: Option[String] = None)(implicit ac: AdamContext): ProgressiveQueryStatusTracker = {
+  private def progressiveQuery[U](exprs: Seq[QueryExpression], filter: Option[DataFrame], onComplete: ProgressiveObservation => U, id: Option[String] = None)(implicit ac: AdamContext): ProgressiveQueryStatusTracker = {
     val tracker = new ProgressiveQueryStatusTracker(id.getOrElse(""))
     log.debug("performing progressive query with " + exprs.length + " paths: " + exprs.map(expr => expr.info.scantype.getOrElse("<missing scantype>") + " (" + expr.info.source.getOrElse("<missing source>") + ")").mkString(", "))
 
@@ -80,7 +88,15 @@ object ProgressiveQueryHandler extends Logging {
     } else {
       None
     }
-    timedProgressiveQuery(pathChooser.getPaths(entityname, nnq), timelimit, filter, id)
+
+    val paths = pathChooser.getPaths(entityname, nnq).distinct
+    val distinctPaths = paths.distinct
+
+    if(paths.length != distinctPaths.length){
+      log.debug("removed " + (distinctPaths.length - paths.length) + " paths for progressive querying, which were duplicates")
+    }
+
+    timedProgressiveQuery(distinctPaths, timelimit, filter, id)
   }
 
 
