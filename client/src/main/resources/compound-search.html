@@ -8,6 +8,8 @@
     <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
     <link rel="stylesheet" href="./lib/css/materialize.min.css">
     <link rel="stylesheet" href="./lib/css/app.css">
+    <link rel="stylesheet" href="http://cdn.datatables.net/1.10.12/css/jquery.dataTables.min.css">
+    <link rel="stylesheet" href="./lib/css/datatable.css">
 </head>
 
 <body>
@@ -136,7 +138,7 @@
         </div>
     </div>
 
-    <div id="resultbox" class="row" style="display:none">
+    <div id="resultbox" class="material-table" style="display:none">
         <div class="s12">
             <h5>Results (limited to 150)</h5>
         </div>
@@ -147,10 +149,11 @@
 
 </div>
 
-<script src="https://code.jquery.com/jquery-2.1.1.min.js"></script>
+<script   src="https://code.jquery.com/jquery-2.2.4.min.js"   integrity="sha256-BbhdlvQf/xTY9gja0Dq3HiwQF8LaCRTXxZKRutelT44="   crossorigin="anonymous"></script>
 <script src="./lib/js/materialize.min.js"></script>
 <script src="./lib/js/jsPlumb-2.0.7-min.js"></script>
 <script src="lib/js/app.js"></script>
+<script language="javascript" type="text/javascript" src="http://cdn.datatables.net/1.10.12/js/jquery.dataTables.min.js"></script>
 <script src="lib/js/compound-search.js"></script>
 <script>
     $(document).ready(function () {
