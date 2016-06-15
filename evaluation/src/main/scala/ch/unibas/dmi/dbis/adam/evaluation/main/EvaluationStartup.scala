@@ -8,7 +8,7 @@ import ch.unibas.dmi.dbis.adam.evaluation.grpc.RPCClient
   * Ivan Giangreco
   * June 2016
   */
-object EvaluationStartup {
+object  EvaluationStartup {
   val grpcHost = "localhost"
   val grpcPort = 5890
 

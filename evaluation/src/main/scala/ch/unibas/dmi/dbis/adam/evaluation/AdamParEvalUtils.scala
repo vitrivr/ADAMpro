@@ -3,7 +3,7 @@ package ch.unibas.dmi.dbis.adam.evaluation
 /**
   * Created by silvan on 06.06.16.
   */
-trait AdamParUtils {
+trait AdamParEvalUtils {
 
   /**
     * Jesper @ http://stackoverflow.com/questions/9160001/how-to-profile-methods-in-scala
