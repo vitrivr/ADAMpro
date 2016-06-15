@@ -60,7 +60,7 @@ case class CompoundQueryRequest(var id: String, var operation: String, var optio
       None,
       Some(DistanceMessage(DistanceMessage.DistanceType.minkowski, Map("norm" -> "1"))),
       options.get("k").getOrElse("100").toInt,
-      Map(),
+      options, //not overly clean solution, but not problematic to send too much information in this case
       true,
       partitions)
 
