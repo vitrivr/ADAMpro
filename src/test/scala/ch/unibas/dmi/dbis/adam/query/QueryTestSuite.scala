@@ -6,6 +6,7 @@ import ch.unibas.dmi.dbis.adam.AdamTestBase
 import ch.unibas.dmi.dbis.adam.api._
 import ch.unibas.dmi.dbis.adam.config.FieldNames
 import ch.unibas.dmi.dbis.adam.datatypes.feature.FeatureVectorWrapper
+import ch.unibas.dmi.dbis.adam.index.Index._
 import ch.unibas.dmi.dbis.adam.index.structures.IndexTypes
 import ch.unibas.dmi.dbis.adam.main.SparkStartup
 import ch.unibas.dmi.dbis.adam.main.SparkStartup.Implicits._
@@ -57,8 +58,37 @@ class QueryTestSuite extends AdamTestBase with ScalaFutures {
 
         Then("we should retrieve the k nearest neighbors")
         results.foreach { res =>
-            assert(res._1 == 0)
+          assert(res._1 == 0)
         }
+      }
+    }
+
+    def indexQuery(es: EvaluationSet, indextypename: IndexTypeName, matchAll: Boolean): Unit = {
+      Given("an index")
+      val index = IndexOp(es.entity.entityname, "featurefield", indextypename, es.distance)
+      assert(index.isSuccess)
+
+      When("performing a kNN query")
+      val nnq = NearestNeighbourQuery("featurefield", es.feature.vector, None, es.distance, es.k)
+      val results = QueryOp.index(index.get.indexname, nnq, None).get.get
+        .map(r => (r.getAs[Float](FieldNames.distanceColumnName), r.getAs[Long]("tid"))).collect() //get here TID of metadata
+        .sortBy(_._1).toSeq
+
+      if (matchAll) {
+        Then("we should retrieve the k nearest neighbors")
+        results.zip(es.nnResults).foreach {
+          case (res, gt) =>
+            assert(res._2 == gt._2)
+            assert(math.abs(res._1 - gt._1) < EPSILON)
+        }
+      } else {
+        Then("we should have a match at least in the first element")
+        Seq(results.zip(es.nnResults).head).map {
+          case (res, gt) =>
+            assert(res._2 == gt._2)
+            assert(math.abs(res._1 - gt._1) < EPSILON)
+        }
+        log.info("score: " + getScore(es.nnResults.map(_._2), results.map(_._2)))
       }
     }
 
@@ -66,78 +96,30 @@ class QueryTestSuite extends AdamTestBase with ScalaFutures {
       *
       */
     scenario("perform a ecp index query") {
-      withQueryEvaluationSet { es =>
-        Given("an index")
-        val index = IndexOp(es.entity.entityname, "featurefield", IndexTypes.ECPINDEX, es.distance)
-        assert(index.isSuccess)
-
-        When("performing a kNN query")
-        val nnq = NearestNeighbourQuery("featurefield", es.feature.vector, None, es.distance, es.k)
-        val results = QueryOp.index(index.get.indexname, nnq, None).get.get
-          .map(r => (r.getAs[Float](FieldNames.distanceColumnName), r.getAs[Long]("tid"))).collect() //get here TID of metadata
-          .sortBy(_._1).toSeq
-
-        Then("we should have a match at least in the first element")
-        Seq(results.zip(es.nnResults).head).map {
-          case (res, gt) =>
-            assert(res._2 == gt._2)
-            assert(math.abs(res._1 - gt._1) < EPSILON)
-        }
-
-        log.info("score: " + getScore(es.nnResults.map(_._2), results.map(_._2)))
-      }
+      withQueryEvaluationSet { es => indexQuery(es, IndexTypes.ECPINDEX, false) }
     }
 
     /**
       *
       */
     scenario("perform a lsh index query") {
-      withQueryEvaluationSet { es =>
-        Given("an index")
-        val index = IndexOp(es.entity.entityname, "featurefield", IndexTypes.LSHINDEX, es.distance)
-        assert(index.isSuccess)
+      withQueryEvaluationSet { es => indexQuery(es, IndexTypes.LSHINDEX, false) }
+    }
 
-        When("performing a kNN query")
-        val nnq = NearestNeighbourQuery("featurefield", es.feature.vector, None, es.distance, es.k)
-        val results = QueryOp.index(index.get.indexname, nnq, None).get.get
-          .map(r => (r.getAs[Float](FieldNames.distanceColumnName), r.getAs[Long]("tid"))).collect() //get here TID of metadata
-          .sortBy(_._1).toSeq
+    /**
+      *
+      */
+    scenario("perform a mi index query") {
+      withQueryEvaluationSet { es => indexQuery(es, IndexTypes.MIINDEX, false) }
 
-        Then("we should have a match at least in the first element")
-        Seq(results.zip(es.nnResults).head).map {
-          case (res, gt) =>
-            assert(res._2 == gt._2)
-            assert(math.abs(res._1 - gt._1) < EPSILON)
-        }
-
-        log.info("score: " + getScore(es.nnResults.map(_._2), results.map(_._2)))
-      }
     }
 
     /**
       *
       */
     scenario("perform a pq index query") {
-      withQueryEvaluationSet { es =>
-        Given("an index")
-        val index = IndexOp(es.entity.entityname, "featurefield", IndexTypes.PQINDEX, es.distance)
-        assert(index.isSuccess)
+      withQueryEvaluationSet { es => indexQuery(es, IndexTypes.PQINDEX, false) }
 
-        When("performing a kNN query")
-        val nnq = NearestNeighbourQuery("featurefield", es.feature.vector, None, es.distance, es.k)
-        val results = QueryOp.index(index.get.indexname, nnq, None).get.get
-          .map(r => (r.getAs[Float](FieldNames.distanceColumnName), r.getAs[Long]("tid"))).collect() //get here TID of metadata
-          .sortBy(_._1).toSeq
-
-        Then("we should have a match at least in the first element")
-        Seq(results.zip(es.nnResults).head).map {
-          case (res, gt) =>
-            assert(res._2 == gt._2)
-            assert(math.abs(res._1 - gt._1) < EPSILON)
-        }
-
-        log.info("score: " + getScore(es.nnResults.map(_._2), results.map(_._2)))
-      }
     }
 
 
@@ -145,26 +127,7 @@ class QueryTestSuite extends AdamTestBase with ScalaFutures {
       *
       */
     scenario("perform a sh index query") {
-      withQueryEvaluationSet { es =>
-        Given("an index")
-        val index = IndexOp(es.entity.entityname, "featurefield", IndexTypes.SHINDEX, es.distance)
-        assert(index.isSuccess)
-
-        When("performing a kNN query")
-        val nnq = NearestNeighbourQuery("featurefield", es.feature.vector, None, es.distance, es.k)
-        val results = QueryOp.index(index.get.indexname, nnq, None).get.get
-          .map(r => (r.getAs[Float](FieldNames.distanceColumnName), r.getAs[Long]("tid"))).collect() //get here TID of metadata
-          .sortBy(_._1).toSeq
-
-        Then("we should have a match at least in the first element")
-        Seq(results.zip(es.nnResults).head).map {
-          case (res, gt) =>
-            assert(res._2 == gt._2)
-            assert(math.abs(res._1 - gt._1) < EPSILON)
-        }
-
-        log.info("score: " + getScore(es.nnResults.map(_._2), results.map(_._2)))
-      }
+      withQueryEvaluationSet { es => indexQuery(es, IndexTypes.SHINDEX, false) }
     }
 
 
@@ -172,24 +135,7 @@ class QueryTestSuite extends AdamTestBase with ScalaFutures {
       *
       */
     scenario("perform a vaf index query") {
-      withQueryEvaluationSet { es =>
-        Given("an index")
-        val index = IndexOp(es.entity.entityname, "featurefield", IndexTypes.VAFINDEX, es.distance)
-        assert(index.isSuccess)
-
-        When("performing a kNN query")
-        val nnq = NearestNeighbourQuery("featurefield", es.feature.vector, None, es.distance, es.k)
-        val results = QueryOp.index(index.get.indexname, nnq, None).get.get
-          .map(r => (r.getAs[Float](FieldNames.distanceColumnName), r.getAs[Long]("tid"))).collect() //get here TID of metadata
-          .sortBy(_._1).toSeq
-
-        Then("we should retrieve the k nearest neighbors")
-        results.zip(es.nnResults).foreach {
-          case (res, gt) =>
-            assert(res._2 == gt._2)
-            assert(math.abs(res._1 - gt._1) < EPSILON)
-        }
-      }
+      withQueryEvaluationSet { es => indexQuery(es, IndexTypes.VAFINDEX, true) }
     }
 
     /**
@@ -220,24 +166,7 @@ class QueryTestSuite extends AdamTestBase with ScalaFutures {
       *
       */
     scenario("perform a vav index query") {
-      withQueryEvaluationSet { es =>
-        Given("an index")
-        val index = IndexOp(es.entity.entityname, "featurefield", IndexTypes.VAVINDEX, es.distance)
-        assert(index.isSuccess)
-
-        When("performing a kNN query")
-        val nnq = NearestNeighbourQuery("featurefield", es.feature.vector, None, es.distance, es.k)
-        val results = QueryOp.index(index.get.indexname, nnq, None).get.get
-          .map(r => (r.getAs[Float](FieldNames.distanceColumnName), r.getAs[Long]("tid"))).collect() //get here TID of metadata
-          .sortBy(_._1).toSeq
-
-        Then("we should retrieve the k nearest neighbors")
-        results.zip(es.nnResults).foreach {
-          case (res, gt) =>
-            assert(res._2 == gt._2)
-            assert(math.abs(res._1 - gt._1) < EPSILON)
-        }
-      }
+      withQueryEvaluationSet { es => indexQuery(es, IndexTypes.VAVINDEX, false) }
     }
 
 
