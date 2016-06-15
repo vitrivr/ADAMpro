@@ -9,10 +9,10 @@ import ch.unibas.dmi.dbis.adam.entity.{EntityNameHolder, AttributeDefinition}
 import ch.unibas.dmi.dbis.adam.exception.{EntityExistingException, EntityNotExistingException, IndexExistingException, IndexNotExistingException}
 import ch.unibas.dmi.dbis.adam.index.Index.{IndexName, IndexTypeName}
 import ch.unibas.dmi.dbis.adam.index.structures.IndexTypes
-import ch.unibas.dmi.dbis.adam.query.scanweight.{ScanWeightHandler, ScanWeightHandler$}
+import ch.unibas.dmi.dbis.adam.query.scanweight.ScanWeightHandler
 import org.apache.commons.io.FileUtils
 import org.apache.spark.Logging
-import slick.driver.H2Driver.api._
+import slick.driver.PostgresDriver.api._
 import slick.jdbc.meta.MTable
 
 import scala.concurrent.Await
@@ -28,7 +28,7 @@ import scala.concurrent.duration._
 object CatalogOperator extends Logging {
   private val MAX_WAITING_TIME: Duration = 100.seconds
 
-  private val db = Database.forURL("jdbc:h2:" + (AdamConfig.catalogPath + "/" + "catalog"), driver = "org.h2.Driver")
+  private val db = Database.forURL(AdamConfig.jdbcUrl, driver = "org.postgresql.Driver", user = AdamConfig.jdbcUser, password = AdamConfig.jdbcPassword)
 
   //generate catalog entities in the beginning if not already existent
   val entityList = Await.result(db.run(MTable.getTables), MAX_WAITING_TIME).toList.map(x => x.name.name)
