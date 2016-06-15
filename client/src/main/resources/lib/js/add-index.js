@@ -1,3 +1,7 @@
+$(document).ready(function () {
+    getEntitySelect("centityname");
+});
+
 //prepare operation
 $("#btnSubmit").click(function () {
     if ($("#entityname").val().length === 0) {

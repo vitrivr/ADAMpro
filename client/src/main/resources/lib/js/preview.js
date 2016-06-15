@@ -1,35 +1,5 @@
 $(document).ready(function () {
-    $("#progress").show();
-    $.ajax("/entity/list", {
-        data: "",
-        contentType: 'application/json',
-        type: 'GET',
-        success: function (data) {
-            if (data.code === 200) {
-                jQuery.each(data.entities, function (index, value) {
-                    $("#entityname").append($('<option>',
-                        {
-                            value: value,
-                            text: value
-                        }));
-                });
-
-
-                $(document).ready(function () {
-                    $('select').material_select();
-                });
-
-            } else {
-                showAlert("Error in request: " + data.message);
-            }
-            $("#progress").hide();
-        }
-        ,
-        error: function () {
-            $("#progress").hide()
-            showAlert("Unspecified error in request.");
-        }
-    });
+    getEntitySelect("centityname");
 });
 
 

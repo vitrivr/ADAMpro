@@ -1,3 +1,7 @@
+$(document).ready(function () {
+    getEntitySelect("centityname");
+});
+
 //submit operation
 var indextypes = ['ecp', 'lsh', 'mi', 'pq', 'sh', 'vaf', 'vav', ''].reverse();
 
