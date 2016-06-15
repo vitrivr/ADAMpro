@@ -88,7 +88,7 @@ object ParquetFeatureStorage extends FeatureStorage {
           data = data.repartition(AdamConfig.defaultNumberOfPartitions)
         }
 
-        data.write.mode(SaveMode.Overwrite).parquet(filepath)
+        data.write.mode(mode).parquet(filepath)
         Success(filepath)
       } catch {
         case e: Exception => Failure(e)
