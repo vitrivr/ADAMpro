@@ -4,6 +4,7 @@ import java.util.concurrent.TimeUnit
 
 import ch.unibas.dmi.dbis.adam.datatypes.feature.Feature._
 import ch.unibas.dmi.dbis.adam.datatypes.feature.FeatureVectorWrapper
+import ch.unibas.dmi.dbis.adam.exception.GeneralAdamException
 import ch.unibas.dmi.dbis.adam.http.grpc.DistanceMessage.DistanceType
 import ch.unibas.dmi.dbis.adam.http.grpc._
 import ch.unibas.dmi.dbis.adam.main.AdamContext
@@ -19,9 +20,10 @@ import ch.unibas.dmi.dbis.adam.query.information.InformationLevels
 import ch.unibas.dmi.dbis.adam.query.information.InformationLevels.{InformationLevel, LAST_STEP_ONLY}
 import ch.unibas.dmi.dbis.adam.query.progressive.{QueryHintsProgressivePathChooser, SimpleProgressivePathChooser}
 import ch.unibas.dmi.dbis.adam.query.query.{BooleanQuery, NearestNeighbourQuery}
+import spire.std.option
 
 import scala.concurrent.duration.Duration
-import scala.util.{Failure, Success, Try}
+import scala.util.{Success, Failure, Try}
 
 /**
   * adampro
@@ -44,8 +46,31 @@ private[rpc] object RPCHelperMethods {
       val indexname = request.from.get.source.index
       val subexpression = request.from.get.source.expression
 
-      val bq = prepareBQ(request.bq)
-      val nnq = prepareNNQ(request.nnq)
+      val bq = if(request.bq.isDefined){
+        val prepared = prepareBQ(request.bq.get)
+
+        if (prepared.isFailure) {
+          return Failure(prepared.failed.get)
+        } else {
+          Some(prepared.get)
+        }
+      } else {
+        None
+      }
+
+
+      val nnq = if (request.nnq.isDefined) {
+        val prepared = prepareNNQ(request.nnq.get)
+
+        if (prepared.isFailure) {
+          return Failure(prepared.failed.get)
+        } else {
+          Some(prepared.get)
+        }
+      } else {
+        None
+      }
+
 
       val hints = QueryHints.withName(request.hints)
 
@@ -56,6 +81,7 @@ private[rpc] object RPCHelperMethods {
 
       var scan: QueryExpression = null
 
+      //selection
       scan = if (time > 0) {
         new TimedScanExpression(entityname.get, nnq.get, preparePaths(request.hints), Duration(time, TimeUnit.MILLISECONDS), queryid)()
       } else if (subexpression.isDefined) {
@@ -79,7 +105,16 @@ private[rpc] object RPCHelperMethods {
         null
       }
 
-      scan = prepareProjectionExpression(request.projection, scan, queryid).getOrElse(scan)
+      //projection
+      if (request.projection.isDefined) {
+        val projection = prepareProjectionExpression(request.projection.get, scan, queryid)
+
+        if (projection.isSuccess) {
+          scan = projection.get
+        } else {
+          return projection
+        }
+      }
 
       Success(scan)
     } catch {
@@ -170,58 +205,54 @@ private[rpc] object RPCHelperMethods {
     * @param pm
     * @return
     */
-  def prepareProjectionExpression(pm: Option[ProjectionMessage], qe: QueryExpression, queryid: Option[String])(implicit ac: AdamContext): Option[QueryExpression] = {
-    val projection: Option[ProjectionField] = if (pm.isEmpty) {
-      None
-    } else if (pm.get.submessage.isField) {
-      val fields = pm.get.getField.field
-
-      if (fields.isEmpty) {
-        None
+  def prepareProjectionExpression(pm: ProjectionMessage, qe: QueryExpression, queryid: Option[String])(implicit ac: AdamContext): Try[QueryExpression] = {
+    try {
+      if (pm.submessage.isOp) {
+        pm.getOp match {
+          case ProjectionMessage.Operation.COUNT => Success(ProjectionExpression(CountOperationProjection(), qe, queryid))
+          case ProjectionMessage.Operation.EXISTS => Success(ProjectionExpression(ExistsOperationProjection(), qe, queryid))
+          case _ => Success(qe)
+        }
       } else {
-        Some(FieldNameProjection(fields))
-      }
-    } else if (pm.get.submessage.isOp) {
-      pm.get.getOp match {
-        case ProjectionMessage.Operation.COUNT => Some(CountOperationProjection())
-        case ProjectionMessage.Operation.EXISTS => Some(ExistsOperationProjection())
-        case _ => None
-      }
-    } else {
-      None
-    }
+        val fields = pm.getField.field
 
-    if (projection.isDefined) {
-      Some(ProjectionExpression(projection.get, qe, queryid))
-    } else {
-      None
+        if (fields.isEmpty) {
+          Success(qe)
+        } else {
+          Success(ProjectionExpression(FieldNameProjection(fields), qe, queryid))
+        }
+      }
+    } catch {
+      case e: Exception => Failure(e)
     }
   }
 
 
   /**
     *
-    * @param option
+    * @param nnq
     * @return
     */
-  def prepareNNQ(option: Option[NearestNeighbourQueryMessage]): Option[NearestNeighbourQuery] = {
-    if (option.isEmpty) {
-      return None
+  def prepareNNQ(nnq: NearestNeighbourQueryMessage): Try[NearestNeighbourQuery] = {
+    try {
+      val distance = prepareDistance(nnq.distance)
+
+      val partitions = if (!nnq.partitions.isEmpty) {
+        Some(nnq.partitions.toSet)
+      } else {
+        None
+      }
+
+      val fv = if(nnq.query.isDefined){
+        prepareFeatureVector(nnq.query.get)
+      } else {
+        return Failure(new GeneralAdamException("no query specified"))
+      }
+
+      Success(NearestNeighbourQuery(nnq.column, fv, nnq.weights.map(prepareFeatureVector(_)), distance, nnq.k, nnq.indexOnly, nnq.options, partitions))
+    } catch {
+      case e: Exception => Failure(e)
     }
-
-    val nnq = option.get
-
-    val distance = prepareDistance(nnq.getDistance)
-
-    val partitions = if (!nnq.partitions.isEmpty) {
-      Some(nnq.partitions.toSet)
-    } else {
-      None
-    }
-
-    val fv = prepareFeatureVector(nnq.query.get)
-
-    Some(NearestNeighbourQuery(nnq.column, fv, nnq.weights.map(prepareFeatureVector(_)), distance, nnq.k, nnq.indexOnly, nnq.options, partitions))
   }
 
 
@@ -244,10 +275,14 @@ private[rpc] object RPCHelperMethods {
     * @param dm
     * @return
     */
-  def prepareDistance(dm: DistanceMessage): DistanceFunction = {
-    dm.distancetype match {
+  def prepareDistance(dm: Option[DistanceMessage]): DistanceFunction = {
+    if(dm.isEmpty){
+      return NormBasedDistanceFunction(2)
+    }
+
+    dm.get.distancetype match {
       case DistanceType.minkowski => {
-        NormBasedDistanceFunction(dm.options.get("norm").get.toDouble)
+        NormBasedDistanceFunction(dm.get.options.get("norm").get.toDouble)
       }
       case _ => NormBasedDistanceFunction(2)
     }
@@ -255,12 +290,11 @@ private[rpc] object RPCHelperMethods {
 
   /**
     *
-    * @param option
+    * @param bq
     * @return
     */
-  def prepareBQ(option: Option[BooleanQueryMessage]): Option[BooleanQuery] = {
-    if (option.isDefined) {
-      val bq = option.get
+  def prepareBQ(bq: BooleanQueryMessage): Try[BooleanQuery] = {
+    try {
       val where = if (!bq.where.isEmpty) {
         Some(bq.where.map(bqm => (bqm.field, bqm.value)))
       } else {
@@ -271,9 +305,9 @@ private[rpc] object RPCHelperMethods {
       } else {
         None
       }
-      Some(BooleanQuery(where, joins))
-    } else {
-      None
+      Success(BooleanQuery(where, joins))
+    } catch {
+      case e: Exception => Failure(e)
     }
   }
 
@@ -324,7 +358,7 @@ private[rpc] object RPCHelperMethods {
       }
     }.filterNot(_ == null)
 
-    if(levels.isEmpty){
+    if (levels.isEmpty) {
       Seq(LAST_STEP_ONLY)
     } else {
       levels

@@ -3,7 +3,7 @@ package ch.unibas.dmi.dbis.adam.rpc
 import ch.unibas.dmi.dbis.adam.api._
 import ch.unibas.dmi.dbis.adam.datatypes.FieldTypes
 import ch.unibas.dmi.dbis.adam.datatypes.feature.{FeatureVectorWrapper, FeatureVectorWrapperUDT}
-import ch.unibas.dmi.dbis.adam.entity.{Entity, AttributeDefinition}
+import ch.unibas.dmi.dbis.adam.entity.{AttributeDefinition, Entity}
 import ch.unibas.dmi.dbis.adam.exception.GeneralAdamException
 import ch.unibas.dmi.dbis.adam.http.grpc.FieldDefinitionMessage.FieldType
 import ch.unibas.dmi.dbis.adam.http.grpc.{AckMessage, CreateEntityMessage, _}
@@ -14,7 +14,7 @@ import ch.unibas.dmi.dbis.adam.storage.partition.PartitionMode
 import ch.unibas.dmi.dbis.adam.utils.AdamImporter
 import io.grpc.stub.StreamObserver
 import org.apache.spark.Logging
-import org.apache.spark.sql.types.{StructField, StructType, DataType}
+import org.apache.spark.sql.types.{DataType, StructField, StructType}
 import org.apache.spark.sql.{Row, types}
 
 import scala.concurrent.Future
@@ -161,7 +161,9 @@ class DataDefinitionRPC(implicit ac: AdamContext) extends AdamDefinitionGrpc.Ada
       return Future.successful(AckMessage(code = AckMessage.Code.ERROR, message = "index type not existing"))
     }
 
-    val res = IndexOp(request.entity, request.column, indextypename.get, RPCHelperMethods.prepareDistance(request.distance.get), request.options)
+    val distance = RPCHelperMethods.prepareDistance(request.distance)
+
+    val res = IndexOp(request.entity, request.column, indextypename.get, distance, request.options)
 
     if (res.isSuccess) {
       Future.successful(AckMessage(code = AckMessage.Code.OK, message = res.get.indexname))
@@ -382,7 +384,9 @@ class DataDefinitionRPC(implicit ac: AdamContext) extends AdamDefinitionGrpc.Ada
     */
   override def generateAllIndexes(request: IndexMessage): Future[AckMessage] = {
     log.debug("rpc call for generating all indexes")
-    val res = IndexOp.generateAll(request.entity, request.column, RPCHelperMethods.prepareDistance(request.distance.get))
+
+    val distance = RPCHelperMethods.prepareDistance(request.distance)
+    val res = IndexOp.generateAll(request.entity, request.column, distance)
 
     if (res.isSuccess) {
       Future.successful(AckMessage(AckMessage.Code.OK))

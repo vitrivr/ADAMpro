@@ -2,7 +2,7 @@ package ch.unibas.dmi.dbis.adam.rpc
 
 import ch.unibas.dmi.dbis.adam.api.{EntityOp, IndexOp, QueryOp}
 import ch.unibas.dmi.dbis.adam.datatypes.feature.{FeatureVectorWrapper, FeatureVectorWrapperUDT}
-import ch.unibas.dmi.dbis.adam.exception.QueryNotCachedException
+import ch.unibas.dmi.dbis.adam.exception.{GeneralAdamException, QueryNotCachedException}
 import ch.unibas.dmi.dbis.adam.http.grpc._
 import ch.unibas.dmi.dbis.adam.main.AdamContext
 import ch.unibas.dmi.dbis.adam.query.datastructures.QueryLRUCache
@@ -147,7 +147,18 @@ class SearchRPC(implicit ac: AdamContext) extends AdamSearchGrpc.AdamSearch with
           new QueryHintsProgressivePathChooser(request.hints.map(QueryHints.withName(_).get))
         }
 
-        val tracker = QueryOp.progressive(request.from.get.getEntity, RPCHelperMethods.prepareNNQ(request.nnq).get, RPCHelperMethods.prepareBQ(request.bq), pathChooser, onComplete)
+        val nnq = if(request.nnq.isDefined){
+          RPCHelperMethods.prepareNNQ(request.nnq.get).get
+        } else {
+          throw new GeneralAdamException("nearest neighbour query necessary for progressive query")
+        }
+        val bq = if(request.bq.isDefined){
+          Some(RPCHelperMethods.prepareBQ(request.bq.get).get)
+        } else {
+          None
+        }
+
+        val tracker = QueryOp.progressive(request.from.get.getEntity, nnq, bq , pathChooser, onComplete)
 
         //track on completed
         while (!tracker.get.isCompleted) {
