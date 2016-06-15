@@ -53,7 +53,7 @@ class ECPIndex(val indexname: IndexName, val entityname: EntityName, override pr
     do  {
       val nns = data.filter(data(FieldNames.featureIndexColumnName) === centroids.value(i)._1).select(pk.name).withColumn(FieldNames.distanceColumnName, lit(centroids.value(i)._2).cast(DataTypes.FloatType))
       if(results != null) {
-        results.unionAll(nns)
+        results = results.unionAll(nns)
       } else {
         results = nns
       }
