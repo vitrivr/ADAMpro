@@ -2,11 +2,11 @@ package ch.unibas.dmi.dbis.adam.query.handler.internal
 
 import ch.unibas.dmi.dbis.adam.entity.Entity
 import ch.unibas.dmi.dbis.adam.entity.Entity._
-import ch.unibas.dmi.dbis.adam.exception.GeneralAdamException
 import ch.unibas.dmi.dbis.adam.index.Index
 import ch.unibas.dmi.dbis.adam.index.Index._
 import ch.unibas.dmi.dbis.adam.main.AdamContext
 import ch.unibas.dmi.dbis.adam.query.handler.generic.{ExpressionDetails, QueryExpression}
+import ch.unibas.dmi.dbis.adam.query.handler.internal.AggregationExpression.EmptyExpression
 import ch.unibas.dmi.dbis.adam.query.handler.internal.BooleanFilterExpression.BooleanFilterScanExpression
 import ch.unibas.dmi.dbis.adam.query.handler.internal.QueryHints._
 import ch.unibas.dmi.dbis.adam.query.query.{BooleanQuery, NearestNeighbourQuery}
@@ -20,8 +20,8 @@ import org.apache.spark.sql.DataFrame
   * Ivan Giangreco
   * May 2016
   */
-case class HintBasedScanExpression(entityname: EntityName, nnq: Option[NearestNeighbourQuery], bq: Option[BooleanQuery], hints: Seq[QueryHint], id: Option[String] = None)(filterExpr: Option[QueryExpression] = None)(@transient implicit val ac: AdamContext) extends QueryExpression(id) {
-  val expr = HintBasedScanExpression.startPlanSearch(entityname, nnq, bq, hints)(filterExpr)
+case class HintBasedScanExpression(entityname: EntityName, nnq: Option[NearestNeighbourQuery], bq: Option[BooleanQuery], hints: Seq[QueryHint], withFallback: Boolean = true, id: Option[String] = None)(filterExpr: Option[QueryExpression] = None)(@transient implicit val ac: AdamContext) extends QueryExpression(id) {
+  val expr = HintBasedScanExpression.startPlanSearch(entityname, nnq, bq, hints, withFallback)(filterExpr)
   override val info = ExpressionDetails(expr.info.source, Some("Hint-Based Expression: " + expr.info.scantype), id, expr.info.confidence)
   children ++= Seq(expr) ++ filterExpr.map(Seq(_)).getOrElse(Seq())
 
@@ -34,22 +34,24 @@ case class HintBasedScanExpression(entityname: EntityName, nnq: Option[NearestNe
 
 object HintBasedScanExpression extends Logging {
 
-  def startPlanSearch(entityname: EntityName, nnq: Option[NearestNeighbourQuery], bq: Option[BooleanQuery], hints: Seq[QueryHint])(expr: Option[QueryExpression] = None)(implicit ac: AdamContext): QueryExpression = {
+  def startPlanSearch(entityname: EntityName, nnq: Option[NearestNeighbourQuery], bq: Option[BooleanQuery], hints: Seq[QueryHint], withFallback: Boolean = true)(expr: Option[QueryExpression] = None)(implicit ac: AdamContext): QueryExpression = {
     val indexes: Map[IndexTypeName, Seq[IndexName]] = CatalogOperator.listIndexes(entityname).groupBy(_._2).mapValues(_.map(_._1))
     var plan = getPlan(entityname, indexes, nnq, bq, hints)(expr)
 
     if (plan.isEmpty) {
-      log.trace("no query plan chosen, go to fallback")
-      plan = getPlan(entityname, indexes, nnq, bq, Seq(QueryHints.FALLBACK_HINTS))(expr)
+      if (withFallback) {
+        log.trace("no query plan chosen, go to fallback")
+        plan = getPlan(entityname, indexes, nnq, bq, Seq(QueryHints.FALLBACK_HINTS))(expr)
+      } else {
+        log.warn("using hints no execution plan could be found, using empty plan")
+        plan = Some(EmptyExpression())
+      }
     }
 
-    if (plan.isDefined) {
-      log.debug("using plan: " + plan.get.getClass.getName)
-    } else {
-      throw new GeneralAdamException("no execution plan set up")
-    }
+    log.debug("using plan: " + plan.get.getClass.getName)
 
     plan.get
+
   }
 
   /**
