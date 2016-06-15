@@ -1,3 +1,7 @@
+$(document).ready(function () {
+    getEntitySelect("centityname");
+});
+
 var instance = jsPlumb.getInstance({
     Endpoint: ["Dot", {radius: 2}],
     Connector: "StateMachine",

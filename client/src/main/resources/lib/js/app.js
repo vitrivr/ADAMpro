@@ -1,5 +1,5 @@
 //alerts
-var showAlert = function(message) {
+var showAlert = function (message) {
     Materialize.toast(message, 4000);
 };
 
@@ -10,6 +10,34 @@ function guid() {
             .toString(16)
             .substring(1);
     }
+
     return s4() + s4() + '-' + s4() + '-' + s4() + '-' +
         s4() + '-' + s4() + s4() + s4();
+}
+
+
+function getEntitySelect(id) {
+    $.ajax("/entity/list", {
+        data: "",
+        contentType: 'application/json',
+        type: 'GET',
+        success: function (data) {
+            if (data.code === 200) {
+                var sel = $(' <select id="entityname" data-collapsible="accordion"><option value="" disabled selected>entity</option></select>');
+
+                jQuery.each(data.entities, function (index, value) {
+                    sel.append($('<option>', {value: value, text: value}));
+                });
+
+                $("#" + id).append(sel);
+                $("#entityname").material_select();
+
+            } else {
+                showAlert("Error in request: " + data.message);
+            }
+        },
+        error: function () {
+            showAlert("Unspecified error in request.");
+        }
+    });
 }
