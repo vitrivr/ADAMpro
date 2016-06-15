@@ -297,10 +297,11 @@ object Index extends Logging {
     val path = storage.write(indexname, index.data, None, allowRepartitioning = true)
     if (path.isSuccess) {
       CatalogOperator.createIndex(indexname, path.get, entity.entityname, attribute, indexgenerator.indextypename, index.metadata)
-      Success(index)
     } else {
-      Failure(path.failed.get)
+      return Failure(path.failed.get)
     }
+
+    Index.load(indexname, false)
   }
 
   /**
