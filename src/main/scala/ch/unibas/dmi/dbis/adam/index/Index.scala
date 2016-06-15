@@ -362,9 +362,13 @@ object Index extends Logging {
     val entityname = CatalogOperator.getEntitynameFromIndex(indexname)
     val meta = CatalogOperator.getIndexMeta(indexname)
 
+    if(meta.isFailure){
+      return Failure(meta.failed.get)
+    }
+
     val indextypename = CatalogOperator.getIndexTypeName(indexname)
 
-    val index = indextypename.index(indexname, entityname, df.get, meta)
+    val index = indextypename.index(indexname, entityname, df.get, meta.get)
 
     Success(index)
   }

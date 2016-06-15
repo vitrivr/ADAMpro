@@ -34,9 +34,6 @@ object AdamConfig extends Serializable with Logging {
   val dataPath = cleanPath(config.getString("adampro.dataPath"))
   val indexPath = cleanPath(config.getString("adampro.indexPath"))
 
-  val catalogPath = cleanPath(config.getString("adampro.catalogPath"))
-  val indexMetaCatalogPath = catalogPath + "/" + "indexmeta"
-
   val internalsPath = cleanPath(config.getString("adampro.internalsPath"))
   val schedulerFile = internalsPath + "/" + "scheduler.xml"
 

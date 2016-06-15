@@ -45,7 +45,7 @@ private[engine] class EntityFieldsCatalog(tag: Tag) extends Table[(String, Strin
     foreignKey("ENTITYNAME", entityname, TableQuery[EntitiesCatalog])(_.entityname)
 }
 
-private[engine] class IndexesCatalog(tag: Tag) extends Table[(String, String, String, String, String, String, Boolean, Float)](tag, "ADAMTWO_INDEXES") {
+private[engine] class IndexesCatalog(tag: Tag) extends Table[(String, String, String, String, String, Array[Byte], Boolean, Float)](tag, "ADAMTWO_INDEXES") {
   def indexname = column[String]("INDEXNAME", O.PrimaryKey)
 
   def fieldname = column[String]("FIELDNAME")
@@ -56,13 +56,13 @@ private[engine] class IndexesCatalog(tag: Tag) extends Table[(String, String, St
 
   def indexpath = column[String]("INDEXPATH")
 
-  def indexmetapath = column[String]("INDEXMETAPATH")
+  def indexmeta = column[Array[Byte]]("INDEXMETA")
 
   def uptodate = column[Boolean]("ISUPTODATE")
 
   def scanweight = column[Float]("WEIGHT")
 
-  def * = (indexname, entityname, fieldname, indextypename, indexpath, indexmetapath, uptodate, scanweight)
+  def * = (indexname, entityname, fieldname, indextypename, indexpath, indexmeta, uptodate, scanweight)
 
   def supplier: ForeignKeyQuery[EntitiesCatalog, (String, String, String, Boolean)] =
     foreignKey("ENTITYNAME", entityname, TableQuery[EntitiesCatalog])(_.entityname)

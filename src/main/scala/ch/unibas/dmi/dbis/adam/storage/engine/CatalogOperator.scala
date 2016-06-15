@@ -17,6 +17,7 @@ import slick.jdbc.meta.MTable
 
 import scala.concurrent.Await
 import scala.concurrent.duration._
+import scala.util.{Success, Failure, Try}
 
 
 /**
@@ -253,17 +254,15 @@ object CatalogOperator extends Logging {
       throw new IndexExistingException()
     }
 
-    val metaPath = AdamConfig.indexMetaCatalogPath + "/" + indexname + "/" //TODO: change this
-    val metaFilePath = metaPath + "_adam_metadata"
-
-    new File(metaPath).mkdirs()
-
-    val oos = new ObjectOutputStream(new FileOutputStream(metaFilePath))
+    val bos = new ByteArrayOutputStream()
+    val oos = new ObjectOutputStream(bos)
     oos.writeObject(indexmeta)
+    val data = bos.toByteArray
     oos.close()
+    bos.close()
 
     val setup = DBIO.seq(
-      indexes.+=((indexname, entityname, column, indextypename.name, path, metaFilePath, true, DEFAULT_WEIGHT))
+      indexes.+=((indexname, entityname, column, indextypename.name, path, data, true, DEFAULT_WEIGHT))
     )
 
     Await.result(db.run(setup), MAX_WAITING_TIME)
@@ -282,10 +281,7 @@ object CatalogOperator extends Logging {
     if (!existsIndex(indexname)) {
       throw new IndexNotExistingException()
     }
-
-    val metaPath = AdamConfig.indexMetaCatalogPath + "/" + indexname + "/" //TODO: change this
-    FileUtils.deleteDirectory(new File(metaPath))
-
+    
     val query = indexes.filter(_.indexname === indexname).delete
     Await.result(db.run(query), MAX_WAITING_TIME)
     log.debug("dropped index from catalog")
@@ -320,7 +316,7 @@ object CatalogOperator extends Logging {
     * @return
     */
   def listIndexes(entityname: EntityName = null, indextypename: IndexTypeName = null): Seq[(IndexName, IndexTypeName, Float)] = {
-    var catalog: Query[IndexesCatalog, (String, String, String, String, String, String, Boolean, Float), Seq] = indexes
+    var catalog: Query[IndexesCatalog, (String, String, String, String, String, Array[Byte], Boolean, Float), Seq] = indexes
 
     if (entityname != null) {
       catalog = catalog.filter(_.entityname === entityname.toString())
@@ -350,11 +346,17 @@ object CatalogOperator extends Logging {
     * @param indexname name of index
     * @return
     */
-  def getIndexMeta(indexname: IndexName): Any = {
-    val query = indexes.filter(_.indexname === indexname).map(_.indexmetapath).result.head
-    val path = Await.result(db.run(query), MAX_WAITING_TIME)
-    val ois = new ObjectInputStream(new FileInputStream(path))
-    ois.readObject()
+  def getIndexMeta(indexname: IndexName): Try[Any] = {
+    try {
+      val query = indexes.filter(_.indexname === indexname).map(_.indexmeta).result.head
+      val data = Await.result(db.run(query), MAX_WAITING_TIME)
+
+      val bis = new ByteArrayInputStream(data)
+      val ois = new ObjectInputStream(bis)
+      Success(ois.readObject())
+    } catch {
+      case e: Exception => Failure(e)
+    }
   }
 
   /**
