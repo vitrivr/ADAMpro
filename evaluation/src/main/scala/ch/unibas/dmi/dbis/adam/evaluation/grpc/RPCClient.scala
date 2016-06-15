@@ -1,7 +1,9 @@
 package ch.unibas.dmi.dbis.adam.evaluation.grpc
 
 
-import ch.unibas.dmi.dbis.adam.evaluation.AdamParUtils
+import java.io.File
+
+import ch.unibas.dmi.dbis.adam.evaluation.AdamParEvalUtils
 import ch.unibas.dmi.dbis.adam.http.grpc.AdamDefinitionGrpc.AdamDefinitionBlockingStub
 import ch.unibas.dmi.dbis.adam.http.grpc.AdamSearchGrpc.{AdamSearchBlockingStub, AdamSearchStub}
 import ch.unibas.dmi.dbis.adam.http.grpc._
@@ -16,36 +18,29 @@ import scala.util.Random
   * Ivan Giangreco
   * June 2016
   */
-class RPCClient(channel: ManagedChannel, definer: AdamDefinitionBlockingStub, searcherBlocking: AdamSearchBlockingStub, searcher: AdamSearchStub) extends AdamParUtils{
+class RPCClient(channel: ManagedChannel, definer: AdamDefinitionBlockingStub, searcherBlocking: AdamSearchBlockingStub, searcher: AdamSearchStub) extends AdamParEvalUtils{
 
-  var eName = "silvan"
-  var nTuples = 1e5.toInt
-  var nDims = 20
-  var noPart = 3
+  val eName = "silvan"+Math.abs(Random.nextInt())
+  val nTuples = 1e5.toInt
+  val nDims = 10
+  val noPart = 3
   val k = 100
 
-  val entityList = definer.listEntities(EmptyMessage())
-  System.out.println(entityList.entities.toString())
+  generateNewEntity()
 
-  definer.dropEntity(EntityNameMessage(eName))
-  generateEntity()
-  definer.generateRandomData(GenerateRandomDataMessage(eName, nTuples, nDims))
-  System.out.println(definer.count(EntityNameMessage(eName)).message)
-
-  definer.dropEntity(EntityNameMessage(eName))
-  generateEntity()
-  nTuples = 1e6.toInt
-  definer.generateRandomData(GenerateRandomDataMessage(eName, nTuples, nDims))
-  System.out.println(definer.count(EntityNameMessage(eName)).message)
-
-  nTuples = 1e4.toInt
-  var count = 0
-  while(count<5){
-    count+=1
-    definer.generateRandomData(GenerateRandomDataMessage(eName, nTuples, nDims))
+  if(definer.count(EntityNameMessage(eName)).message.toInt!=nTuples){
+    System.err.println("Data generation failed")
+    System.exit(1)
   }
 
-  generateIndex(IndexType.ecp)
+  val ecpName = generateIndex(IndexType.ecp)
+  val vafName = generateIndex(IndexType.vaf)
+  if(!ecpName.equals(eName+"_feature_ecp_0")){
+    System.err.println(ecpName)
+    System.err.println(eName+"_feature_ecp_0")
+  }
+
+  System.out.println(ecpName + " | "+vafName)
 
   val repMessage = RepartitionMessage(eName,noPart,Seq("feature"),RepartitionMessage.PartitionOptions.REPLACE_EXISTING)
   time("Repartitioning Entity")(verifyRes(definer.repartitionEntityData(repMessage)))
@@ -53,37 +48,37 @@ class RPCClient(channel: ManagedChannel, definer: AdamDefinitionBlockingStub, se
   /**
     * Query-Testing
     */
-  val featureVector = FeatureVectorMessage().withDenseVector(DenseVectorMessage(Seq.fill(nDims)(Random.nextFloat())))
-  val queryMsg = NearestNeighbourQueryMessage("feature",Some(featureVector),None,None,k,Map[String,String](),true,1 until noPart)
-
-  val resIndex = time("Performing nnQuery")(searcherBlocking.doQuery(QueryMessage(nnq = Some(queryMsg),from = Some(FromMessage(FromMessage.Source.Index("silvan_feature_ecp_0"))))))
-
-  System.out.println("\n" + resIndex.serializedSize + " Results!\n")
-
-  System.out.println(definer.count(EntityNameMessage(eName)).message)
+  val ecpScan = time("Performing nnQuery")(searcherBlocking.doQuery(QueryMessage(nnq = Some(randomQueryMessage),from = Some(FromMessage(FromMessage.Source.Index(ecpName))))))
+  System.out.println("\n" + ecpScan.responses.head.results.size + " ECP - Results! \n")
 
 
-  def generateIndex(indexType: IndexType): String = {
-    val indexMsg = IndexMessage(eName,"feature",indexType,None,Map[String,String]())
-    val indexRes = time("Building " + indexType.toString + " Index")(definer.index(indexMsg))
-    verifyRes(indexRes)
-    System.out.println(indexRes.message)
-    indexRes.message
+  val vafScan = time("Performing nnQuery")(searcherBlocking.doQuery(QueryMessage(nnq = Some(randomQueryMessage),from = Some(FromMessage(FromMessage.Source.Index(vafName))))))
+  System.out.println("\n" + vafScan.responses.head.results.size + " VAF - Results! \n")
+
+
+  def randomQueryMessage = NearestNeighbourQueryMessage("feature",Some(FeatureVectorMessage().withDenseVector(DenseVectorMessage(Seq.fill(nDims)(Random.nextFloat())))),None,getDistanceMsg,k,Map[String,String](),true,1 until noPart)
+
+  def generateNewEntity(): Unit ={
+    val entities = definer.listEntities(EmptyMessage())
+    System.out.println("Current entities: "+entities.entities.toString())
+    //verifyRes(definer.dropEntity(EntityNameMessage(eName)))
+    dropAllEntities()
+    generateEntity()
+    val newEntities = definer.listEntities(EmptyMessage())
+    System.out.println("New entities: "+newEntities.entities.toString())
+
+    time("Generating Random Data")(verifyRes(definer.generateRandomData(GenerateRandomDataMessage(eName, nTuples, nDims))))
   }
 
   def generateEntity(): Unit = {
-    val entityRes = time("Creating Entity")(definer.createEntity(CreateEntityMessage.apply(eName, Seq(FieldDefinitionMessage.apply("id", FieldDefinitionMessage.FieldType.LONG, true, true, true), FieldDefinitionMessage.apply("feature", FieldDefinitionMessage.FieldType.FEATURE, false, false, true)))))
+    val entityRes = time("Creating Entity")(definer.createEntity(CreateEntityMessage.apply(eName, Seq(FieldDefinitionMessage.apply("id", FieldDefinitionMessage.FieldType.LONG, true, true, true), FieldDefinitionMessage("feature", FieldDefinitionMessage.FieldType.FEATURE,false,false,true)))))
     verifyRes(entityRes)
   }
-
-  def getDistanceMsg : Option[DistanceMessage] = Some(DistanceMessage(DistanceMessage.DistanceType.minkowski,Map[String,String](("norm","2"))))
-
 
   def verifyRes (res: AckMessage) {
     if (!(res.code == AckMessage.Code.OK) ) {
       System.err.println ("Error during entity creation")
       System.err.println (res.message)
-      System.exit (1)
     }
   }
 
@@ -96,6 +91,20 @@ class RPCClient(channel: ManagedChannel, definer: AdamDefinitionBlockingStub, se
       val dropEnt = definer.dropEntity(EntityNameMessage(entity))
       verifyRes(dropEnt)
     }
+  }
+
+  def getDistanceMsg : Option[DistanceMessage] = Some(DistanceMessage(DistanceMessage.DistanceType.minkowski,Map[String,String](("norm","2"))))
+
+  def generateIndex(indexType: IndexType): String = {
+    val indexMsg = IndexMessage(eName,"feature",indexType,getDistanceMsg,Map[String,String]())
+    val indexRes = time("Building " + indexType.toString + " Index")(definer.index(indexMsg))
+    verifyRes(indexRes)
+    indexRes.message
+  }
+
+  def appendToResults(tuples:Int, dimensions:Int, partitions: Int, index: String, time: Long, k: Int): Unit ={
+    val pw = new java.io.PrintWriter(new File("results.txt"))
+    try pw.println(index+","+tuples+","+dimensions+","+partitions+","+time+","+k) finally pw.close()
   }
 
 
