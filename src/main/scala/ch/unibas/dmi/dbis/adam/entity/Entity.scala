@@ -54,7 +54,16 @@ case class Entity(val entityname: EntityName)(@transient implicit val ac: AdamCo
     * @return
     */
   def featureData: Option[DataFrame] = {
-    if (_featureData.isEmpty) {
+
+    var tempFix = false
+    try {
+      _featureData.get.rdd.first().toString()
+      System.out.println("Gotcha!")
+    } catch{
+      case e:Exception => tempFix = true
+    }
+
+    if (_featureData.isEmpty || tempFix) {
       if (featurePath.isDefined) {
         val data = Entity.featureStorage.read(featurePath.get)
 

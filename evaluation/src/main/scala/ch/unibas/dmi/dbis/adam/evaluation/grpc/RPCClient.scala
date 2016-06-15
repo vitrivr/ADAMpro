@@ -56,8 +56,6 @@ class RPCClient(channel: ManagedChannel, definer: AdamDefinitionBlockingStub, se
           val time = timeQuery(name,dim, part)
           appendToResults(tuples,dim,part,index.name,time,k)
         }
-
-        System.exit(1)
       }
     }
   }
