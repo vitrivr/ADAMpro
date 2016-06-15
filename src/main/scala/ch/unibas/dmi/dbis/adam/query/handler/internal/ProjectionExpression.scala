@@ -13,7 +13,7 @@ import org.apache.spark.sql.{DataFrame, Row}
   * Ivan Giangreco
   * May 2016
   */
-case class ProjectionExpression(projection: ProjectionField, expr : QueryExpression, id: Option[String] = None)(@transient implicit val ac: AdamContext) extends QueryExpression(id) {
+case class ProjectionExpression(private val projection: ProjectionField, private val expr: QueryExpression, id: Option[String] = None)(@transient implicit val ac: AdamContext) extends QueryExpression(id) {
   override val info = ExpressionDetails(None, Some("Projection Expression"), id, None)
   children ++= Seq(expr)
 
@@ -21,9 +21,24 @@ case class ProjectionExpression(projection: ProjectionField, expr : QueryExpress
     log.debug("performing projection on data")
     expr.evaluate().map(projection.f)
   }
+
+  override def equals(that: Any): Boolean =
+    that match {
+      case that: ProjectionExpression => this.expr.equals(that.expr) && this.projection.equals(that.projection)
+      case _ => this.expr.equals(that)
+    }
+
+  override def hashCode(): Int = {
+    val prime = 31
+    var result = 1
+    result = prime * result + expr.hashCode
+    result = prime * result + projection.hashCode
+    result
+  }
 }
 
 object ProjectionExpression extends Logging {
+
   abstract class ProjectionField {
     def f(df: DataFrame): DataFrame
   }
@@ -37,17 +52,44 @@ object ProjectionExpression extends Logging {
         df
       }
     }
+
+    override def equals(that: Any): Boolean =
+      that match {
+        case that: FieldNameProjection => this.names.sorted.equals(that.names.sorted)
+        case _ => false
+      }
+
+    override def hashCode(): Int = {
+      names.hashCode
+    }
   }
 
   case class CountOperationProjection(implicit ac: AdamContext) extends ProjectionField {
     override def f(df: DataFrame): DataFrame = {
       ac.sqlContext.createDataFrame(ac.sc.makeRDD(Seq(Row(df.count()))), StructType(Seq(StructField("count", LongType))))
     }
+
+    override def equals(that: Any): Boolean =
+      that match {
+        case that: CountOperationProjection => true
+        case _ => false
+      }
+
+    override def hashCode(): Int = 0
   }
 
   case class ExistsOperationProjection(implicit ac: AdamContext) extends ProjectionField {
     override def f(df: DataFrame): DataFrame = {
       ac.sqlContext.createDataFrame(ac.sc.makeRDD(Seq(Row(df.count() > 1))), StructType(Seq(StructField("exists", BooleanType))))
     }
+
+    override def equals(that: Any): Boolean =
+      that match {
+        case that: ExistsOperationProjection => true
+        case _ => false
+      }
+
+    override def hashCode(): Int = 1
   }
+
 }

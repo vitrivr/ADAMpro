@@ -17,7 +17,7 @@ import org.apache.spark.sql.DataFrame
   * Ivan Giangreco
   * May 2016
   */
-case class IndexScanExpression(index: Index)(nnq: NearestNeighbourQuery, id: Option[String] = None)(filterExpr: Option[QueryExpression] = None)(@transient implicit val ac: AdamContext) extends QueryExpression(id) {
+case class IndexScanExpression(private val index: Index)(private val nnq: NearestNeighbourQuery, id: Option[String] = None)(filterExpr: Option[QueryExpression] = None)(@transient implicit val ac: AdamContext) extends QueryExpression(id) {
   override val info = ExpressionDetails(Some(index.indextypename.name + " (" + index.indexname + ")"), Some("Index Scan Expression"), id, Some(index.confidence))
   children ++= filterExpr.map(Seq(_)).getOrElse(Seq())
 
@@ -71,6 +71,20 @@ case class IndexScanExpression(index: Index)(nnq: NearestNeighbourQuery, id: Opt
     } else {
       this
     }
+  }
+
+  override def equals(that: Any): Boolean =
+    that match {
+      case that: IndexScanExpression => this.index.equals(that.index) && this.nnq.equals(that.nnq)
+      case _ => false
+    }
+
+  override def hashCode(): Int = {
+    val prime = 31
+    var result = 1
+    result = prime * result + index.hashCode
+    result = prime * result + nnq.hashCode
+    result
   }
 }
 

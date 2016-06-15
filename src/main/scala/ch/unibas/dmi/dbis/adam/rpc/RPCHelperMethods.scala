@@ -87,7 +87,7 @@ private[rpc] object RPCHelperMethods {
       } else if (subexpression.isDefined) {
         new CompoundQueryExpression(toExpression(subexpression).get, queryid)
       } else if (entityname.isDefined) {
-        HintBasedScanExpression(entityname.get, nnq, bq, hints, queryid)()
+        HintBasedScanExpression(entityname.get, nnq, bq, hints, true, queryid)()
       } else if (indexname.isDefined) {
 
         var scan: Option[QueryExpression] = None

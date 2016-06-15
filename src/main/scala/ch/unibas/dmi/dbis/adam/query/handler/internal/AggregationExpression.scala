@@ -21,7 +21,7 @@ import scala.concurrent.{Await, Future}
   * Ivan Giangreco
   * April 2016
   */
-abstract class AggregationExpression(left: QueryExpression, right: QueryExpression, order: ExpressionEvaluationOrder.Order = ExpressionEvaluationOrder.Parallel, id: Option[String] = None)(@transient implicit val ac: AdamContext) extends QueryExpression(id) {
+abstract class AggregationExpression(private val left: QueryExpression, private val right: QueryExpression, order: ExpressionEvaluationOrder.Order = ExpressionEvaluationOrder.Parallel, id: Option[String] = None)(@transient implicit val ac: AdamContext) extends QueryExpression(id) {
   children ++= Seq(left, right)
 
   override protected def run(filter: Option[DataFrame] = None)(implicit ac: AdamContext): Option[DataFrame] = {
@@ -36,6 +36,22 @@ abstract class AggregationExpression(left: QueryExpression, right: QueryExpressi
     }
 
     Some(result)
+  }
+
+  override def equals(that: Any): Boolean =
+    that match {
+      case that: AggregationExpression =>
+        this.getClass().equals(that.getClass) && this.left.equals(that.left) && this.right.equals(that.right)
+      case _ => false
+    }
+
+  override def hashCode: Int = {
+    val prime = 31
+    var result = 1
+    result = prime * result + this.getClass.hashCode
+    result = prime * result + left.hashCode
+    result = prime * result + right.hashCode
+    result
   }
 
   private def asymmetric(first: QueryExpression, second: QueryExpression, filter: Option[DataFrame] = None): DataFrame = {
@@ -141,6 +157,14 @@ object AggregationExpression {
       val rdd = sc.emptyRDD[Row]
       Some(sqlContext.createDataFrame(rdd, Result.resultSchema(AttributeDefinition("", FieldTypes.STRINGTYPE))))
     }
+
+    override def equals(that: Any): Boolean =
+      that match {
+        case that: EmptyExpression => true
+        case _ => false
+      }
+
+    override def hashCode: Int = 0
   }
 
 }
