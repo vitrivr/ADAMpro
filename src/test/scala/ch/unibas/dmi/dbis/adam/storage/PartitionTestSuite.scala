@@ -20,11 +20,11 @@ class PartitionTestSuite extends AdamTestBase {
   val nPartitions = 8
 
 
-  feature("repartitioning") {
+  feature("repartitioning index") {
     /**
       *
       */
-    scenario("repartition replacing existing") {
+    scenario("repartition index replacing existing") {
       withQueryEvaluationSet { es =>
         val index = IndexOp(es.entity.entityname, "featurefield", IndexTypes.ECPINDEX, EuclideanDistance)
         assert(index.isSuccess)
@@ -47,7 +47,7 @@ class PartitionTestSuite extends AdamTestBase {
     /**
       *
       */
-    scenario("repartition creating temporary new") {
+    scenario("repartition index creating temporary new") {
       withQueryEvaluationSet { es =>
         val index = IndexOp(es.entity.entityname, "featurefield", IndexTypes.ECPINDEX, EuclideanDistance)
         assert(index.isSuccess)
@@ -75,7 +75,7 @@ class PartitionTestSuite extends AdamTestBase {
     /**
       *
       */
-    scenario("repartition creating new") {
+    scenario("repartition index creating new") {
       withQueryEvaluationSet { es =>
         val index = IndexOp(es.entity.entityname, "featurefield", IndexTypes.ECPINDEX, EuclideanDistance)
         assert(index.isSuccess)
@@ -102,7 +102,7 @@ class PartitionTestSuite extends AdamTestBase {
     /**
       *
       */
-    scenario("repartition based on metadata") {
+    scenario("repartition index based on metadata") {
       withQueryEvaluationSet { es =>
         val index = IndexOp(es.entity.entityname, "featurefield", IndexTypes.ECPINDEX, EuclideanDistance)
         assert(index.isSuccess)
