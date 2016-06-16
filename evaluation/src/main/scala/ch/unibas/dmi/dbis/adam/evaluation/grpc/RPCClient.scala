@@ -2,6 +2,7 @@ package ch.unibas.dmi.dbis.adam.evaluation.grpc
 
 
 import java.io.{BufferedWriter, File, FileWriter, PrintWriter}
+import java.util.Calendar
 
 import ch.unibas.dmi.dbis.adam.evaluation.AdamParEvalUtils
 import ch.unibas.dmi.dbis.adam.http.grpc.AdamDefinitionGrpc.AdamDefinitionBlockingStub
@@ -18,8 +19,8 @@ import scala.util.Random
   * Ivan Giangreco
   * June 2016
   */
-class RPCClient(channel: ManagedChannel, definer: AdamDefinitionBlockingStub, searcherBlocking: AdamSearchBlockingStub, searcher: AdamSearchStub) extends AdamParEvalUtils{
-  val fw = new FileWriter("results.txt", true)
+class RPCClient(channel: ManagedChannel, definer: AdamDefinitionBlockingStub, searcherBlocking: AdamSearchBlockingStub, searcher: AdamSearchStub) extends AdamParEvalUtils {
+  val fw = new FileWriter("results2.txt", true)
   val bw = new BufferedWriter(fw)
   val out = new PrintWriter(bw)
 
@@ -32,75 +33,78 @@ class RPCClient(channel: ManagedChannel, definer: AdamDefinitionBlockingStub, se
   /**
     * Evaluation Code
     */
-  val tupleSizes = Seq(1e5.toInt)
+  val tupleSizes = Seq(1e7.toInt, 1e8.toInt, 1e9.toInt)
   val dimensions = Seq(10, 50, 128, 500)
-  val partitions = Seq(1, 2, 4, 8, 16, 100)
-  val indices = Seq(IndexType.ecp,IndexType.vaf)
+  val partitions = Seq(1, 2, 4, 8, 16, 32, 64, 128)
+  val indices = Seq(IndexType.ecp, IndexType.vaf, IndexType.lsh, IndexType.pq)
 
   try
-  for(tuples <- tupleSizes){
-    for(dim <- dimensions){
-      for(part <- partitions){
-        System.out.println("\n New Round! "+tuples + " | "+dim+" | "+part+"\n")
-        dropAllEntities()
-        val eName = ("silvan"+Math.abs(Random.nextInt())).filter(_!='0')
+      for (tuples <- tupleSizes) {
+        for (dim <- dimensions) {
 
-        definer.createEntity(CreateEntityMessage(eName,Seq(FieldDefinitionMessage.apply("id", FieldDefinitionMessage.FieldType.LONG, true, true, true),FieldDefinitionMessage("feature",FieldDefinitionMessage.FieldType.FEATURE,false,false,true))))
+          dropAllEntities()
+          val eName = ("silvan" + Math.abs(Random.nextInt())).filter(_ != '0')
 
-        definer.generateRandomData(GenerateRandomDataMessage(eName, tuples, dim))
+          definer.createEntity(CreateEntityMessage(eName, Seq(FieldDefinitionMessage.apply("id", FieldDefinitionMessage.FieldType.LONG, true, true, true), FieldDefinitionMessage("feature", FieldDefinitionMessage.FieldType.FEATURE, false, false, true))))
 
-        val newName = definer.repartitionEntityData(RepartitionMessage(eName,part,option = RepartitionMessage.PartitionOptions.REPLACE_EXISTING))
+          definer.generateRandomData(GenerateRandomDataMessage(eName, tuples, dim))
 
-        for(index <- indices){
-          val name = generateIndex(index, newName.message)
-          val time = timeQuery(name,dim, part)
-          appendToResults(tuples,dim,part,index.name,time,k)
+          for (index <- indices) {
+            val name = generateIndex(index, eName)
+            for (part <- partitions) {
+              definer.repartitionIndexData(RepartitionMessage(name, part, option = RepartitionMessage.PartitionOptions.REPLACE_EXISTING))
+              val (time, noResults) = timeQuery(name, dim, part)
+              appendToResults(tuples, dim, part, index.name, time, k, noResults)
+            }
+          }
         }
       }
-    }
-  }
   finally out.close
 
 
-  def timeQuery(indexName: String, dim:Int, part: Int) : Long = {
+  def timeQuery(indexName: String, dim: Int, part: Int): (Float, Int) = {
     //1 free query to cache Index
-    val res = searcherBlocking.doQuery(QueryMessage(nnq = Some(randomQueryMessage(dim, part)),from = Some(FromMessage(FromMessage.Source.Index(indexName)))))
-    System.out.println(indexName + " - "+res.responses.head.results.size)
-    if(k>res.responses.head.results.size){
-      System.err.println("Should be "+k+", but actually only " + res.responses.head.results.size)
+    val res = searcherBlocking.doQuery(QueryMessage(nnq = Some(randomQueryMessage(dim, part)), from = Some(FromMessage(FromMessage.Source.Index(indexName)))))
+    System.out.println(indexName + " - " + res.responses.head.results.size)
+    if (k > res.responses.head.results.size) {
+      System.err.println("Should be " + k + ", but actually only " + res.responses.head.results.size)
     }
 
+    var resSize = 0
+
+    //Average over 10 Queries
     val start = System.currentTimeMillis()
     var counter = 0
-    while(counter<10){
-      searcherBlocking.doQuery(QueryMessage(nnq = Some(randomQueryMessage(dim, part)),from = Some(FromMessage(FromMessage.Source.Index(indexName)))))
-      counter+=1
+    while (counter < 10) {
+      val res = searcherBlocking.doQuery(QueryMessage(nnq = Some(randomQueryMessage(dim, part)), from = Some(FromMessage(FromMessage.Source.Index(indexName)))))
+      resSize+=res.responses.head.results.size
+      counter += 1
     }
     val stop = System.currentTimeMillis()
-    (stop-start)
+    ((stop - start)/10f,resSize/10)
   }
 
-  def randomQueryMessage(dim: Int, part:Int) = NearestNeighbourQueryMessage("feature",Some(FeatureVectorMessage().withDenseVector(DenseVectorMessage(Seq.fill(dim)(Random.nextFloat())))),None,getDistanceMsg,k,Map[String,String](),true,1 until part)
+  def randomQueryMessage(dim: Int, part: Int) = NearestNeighbourQueryMessage("feature", Some(FeatureVectorMessage().withDenseVector(DenseVectorMessage(Seq.fill(dim)(Random.nextFloat())))), None, getDistanceMsg, k, Map[String, String](), true, 1 until part)
 
   def dropAllEntities() = {
     val entityList = definer.listEntities(EmptyMessage())
 
-    for(entity <- entityList.entities) {
+    for (entity <- entityList.entities) {
       System.out.println("Dropping " + entity)
       val dropEnt = definer.dropEntity(EntityNameMessage(entity))
     }
   }
 
-  def getDistanceMsg : Option[DistanceMessage] = Some(DistanceMessage(DistanceMessage.DistanceType.minkowski,Map[String,String](("norm","2"))))
+  def getDistanceMsg: Option[DistanceMessage] = Some(DistanceMessage(DistanceMessage.DistanceType.minkowski, Map[String, String](("norm", "2"))))
 
   def generateIndex(indexType: IndexType, eName: String): String = {
-    val indexMsg = time("Indexing "+indexType.name)(IndexMessage(eName,"feature",indexType,getDistanceMsg,Map[String,String]()))
-    val indexRes = definer.index(indexMsg)
+    val indexMsg = IndexMessage(eName, "feature", indexType, getDistanceMsg, Map[String, String]())
+    val indexRes = time("Indexing " + indexType.name)(definer.index(indexMsg))
     indexRes.message
   }
 
-  def appendToResults(tuples:Int, dimensions:Int, partitions: Int, index: String, time: Long, k: Int): Unit ={
-    out.println(index+","+tuples+","+dimensions+","+partitions+","+time+","+k)
+  def appendToResults(tuples: Int, dimensions: Int, partitions: Int, index: String, time: Float, k: Int, noResults: Int): Unit = {
+    out.println(Calendar.getInstance().getTime()+","+index + "," + tuples + "," + dimensions + "," + partitions + "," + time + "," + k+", "+ noResults)
     out.flush()
   }
 
