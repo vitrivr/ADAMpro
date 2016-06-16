@@ -33,7 +33,7 @@ class RPCClient(channel: ManagedChannel, definer: AdamDefinitionBlockingStub, se
   /**
     * Evaluation Code
     */
-  val tupleSizes = Seq(1e7.toInt, 1e8.toInt, 1e9.toInt)
+  val tupleSizes = Seq(1e5.toInt, 1e6.toInt, 1e7.toInt, 1e8.toInt)
   val dimensions = Seq(10, 50, 128, 500)
   val partitions = Seq(1, 2, 4, 8, 16, 32, 64, 128)
   val indices = Seq(IndexType.ecp, IndexType.vaf, IndexType.lsh, IndexType.pq)
@@ -41,13 +41,18 @@ class RPCClient(channel: ManagedChannel, definer: AdamDefinitionBlockingStub, se
   try
       for (tuples <- tupleSizes) {
         for (dim <- dimensions) {
-
+          System.out.println("New Round! "+tuples+" "+dim)
           dropAllEntities()
           val eName = ("silvan" + Math.abs(Random.nextInt())).filter(_ != '0')
 
           definer.createEntity(CreateEntityMessage(eName, Seq(FieldDefinitionMessage.apply("id", FieldDefinitionMessage.FieldType.LONG, true, true, true), FieldDefinitionMessage("feature", FieldDefinitionMessage.FieldType.FEATURE, false, false, true))))
 
           definer.generateRandomData(GenerateRandomDataMessage(eName, tuples, dim))
+
+          val countedTuples = definer.count(EntityNameMessage(eName))
+          if(countedTuples.message.toInt!= tuples){
+            System.err.println(tuples + " | "+countedTuples)
+          }
 
           for (index <- indices) {
             val name = generateIndex(index, eName)
