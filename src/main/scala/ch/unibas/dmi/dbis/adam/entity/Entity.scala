@@ -27,9 +27,9 @@ import scala.util.{Failure, Random, Success, Try}
   * October 2015
   */
 case class Entity(val entityname: EntityName)(@transient implicit val ac: AdamContext) extends Serializable with Logging {
-  var _featureData: Option[DataFrame] = None
-  var _metaData: Option[DataFrame] = None
-  var _join: Option[DataFrame] = None
+  private var _featureData: Option[DataFrame] = None
+  private var _metaData: Option[DataFrame] = None
+  private var _join: Option[DataFrame] = None
 
   //TODO: make entities singleton? lock on entity?
 
@@ -217,8 +217,8 @@ case class Entity(val entityname: EntityName)(@transient implicit val ac: AdamCo
   /**
     * Inserts data into the entity.
     *
-    * @param data
-    * @param ignoreChecks
+    * @param data data to insert
+    * @param ignoreChecks whether to ignore checks
     * @return
     */
   def insert(data: DataFrame, ignoreChecks: Boolean = false): Try[Void] = {
@@ -363,7 +363,7 @@ object Entity extends Logging {
       }
 
       FieldNames.reservedNames.foreach { reservedName =>
-        if (attributes.contains(reservedName)) {
+        if (attributes.map(_.name).contains(reservedName)) {
           return Failure(EntityNotProperlyDefinedException("Entity defined with field " + reservedName + ", but name is reserved"))
         }
       }
@@ -376,7 +376,7 @@ object Entity extends Logging {
 
       if (attributes.count(_.pk) > 1) {
         return Failure(EntityNotProperlyDefinedException("Entity defined with more than one primary key"))
-      } else if (attributes.filter(_.pk).isEmpty) {
+      } else if (!attributes.exists(_.pk)) {
         return Failure(EntityNotProperlyDefinedException("Entity defined has no primary key."))
       } else if (!attributes.filter(_.pk).forall(field => allowedPkTypes.contains(field.fieldtype))) {
         return Failure(EntityNotProperlyDefinedException("Entity defined needs a " + allowedPkTypes.map(_.name).mkString(", ") + " primary key"))
@@ -392,7 +392,7 @@ object Entity extends Logging {
       val pk = attributes.filter(_.pk).head
 
       //perform
-      val featurePath = if (!attributes.filter(_.fieldtype == FEATURETYPE).isEmpty) {
+      val featurePath = if (attributes.exists(_.fieldtype == FEATURETYPE)) {
         val featureFields = attributes.filter(_.fieldtype == FEATURETYPE)
 
         val path = featureStorage.create(entityname, featureFields)
@@ -406,7 +406,7 @@ object Entity extends Logging {
         None
       }
 
-      val metadataPath = if (!attributes.filterNot(_.fieldtype == FEATURETYPE).filterNot(_.pk).isEmpty) {
+      val metadataPath = if (attributes.exists(attr => (attr.fieldtype != FEATURETYPE) && !attr.pk)) {
         val metadataFields = attributes.filterNot(_.fieldtype == FEATURETYPE)
         val path = metadataStorage.create(entityname, metadataFields)
 
@@ -419,7 +419,7 @@ object Entity extends Logging {
         None
       }
 
-      CatalogOperator.createEntity(entityname, featurePath, metadataPath, attributes, !attributes.filterNot(_.fieldtype == FEATURETYPE).filterNot(_.pk).isEmpty)
+      CatalogOperator.createEntity(entityname, featurePath, metadataPath, attributes, attributes.exists(attr => (attr.fieldtype != FEATURETYPE) && !attr.pk))
 
       Success(Entity(entityname)(ac))
     } catch {
