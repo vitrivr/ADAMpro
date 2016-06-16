@@ -554,6 +554,7 @@ object Entity extends Logging {
 
         featureStorage.write(entity.entityname, data, SaveMode.ErrorIfExists, Some(newPath))
         CatalogOperator.updateEntityFeaturePath(entity.entityname, newPath)
+        entity._featureData = None
         featureStorage.drop(oldPath)
 
         return Success(entity)
