@@ -54,16 +54,7 @@ case class Entity(val entityname: EntityName)(@transient implicit val ac: AdamCo
     * @return
     */
   def featureData: Option[DataFrame] = {
-
-    var tempFix = false
-    try {
-      _featureData.get.rdd.first().toString()
-      System.out.println("Gotcha!")
-    } catch{
-      case e:Exception => tempFix = true
-    }
-
-    if (_featureData.isEmpty || tempFix) {
+    if (_featureData.isEmpty) {
       if (featurePath.isDefined) {
         val data = Entity.featureStorage.read(featurePath.get)
 
@@ -564,6 +555,8 @@ object Entity extends Logging {
         featureStorage.write(entity.entityname, data, SaveMode.ErrorIfExists, Some(newPath))
         CatalogOperator.updateEntityFeaturePath(entity.entityname, newPath)
         entity._featureData = None
+        entity._join = None
+        entity._metaData = None
         featureStorage.drop(oldPath)
 
         return Success(entity)
