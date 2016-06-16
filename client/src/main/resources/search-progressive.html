@@ -47,8 +47,58 @@
     </div>
 </nav>
 
-<div class='container' style='width:90%'><div class='row'><h1 style='font-size:40pt;'>ADAM<span style='font-size:20pt;'>pro</span></h1></div>
+<div class='container' style='width:90%'><div class='row'><h1 style='font-size:40pt;'>Progressive<span style='font-size:20pt; padding-left: 20px'>Search</span></h1></div>
 
+<div class="row">
+    <div id="centityname" class="input-field col s2"></div>
+    <div class="input-field col s2">
+        <input type="text" class="form-control" id="column" placeholder="attribute">
+    </div>
+    
+    <div class="input-field col s3">
+        <input type="text" class="form-control" id="query" placeholder="query">
+    </div>
+
+    <div class="input-field col s1">
+        <input type="text" class="form-control" id="k" placeholder="k" style="text-align:right;">
+    </div>
+
+    <div class="input-field col s3">
+        <select multiple id="indextype">
+            <option value="" disabled selected>all</option>
+            <option value="ecp">eCP Index</option>
+            <option value="lsh">LSH Index</option>
+            <option value="mi">MI Index</option>
+            <option value="pq">PQ Index</option>
+            <option value="sh">SH Index</option>
+            <option value="vaf">VAF Index</option>
+            <option value="vav">VAV Index</option>
+        </select>
+        <label>index type</label>
+    </div>
+
+    <div class="input-field col s1">
+        <button class="btn waves-effect waves-light red" name="action" id="btnSubmit">
+            Search
+        </button>
+    </div>
+</div>
+
+<div id="container" style="min-width: 400px; height: 400px; margin: 0 auto"></div>
+
+
+<script src="https://code.highcharts.com/highcharts.js"></script>
+<script src="https://code.highcharts.com/modules/exporting.js"></script>
+<script src="lib/js/search-progressive.js"></script>
+<script>
+$(document).ready(function () {
+    entityListGetSelect("centityname");
+});
+
+$(document).ready(function () {
+    $('select').material_select();
+});
+</script>
 
 </div>
 

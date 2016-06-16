@@ -11,7 +11,8 @@
     
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/materialize/0.97.6/css/materialize.min.css">
     <link rel="stylesheet" href="./lib/css/app.css">
-    
+    <link rel="stylesheet" href="./lib/css/materialize-datatable.css">
+
     <script src="https://code.jquery.com/jquery-2.1.1.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/materialize/0.97.6/js/materialize.min.js"></script>
     <script src="./lib/js/config.js"></script>
@@ -47,9 +48,59 @@
     </div>
 </nav>
 
-<div class='container' style='width:90%'><div class='row'><h1 style='font-size:40pt;'>ADAM<span style='font-size:20pt;'>pro</span></h1></div>
+<div class='container' style='width:90%'><div class='row'><h1 style='font-size:40pt;'>Read<span style='font-size:20pt; padding-left: 20px'>Entity</span></h1></div>
 
 
+<div class="row">
+    <div id="centityname" class="input-field col s4"></div>
+    <button class="btn waves-effect waves-light red" name="action" id="btnSubmit">Show</button>
+</div>
+
+<div id="resultbox" class="material-table s8">
+</div>
+
+<script src="http://cdn.datatables.net/1.10.12/js/jquery.dataTables.min.js"></script>
+<script src="./lib/js/materialize-datatable.js"></script>
+<script>
+$(document).ready(function () {
+    entityListGetSelect("centityname");
+});
+
+$("#btnSubmit").click(function () {
+    var entityname = $("#entityname").val();
+
+    entityRead(entityname, function(data){
+        if (data.details.length < 1) { return; }
+
+        var innerhtml = '';
+        innerhtml += '<table id="' + entityname + '"class="striped highlight">';
+        
+        //thead
+        innerhtml += '<thead><tr>';
+        $.each( data.details[0], function( key, value ) {
+            innerhtml += "<th>" + key + "</th>"
+        });
+        innerhtml += '</tr></thead>';
+        
+        //tbody
+        innerhtml += '<tbody>';
+        $.each( data.details, function( key, value ) {
+            innerhtml += "<tr>";
+            $.each( value, function( attributekey, attributevalue ) {
+                innerhtml += "<td>" + attributevalue + "</td>"
+            });
+            innerhtml += "</tr>";
+        });
+        innerhtml += '</tbody>';
+        
+        innerhtml += '</table>';
+
+        $("#resultbox").html(innerhtml); 
+        makeDatatable(entityname);
+    })
+});
+</script>
+    
 </div>
 
 </body>

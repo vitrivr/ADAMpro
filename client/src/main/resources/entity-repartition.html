@@ -47,8 +47,41 @@
     </div>
 </nav>
 
-<div class='container' style='width:90%'><div class='row'><h1 style='font-size:40pt;'>ADAM<span style='font-size:20pt;'>pro</span></h1></div>
+<div class='container' style='width:90%'><div class='row'><h1 style='font-size:40pt;'>Repartition<span style='font-size:20pt; padding-left: 20px'>Entity</span></h1></div>
 
+<div class="row">
+    <div id="centityname" class="input-field col s4"></div>
+</div>
+<div class="row">
+    <div class="input-field col s2">
+        <input id="npartitions" type="text">
+        <label for="npartitions">number of partitions</label>
+    </div>
+    <div class="input-field col s6">
+        <input id="attributes" type="text">
+        <label for="attributes">partition attributes</label>
+    </div>
+</div>
+<div class="row" style="padding-top: 40px;">
+    <button class="btn waves-effect waves-light red" name="action" id="btnSubmit">Partition</button>
+</div>
+
+<script>
+$(document).ready(function () {
+    entityListGetSelect("centityname");
+});
+
+
+$("#btnSubmit").click(function () {
+    var entityname = $("#entityname").val();
+    var attributes = $("#attributes").val().split(",");
+    var materialize = true;
+    var replace = true;
+    var npartitions = $("#npartitions").val();
+
+    entityPartition(entityname, attributes, materialize, replace, npartitions);
+});
+</script>
 
 </div>
 

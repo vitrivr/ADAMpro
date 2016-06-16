@@ -1,0 +1,1 @@
+const ADAM_CLIENT_HOST = "http://localhost:9099";
