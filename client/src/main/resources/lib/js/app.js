@@ -431,7 +431,7 @@ function indexCreate(entityname, attribute, norm, indextype, options) {
         type: 'POST',
         success: function (data) {
             if (data.code === 200) {
-                showAlert("Created index for entity " + entityname + ".");
+                showAlert("Created index " + data.message + " for " + entityname + ".");
             } else {
                 raiseError(data.message);
             }
