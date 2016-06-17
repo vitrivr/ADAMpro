@@ -1,1 +1,1 @@
-const ADAM_CLIENT_HOST = "http://localhost:9099";
+const ADAM_CLIENT_HOST = "";
