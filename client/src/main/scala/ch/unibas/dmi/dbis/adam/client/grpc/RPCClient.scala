@@ -113,7 +113,7 @@ class RPCClient(channel: ManagedChannel, definer: AdamDefinitionBlockingStub, se
     */
   def entityList(): Try[Seq[String]] = {
     execute("list entities operation") {
-      Success(definer.listEntities(EmptyMessage()).entities)
+      Success(definer.listEntities(EmptyMessage()).entities.sorted)
     }
   }
 
