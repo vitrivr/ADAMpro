@@ -1,7 +1,7 @@
 package ch.unibas.dmi.dbis.adam.evaluation.grpc
 
 
-import java.io.{BufferedWriter, File, FileWriter, PrintWriter}
+import java.io.{BufferedWriter, FileWriter, PrintWriter}
 import java.util.Calendar
 
 import ch.unibas.dmi.dbis.adam.evaluation.AdamParEvalUtils
@@ -20,7 +20,7 @@ import scala.util.Random
   * June 2016
   */
 class RPCClient(channel: ManagedChannel, definer: AdamDefinitionBlockingStub, searcherBlocking: AdamSearchBlockingStub, searcher: AdamSearchStub) extends AdamParEvalUtils {
-  val fw = new FileWriter("results2.txt", true)
+  val fw = new FileWriter("results.csv", true)
   val bw = new BufferedWriter(fw)
   val out = new PrintWriter(bw)
 
