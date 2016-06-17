@@ -17,6 +17,7 @@ import ch.unibas.dmi.dbis.adam.query.query.{BooleanQuery, NearestNeighbourQuery}
 import org.scalatest.concurrent.ScalaFutures
 
 import scala.concurrent.duration.Duration
+import scala.util.Try
 
 
 /**
@@ -286,7 +287,13 @@ class QueryTestSuite extends AdamTestBase with ScalaFutures {
         IndexOp(es.entity.entityname, "featurefield", IndexTypes.SHINDEX, es.distance)
         IndexOp(es.entity.entityname, "featurefield", IndexTypes.VAFINDEX, es.distance)
 
-        def processResults(po: ProgressiveObservation) {
+        def processResults(tpo: Try[ProgressiveObservation]) {
+          if(tpo.isFailure){
+            assert(false)
+          }
+
+          val po = tpo.get
+
           val results = po.results.get.map(r => (r.getAs[Float](FieldNames.distanceColumnName), r.getAs[Long]("tid"))).collect() //get here TID of metadata
             .sortBy(_._1).toSeq
 

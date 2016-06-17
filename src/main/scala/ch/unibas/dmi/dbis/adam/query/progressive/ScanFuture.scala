@@ -1,13 +1,14 @@
 package ch.unibas.dmi.dbis.adam.query.progressive
 
 import ch.unibas.dmi.dbis.adam.main.AdamContext
-import ch.unibas.dmi.dbis.adam.query.datastructures.{ProgressiveQueryStatus, ProgressiveQueryStatusTracker}
+import ch.unibas.dmi.dbis.adam.query.datastructures.ProgressiveQueryStatusTracker
 import ch.unibas.dmi.dbis.adam.query.handler.generic.QueryExpression
 import org.apache.spark.Logging
 import org.apache.spark.sql.DataFrame
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
+import scala.util.{Failure, Success, Try}
 
 
 /**
@@ -16,7 +17,7 @@ import scala.concurrent.Future
   * Ivan Giangreco
   * October 2015
   */
-class ScanFuture[U](expression: QueryExpression, filter : Option[DataFrame], onComplete: ProgressiveObservation => U, val tracker: ProgressiveQueryStatusTracker)(implicit ac: AdamContext) extends Logging{
+class ScanFuture[U](expression: QueryExpression, filter : Option[DataFrame], onComplete: Try[ProgressiveObservation] => U, val tracker: ProgressiveQueryStatusTracker)(implicit ac: AdamContext) extends Logging{
   tracker.register(this)
 
   val t1 = System.currentTimeMillis()
@@ -33,8 +34,8 @@ class ScanFuture[U](expression: QueryExpression, filter : Option[DataFrame], onC
         val info = Map[String, String]()
 
         val observation = ProgressiveObservation(tracker.status, res, confidence.getOrElse(0), typename.getOrElse(""), info, t1, System.currentTimeMillis())
-        if (tracker.status == ProgressiveQueryStatus.RUNNING) {
-          onComplete(observation)
+        if (!tracker.isCompleted) {
+          onComplete(Success(observation))
         }
 
         log.debug("completed scanning of " + typename.getOrElse("<missing information>"))
@@ -44,10 +45,8 @@ class ScanFuture[U](expression: QueryExpression, filter : Option[DataFrame], onC
   })
   future.onFailure({
     case res =>
-      val info = Map[String, String]()
-      val observation = ProgressiveObservation(tracker.status, None, confidence.getOrElse(0), res.getMessage, info, t1, System.currentTimeMillis())
-      if (tracker.status == ProgressiveQueryStatus.RUNNING) {
-        onComplete(observation)
+      if (!tracker.isCompleted) {
+        onComplete(Failure(res))
       }
 
       log.error("error when running progressive query", res)

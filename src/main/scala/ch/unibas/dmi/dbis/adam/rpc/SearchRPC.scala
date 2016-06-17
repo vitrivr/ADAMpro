@@ -14,6 +14,7 @@ import org.apache.spark.sql.DataFrame
 import org.apache.spark.sql.types._
 
 import scala.concurrent.Future
+import scala.util.Try
 
 /**
   * adamtwo
@@ -138,11 +139,17 @@ class SearchRPC(implicit ac: AdamContext) extends AdamSearchGrpc.AdamSearch with
       try {
         //track on next
         val onComplete =
-          (po: ProgressiveObservation) => ({
-            responseObserver.onNext(
-              QueryResultsMessage(Some(AckMessage(AckMessage.Code.OK)),
-                Seq(prepareResults(request.queryid, po.confidence, po.t2 - po.t1, po.source + " (" + po.info.get("name").getOrElse("no details") + ")", po.results))))
-          })
+          (tpo: Try[ProgressiveObservation]) => {
+            if(tpo.isSuccess){
+              val po = tpo.get
+              responseObserver.onNext(
+                QueryResultsMessage(Some(AckMessage(AckMessage.Code.OK)),
+                  Seq(prepareResults(request.queryid, po.confidence, po.t2 - po.t1, po.source + " (" + po.info.getOrElse("name", "no details") + ")", po.results))))
+            } else {
+              responseObserver.onNext(
+                QueryResultsMessage(Some(AckMessage(AckMessage.Code.ERROR, tpo.failed.get.getMessage))))
+            }
+          }
 
         val pathChooser = if (request.hints.isEmpty) {
           new SimpleProgressivePathChooser()
