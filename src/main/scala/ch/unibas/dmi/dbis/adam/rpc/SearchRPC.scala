@@ -80,11 +80,14 @@ class SearchRPC(implicit ac: AdamContext) extends AdamSearchGrpc.AdamSearch with
     */
   override def preview(request: EntityNameMessage): Future[QueryResultsMessage] = {
     time("rpc call to preview entity") {
-      val entityname = request.entity
-      Future.successful(QueryResultsMessage(
-        Some(AckMessage(AckMessage.Code.OK)),
-        Seq((prepareResults("", 1.toFloat, 0, "sequential scan", Some(EntityOp.preview(entityname, 100).get))))
-      ))
+      val res = EntityOp.preview(request.entity, 100)
+
+      if (res.isSuccess) {
+        Future.successful(QueryResultsMessage(Some(AckMessage(AckMessage.Code.OK)), Seq((prepareResults("", 1.toFloat, 0, "sequential scan", Some(res.get))))))
+      } else {
+        log.error(res.failed.get.getMessage)
+        Future.successful(QueryResultsMessage(Some(AckMessage(code = AckMessage.Code.ERROR, message = res.failed.get.getMessage))))
+      }
     }
   }
 

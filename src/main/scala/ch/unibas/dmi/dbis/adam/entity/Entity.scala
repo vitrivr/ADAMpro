@@ -206,13 +206,7 @@ case class Entity(val entityname: EntityName)(@transient implicit val ac: AdamCo
     * @param k number of elements to show in preview
     * @return
     */
-  def show(k: Int): Option[DataFrame] = {
-    if (data.isDefined) {
-      Some(data.get.limit(k))
-    } else {
-      None
-    }
-  }
+  def show(k: Int): Option[DataFrame] = data.map(_.limit(k))
 
   /**
     * Inserts data into the entity.
