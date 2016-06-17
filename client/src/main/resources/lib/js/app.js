@@ -517,7 +517,7 @@ function searchCompound(params, handler) {
 }
 
 /**
- * 
+ *
  * @param entityname
  * @param attribute
  * @param query
