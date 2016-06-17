@@ -70,7 +70,7 @@ class RPCClient(channel: ManagedChannel, definer: AdamDefinitionBlockingStub, se
   def timeQuery(indexName: String, dim: Int, part: Int): (Float, Int) = {
     //1 free query to cache Index
     val res = searcherBlocking.doQuery(QueryMessage(nnq = Some(randomQueryMessage(dim, part)), from = Some(FromMessage(FromMessage.Source.Index(indexName)))))
-    System.out.println(indexName + " - " + res.responses.head.results.size)
+    //System.out.println(indexName + " - " + res.responses.head.results.size)
     if (k > res.responses.head.results.size) {
       System.err.println("Should be " + k + ", but actually only " + res.responses.head.results.size)
     }
@@ -95,7 +95,7 @@ class RPCClient(channel: ManagedChannel, definer: AdamDefinitionBlockingStub, se
     val entityList = definer.listEntities(EmptyMessage())
 
     for (entity <- entityList.entities) {
-      System.out.println("Dropping " + entity)
+      //System.out.println("Dropping " + entity)
       val dropEnt = definer.dropEntity(EntityNameMessage(entity))
     }
   }
@@ -104,7 +104,7 @@ class RPCClient(channel: ManagedChannel, definer: AdamDefinitionBlockingStub, se
 
   def generateIndex(indexType: IndexType, eName: String): String = {
     val indexMsg = IndexMessage(eName, "feature", indexType, getDistanceMsg, Map[String, String]())
-    val indexRes = time("Indexing " + indexType.name)(definer.index(indexMsg))
+    val indexRes = definer.index(indexMsg)
     indexRes.message
   }
 

@@ -1,8 +1,10 @@
+import sbt.project
+import sbt._
 import sbt.ExclusionRule
 import sbt.Keys._
 import sbtassembly.AssemblyPlugin.autoImport._
 
-name := "ADAMpro"
+name := "ADAMpar"
 
 lazy val commonSettings = Seq(
   organization := "ch.unibas.dmi.dbis",
