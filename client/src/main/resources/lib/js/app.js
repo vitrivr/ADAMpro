@@ -1,25 +1,41 @@
+/**
+ *
+ * @param message
+ */
 function showAlert(message) {
     Materialize.toast(message, 4000);
 }
 
-
-function raiseError(message = "Unspecified error."){
+/**
+ *
+ * @param message
+ */
+function raiseError(message = "Unspecified error.") {
     showAlert("Error in request: " + message)
 }
 
-function startTask(){
+/**
+ *
+ */
+function startTask() {
     $("#progress").show();
     $("#btnSubmit").addClass('disabled');
     $("#btnSubmit").prop('disabled', true);
 }
 
-function stopTask(){
+/**
+ *
+ */
+function stopTask() {
     $("#progress").hide();
     $("#btnSubmit").removeClass('disabled');
     $("#btnSubmit").prop('disabled', false);
 }
 
-
+/**
+ *
+ * @returns {string}
+ */
 function guid() {
     function s4() {
         return Math.floor((1 + Math.random()) * 0x10000).toString(16).substring(1);
@@ -28,16 +44,20 @@ function guid() {
     return s4() + s4() + '-' + s4() + '-' + s4() + '-' + s4() + '-' + s4() + s4() + s4();
 }
 
-
-function entityCreate(entityname, attributes){
-    if(entityname === null || entityname.length == 0){
+/**
+ *
+ * @param entityname name of entity
+ * @param attributes list of attributes
+ */
+function entityCreate(entityname, attributes) {
+    if (entityname === null || entityname.length == 0) {
         raiseError("Please specify an entity.");
     }
-    
-    if(attributes.length == 0){
+
+    if (attributes.length == 0) {
         raiseError("Please specify at least one attribute.");
     }
-    
+
     startTask();
 
     var params = {};
@@ -45,7 +65,7 @@ function entityCreate(entityname, attributes){
     params.attributes = $.map(attributes, function (value, index) {
         return [value];
     });
-    
+
     $.ajax(ADAM_CLIENT_HOST + "/entity/add", {
         data: JSON.stringify(params),
         contentType: 'application/json',
@@ -54,27 +74,35 @@ function entityCreate(entityname, attributes){
             if (data.code === 200) {
                 showAlert("Entity " + entityname + " has been created.");
             } else {
-                raiseError(data.message); 
+                raiseError(data.message);
             }
             stopTask();
         },
-        error: function () { raiseError(); stopTask(); }
+        error: function () {
+            raiseError();
+            stopTask();
+        }
     });
 }
 
-
-function entityFillData(entityname, ntuples, ndims){
-    if(entityname === null || entityname.length == 0){
+/**
+ *
+ * @param entityname name of entity
+ * @param ntuples number of tuples
+ * @param ndims number of dims for feature attributes
+ */
+function entityFillData(entityname, ntuples, ndims) {
+    if (entityname === null || entityname.length == 0) {
         raiseError("Please specify an entity.");
     }
-    
+
     startTask();
 
     var params = {};
     params.entityname = entityname;
     params.ntuples = ntuples;
     params.ndims = ndims;
-    
+
     $.ajax(ADAM_CLIENT_HOST + "/entity/insertdemo", {
         data: JSON.stringify(params),
         contentType: 'application/json',
@@ -83,14 +111,24 @@ function entityFillData(entityname, ntuples, ndims){
             if (data.code === 200) {
                 showAlert("Inserted data into entity " + entityname + ".");
             } else {
-                raiseError(data.message); 
+                raiseError(data.message);
             }
             stopTask();
         },
-        error: function () { raiseError(); stopTask(); }
+        error: function () {
+            raiseError();
+            stopTask();
+        }
     });
 }
 
+/**
+ *
+ * @param host
+ * @param database
+ * @param username
+ * @param password
+ */
 function entityImportData(host, database, username, password) {
     startTask();
 
@@ -112,32 +150,44 @@ function entityImportData(host, database, username, password) {
             }
             stopTask();
         },
-        error: function () { raiseError(); stopTask(); }
+        error: function () {
+            raiseError();
+            stopTask();
+        }
     });
 }
 
-
-function entityList(handler){
+/**
+ *
+ * @param handler
+ */
+function entityList(handler) {
     startTask();
     $.ajax(ADAM_CLIENT_HOST + "/entity/list", {
         data: "",
         contentType: 'application/json',
         type: 'GET',
-        success: function (data) { 
+        success: function (data) {
             if (data.code === 200) {
                 handler(data);
             } else {
-                raiseError(data.message); 
+                raiseError(data.message);
             }
             stopTask();
-         },
-         error: function () { raiseError(); stopTask(); }
+        },
+        error: function () {
+            raiseError();
+            stopTask();
+        }
     });
 }
 
-
+/**
+ *
+ * @param parentid id of parent div
+ */
 function entityListGetSelect(parentid) {
-    entityList(function(data){
+    entityList(function (data) {
         var sel = $(' <select id="entityname" data-collapsible="accordion"><option value="" disabled selected>name of entity</option></select>');
 
         jQuery.each(data.entities, function (index, value) {
@@ -149,12 +199,16 @@ function entityListGetSelect(parentid) {
     });
 }
 
-
+/**
+ *
+ * @param entityname name of entity
+ * @param handler to handle the incoming data
+ */
 function entityDetails(entityname, handler) {
-    if(entityname === null || entityname.length == 0){
+    if (entityname === null || entityname.length == 0) {
         raiseError("Please specify an entity.");
     }
-    
+
     startTask();
     $.ajax(ADAM_CLIENT_HOST + "/entity/details?entityname=" + entityname, {
         type: 'GET',
@@ -162,24 +216,34 @@ function entityDetails(entityname, handler) {
             if (data.code === 200) {
                 handler(data)
             } else {
-                raiseError(data.message); 
+                raiseError(data.message);
             }
             stopTask();
         },
-        error: function () { raiseError(); stopTask(); }
+        error: function () {
+            raiseError();
+            stopTask();
+        }
     });
 }
 
-
-function entityPartition(entityname, attributes, materialize, replace, npartitions) {
-    if(entityname === null || entityname.length == 0){
+/**
+ *
+ * @param entityname
+ * @param attributes
+ * @param materialize
+ * @param replace
+ * @param npartitions
+ */
+function entityPartition(entityname, attributes, materialize, replace, npartitions) {
+    if (entityname === null || entityname.length == 0) {
         raiseError("Please specify an entity.");
     }
-    
-    if(npartitions <= 0){
+
+    if (npartitions <= 0) {
         raiseError("Please specify a proper number of partitions.");
-    }   
-    
+    }
+
     startTask();
 
     var params = {};
@@ -188,7 +252,7 @@ function entityPartition(entityname, attributes, materialize, replace, npartitio
     params.materialize = materialize;
     params.replace = replace;
     params.npartitions = npartitions;
-    
+
     $.ajax(ADAM_CLIENT_HOST + "/entity/partition", {
         data: JSON.stringify(params),
         contentType: 'application/json',
@@ -197,43 +261,56 @@ function entityPartition(entityname, attributes, materialize, replace, npartitio
             if (data.code === 200) {
                 showAlert("Partitioned entity " + entityname + ".");
             } else {
-                raiseError(data.message); 
+                raiseError(data.message);
             }
             stopTask();
         },
-        error: function () { raiseError(); stopTask(); }
-    }); 
+        error: function () {
+            raiseError();
+            stopTask();
+        }
+    });
 }
 
-
-function entityRead(entityname, handler){
-    if(entityname === null || entityname.length == 0){
+/**
+ *
+ * @param entityname
+ * @param handler to handle the incoming data
+ */
+function entityRead(entityname, handler) {
+    if (entityname === null || entityname.length == 0) {
         raiseError("Please specify an entity.");
     }
-    
+
     startTask();
     $.ajax(ADAM_CLIENT_HOST + "/entity/preview?entityname=" + entityname, {
         data: "",
         contentType: 'application/json',
         type: 'GET',
-        success: function (data) { 
+        success: function (data) {
             if (data.code === 200) {
                 handler(data);
             } else {
-                raiseError(data.message); 
+                raiseError(data.message);
             }
             stopTask();
-         },
-         error: function () { raiseError(); stopTask(); }
+        },
+        error: function () {
+            raiseError();
+            stopTask();
+        }
     });
 }
 
-
+/**
+ *
+ * @param entityname
+ */
 function entityBenchmark(entityname) {
-    if(entityname === null || entityname.length == 0){
+    if (entityname === null || entityname.length == 0) {
         raiseError("Please specify an entity.");
     }
-    
+
     startTask();
     $.ajax(ADAM_CLIENT_HOST + "/entity/benchmark?entityname=" + entityname, {
         type: 'GET',
@@ -241,19 +318,26 @@ function entityBenchmark(entityname) {
             if (data.code === 200) {
                 showAlert("Adjusted relevance weights for entity " + entityname + " and indexes.")
             } else {
-                raiseError(data.message); 
+                raiseError(data.message);
             }
             stopTask();
         },
-        error: function () { raiseError(); stopTask(); }
+        error: function () {
+            raiseError();
+            stopTask();
+        }
     });
 }
 
+/**
+ *
+ * @param entityname
+ */
 function entityDrop(entityname) {
-    if(entityname === null || entityname.length == 0){
+    if (entityname === null || entityname.length == 0) {
         raiseError("Please specify an entity.");
     }
-    
+
     startTask();
     $.ajax(ADAM_CLIENT_HOST + "/entity/drop?entityname=" + entityname, {
         type: 'GET',
@@ -261,31 +345,41 @@ function entityDrop(entityname) {
             if (data.code === 200) {
                 showAlert("Entity " + entityname + " has been dropped.")
             } else {
-                raiseError(data.message); 
+                raiseError(data.message);
             }
             stopTask();
         },
-        error: function () { raiseError(); stopTask(); }
+        error: function () {
+            raiseError();
+            stopTask();
+        }
     });
 }
 
-
+/**
+ *
+ * @returns {string[]}
+ */
 function getIndexTypes() {
     return ['ecp', 'lsh', 'mi', 'pq', 'sh', 'vaf', 'vav'];
 }
 
-
-function indexCreateAll(entityname, attributes){
-    if(entityname === null || entityname.length == 0){
+/**
+ *
+ * @param entityname
+ * @param attributes
+ */
+function indexCreateAll(entityname, attributes) {
+    if (entityname === null || entityname.length == 0) {
         raiseError("Please specify an entity.");
     }
-    
+
     startTask();
 
     var params = {};
     params.entityname = entityname;
     params.attributes = attributes;
-    
+
     $.ajax(ADAM_CLIENT_HOST + "/entity/indexall", {
         data: JSON.stringify(params),
         contentType: 'application/json',
@@ -294,24 +388,34 @@ function indexCreateAll(entityname, attributes){
             if (data.code === 200) {
                 showAlert("Created indexes for entity " + entityname + ".");
             } else {
-                raiseError(data.message); 
+                raiseError(data.message);
             }
             stopTask();
         },
-        error: function () { raiseError(); stopTask(); }
+        error: function () {
+            raiseError();
+            stopTask();
+        }
     });
 }
 
-
-function indexCreate(entityname, attribute, norm, indextype, options){
-    if(entityname === null || entityname.length == 0){
+/**
+ *
+ * @param entityname
+ * @param attribute
+ * @param norm
+ * @param indextype
+ * @param options
+ */
+function indexCreate(entityname, attribute, norm, indextype, options) {
+    if (entityname === null || entityname.length == 0) {
         raiseError("Please specify an entity.");
     }
-    
-    if(attribute === null || attribute.length == 0){
+
+    if (attribute === null || attribute.length == 0) {
         raiseError("Please specify an attribute.");
     }
-    
+
     startTask();
 
     var params = {};
@@ -320,7 +424,7 @@ function indexCreate(entityname, attribute, norm, indextype, options){
     params.norm = norm;
     params.indextype = indextype;
     params.options = options;
-    
+
     $.ajax(ADAM_CLIENT_HOST + "/entity/index/add", {
         data: JSON.stringify(params),
         contentType: 'application/json',
@@ -329,23 +433,34 @@ function indexCreate(entityname, attribute, norm, indextype, options){
             if (data.code === 200) {
                 showAlert("Created index for entity " + entityname + ".");
             } else {
-                raiseError(data.message); 
+                raiseError(data.message);
             }
             stopTask();
         },
-        error: function () { raiseError(); stopTask(); }
+        error: function () {
+            raiseError();
+            stopTask();
+        }
     });
 }
 
-function indexPartition(indexname, attributes, materialize, replace, npartitions) {
-    if(indexname === null || indexname.length == 0){
+/**
+ *
+ * @param indexname
+ * @param attributes
+ * @param materialize
+ * @param replace
+ * @param npartitions
+ */
+function indexPartition(indexname, attributes, materialize, replace, npartitions) {
+    if (indexname === null || indexname.length == 0) {
         raiseError("Please specify an index.");
     }
-    
-    if(npartitions <= 0){
+
+    if (npartitions <= 0) {
         raiseError("Please specify a proper number of partitions.");
-    }   
-    
+    }
+
     startTask();
 
     var params = {};
@@ -354,7 +469,7 @@ function indexPartition(indexname, attributes, materialize, replace, npartitions
     params.materialize = materialize;
     params.replace = replace;
     params.npartitions = npartitions;
-    
+
     $.ajax(ADAM_CLIENT_HOST + "/entity/index/partition", {
         data: JSON.stringify(params),
         contentType: 'application/json',
@@ -363,15 +478,23 @@ function indexPartition(indexname, attributes, materialize, replace, npartitions
             if (data.code === 200) {
                 showAlert("Partitioned index " + indexname + " to " + data.message + ".");
             } else {
-                raiseError(data.message); 
+                raiseError(data.message);
             }
             stopTask();
         },
-        error: function () { raiseError(); stopTask(); }
-    }); 
+        error: function () {
+            raiseError();
+            stopTask();
+        }
+    });
 }
 
-function searchCompound(params, handler){
+/**
+ *
+ * @param params
+ * @param handler
+ */
+function searchCompound(params, handler) {
     startTask();
 
     $.ajax(ADAM_CLIENT_HOST + "/search/compound", {
@@ -386,11 +509,25 @@ function searchCompound(params, handler){
             }
             stopTask();
         },
-        error: function () { raiseError(); stopTask(); }
+        error: function () {
+            raiseError();
+            stopTask();
+        }
     });
 }
 
-function searchProgressive(entityname, attribute, query, hints, k, successHandler, updateHandler, errorHandler){
+/**
+ * 
+ * @param entityname
+ * @param attribute
+ * @param query
+ * @param hints
+ * @param k
+ * @param successHandler
+ * @param updateHandler
+ * @param errorHandler
+ */
+function searchProgressive(entityname, attribute, query, hints, k, successHandler, updateHandler, errorHandler) {
     startTask();
 
     var id = guid();
@@ -417,15 +554,25 @@ function searchProgressive(entityname, attribute, query, hints, k, successHandle
                     success: function (data) {
                         if (data.status === "finished") {
                             stopTask();
-                        } else if (data.status === "error"){
-                            errorHandler(dataPollIntervalId); raiseError(data.results.source); stopTask();
+                        } else if (data.status === "error") {
+                            errorHandler(dataPollIntervalId);
+                            raiseError(data.results.source);
+                            stopTask();
                         }
                         updateHandler(data, dataPollIntervalId);
                     },
-                    error: function () { errorHandler(); raiseError(); stopTask(); }
+                    error: function () {
+                        errorHandler();
+                        raiseError();
+                        stopTask();
+                    }
                 });
             }, 500);
         },
-        error: function () { errorHandler(); raiseError(); stopTask(); }
+        error: function () {
+            errorHandler();
+            raiseError();
+            stopTask();
+        }
     });
 }
