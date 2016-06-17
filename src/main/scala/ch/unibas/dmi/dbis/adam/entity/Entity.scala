@@ -449,6 +449,8 @@ object Entity extends Logging {
     }
 
     CatalogOperator.dropEntity(entityname, ifExists)
+
+    EntityLRUCache.invalidate(entityname)
     Success(null)
   }
 

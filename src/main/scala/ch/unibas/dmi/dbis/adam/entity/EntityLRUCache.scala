@@ -50,5 +50,9 @@ object EntityLRUCache extends Logging {
         Failure(e)
     }
   }
+
+  def invalidate(entityname: EntityName): Unit = {
+    entityCache.invalidate(entityname)
+  }
 }
 

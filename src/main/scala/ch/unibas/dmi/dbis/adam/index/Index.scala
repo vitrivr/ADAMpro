@@ -392,6 +392,7 @@ object Index extends Logging {
   def drop(indexname: IndexName)(implicit ac: AdamContext): Try[Void] = {
     storage.drop(CatalogOperator.getIndexPath(indexname))
     CatalogOperator.dropIndex(indexname)
+    IndexLRUCache.invalidate(indexname)
     Success(null)
   }
 
@@ -405,10 +406,8 @@ object Index extends Logging {
     val indexes = CatalogOperator.listIndexes(entityname).map(_._1)
 
     indexes.foreach {
-      indexname => storage.drop(CatalogOperator.getIndexPath(indexname))
+      indexname => drop(indexname)
     }
-
-    CatalogOperator.dropAllIndexes(entityname)
 
     Success(null)
   }
