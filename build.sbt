@@ -73,6 +73,8 @@ val secondaryLibs = Seq(
   "org.apache.commons" % "commons-lang3" % "3.4" force(),
   "org.apache.commons" % "commons-math3" % "3.4.1" force(),
   "it.unimi.dsi" % "fastutil" % "7.0.12",
+  //Don't update this to 17 unless you are also upgrading Hadoop to 2.7
+  /* http://stackoverflow.com/questions/36427291/illegalaccesserror-to-guavas-stopwatch-from-org-apache-hadoop-mapreduce-lib-inp */
   "com.google.guava" % "guava" % "16.0.1" force()
 ).map(
   _.excludeAll(

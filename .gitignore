@@ -8,3 +8,5 @@ adamtwo.iml
 build
 src/generated
 /lib
+
+*.csv
