@@ -20,7 +20,7 @@ import scala.util.Random
   * June 2016
   */
 class RPCClient(channel: ManagedChannel, definer: AdamDefinitionBlockingStub, searcherBlocking: AdamSearchBlockingStub, searcher: AdamSearchStub) extends AdamParEvalUtils {
-  val fw = new FileWriter("results.csv", true)
+  val fw = new FileWriter("results"+Calendar.getInstance().getTime.getTime+".csv", true)
   val bw = new BufferedWriter(fw)
   val out = new PrintWriter(bw)
 
@@ -33,10 +33,10 @@ class RPCClient(channel: ManagedChannel, definer: AdamDefinitionBlockingStub, se
   /**
     * Evaluation Code
     */
-  val tupleSizes = Seq(1e5.toInt, 1e6.toInt, 1e7.toInt, 1e8.toInt)
-  val dimensions = Seq(10, 50, 128, 500)
-  val partitions = Seq(1, 2, 4, 8, 16, 32, 64, 128)
-  val indices = Seq(IndexType.ecp, IndexType.vaf, IndexType.lsh, IndexType.pq)
+  val tupleSizes = Seq(1e7.toInt, 1e8.toInt)
+  val dimensions = Seq(10, 128, 500)
+  val partitions = Seq(1, 2, 4,  8, 16, 32, 64, 128)
+  val indices = Seq(IndexType.ecp, IndexType.vaf, IndexType.lsh, IndexType.pq, IndexType.sh)
 
   try
       for (tuples <- tupleSizes) {
@@ -61,6 +61,12 @@ class RPCClient(channel: ManagedChannel, definer: AdamDefinitionBlockingStub, se
               val (time, noResults) = timeQuery(name, dim, part)
               appendToResults(tuples, dim, part, index.name, time, k, noResults)
             }
+            try{
+              val res = definer.dropIndex(IndexNameMessage(index.name))
+              System.out.println(res)
+            }catch {
+              case e: Exception => System.err.println("Drop Index failed")
+            }
           }
         }
       }
@@ -68,25 +74,26 @@ class RPCClient(channel: ManagedChannel, definer: AdamDefinitionBlockingStub, se
 
 
   def timeQuery(indexName: String, dim: Int, part: Int): (Float, Int) = {
+
+    val queryCount = 100
     //1 free query to cache Index
     val res = searcherBlocking.doQuery(QueryMessage(nnq = Some(randomQueryMessage(dim, part)), from = Some(FromMessage(FromMessage.Source.Index(indexName)))))
-    //System.out.println(indexName + " - " + res.responses.head.results.size)
     if (k > res.responses.head.results.size) {
       System.err.println("Should be " + k + ", but actually only " + res.responses.head.results.size)
     }
 
     var resSize = 0
 
-    //Average over 10 Queries
+    //Average over Queries
     val start = System.currentTimeMillis()
     var counter = 0
-    while (counter < 10) {
+    while (counter < queryCount) {
       val res = searcherBlocking.doQuery(QueryMessage(nnq = Some(randomQueryMessage(dim, part)), from = Some(FromMessage(FromMessage.Source.Index(indexName)))))
       resSize+=res.responses.head.results.size
       counter += 1
     }
     val stop = System.currentTimeMillis()
-    ((stop - start)/10f,resSize/10)
+    ((stop - start)/queryCount.toFloat,resSize/queryCount)
   }
 
   def randomQueryMessage(dim: Int, part: Int) = NearestNeighbourQueryMessage("feature", Some(FeatureVectorMessage().withDenseVector(DenseVectorMessage(Seq.fill(dim)(Random.nextFloat())))), None, getDistanceMsg, k, Map[String, String](), true, 1 until part)
