@@ -7,7 +7,7 @@ import ch.unibas.dmi.dbis.adam.query.handler.generic.{ExpressionDetails, QueryEx
 import org.apache.http.impl.client.SystemDefaultHttpClient
 import org.apache.solr.client.solrj.SolrQuery
 import org.apache.solr.client.solrj.impl.HttpSolrClient
-import org.apache.spark.Logging
+import ch.unibas.dmi.dbis.adam.utils.Logging
 import org.apache.spark.annotation.Experimental
 import org.apache.spark.sql.types.{StringType, StructField, StructType}
 import org.apache.spark.sql.{DataFrame, Row}

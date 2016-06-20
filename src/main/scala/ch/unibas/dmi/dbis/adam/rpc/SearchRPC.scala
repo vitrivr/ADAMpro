@@ -9,7 +9,7 @@ import ch.unibas.dmi.dbis.adam.query.datastructures.QueryLRUCache
 import ch.unibas.dmi.dbis.adam.query.handler.internal.QueryHints
 import ch.unibas.dmi.dbis.adam.query.progressive.{ProgressiveObservation, QueryHintsProgressivePathChooser, SimpleProgressivePathChooser}
 import io.grpc.stub.StreamObserver
-import org.apache.spark.Logging
+import ch.unibas.dmi.dbis.adam.utils.Logging
 import org.apache.spark.sql.DataFrame
 import org.apache.spark.sql.types._
 

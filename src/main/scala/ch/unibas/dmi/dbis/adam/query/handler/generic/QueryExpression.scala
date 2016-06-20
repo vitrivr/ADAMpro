@@ -4,7 +4,7 @@ import java.util.concurrent.TimeUnit
 
 import ch.unibas.dmi.dbis.adam.main.AdamContext
 import ch.unibas.dmi.dbis.adam.query.information.InformationLevels._
-import org.apache.spark.Logging
+import ch.unibas.dmi.dbis.adam.utils.Logging
 import org.apache.spark.sql.DataFrame
 
 import scala.collection.mutable.ListBuffer

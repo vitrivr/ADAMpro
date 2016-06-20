@@ -2,7 +2,7 @@ package ch.unibas.dmi.dbis.adam.utils
 
 import java.sql.{Connection, DriverManager}
 
-import ch.unibas.dmi.dbis.adam.api.{IndexOp, EntityOp}
+import ch.unibas.dmi.dbis.adam.api.{EntityOp, IndexOp}
 import ch.unibas.dmi.dbis.adam.config.AdamConfig
 import ch.unibas.dmi.dbis.adam.datatypes.FieldTypes
 import ch.unibas.dmi.dbis.adam.datatypes.FieldTypes.FEATURETYPE
@@ -10,7 +10,6 @@ import ch.unibas.dmi.dbis.adam.datatypes.feature.FeatureVectorWrapper
 import ch.unibas.dmi.dbis.adam.entity.AttributeDefinition
 import ch.unibas.dmi.dbis.adam.main.{AdamContext, SparkStartup}
 import ch.unibas.dmi.dbis.adam.query.distance.NormBasedDistanceFunction
-import org.apache.spark.Logging
 import org.apache.spark.annotation.Experimental
 import org.apache.spark.sql.jdbc.AdamDialectRegistrar
 import org.apache.spark.sql.types.DataTypes

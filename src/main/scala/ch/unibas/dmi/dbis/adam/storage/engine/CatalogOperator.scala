@@ -11,7 +11,7 @@ import ch.unibas.dmi.dbis.adam.index.Index.{IndexName, IndexTypeName}
 import ch.unibas.dmi.dbis.adam.index.structures.IndexTypes
 import ch.unibas.dmi.dbis.adam.query.scanweight.ScanWeightHandler
 import org.apache.commons.io.FileUtils
-import org.apache.spark.Logging
+import ch.unibas.dmi.dbis.adam.utils.Logging
 import slick.driver.PostgresDriver.api._
 import slick.jdbc.meta.MTable
 

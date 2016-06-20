@@ -6,7 +6,8 @@ import ch.unibas.dmi.dbis.adam.datatypes.feature.FeatureVectorWrapperUDT
 import ch.unibas.dmi.dbis.adam.storage.components.{FeatureStorage, IndexStorage, MetadataStorage}
 import ch.unibas.dmi.dbis.adam.storage.engine.{ParquetFeatureStorage, ParquetIndexStorage, PostgresqlMetadataStorage}
 import org.apache.spark.sql.hive.HiveContext
-import org.apache.spark.{Logging, SparkConf, SparkContext}
+import ch.unibas.dmi.dbis.adam.utils.Logging
+import org.apache.spark.{SparkConf, SparkContext}
 
 /**
   * adamtwo

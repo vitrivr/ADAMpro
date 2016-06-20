@@ -1,7 +1,7 @@
 package ch.unibas.dmi.dbis.adam.datatypes.bitString
 
 import ch.unibas.dmi.dbis.adam.util.BitSet
-import org.apache.spark.Logging
+import ch.unibas.dmi.dbis.adam.utils.Logging
 
 /**
   * adamtwo

@@ -6,7 +6,7 @@ import ch.unibas.dmi.dbis.adam.config.AdamConfig
 import ch.unibas.dmi.dbis.adam.index.Index.IndexName
 import ch.unibas.dmi.dbis.adam.main.SparkStartup
 import com.google.common.cache.{CacheBuilder, CacheLoader}
-import org.apache.spark.Logging
+import ch.unibas.dmi.dbis.adam.utils.Logging
 
 import scala.util.{Failure, Success, Try}
 

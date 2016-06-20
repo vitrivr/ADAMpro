@@ -1,6 +1,6 @@
 package ch.unibas.dmi.dbis.adam.api
 
-import org.apache.spark.Logging
+import ch.unibas.dmi.dbis.adam.utils.Logging
 
 import scala.util.{Failure, Try}
 
