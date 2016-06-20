@@ -555,7 +555,7 @@ object Entity extends Logging {
       var newPath = ""
 
       do {
-        newPath = oldPath + "-sparsed" + Random.nextInt
+        newPath = oldPath.substring(0, oldPath.lastIndexOf("-")) + "-sparse" + Random.nextInt
       } while (SparkStartup.featureStorage.exists(newPath).get)
 
       featureStorage.write(entity.entityname, data, SaveMode.ErrorIfExists, Some(newPath))
