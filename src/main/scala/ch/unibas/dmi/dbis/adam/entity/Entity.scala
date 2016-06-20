@@ -268,6 +268,8 @@ case class Entity(val entityname: EntityName)(@transient implicit val ac: AdamCo
     }
   }
 
+  //TODO: add delete operation?
+
   /**
     * Returns a map of properties to the entity. Useful for printing.
     */
