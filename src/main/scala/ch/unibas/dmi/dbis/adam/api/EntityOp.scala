@@ -81,6 +81,18 @@ object EntityOp extends GenericOp {
   }
 
   /**
+    * Compress operation. Compresses dense vectors to sparse vectors.
+    *
+    * @param entityname name of entity
+    * @return
+    */
+  def compress(entityname: EntityName)(implicit ac: AdamContext): Try[Entity] = {
+    execute("compress tuples in entity " + entityname + " operation") {
+      Entity.compress(Entity.load(entityname).get)
+    }
+  }
+
+  /**
     * Inserts data into the entity.
     *
     * @param entityname name of entity

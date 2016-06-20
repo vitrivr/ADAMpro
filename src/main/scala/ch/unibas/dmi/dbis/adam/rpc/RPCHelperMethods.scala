@@ -262,7 +262,6 @@ private[rpc] object RPCHelperMethods {
     * @return
     */
   def prepareFeatureVector(fv: FeatureVectorMessage): FeatureVector = fv.feature match {
-    //TODO: adjust here to use sparse vector too
     case FeatureVectorMessage.Feature.DenseVector(request) => FeatureVectorWrapper(request.vector).vector
     case FeatureVectorMessage.Feature.SparseVector(request) => new FeatureVectorWrapper(request.position, request.vector, request.length).vector
     case FeatureVectorMessage.Feature.IntVector(request) => FeatureVectorWrapper(request.vector.map(_.toFloat)).vector //TODO: change in future to int vector
