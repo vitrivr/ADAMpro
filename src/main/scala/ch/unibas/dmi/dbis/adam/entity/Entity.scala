@@ -7,7 +7,6 @@ import ch.unibas.dmi.dbis.adam.datatypes.feature.{FeatureVectorWrapper, FeatureV
 import ch.unibas.dmi.dbis.adam.entity.Entity.EntityName
 import ch.unibas.dmi.dbis.adam.exception.{EntityExistingException, EntityNotExistingException, EntityNotProperlyDefinedException, GeneralAdamException}
 import ch.unibas.dmi.dbis.adam.index.Index
-import ch.unibas.dmi.dbis.adam.main.SparkStartup.Implicits._
 import ch.unibas.dmi.dbis.adam.main.{AdamContext, SparkStartup}
 import ch.unibas.dmi.dbis.adam.query.query.NearestNeighbourQuery
 import ch.unibas.dmi.dbis.adam.storage.engine.CatalogOperator
@@ -73,7 +72,7 @@ case class Entity(val entityname: EntityName)(@transient implicit val ac: AdamCo
     * @param attribute attribute that is indexed
     * @return
     */
-  private[adam] def getIndexableFeature(attribute: String) = {
+  private[adam] def getIndexableFeature(attribute: String)(implicit ac: AdamContext) = {
     if (featureData.isDefined) {
       featureData.get.select(col(pk.name), col(attribute))
     } else {
@@ -81,7 +80,7 @@ case class Entity(val entityname: EntityName)(@transient implicit val ac: AdamCo
         StructField(pk.name, pk.fieldtype.datatype),
         StructField(attribute, FieldTypes.FEATURETYPE.datatype)
       ))
-      sqlContext.createDataFrame(sc.emptyRDD[Row], structFields)
+      ac.sqlContext.createDataFrame(ac.sc.emptyRDD[Row], structFields)
     }
   }
 

@@ -4,7 +4,7 @@ import ch.unibas.dmi.dbis.adam.api.{EntityOp, IndexOp, QueryOp}
 import ch.unibas.dmi.dbis.adam.datatypes.feature.{FeatureVectorWrapper, FeatureVectorWrapperUDT}
 import ch.unibas.dmi.dbis.adam.exception.{GeneralAdamException, QueryNotCachedException}
 import ch.unibas.dmi.dbis.adam.http.grpc._
-import ch.unibas.dmi.dbis.adam.main.AdamContext
+import ch.unibas.dmi.dbis.adam.main.{SparkStartup, AdamContext}
 import ch.unibas.dmi.dbis.adam.query.datastructures.QueryLRUCache
 import ch.unibas.dmi.dbis.adam.query.handler.internal.QueryHints
 import ch.unibas.dmi.dbis.adam.query.progressive.{ProgressiveObservation, QueryHintsProgressivePathChooser, SimpleProgressivePathChooser}
@@ -22,8 +22,8 @@ import scala.util.Try
   * Ivan Giangreco
   * March 2016
   */
-class SearchRPC(implicit ac: AdamContext) extends AdamSearchGrpc.AdamSearch with Logging {
-  //TODO: possibly start new 'lightweight' AdamContext with each new query
+class SearchRPC extends AdamSearchGrpc.AdamSearch with Logging {
+  implicit def ac : AdamContext = SparkStartup.mainContext
 
   /**
     *

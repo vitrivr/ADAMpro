@@ -16,10 +16,10 @@ import scala.concurrent.ExecutionContext
   * March 2016
   */
 class RPCStartup extends Thread with Logging {
-  override def run() : Unit = {
+  override def run(): Unit = {
     log.debug("RPC server starting up")
 
-    val server = new RPCServer(scala.concurrent.ExecutionContext.global)(SparkStartup.Implicits.ac)
+    val server = new RPCServer(scala.concurrent.ExecutionContext.global)
     server.start()
 
     log.debug("RPC server running")
@@ -28,7 +28,8 @@ class RPCStartup extends Thread with Logging {
   }
 }
 
-class RPCServer(executionContext: ExecutionContext)(implicit ac : AdamContext) { self =>
+class RPCServer(executionContext: ExecutionContext) {
+  self =>
   private var server: Server = null
 
   private val port = AdamConfig.grpcPort
@@ -52,7 +53,7 @@ class RPCServer(executionContext: ExecutionContext)(implicit ac : AdamContext) {
   }
 
   def blockUntilShutdown(): Unit = {
-    while(true){
+    while (true) {
       Thread.sleep(1000)
     }
   }

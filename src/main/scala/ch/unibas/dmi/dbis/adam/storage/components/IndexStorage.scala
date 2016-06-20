@@ -19,7 +19,7 @@ trait IndexStorage extends Serializable with Logging {
     * @param path path to store index to
     * @return
     */
-  def exists(path: String): Try[Boolean]
+  def exists(path: String)(implicit ac: AdamContext): Try[Boolean]
 
   /**
     * Create an index in the index storage.

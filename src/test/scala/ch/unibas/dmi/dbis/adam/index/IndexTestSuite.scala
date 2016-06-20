@@ -13,8 +13,6 @@ import org.apache.spark.sql.types.{LongType, StructField, StructType}
 
 import scala.util.Random
 
-import SparkStartup.Implicits._
-
 
 /**
   * adamtwo

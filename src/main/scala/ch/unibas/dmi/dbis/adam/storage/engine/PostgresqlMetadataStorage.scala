@@ -4,9 +4,9 @@ import java.sql.{Connection, DriverManager}
 import java.util.Properties
 
 import ch.unibas.dmi.dbis.adam.config.AdamConfig
-import ch.unibas.dmi.dbis.adam.entity.Entity.EntityName
 import ch.unibas.dmi.dbis.adam.entity.AttributeDefinition
-import ch.unibas.dmi.dbis.adam.main.SparkStartup
+import ch.unibas.dmi.dbis.adam.entity.Entity.EntityName
+import ch.unibas.dmi.dbis.adam.main.AdamContext
 import ch.unibas.dmi.dbis.adam.storage.components.MetadataStorage
 import org.apache.spark.sql.types.{StructField, StructType}
 import org.apache.spark.sql.{DataFrame, Row, SaveMode}
@@ -33,15 +33,14 @@ object PostgresqlMetadataStorage extends MetadataStorage {
     DriverManager.getConnection(AdamConfig.jdbcUrl, AdamConfig.jdbcUser, AdamConfig.jdbcPassword)
   }
 
-  override def create(entityname: EntityName, fields: Seq[AttributeDefinition]): Try[Option[String]] = {
+  override def create(entityname: EntityName, fields: Seq[AttributeDefinition])(implicit ac: AdamContext): Try[Option[String]] = {
     try {
       log.debug("postgresql create operation")
       val structFields = fields.map {
         field => StructField(field.name, field.fieldtype.datatype)
       }.toSeq
 
-      import SparkStartup.Implicits._
-      val df = sqlContext.createDataFrame(sc.emptyRDD[Row], StructType(structFields))
+      val df = ac.sqlContext.createDataFrame(ac.sc.emptyRDD[Row], StructType(structFields))
 
       val tablename = write(entityname, df, SaveMode.ErrorIfExists)
 
@@ -84,12 +83,11 @@ object PostgresqlMetadataStorage extends MetadataStorage {
     }
   }
 
-  override def read(tablename: EntityName): Try[DataFrame] = {
+  override def read(tablename: EntityName)(implicit ac: AdamContext): Try[DataFrame] = {
     log.debug("postgresql read operation")
 
     try {
-      import SparkStartup.Implicits._
-      val df = sqlContext.read.format("jdbc").options(
+      val df = ac.sqlContext.read.format("jdbc").options(
         Map("url" -> url, "dbtable" -> tablename.toString(), "user" -> AdamConfig.jdbcUser, "password" -> AdamConfig.jdbcPassword, "driver" -> "org.postgresql.Driver")
       ).load()
       Success(df)
@@ -98,7 +96,7 @@ object PostgresqlMetadataStorage extends MetadataStorage {
     }
   }
 
-  override def write(tablename: EntityName, df: DataFrame, mode: SaveMode = SaveMode.Append): Try[String] = {
+  override def write(tablename: EntityName, df: DataFrame, mode: SaveMode = SaveMode.Append)(implicit ac: AdamContext): Try[String] = {
     log.debug("postgresql write operation")
 
     try {
@@ -114,7 +112,7 @@ object PostgresqlMetadataStorage extends MetadataStorage {
     }
   }
 
-  override def drop(tablename: EntityName): Try[Void] = {
+  override def drop(tablename: EntityName)(implicit ac: AdamContext): Try[Void] = {
     log.debug("postgresql drop operation")
 
     try {

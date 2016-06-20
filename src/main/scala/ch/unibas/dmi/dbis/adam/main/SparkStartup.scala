@@ -23,6 +23,7 @@ object SparkStartup extends Logging {
     .set("spark.kryoserializer.buffer", "2047")
     .registerKryoClasses(Array(classOf[BitStringUDT], classOf[FeatureVectorWrapperUDT]))
     .set("spark.scheduler.allocation.file", AdamConfig.schedulerFile)
+    .set("spark.driver.allowMultipleContexts", "true")
 
   if (AdamConfig.master.isDefined) {
     sparkConfig.setMaster(AdamConfig.master.get)
@@ -45,6 +46,9 @@ object SparkStartup extends Logging {
 
     @transient implicit lazy val sqlContext = new HiveContext(sc)
   }
+
+  val mainContext = Implicits.ac
+  val contexts = Seq(mainContext)
 
   val featureStorage: FeatureStorage = ParquetFeatureStorage
   val metadataStorage: MetadataStorage = PostgresqlMetadataStorage

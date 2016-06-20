@@ -378,7 +378,7 @@ object Index extends Logging {
 
     val indextypename = CatalogOperator.getIndexTypeName(indexname)
 
-    val index = indextypename.index(indexname, entityname, df.get, meta.get)
+    val index = indextypename.index(indexname, entityname, df.get, meta.get, ac)
 
     Success(index)
   }
