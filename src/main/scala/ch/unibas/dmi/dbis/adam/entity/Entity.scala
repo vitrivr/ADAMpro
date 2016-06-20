@@ -570,7 +570,7 @@ object Entity extends Logging {
 
       EntityLRUCache.invalidate(entity.entityname)
 
-      Success(null)
+      Success(entity)
     } catch {
       case e: Exception => Failure(e)
     }
