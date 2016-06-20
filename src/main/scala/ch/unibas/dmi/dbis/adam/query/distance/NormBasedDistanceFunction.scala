@@ -1,7 +1,7 @@
 package ch.unibas.dmi.dbis.adam.query.distance
 
-import breeze.linalg.{zipValues, DenseVector}
-import ch.unibas.dmi.dbis.adam.datatypes.feature.Feature.{FeatureVector, VectorBase}
+import breeze.linalg.DenseVector
+import ch.unibas.dmi.dbis.adam.datatypes.feature.Feature.{FeatureVector, SparseFeatureVector, VectorBase}
 import ch.unibas.dmi.dbis.adam.query.distance.Distance.Distance
 import org.apache.spark.Logging
 
@@ -23,20 +23,85 @@ object NormBasedDistanceFunction extends Serializable {
 class MinkowskiDistance(val n: Double) extends DistanceFunction with Logging with Serializable {
   override def apply(v1: FeatureVector, v2: FeatureVector, weights: Option[FeatureVector] = None): Distance = {
     var cum = 0.0
+
+    //computing sum
     if (weights.isEmpty) {
-      log.trace("compute distance")
-      zipValues(v1, v2).foreach { (a, b) =>
-        cum += Math.pow(math.abs(a - b), n)
+      //un-weighted
+      if (v1.isInstanceOf[SparseFeatureVector] && v2.isInstanceOf[SparseFeatureVector]) {
+        //sparse vectors
+        log.trace("compute distance without weights, sparse vectors")
+
+        val sv1 = v1.asInstanceOf[SparseFeatureVector]
+        val sv2 = v2.asInstanceOf[SparseFeatureVector]
+
+        var offset = 0
+        while (offset < sv1.activeSize) {
+          if (sv1.isActive(offset) && sv2.isActive(offset)) {
+            cum += Math.pow(math.abs(sv1.valueAt(offset) - sv2.valueAt(offset)), n)
+          } else if (sv1.isActive(offset)) {
+            cum += Math.pow(sv1.valueAt(offset), n)
+          } else if (sv2.isActive(offset)) {
+            cum += Math.pow(sv2.valueAt(offset), n)
+          }
+          offset += 1
+        }
+      } else {
+        //dense vectors
+        log.trace("compute distance without weights, dense vectors")
+
+        var offset = 0
+        while (offset < v1.length) {
+          cum += Math.pow(math.abs(v1(offset) - v2(offset)), n)
+          offset += 1
+        }
       }
     } else {
+      //weighted
       log.trace("compute distance with weights")
-      val itv1 = v1.valuesIterator
-      val itv2 = v2.valuesIterator
-      val itw = weights.get.valuesIterator
 
-      while (itv1.hasNext && itv2.hasNext && itw.hasNext) {
-        cum += Math.pow(itw.next() * math.abs(itv1.next() - itv2.next()), n)
+      if (weights.get.isInstanceOf[SparseFeatureVector]) {
+        //sparse weights
+        log.trace("compute distance with sparse weights")
+
+        val sweights = weights.get.asInstanceOf[SparseFeatureVector]
+
+        var offset = 0
+        while (offset < sweights.activeSize) {
+          if (sweights.isActive(offset)) {
+            cum += Math.pow(sweights.valueAt(offset) * math.abs(v1(offset) - v2(offset)), n)
+          }
+          offset += 1
+        }
+      } else if(v1.isInstanceOf[SparseFeatureVector] && v2.isInstanceOf[SparseFeatureVector]){
+        //dense weights, sparse vectors
+        log.trace("compute distance with dense weights and sparse vectors")
+
+        val sv1 = v1.asInstanceOf[SparseFeatureVector]
+        val sv2 = v2.asInstanceOf[SparseFeatureVector]
+
+        var offset = 0
+        while (offset < sv1.activeSize) {
+          if (sv1.isActive(offset) && sv2.isActive(offset)) {
+            cum += Math.pow(weights.get(offset) * math.abs(sv1.valueAt(offset) - sv2.valueAt(offset)), n)
+          } else if (sv1.isActive(offset)) {
+            cum += Math.pow(weights.get(offset) * sv1.valueAt(offset), n)
+          } else if (sv2.isActive(offset)) {
+            cum += Math.pow(weights.get(offset) * sv2.valueAt(offset), n)
+          }
+          offset += 1
+        }
+      } else {
+        //dense weights, dense vectors
+        log.trace("compute distance with dense weights and dense vectors")
+
+        var offset = 0
+        while (offset < v1.length) {
+          cum += Math.pow(weights.get(offset) * math.abs(v1(offset) - v2(offset)), n)
+          offset += 1
+        }
       }
+
+
     }
 
     Math.pow(cum, 1 / n).toFloat
