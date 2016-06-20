@@ -549,10 +549,13 @@ object Entity extends Logging {
 
         featureStorage.write(entity.entityname, data, SaveMode.ErrorIfExists, Some(newPath))
         CatalogOperator.updateEntityFeaturePath(entity.entityname, newPath)
+        featureStorage.drop(oldPath)
+
         entity._featureData = None
         entity._join = None
         entity._metaData = None
-        featureStorage.drop(oldPath)
+
+        EntityLRUCache.invalidate(entity.entityname)
 
         return Success(entity)
 
