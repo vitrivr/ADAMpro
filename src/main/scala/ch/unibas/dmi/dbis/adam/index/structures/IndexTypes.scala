@@ -67,7 +67,6 @@ object IndexTypes {
     * @param s
     * @return
     */
-  //TODO: add checks
   def withName(s: String): Option[IndexType] = {
     values.map(value => value.name -> value).toMap.get(s)
   }
@@ -77,7 +76,6 @@ object IndexTypes {
     * @param indextype
     * @return
     */
-  //TODO: add checks
   def withIndextype(indextype: grpc.IndexType): Option[IndexType] = {
     values.map(value => value.indextype -> value).toMap.get(indextype)
   }

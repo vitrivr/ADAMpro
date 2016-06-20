@@ -64,7 +64,6 @@ object ProgressiveQueryHandler extends Logging {
     log.debug("performing progressive query with " + exprs.length + " paths: " + exprs.map(expr => expr.info.scantype.getOrElse("<missing scantype>") + " (" + expr.info.source.getOrElse("<missing source>") + ")").mkString(", "))
 
     if (exprs.isEmpty) {
-      //TODO: check that errors are sent back to client
       throw new GeneralAdamException("no paths for progressive query set; possible causes: is the entity or the attribute existing?")
     }
 
