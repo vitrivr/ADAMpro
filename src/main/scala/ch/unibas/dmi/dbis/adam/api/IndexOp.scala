@@ -44,7 +44,7 @@ object IndexOp extends GenericOp {
     */
   def create(entityname: EntityName, column: String, indextypename: IndexTypeName, distance: DistanceFunction, properties: Map[String, String] = Map())(implicit ac: AdamContext): Try[Index] = {
     execute("create index for " + entityname) {
-      Index.createIndex(Entity.load(entityname).get, column, indextypename.indexer(distance, properties))
+      Index.createIndex(Entity.load(entityname).get, column, indextypename.indexer(distance, properties, ac))
     }
   }
 

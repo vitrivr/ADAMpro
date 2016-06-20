@@ -9,7 +9,6 @@ import ch.unibas.dmi.dbis.adam.datatypes.feature.FeatureVectorWrapper
 import ch.unibas.dmi.dbis.adam.index.Index._
 import ch.unibas.dmi.dbis.adam.index.structures.IndexTypes
 import ch.unibas.dmi.dbis.adam.main.SparkStartup
-import ch.unibas.dmi.dbis.adam.main.SparkStartup.Implicits._
 import ch.unibas.dmi.dbis.adam.query.handler.internal.AggregationExpression.{ExpressionEvaluationOrder, IntersectExpression}
 import ch.unibas.dmi.dbis.adam.query.handler.internal.{CompoundQueryExpression, IndexScanExpression}
 import ch.unibas.dmi.dbis.adam.query.progressive.{AllProgressivePathChooser, ProgressiveObservation}
@@ -17,6 +16,7 @@ import ch.unibas.dmi.dbis.adam.query.query.{BooleanQuery, NearestNeighbourQuery}
 import org.scalatest.concurrent.ScalaFutures
 
 import scala.concurrent.duration.Duration
+import scala.util.Try
 
 
 /**
@@ -286,7 +286,13 @@ class QueryTestSuite extends AdamTestBase with ScalaFutures {
         IndexOp(es.entity.entityname, "featurefield", IndexTypes.SHINDEX, es.distance)
         IndexOp(es.entity.entityname, "featurefield", IndexTypes.VAFINDEX, es.distance)
 
-        def processResults(po: ProgressiveObservation) {
+        def processResults(tpo: Try[ProgressiveObservation]) {
+          if(tpo.isFailure){
+            assert(false)
+          }
+
+          val po = tpo.get
+
           val results = po.results.get.map(r => (r.getAs[Float](FieldNames.distanceColumnName), r.getAs[Long]("tid"))).collect() //get here TID of metadata
             .sortBy(_._1).toSeq
 

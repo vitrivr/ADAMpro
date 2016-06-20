@@ -2,7 +2,7 @@ package ch.unibas.dmi.dbis.adam.client.grpc
 
 import java.util.concurrent.TimeUnit
 
-import ch.unibas.dmi.dbis.adam.client.web.datastructures.{CompoundQueryDetails, CompoundQueryRequest, EntityField}
+import ch.unibas.dmi.dbis.adam.client.web.datastructures.{SearchResponse, SearchCompoundRequest, EntityField}
 import ch.unibas.dmi.dbis.adam.http.grpc.AdamDefinitionGrpc.AdamDefinitionBlockingStub
 import ch.unibas.dmi.dbis.adam.http.grpc.AdamSearchGrpc.{AdamSearchBlockingStub, AdamSearchStub}
 import ch.unibas.dmi.dbis.adam.http.grpc.DataMessage.Datatype
@@ -28,15 +28,35 @@ class RPCClient(channel: ManagedChannel, definer: AdamDefinitionBlockingStub, se
 
   /**
     *
-    * @param entityname
-    * @param fields
+    * @param desc
+    * @param op
+    * @tparam T
     * @return
     */
-  def createEntity(entityname: String, fields: Seq[EntityField]): Try[String] = {
+  def execute[T](desc: String)(op: => Try[T]): Try[T] = {
     try {
-      log.info("creating entity")
+      log.debug("starting " + desc)
+      val t1 = System.currentTimeMillis
+      val result = op
+      val t2 = System.currentTimeMillis
+      log.debug("performed " + desc + " in " + (t2 - t1) + " msecs")
+      result
+    } catch {
+      case e: Exception =>
+        log.error("error in " + desc, e)
+        Failure(e)
+    }
+  }
 
-      val fieldMessage = fields.map(field =>
+  /**
+    *
+    * @param entityname name of entity
+    * @param attributes attributes of new entity
+    * @return
+    */
+  def entityCreate(entityname: String, attributes: Seq[EntityField]): Try[String] = {
+    execute("create entity operation") {
+      val fieldMessage = attributes.map(field =>
         FieldDefinitionMessage(field.name, getFieldType(field.datatype), field.pk, false, field.indexed)
       )
 
@@ -46,49 +66,18 @@ class RPCClient(channel: ManagedChannel, definer: AdamDefinitionBlockingStub, se
       } else {
         return Failure(new Exception(res.message))
       }
-    } catch {
-      case e: Exception => Failure(e)
     }
   }
 
   /**
     *
-    * @param entityname
-    */
-  def dropEntity(entityname: String): Try[Void] = {
-    try {
-      definer.dropEntity(EntityNameMessage(entityname))
-      Success(null)
-    } catch {
-      case e: Exception => Failure(e)
-    }
-  }
-
-  def benchmarkAndAdjustWeights(entityname : String, column : String) : Try[Void] = {
-    try {
-      definer.benchmarkAndUpdateScanWeights(WeightMessage(entityname, column))
-      Success(null)
-    } catch {
-      case e: Exception => Failure(e)
-    }
-  }
-
-
-  /**
-    *
-    * @param entityname
-    * @param ntuples
-    * @param ndims
-    * @param fields
+    * @param entityname name of entity
+    * @param ntuples    number of tuples
+    * @param ndims      dimensionality for feature fields
     * @return
     */
-  def prepareDemo(entityname: String, ntuples: Int, ndims: Int, fields: Seq[EntityField]): Try[Void] = {
-    try {
-      log.info("preparing demo data")
-      val fieldMessage = fields.map(field =>
-        FieldDefinitionMessage(field.name, getFieldType(field.datatype), false, false, field.indexed)
-      )
-
+  def entityFill(entityname: String, ntuples: Int, ndims: Int): Try[Void] = {
+    execute("insert data operation") {
       val res = definer.generateRandomData(GenerateRandomDataMessage(entityname, ntuples, ndims))
 
       if (res.code == AckMessage.Code.OK) {
@@ -96,115 +85,91 @@ class RPCClient(channel: ManagedChannel, definer: AdamDefinitionBlockingStub, se
       } else {
         return Failure(new Exception(res.message))
       }
-    } catch {
-      case e: Exception => Failure(e)
     }
   }
 
-  /**
-    *
-    * @param s
-    * @return
-    */
-  private def getFieldType(s: String): FieldDefinitionMessage.FieldType = s match {
-    case "feature" => FieldType.FEATURE
-    case "long" => FieldType.LONG
-    case "int" => FieldType.INT
-    case "float" => FieldType.FLOAT
-    case "double" => FieldType.DOUBLE
-    case "string" => FieldType.STRING
-    case "boolean" => FieldType.BOOLEAN
-    case _ => null
-  }
-
 
   /**
     *
+    * @param host     host
+    * @param database database
+    * @param username username
+    * @param password password
     * @return
     */
-  def listEntities(): Try[Seq[String]] = {
-    log.info("listing entities")
-
+  def entityImport(host: String, database: String, username: String, password: String): Try[Void] = {
     try {
-      Success(definer.listEntities(EmptyMessage()).entities)
-    } catch {
-      case e: Exception => Failure(e)
-    }
-  }
-
-  /**
-    *
-    * @return
-    */
-  def getDetails(entityname: String): Try[Map[String, String]] = {
-    log.info("retrieving entity details")
-
-    try {
-      val count = definer.count(EntityNameMessage(entityname))
-      val properties = definer.getEntityProperties(EntityNameMessage(entityname)).properties
-      Success(properties.+("count" -> definer.count(EntityNameMessage(entityname)).message))
-    } catch {
-      case e: Exception => Failure(e)
-    }
-  }
-
-  /**
-    *
-    * @param entityname
-    * @param indextype
-    * @param norm
-    * @param options
-    * @return
-    */
-  def addIndex(entityname: String, column: String, indextype: IndexType, norm: Int, options: Map[String, String]): Try[String] = {
-    log.info("adding index")
-
-    try {
-      val indexMessage = IndexMessage(entityname, column, indextype, Some(DistanceMessage(DistanceType.minkowski, Map("norm" -> norm.toString))), options)
-      val res = definer.index(indexMessage)
-
-      if (res.code == AckMessage.Code.OK) {
-        return Success(res.message)
-      } else {
-        return Failure(new Exception(res.message))
-      }
-    } catch {
-      case e: Exception => Failure(e)
-    }
-  }
-
-  /**
-    *
-    * @param entityname
-    * @return
-    */
-  def addAllIndex(entityname: String, fields: Seq[EntityField], norm: Int): Try[Void] = {
-    log.info("adding all index")
-
-    try {
-      val fieldMessage = fields.map(field =>
-        FieldDefinitionMessage(field.name, getFieldType(field.datatype), false, false, field.indexed)
-      ).filter(_.fieldtype == FieldType.FEATURE)
-
-      fieldMessage.map { column =>
-        val res = definer.generateAllIndexes(IndexMessage(entity = entityname, column = column.name, distance = Some(DistanceMessage(DistanceType.minkowski, options = Map("norm" -> norm.toString)))))
-        if (res.code != AckMessage.Code.OK) {
-          return Failure(new Exception(res.message))
-        }
-      }
-
+      definer.importData(ImportMessage(host, database, username, password))
       Success(null)
     } catch {
       case e: Exception => Failure(e)
     }
   }
 
+
   /**
     *
-    * @param entityname
+    * @return
     */
-  def preview(entityname: String): Try[Seq[Map[String, String]]] = {
-    try {
+  def entityList(): Try[Seq[String]] = {
+    execute("list entities operation") {
+      Success(definer.listEntities(EmptyMessage()).entities.sorted)
+    }
+  }
+
+
+  /**
+    *
+    * @param entityname name of entity
+    * @return
+    */
+  def entityDetails(entityname: String): Try[Map[String, String]] = {
+    execute("get details of entity operation") {
+      val count = definer.count(EntityNameMessage(entityname))
+      val properties = definer.getEntityProperties(EntityNameMessage(entityname)).properties
+      Success(properties.+("count" -> definer.count(EntityNameMessage(entityname)).message))
+    }
+  }
+
+
+  /**
+    *
+    * @param entityname  name of entity
+    * @param npartitions number of partitions
+    * @param attributes  attributes
+    * @param materialize materialize partitioning
+    * @param replace     replace partitioning
+    * @return
+    */
+  def entityPartition(entityname: String, npartitions: Int, attributes: Seq[String] = Seq(), materialize: Boolean, replace: Boolean): Try[String] = {
+    execute("repartition entity operation") {
+      val option = if (replace) {
+        PartitionOptions.REPLACE_EXISTING
+      } else if (materialize) {
+        PartitionOptions.CREATE_NEW
+      } else if (!materialize) {
+        PartitionOptions.CREATE_TEMP
+      } else {
+        PartitionOptions.CREATE_NEW
+      }
+
+      val res = definer.repartitionEntityData(RepartitionMessage(entityname, npartitions, attributes, option))
+
+      if (res.code == AckMessage.Code.OK) {
+        Success(res.message)
+      } else {
+        Failure(throw new Exception(res.message))
+      }
+    }
+  }
+
+
+  /**
+    *
+    * @param entityname name of entity
+    */
+  def entityRead(entityname: String): Try[Seq[Map[String, String]]] = {
+    execute("get entity data operation") {
       val res = searcherBlocking.preview(EntityNameMessage(entityname))
 
       val readable = res.responses.head.results.map(tuple => {
@@ -225,41 +190,165 @@ class RPCClient(channel: ManagedChannel, definer: AdamDefinitionBlockingStub, se
       })
 
       Success(readable)
-    } catch {
-      case e: Exception => Failure(e)
     }
   }
 
+
   /**
     *
-    * @param request
+    * @param entityname name of entity
+    * @param attribute  name of feature attribute
     * @return
     */
-  def compoundQuery(request: CompoundQueryRequest): Try[CompoundQueryDetails] = {
-    log.info("compound query start")
+  def entityBenchmark(entityname: String, attribute: String): Try[Void] = {
+    execute("benchmark entity scans and reset weights operation") {
+      definer.benchmarkAndUpdateScanWeights(WeightMessage(entityname, attribute))
+      Success(null)
+    }
+  }
 
-    try {
+
+  /**
+    *
+    * @param entityname name of entity
+    */
+  def entityDrop(entityname: String): Try[Void] = {
+    execute("drop entity operation") {
+      definer.dropEntity(EntityNameMessage(entityname))
+      Success(null)
+    }
+  }
+
+
+  /**
+    *
+    * @param entityname name of entity
+    * @param attributes name of attributes
+    * @param norm       norm for distance function
+    * @return
+    */
+  def entityCreateAll(entityname: String, attributes: Seq[EntityField], norm: Int): Try[Void] = {
+    execute("create all indexes operation") {
+      val fieldMessage = attributes.map(field =>
+        FieldDefinitionMessage(field.name, getFieldType(field.datatype), false, false, field.indexed)
+      ).filter(_.fieldtype == FieldType.FEATURE)
+
+      fieldMessage.map { column =>
+        val res = definer.generateAllIndexes(IndexMessage(entity = entityname, column = column.name, distance = Some(DistanceMessage(DistanceType.minkowski, options = Map("norm" -> norm.toString)))))
+        if (res.code != AckMessage.Code.OK) {
+          return Failure(new Exception(res.message))
+        }
+      }
+
+      Success(null)
+    }
+  }
+
+
+  /**
+    *
+    * @param entityname name of entity
+    * @param attribute  name of attribute
+    * @param indextype  type of index
+    * @param norm       norm
+    * @param options    index creation options
+    * @return
+    */
+  def indexCreate(entityname: String, attribute: String, indextype: IndexType, norm: Int, options: Map[String, String]): Try[String] = {
+    execute("create index operation") {
+      val indexMessage = IndexMessage(entityname, attribute, indextype, Some(DistanceMessage(DistanceType.minkowski, Map("norm" -> norm.toString))), options)
+      val res = definer.index(indexMessage)
+
+      if (res.code == AckMessage.Code.OK) {
+        return Success(res.message)
+      } else {
+        return Failure(new Exception(res.message))
+      }
+    }
+  }
+
+
+  /**
+    *
+    * @param indexname   name of index
+    * @param npartitions number of partitions
+    * @param attributes  attributes
+    * @param materialize materialize partitioning
+    * @param replace     replace partitioning
+    * @return
+    */
+  def indexPartition(indexname: String, npartitions: Int, attributes: Seq[String] = Seq(), materialize: Boolean, replace: Boolean): Try[String] = {
+    execute("partition index operation") {
+      val option = if (replace) {
+        PartitionOptions.REPLACE_EXISTING
+      } else if (materialize) {
+        PartitionOptions.CREATE_NEW
+      } else if (!materialize) {
+        PartitionOptions.CREATE_TEMP
+      } else {
+        PartitionOptions.CREATE_NEW
+      }
+
+      val res = definer.repartitionIndexData(RepartitionMessage(indexname, npartitions, attributes, option))
+
+      if (res.code == AckMessage.Code.OK) {
+        Success(res.message)
+      } else {
+        Failure(throw new Exception(res.message))
+      }
+    }
+  }
+
+
+  /**
+    *
+    * @param s
+    * @return
+    */
+  private def getFieldType(s: String): FieldDefinitionMessage.FieldType = s match {
+    case "feature" => FieldType.FEATURE
+    case "long" => FieldType.LONG
+    case "int" => FieldType.INT
+    case "float" => FieldType.FLOAT
+    case "double" => FieldType.DOUBLE
+    case "string" => FieldType.STRING
+    case "boolean" => FieldType.BOOLEAN
+    case _ => null
+  }
+
+
+  /**
+    *
+    * @param request search compound request
+    * @return
+    */
+  def searchCompound(request: SearchCompoundRequest): Try[SearchResponse] = {
+    execute("compound query operation") {
       val res = searcherBlocking.doQuery(request.toRPCMessage())
       if (res.ack.get.code == AckMessage.Code.OK) {
-        return Success(new CompoundQueryDetails(res))
+        return Success(new SearchResponse(res))
       } else {
         return Failure(new Exception(res.ack.get.message))
       }
-
-    } catch {
-      case e: Exception => Failure(e)
     }
   }
 
   /**
     *
+    * @param queryid    query id
+    * @param entityname name of entity
+    * @param q          vector
+    * @param attribute
+    * @param hints      query hints
+    * @param k          k of kNN
+    * @param next       function for next result
+    * @param completed  function for final result
+    * @return
     */
-  def progressiveQuery(id: String, entityname: String, query: Seq[Float], column: String, hints: Seq[String], k: Int, next: (String, Double, String, Long, Seq[Map[String, String]]) => (Unit), completed: (String) => (Unit)): Try[Void] = {
-    log.info("progressive query start")
-
-    try {
-      val fv = FeatureVectorMessage().withDenseVector(DenseVectorMessage(query))
-      val nnq = NearestNeighbourQueryMessage(column, Some(fv), None, Option(DistanceMessage(DistanceType.minkowski, Map("norm" -> "2"))), k, indexOnly = true)
+  def searchProgressive(queryid: String, entityname: String, q: Seq[Float], attribute: String, hints: Seq[String], k: Int, next: (Try[(String, Double, String, Long, Seq[Map[String, String]])]) => (Unit), completed: (String) => (Unit)): Try[Void] = {
+    execute("progressive query operation") {
+      val fv = FeatureVectorMessage().withDenseVector(DenseVectorMessage(q))
+      val nnq = NearestNeighbourQueryMessage(attribute, Some(fv), None, Option(DistanceMessage(DistanceType.minkowski, Map("norm" -> "2"))), k, indexOnly = true)
       val request = QueryMessage(from = Some(FromMessage().withEntity(entityname)), hints = hints, nnq = Option(nnq))
 
       val so = new StreamObserver[QueryResultsMessage]() {
@@ -268,7 +357,7 @@ class RPCClient(channel: ManagedChannel, definer: AdamDefinitionBlockingStub, se
         }
 
         override def onCompleted(): Unit = {
-          completed(id)
+          completed(queryid)
         }
 
         override def onNext(qr: QueryResultsMessage): Unit = {
@@ -282,99 +371,15 @@ class RPCClient(channel: ManagedChannel, definer: AdamDefinitionBlockingStub, se
             val time = head.time
             val results = head.results.map(x => x.data.mapValues(x => ""))
 
-            next(id, confidence, source, time, results)
+            next(Success(queryid, confidence, source, time, results))
           } else {
-            Failure(new Exception(qr.ack.get.message))
+            next(Failure(new Exception(qr.ack.get.message)))
           }
         }
       }
 
       searcher.doProgressiveQuery(request, so)
       Success(null)
-    } catch {
-      case e: Exception => Failure(e)
-    }
-  }
-
-
-  /**
-    *
-    * @param entity
-    * @param partitions
-    * @return
-    */
-  def repartitionEntity(entity: String, partitions: Int, cols: Seq[String] = Seq(), materialize: Boolean, replace: Boolean): Try[String] = {
-    log.info("repartitioning entity")
-
-    try {
-      val option = if (replace) {
-        PartitionOptions.REPLACE_EXISTING
-      } else if (materialize) {
-        PartitionOptions.CREATE_NEW
-      } else if (!materialize) {
-        PartitionOptions.CREATE_TEMP
-      } else {
-        PartitionOptions.CREATE_NEW
-      }
-
-      val res = definer.repartitionEntityData(RepartitionMessage(entity, partitions, cols, option))
-
-      if (res.code == AckMessage.Code.OK) {
-        Success(res.message)
-      } else {
-        Failure(throw new Exception(res.message))
-      }
-    } catch {
-      case e: Exception => Failure(e)
-    }
-  }
-
-  /**
-    *
-    * @param index
-    * @param partitions
-    * @return
-    */
-  def repartitionIndex(index: String, partitions: Int, cols: Seq[String] = Seq(), materialize: Boolean, replace: Boolean): Try[String] = {
-    log.info("repartitioning index")
-
-    try {
-      val option = if (replace) {
-        PartitionOptions.REPLACE_EXISTING
-      } else if (materialize) {
-        PartitionOptions.CREATE_NEW
-      } else if (!materialize) {
-        PartitionOptions.CREATE_TEMP
-      } else {
-        PartitionOptions.CREATE_NEW
-      }
-
-      val res = definer.repartitionIndexData(RepartitionMessage(index, partitions, cols, option))
-
-      if (res.code == AckMessage.Code.OK) {
-        Success(res.message)
-      } else {
-        Failure(throw new Exception(res.message))
-      }
-    } catch {
-      case e: Exception => Failure(e)
-    }
-  }
-
-  /**
-    *
-    * @param host
-    * @param database
-    * @param username
-    * @param password
-    * @return
-    */
-  def importData(host: String, database: String, username: String, password: String): Try[Void] = {
-    try {
-      definer.importData(ImportMessage(host, database, username, password))
-      Success(null)
-    } catch {
-      case e: Exception => Failure(e)
     }
   }
 

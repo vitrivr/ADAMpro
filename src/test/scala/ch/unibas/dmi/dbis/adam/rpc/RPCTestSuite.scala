@@ -11,7 +11,6 @@ import ch.unibas.dmi.dbis.adam.main.RPCStartup
 import io.grpc.ManagedChannelBuilder
 import io.grpc.stub.StreamObserver
 import org.scalatest.concurrent.ScalaFutures
-import ch.unibas.dmi.dbis.adam.main.SparkStartup.Implicits._
 
 import scala.concurrent.duration._
 import scala.util.Random

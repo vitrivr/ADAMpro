@@ -17,6 +17,7 @@ object ClientStartup {
 
   def main(args: Array[String]): Unit = {
     val grpc = RPCClient(grpcHost, grpcPort)
+
     val web = new WebServer(httpPort, new AdamController(grpc)).main(Array[String]())
   }
 }

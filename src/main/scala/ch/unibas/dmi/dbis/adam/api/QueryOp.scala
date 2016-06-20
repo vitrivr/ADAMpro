@@ -116,7 +116,7 @@ object QueryOp extends GenericOp {
     * @param onComplete  operation to perform as soon as one index returns results
     * @return a tracker for the progressive query
     */
-  def progressive[U](entityname: EntityName, nnq: NearestNeighbourQuery, bq: Option[BooleanQuery], pathChooser: ProgressivePathChooser, onComplete: ProgressiveObservation => U)(implicit ac: AdamContext): Try[ProgressiveQueryStatusTracker] = {
+  def progressive[U](entityname: EntityName, nnq: NearestNeighbourQuery, bq: Option[BooleanQuery], pathChooser: ProgressivePathChooser, onComplete: Try[ProgressiveObservation] => U)(implicit ac: AdamContext): Try[ProgressiveQueryStatusTracker] = {
     Success(ProgressiveQueryHandler.progressiveQuery(entityname, nnq, bq, pathChooser, onComplete))
   }
 

@@ -33,7 +33,7 @@ object ParquetIndexStorage extends IndexStorage {
   }
 
 
-  override def exists(path: String): Try[Boolean] = {
+  override def exists(path: String)(implicit ac: AdamContext): Try[Boolean] = {
     log.debug("checking index exists in " + path)
     storage.exists(path)
   }
@@ -115,7 +115,7 @@ object ParquetIndexStorage extends IndexStorage {
       * @param path
       * @return
       */
-    override def exists(path: String): Try[Boolean] = {
+    override def exists(path: String)(implicit ac: AdamContext): Try[Boolean] = {
       try {
         Success(FileSystem.get(new Path(AdamConfig.indexPath).toUri, hadoopConf).exists(new org.apache.hadoop.fs.Path(path)))
       } catch {
@@ -149,7 +149,7 @@ object ParquetIndexStorage extends IndexStorage {
       * @param path
       * @return
       */
-    override def exists(path: String): Try[Boolean] = {
+    override def exists(path: String)(implicit ac: AdamContext): Try[Boolean] = {
       try {
         Success(new File(path).exists())
       } catch {

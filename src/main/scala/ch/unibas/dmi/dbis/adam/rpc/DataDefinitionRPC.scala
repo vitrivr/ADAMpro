@@ -8,7 +8,7 @@ import ch.unibas.dmi.dbis.adam.exception.GeneralAdamException
 import ch.unibas.dmi.dbis.adam.http.grpc.FieldDefinitionMessage.FieldType
 import ch.unibas.dmi.dbis.adam.http.grpc.{AckMessage, CreateEntityMessage, _}
 import ch.unibas.dmi.dbis.adam.index.structures.IndexTypes
-import ch.unibas.dmi.dbis.adam.main.AdamContext
+import ch.unibas.dmi.dbis.adam.main.{SparkStartup, AdamContext}
 import ch.unibas.dmi.dbis.adam.storage.engine.CatalogOperator
 import ch.unibas.dmi.dbis.adam.storage.partition.PartitionMode
 import ch.unibas.dmi.dbis.adam.utils.AdamImporter
@@ -25,7 +25,8 @@ import scala.concurrent.Future
   * Ivan Giangreco
   * March 2016
   */
-class DataDefinitionRPC(implicit ac: AdamContext) extends AdamDefinitionGrpc.AdamDefinition with Logging {
+class DataDefinitionRPC extends AdamDefinitionGrpc.AdamDefinition with Logging {
+  implicit def ac : AdamContext = SparkStartup.mainContext
 
   /**
     *
@@ -78,6 +79,24 @@ class DataDefinitionRPC(implicit ac: AdamContext) extends AdamDefinitionGrpc.Ada
     case types.StringType => (x) => x.getStringData
     case _: FeatureVectorWrapperUDT => (x) => FeatureVectorWrapper(RPCHelperMethods.prepareFeatureVector(x.getFeatureData))
   }
+
+  /**
+    *
+    * @param request
+    * @return
+    */
+  override def compressEntity(request: EntityNameMessage): Future[AckMessage] = {
+    log.debug("rpc call for compress operation")
+    val res = EntityOp.compress(request.entity)
+
+    if (res.isSuccess) {
+      Future.successful(AckMessage(code = AckMessage.Code.OK, res.get.toString))
+    } else {
+      log.error(res.failed.get.getMessage)
+      Future.successful(AckMessage(code = AckMessage.Code.ERROR, message = res.failed.get.getMessage))
+    }
+  }
+
 
   /**
     *

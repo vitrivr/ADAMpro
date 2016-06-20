@@ -378,7 +378,7 @@ object Index extends Logging {
 
     val indextypename = CatalogOperator.getIndexTypeName(indexname)
 
-    val index = indextypename.index(indexname, entityname, df.get, meta.get)
+    val index = indextypename.index(indexname, entityname, df.get, meta.get, ac)
 
     Success(index)
   }
@@ -392,6 +392,7 @@ object Index extends Logging {
   def drop(indexname: IndexName)(implicit ac: AdamContext): Try[Void] = {
     storage.drop(CatalogOperator.getIndexPath(indexname))
     CatalogOperator.dropIndex(indexname)
+    IndexLRUCache.invalidate(indexname)
     Success(null)
   }
 
@@ -405,10 +406,8 @@ object Index extends Logging {
     val indexes = CatalogOperator.listIndexes(entityname).map(_._1)
 
     indexes.foreach {
-      indexname => storage.drop(CatalogOperator.getIndexPath(indexname))
+      indexname => drop(indexname)
     }
-
-    CatalogOperator.dropAllIndexes(entityname)
 
     Success(null)
   }
@@ -476,7 +475,7 @@ object Index extends Logging {
         var newPath = ""
 
         do {
-          newPath = oldPath + "-rep" + Random.nextInt
+          newPath = oldPath.substring(0, oldPath.lastIndexOf("-")) + "-repartitioned" + Random.nextInt
         } while (SparkStartup.indexStorage.exists(newPath).get)
 
         SparkStartup.indexStorage.write(index.indexname, data, Some(newPath))

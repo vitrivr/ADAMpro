@@ -3,17 +3,17 @@ package ch.unibas.dmi.dbis.adam.entity
 import ch.unibas.dmi.dbis.adam.config.FieldNames
 import ch.unibas.dmi.dbis.adam.datatypes.FieldTypes
 import ch.unibas.dmi.dbis.adam.datatypes.FieldTypes._
+import ch.unibas.dmi.dbis.adam.datatypes.feature.Feature.{SparseFeatureVector, VectorBase}
 import ch.unibas.dmi.dbis.adam.datatypes.feature.{FeatureVectorWrapper, FeatureVectorWrapperUDT}
 import ch.unibas.dmi.dbis.adam.entity.Entity.EntityName
 import ch.unibas.dmi.dbis.adam.exception.{EntityExistingException, EntityNotExistingException, EntityNotProperlyDefinedException, GeneralAdamException}
 import ch.unibas.dmi.dbis.adam.index.Index
-import ch.unibas.dmi.dbis.adam.main.SparkStartup.Implicits._
 import ch.unibas.dmi.dbis.adam.main.{AdamContext, SparkStartup}
 import ch.unibas.dmi.dbis.adam.query.query.NearestNeighbourQuery
 import ch.unibas.dmi.dbis.adam.storage.engine.CatalogOperator
 import ch.unibas.dmi.dbis.adam.storage.partition.PartitionMode
 import org.apache.spark.Logging
-import org.apache.spark.sql.functions.col
+import org.apache.spark.sql.functions._
 import org.apache.spark.sql.types.{StructField, StructType}
 import org.apache.spark.sql.{DataFrame, Row, SaveMode}
 
@@ -73,7 +73,7 @@ case class Entity(val entityname: EntityName)(@transient implicit val ac: AdamCo
     * @param attribute attribute that is indexed
     * @return
     */
-  private[adam] def getIndexableFeature(attribute: String) = {
+  private[adam] def getIndexableFeature(attribute: String)(implicit ac: AdamContext) = {
     if (featureData.isDefined) {
       featureData.get.select(col(pk.name), col(attribute))
     } else {
@@ -81,7 +81,7 @@ case class Entity(val entityname: EntityName)(@transient implicit val ac: AdamCo
         StructField(pk.name, pk.fieldtype.datatype),
         StructField(attribute, FieldTypes.FEATURETYPE.datatype)
       ))
-      sqlContext.createDataFrame(sc.emptyRDD[Row], structFields)
+      ac.sqlContext.createDataFrame(ac.sc.emptyRDD[Row], structFields)
     }
   }
 
@@ -206,18 +206,12 @@ case class Entity(val entityname: EntityName)(@transient implicit val ac: AdamCo
     * @param k number of elements to show in preview
     * @return
     */
-  def show(k: Int): Option[DataFrame] = {
-    if (data.isDefined) {
-      Some(data.get.limit(k))
-    } else {
-      None
-    }
-  }
+  def show(k: Int): Option[DataFrame] = data.map(_.limit(k))
 
   /**
     * Inserts data into the entity.
     *
-    * @param data data to insert
+    * @param data         data to insert
     * @param ignoreChecks whether to ignore checks
     * @return
     */
@@ -273,6 +267,8 @@ case class Entity(val entityname: EntityName)(@transient implicit val ac: AdamCo
       markStale()
     }
   }
+
+  //TODO: add delete operation?
 
   /**
     * Returns a map of properties to the entity. Useful for printing.
@@ -455,6 +451,8 @@ object Entity extends Logging {
     }
 
     CatalogOperator.dropEntity(entityname, ifExists)
+
+    EntityLRUCache.invalidate(entityname)
     Success(null)
   }
 
@@ -500,6 +498,79 @@ object Entity extends Logging {
       val pk = CatalogOperator.getEntityPK(entityname)
 
       Success(Entity(entityname)(ac))
+    } catch {
+      case e: Exception => Failure(e)
+    }
+  }
+
+  /**
+    * Compresses the entity by turning vectors to sparse.
+    *
+    * @param entity entity
+    * @return
+    */
+  def compress(entity: Entity)(implicit ac: AdamContext): Try[Entity] = {
+    try {
+      if (entity.featurePath.isEmpty) {
+        return Failure(new GeneralAdamException("no feature data available for performing repartitioning"))
+      }
+
+      var data = entity.featureData.get
+      val convertToSparse = udf((c: FeatureVectorWrapper) => {
+        val vec = c.vector
+
+        if (vec.isInstanceOf[SparseFeatureVector]) {
+          c
+        } else {
+          val numNonZeros = {
+            var nnz = 0
+            vec.foreach { v =>
+              if (v - 0 < 1E-10) {
+                nnz += 1
+              }
+            }
+            nnz
+          }
+
+          val ii = new Array[Int](numNonZeros)
+          val vv = new Array[VectorBase](numNonZeros)
+          var k = 0
+
+          vec.foreachPair { (i, v) =>
+            if (v - 0 < 1E-10) {
+              ii(k) = i
+              vv(k) = v
+              k += 1
+            }
+          }
+          new FeatureVectorWrapper(ii, vv, vec.size)
+        }
+      })
+
+      data.schema.filter(a => a.dataType.isInstanceOf[FeatureVectorWrapperUDT]).foreach { a =>
+        data = data.withColumn("conv-" + a.name, convertToSparse(data(a.name)))
+        data = data.drop(a.name).withColumnRenamed("conv-" + a.name, a.name)
+      }
+
+      val oldPath = entity.featurePath.get
+
+      var newPath = ""
+
+      do {
+        newPath = oldPath.substring(0, oldPath.lastIndexOf("-")) + "-sparse" + Random.nextInt
+      } while (SparkStartup.featureStorage.exists(newPath).get)
+
+      featureStorage.write(entity.entityname, data, SaveMode.ErrorIfExists, Some(newPath))
+      CatalogOperator.updateEntityFeaturePath(entity.entityname, newPath)
+      featureStorage.drop(oldPath)
+
+      entity._featureData = None
+      entity._join = None
+      entity._metaData = None
+
+      EntityLRUCache.invalidate(entity.entityname)
+
+      Success(null)
     } catch {
       case e: Exception => Failure(e)
     }
@@ -554,10 +625,13 @@ object Entity extends Logging {
 
         featureStorage.write(entity.entityname, data, SaveMode.ErrorIfExists, Some(newPath))
         CatalogOperator.updateEntityFeaturePath(entity.entityname, newPath)
+        featureStorage.drop(oldPath)
+
         entity._featureData = None
         entity._join = None
         entity._metaData = None
-        featureStorage.drop(oldPath)
+
+        EntityLRUCache.invalidate(entity.entityname)
 
         return Success(entity)
 

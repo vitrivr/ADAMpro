@@ -28,9 +28,8 @@ object EntityLRUCache extends Logging {
     build(
       new CacheLoader[EntityName, Entity]() {
         def load(entityname: EntityName): Entity = {
-          import SparkStartup.Implicits._
           log.trace("cache miss for entity " + entityname + "; loading from disk")
-          val entity = Entity.loadEntityMetaData(entityname)
+          val entity = Entity.loadEntityMetaData(entityname)(SparkStartup.mainContext)
           entity.get
         }
       }
@@ -49,6 +48,10 @@ object EntityLRUCache extends Logging {
       case e: Exception =>
         Failure(e)
     }
+  }
+
+  def invalidate(entityname: EntityName): Unit = {
+    entityCache.invalidate(entityname)
   }
 }
 

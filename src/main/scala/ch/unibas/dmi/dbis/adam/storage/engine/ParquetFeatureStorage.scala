@@ -37,7 +37,7 @@ object ParquetFeatureStorage extends FeatureStorage {
     Success(None)
   }
 
-  override def exists(path: String): Try[Boolean] = {
+  override def exists(path: String)(implicit ac: AdamContext): Try[Boolean] = {
     log.debug("checking data exists in " + path)
     storage.exists(path)
   }
@@ -137,7 +137,7 @@ object ParquetFeatureStorage extends FeatureStorage {
       * @param path
       * @return
       */
-    override def exists(path: String): Try[Boolean] = {
+    override def exists(path: String)(implicit ac: AdamContext): Try[Boolean] = {
       try {
         Success(FileSystem.get(new Path(AdamConfig.dataPath).toUri, hadoopConf).exists(new org.apache.hadoop.fs.Path(path)))
       } catch {
@@ -172,7 +172,7 @@ object ParquetFeatureStorage extends FeatureStorage {
       * @param path
       * @return
       */
-    override def exists(path: String): Try[Boolean] = {
+    override def exists(path: String)(implicit ac: AdamContext): Try[Boolean] = {
       try {
         Success(new File(path).exists())
       } catch {

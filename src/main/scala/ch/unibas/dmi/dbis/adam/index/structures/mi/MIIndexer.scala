@@ -63,6 +63,15 @@ class MIIndexer(p_ki: Option[Int], p_ks: Option[Int], distance: DistanceFunction
       .mapValues(vals => (vals.map(_.tid), vals.map(_.score))) //postingListId, scoreList
       .map(x => Row(x._1, x._2._1, x._2._2))
 
+    //TODO: possibly change structure to fit better Spark and return a ReferencePointAssignment rather than a true posting list
+    /*val indexdata = data.flatMap(datum => {
+      refs.value
+        .sortBy(ref => distance.apply(datum.feature, ref.feature)) //sort refs by distance
+        .zipWithIndex //give rank (score)
+        .map { case (ref, idx) => ReferencePointAssignment(datum.id, ref.id, idx) } //obj, postingListId, score
+        .take(ki) //limit to number of nearest pivots used when indexing
+    }).map(x => Row(x.refid, x.tid, x.score))*/
+
 
     val schema = StructType(Seq(
       StructField(MIIndexer.REFERENCE_OBJ_NAME, IntegerType, nullable = false),

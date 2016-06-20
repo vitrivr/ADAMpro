@@ -27,16 +27,16 @@
     <div class="nav-wrapper blue-grey darken-3" style="padding: 0px 50px 0px 50px">
         <a href="#!" class="brand-logo right" style="padding-right: 20px;">ADAMpro <img src="./lib/imgs/logo.png" style="height:40px; padding: 5px; margin-top: 10px;"/></a>
         <ul class="hide-on-med-and-down left">
-    
-        <li style="padding-left: 20px; padding-right: 20px; font-weight: bold;"><i class="material-icons left" style="margin-right:5px;">playlist_add</i>ENTITY</li>
+
+            <li style="padding-left: 20px; padding-right: 20px; font-weight: bold;"><i class="material-icons left" style="margin-right:5px;">playlist_add</i>ENTITY</li>
 
             <li><a href="entity-list.html">List</a></li>
             <li><a href="entity-create.html">Create</a></li>
             <li><a href="entity-fill.html">Fill</a></li>
             <li><a href="entity-read.html">Read</a></li>
             <li><a href="entity-repartition.html">Repartition</a></li>
-        
-        <li style="border-left: white 1px solid; padding-left: 20px; padding-right: 20px; font-weight: bold;"><i class="material-icons left" style="margin-right:5px;">filter_list</i>INDEX</li>
+
+            <li style="border-left: white 1px solid; padding-left: 20px; padding-right: 20px; font-weight: bold;"><i class="material-icons left" style="margin-right:5px;">filter_list</i>INDEX</li>
             <li><a href="index-create.html">Create</a></li>
             <li><a href="index-repartition.html">Repartition</a></li>
 
@@ -48,8 +48,51 @@
     </div>
 </nav>
 
-<div class='container' style='width:90%'><div class='row'><h1 style='font-size:40pt;'>ADAM<span style='font-size:20pt;'>pro</span></h1></div>
+<div class='container' style='width:90%'><div class='row'><h1 style='font-size:40pt;'>Fill<span style='font-size:20pt; padding-left: 20px'>Entity</span></h1></div>
 
+<div class="row">
+    <div id="centityname" class="input-field col s4"></div>
+</div>
+<div class="row">
+    <div class="input-field col s4">
+        <input id="ntuples" type="text">
+        <label for="ntuples">number of tuples</label>
+    </div>
+    <div class="input-field col s4">
+        <input id="ndims" type="text">
+        <label for="ndims">number of dimensions</label>
+    </div>
+</div>
+
+<div class="row" style="padding-top: 40px;">
+    <button class="btn waves-effect waves-light red" name="action" id="btnSubmit">
+        Fill
+    </button>
+</div>
+
+<div class="row" style="padding-top: 120px;">
+    <div class="col s4">
+        or import the data from an old ADAM instance:
+    </div>
+    <div class="col s2">
+        <a href="entity-import.html" class="btn">Import</a>
+    </div>
+</div>
+
+
+<script>
+$(document).ready(function () {
+    entityListGetSelect("centityname");
+});
+
+$("#btnSubmit").click(function () {
+    var entityname = $("#entityname").val();
+    var ntuples = $("#ntuples").val();
+    var ndims = $("#ndims").val();
+
+    entityFillData(entityname, ntuples, ndims);
+});
+</script>
 
 </div>
 

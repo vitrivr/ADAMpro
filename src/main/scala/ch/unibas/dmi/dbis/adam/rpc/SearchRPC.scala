@@ -4,7 +4,7 @@ import ch.unibas.dmi.dbis.adam.api.{EntityOp, IndexOp, QueryOp}
 import ch.unibas.dmi.dbis.adam.datatypes.feature.{FeatureVectorWrapper, FeatureVectorWrapperUDT}
 import ch.unibas.dmi.dbis.adam.exception.{GeneralAdamException, QueryNotCachedException}
 import ch.unibas.dmi.dbis.adam.http.grpc._
-import ch.unibas.dmi.dbis.adam.main.AdamContext
+import ch.unibas.dmi.dbis.adam.main.{SparkStartup, AdamContext}
 import ch.unibas.dmi.dbis.adam.query.datastructures.QueryLRUCache
 import ch.unibas.dmi.dbis.adam.query.handler.internal.QueryHints
 import ch.unibas.dmi.dbis.adam.query.progressive.{ProgressiveObservation, QueryHintsProgressivePathChooser, SimpleProgressivePathChooser}
@@ -14,6 +14,7 @@ import org.apache.spark.sql.DataFrame
 import org.apache.spark.sql.types._
 
 import scala.concurrent.Future
+import scala.util.Try
 
 /**
   * adamtwo
@@ -21,8 +22,8 @@ import scala.concurrent.Future
   * Ivan Giangreco
   * March 2016
   */
-class SearchRPC(implicit ac: AdamContext) extends AdamSearchGrpc.AdamSearch with Logging {
-  //TODO: possibly start new 'lightweight' AdamContext with each new query
+class SearchRPC extends AdamSearchGrpc.AdamSearch with Logging {
+  implicit def ac : AdamContext = SparkStartup.mainContext
 
   /**
     *
@@ -80,11 +81,14 @@ class SearchRPC(implicit ac: AdamContext) extends AdamSearchGrpc.AdamSearch with
     */
   override def preview(request: EntityNameMessage): Future[QueryResultsMessage] = {
     time("rpc call to preview entity") {
-      val entityname = request.entity
-      Future.successful(QueryResultsMessage(
-        Some(AckMessage(AckMessage.Code.OK)),
-        Seq((prepareResults("", 1.toFloat, 0, "sequential scan", Some(EntityOp.preview(entityname, 100).get))))
-      ))
+      val res = EntityOp.preview(request.entity, 100)
+
+      if (res.isSuccess) {
+        Future.successful(QueryResultsMessage(Some(AckMessage(AckMessage.Code.OK)), Seq((prepareResults("", 1.toFloat, 0, "sequential scan", Some(res.get))))))
+      } else {
+        log.error(res.failed.get.getMessage)
+        Future.successful(QueryResultsMessage(Some(AckMessage(code = AckMessage.Code.ERROR, message = res.failed.get.getMessage))))
+      }
     }
   }
 
@@ -135,11 +139,17 @@ class SearchRPC(implicit ac: AdamContext) extends AdamSearchGrpc.AdamSearch with
       try {
         //track on next
         val onComplete =
-          (po: ProgressiveObservation) => ({
-            responseObserver.onNext(
-              QueryResultsMessage(Some(AckMessage(AckMessage.Code.OK)),
-                Seq(prepareResults(request.queryid, po.confidence, po.t2 - po.t1, po.source + " (" + po.info.get("name").getOrElse("no details") + ")", po.results))))
-          })
+          (tpo: Try[ProgressiveObservation]) => {
+            if(tpo.isSuccess){
+              val po = tpo.get
+              responseObserver.onNext(
+                QueryResultsMessage(Some(AckMessage(AckMessage.Code.OK)),
+                  Seq(prepareResults(request.queryid, po.confidence, po.t2 - po.t1, po.source + " (" + po.info.getOrElse("name", "no details") + ")", po.results))))
+            } else {
+              responseObserver.onNext(
+                QueryResultsMessage(Some(AckMessage(AckMessage.Code.ERROR, tpo.failed.get.getMessage))))
+            }
+          }
 
         val pathChooser = if (request.hints.isEmpty) {
           new SimpleProgressivePathChooser()

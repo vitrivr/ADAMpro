@@ -3,7 +3,7 @@ package ch.unibas.dmi.dbis.adam.api
 import ch.unibas.dmi.dbis.adam.datatypes.feature.FeatureVectorWrapper
 import ch.unibas.dmi.dbis.adam.entity.Entity
 import ch.unibas.dmi.dbis.adam.entity.Entity.EntityName
-import ch.unibas.dmi.dbis.adam.main.SparkStartup.Implicits._
+import ch.unibas.dmi.dbis.adam.main.AdamContext
 import org.apache.spark.Logging
 import org.apache.spark.sql.types.{DataType, StructField, StructType, UserDefinedType}
 import org.apache.spark.sql.{Row, types}
@@ -25,7 +25,7 @@ object RandomDataOp extends Logging {
     * @param collectionSize size of collection
     * @param vectorSize     size of feature vectors
     */
-  def apply(entityname: EntityName, collectionSize: Int, vectorSize: Int): Try[Void] = {
+  def apply(entityname: EntityName, collectionSize: Int, vectorSize: Int)(implicit ac: AdamContext): Try[Void] = {
     try {
       log.debug("perform generate data operation")
 
@@ -59,7 +59,7 @@ object RandomDataOp extends Logging {
             Row(data: _*)
           })
         )
-        val data = sqlContext.createDataFrame(rdd, StructType(schema.map(field => StructField(field.name, field.fieldtype.datatype))))
+        val data = ac.sqlContext.createDataFrame(rdd, StructType(schema.map(field => StructField(field.name, field.fieldtype.datatype))))
 
         log.debug("inserting data batch")
         entity.get.insert(data, true)

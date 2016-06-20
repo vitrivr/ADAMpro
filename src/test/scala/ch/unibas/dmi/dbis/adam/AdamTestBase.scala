@@ -1,13 +1,13 @@
 package ch.unibas.dmi.dbis.adam
 
 import java.sql.DriverManager
+
 import ch.unibas.dmi.dbis.adam.api.EntityOp
 import ch.unibas.dmi.dbis.adam.config.AdamConfig
 import ch.unibas.dmi.dbis.adam.datatypes.FieldTypes
 import ch.unibas.dmi.dbis.adam.datatypes.feature.{FeatureVectorWrapper, FeatureVectorWrapperUDT}
-import ch.unibas.dmi.dbis.adam.entity.{Entity, AttributeDefinition}
-import ch.unibas.dmi.dbis.adam.main.SparkStartup
-import ch.unibas.dmi.dbis.adam.main.SparkStartup.Implicits._
+import ch.unibas.dmi.dbis.adam.entity.{AttributeDefinition, Entity}
+import ch.unibas.dmi.dbis.adam.main.{AdamContext, SparkStartup}
 import ch.unibas.dmi.dbis.adam.query.distance.{ManhattanDistance, MinkowskiDistance}
 import org.apache.spark.Logging
 import org.apache.spark.sql.types.{LongType, StructField, StructType}
@@ -26,6 +26,7 @@ import scala.util.Random
   */
 class AdamTestBase extends FeatureSpec with GivenWhenThen with Eventually with IntegrationPatience with Logging {
   val startup = SparkStartup
+  implicit val ac : AdamContext = startup.mainContext
 
   /**
     * Precision

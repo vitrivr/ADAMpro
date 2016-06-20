@@ -11,7 +11,7 @@ import scala.collection.mutable
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.duration._
 import scala.concurrent.{Await, Future}
-import scala.util.Success
+import scala.util.{Try, Success}
 
 /**
   * adampro
@@ -28,8 +28,6 @@ class AdamController(rpcClient: RPCClient) extends Controller {
       "index.html")
   }
 
-  case class GeneralResponse(code: Int, message: String = "")
-
 
   /**
     *
@@ -38,7 +36,7 @@ class AdamController(rpcClient: RPCClient) extends Controller {
     val filter = request.params.get("filter")
 
     val entities = if (filter.isEmpty) {
-      rpcClient.listEntities()
+      rpcClient.entityList()
     } else {
       Success(Seq(filter.get))
     }
@@ -50,7 +48,6 @@ class AdamController(rpcClient: RPCClient) extends Controller {
     }
   }
 
-  case class EntityListResponse(code: Int, entities: Seq[String])
 
   /**
     *
@@ -62,7 +59,7 @@ class AdamController(rpcClient: RPCClient) extends Controller {
       response.ok.json(GeneralResponse(500, "entity not specified"))
     }
 
-    val details = rpcClient.getDetails(entityname.get)
+    val details = rpcClient.entityDetails(entityname.get)
 
     if (details.isSuccess) {
       response.ok.json(EntityDetailResponse(200, entityname.get, details.get))
@@ -70,8 +67,6 @@ class AdamController(rpcClient: RPCClient) extends Controller {
       response.ok.json(GeneralResponse(500, details.failed.get.getMessage))
     }
   }
-
-  case class EntityDetailResponse(code: Int, entity : String, details : Map[String, String])
 
 
   /**
@@ -84,7 +79,7 @@ class AdamController(rpcClient: RPCClient) extends Controller {
       response.ok.json(GeneralResponse(500, "entity not specified"))
     }
 
-    val details = rpcClient.benchmarkAndAdjustWeights(entityname.get, "feature")
+    val details = rpcClient.entityBenchmark(entityname.get, "feature")
 
     if (details.isSuccess) {
       response.ok.json(GeneralResponse(200))
@@ -103,7 +98,7 @@ class AdamController(rpcClient: RPCClient) extends Controller {
       response.ok.json(GeneralResponse(500, "entity not specified"))
     }
 
-    val details = rpcClient.dropEntity(entityname.get)
+    val details = rpcClient.entityDrop(entityname.get)
 
     if (details.isSuccess) {
       response.ok.json(GeneralResponse(200))
@@ -123,23 +118,21 @@ class AdamController(rpcClient: RPCClient) extends Controller {
       response.ok.json(GeneralResponse(500, "entity not specified"))
     }
 
-    val res = rpcClient.preview(entityname.get)
+    val res = rpcClient.entityRead(entityname.get)
 
     if (res.isSuccess) {
-      response.ok.json(EntityPreviewResponse(200, entityname.get, res.get))
+      response.ok.json(EntityReadResponse(200, entityname.get, res.get))
     } else {
       response.ok.json(GeneralResponse(500, res.failed.get.getMessage))
     }
   }
 
-  case class EntityPreviewResponse(code: Int, entity : String, details : Seq[Map[String, String]])
-
 
   /**
     *
     */
-  post("/entity/add") { request: EntityCreationRequest =>
-    val res = rpcClient.createEntity(request.entityname, request.fields)
+  post("/entity/add") { request: EntityCreateRequest =>
+    val res = rpcClient.entityCreate(request.entityname, request.attributes)
 
     if (res.isSuccess) {
       response.ok.json(GeneralResponse(200, res.get))
@@ -151,8 +144,8 @@ class AdamController(rpcClient: RPCClient) extends Controller {
   /**
     *
     */
-  post("/import") { request: ImportRequest =>
-    val res = rpcClient.importData(request.host, request.database, request.username, request.password)
+  post("/import") { request: EntityImportRequest =>
+    val res = rpcClient.entityImport(request.host, request.database, request.username, request.password)
 
     if (res.isSuccess) {
       response.ok.json(GeneralResponse(200))
@@ -164,8 +157,8 @@ class AdamController(rpcClient: RPCClient) extends Controller {
   /**
     *
     */
-  post("/entity/insertdemo") { request: InsertDataRequest =>
-    val res = rpcClient.prepareDemo(request.entityname, request.ntuples, request.ndims, request.fields)
+  post("/entity/insertdemo") { request: EntityFillRequest =>
+    val res = rpcClient.entityFill(request.entityname, request.ntuples, request.ndims)
 
     if (res.isSuccess) {
       response.ok.json(GeneralResponse(200))
@@ -177,8 +170,8 @@ class AdamController(rpcClient: RPCClient) extends Controller {
   /**
     *
     */
-  post("/entity/indexall") { request: IndexAllRequest =>
-    val res = rpcClient.addAllIndex(request.entityname, request.fields, 2)
+  post("/entity/indexall") { request: IndexCreateAllRequest =>
+    val res = rpcClient.entityCreateAll(request.entityname, request.attributes, 2)
 
 
     if (res.isSuccess) {
@@ -192,8 +185,8 @@ class AdamController(rpcClient: RPCClient) extends Controller {
   /**
     *
     */
-  post("/entity/repartition") { request: RepartitionRequest =>
-    val res = rpcClient.repartitionEntity(request.entity, request.partitions, request.columns.filter(_.length > 0), request.materialize, request.replace)
+  post("/entity/partition") { request: EntityPartitionRequest =>
+    val res = rpcClient.entityPartition(request.entityname, request.npartitions, request.attributes.filter(_.length > 0), request.materialize, request.replace)
 
     if (res.isSuccess) {
       response.ok.json(GeneralResponse(200, res.get))
@@ -205,7 +198,7 @@ class AdamController(rpcClient: RPCClient) extends Controller {
   /**
     *
     */
-  post("/index/add") { request: IndexRequest =>
+  post("/entity/index/add") { request: IndexCreateRequest =>
     val indextype = request.indextype match {
       case "ecp" => IndexType.ecp
       case "lsh" => IndexType.lsh
@@ -217,7 +210,7 @@ class AdamController(rpcClient: RPCClient) extends Controller {
       case _ => null
     }
 
-    val res = rpcClient.addIndex(request.entityname, request.column, indextype, request.norm, request.options)
+    val res = rpcClient.indexCreate(request.entityname, request.attribute, indextype, request.norm, request.options)
 
     if (res.isSuccess) {
       response.ok.json(GeneralResponse(200))
@@ -230,8 +223,8 @@ class AdamController(rpcClient: RPCClient) extends Controller {
   /**
     *
     */
-  post("/index/repartition") { request: RepartitionRequest =>
-    val res = rpcClient.repartitionIndex(request.entity, request.partitions, request.columns.filter(_.length > 0), request.materialize, request.replace)
+  post("/entity/index/partition") { request: IndexPartitionRequest =>
+    val res = rpcClient.indexPartition(request.indexname, request.npartitions, request.attributes.filter(_.length > 0), request.materialize, request.replace)
 
     if (res.isSuccess) {
       response.ok.json(GeneralResponse(200, res.get))
@@ -243,53 +236,65 @@ class AdamController(rpcClient: RPCClient) extends Controller {
   /**
     *
     */
-  post("/query/compound") { request: CompoundQueryRequest =>
-    val res = rpcClient.compoundQuery(request)
+  post("/search/compound") { request: SearchCompoundRequest =>
+    val res = rpcClient.searchCompound(request)
     if (res.isSuccess) {
-      response.ok.json(CompoundQueryResponse(200, res.get))
+      response.ok.json(SearchCompoundResponse(200, res.get))
     } else {
       response.ok.json(GeneralResponse(500, res.failed.get.getMessage))
     }
   }
 
-  case class CompoundQueryResponse(code: Int, details: CompoundQueryDetails)
-
 
   /**
     *
     */
-  post("/query/progressive") { request: ProgressiveQueryRequest =>
-    val res = rpcClient.progressiveQuery(request.id, request.entityname, request.q, request.column, request.hints, request.k, processProgressiveResults, completedProgressiveResults)
+  post("/search/progressive") { request: SearchProgressiveRequest =>
+    val res = rpcClient.searchProgressive(request.id, request.entityname, request.q, request.attribute, request.hints, request.k, processProgressiveResults(request.id), completedProgressiveResults)
 
     progTempResults.synchronized {
       if (!progTempResults.contains(request.id)) {
-        val queue = mutable.Queue[ProgressiveTempResponse]()
+        val queue = mutable.Queue[SearchProgressiveIntermediaryResponse]()
         progTempResults.put(request.id, queue)
       } else {
         log.error("query id is already being used")
       }
     }
 
-    response.ok.json(ProgressiveStartResponse(request.id))
+    response.ok.json(SearchProgressiveStartResponse(request.id))
   }
 
-  case class ProgressiveStartResponse(id: String)
 
-  private def processProgressiveResults(id: String, confidence: Double, source: String, time: Long, results: Seq[Map[String, String]]): Unit = {
-    val sourcetype = if(source.length > 0){
-      source.substring(0, source.indexOf("(")).toLowerCase.trim
+  private def processProgressiveResults(id : String)(res: Try[(String, Double, String, Long, Seq[Map[String, String]])]): Unit = {
+    if (res.isSuccess) {
+
+      val confidence = res.get._2
+      val source = res.get._3
+      val time = res.get._4
+      val results = res.get._5
+
+
+      val sourcetype = if (source.length > 0) {
+        source.substring(0, source.indexOf("(")).toLowerCase.trim
+      } else {
+        ""
+      }
+      progTempResults.get(id).get += SearchProgressiveIntermediaryResponse(id, confidence, source, sourcetype, time, results, ProgressiveQueryStatus.RUNNING)
     } else {
-      ""
+      log.error(res.failed.get)
+      completedProgressiveResults(id, res.failed.get.getMessage, ProgressiveQueryStatus.ERROR)
     }
-    progTempResults.get(id).get += ProgressiveTempResponse(id, confidence, source, sourcetype, time, results, ProgressiveQueryStatus.RUNNING)
   }
 
-  case class ProgressiveTempResponse(id: String, confidence: Double, source: String, sourcetype: String, time: Long, results: Seq[Map[String, String]], status: ProgressiveQueryStatus.Value)
 
-  val progTempResults = mutable.HashMap[String, mutable.Queue[ProgressiveTempResponse]]()
+  val progTempResults = mutable.HashMap[String, mutable.Queue[SearchProgressiveIntermediaryResponse]]()
 
   private def completedProgressiveResults(id: String): Unit = {
-    progTempResults.get(id).get += ProgressiveTempResponse(id, 0.0, "", "", 0, Seq(), ProgressiveQueryStatus.FINISHED)
+    completedProgressiveResults(id, "", ProgressiveQueryStatus.FINISHED)
+  }
+
+  private def completedProgressiveResults(id : String, message : String, newStatus : ProgressiveQueryStatus.Value): Unit ={
+    progTempResults.get(id).get += SearchProgressiveIntermediaryResponse(id, 0.0, message, "", 0, Seq(), newStatus)
     lazy val f = Future {
       Thread.sleep(10000);
       true
@@ -302,18 +307,19 @@ class AdamController(rpcClient: RPCClient) extends Controller {
   /**
     *
     */
-  post("/query/progressive/temp") { request: ProgressiveQueryTemporaryResultsRequest =>
+  get("/query/progressive/temp") { request: Request =>
+    val id = request.params.get("id").get
+
     progTempResults.synchronized {
-      if (progTempResults.get(request.id).isDefined && !progTempResults.get(request.id).get.isEmpty) {
-        val result = progTempResults.get(request.id).get.dequeue()
-        response.ok.json(ProgressiveQueryResponse(result, result.status.toString))
+      if (progTempResults.get(id).isDefined && !progTempResults.get(id).get.isEmpty) {
+        val result = progTempResults.get(id).get.dequeue()
+        response.ok.json(SearchProgressiveResponse(result, result.status.toString))
       } else {
         response.ok
       }
     }
   }
 
-  case class ProgressiveQueryResponse(results: ProgressiveTempResponse, status: String)
 
 }
 
@@ -324,4 +330,5 @@ object ProgressiveQueryStatus extends Enumeration {
   val RUNNING = Value("running")
   val PREMATURE_FINISHED = Value("premature")
   val FINISHED = Value("finished")
+  val ERROR = Value("error")
 }

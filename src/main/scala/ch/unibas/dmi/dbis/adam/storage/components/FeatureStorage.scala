@@ -20,7 +20,7 @@ trait FeatureStorage extends Serializable with Logging {
     * @param path path to store features to
     * @return
     */
-  def exists(path: String): Try[Boolean]
+  def exists(path: String)(implicit ac: AdamContext): Try[Boolean]
 
   /**
     * Create the entity in the feature storage.

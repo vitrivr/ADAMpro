@@ -2,6 +2,7 @@ package ch.unibas.dmi.dbis.adam.storage.components
 
 import ch.unibas.dmi.dbis.adam.entity.Entity._
 import ch.unibas.dmi.dbis.adam.entity.AttributeDefinition
+import ch.unibas.dmi.dbis.adam.main.AdamContext
 import org.apache.spark.Logging
 import org.apache.spark.sql.{DataFrame, SaveMode}
 
@@ -20,7 +21,7 @@ trait MetadataStorage extends Serializable with Logging {
     * @param tablename name of table
     * @param attributes attributes
     */
-  def create(tablename: EntityName, attributes: Seq[AttributeDefinition]): Try[Option[String]] = Success(None)
+  def create(tablename: EntityName, attributes: Seq[AttributeDefinition])(implicit ac: AdamContext): Try[Option[String]] = Success(None)
 
   /**
     * Read data from metadata storage.
@@ -28,7 +29,7 @@ trait MetadataStorage extends Serializable with Logging {
     * @param tablename name of table
     * @return
     */
-  def read(tablename: EntityName): Try[DataFrame]
+  def read(tablename: EntityName)(implicit ac: AdamContext): Try[DataFrame]
 
   /**
     * Write data to metadata storage.
@@ -38,7 +39,7 @@ trait MetadataStorage extends Serializable with Logging {
     * @param mode save mode (append, overwrite, ...)
     * @return
     */
-  def write(tablename: EntityName, data: DataFrame, mode: SaveMode = SaveMode.Append): Try[String]
+  def write(tablename: EntityName, data: DataFrame, mode: SaveMode = SaveMode.Append)(implicit ac: AdamContext): Try[String]
 
   /**
     * Drop data from the metadata storage.
@@ -46,5 +47,5 @@ trait MetadataStorage extends Serializable with Logging {
     * @param tablename name of table
     * @return
     */
-  def drop(tablename: EntityName): Try[Void]
+  def drop(tablename: EntityName)(implicit ac: AdamContext): Try[Void]
 }
