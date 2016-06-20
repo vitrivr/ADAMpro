@@ -73,7 +73,7 @@ val secondaryLibs = Seq(
   "org.apache.commons" % "commons-lang3" % "3.4" force(),
   "org.apache.commons" % "commons-math3" % "3.4.1" force(),
   "it.unimi.dsi" % "fastutil" % "7.0.12",
-  "com.google.guava" % "guava" % "19.0" force()
+  "com.google.guava" % "guava" % "16.0.1" force()
 ).map(
   _.excludeAll(
     ExclusionRule("org.scala-lang"),
