@@ -3,7 +3,7 @@ package ch.unibas.dmi.dbis.adam.query.distance
 import breeze.linalg.DenseVector
 import ch.unibas.dmi.dbis.adam.datatypes.feature.Feature.{FeatureVector, SparseFeatureVector, VectorBase}
 import ch.unibas.dmi.dbis.adam.query.distance.Distance.Distance
-import org.apache.spark.Logging
+import ch.unibas.dmi.dbis.adam.utils.Logging
 
 /**
   * adamtwo

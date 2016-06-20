@@ -3,7 +3,7 @@ package ch.unibas.dmi.dbis.adam.query.handler.internal
 import ch.unibas.dmi.dbis.adam.main.AdamContext
 import ch.unibas.dmi.dbis.adam.query.handler.generic.{ExpressionDetails, QueryExpression}
 import ch.unibas.dmi.dbis.adam.query.handler.internal.ProjectionExpression.ProjectionField
-import org.apache.spark.Logging
+import ch.unibas.dmi.dbis.adam.utils.Logging
 import org.apache.spark.sql.types.{BooleanType, LongType, StructField, StructType}
 import org.apache.spark.sql.{DataFrame, Row}
 

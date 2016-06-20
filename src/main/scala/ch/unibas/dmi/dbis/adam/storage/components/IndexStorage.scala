@@ -2,7 +2,7 @@ package ch.unibas.dmi.dbis.adam.storage.components
 
 import ch.unibas.dmi.dbis.adam.index.Index.IndexName
 import ch.unibas.dmi.dbis.adam.main.AdamContext
-import org.apache.spark.Logging
+import ch.unibas.dmi.dbis.adam.utils.Logging
 import org.apache.spark.sql.DataFrame
 
 import scala.util.Try

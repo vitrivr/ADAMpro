@@ -3,7 +3,7 @@ package ch.unibas.dmi.dbis.adam.config
 import java.io.File
 
 import com.typesafe.config.ConfigFactory
-import org.apache.spark.Logging
+import ch.unibas.dmi.dbis.adam.utils.Logging
 
 /**
   * adamtwo

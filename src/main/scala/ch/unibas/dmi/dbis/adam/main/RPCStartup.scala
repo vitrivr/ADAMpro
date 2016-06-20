@@ -5,7 +5,7 @@ import ch.unibas.dmi.dbis.adam.http.grpc.{AdamDefinitionGrpc, AdamSearchGrpc}
 import ch.unibas.dmi.dbis.adam.rpc.{DataDefinitionRPC, SearchRPC}
 import io.grpc.Server
 import io.grpc.netty.NettyServerBuilder
-import org.apache.spark.Logging
+import ch.unibas.dmi.dbis.adam.utils.Logging
 
 import scala.concurrent.ExecutionContext
 

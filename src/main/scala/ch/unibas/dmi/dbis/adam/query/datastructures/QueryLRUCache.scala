@@ -5,7 +5,7 @@ import java.util.concurrent.TimeUnit
 import ch.unibas.dmi.dbis.adam.config.AdamConfig
 import ch.unibas.dmi.dbis.adam.exception.QueryNotCachedException
 import com.google.common.cache.{CacheBuilder, CacheLoader}
-import org.apache.spark.Logging
+import ch.unibas.dmi.dbis.adam.utils.Logging
 import org.apache.spark.sql.DataFrame
 
 import scala.util.{Failure, Success, Try}

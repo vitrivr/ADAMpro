@@ -7,7 +7,7 @@ import ch.unibas.dmi.dbis.adam.query.datastructures._
 import ch.unibas.dmi.dbis.adam.query.handler.generic.QueryExpression
 import ch.unibas.dmi.dbis.adam.query.handler.internal.BooleanFilterExpression.BooleanFilterScanExpression
 import ch.unibas.dmi.dbis.adam.query.query.{BooleanQuery, NearestNeighbourQuery}
-import org.apache.spark.Logging
+import ch.unibas.dmi.dbis.adam.utils.Logging
 import org.apache.spark.sql.DataFrame
 
 import scala.concurrent.ExecutionContext.Implicits.global

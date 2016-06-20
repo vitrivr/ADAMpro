@@ -13,7 +13,7 @@ import ch.unibas.dmi.dbis.adam.storage.engine.CatalogOperator
 import ch.unibas.dmi.dbis.adam.storage.partition.PartitionMode
 import ch.unibas.dmi.dbis.adam.utils.AdamImporter
 import io.grpc.stub.StreamObserver
-import org.apache.spark.Logging
+import ch.unibas.dmi.dbis.adam.utils.Logging
 import org.apache.spark.sql.types.{DataType, StructField, StructType}
 import org.apache.spark.sql.{Row, types}
 

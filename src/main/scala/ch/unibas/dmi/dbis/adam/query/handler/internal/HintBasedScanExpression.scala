@@ -11,7 +11,7 @@ import ch.unibas.dmi.dbis.adam.query.handler.internal.BooleanFilterExpression.Bo
 import ch.unibas.dmi.dbis.adam.query.handler.internal.QueryHints._
 import ch.unibas.dmi.dbis.adam.query.query.{BooleanQuery, NearestNeighbourQuery}
 import ch.unibas.dmi.dbis.adam.storage.engine.CatalogOperator
-import org.apache.spark.Logging
+import ch.unibas.dmi.dbis.adam.utils.Logging
 import org.apache.spark.sql.DataFrame
 
 /**

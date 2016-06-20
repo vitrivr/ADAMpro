@@ -9,7 +9,7 @@ import ch.unibas.dmi.dbis.adam.datatypes.feature.{FeatureVectorWrapper, FeatureV
 import ch.unibas.dmi.dbis.adam.entity.{AttributeDefinition, Entity}
 import ch.unibas.dmi.dbis.adam.main.{AdamContext, SparkStartup}
 import ch.unibas.dmi.dbis.adam.query.distance.{ManhattanDistance, MinkowskiDistance}
-import org.apache.spark.Logging
+import ch.unibas.dmi.dbis.adam.utils.Logging
 import org.apache.spark.sql.types.{LongType, StructField, StructType}
 import org.apache.spark.sql.{DataFrame, Row, types}
 import org.scalatest.concurrent.{Eventually, IntegrationPatience}

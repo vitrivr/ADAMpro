@@ -13,7 +13,7 @@ import ch.unibas.dmi.dbis.adam.index.structures.va.marks.{EquidistantMarksGenera
 import ch.unibas.dmi.dbis.adam.index.structures.va.signature.FixedSignatureGenerator
 import ch.unibas.dmi.dbis.adam.main.AdamContext
 import ch.unibas.dmi.dbis.adam.query.distance.{DistanceFunction, MinkowskiDistance}
-import org.apache.spark.Logging
+import ch.unibas.dmi.dbis.adam.utils.Logging
 import org.apache.spark.rdd.RDD
 import org.apache.spark.sql.Row
 import org.apache.spark.sql.types.{StructField, StructType}

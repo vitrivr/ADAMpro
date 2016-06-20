@@ -3,7 +3,7 @@ package ch.unibas.dmi.dbis.adam.query.progressive
 import ch.unibas.dmi.dbis.adam.main.AdamContext
 import ch.unibas.dmi.dbis.adam.query.datastructures.ProgressiveQueryStatusTracker
 import ch.unibas.dmi.dbis.adam.query.handler.generic.QueryExpression
-import org.apache.spark.Logging
+import ch.unibas.dmi.dbis.adam.utils.Logging
 import org.apache.spark.sql.DataFrame
 
 import scala.concurrent.ExecutionContext.Implicits.global
