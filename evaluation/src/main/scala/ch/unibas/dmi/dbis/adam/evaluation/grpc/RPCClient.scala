@@ -33,10 +33,11 @@ class RPCClient(channel: ManagedChannel, definer: AdamDefinitionBlockingStub, se
   /**
     * Evaluation Code
     */
-  val tupleSizes = Seq(1e7.toInt, 1e8.toInt)
+  val tupleSizes = Seq(1e6.toInt, 1e7.toInt, 1e8.toInt, 1e9.toInt)
   val dimensions = Seq(10, 128, 500)
   val partitions = Seq(1, 2, 4,  8, 16, 32, 64, 128)
   val indices = Seq(IndexType.ecp, IndexType.vaf, IndexType.lsh, IndexType.pq, IndexType.sh)
+  val partitioners = Seq(RepartitionMessage.Partitioner.CURRENT, RepartitionMessage.Partitioner.SPARK, RepartitionMessage.Partitioner.RANDOM)
 
   try
       for (tuples <- tupleSizes) {
@@ -49,20 +50,17 @@ class RPCClient(channel: ManagedChannel, definer: AdamDefinitionBlockingStub, se
 
           definer.generateRandomData(GenerateRandomDataMessage(eName, tuples, dim))
 
-          val countedTuples = definer.count(EntityNameMessage(eName))
-          if(countedTuples.message.toInt!= tuples){
-            System.err.println(tuples + " | "+countedTuples)
-          }
-
           for (index <- indices) {
             val name = generateIndex(index, eName)
             for (part <- partitions) {
-              definer.repartitionIndexData(RepartitionMessage(name, part, option = RepartitionMessage.PartitionOptions.REPLACE_EXISTING))
-              val (time, noResults) = timeQuery(name, dim, part)
-              appendToResults(tuples, dim, part, index.name, time, k, noResults)
+              for(partitioner <- partitioners){
+                definer.repartitionIndexData(RepartitionMessage(name, part, option = RepartitionMessage.PartitionOptions.REPLACE_EXISTING,partitioner = partitioner))
+                val (avgTime, noResults) = timeQuery(name, dim, part)
+                appendToResults(tuples, dim, part, index.name, avgTime, k, noResults, partitioner)
+              }
             }
             try{
-              val res = definer.dropIndex(IndexNameMessage(index.name))
+              val res = definer.dropIndex(IndexNameMessage(name))
               System.out.println(res)
             }catch {
               case e: Exception => System.err.println("Drop Index failed")
@@ -75,7 +73,7 @@ class RPCClient(channel: ManagedChannel, definer: AdamDefinitionBlockingStub, se
 
   def timeQuery(indexName: String, dim: Int, part: Int): (Float, Int) = {
 
-    val queryCount = 100
+    val queryCount = 40
     //1 free query to cache Index
     val res = searcherBlocking.doQuery(QueryMessage(nnq = Some(randomQueryMessage(dim, part)), from = Some(FromMessage(FromMessage.Source.Index(indexName)))))
     if (k > res.responses.head.results.size) {
@@ -115,8 +113,8 @@ class RPCClient(channel: ManagedChannel, definer: AdamDefinitionBlockingStub, se
     indexRes.message
   }
 
-  def appendToResults(tuples: Int, dimensions: Int, partitions: Int, index: String, time: Float, k: Int, noResults: Int): Unit = {
-    out.println(Calendar.getInstance().getTime()+","+index + "," + tuples + "," + dimensions + "," + partitions + "," + time + "," + k+", "+ noResults)
+  def appendToResults(tuples: Int, dimensions: Int, partitions: Int, index: String, time: Float, k: Int = 0, noResults: Int = 0, partitioner: RepartitionMessage.Partitioner): Unit = {
+    out.println(Calendar.getInstance().getTime()+","+index + "," + tuples + "," + dimensions + "," + partitions + "," + time + "," + k+", "+ noResults+", "+partitioner.name)
     out.flush()
   }
 

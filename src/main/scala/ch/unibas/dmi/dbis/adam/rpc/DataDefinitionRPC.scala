@@ -7,8 +7,9 @@ import ch.unibas.dmi.dbis.adam.entity.{AttributeDefinition, Entity}
 import ch.unibas.dmi.dbis.adam.exception.GeneralAdamException
 import ch.unibas.dmi.dbis.adam.http.grpc.FieldDefinitionMessage.FieldType
 import ch.unibas.dmi.dbis.adam.http.grpc.{AckMessage, CreateEntityMessage, _}
+import ch.unibas.dmi.dbis.adam.index.repartition.PartitionerChoice
 import ch.unibas.dmi.dbis.adam.index.structures.IndexTypes
-import ch.unibas.dmi.dbis.adam.main.{SparkStartup, AdamContext}
+import ch.unibas.dmi.dbis.adam.main.{AdamContext, SparkStartup}
 import ch.unibas.dmi.dbis.adam.storage.engine.CatalogOperator
 import ch.unibas.dmi.dbis.adam.storage.partition.PartitionMode
 import ch.unibas.dmi.dbis.adam.utils.AdamImporter
@@ -298,7 +299,15 @@ class DataDefinitionRPC extends AdamDefinitionGrpc.AdamDefinition with Logging {
       case _ => PartitionMode.CREATE_NEW
     }
 
-    val res = IndexOp.partition(request.entity, request.numberOfPartitions, None, cols, option)
+    //Note that default is spark
+    val partitioner = request.partitioner match{
+      case RepartitionMessage.Partitioner.SPARK => PartitionerChoice.SPARK
+      case RepartitionMessage.Partitioner.CURRENT => PartitionerChoice.CURRENT
+      case RepartitionMessage.Partitioner.RANDOM => PartitionerChoice.RANDOM
+      case _ => PartitionerChoice.SPARK
+    }
+
+    val res = IndexOp.partition(request.entity, request.numberOfPartitions, None, cols, option, partitioner, request.options)
 
     if (res.isSuccess) {
       Future.successful(AckMessage(AckMessage.Code.OK, res.get.indexname))

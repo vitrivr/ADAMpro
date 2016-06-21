@@ -5,6 +5,7 @@ import ch.unibas.dmi.dbis.adam.entity.Entity._
 import ch.unibas.dmi.dbis.adam.exception.GeneralAdamException
 import ch.unibas.dmi.dbis.adam.index.Index
 import ch.unibas.dmi.dbis.adam.index.Index._
+import ch.unibas.dmi.dbis.adam.index.repartition.PartitionerChoice
 import ch.unibas.dmi.dbis.adam.index.structures.IndexTypes
 import ch.unibas.dmi.dbis.adam.main.AdamContext
 import ch.unibas.dmi.dbis.adam.query.distance.DistanceFunction
@@ -130,9 +131,9 @@ object IndexOp extends GenericOp {
     * @param mode        partition mode (e.g., create new index, replace current index, etc.)
     * @return
     */
-  def partition(indexname: IndexName, nPartitions: Int, joins: Option[DataFrame], cols: Option[Seq[String]], mode: PartitionMode.Value)(implicit ac: AdamContext): Try[Index] = {
+  def partition(indexname: IndexName, nPartitions: Int, joins: Option[DataFrame], cols: Option[Seq[String]], mode: PartitionMode.Value, partitioner: PartitionerChoice.Value = PartitionerChoice.SPARK, options: Map[String, String] = Map[String, String]())(implicit ac: AdamContext): Try[Index] = {
     execute("repartition index " + indexname + " operation") {
-      Index.repartition(Index.load(indexname).get, nPartitions, joins, cols, mode)
+      Index.repartition(Index.load(indexname).get, nPartitions, joins, cols, mode, partitioner, options)
     }
   }
 
