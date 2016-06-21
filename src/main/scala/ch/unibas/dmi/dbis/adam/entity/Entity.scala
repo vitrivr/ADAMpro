@@ -557,7 +557,7 @@ object Entity extends Logging {
       var newPath = ""
 
       do {
-        newPath = oldPath.substring(0, oldPath.lastIndexOf("-")) + "-sparse" + Random.nextInt
+        newPath = oldPath + "-sp" + Random.nextInt(999)
       } while (SparkStartup.featureStorage.exists(newPath).get)
 
       featureStorage.write(entity.entityname, data, SaveMode.ErrorIfExists, Some(newPath))
@@ -620,7 +620,7 @@ object Entity extends Logging {
         var newPath = ""
 
         do {
-          newPath = oldPath + "-rep" + Random.nextInt
+          newPath = oldPath + "-rep" +  Random.nextInt(999)
         } while (SparkStartup.featureStorage.exists(newPath).get)
 
         featureStorage.write(entity.entityname, data, SaveMode.ErrorIfExists, Some(newPath))
