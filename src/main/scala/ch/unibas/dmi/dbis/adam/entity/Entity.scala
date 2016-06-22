@@ -525,7 +525,7 @@ object Entity extends Logging {
           val numNonZeros = {
             var nnz = 0
             vec.foreach { v =>
-              if (v - 0 < 1E-10) {
+              if (math.abs(v) < 1E-10) {
                 nnz += 1
               }
             }
@@ -537,7 +537,7 @@ object Entity extends Logging {
           var k = 0
 
           vec.foreachPair { (i, v) =>
-            if (v - 0 < 1E-10) {
+            if (math.abs(v) > 1E-10) {
               ii(k) = i
               vv(k) = v
               k += 1
@@ -557,7 +557,7 @@ object Entity extends Logging {
       var newPath = ""
 
       do {
-        newPath = oldPath.substring(0, oldPath.lastIndexOf("-")) + "-sparse" + Random.nextInt
+        newPath = oldPath + "-sp" + Random.nextInt(999)
       } while (SparkStartup.featureStorage.exists(newPath).get)
 
       featureStorage.write(entity.entityname, data, SaveMode.ErrorIfExists, Some(newPath))
@@ -620,7 +620,7 @@ object Entity extends Logging {
         var newPath = ""
 
         do {
-          newPath = oldPath + "-rep" + Random.nextInt
+          newPath = oldPath + "-rep" +  Random.nextInt(999)
         } while (SparkStartup.featureStorage.exists(newPath).get)
 
         featureStorage.write(entity.entityname, data, SaveMode.ErrorIfExists, Some(newPath))
