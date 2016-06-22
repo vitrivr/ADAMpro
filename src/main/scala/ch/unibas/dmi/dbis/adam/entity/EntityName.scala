@@ -27,7 +27,7 @@ case class EntityNameHolder(originalName: String) {
     * @param str name of entity
     * @return
     */
-  private def cleanName(str : String): String = str.replaceAll("[^A-Za-z1-9_-]", "").toLowerCase()
+  private def cleanName(str : String): String = str.replaceAll("[^A-Za-z0-9_-]", "").toLowerCase()
 }
 
 object EntityNameHolder {
