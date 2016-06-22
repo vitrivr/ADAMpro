@@ -6,8 +6,9 @@ import ch.unibas.dmi.dbis.adam.datatypes.feature.Feature._
 import ch.unibas.dmi.dbis.adam.datatypes.feature.FeatureVectorWrapper
 import ch.unibas.dmi.dbis.adam.entity.Entity
 import ch.unibas.dmi.dbis.adam.entity.Entity._
-import ch.unibas.dmi.dbis.adam.exception.{IndexNotProperlyDefinedException, GeneralAdamException, IndexNotExistingException}
+import ch.unibas.dmi.dbis.adam.exception.{GeneralAdamException, IndexNotExistingException, IndexNotProperlyDefinedException}
 import ch.unibas.dmi.dbis.adam.index.Index.{IndexName, IndexTypeName, PartitionID}
+import ch.unibas.dmi.dbis.adam.index.repartition.{PartitionerChoice, RandomPartitioner, SparkPartitioner}
 import ch.unibas.dmi.dbis.adam.index.structures.IndexTypes
 import ch.unibas.dmi.dbis.adam.main.{AdamContext, SparkStartup}
 import ch.unibas.dmi.dbis.adam.query.Result
@@ -17,8 +18,10 @@ import ch.unibas.dmi.dbis.adam.storage.engine.CatalogOperator
 import ch.unibas.dmi.dbis.adam.storage.partition.PartitionMode
 import org.apache.hadoop.hive.metastore.api.ThriftHiveMetastore.Processor.lock
 import ch.unibas.dmi.dbis.adam.utils.Logging
+import org.apache.spark.HashPartitioner
 import org.apache.spark.rdd.RDD
 import org.apache.spark.sql.functions.col
+import org.apache.spark.sql.types.StructType
 import org.apache.spark.sql.{DataFrame, Row}
 
 import scala.collection.mutable
@@ -421,13 +424,13 @@ object Index extends Logging {
     * @param join        other dataframes to join on, on which the partitioning is performed
     * @param cols        columns to partition on, if not specified the primary key is used
     * @param mode        partition mode
+    * @param partitioner Which Partitioner you want to use.
+    * @param options Options for partitioner. See each partitioner for details
     * @return
     */
-  def repartition(index: Index, nPartitions: Int, join: Option[DataFrame], cols: Option[Seq[String]], mode: PartitionMode.Value)(implicit ac: AdamContext): Try[Index] = {
+  def repartition(index: Index, nPartitions: Int, join: Option[DataFrame], cols: Option[Seq[String]], mode: PartitionMode.Value, partitioner: PartitionerChoice.Value = PartitionerChoice.SPARK, options: Map[String, String] = Map[String, String]())(implicit ac: AdamContext): Try[Index] = {
+    log.debug("Repartitioning Index: " + index.indexname + " with partitioner " + partitioner)
     var data = index.data.join(index.entity.get.data.get, index.pk.name)
-
-    //TODO: possibly add own partitioner
-    //data.map(r => (r.getAs[Any](cols.get.head), r)).partitionBy(new HashPartitioner())
 
     //TODO: possibly consider replication
     //http://stackoverflow.com/questions/31624622/is-there-a-way-to-change-the-replication-factor-of-rdds-in-spark
@@ -437,15 +440,19 @@ object Index extends Logging {
       data = data.join(join.get, index.pk.name)
     }
 
-    data = if (cols.isDefined) {
-      val entityColNames = data.schema.map(_.name)
-      if (!cols.get.forall(name => entityColNames.contains(name))) {
-        Failure(throw new GeneralAdamException("one of the columns " + cols.mkString(",") + " is not existing in entity " + index.entityname + entityColNames.mkString("(", ",", ")")))
-      }
+    //lazy because df.repartition() doesn't need it
+    lazy val toPartition = {
+      if(cols.isDefined) data.map(r => (r.getAs[Any](cols.get.head), r)) else data.map(r => (r.getAs[Any](index.pk.name), r))
+    }
 
-      data.repartition(nPartitions, cols.get.map(col): _*)
-    } else {
-      data.repartition(nPartitions, data(index.pk.name))
+    data = partitioner match{
+      case PartitionerChoice.SPARK =>
+        new SparkPartitioner(nPartitions).repartition(data,cols, Some(index))
+      case PartitionerChoice.RANDOM =>
+        ac.sqlContext.createDataFrame(toPartition.partitionBy(new RandomPartitioner(nPartitions)).map(_._2),data.schema)
+      case PartitionerChoice.CURRENT => {
+        ac.sqlContext.createDataFrame(toPartition.partitionBy(new HashPartitioner(nPartitions)).map(_._2),data.schema)
+      }
     }
 
     data = data.select(index.pk.name, FieldNames.featureIndexColumnName)
@@ -469,13 +476,22 @@ object Index extends Logging {
         Success(newIndex)
 
       case PartitionMode.REPLACE_EXISTING =>
-        val oldPath = index.path
+        val oldPath= index.path
 
         index.data = data
         var newPath = ""
 
         do {
-          newPath = oldPath + "-rep" + Random.nextInt(999)
+          if(oldPath.contains("-rep") && oldPath.contains("/")){
+            if(oldPath.lastIndexOf("-rep")>oldPath.lastIndexOf("/")){
+              newPath = oldPath.substring(0,oldPath.lastIndexOf("-")) + "-rep" + Random.nextInt(999)
+            }
+            else{
+              newPath = oldPath + "-rep" + Random.nextInt(999)
+            }
+          } else{
+            newPath = oldPath + "-rep" + Random.nextInt(999)
+          }
         } while (SparkStartup.indexStorage.exists(newPath).get)
 
         SparkStartup.indexStorage.write(index.indexname, data, Some(newPath))
