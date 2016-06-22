@@ -476,13 +476,22 @@ object Index extends Logging {
         Success(newIndex)
 
       case PartitionMode.REPLACE_EXISTING =>
-        val oldPath = index.path
+        val oldPath= index.path
 
         index.data = data
         var newPath = ""
 
         do {
-          newPath = oldPath.substring(0,oldPath.lastIndexOf("-")) + "-rep" + Random.nextInt(999)
+          if(oldPath.contains("-rep") && oldPath.contains("/")){
+            if(oldPath.lastIndexOf("-rep")>oldPath.lastIndexOf("/")){
+              newPath = oldPath.substring(0,oldPath.lastIndexOf("-")) + "-rep" + Random.nextInt(999)
+            }
+            else{
+              newPath = oldPath + "-rep" + Random.nextInt(999)
+            }
+          } else{
+            newPath = oldPath + "-rep" + Random.nextInt(999)
+          }
         } while (SparkStartup.indexStorage.exists(newPath).get)
 
         SparkStartup.indexStorage.write(index.indexname, data, Some(newPath))
