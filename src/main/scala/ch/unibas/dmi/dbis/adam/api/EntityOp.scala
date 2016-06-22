@@ -86,9 +86,9 @@ object EntityOp extends GenericOp {
     * @param entityname name of entity
     * @return
     */
-  def compress(entityname: EntityName)(implicit ac: AdamContext): Try[Entity] = {
+  def sparsify(entityname: EntityName, attribute : String)(implicit ac: AdamContext): Try[Entity] = {
     execute("compress tuples in entity " + entityname + " operation") {
-      Entity.compress(Entity.load(entityname).get)
+      Entity.sparsify(Entity.load(entityname).get, attribute)
     }
   }
 

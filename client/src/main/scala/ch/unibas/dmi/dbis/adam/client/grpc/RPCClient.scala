@@ -207,6 +207,19 @@ class RPCClient(channel: ManagedChannel, definer: AdamDefinitionBlockingStub, se
     }
   }
 
+  /**
+    *
+    * @param entityname name of entity
+    * @param attribute  name of feature attribute
+    * @return
+    */
+  def entitySparsify(entityname: String, attribute : String): Try[Void] = {
+    execute("benchmark entity scans and reset weights operation") {
+      definer.sparsifyEntity(WeightMessage(entityname, attribute))
+      Success(null)
+    }
+  }
+
 
   /**
     *

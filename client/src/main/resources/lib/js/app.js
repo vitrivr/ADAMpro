@@ -306,17 +306,44 @@ function entityRead(entityname, handler) {
  *
  * @param entityname
  */
-function entityBenchmark(entityname) {
+function entityBenchmark(entityname, attribute) {
     if (entityname === null || entityname.length == 0) {
         raiseError("Please specify an entity.");
     }
 
     startTask();
-    $.ajax(ADAM_CLIENT_HOST + "/entity/benchmark?entityname=" + entityname, {
+    $.ajax(ADAM_CLIENT_HOST + "/entity/benchmark?entityname=" + entityname + "&attribute=" + attribute, {
         type: 'GET',
         success: function (data) {
             if (data.code === 200) {
                 showAlert("Adjusted relevance weights for entity " + entityname + " and indexes.")
+            } else {
+                raiseError(data.message);
+            }
+            stopTask();
+        },
+        error: function () {
+            raiseError();
+            stopTask();
+        }
+    });
+}
+
+/**
+ *
+ * @param entityname
+ */
+function entitySparsify(entityname, attribute) {
+    if (entityname === null || entityname.length == 0) {
+        raiseError("Please specify an entity.");
+    }
+
+    startTask();
+    $.ajax(ADAM_CLIENT_HOST + "/entity/sparsify?entityname=" + entityname + "&attribute=" + attribute, {
+        type: 'GET',
+        success: function (data) {
+            if (data.code === 200) {
+                showAlert("Sparsified entity " + entityname + ".")
             } else {
                 raiseError(data.message);
             }

@@ -1,5 +1,6 @@
 package ch.unibas.dmi.dbis.adam.entity
 
+import breeze.linalg.SparseVector
 import ch.unibas.dmi.dbis.adam.config.FieldNames
 import ch.unibas.dmi.dbis.adam.datatypes.FieldTypes
 import ch.unibas.dmi.dbis.adam.datatypes.FieldTypes._
@@ -509,7 +510,7 @@ object Entity extends Logging {
     * @param entity entity
     * @return
     */
-  def compress(entity: Entity)(implicit ac: AdamContext): Try[Entity] = {
+  def sparsify(entity: Entity, attribute: String)(implicit ac: AdamContext): Try[Entity] = {
     try {
       if (entity.featurePath.isEmpty) {
         return Failure(new GeneralAdamException("no feature data available for performing repartitioning"))
@@ -522,35 +523,26 @@ object Entity extends Logging {
         if (vec.isInstanceOf[SparseFeatureVector]) {
           c
         } else {
-          val numNonZeros = {
-            var nnz = 0
-            vec.foreach { v =>
-              if (math.abs(v) < 1E-10) {
-                nnz += 1
-              }
-            }
-            nnz
-          }
-
-          val ii = new Array[Int](numNonZeros)
-          val vv = new Array[VectorBase](numNonZeros)
-          var k = 0
+          val ii = new ListBuffer[Int]()
+          val vv = new ListBuffer[VectorBase]()
 
           vec.foreachPair { (i, v) =>
-            if (math.abs(v) > 1E-10) {
-              ii(k) = i
-              vv(k) = v
-              k += 1
+            if (math.abs(v) >= 1E-10) {
+              ii.append(i)
+              vv.append(v)
             }
           }
-          new FeatureVectorWrapper(ii, vv, vec.size)
+
+          if (ii.nonEmpty) {
+            new FeatureVectorWrapper(ii.toArray, vv.toArray, vec.size)
+          } else {
+            FeatureVectorWrapper(SparseVector.apply(vec.size))
+          }
         }
       })
 
-      data.schema.filter(a => a.dataType.isInstanceOf[FeatureVectorWrapperUDT]).foreach { a =>
-        data = data.withColumn("conv-" + a.name, convertToSparse(data(a.name)))
-        data = data.drop(a.name).withColumnRenamed("conv-" + a.name, a.name)
-      }
+      data = data.withColumn("conv-" + attribute, convertToSparse(data(attribute)))
+      data = data.drop(attribute).withColumnRenamed("conv-" + attribute, attribute)
 
       val oldPath = entity.featurePath.get
 
@@ -571,7 +563,9 @@ object Entity extends Logging {
       EntityLRUCache.invalidate(entity.entityname)
 
       Success(entity)
-    } catch {
+    }
+
+    catch {
       case e: Exception => Failure(e)
     }
   }
@@ -620,7 +614,7 @@ object Entity extends Logging {
         var newPath = ""
 
         do {
-          newPath = oldPath + "-rep" +  Random.nextInt(999)
+          newPath = oldPath + "-rep" + Random.nextInt(999)
         } while (SparkStartup.featureStorage.exists(newPath).get)
 
         featureStorage.write(entity.entityname, data, SaveMode.ErrorIfExists, Some(newPath))

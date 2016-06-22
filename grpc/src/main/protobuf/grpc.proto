@@ -12,7 +12,6 @@ option java_package = "ch.unibas.dmi.dbis.adam.http";
 service AdamDefinition {
   rpc CreateEntity(CreateEntityMessage) returns (AckMessage) {}
   rpc Count(EntityNameMessage) returns (AckMessage) {}
-  rpc CompressEntity(EntityNameMessage) returns (AckMessage) {}
   rpc DropEntity(EntityNameMessage) returns (AckMessage) {}
   rpc Insert(stream InsertMessage) returns (AckMessage) {}
   //creates an index on the data
@@ -28,6 +27,7 @@ service AdamDefinition {
   rpc BenchmarkAndUpdateScanWeights(WeightMessage) returns (AckMessage) {}
   rpc ResetScanWeights(EntityNameMessage) returns (AckMessage) {}
   rpc SetScanWeight(WeightMessage) returns (AckMessage) {}
+  rpc SparsifyEntity(WeightMessage) returns (AckMessage) {}
   rpc ImportData(ImportMessage) returns (AckMessage) {}
 }
 

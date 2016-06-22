@@ -72,6 +72,7 @@ $(document).ready(function () {
             innerhtml += "<ul>";
             innerhtml += "<li id='btn-" + entityname + "-info' ><span class='btn-floating blue'><i class='material-icons'>info</i></span></li>";
             innerhtml += "<li id='btn-" + entityname + "-benchmark'><span  class='btn-floating yellow darken-1'><i class='material-icons'>line_style</i></span></li>";
+            innerhtml += "<li id='btn-" + entityname + "-sparsify'><span class='btn-floating green'><i class='material-icons'>donut_small</i></span></li>";
             innerhtml += "<li id='btn-" + entityname + "-delete'><span class='btn-floating red'><i class='material-icons'>delete</i></span></li>";
             innerhtml += "</ul>";
             innerhtml += "</div>";
@@ -86,7 +87,8 @@ $(document).ready(function () {
 
             $("#info").append(innerhtml);
             $('#btn-' + entityname + '-info').bind("click", function(){infoHandler(entityname)});
-            $('#btn-' + entityname + '-benchmark').bind("click", function(){benchmarkHandler(entityname)});
+            $('#btn-' + entityname + '-benchmark').bind("click", function(){benchmarkHandler(entityname, "feature")});
+            $('#btn-' + entityname + '-sparsify').bind("click", function(){sparsifyHandler(entityname, "feature")});
             $('#btn-' + entityname + '-delete').bind("click", function(){dropHandler(entityname)});
         })
     })
@@ -116,8 +118,12 @@ function infoHandler(entityname) {
 }
 
 
-function benchmarkHandler(entityname){
-    entityBenchmark(entityname);
+function benchmarkHandler(entityname, attribute){
+    entityBenchmark(entityname, attribute);
+}
+
+function sparsifyHandler(entityname, attribute){
+    entitySparsify(entityname, attribute);
 }
 
 

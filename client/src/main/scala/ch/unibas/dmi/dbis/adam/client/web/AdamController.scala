@@ -74,12 +74,41 @@ class AdamController(rpcClient: RPCClient) extends Controller {
     */
   get("/entity/benchmark") { request: Request =>
     val entityname = request.params.get("entityname")
+    val attribute = request.params.get("attribute")
 
     if (entityname.isEmpty) {
       response.ok.json(GeneralResponse(500, "entity not specified"))
     }
 
-    val details = rpcClient.entityBenchmark(entityname.get, "feature")
+    if (attribute.isEmpty) {
+      response.ok.json(GeneralResponse(500, "attribute not specified"))
+    }
+
+    val details = rpcClient.entityBenchmark(entityname.get, attribute.get)
+
+    if (details.isSuccess) {
+      response.ok.json(GeneralResponse(200))
+    } else {
+      response.ok.json(GeneralResponse(500, details.failed.get.getMessage))
+    }
+  }
+
+  /**
+    *
+    */
+  get("/entity/sparsify") { request: Request =>
+    val entityname = request.params.get("entityname")
+    val attribute = request.params.get("attribute")
+
+    if (entityname.isEmpty) {
+      response.ok.json(GeneralResponse(500, "entity not specified"))
+    }
+
+    if (attribute.isEmpty) {
+      response.ok.json(GeneralResponse(500, "attribute not specified"))
+    }
+
+    val details = rpcClient.entitySparsify(entityname.get, attribute.get)
 
     if (details.isSuccess) {
       response.ok.json(GeneralResponse(200))
