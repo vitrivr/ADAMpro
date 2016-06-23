@@ -7,6 +7,8 @@ import ch.unibas.dmi.dbis.adam.http.grpc.QueryMessage.InformationLevel
 import ch.unibas.dmi.dbis.adam.http.grpc.QueryMessage.InformationLevel.{INFORMATION_LAST_STEP_ONLY, INFORMATION_INTERMEDIATE_RESULTS, INFORMATION_FULL_TREE}
 import ch.unibas.dmi.dbis.adam.http.grpc._
 
+import scala.collection.mutable.ListBuffer
+
 /**
   * ADAMpro
   *
@@ -29,6 +31,24 @@ case class SearchCompoundRequest(var id: String, var operation: String, var opti
   private def subtype = options.get("subtype").getOrElse("")
 
   private def query = options.get("query").get.split(",").map(_.toFloat)
+
+  private def sparsify(vec: Seq[Float]) = {
+
+    val ii = new ListBuffer[Int]()
+    val vv = new ListBuffer[Float]()
+
+    vec.zipWithIndex.foreach { x =>
+      val v = x._1
+      val i = x._2
+
+      if (math.abs(v) > 1E-10) {
+        ii.append(i)
+        vv.append(v)
+      }
+    }
+
+    (ii.toArray, vv.toArray, vec.size)
+  }
 
   /**
     *
