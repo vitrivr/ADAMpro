@@ -56,7 +56,7 @@ val coreLibs = Seq(
   "org.apache.spark" %% "spark-sql" % "1.6.1",
   "org.apache.spark" %% "spark-hive" % "1.6.1",
   "org.apache.spark" %% "spark-mllib" % "1.6.1",
-  "org.apache.hadoop" % "hadoop-client" % "2.6.0" excludeAll ExclusionRule("javax.servlet") //make sure that you use the same hadoop version as in your deployment!
+  "org.apache.hadoop" % "hadoop-client" % "2.7.0" excludeAll ExclusionRule("javax.servlet") //make sure that you use the same hadoop version as in your deployment!
 ).map(
   _.excludeAll(
     ExclusionRule("org.scala-lang"),
@@ -77,7 +77,7 @@ val secondaryLibs = Seq(
   "it.unimi.dsi" % "fastutil" % "7.0.12",
   //Don't update this to 17 unless you are also upgrading Hadoop to 2.7
   /* http://stackoverflow.com/questions/36427291/illegalaccesserror-to-guavas-stopwatch-from-org-apache-hadoop-mapreduce-lib-inp */
-  "com.google.guava" % "guava" % "16.0.1" force()
+  "com.google.guava" % "guava" % "19.0" force()
 ).map(
   _.excludeAll(
     ExclusionRule("org.scala-lang"),
