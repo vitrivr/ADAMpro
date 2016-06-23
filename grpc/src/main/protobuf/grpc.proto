@@ -337,7 +337,7 @@ message BooleanQueryMessage {
   message WhereMessage {
     string field = 1;
     //if value starts on certain operators (e.g., != or IN), then the operation used in query is adapted, otherwise equality is used
-    string value = 2; //TODO: possibly adjust to DataMessage
+    string value = 2; //TODO: possibly adjust to DataMessage, but in that case make sure that using where only non-feature fields can be queried
   }
 
   message JoinMessage {
