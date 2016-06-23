@@ -523,20 +523,36 @@ object Entity extends Logging {
         if (vec.isInstanceOf[SparseFeatureVector]) {
           c
         } else {
-          val ii = new ListBuffer[Int]()
-          val vv = new ListBuffer[VectorBase]()
+          var numNonZeros = 0
+          var k = 0
+          numNonZeros = {
+            var nnz = 0
+            vec.foreach { v =>
+              if (math.abs(v) > 1E-10) {
+                nnz += 1
+              }
+            }
+            nnz
+          }
+
+          //TODO: possibly check here if nnz > 0.5 length then do not translate to sparse
+
+          val ii = new Array[Int](numNonZeros)
+          val vv = new Array[VectorBase](numNonZeros)
+          k = 0
 
           vec.foreachPair { (i, v) =>
-            if (math.abs(v) >= 1E-10) {
-              ii.append(i)
-              vv.append(v)
+            if (math.abs(v) > 1E-10) {
+              ii(k) = i
+              vv(k) = v
+              k += 1
             }
           }
 
           if (ii.nonEmpty) {
-            new FeatureVectorWrapper(ii.toArray, vv.toArray, vec.size)
+            new FeatureVectorWrapper(ii, vv, vec.size)
           } else {
-            FeatureVectorWrapper(SparseVector.apply(vec.size))
+            FeatureVectorWrapper(SparseVector.zeros(vec.size))
           }
         }
       })

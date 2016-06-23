@@ -33,14 +33,14 @@ class MinkowskiDistance(val n: Double) extends DistanceFunction with Logging wit
 
         val sv1 = v1.asInstanceOf[SparseFeatureVector]
         val sv2 = v2.asInstanceOf[SparseFeatureVector]
-
         var offset = 0
-        while (offset < sv1.activeSize) {
-          if (sv1.isActive(offset) && sv2.isActive(offset)) {
+
+        while (offset < math.max(sv1.activeSize, sv2.activeSize)) {
+          if (offset < sv1.activeSize && offset < sv2.activeSize) {
             cum += Math.pow(math.abs(sv1.valueAt(offset) - sv2.valueAt(offset)), n)
-          } else if (sv1.isActive(offset)) {
+          } else if (offset < sv1.activeSize) {
             cum += Math.pow(sv1.valueAt(offset), n)
-          } else if (sv2.isActive(offset)) {
+          } else if (offset < sv2.activeSize) {
             cum += Math.pow(sv2.valueAt(offset), n)
           }
           offset += 1
@@ -50,7 +50,7 @@ class MinkowskiDistance(val n: Double) extends DistanceFunction with Logging wit
         log.trace("compute distance without weights, dense vectors")
 
         var offset = 0
-        while (offset < v1.length) {
+        while (offset < math.min(v1.length, v2.length)) {
           cum += Math.pow(math.abs(v1(offset) - v2(offset)), n)
           offset += 1
         }
@@ -67,12 +67,12 @@ class MinkowskiDistance(val n: Double) extends DistanceFunction with Logging wit
 
         var offset = 0
         while (offset < sweights.activeSize) {
-          if (sweights.isActive(offset)) {
+          if (offset < v1.length && offset < v2.length) {
             cum += Math.pow(sweights.valueAt(offset) * math.abs(v1(offset) - v2(offset)), n)
           }
           offset += 1
         }
-      } else if(v1.isInstanceOf[SparseFeatureVector] && v2.isInstanceOf[SparseFeatureVector]){
+      } else if (v1.isInstanceOf[SparseFeatureVector] && v2.isInstanceOf[SparseFeatureVector]) {
         //dense weights, sparse vectors
         log.trace("compute distance with dense weights and sparse vectors")
 
@@ -80,12 +80,12 @@ class MinkowskiDistance(val n: Double) extends DistanceFunction with Logging wit
         val sv2 = v2.asInstanceOf[SparseFeatureVector]
 
         var offset = 0
-        while (offset < sv1.activeSize) {
-          if (sv1.isActive(offset) && sv2.isActive(offset)) {
+        while (offset < math.max(sv1.activeSize, sv2.activeSize)) {
+          if (offset < sv1.activeSize && offset < sv2.activeSize) {
             cum += Math.pow(weights.get(offset) * math.abs(sv1.valueAt(offset) - sv2.valueAt(offset)), n)
-          } else if (sv1.isActive(offset)) {
+          } else if (offset < sv1.activeSize) {
             cum += Math.pow(weights.get(offset) * sv1.valueAt(offset), n)
-          } else if (sv2.isActive(offset)) {
+          } else if (offset < sv2.activeSize) {
             cum += Math.pow(weights.get(offset) * sv2.valueAt(offset), n)
           }
           offset += 1
@@ -95,7 +95,7 @@ class MinkowskiDistance(val n: Double) extends DistanceFunction with Logging wit
         log.trace("compute distance with dense weights and dense vectors")
 
         var offset = 0
-        while (offset < v1.length) {
+        while (offset < v1.length && offset < v1.length && offset < v2.length) {
           cum += Math.pow(weights.get(offset) * math.abs(v1(offset) - v2(offset)), n)
           offset += 1
         }
