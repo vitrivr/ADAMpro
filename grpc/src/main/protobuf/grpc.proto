@@ -322,7 +322,18 @@ message NearestNeighbourQueryMessage {
 
 message DistanceMessage {
   enum DistanceType {
-    minkowski = 0; //add option 'norm'
+    chisquared = 0;
+    correlation = 1;
+    cosine = 2;
+    hamming = 3;
+    jaccard = 4;
+    kullbackleibler = 5;
+    chebyshev = 6;
+    euclidean = 7;
+    squaredeuclidean = 8;
+    manhattan = 9;
+    minkowski = 10; //add option 'norm'
+    spannorm = 11;
   }
   DistanceType distancetype = 1;
   map<string, string> options = 2;

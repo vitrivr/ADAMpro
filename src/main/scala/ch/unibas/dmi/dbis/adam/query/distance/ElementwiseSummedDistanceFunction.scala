@@ -1,28 +1,19 @@
 package ch.unibas.dmi.dbis.adam.query.distance
 
-import breeze.linalg.DenseVector
-import ch.unibas.dmi.dbis.adam.datatypes.feature.Feature.{FeatureVector, SparseFeatureVector, VectorBase}
+import ch.unibas.dmi.dbis.adam.datatypes.feature.Feature._
 import ch.unibas.dmi.dbis.adam.query.distance.Distance.Distance
 import ch.unibas.dmi.dbis.adam.utils.Logging
 
 /**
-  * adamtwo
+  * ADAMpro
   *
   * Ivan Giangreco
-  * August 2015
+  * June 2016
   */
-object NormBasedDistanceFunction extends Serializable {
-  def apply(n: Double) = n match {
-    case x if math.abs(n - 1) < 0.00001 => ManhattanDistance
-    case x if math.abs(n - 2) < 0.00001 => EuclideanDistance
-    case n => new MinkowskiDistance(n)
-  }
-}
+trait ElementwiseSummedDistanceFunction extends DistanceFunction with Logging with Serializable {
 
-@SerialVersionUID(100L)
-class MinkowskiDistance(val n: Double) extends DistanceFunction with Logging with Serializable {
-  override def apply(v1: FeatureVector, v2: FeatureVector, weights: Option[FeatureVector] = None): Distance = {
-    var cum = 0.0
+  override def apply(v1: FeatureVector, v2: FeatureVector, weights: Option[FeatureVector]): Distance = {
+    var cumSum = 0.0
 
     //computing sum
     if (weights.isEmpty) {
@@ -37,11 +28,11 @@ class MinkowskiDistance(val n: Double) extends DistanceFunction with Logging wit
 
         while (offset < math.max(sv1.activeSize, sv2.activeSize)) {
           if (offset < sv1.activeSize && offset < sv2.activeSize) {
-            cum += Math.pow(math.abs(sv1.valueAt(offset) - sv2.valueAt(offset)), n)
+            cumSum += element(sv1.valueAt(offset), sv2.valueAt(offset))
           } else if (offset < sv1.activeSize) {
-            cum += Math.pow(sv1.valueAt(offset), n)
+            cumSum += element(sv1.valueAt(offset), 0.0)
           } else if (offset < sv2.activeSize) {
-            cum += Math.pow(sv2.valueAt(offset), n)
+            cumSum += element(0.0, sv2.valueAt(offset))
           }
           offset += 1
         }
@@ -51,7 +42,7 @@ class MinkowskiDistance(val n: Double) extends DistanceFunction with Logging wit
 
         var offset = 0
         while (offset < math.min(v1.length, v2.length)) {
-          cum += Math.pow(math.abs(v1(offset) - v2(offset)), n)
+          cumSum += element(v1(offset), v2(offset))
           offset += 1
         }
       }
@@ -68,7 +59,7 @@ class MinkowskiDistance(val n: Double) extends DistanceFunction with Logging wit
         var offset = 0
         while (offset < sweights.activeSize) {
           if (offset < v1.length && offset < v2.length) {
-            cum += Math.pow(sweights.valueAt(offset) * math.abs(v1(offset) - v2(offset)), n)
+            cumSum += element(v1(offset), v2(offset), sweights.valueAt(offset))
           }
           offset += 1
         }
@@ -82,11 +73,11 @@ class MinkowskiDistance(val n: Double) extends DistanceFunction with Logging wit
         var offset = 0
         while (offset < math.max(sv1.activeSize, sv2.activeSize)) {
           if (offset < sv1.activeSize && offset < sv2.activeSize) {
-            cum += Math.pow(weights.get(offset) * math.abs(sv1.valueAt(offset) - sv2.valueAt(offset)), n)
+            cumSum += element(sv1.valueAt(offset), sv2.valueAt(offset), weights.get(offset))
           } else if (offset < sv1.activeSize) {
-            cum += Math.pow(weights.get(offset) * sv1.valueAt(offset), n)
+            cumSum += element(sv1.valueAt(offset), 0.0, weights.get(offset))
           } else if (offset < sv2.activeSize) {
-            cum += Math.pow(weights.get(offset) * sv2.valueAt(offset), n)
+            cumSum += element(0.0, sv2.valueAt(offset), weights.get(offset))
           }
           offset += 1
         }
@@ -96,22 +87,31 @@ class MinkowskiDistance(val n: Double) extends DistanceFunction with Logging wit
 
         var offset = 0
         while (offset < v1.length && offset < v1.length && offset < v2.length) {
-          cum += Math.pow(weights.get(offset) * math.abs(v1(offset) - v2(offset)), n)
+          cumSum += element(v1(offset), v2(offset), weights.get(offset))
           offset += 1
         }
       }
-
-
     }
 
-    Math.pow(cum, 1 / n).toFloat
+    normalize(cumSum)
   }
 
-  def apply(v1: VectorBase, v2: VectorBase): Distance = apply(DenseVector(v1), DenseVector(v2))
+
+  /**
+    * Element-wise computation.
+    *
+    * @param v1 value 1
+    * @param v2 value 2
+    * @param w  weight
+    * @return
+    */
+  def element(v1: VectorBase, v2: VectorBase, w: VectorBase = 1.0): Distance
+
+  /**
+    * Normalization after summing up the element-wise distances.
+    *
+    * @param sum cumulative sum
+    * @return
+    */
+  def normalize(sum: Distance): Distance = sum
 }
-
-@SerialVersionUID(100L)
-object ManhattanDistance extends MinkowskiDistance(1) with Logging with Serializable {}
-
-@SerialVersionUID(100L)
-object EuclideanDistance extends MinkowskiDistance(2) with Logging with Serializable {}

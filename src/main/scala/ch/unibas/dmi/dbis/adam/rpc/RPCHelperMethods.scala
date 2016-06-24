@@ -2,6 +2,7 @@ package ch.unibas.dmi.dbis.adam.rpc
 
 import java.util.concurrent.TimeUnit
 
+import breeze.stats.distributions.ChiSquared
 import ch.unibas.dmi.dbis.adam.datatypes.feature.Feature._
 import ch.unibas.dmi.dbis.adam.datatypes.feature.FeatureVectorWrapper
 import ch.unibas.dmi.dbis.adam.exception.GeneralAdamException
@@ -9,7 +10,7 @@ import ch.unibas.dmi.dbis.adam.http.grpc.DistanceMessage.DistanceType
 import ch.unibas.dmi.dbis.adam.http.grpc._
 import ch.unibas.dmi.dbis.adam.main.AdamContext
 import ch.unibas.dmi.dbis.adam.query.datastructures.QueryCacheOptions
-import ch.unibas.dmi.dbis.adam.query.distance.{DistanceFunction, NormBasedDistanceFunction}
+import ch.unibas.dmi.dbis.adam.query.distance._
 import ch.unibas.dmi.dbis.adam.query.handler.external.ExternalScanExpressions
 import ch.unibas.dmi.dbis.adam.query.handler.generic.QueryExpression
 import ch.unibas.dmi.dbis.adam.query.handler.internal.AggregationExpression._
@@ -276,14 +277,25 @@ private[rpc] object RPCHelperMethods {
     */
   def prepareDistance(dm: Option[DistanceMessage]): DistanceFunction = {
     if(dm.isEmpty){
-      return NormBasedDistanceFunction(2)
+      return NormBasedDistance(2)
     }
 
     dm.get.distancetype match {
+      case DistanceType.chisquared => ChiSquaredDistance
+      case DistanceType.correlation => CorrelationDistance
+      case DistanceType.cosine => CosineDistance
+      case DistanceType.hamming => HammingDistance
+      case DistanceType.jaccard => JaccardDistance
+      case DistanceType.kullbackleibler => KullbackLeiblerDivergence
+      case DistanceType.chebyshev => ChebyshevDistance
+      case DistanceType.euclidean => EuclideanDistance
+      case DistanceType.squaredeuclidean => SquaredEuclideanDistance
+      case DistanceType.manhattan => ManhattanDistance
       case DistanceType.minkowski => {
-        NormBasedDistanceFunction(dm.get.options.get("norm").get.toDouble)
+        NormBasedDistance(dm.get.options.get("norm").get.toDouble)
       }
-      case _ => NormBasedDistanceFunction(2)
+      case DistanceType.spannorm => SpanNormDistance
+      case _ => NormBasedDistance(2)
     }
   }
 

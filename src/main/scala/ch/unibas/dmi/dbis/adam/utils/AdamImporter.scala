@@ -9,7 +9,7 @@ import ch.unibas.dmi.dbis.adam.datatypes.FieldTypes.FEATURETYPE
 import ch.unibas.dmi.dbis.adam.datatypes.feature.FeatureVectorWrapper
 import ch.unibas.dmi.dbis.adam.entity.AttributeDefinition
 import ch.unibas.dmi.dbis.adam.main.{AdamContext, SparkStartup}
-import ch.unibas.dmi.dbis.adam.query.distance.NormBasedDistanceFunction
+import ch.unibas.dmi.dbis.adam.query.distance.NormBasedDistance
 import org.apache.spark.annotation.Experimental
 import org.apache.spark.sql.jdbc.AdamDialectRegistrar
 import org.apache.spark.sql.types.DataTypes
@@ -125,7 +125,7 @@ class AdamImporter(url: String, user: String, password: String) extends Logging 
         log.info("successfully imported data into entity " + entityname + "; in df: " + insertDFcount + ", inserted: " + entitycount)
         assert(insertDFcount == entitycount)
 
-        IndexOp.create(entityname, "feature", "vaf", NormBasedDistanceFunction(2))
+        IndexOp.create(entityname, "feature", "vaf", NormBasedDistance(2))
       } else {
         log.error("entity not created", entity.failed.get)
       }

@@ -114,8 +114,8 @@ class VAIndex(val indexname: IndexName, val entityname: EntityName, override pri
       while (it.hasNext) {
         val dimMark = it.next()
 
-        lazy val d0fv1 = distance(dimMark(0), fvi)
-        lazy val d1fv1 = distance(dimMark(1), fvi)
+        lazy val d0fv1 = distance.element(dimMark(0), fvi)
+        lazy val d1fv1 = distance.element(dimMark(1), fvi)
 
         if (fvi < dimMark(0)) {
           lbounds(i)(j) = d0fv1

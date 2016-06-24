@@ -6,7 +6,7 @@ import ch.unibas.dmi.dbis.adam.entity.Entity
 import ch.unibas.dmi.dbis.adam.entity.Entity.EntityName
 import ch.unibas.dmi.dbis.adam.exception.GeneralAdamException
 import ch.unibas.dmi.dbis.adam.main.AdamContext
-import ch.unibas.dmi.dbis.adam.query.distance.NormBasedDistanceFunction
+import ch.unibas.dmi.dbis.adam.query.distance.NormBasedDistance
 import ch.unibas.dmi.dbis.adam.query.handler.generic.QueryExpression
 import ch.unibas.dmi.dbis.adam.query.handler.internal.{IndexScanExpression, SequentialScanExpression}
 import ch.unibas.dmi.dbis.adam.query.query.NearestNeighbourQuery
@@ -93,7 +93,7 @@ class ScanWeightHandler(entityname: EntityName, column: String)(@transient impli
     val lb = new ListBuffer[Long]()
 
     qs.foreach { q =>
-      val nnq: NearestNeighbourQuery = NearestNeighbourQuery(column, q.vector, None, NormBasedDistanceFunction(1), 100, false)
+      val nnq: NearestNeighbourQuery = NearestNeighbourQuery(column, q.vector, None, NormBasedDistance(1), 100, false)
       val expr = fexpr(nnq).prepareTree()
 
       (0 to NUMBER_OF_RUNS).foreach { i =>
