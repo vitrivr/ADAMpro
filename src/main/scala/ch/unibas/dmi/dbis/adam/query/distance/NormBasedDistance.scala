@@ -26,7 +26,7 @@ object NormBasedDistance {
   * @param n
   */
 class MinkowskiDistance(val n: Double) extends ElementwiseSummedDistanceFunction with Serializable {
-  override def element(v1: VectorBase, v2: VectorBase, w: VectorBase): Distance = Math.pow(w * math.abs(v1 - v1), n).toFloat
+  override def element(v1: VectorBase, v2: VectorBase, w: VectorBase): Distance = Math.pow(w * math.abs(v1 - v2), n).toFloat
 
   override def normalize(cumSum: Distance): Distance = Math.pow(cumSum, 1 / n).toFloat
 }
@@ -53,6 +53,10 @@ object SquaredEuclideanDistance extends MinkowskiDistance(2) with Serializable {
   */
 object ChebyshevDistance extends MinkowskiDistance(Double.PositiveInfinity) with Serializable {
   override def apply(v1: FeatureVector, v2: FeatureVector, weights: Option[FeatureVector]): Distance = {
-    max((weights.get :* (v1 - v2)).map(_.abs))
+    if (weights.isDefined) {
+      max((weights.get :* (v1 - v2)).map(_.abs))
+    } else {
+      max(((v1 - v2)).map(_.abs))
+    }
   }
 }
