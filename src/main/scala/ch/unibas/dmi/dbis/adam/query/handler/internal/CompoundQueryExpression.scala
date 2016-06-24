@@ -19,6 +19,7 @@ case class CompoundQueryExpression(private val expr : QueryExpression, id: Optio
 
     ac.sc.setJobGroup(id.getOrElse(""), "compound query", interruptOnCancel = true)
 
+    expr.filter = filter
     expr.evaluate()
   }
 
