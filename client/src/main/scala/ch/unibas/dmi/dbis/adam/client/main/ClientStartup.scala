@@ -12,7 +12,7 @@ import ch.unibas.dmi.dbis.adam.client.web.{AdamController, WebServer}
 object ClientStartup {
   val httpPort = 9099
 
-  val grpcHost = "p2.cs.unibas.ch"
+  val grpcHost = "localhost"
   val grpcPort = 5890
 
   def main(args: Array[String]): Unit = {
