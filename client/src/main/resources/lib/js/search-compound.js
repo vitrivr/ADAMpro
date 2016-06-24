@@ -214,7 +214,13 @@ function evaluate (id) {
 
     result.options.entityname = $("#entityname").val();
     result.options.column = $("#column").val();
-    result.options.query = $("#query").val().replace("[", "").replace("]", "");
+    result.options.query = $("#query").val().replace("[", "").replace("]", "").trim();
+    result.options.sparsequery = $("#sparsequery").prop("checked");
+
+    result.options.weights = $("#weights").val().replace("[", "").replace("]", "").trim();
+    result.options.sparseweights = $("#sparseweights").prop("checked");
+
+    result.options.distance =  $("#distance").val();
 
     result.options.informationlevel = $("#informationlevel").val();
 

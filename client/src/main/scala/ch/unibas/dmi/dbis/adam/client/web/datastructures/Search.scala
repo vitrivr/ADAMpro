@@ -4,7 +4,7 @@ import ch.unibas.dmi.dbis.adam.client.web.ProgressiveQueryStatus
 import ch.unibas.dmi.dbis.adam.http.grpc.BooleanQueryMessage.WhereMessage
 import ch.unibas.dmi.dbis.adam.http.grpc.DataMessage.Datatype
 import ch.unibas.dmi.dbis.adam.http.grpc.QueryMessage.InformationLevel
-import ch.unibas.dmi.dbis.adam.http.grpc.QueryMessage.InformationLevel.{INFORMATION_LAST_STEP_ONLY, INFORMATION_INTERMEDIATE_RESULTS, INFORMATION_FULL_TREE}
+import ch.unibas.dmi.dbis.adam.http.grpc.QueryMessage.InformationLevel.{INFORMATION_FULL_TREE, INFORMATION_INTERMEDIATE_RESULTS, INFORMATION_LAST_STEP_ONLY}
 import ch.unibas.dmi.dbis.adam.http.grpc._
 
 import scala.collection.mutable.ListBuffer
@@ -30,8 +30,6 @@ case class SearchCompoundRequest(var id: String, var operation: String, var opti
 
   private def subtype = options.get("subtype").getOrElse("")
 
-  private def query = options.get("query").get.split(",").map(_.toFloat)
-
   private def sparsify(vec: Seq[Float]) = {
 
     val ii = new ListBuffer[Int]()
@@ -47,7 +45,53 @@ case class SearchCompoundRequest(var id: String, var operation: String, var opti
       }
     }
 
-    (ii.toArray, vv.toArray, vec.size)
+    (vv.toArray, ii.toArray, vec.size)
+  }
+
+  private def query = {
+    val vals = options.get("query").get.split(",").map(_.toFloat)
+
+    if (options.getOrElse("sparsequery", "") == "true") {
+      val (vv, ii, size) = sparsify(vals)
+      FeatureVectorMessage().withSparseVector(SparseVectorMessage(vv, ii, size))
+    } else {
+      FeatureVectorMessage().withDenseVector(DenseVectorMessage(vals))
+    }
+  }
+
+  private def weights = {
+    if (options.get("weights").isDefined && options.get("weights").get.length > 0) {
+      val vals = options.get("weights").get.split(",").map(_.toFloat)
+
+      if (options.getOrElse("sparseweights", "") == "true") {
+        val (vv, ii, size) = sparsify(vals)
+        Some(FeatureVectorMessage().withSparseVector(SparseVectorMessage(vv, ii, size)))
+      } else {
+        Some(FeatureVectorMessage().withDenseVector(DenseVectorMessage(vals)))
+      }
+    } else {
+      None
+    }
+  }
+
+  private def distance: DistanceMessage = {
+    val distance = options.getOrElse("distance", "")
+
+    distance match {
+      case "chisquared" => DistanceMessage(DistanceMessage.DistanceType.chisquared)
+      case "correlation" => DistanceMessage(DistanceMessage.DistanceType.correlation)
+      case "cosine" => DistanceMessage(DistanceMessage.DistanceType.cosine)
+      case "hamming" => DistanceMessage(DistanceMessage.DistanceType.hamming)
+      case "jaccard" => DistanceMessage(DistanceMessage.DistanceType.jaccard)
+      case "kullbackleibler" => DistanceMessage(DistanceMessage.DistanceType.kullbackleibler)
+      case "chebyshev" => DistanceMessage(DistanceMessage.DistanceType.chebyshev)
+      case "euclidean" => DistanceMessage(DistanceMessage.DistanceType.euclidean)
+      case "squaredeuclidean" => DistanceMessage(DistanceMessage.DistanceType.squaredeuclidean)
+      case "manhattan" => DistanceMessage(DistanceMessage.DistanceType.manhattan)
+      case "minkowski" => DistanceMessage(DistanceMessage.DistanceType.minkowski)
+      case "spannorm" => DistanceMessage(DistanceMessage.DistanceType.spannorm)
+      case _ => DistanceMessage(DistanceMessage.DistanceType.minkowski, Map("norm" -> "1"))
+    }
   }
 
   /**
@@ -66,9 +110,8 @@ case class SearchCompoundRequest(var id: String, var operation: String, var opti
       Seq[Int]()
     }
 
-    val nnq = NearestNeighbourQueryMessage(options.getOrElse("column", "feature"), Some(FeatureVectorMessage().withDenseVector(DenseVectorMessage(query))),
-      None,
-      Some(DistanceMessage(DistanceMessage.DistanceType.minkowski, Map("norm" -> "1"))),
+    val nnq = NearestNeighbourQueryMessage(options.getOrElse("column", "feature"), Some(query),
+      weights, Some(distance),
       options.get("k").getOrElse("100").toInt,
       options, //not overly clean solution, but not problematic to send too much information in this case
       true,
