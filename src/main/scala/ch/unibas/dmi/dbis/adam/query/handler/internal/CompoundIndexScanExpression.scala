@@ -3,6 +3,7 @@ package ch.unibas.dmi.dbis.adam.query.handler.internal
 import ch.unibas.dmi.dbis.adam.config.FieldNames
 import ch.unibas.dmi.dbis.adam.main.AdamContext
 import ch.unibas.dmi.dbis.adam.query.handler.generic.{ExpressionDetails, QueryExpression}
+import ch.unibas.dmi.dbis.adam.query.query.NearestNeighbourQuery
 import org.apache.http.annotation.Experimental
 import org.apache.spark.sql.DataFrame
 import org.apache.spark.sql.functions._
@@ -14,7 +15,7 @@ import org.apache.spark.sql.functions._
   * June 2016
   */
 @Experimental
-case class CompoundIndexScanExpression(private val exprs: Seq[IndexScanExpression], id: Option[String] = None)(filterExpr: Option[QueryExpression] = None)(@transient implicit val ac: AdamContext) extends QueryExpression(id) {
+case class CompoundIndexScanExpression(private val exprs: Seq[IndexScanExpression])(nnq: NearestNeighbourQuery, id: Option[String] = None)(filterExpr: Option[QueryExpression] = None)(@transient implicit val ac: AdamContext) extends QueryExpression(id) {
   override val info = ExpressionDetails(None, Some("Compound Query Index Scan Expression"), id, None)
   children ++= exprs ++ filterExpr.map(Seq(_)).getOrElse(Seq())
   var confidence: Option[Float] = None
@@ -32,25 +33,22 @@ case class CompoundIndexScanExpression(private val exprs: Seq[IndexScanExpressio
     ac.sc.setJobGroup(id.getOrElse(""), "compound query index scan", interruptOnCancel = true)
 
     exprs.map(_.filter = filter)
-    val results = exprs.map(_.evaluate())
+    val results = exprs.map(expr => {
+      //make sure that index only is queried and not a sequential scan too!
+      //therefore, we do not prepare the tree! expr.prepareTree()
+      expr.evaluate()
+    })
 
-    val res = results.filter(_.isDefined).map(_.get).reduce[DataFrame] { case (a, b) => {
-      val dfa = a.select(entity.pk.name, FieldNames.distanceColumnName).withColumnRenamed(FieldNames.distanceColumnName, "a-" + FieldNames.distanceColumnName)
-      val dfb = b.select(entity.pk.name, FieldNames.distanceColumnName).withColumnRenamed(FieldNames.distanceColumnName, "b-" + FieldNames.distanceColumnName)
+    val res = results.filter(_.isDefined).map(_.get).reduce[DataFrame] { case (a, b) => a.select(entity.pk.name, FieldNames.distanceColumnName).unionAll(b.select(entity.pk.name, FieldNames.distanceColumnName)) }
+      .groupBy(entity.pk.name).agg(count("*").alias("adampro_result_appears_in_n_joins"))
+      .withColumn(FieldNames.distanceColumnName, distUDF(col("adampro_result_appears_in_n_joins")))
 
-      var res = dfa.join(dfb, entity.pk.name)
-      res = res.withColumn(FieldNames.distanceColumnName, distCombinationUDF(res("a-" + FieldNames.distanceColumnName), res("b-" + FieldNames.distanceColumnName)))
-      res = res.drop("a-" + FieldNames.distanceColumnName).drop("b-" + FieldNames.distanceColumnName)
-
-      res
-    }}
-
-    Some(res)
+    Some(res.select(entity.pk.name, FieldNames.distanceColumnName))
   }
 
-  val distCombinationUDF = udf((a: Float, b: Float) => {
-    //TODO: possibly use other functions
-    a + b
+  val distUDF = udf((count: Int) => {
+    //TODO: possibly use indexDistance for more precise evaluation of distance
+    1 - (count / exprs.length).toFloat
   })
 
   override def equals(that: Any): Boolean =

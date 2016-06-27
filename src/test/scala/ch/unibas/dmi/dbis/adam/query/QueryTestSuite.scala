@@ -10,7 +10,7 @@ import ch.unibas.dmi.dbis.adam.index.Index._
 import ch.unibas.dmi.dbis.adam.index.structures.IndexTypes
 import ch.unibas.dmi.dbis.adam.main.SparkStartup
 import ch.unibas.dmi.dbis.adam.query.handler.internal.AggregationExpression.{ExpressionEvaluationOrder, IntersectExpression}
-import ch.unibas.dmi.dbis.adam.query.handler.internal.{CompoundQueryExpression, IndexScanExpression}
+import ch.unibas.dmi.dbis.adam.query.handler.internal.{CompoundIndexScanExpression, CompoundQueryExpression, IndexScanExpression}
 import ch.unibas.dmi.dbis.adam.query.progressive.{AllProgressivePathChooser, ProgressiveObservation}
 import ch.unibas.dmi.dbis.adam.query.query.{BooleanQuery, NearestNeighbourQuery}
 import org.scalatest.concurrent.ScalaFutures
@@ -287,7 +287,7 @@ class QueryTestSuite extends AdamTestBase with ScalaFutures {
         IndexOp(es.entity.entityname, "featurefield", IndexTypes.VAFINDEX, es.distance)
 
         def processResults(tpo: Try[ProgressiveObservation]) {
-          if(tpo.isFailure){
+          if (tpo.isFailure) {
             assert(false)
           }
 
@@ -420,6 +420,32 @@ class QueryTestSuite extends AdamTestBase with ScalaFutures {
           case (res, gt) =>
             assert(res == gt)
         }
+      }
+    }
+  }
+
+  feature("compound index scan") {
+    scenario("perform a compound index scan query with various index types on the same entity") {
+      withQueryEvaluationSet { es =>
+        val index = IndexOp.generateAll(es.entity.entityname, "featurefield", es.distance)
+
+        When("performing a kNN query")
+        val nnq = NearestNeighbourQuery("featurefield", es.feature.vector, None, es.distance, es.k, false)
+
+        val indexscans = es.entity.indexes.map(index => IndexScanExpression(index.get)(nnq)()(ac))
+
+        val results = CompoundIndexScanExpression(indexscans)(nnq)()(ac).prepareTree()
+          .evaluate()(ac).get.map(r => (r.getAs[Float](FieldNames.distanceColumnName), r.getAs[Long]("tid"))).collect() //get here TID of metadata
+          .sortBy(x => (x._1, x._2)).toSeq
+
+        Then("we should retrieve the k nearest neighbors")
+        Seq(results.zip(es.nnResults).head).map {
+          case (res, gt) =>
+            assert(res._2 == gt._2)
+            assert(math.abs(res._1 - gt._1) < EPSILON)
+        }
+
+        log.info("score: " + getScore(es.nnResults.map(_._2), results.map(_._2)))
       }
     }
   }
