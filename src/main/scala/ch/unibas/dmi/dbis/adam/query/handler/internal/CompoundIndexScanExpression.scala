@@ -17,7 +17,8 @@ import org.apache.spark.sql.functions._
 @Experimental
 case class CompoundIndexScanExpression(private val exprs: Seq[IndexScanExpression])(nnq: NearestNeighbourQuery, id: Option[String] = None)(filterExpr: Option[QueryExpression] = None)(@transient implicit val ac: AdamContext) extends QueryExpression(id) {
   override val info = ExpressionDetails(None, Some("Compound Query Index Scan Expression"), id, None)
-  children ++= exprs ++ filterExpr.map(Seq(_)).getOrElse(Seq())
+  children ++= filterExpr.map(Seq(_)).getOrElse(Seq())
+  //expres is not added to children as they would be "prepared" for querying, resulting possibly in a sequential scan
   var confidence: Option[Float] = None
 
   //only work on one entity
@@ -35,7 +36,6 @@ case class CompoundIndexScanExpression(private val exprs: Seq[IndexScanExpressio
     exprs.map(_.filter = filter)
     val results = exprs.map(expr => {
       //make sure that index only is queried and not a sequential scan too!
-      //therefore, we do not prepare the tree! expr.prepareTree()
       expr.evaluate()
     })
 
@@ -50,6 +50,16 @@ case class CompoundIndexScanExpression(private val exprs: Seq[IndexScanExpressio
     //TODO: possibly use indexDistance for more precise evaluation of distance
     1 - (count / exprs.length).toFloat
   })
+
+
+  override def prepareTree(): QueryExpression = {
+    super.prepareTree()
+    if (!nnq.indexOnly) {
+      new SequentialScanExpression(entity)(nnq, id)(Some(this)) //add sequential scan if not only scanning index
+    } else {
+      this
+    }
+  }
 
   override def equals(that: Any): Boolean =
     that match {

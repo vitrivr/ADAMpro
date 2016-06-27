@@ -89,8 +89,10 @@ private[rpc] object RPCHelperMethods {
         new CompoundQueryExpression(toExpression(subexpression).get, queryid)
       } else if (entityname.isDefined) {
         HintBasedScanExpression(entityname.get, nnq, bq, hints, true, queryid)()
+      } else if (request.from.get.source.isIndexes) {
+        val indexes = request.from.get.getIndexes.indexes
+        new CompoundIndexScanExpression(indexes.map(index => new IndexScanExpression(index)(nnq.get, queryid)()))(nnq.get, queryid)()
       } else if (indexname.isDefined) {
-
         var scan: Option[QueryExpression] = None
 
         if (bq.isDefined) {

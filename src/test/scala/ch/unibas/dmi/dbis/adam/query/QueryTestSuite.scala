@@ -430,7 +430,7 @@ class QueryTestSuite extends AdamTestBase with ScalaFutures {
         val index = IndexOp.generateAll(es.entity.entityname, "featurefield", es.distance)
 
         When("performing a kNN query")
-        val nnq = NearestNeighbourQuery("featurefield", es.feature.vector, None, es.distance, es.k, false)
+        val nnq = NearestNeighbourQuery("featurefield", es.feature.vector, None, es.distance, es.k)
 
         val indexscans = es.entity.indexes.map(index => IndexScanExpression(index.get)(nnq)()(ac))
 

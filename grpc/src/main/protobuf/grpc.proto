@@ -296,9 +296,15 @@ message FromMessage {
     string entity = 1;
     //or an index (note that if you specify the index name, the hints are disregarded)
     string index = 2;
+    //or a list of indexes
+    IndexListMessage indexes = 3;
     //or an expression
-    SubExpressionQueryMessage expression = 3;
+    SubExpressionQueryMessage expression = 4;
   }
+}
+
+message IndexListMessage {
+  repeated string indexes = 1;
 }
 
 message NearestNeighbourQueryMessage {
