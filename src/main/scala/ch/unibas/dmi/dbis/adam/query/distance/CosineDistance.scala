@@ -19,6 +19,11 @@ object CosineDistance extends DistanceFunction with Logging with Serializable {
       log.warn("weights cannot be used with cosine distance and are ignored")
     }
 
-    ((1.0 - (v1 dot v2)) / (norm(v1, 2.0) * norm(v2, 2.0))).toFloat
+    if (math.abs(norm(v1, 2.0)) < 10E-6 || math.abs(norm(v2, 2.0)) < 10E-6) {
+      log.warn("for vectors of elements 0 the cosine distance is not defined")
+      0.toFloat //for convenience returning 0
+    } else {
+      (1.0 - (v1 dot v2) / (norm(v1, 2.0) * norm(v2, 2.0))).toFloat
+    }
   }
 }

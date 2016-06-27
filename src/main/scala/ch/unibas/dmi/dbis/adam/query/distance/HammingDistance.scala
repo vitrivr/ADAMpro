@@ -13,6 +13,10 @@ import ch.unibas.dmi.dbis.adam.query.distance.Distance.Distance
   */
 object HammingDistance extends ElementwiseSummedDistanceFunction with Serializable {
   override def element(v1: VectorBase, v2: VectorBase, w: VectorBase): Distance = {
-    (w * (if (v1 - v2 < 10E6) { 1.0  } else { 0.0 })).toFloat
+    (w * (if (math.abs(v1 - v2) > 10E-6) {
+      1.0
+    } else {
+      0.0
+    })).toFloat
   }
 }
