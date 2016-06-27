@@ -77,7 +77,7 @@ private[rpc] object RPCHelperMethods {
 
       val time = request.time
 
-      //TODO: add cache options
+      //TODO: use cache options
       val cacheOptions = prepareCacheExpression(request.readFromCache, request.putInCache)
 
       var scan: QueryExpression = null
@@ -173,7 +173,7 @@ private[rpc] object RPCHelperMethods {
         case ExpressionQueryMessage.Operation.UNION => Success(UnionExpression(left.get, right.get, queryid))
         case ExpressionQueryMessage.Operation.INTERSECT => Success(IntersectExpression(left.get, right.get, order, queryid))
         case ExpressionQueryMessage.Operation.EXCEPT => Success(ExceptExpression(left.get, right.get, order, queryid))
-        case _ => Failure(new Exception("operation unknown")) //TODO: do we need a pre-filter option?
+        case _ => Failure(new Exception("operation unknown"))
       }
     } catch {
       case e: Exception => Failure(e)

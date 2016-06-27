@@ -37,7 +37,6 @@ case class BooleanQuery(
     * @return
     */
   def buildWhereClause(): String = {
-    //TODO: refactor
     val regex =
       s"""^(${sqlOperators.mkString("|")}){0,1}(.*)""".r
 

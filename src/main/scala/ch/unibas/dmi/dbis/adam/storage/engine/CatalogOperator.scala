@@ -9,8 +9,7 @@ import ch.unibas.dmi.dbis.adam.entity.{EntityNameHolder, AttributeDefinition}
 import ch.unibas.dmi.dbis.adam.exception.{EntityExistingException, EntityNotExistingException, IndexExistingException, IndexNotExistingException}
 import ch.unibas.dmi.dbis.adam.index.Index.{IndexName, IndexTypeName}
 import ch.unibas.dmi.dbis.adam.index.structures.IndexTypes
-import ch.unibas.dmi.dbis.adam.query.scanweight.{ScanWeightBenchmarker, ScanWeightBenchmarker$}
-import org.apache.commons.io.FileUtils
+import ch.unibas.dmi.dbis.adam.query.scanweight.ScanWeightBenchmarker
 import ch.unibas.dmi.dbis.adam.utils.Logging
 import slick.driver.PostgresDriver.api._
 import slick.jdbc.meta.MTable
@@ -445,10 +444,10 @@ object CatalogOperator extends Logging {
     * @param entityname name of entity
     */
   def updateIndexesToStale(entityname: EntityName): Boolean = {
-    val query = indexes.filter(_.entityname === entityname.toString()).map(_.uptodate)
+    val query = indexes.filter(_.entityname === entityname.toString()).map(x => (x.uptodate, x.scanweight))
 
     val update = DBIO.seq(
-      query.update(false) //TODO: possibly also change weight
+      query.update((false, 0.toFloat))
     )
     Await.result(db.run(update), MAX_WAITING_TIME)
 
