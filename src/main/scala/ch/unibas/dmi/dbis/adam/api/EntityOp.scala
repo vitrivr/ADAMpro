@@ -1,13 +1,9 @@
 package ch.unibas.dmi.dbis.adam.api
 
-import ch.unibas.dmi.dbis.adam.api.IndexOp._
 import ch.unibas.dmi.dbis.adam.entity.Entity._
-import ch.unibas.dmi.dbis.adam.entity.Entity.create
-import ch.unibas.dmi.dbis.adam.entity.{Entity, AttributeDefinition}
-import ch.unibas.dmi.dbis.adam.index.Index
-import ch.unibas.dmi.dbis.adam.index.Index._
+import ch.unibas.dmi.dbis.adam.entity.{AttributeDefinition, Entity}
 import ch.unibas.dmi.dbis.adam.main.AdamContext
-import ch.unibas.dmi.dbis.adam.query.scanweight.{ScanWeightHandler, ScanWeightHandler$}
+import ch.unibas.dmi.dbis.adam.query.scanweight.ScanWeightBenchmarker
 import ch.unibas.dmi.dbis.adam.storage.partition.PartitionMode
 import org.apache.spark.sql.DataFrame
 
@@ -156,7 +152,7 @@ object EntityOp extends GenericOp {
     */
   def benchmarkAndSetScanWeights(entityname: EntityName, column: String)(implicit ac: AdamContext): Try[Void] = {
     execute("benchmark entity and indexes of " + entityname + "(" + column + ")" + "and adjust weights operation") {
-      val swh = new ScanWeightHandler(entityname, column)
+      val swh = new ScanWeightBenchmarker(entityname, column)
       swh.benchmarkAndUpdate()
       Success(null)
     }
@@ -184,7 +180,7 @@ object EntityOp extends GenericOp {
     */
   def resetScanWeights(entityname: EntityName)(implicit ac: AdamContext): Try[Void] = {
     execute("reset weights of entity and indexes of " + entityname) {
-      ScanWeightHandler.resetWeights(entityname)
+      ScanWeightBenchmarker.resetWeights(entityname)
       Success(null)
     }
   }

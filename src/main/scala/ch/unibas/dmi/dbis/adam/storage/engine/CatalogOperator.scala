@@ -9,7 +9,7 @@ import ch.unibas.dmi.dbis.adam.entity.{EntityNameHolder, AttributeDefinition}
 import ch.unibas.dmi.dbis.adam.exception.{EntityExistingException, EntityNotExistingException, IndexExistingException, IndexNotExistingException}
 import ch.unibas.dmi.dbis.adam.index.Index.{IndexName, IndexTypeName}
 import ch.unibas.dmi.dbis.adam.index.structures.IndexTypes
-import ch.unibas.dmi.dbis.adam.query.scanweight.ScanWeightHandler
+import ch.unibas.dmi.dbis.adam.query.scanweight.{ScanWeightBenchmarker, ScanWeightBenchmarker$}
 import org.apache.commons.io.FileUtils
 import ch.unibas.dmi.dbis.adam.utils.Logging
 import slick.driver.PostgresDriver.api._
@@ -42,7 +42,7 @@ object CatalogOperator extends Logging {
   private val indexes = TableQuery[IndexesCatalog]
 
   private val DEFAULT_DIMENSIONALITY: Int = -1
-  private val DEFAULT_WEIGHT: Float = ScanWeightHandler.DEFAULT_WEIGHT
+  private val DEFAULT_WEIGHT: Float = ScanWeightBenchmarker.DEFAULT_WEIGHT
 
 
   /**

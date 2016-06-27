@@ -22,7 +22,7 @@ import scala.collection.mutable.ListBuffer
   * Ivan Giangreco
   * June 2016
   */
-class ScanWeightHandler(entityname: EntityName, column: String)(@transient implicit val ac: AdamContext) extends Serializable with Logging {
+class ScanWeightBenchmarker(entityname: EntityName, column: String)(@transient implicit val ac: AdamContext) extends Serializable with Logging {
   private val NUMBER_OF_QUERIES = 5
   private val NUMBER_OF_RUNS = 2
   private val entity = Entity.load(entityname).get
@@ -59,9 +59,9 @@ class ScanWeightHandler(entityname: EntityName, column: String)(@transient impli
 
     val sumCost: Float = indBenchmarks.map(_._2).sum + seqCost
 
-    entity.setScanWeight(column, Some((1 + 1 - (seqCost / sumCost)) * ScanWeightHandler.DEFAULT_WEIGHT))
+    entity.setScanWeight(column, Some((1 + 1 - (seqCost / sumCost)) * ScanWeightBenchmarker.DEFAULT_WEIGHT))
     indBenchmarks.foreach { case (index, indCost) =>
-      index.setScanWeight(Some((1 + 1 - (indCost / sumCost)) * ScanWeightHandler.DEFAULT_WEIGHT))
+      index.setScanWeight(Some((1 + 1 - (indCost / sumCost)) * ScanWeightBenchmarker.DEFAULT_WEIGHT))
     }
   }
 
@@ -123,7 +123,7 @@ class ScanWeightHandler(entityname: EntityName, column: String)(@transient impli
 
 }
 
-object ScanWeightHandler {
+object ScanWeightBenchmarker {
   val DEFAULT_WEIGHT: Float = 100
 
   /**
