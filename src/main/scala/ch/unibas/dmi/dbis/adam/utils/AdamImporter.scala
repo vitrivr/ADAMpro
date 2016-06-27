@@ -22,6 +22,8 @@ import scala.util.Random
   *
   * Ivan Giangreco
   * May 2016
+  *
+  * Imports data (specifically for the OSVC database) from ADAM to ADAMpro.
   */
 @Experimental
 class AdamImporter(url: String, user: String, password: String) extends Logging {
@@ -37,6 +39,13 @@ class AdamImporter(url: String, user: String, password: String) extends Logging 
 
       val attributeRenamingRules = Seq(("shotid" -> "id"), ("video" -> "multimediaobject"), ("startframe" -> "segmentstart"), ("endframe" -> "segmentend"), ("frames" -> "framecount"), ("seconds" -> "duration"))
       val attributeCasting = Seq(("id" -> DataTypes.StringType), ("multimediaobject" -> DataTypes.StringType))
+
+      val entityname = schemaname + "_" + newtablename
+
+      if(EntityOp.exists(entityname).get){
+        log.warn("table " + entityname + " exists already, not importing")
+        return
+      }
 
       val df = ac.sqlContext.read.format("jdbc").options(
         Map("url" -> url, "dbtable" -> (schemaname + "." + tablename), "user" -> AdamConfig.jdbcUser, "password" -> AdamConfig.jdbcPassword, "driver" -> "org.postgresql.Driver")
@@ -76,10 +85,17 @@ class AdamImporter(url: String, user: String, password: String) extends Logging 
       })
 
       df.schema.fields.filter(x => featureFields.contains(x.name)).map { field =>
-        val newName = field.name + "__" + math.abs(Random.nextInt)
+        val tmpName = field.name + "__" + math.abs(Random.nextInt)
+        val newName = if (featureFields.length == 1) {
+          "feature"
+        } else {
+          field.name
+        }
+
         insertDF = insertDF
-          .withColumn("feature", toFeatureVectorWrapper(insertDF(field.name)))
+          .withColumn(tmpName, toFeatureVectorWrapper(insertDF(field.name)))
           .drop(field.name)
+          .withColumnRenamed(tmpName, newName)
       }
 
       attributeRenamingRules.foreach {
@@ -101,7 +117,13 @@ class AdamImporter(url: String, user: String, password: String) extends Logging 
 
       var schema = insertDF.schema.fields.map(field => {
         if (featureFields.contains(field.name)) {
-          AttributeDefinition("feature", FEATURETYPE, field.name.equals(pk))
+          val newName = if (featureFields.length == 1) {
+            "feature"
+          } else {
+            field.name
+          }
+
+          AttributeDefinition(newName, FEATURETYPE, field.name.equals(pk))
         } else {
           val fieldType = FieldTypes.fromDataType(field.dataType)
           AttributeDefinition(field.name, fieldType, field.name.equals(pk))
@@ -109,7 +131,6 @@ class AdamImporter(url: String, user: String, password: String) extends Logging 
       })
 
 
-      val entityname = schemaname + "_" + newtablename
       log.info("creating new entity " + entityname + " with schema: " + schema.map(field => field.name + "(" + field.fieldtype.name + ")").mkString(", "))
       val entity = EntityOp.create(entityname, schema, true)
 
@@ -125,7 +146,10 @@ class AdamImporter(url: String, user: String, password: String) extends Logging 
         log.info("successfully imported data into entity " + entityname + "; in df: " + insertDFcount + ", inserted: " + entitycount)
         assert(insertDFcount == entitycount)
 
-        IndexOp.create(entityname, "feature", "vaf", NormBasedDistance(2))
+        featureFields.foreach{
+          featureField =>
+            IndexOp.create(entityname, featureField, "vaf", NormBasedDistance(2))
+        }
       } else {
         log.error("entity not created", entity.failed.get)
       }
@@ -142,7 +166,6 @@ object AdamImporter {
 
 
     //tables to import
-
     val cineast = Seq("representativeframes", "resultcachenames", "shots", "videos")
     cineast.map(table => importer.importTable("cineast", table, entityRenamingRules.getOrElse(table, table)))
 
