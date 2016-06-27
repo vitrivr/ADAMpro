@@ -32,7 +32,8 @@ abstract class QueryExpression(id: Option[String]) extends Serializable with Log
   var filter: Option[DataFrame] = None
 
   /**
-    * Makes adjustments to the tree
+    * Makes adjustments to the tree. Note that you should always perform prepareTree before running evaluate; furthermore,
+    * you should perform evaluate() on the "prepared expression" (i.e. on what this method returns) and not on the expression generally
     */
   def prepareTree(): QueryExpression = {
     if (!prepared) {
