@@ -94,7 +94,7 @@ class VAVIndexer(nbits: Option[Int], marksGenerator: MarksGenerator, trainingSiz
 
     log.trace("VA-File (variable) finished training")
 
-    VAIndexMetaData(marks, signatureGenerator, distance)
+    VAIndexMetaData(marks, signatureGenerator)
   }
 
 

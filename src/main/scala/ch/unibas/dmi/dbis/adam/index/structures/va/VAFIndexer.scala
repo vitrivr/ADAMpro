@@ -81,7 +81,7 @@ class VAFIndexer(maxMarks: Int = 64, marksGenerator: MarksGenerator, bitsPerDime
 
     log.trace("VA-File (fixed) finished training")
 
-    VAIndexMetaData(marks, signatureGenerator, distance)
+    VAIndexMetaData(marks, signatureGenerator)
   }
 
 
