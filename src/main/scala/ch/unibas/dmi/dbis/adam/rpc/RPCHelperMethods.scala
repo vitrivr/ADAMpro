@@ -313,12 +313,7 @@ private[rpc] object RPCHelperMethods {
       } else {
         None
       }
-      val joins = if (!bq.joins.isEmpty) {
-        Some(bq.joins.map(x => (x.table, x.columns)))
-      } else {
-        None
-      }
-      Success(BooleanQuery(where, joins))
+      Success(BooleanQuery(where))
     } catch {
       case e: Exception => Failure(e)
     }
