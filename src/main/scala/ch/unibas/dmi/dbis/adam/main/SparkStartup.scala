@@ -3,7 +3,7 @@ package ch.unibas.dmi.dbis.adam.main
 import ch.unibas.dmi.dbis.adam.config.AdamConfig
 import ch.unibas.dmi.dbis.adam.datatypes.bitString.BitStringUDT
 import ch.unibas.dmi.dbis.adam.datatypes.feature.FeatureVectorWrapperUDT
-import ch.unibas.dmi.dbis.adam.handler.{RelationalDatabaseHandler, FeatureDatabaseHandler, HandlerCatalog}
+import ch.unibas.dmi.dbis.adam.handler.{RelationalDatabaseHandler, FlatFileHandler, HandlerCatalog}
 import ch.unibas.dmi.dbis.adam.utils.Logging
 import org.apache.spark.sql.hive.HiveContext
 import org.apache.spark.{SparkConf, SparkContext}
@@ -51,6 +51,6 @@ object SparkStartup extends Logging {
   val contexts = Seq(mainContext)
 
   val handler = HandlerCatalog
-  handler.register(FeatureDatabaseHandler)
+  handler.register(FlatFileHandler)
   handler.register(RelationalDatabaseHandler)
 }

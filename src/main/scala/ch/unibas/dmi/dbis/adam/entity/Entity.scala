@@ -8,7 +8,7 @@ import ch.unibas.dmi.dbis.adam.datatypes.feature.Feature.{SparseFeatureVector, V
 import ch.unibas.dmi.dbis.adam.datatypes.feature.FeatureVectorWrapper
 import ch.unibas.dmi.dbis.adam.entity.Entity.EntityName
 import ch.unibas.dmi.dbis.adam.exception.{EntityExistingException, EntityNotExistingException, EntityNotProperlyDefinedException, GeneralAdamException}
-import ch.unibas.dmi.dbis.adam.handler.FeatureDatabaseHandler
+import ch.unibas.dmi.dbis.adam.handler.FlatFileHandler
 import ch.unibas.dmi.dbis.adam.index.Index
 import ch.unibas.dmi.dbis.adam.main.AdamContext
 import ch.unibas.dmi.dbis.adam.query.query.NearestNeighbourQuery
@@ -29,11 +29,7 @@ import scala.util.{Failure, Random, Success, Try}
   * October 2015
   */
 case class Entity(val entityname: EntityName)(@transient implicit val ac: AdamContext) extends Serializable with Logging {
-  //TODO: "store" join, markStale at insertion
   //TODO: make entities singleton? lock on entity?
-
-  private var _data: Option[DataFrame] = None
-
 
   /**
     * Gets feature data.
@@ -49,6 +45,9 @@ case class Entity(val entityname: EntityName)(@transient implicit val ac: AdamCo
     * @return
     */
   private[adam] def getIndexableFeature(attribute: String)(implicit ac: AdamContext): Option[DataFrame] = data(Some(Seq(pk.name, attribute)))
+
+
+  private var _data: Option[DataFrame] = None
 
   /**
     * Gets the full entity data.
@@ -118,7 +117,7 @@ case class Entity(val entityname: EntityName)(@transient implicit val ac: AdamCo
 
 
   /**
-    * Returns number of elements in the entity (only the feature storage is considered for this).
+    * Returns number of elements in the entity.
     *
     * @return
     */
@@ -499,7 +498,7 @@ object Entity extends Logging {
       val attribute = entity.schema(Some(Seq(attributename))).head
       val oldPath = attribute.path.get
 
-      data = data.select(entity.schema().filter(_.handler == FeatureDatabaseHandler).map(attribute => col(attribute.name)): _*)
+      data = data.select(entity.schema().filter(_.handler == FlatFileHandler).map(attribute => col(attribute.name)): _*)
 
       var newPath = ""
 
@@ -538,7 +537,7 @@ object Entity extends Logging {
     }
 
     val attributes = entity.schema(cols)
-    if (!attributes.forall(_.handler != FeatureDatabaseHandler)) {
+    if (!attributes.forall(_.handler != FlatFileHandler)) {
       return Failure(new GeneralAdamException("repartitioning is only possible for data in the feature database handler"))
     }
 
@@ -562,7 +561,7 @@ object Entity extends Logging {
       data.repartition(nPartitions, data(entity.pk.name))
     }
 
-    data = data.select(entity.schema().filter(_.handler == FeatureDatabaseHandler).map(attribute => col(attribute.name)): _*)
+    data = data.select(entity.schema().filter(_.handler == FlatFileHandler).map(attribute => col(attribute.name)): _*)
 
     mode match {
       case PartitionMode.REPLACE_EXISTING =>

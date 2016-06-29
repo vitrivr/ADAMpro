@@ -15,7 +15,7 @@ import scala.util.Try
   * Ivan Giangreco
   * June 2016
   */
-object FeatureDatabaseHandler extends Handler with Serializable {
+object FlatFileHandler extends Handler with Serializable {
   override def supportedFields = Seq(FieldTypes.AUTOTYPE, FieldTypes.INTTYPE, FieldTypes.LONGTYPE, FieldTypes.STRINGTYPE, FieldTypes.FEATURETYPE)
 
   override val name: String = "feature"
