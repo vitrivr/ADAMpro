@@ -97,6 +97,11 @@ message DataMessage {
   }
 }
 
+enum HandlerType {
+  relational = 0;
+  feature = 1;
+  solr = 2;
+}
 
 
 //****  DATA DEFINITION REQUESTS ****//
@@ -122,6 +127,7 @@ message FieldDefinitionMessage {
   bool pk = 3;
   bool unique = 4;
   bool indexed = 5;
+  HandlerType handler = 6;
 }
 
 message EntityNameMessage {

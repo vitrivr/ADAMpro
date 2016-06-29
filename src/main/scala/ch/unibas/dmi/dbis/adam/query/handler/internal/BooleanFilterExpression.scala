@@ -2,7 +2,7 @@ package ch.unibas.dmi.dbis.adam.query.handler.internal
 
 import ch.unibas.dmi.dbis.adam.entity.Entity
 import ch.unibas.dmi.dbis.adam.entity.Entity._
-import ch.unibas.dmi.dbis.adam.main.{AdamContext, SparkStartup}
+import ch.unibas.dmi.dbis.adam.main.AdamContext
 import ch.unibas.dmi.dbis.adam.query.handler.generic.{ExpressionDetails, QueryExpression}
 import ch.unibas.dmi.dbis.adam.query.query.BooleanQuery
 import ch.unibas.dmi.dbis.adam.utils.Logging
@@ -36,7 +36,7 @@ object BooleanFilterExpression extends Logging {
 
       ac.sc.setJobGroup(id.getOrElse(""), "boolean filter scan", interruptOnCancel = true)
 
-      var df = entity.data
+      var df = entity.data()
 
       var ids = mutable.Set[Any]()
 

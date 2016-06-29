@@ -5,7 +5,7 @@ import java.io._
 import ch.unibas.dmi.dbis.adam.config.AdamConfig
 import ch.unibas.dmi.dbis.adam.datatypes.FieldTypes
 import ch.unibas.dmi.dbis.adam.entity.Entity.EntityName
-import ch.unibas.dmi.dbis.adam.entity.{EntityNameHolder, AttributeDefinition}
+import ch.unibas.dmi.dbis.adam.entity.{AttributeDefinition, EntityNameHolder}
 import ch.unibas.dmi.dbis.adam.exception.{EntityExistingException, EntityNotExistingException, IndexExistingException, IndexNotExistingException}
 import ch.unibas.dmi.dbis.adam.index.Index.{IndexName, IndexTypeName}
 import ch.unibas.dmi.dbis.adam.index.structures.IndexTypes
@@ -16,7 +16,7 @@ import slick.jdbc.meta.MTable
 
 import scala.concurrent.Await
 import scala.concurrent.duration._
-import scala.util.{Success, Failure, Try}
+import scala.util.{Failure, Success, Try}
 
 
 /**
@@ -46,26 +46,23 @@ object CatalogOperator extends Logging {
 
   /**
     *
-    * @param entityname   name of entity
-    * @param featurepath  path of feature data
-    * @param metadatapath path of metadata data
-    * @param attributes   attributes
-    * @param withMetadata has metadata
+    * @param entityname name of entity
+    * @param attributes attributes
     * @return
     */
-  def createEntity(entityname: EntityName, featurepath: Option[String], metadatapath: Option[String], attributes: Seq[AttributeDefinition], withMetadata: Boolean = false): Boolean = {
+  def createEntity(entityname: EntityName, attributes: Seq[AttributeDefinition]): Boolean = {
     if (existsEntity(entityname)) {
       throw new EntityExistingException()
     }
 
     val setup = DBIO.seq(
-      entities.+=(entityname, featurepath.getOrElse(""), metadatapath.getOrElse(""), withMetadata)
+      entities.+=(entityname)
     )
 
     Await.result(db.run(setup), MAX_WAITING_TIME)
 
     attributes.foreach { field =>
-      val setup = DBIO.seq(entityfields.+=(field.name, field.fieldtype.name, field.pk, field.unique, field.indexed, entityname, DEFAULT_DIMENSIONALITY, DEFAULT_WEIGHT))
+      val setup = DBIO.seq(entityfields.+=(field.name, field.fieldtype.name, field.pk, field.unique, field.indexed, entityname, DEFAULT_DIMENSIONALITY, DEFAULT_WEIGHT, field.handler.name, field.path.getOrElse("")))
       Await.result(db.run(setup), MAX_WAITING_TIME)
     }
 
@@ -76,31 +73,12 @@ object CatalogOperator extends Logging {
   /**
     *
     * @param entityname name of entity
-    * @return
-    */
-  def getEntityFeaturePath(entityname: EntityName): String = {
-    val query = entities.filter(_.entityname === entityname.toString()).map(_.featurepath).result.head
-    Await.result(db.run(query), MAX_WAITING_TIME)
-  }
-
-  /**
-    *
-    * @param entityname name of entity
-    * @return
-    */
-  def getEntityMetadataPath(entityname: EntityName): String = {
-    val query = entities.filter(_.entityname === entityname.toString()).map(_.metadatapath).result.head
-    Await.result(db.run(query), MAX_WAITING_TIME)
-  }
-
-  /**
-    *
-    * @param entityname name of entity
+    * @param handler    name of handler
     * @param newPath    new path
     * @return
     */
-  def updateEntityFeaturePath(entityname: EntityName, newPath: String): Boolean = {
-    val query = entities.filter(_.entityname === entityname.toString()).map(_.featurepath)
+  def updateEntityFeaturePath(entityname: EntityName, handler: String, newPath: String): Boolean = {
+    val query = entityfields.filter(_.entityname === entityname.toString()).filter(_.handler === handler).map(_.path)
 
     val update = DBIO.seq(
       query.update(newPath)
@@ -117,6 +95,7 @@ object CatalogOperator extends Logging {
     * @param attribute  name of attribute
     * @return
     */
+  
   def getEntityWeight(entityname: EntityName, attribute: String): Float = {
     val query = entityfields.filter(_.entityname === entityname.toString).filter(_.fieldname === attribute).map(_.scanweight).result.head
     Await.result(db.run(query), MAX_WAITING_TIME)
@@ -185,10 +164,10 @@ object CatalogOperator extends Logging {
     * @return
     */
   def getEntityPK(entityname: EntityName): AttributeDefinition = {
-    val query = entityfields.filter(_.entityname === entityname.toString()).filter(_.pk).result
-    val fields = Await.result(db.run(query), MAX_WAITING_TIME)
+    val query = entityfields.filter(_.entityname === entityname.toString()).filter(_.pk).map(_.fieldname).result
+    val pkfield = Await.result(db.run(query), MAX_WAITING_TIME).head
 
-    fields.map(x => AttributeDefinition(x._1, FieldTypes.fromString(x._2), x._3, x._4, x._5)).head
+    getFields(entityname, Some(pkfield)).head
   }
 
   /**
@@ -196,23 +175,27 @@ object CatalogOperator extends Logging {
     * @param entityname name of entity
     * @return
     */
-  def getFields(entityname: EntityName): Seq[AttributeDefinition] = {
+  def getFields(entityname: EntityName, filter: Option[String] = None): Seq[AttributeDefinition] = {
     val query = entityfields.filter(_.entityname === entityname.toString()).result
-    val fields = Await.result(db.run(query), MAX_WAITING_TIME)
+    var fields = Await.result(db.run(query), MAX_WAITING_TIME)
 
-    fields.map(x => AttributeDefinition(x._1, FieldTypes.fromString(x._2), x._3, x._4, x._5))
+    if (filter.isDefined) {
+      fields = fields.filter(field => field._1.equals(filter.get))
+    }
+
+    fields.map(x => {
+      val name = x._1
+      val fieldtype = FieldTypes.fromString(x._2)
+      val pk = x._3
+      val unique = x._4
+      val indexed = x._5
+      val handlerName = x._9
+      val path = x._10
+
+      AttributeDefinition(name, fieldtype, pk, unique, indexed, Some(handlerName), Some(path))
+    })
   }
 
-  /**
-    * Checks whether entity has metadata.
-    *
-    * @param entityname name of entity
-    * @return
-    */
-  def hasEntityMetadata(entityname: EntityName): Boolean = {
-    val query = entities.filter(_.entityname === entityname.toString()).map(_.hasMeta).take(1).result
-    Await.result(db.run(query), MAX_WAITING_TIME).head
-  }
 
   /**
     * Lists all entities in catalog.
@@ -280,7 +263,7 @@ object CatalogOperator extends Logging {
     if (!existsIndex(indexname)) {
       throw new IndexNotExistingException()
     }
-    
+
     val query = indexes.filter(_.indexname === indexname).delete
     Await.result(db.run(query), MAX_WAITING_TIME)
     log.debug("dropped index from catalog")

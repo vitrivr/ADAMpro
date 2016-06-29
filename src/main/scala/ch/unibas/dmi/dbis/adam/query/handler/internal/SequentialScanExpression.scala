@@ -37,7 +37,7 @@ case class SequentialScanExpression(private val entity : Entity)(private val nnq
       throw QueryNotConformException()
     }
 
-    var df = entity.data
+    var df = entity.data()
     var ids = mutable.Set[Any]()
 
     if (filter.isDefined) {

@@ -38,7 +38,7 @@ class DataDefinitionRPC extends AdamDefinitionGrpc.AdamDefinition with Logging {
     log.debug("rpc call for create entity operation")
     val entityname = request.entity
     val fields = request.fields.map(field => {
-      AttributeDefinition(field.name, matchFields(field.fieldtype), field.pk, field.unique, field.indexed)
+      AttributeDefinition(field.name, matchFields(field.fieldtype), field.pk, field.unique, field.indexed) //TODO: add handler type
     })
     val res = EntityOp(entityname, fields)
 
@@ -131,7 +131,7 @@ class DataDefinitionRPC extends AdamDefinitionGrpc.AdamDefinition with Logging {
           return onError(new GeneralAdamException("cannot load entity"))
         }
 
-        val schema = entity.get.schema
+        val schema = entity.get.schema()
 
         val rows = insert.tuples.map(tuple => {
           val data = schema.map(field => {
@@ -146,7 +146,7 @@ class DataDefinitionRPC extends AdamDefinitionGrpc.AdamDefinition with Logging {
         })
 
         val rdd = ac.sc.parallelize(rows)
-        val df = ac.sqlContext.createDataFrame(rdd, StructType(entity.get.schema.map(field => StructField(field.name, field.fieldtype.datatype))))
+        val df = ac.sqlContext.createDataFrame(rdd, StructType(entity.get.schema().map(field => StructField(field.name, field.fieldtype.datatype))))
 
         val res = EntityOp.insert(entity.get.entityname, df)
 

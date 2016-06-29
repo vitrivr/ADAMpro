@@ -136,7 +136,7 @@ object ScanWeightBenchmarker {
     val indexes = entity.indexes.filter(_.isSuccess).map(_.get)
 
     val cols = if (column.isEmpty) {
-      entity.schema.filter(_.fieldtype == FieldTypes.FEATURETYPE).map(_.name)
+      entity.schema().filter(_.fieldtype == FieldTypes.FEATURETYPE).map(_.name)
     } else {
       Seq(column.get)
     }

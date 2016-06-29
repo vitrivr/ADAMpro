@@ -5,11 +5,12 @@ import ch.unibas.dmi.dbis.adam.config.FieldNames
 import ch.unibas.dmi.dbis.adam.datatypes.FieldTypes
 import ch.unibas.dmi.dbis.adam.datatypes.FieldTypes._
 import ch.unibas.dmi.dbis.adam.datatypes.feature.Feature.{SparseFeatureVector, VectorBase}
-import ch.unibas.dmi.dbis.adam.datatypes.feature.{FeatureVectorWrapper, FeatureVectorWrapperUDT}
+import ch.unibas.dmi.dbis.adam.datatypes.feature.FeatureVectorWrapper
 import ch.unibas.dmi.dbis.adam.entity.Entity.EntityName
 import ch.unibas.dmi.dbis.adam.exception.{EntityExistingException, EntityNotExistingException, EntityNotProperlyDefinedException, GeneralAdamException}
+import ch.unibas.dmi.dbis.adam.handler.FeatureDatabaseHandler
 import ch.unibas.dmi.dbis.adam.index.Index
-import ch.unibas.dmi.dbis.adam.main.{AdamContext, SparkStartup}
+import ch.unibas.dmi.dbis.adam.main.AdamContext
 import ch.unibas.dmi.dbis.adam.query.query.NearestNeighbourQuery
 import ch.unibas.dmi.dbis.adam.storage.engine.CatalogOperator
 import ch.unibas.dmi.dbis.adam.storage.partition.PartitionMode
@@ -28,45 +29,18 @@ import scala.util.{Failure, Random, Success, Try}
   * October 2015
   */
 case class Entity(val entityname: EntityName)(@transient implicit val ac: AdamContext) extends Serializable with Logging {
-  private var _featureData: Option[DataFrame] = None
-  private var _metaData: Option[DataFrame] = None
-  private var _join: Option[DataFrame] = None
-
+  //TODO: "store" join, markStale at insertion
   //TODO: make entities singleton? lock on entity?
 
+  private var _data: Option[DataFrame] = None
 
-  /**
-    * Gets path of feature data.
-    *
-    * @return
-    */
-  private[entity] def featurePath: Option[String] = {
-    val path = CatalogOperator.getEntityFeaturePath(entityname)
-    if (path != null && path.length > 0) {
-      Some(path)
-    } else {
-      None
-    }
-  }
 
   /**
     * Gets feature data.
     *
     * @return
     */
-  def featureData: Option[DataFrame] = {
-    if (_featureData.isEmpty) {
-      if (featurePath.isDefined) {
-        val data = Entity.featureStorage.read(featurePath.get)
-
-        if (data.isSuccess) {
-          _featureData = Some(data.get)
-        }
-      }
-    }
-
-    _featureData
-  }
+  def featureData: Option[DataFrame] = data(typeFilter = Some(Seq(FEATURETYPE)))
 
   /**
     * Gets feature column and pk column; use this for indexing purposes.
@@ -74,78 +48,39 @@ case class Entity(val entityname: EntityName)(@transient implicit val ac: AdamCo
     * @param attribute attribute that is indexed
     * @return
     */
-  private[adam] def getIndexableFeature(attribute: String)(implicit ac: AdamContext) = {
-    if (featureData.isDefined) {
-      featureData.get.select(col(pk.name), col(attribute))
-    } else {
-      val structFields = StructType(Seq(
-        StructField(pk.name, pk.fieldtype.datatype),
-        StructField(attribute, FieldTypes.FEATURETYPE.datatype)
-      ))
-      ac.sqlContext.createDataFrame(ac.sc.emptyRDD[Row], structFields)
-    }
-  }
-
-  /**
-    * Gets path of metadata.
-    *
-    * @return
-    */
-  private[entity] def metadataPath: Option[String] = {
-    val path = CatalogOperator.getEntityMetadataPath(entityname)
-    if (path != null && path.length > 0) {
-      Some(path)
-    } else {
-      None
-    }
-  }
-
-  /**
-    * Gets feature data.
-    *
-    * @return
-    */
-  def metaData: Option[DataFrame] = {
-    if (_metaData.isEmpty) {
-      if (metadataPath.isDefined) {
-        val data = Entity.metadataStorage.read(metadataPath.get)
-
-        if (data.isSuccess) {
-          _metaData = Some(data.get)
-        }
-      }
-    }
-
-    _metaData
-  }
+  private[adam] def getIndexableFeature(attribute: String)(implicit ac: AdamContext): Option[DataFrame] = data(Some(Seq(pk.name, attribute)))
 
   /**
     * Gets the full entity data.
     *
     * @return
     */
-  def data: Option[DataFrame] = {
-    if (_join.isEmpty) {
-      if (featureData.isDefined && metaData.isDefined) {
-        _join = Some(featureData.get.join(metaData.get, pk.name))
-      } else if (featureData.isDefined) {
-        _join = Some(featureData.get)
-      } else if (metaData.isDefined) {
-        _join = Some(metaData.get)
-      }
+  def data(nameFilter: Option[Seq[String]] = None, typeFilter: Option[Seq[FieldType]] = None): Option[DataFrame] = {
+    if (_data.isEmpty) {
+      val res = schema().filterNot(_.pk).groupBy(_.handler).mapValues(_.map(_.path).map(_.get).distinct).flatMap { case (handler, paths) =>
+        paths.map(path => handler.read(entityname, Some(path)).get)
+      }.reduce(_.join(_, pk.name))
+
+      _data = Some(res)
     }
 
-    _join
+    if (nameFilter.isDefined || typeFilter.isDefined) {
+      val tmpData = _data
+
+      import org.apache.spark.sql.functions.col
+
+      tmpData.map(_.select(schema(nameFilter, typeFilter).map(attribute => col(attribute.name)): _*))
+    } else {
+      _data
+    }
   }
 
   /**
     * Marks the data stale (e.g., if new data has been inserted to entity).
     */
   private def markStale(): Unit = {
-    _featureData = None
-    _metaData = None
-    _join = None
-    tupleCount = None
+    _tupleCount = None
+    _data = None
   }
 
   /**
@@ -179,7 +114,7 @@ case class Entity(val entityname: EntityName)(@transient implicit val ac: AdamCo
     CatalogOperator.updateEntityWeight(entityname, attribute, weight)
   }
 
-  private var tupleCount: Option[Long] = None
+  private var _tupleCount: Option[Long] = None
 
 
   /**
@@ -188,16 +123,15 @@ case class Entity(val entityname: EntityName)(@transient implicit val ac: AdamCo
     * @return
     */
   def count: Long = {
-    //TODO: possibly switch to metadata storage?
-    if (tupleCount.isEmpty) {
-      tupleCount = if (featurePath.isDefined) {
-        Some(Entity.featureStorage.count(featurePath.get).get)
+    if (_tupleCount.isEmpty) {
+      if (data().isEmpty) {
+        _tupleCount = Some(0)
       } else {
-        Some(0)
+        _tupleCount = Some(data().get.count())
       }
     }
 
-    tupleCount.get
+    _tupleCount.get
   }
 
 
@@ -207,7 +141,7 @@ case class Entity(val entityname: EntityName)(@transient implicit val ac: AdamCo
     * @param k number of elements to show in preview
     * @return
     */
-  def show(k: Int): Option[DataFrame] = data.map(_.limit(k))
+  def show(k: Int): Option[DataFrame] = data().map(_.limit(k))
 
   /**
     * Inserts data into the entity.
@@ -220,7 +154,7 @@ case class Entity(val entityname: EntityName)(@transient implicit val ac: AdamCo
     log.debug("inserting data into entity")
 
     try {
-      val insertion =
+      var insertion =
         if (pk.fieldtype.equals(FieldTypes.AUTOTYPE)) {
           if (data.schema.fieldNames.contains(pk.name)) {
             return Failure(new GeneralAdamException("the field " + pk.name + " has been specified as auto and should therefore not be provided"))
@@ -236,24 +170,25 @@ case class Entity(val entityname: EntityName)(@transient implicit val ac: AdamCo
 
       //TODO: check that schema of data inserted and schema of entity are equal
 
-      val featureFieldNames = insertion.schema.fields.filter(_.dataType.isInstanceOf[FeatureVectorWrapperUDT]).map(_.name)
-      val newFeaturePath = Entity.featureStorage.write(entityname, insertion.select(pk.name, featureFieldNames.toSeq: _*), SaveMode.Append, featurePath, true)
+      insertion.schema.fields
+        .map(field => schema(Some(Seq(field.name))))
+        .filterNot(_.isEmpty).map(_.head)
+        .groupBy(_.handler)
+        .foreach { case (handler, attributes) =>
+          val a = attributes
 
-      if (featurePath.isEmpty) {
-        if (newFeaturePath.isSuccess) {
-          CatalogOperator.updateEntityFeaturePath(entityname, newFeaturePath.get)
+          val fields = if (attributes.filter(_.name == pk.name).isEmpty) {
+            attributes.+:(pk)
+          } else {
+            attributes
+          }
+
+          import org.apache.spark.sql.functions.col
+          val df = insertion.select(fields.map(attribute => col(attribute.name)): _*)
+
+          handler.write(entityname, None, df)
         }
-      }
 
-      if (newFeaturePath.isFailure) {
-        return Failure(newFeaturePath.failed.get)
-      }
-
-      val metadataFieldNames = insertion.schema.fields.filterNot(_.dataType.isInstanceOf[FeatureVectorWrapperUDT]).map(_.name)
-      if (metadataPath.isDefined) {
-        log.debug("metadata storage is defined: inserting data also into metadata storage")
-        Entity.metadataStorage.write(entityname, insertion.select(pk.name, metadataFieldNames.filterNot(x => x == pk.name).toSeq: _*), SaveMode.Append)
-      }
 
       if (CatalogOperator.listIndexes(entityname).nonEmpty) {
         log.warn("new data inserted, but indexes are not updated; please re-create index")
@@ -269,6 +204,15 @@ case class Entity(val entityname: EntityName)(@transient implicit val ac: AdamCo
     }
   }
 
+
+  def drop(): Unit = {
+    schema().groupBy(_.handler).mapValues(_.map(_.path).distinct).foreach { case (handler, paths) =>
+      paths.foreach { path =>
+        handler.drop(entityname, path)
+      }
+    }
+  }
+
   //TODO: add delete operation?
 
   /**
@@ -277,19 +221,37 @@ case class Entity(val entityname: EntityName)(@transient implicit val ac: AdamCo
   def properties: Map[String, String] = {
     val lb = ListBuffer[(String, String)]()
 
-    lb.append("scanweight" -> schema.filter(_.fieldtype == FieldTypes.FEATURETYPE).map(field => field.name -> scanweight(field.name)).map { case (name, weight) => name + "(" + weight + ")" }.mkString(","))
+    lb.append("scanweight" -> schema().filter(_.fieldtype == FieldTypes.FEATURETYPE).map(field => field.name -> scanweight(field.name)).map { case (name, weight) => name + "(" + weight + ")" }.mkString(","))
     lb.append("schema" -> CatalogOperator.getFields(entityname).map(field => field.name + "(" + field.fieldtype.name + ")").mkString(","))
     lb.append("indexes" -> CatalogOperator.listIndexes(entityname).mkString(", "))
 
     lb.toMap
   }
 
+  private var _schema: Option[Seq[AttributeDefinition]] = None
+
   /**
     * Schema of the entity.
     *
     * @return
     */
-  def schema: Seq[AttributeDefinition] = CatalogOperator.getFields(entityname)
+  def schema(nameFilter: Option[Seq[String]] = None, typeFilter: Option[Seq[FieldType]] = None): Seq[AttributeDefinition] = {
+    if (_schema.isEmpty) {
+      _schema = Some(CatalogOperator.getFields(entityname))
+    }
+
+    var tmpSchema = _schema.get
+
+    if (nameFilter.isDefined) {
+      tmpSchema = tmpSchema.filter(attribute => nameFilter.get.contains(attribute.name))
+    }
+
+    if (typeFilter.isDefined) {
+      tmpSchema = tmpSchema.filter(attribute => typeFilter.get.map(_.name).contains(attribute.fieldtype.name))
+    }
+
+    tmpSchema
+  }
 
 
   /**
@@ -316,7 +278,7 @@ case class Entity(val entityname: EntityName)(@transient implicit val ac: AdamCo
     }
   }
 
-  lazy val featureLength = schema.filter(_.fieldtype == FEATURETYPE).map(attribute => attribute.name -> featureData.get.first().getAs[FeatureVectorWrapper](attribute.name).vector.length).toMap
+  lazy val featureLength = schema().filter(_.fieldtype == FEATURETYPE).map(attribute => attribute.name -> featureData.get.first().getAs[FeatureVectorWrapper](attribute.name).vector.length).toMap
 
   override def equals(that: Any): Boolean =
     that match {
@@ -330,9 +292,6 @@ case class Entity(val entityname: EntityName)(@transient implicit val ac: AdamCo
 
 object Entity extends Logging {
   type EntityName = EntityNameHolder
-
-  private val featureStorage = SparkStartup.featureStorage
-  private val metadataStorage = SparkStartup.metadataStorage
 
   def exists(entityname: EntityName): Boolean = CatalogOperator.existsEntity(entityname)
 
@@ -369,7 +328,7 @@ object Entity extends Logging {
         return Failure(EntityNotProperlyDefinedException("Entity defined with duplicate fields."))
       }
 
-      val allowedPkTypes = Seq(INTTYPE, LONGTYPE, STRINGTYPE, AUTOTYPE)
+      val allowedPkTypes = FieldTypes.values.filter(_.pk)
 
       if (attributes.count(_.pk) > 1) {
         return Failure(EntityNotProperlyDefinedException("Entity defined with more than one primary key"))
@@ -385,38 +344,26 @@ object Entity extends Logging {
         return Failure(EntityNotProperlyDefinedException("Auto type only allowed in primary key."))
       }
 
-
       val pk = attributes.filter(_.pk).head
 
-      //perform
-      val featurePath = if (attributes.exists(_.fieldtype == FEATURETYPE)) {
-        val featureFields = attributes.filter(_.fieldtype == FEATURETYPE)
+      val handlers = (attributes.filterNot(_.pk)).groupBy(_.handler)
 
-        val path = featureStorage.create(entityname, featureFields)
+      handlers.foreach {
+        case (handler, attributes) =>
+          attributes.map(_.handlerName = Some(handler.name))
 
-        if (path.isFailure) {
-          throw path.failed.get
-        }
+          val path = handler.create(entityname, None, attributes.+:(pk))
 
-        path.get
-      } else {
-        None
+          if (path.isSuccess) {
+            attributes.map(_.path = path.get)
+          } else {
+            throw path.failed.get
+          }
       }
 
-      val metadataPath = if (attributes.exists(attr => (attr.fieldtype != FEATURETYPE) && !attr.pk)) {
-        val metadataFields = attributes.filterNot(_.fieldtype == FEATURETYPE)
-        val path = metadataStorage.create(entityname, metadataFields)
+      //TODO: if attributes filterNot pk length == 0 we have to still store the pk
 
-        if (path.isFailure) {
-          throw path.failed.get
-        }
-
-        path.get
-      } else {
-        None
-      }
-
-      CatalogOperator.createEntity(entityname, featurePath, metadataPath, attributes, attributes.exists(attr => (attr.fieldtype != FEATURETYPE) && !attr.pk))
+      CatalogOperator.createEntity(entityname, attributes)
 
       Success(Entity(entityname)(ac))
     } catch {
@@ -444,12 +391,7 @@ object Entity extends Logging {
     }
 
     Index.dropAll(entityname)
-
-    featureStorage.drop(CatalogOperator.getEntityFeaturePath(entityname))
-
-    if (CatalogOperator.hasEntityMetadata(entityname)) {
-      metadataStorage.drop(CatalogOperator.getEntityMetadataPath(entityname))
-    }
+    Entity(entityname)(ac).drop()
 
     CatalogOperator.dropEntity(entityname, ifExists)
 
@@ -471,14 +413,7 @@ object Entity extends Logging {
     val entity = EntityLRUCache.get(entityname)
 
     if (cache) {
-      if (entity.get.featureData.isDefined) {
-        entity.get.featureData.get.rdd.setName(entityname + "_feature").cache()
-      }
-      val meta = entity.get.metaData
-
-      if (meta.isDefined) {
-        meta.get.rdd.setName(entityname + "_feature").cache()
-      }
+      //TODO: cache data for each handler
     }
 
     entity
@@ -507,16 +442,17 @@ object Entity extends Logging {
   /**
     * Compresses the entity by turning vectors to sparse.
     *
-    * @param entity entity
+    * @param entity        entity
+    * @param attributename name of attribute
     * @return
     */
-  def sparsify(entity: Entity, attribute: String)(implicit ac: AdamContext): Try[Entity] = {
+  def sparsify(entity: Entity, attributename: String)(implicit ac: AdamContext): Try[Entity] = {
     try {
-      if (entity.featurePath.isEmpty) {
-        return Failure(new GeneralAdamException("no feature data available for performing repartitioning"))
+      if (entity.featureData.isEmpty) {
+        return Failure(new GeneralAdamException("no feature data available for performing sparsifying"))
       }
 
-      var data = entity.featureData.get
+      var data = entity.data().get
       val convertToSparse = udf((c: FeatureVectorWrapper) => {
         val vec = c.vector
 
@@ -557,25 +493,25 @@ object Entity extends Logging {
         }
       })
 
-      data = data.withColumn("conv-" + attribute, convertToSparse(data(attribute)))
-      data = data.drop(attribute).withColumnRenamed("conv-" + attribute, attribute)
+      data = data.withColumn("conv-" + attributename, convertToSparse(data(attributename)))
+      data = data.drop(attributename).withColumnRenamed("conv-" + attributename, attributename)
 
-      val oldPath = entity.featurePath.get
+      val attribute = entity.schema(Some(Seq(attributename))).head
+      val oldPath = attribute.path.get
+
+      data = data.select(entity.schema().filter(_.handler == FeatureDatabaseHandler).map(attribute => col(attribute.name)): _*)
 
       var newPath = ""
 
       do {
         newPath = oldPath + "-sp" + Random.nextInt(999)
-      } while (SparkStartup.featureStorage.exists(newPath).get)
+      } while (attribute.handler.exists(entity.entityname, Some(newPath)).get)
 
-      featureStorage.write(entity.entityname, data, SaveMode.ErrorIfExists, Some(newPath))
-      CatalogOperator.updateEntityFeaturePath(entity.entityname, newPath)
-      featureStorage.drop(oldPath)
+      attribute.handler.write(entity.entityname, Some(newPath), data, SaveMode.ErrorIfExists)
+      CatalogOperator.updateEntityFeaturePath(entity.entityname, attribute.handler.name, newPath)
+      attribute.handler.drop(entity.entityname, Some(oldPath))
 
-      entity._featureData = None
-      entity._join = None
-      entity._metaData = None
-
+      entity.markStale()
       EntityLRUCache.invalidate(entity.entityname)
 
       Success(entity)
@@ -597,11 +533,16 @@ object Entity extends Logging {
     * @return
     */
   def repartition(entity: Entity, nPartitions: Int, join: Option[DataFrame], cols: Option[Seq[String]], mode: PartitionMode.Value)(implicit ac: AdamContext): Try[Entity] = {
-    if (entity.featurePath.isEmpty) {
-      return Failure(new GeneralAdamException("no feature data available for performing repartitioning"))
+    if (entity.featureData.isEmpty) {
+      return Failure(new GeneralAdamException("no feature data available for performing sparsifying"))
     }
 
-    var data = entity.data.get
+    val attributes = entity.schema(cols)
+    if (!attributes.forall(_.handler != FeatureDatabaseHandler)) {
+      return Failure(new GeneralAdamException("repartitioning is only possible for data in the feature database handler"))
+    }
+
+    var data = entity.data().get
 
     //TODO: possibly add own partitioner
     //data.map(r => (r.getAs[Any](cols.get.head), r)).partitionBy(new HashPartitioner())
@@ -621,26 +562,27 @@ object Entity extends Logging {
       data.repartition(nPartitions, data(entity.pk.name))
     }
 
-    data = data.select(entity.featureData.get.columns.map(col): _*)
+    data = data.select(entity.schema().filter(_.handler == FeatureDatabaseHandler).map(attribute => col(attribute.name)): _*)
 
     mode match {
       case PartitionMode.REPLACE_EXISTING =>
-        val oldPath = entity.featurePath.get
+        if (attributes.length > 1 && attributes.map(_.path).map(_.get).distinct.length > 1) {
+          return Failure(new GeneralAdamException("the repartitioner has received columns from more than one path"))
+        }
+
+        val oldPath = attributes.head.path.get
 
         var newPath = ""
 
         do {
           newPath = oldPath + "-rep" + Random.nextInt(999)
-        } while (SparkStartup.featureStorage.exists(newPath).get)
+        } while (attributes.head.handler.exists(entity.entityname, Some(newPath)).get)
 
-        featureStorage.write(entity.entityname, data, SaveMode.ErrorIfExists, Some(newPath))
-        CatalogOperator.updateEntityFeaturePath(entity.entityname, newPath)
-        featureStorage.drop(oldPath)
+        attributes.head.handler.write(entity.entityname, Some(newPath), data, SaveMode.ErrorIfExists)
+        CatalogOperator.updateEntityFeaturePath(entity.entityname, attributes.head.handler.name, newPath)
+        attributes.head.handler.drop(entity.entityname, Some(oldPath))
 
-        entity._featureData = None
-        entity._join = None
-        entity._metaData = None
-
+        entity.markStale()
         EntityLRUCache.invalidate(entity.entityname)
 
         return Success(entity)

@@ -3,8 +3,8 @@ package ch.unibas.dmi.dbis.adam.storage.engine
 import java.io.File
 
 import ch.unibas.dmi.dbis.adam.config.AdamConfig
-import ch.unibas.dmi.dbis.adam.entity.Entity.EntityName
 import ch.unibas.dmi.dbis.adam.entity.AttributeDefinition
+import ch.unibas.dmi.dbis.adam.entity.Entity.EntityName
 import ch.unibas.dmi.dbis.adam.exception.GeneralAdamException
 import ch.unibas.dmi.dbis.adam.main.AdamContext
 import ch.unibas.dmi.dbis.adam.storage.components.FeatureStorage
@@ -34,7 +34,7 @@ object ParquetFeatureStorage extends FeatureStorage {
   }
 
   override def create(entityname: EntityName, fields: Seq[AttributeDefinition])(implicit ac: AdamContext): Try[Option[String]] = {
-    Success(None)
+    Success(Some(getPath(entityname.toString)))
   }
 
   override def exists(path: String)(implicit ac: AdamContext): Try[Boolean] = {

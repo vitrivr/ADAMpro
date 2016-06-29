@@ -35,7 +35,7 @@ object RandomDataOp extends Logging {
       }
 
       //schema of random data dataframe to insert
-      val schema = entity.get.schema
+      val schema = entity.get.schema()
 
       //generator
       def randomGenerator(datatype: DataType): () => Any = {

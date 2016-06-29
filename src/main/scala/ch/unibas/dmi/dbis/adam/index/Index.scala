@@ -14,7 +14,7 @@ import ch.unibas.dmi.dbis.adam.main.{AdamContext, SparkStartup}
 import ch.unibas.dmi.dbis.adam.query.Result
 import ch.unibas.dmi.dbis.adam.query.distance.DistanceFunction
 import ch.unibas.dmi.dbis.adam.query.query.NearestNeighbourQuery
-import ch.unibas.dmi.dbis.adam.storage.engine.CatalogOperator
+import ch.unibas.dmi.dbis.adam.storage.engine.{ParquetIndexStorage, CatalogOperator}
 import ch.unibas.dmi.dbis.adam.storage.partition.PartitionMode
 import org.apache.hadoop.hive.metastore.api.ThriftHiveMetastore.Processor.lock
 import ch.unibas.dmi.dbis.adam.utils.Logging
@@ -243,7 +243,7 @@ object Index extends Logging {
   type IndexName = String
   type IndexTypeName = IndexTypes.IndexType
 
-  private val storage = SparkStartup.indexStorage
+  private val storage = ParquetIndexStorage
 
   //TODO: make indexes singleton? lock on entity?
 
@@ -282,11 +282,11 @@ object Index extends Logging {
     * @return index
     */
   def createIndex(entity: Entity, attribute: String, indexgenerator: IndexGenerator)(implicit ac: AdamContext): Try[Index] = {
-    if (!entity.schema.map(_.name).contains(attribute)) {
-      return Failure(new IndexNotProperlyDefinedException("attribute not existing in entity " + entity.entityname + entity.schema.map(_.name).mkString("(", ",", ")")))
+    if (!entity.schema().map(_.name).contains(attribute)) {
+      return Failure(new IndexNotProperlyDefinedException("attribute not existing in entity " + entity.entityname + entity.schema().map(_.name).mkString("(", ",", ")")))
     }
 
-    val columnFieldtype = entity.schema.filter(_.name == attribute).map(_.fieldtype).head
+    val columnFieldtype = entity.schema().filter(_.name == attribute).map(_.fieldtype).head
     if (columnFieldtype != FEATURETYPE) {
       return Failure(new IndexNotProperlyDefinedException(attribute + " is of type " + columnFieldtype.name + ", not feature"))
     }
@@ -297,7 +297,8 @@ object Index extends Logging {
     }
 
     val indexname = createIndexName(entity.entityname, attribute, indexgenerator.indextypename)
-    val rdd: RDD[IndexingTaskTuple[_]] = entity.getIndexableFeature(attribute).map { x => IndexingTaskTuple(x.getAs[Any](entity.pk.name), x.getAs[FeatureVectorWrapper](attribute).vector) }
+    //TODO: remove get
+    val rdd: RDD[IndexingTaskTuple[_]] = entity.getIndexableFeature(attribute).get.map { x => IndexingTaskTuple(x.getAs[Any](entity.pk.name), x.getAs[FeatureVectorWrapper](attribute).vector) }
 
     val index = indexgenerator.index(indexname, entity.entityname, rdd)
     index.data = index
@@ -430,7 +431,7 @@ object Index extends Logging {
     */
   def repartition(index: Index, nPartitions: Int, join: Option[DataFrame], cols: Option[Seq[String]], mode: PartitionMode.Value, partitioner: PartitionerChoice.Value = PartitionerChoice.SPARK, options: Map[String, String] = Map[String, String]())(implicit ac: AdamContext): Try[Index] = {
     log.debug("Repartitioning Index: " + index.indexname + " with partitioner " + partitioner)
-    var data = index.data.join(index.entity.get.data.get, index.pk.name)
+    var data = index.data.join(index.entity.get.data().get, index.pk.name)
 
     //TODO: possibly consider replication
     //http://stackoverflow.com/questions/31624622/is-there-a-way-to-change-the-replication-factor-of-rdds-in-spark
@@ -492,11 +493,11 @@ object Index extends Logging {
           } else{
             newPath = oldPath + "-rep" + Random.nextInt(999)
           }
-        } while (SparkStartup.indexStorage.exists(newPath).get)
+        } while (storage.exists(newPath).get)
 
-        SparkStartup.indexStorage.write(index.indexname, data, Some(newPath))
+        storage.write(index.indexname, data, Some(newPath))
         CatalogOperator.updateIndexPath(index.indexname, newPath)
-        SparkStartup.indexStorage.drop(oldPath)
+        storage.drop(oldPath)
 
         IndexLRUCache.invalidate(index.indexname)
 

@@ -10,19 +10,13 @@ import slick.lifted.ForeignKeyQuery
   * Ivan Giangreco
   * August 2015
   */
-private[engine] class EntitiesCatalog(tag: Tag) extends Table[(String, String, String, Boolean)](tag, "ADAMTWO_ENTITIES") {
+private[engine] class EntitiesCatalog(tag: Tag) extends Table[(String)](tag, "ADAMTWO_ENTITIES") {
   def entityname = column[String]("ENTITYNAME", O.PrimaryKey)
 
-  def featurepath = column[String]("FEATUREPATH")
-
-  def metadatapath = column[String]("METADATAPATH")
-
-  def hasMeta = column[Boolean]("HASMETA")
-
-  def * = (entityname, featurepath, metadatapath, hasMeta)
+  def * = (entityname)
 }
 
-private[engine] class EntityFieldsCatalog(tag: Tag) extends Table[(String, String, Boolean, Boolean, Boolean, String, Int, Float)](tag, "ADAMTWO_FIELDS") {
+private[engine] class EntityFieldsCatalog(tag: Tag) extends Table[(String, String, Boolean, Boolean, Boolean, String, Int, Float, String, String)](tag, "ADAMTWO_FIELDS") {
   def fieldname = column[String]("FIELDNAME")
 
   def fieldtype = column[String]("FIELDTYPE")
@@ -39,9 +33,13 @@ private[engine] class EntityFieldsCatalog(tag: Tag) extends Table[(String, Strin
 
   def scanweight = column[Float]("WEIGHT")
 
-  def * = (fieldname, fieldtype, pk, unique, indexed, entityname, featurelength, scanweight)
+  def handler = column[String]("HANDLER")
 
-  def supplier: ForeignKeyQuery[EntitiesCatalog, (String, String, String, Boolean)] =
+  def path = column[String]("PATH")
+
+  def * = (fieldname, fieldtype, pk, unique, indexed, entityname, featurelength, scanweight, handler, path)
+
+  def supplier: ForeignKeyQuery[EntitiesCatalog, (String)] =
     foreignKey("ENTITYNAME", entityname, TableQuery[EntitiesCatalog])(_.entityname)
 }
 
@@ -64,7 +62,7 @@ private[engine] class IndexesCatalog(tag: Tag) extends Table[(String, String, St
 
   def * = (indexname, entityname, fieldname, indextypename, indexpath, indexmeta, uptodate, scanweight)
 
-  def supplier: ForeignKeyQuery[EntitiesCatalog, (String, String, String, Boolean)] =
+  def supplier: ForeignKeyQuery[EntitiesCatalog, (String)] =
     foreignKey("ENTITYNAME", entityname, TableQuery[EntitiesCatalog])(_.entityname)
 }
 
