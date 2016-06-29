@@ -18,11 +18,9 @@ abstract class Query(queryID: Option[String] = Some(java.util.UUID.randomUUID().
   *
   * @param where a where 'clause' in form of (String, String), if the first string ends with '!=' or 'IN' the
   *              operator is used in the query, otherwise a '=' is added in between; AND-ing is assumed
-  * @param join  Seq of (table, columns to join on)
   */
 case class BooleanQuery(
                          where: Option[Seq[(String, String)]] = None,
-                         join: Option[Seq[(String, Seq[String])]] = None,
                          queryID: Option[String] = Some(java.util.UUID.randomUUID().toString))
   extends Query(queryID) {
   /**
@@ -54,7 +52,7 @@ case class BooleanQuery(
   override def equals(that: Any): Boolean = {
     that match {
       case that: BooleanQuery =>
-        this.where.equals(that.where) && this.join.equals(that.join)
+        this.where.equals(that.where)
       case _ =>
         false
     }
@@ -64,7 +62,6 @@ case class BooleanQuery(
     val prime = 31
     var result = 1
     result = prime * result + where.hashCode()
-    result = prime * result + join.hashCode()
     result
   }
 }

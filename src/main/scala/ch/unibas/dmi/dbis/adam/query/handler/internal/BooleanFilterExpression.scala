@@ -123,21 +123,6 @@ object BooleanFilterExpression extends Logging {
     log.debug("filter using boolean query filter")
     var data = df
 
-    if (bq.join.isDefined) {
-      log.debug("join tables to results")
-      val joins = bq.join.get
-
-      for (i <- joins.indices) {
-        val join = joins(i)
-        log.debug("join " + join._1 + " on " + join._2.mkString("(", ", ", ")"))
-        val newDF = SparkStartup.metadataStorage.read(join._1)
-
-        if (newDF.isSuccess) {
-          data = data.join(newDF.get, join._2)
-        }
-      }
-    }
-
     if (bq.where.isDefined) {
       val where = bq.buildWhereClause()
       log.debug("query metadata using where clause: " + where)

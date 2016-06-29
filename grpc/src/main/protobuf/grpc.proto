@@ -348,8 +348,6 @@ message DistanceMessage {
 message BooleanQueryMessage {
   //Boolean query parameters
   repeated WhereMessage where = 1;
-  //join information, to join to other entities or metadata tables
-  repeated JoinMessage joins = 2;
 
   message WhereMessage {
     string field = 1;

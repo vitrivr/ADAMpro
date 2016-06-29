@@ -195,47 +195,6 @@ class QueryTestSuite extends AdamTestBase with ScalaFutures {
       }
     }
 
-
-    /**
-      *
-      */
-    scenario("perform a boolean query on the joined metadata") {
-      withQueryEvaluationSet { es =>
-        Given("a joinable table")
-
-        val df = es.fullData
-
-        val metadataname = es.entity.entityname + "_metadata"
-
-        val metadata = df.withColumn("tid100", df("tid") * 100).select("tid", "tid100")
-
-        SparkStartup.metadataStorage.write(metadataname, metadata)
-
-        When("performing a boolean query on the joined metadata")
-        val nnq = NearestNeighbourQuery("featurefield", es.feature.vector, None, es.distance, es.k)
-
-        val inStmt = "IN " + es.nnbqResults.map {
-          case (distance, tid) =>
-            (tid * 100).toString
-        }.mkString("(", ", ", ")")
-        val whereStmt = Option(Seq("tid100" -> inStmt))
-
-        val bq = BooleanQuery(whereStmt, Some(Seq((metadataname, Seq("tid")))))
-        val results = QueryOp.sequential(es.entity.entityname, nnq, Option(bq)).get.get
-          .map(r => (r.getAs[Float](FieldNames.distanceColumnName), r.getAs[Long]("tid"))).collect() //get here TID of metadata
-          .sortBy(_._1).toSeq
-
-        Then("we should retrieve the k nearest neighbors")
-        results.zip(es.nnbqResults).foreach {
-          case (res, gt) =>
-            assert(res._2 == gt._2)
-            assert(math.abs(res._1 - gt._1) < EPSILON)
-        }
-        //clean up
-        SparkStartup.metadataStorage.drop(metadataname)
-      }
-    }
-
     /**
       *
       */
@@ -245,20 +204,14 @@ class QueryTestSuite extends AdamTestBase with ScalaFutures {
 
         val df = es.fullData
 
-        val metadataname = es.entity.entityname + "_metadata"
-
-        val metadata = df.withColumn("tid100", df("tid") * 100).select("tid", "tid100")
-
-        SparkStartup.metadataStorage.write(metadataname, metadata)
-
         When("performing a boolean query on the joined metadata")
         val inStmt = "IN " + es.nnbqResults.map {
           case (distance, tid) =>
-            (tid * 100).toString
+            (tid).toString
         }.mkString("(", ", ", ")")
-        val whereStmt = Option(Seq("tid100" -> inStmt))
+        val whereStmt = Option(Seq("tid" -> inStmt))
 
-        val bq = BooleanQuery(whereStmt, Some(Seq((metadataname, Seq("tid")))))
+        val bq = BooleanQuery(whereStmt)
 
         val results = QueryOp.booleanQuery(es.entity.entityname, Option(bq)).get.get
           .map(r => r.getAs[Long]("tid")).collect() //get here TID of metadata
@@ -269,9 +222,6 @@ class QueryTestSuite extends AdamTestBase with ScalaFutures {
           case (res, gt) =>
             assert(res == gt)
         }
-
-        //clean up
-        SparkStartup.metadataStorage.drop(metadataname)
       }
     }
   }
