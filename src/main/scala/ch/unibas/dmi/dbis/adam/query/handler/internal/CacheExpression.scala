@@ -1,7 +1,7 @@
 package ch.unibas.dmi.dbis.adam.query.handler.internal
 
 import ch.unibas.dmi.dbis.adam.main.AdamContext
-import ch.unibas.dmi.dbis.adam.query.datastructures.{QueryCacheOptions, QueryLRUCache}
+import ch.unibas.dmi.dbis.adam.query.{QueryCacheOptions, QueryLRUCache}
 import ch.unibas.dmi.dbis.adam.query.handler.generic.{ExpressionDetails, QueryExpression}
 import org.apache.spark.sql.DataFrame
 

@@ -28,7 +28,7 @@ object EntityLRUCache extends Logging {
     build(
       new CacheLoader[EntityName, Entity]() {
         def load(entityname: EntityName): Entity = {
-          log.trace("cache miss for entity " + entityname + "; loading from disk")
+          log.trace("cache miss for entity " + entityname + "; loading and caching")
           val entity = Entity.loadEntityMetaData(entityname)(SparkStartup.mainContext)
           entity.get
         }
@@ -50,6 +50,11 @@ object EntityLRUCache extends Logging {
     }
   }
 
+  /**
+    * Invalidates the cache entry for entity.
+    *
+    * @param entityname name of entity
+    */
   def invalidate(entityname: EntityName): Unit = {
     entityCache.invalidate(entityname)
   }

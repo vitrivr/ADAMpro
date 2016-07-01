@@ -4,11 +4,10 @@ import ch.unibas.dmi.dbis.adam.entity.Entity._
 import ch.unibas.dmi.dbis.adam.index.Index
 import ch.unibas.dmi.dbis.adam.index.Index.{IndexName, IndexTypeName}
 import ch.unibas.dmi.dbis.adam.main.AdamContext
-import ch.unibas.dmi.dbis.adam.query.datastructures.ProgressiveQueryStatusTracker
 import ch.unibas.dmi.dbis.adam.query.handler.generic.QueryExpression
 import ch.unibas.dmi.dbis.adam.query.handler.internal.BooleanFilterExpression.BooleanFilterScanExpression
 import ch.unibas.dmi.dbis.adam.query.handler.internal._
-import ch.unibas.dmi.dbis.adam.query.progressive.{ProgressiveObservation, ProgressivePathChooser, ProgressiveQueryHandler}
+import ch.unibas.dmi.dbis.adam.query.progressive.{ProgressiveQueryStatusTracker, ProgressiveObservation, ProgressivePathChooser, ProgressiveQueryHandler}
 import ch.unibas.dmi.dbis.adam.query.query.{BooleanQuery, NearestNeighbourQuery}
 import org.apache.spark.sql.DataFrame
 

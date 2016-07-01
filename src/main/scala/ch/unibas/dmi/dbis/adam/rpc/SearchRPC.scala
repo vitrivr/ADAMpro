@@ -5,7 +5,7 @@ import ch.unibas.dmi.dbis.adam.datatypes.feature.{FeatureVectorWrapper, FeatureV
 import ch.unibas.dmi.dbis.adam.exception.{GeneralAdamException, QueryNotCachedException}
 import ch.unibas.dmi.dbis.adam.http.grpc._
 import ch.unibas.dmi.dbis.adam.main.{SparkStartup, AdamContext}
-import ch.unibas.dmi.dbis.adam.query.datastructures.QueryLRUCache
+import ch.unibas.dmi.dbis.adam.query.QueryLRUCache
 import ch.unibas.dmi.dbis.adam.query.handler.internal.QueryHints
 import ch.unibas.dmi.dbis.adam.query.progressive.{ProgressiveObservation, QueryHintsProgressivePathChooser, SimpleProgressivePathChooser}
 import io.grpc.stub.StreamObserver

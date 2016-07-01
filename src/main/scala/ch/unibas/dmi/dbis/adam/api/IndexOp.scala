@@ -3,9 +3,10 @@ package ch.unibas.dmi.dbis.adam.api
 import ch.unibas.dmi.dbis.adam.entity.Entity
 import ch.unibas.dmi.dbis.adam.entity.Entity._
 import ch.unibas.dmi.dbis.adam.exception.GeneralAdamException
-import ch.unibas.dmi.dbis.adam.index.Index
+import ch.unibas.dmi.dbis.adam.helpers.scanweight.ScanWeightInspector
+import ch.unibas.dmi.dbis.adam.index.{IndexPartitioner, Index}
 import ch.unibas.dmi.dbis.adam.index.Index._
-import ch.unibas.dmi.dbis.adam.index.repartition.PartitionerChoice
+import ch.unibas.dmi.dbis.adam.helpers.repartition.PartitionerChoice
 import ch.unibas.dmi.dbis.adam.index.structures.IndexTypes
 import ch.unibas.dmi.dbis.adam.main.AdamContext
 import ch.unibas.dmi.dbis.adam.query.distance.DistanceFunction
@@ -105,7 +106,7 @@ object IndexOp extends GenericOp {
     */
   def setScanWeight(indexname: IndexName, weight: Float)(implicit ac: AdamContext): Try[Void] = {
     execute("set index weight for " + indexname + " operation") {
-      Index.load(indexname).get.setScanWeight(Some(weight))
+      ScanWeightInspector.set(Index.load(indexname).get, weight)
       Success(null)
     }
   }
@@ -133,7 +134,7 @@ object IndexOp extends GenericOp {
     */
   def partition(indexname: IndexName, nPartitions: Int, joins: Option[DataFrame], cols: Option[Seq[String]], mode: PartitionMode.Value, partitioner: PartitionerChoice.Value = PartitionerChoice.SPARK, options: Map[String, String] = Map[String, String]())(implicit ac: AdamContext): Try[Index] = {
     execute("repartition index " + indexname + " operation") {
-      Index.repartition(Index.load(indexname).get, nPartitions, joins, cols, mode, partitioner, options)
+      IndexPartitioner(Index.load(indexname).get, nPartitions, joins, cols, mode, partitioner, options)
     }
   }
 

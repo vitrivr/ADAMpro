@@ -4,7 +4,6 @@ import ch.unibas.dmi.dbis.adam.config.FieldNames
 import ch.unibas.dmi.dbis.adam.datatypes.feature.FeatureVectorWrapper
 import ch.unibas.dmi.dbis.adam.entity.Entity
 import ch.unibas.dmi.dbis.adam.entity.Entity.EntityName
-import ch.unibas.dmi.dbis.adam.exception.QueryNotConformException
 import ch.unibas.dmi.dbis.adam.main.AdamContext
 import ch.unibas.dmi.dbis.adam.query.handler.generic.{ExpressionDetails, QueryExpression}
 import ch.unibas.dmi.dbis.adam.query.query.NearestNeighbourQuery
@@ -32,10 +31,6 @@ case class SequentialScanExpression(private val entity : Entity)(private val nnq
 
     ac.sc.setLocalProperty("spark.scheduler.pool", "sequential")
     ac.sc.setJobGroup(id.getOrElse(""), "sequential scan: " + entity.entityname.toString, interruptOnCancel = true)
-
-    if (!entity.isQueryConform(nnq)) {
-      throw QueryNotConformException()
-    }
 
     var df = entity.data()
     var ids = mutable.Set[Any]()

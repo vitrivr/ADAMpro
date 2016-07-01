@@ -1,6 +1,7 @@
 package ch.unibas.dmi.dbis.adam.query.progressive
 
 import ch.unibas.dmi.dbis.adam.entity.Entity.EntityName
+import ch.unibas.dmi.dbis.adam.helpers.scanweight.ScanWeightInspector
 import ch.unibas.dmi.dbis.adam.index.Index
 import ch.unibas.dmi.dbis.adam.index.Index._
 import ch.unibas.dmi.dbis.adam.index.structures.IndexTypes
@@ -34,10 +35,10 @@ class SimpleProgressivePathChooser()(implicit ac: AdamContext) extends Progressi
   override def getPaths(entityname: EntityName, nnq: NearestNeighbourQuery): Seq[QueryExpression] = {
     //TODO: choose better default
     IndexTypes.values
-      .map(indextypename => Index.list(entityname, indextypename).filter(_.isSuccess).sortBy(-_.get.scanweight))
+      .map(indextypename => Index.list(Some(entityname), Some(indextypename)).filter(_.isSuccess).map(_.get).sortBy(index => - ScanWeightInspector(index)))
       .filterNot(_.isEmpty)
       .map(_.head)
-      .map(index => {IndexScanExpression(index.get)(nnq)()})
+      .map(index => {IndexScanExpression(index)(nnq)()})
   }
 }
 
@@ -47,7 +48,7 @@ class SimpleProgressivePathChooser()(implicit ac: AdamContext) extends Progressi
   */
 class AllProgressivePathChooser(implicit ac: AdamContext) extends ProgressivePathChooser {
   override def getPaths(entityname: EntityName, nnq: NearestNeighbourQuery): Seq[QueryExpression] = {
-    Index.list(entityname)
+    Index.list(Some(entityname))
       .map(index => IndexScanExpression(index.get)(nnq)()).+:(new SequentialScanExpression(entityname)(nnq)())
   }
 }
@@ -60,8 +61,8 @@ class AllProgressivePathChooser(implicit ac: AdamContext) extends ProgressivePat
 class IndexTypeProgressivePathChooser(indextypenames: Seq[IndexTypeName])(implicit ac: AdamContext) extends ProgressivePathChooser {
   override def getPaths(entityname: EntityName, nnq: NearestNeighbourQuery): Seq[QueryExpression] = {
     indextypenames
-      .map(indextypename => Index.list(entityname, indextypename).filter(_.isSuccess).sortBy(-_.get.scanweight).head)
-      .map(index => IndexScanExpression(index.get)(nnq)())
+      .map(indextypename => Index.list(Some(entityname), Some(indextypename)).filter(_.isSuccess).map(_.get).sortBy(index => - ScanWeightInspector(index)).head)
+      .map(index => IndexScanExpression(index)(nnq)())
   }
 }
 

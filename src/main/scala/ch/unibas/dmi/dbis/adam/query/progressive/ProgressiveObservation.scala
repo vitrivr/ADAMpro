@@ -1,6 +1,5 @@
 package ch.unibas.dmi.dbis.adam.query.progressive
 
-import ch.unibas.dmi.dbis.adam.query.datastructures.ProgressiveQueryStatus
 import org.apache.spark.sql.DataFrame
 
 /**

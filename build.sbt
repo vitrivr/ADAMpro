@@ -93,7 +93,8 @@ val logLibs = Seq(
 
 //tertiary libs
 val tertiaryLibs = Seq(
-  "org.apache.solr" % "solr-solrj" % "5.5.0"
+  "org.apache.solr" % "solr-solrj" % "5.5.0",
+  "com.lucidworks.spark" % "spark-solr" % "2.0.1"
 ).map(
   _.excludeAll(
     ExclusionRule("org.scala-lang"),

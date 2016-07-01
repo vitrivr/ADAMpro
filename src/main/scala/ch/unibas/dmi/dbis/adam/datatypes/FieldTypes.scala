@@ -1,7 +1,6 @@
 package ch.unibas.dmi.dbis.adam.datatypes
 
 import ch.unibas.dmi.dbis.adam.datatypes.feature.FeatureVectorWrapperUDT
-import ch.unibas.dmi.dbis.adam.handler.{FeatureDatabaseHandler, Handler, RelationalDatabaseHandler, TextRetrievalHandler}
 import org.apache.spark.sql.types
 import org.apache.spark.sql.types.{ArrayType, DataType}
 
@@ -13,29 +12,29 @@ import org.apache.spark.sql.types.{ArrayType, DataType}
   */
 object FieldTypes {
 
-  sealed abstract class FieldType(val name: String, val pk : Boolean, val datatype: DataType, val defaultHandler : Handler) extends Serializable {
+  sealed abstract class FieldType(val name: String, val pk : Boolean, val datatype: DataType) extends Serializable {
     def equals(other: FieldType): Boolean = other.name.equals(name)
   }
 
-  case object AUTOTYPE extends FieldType("auto", true, types.LongType, RelationalDatabaseHandler)
+  case object AUTOTYPE extends FieldType("auto", true, types.LongType)
 
-  case object INTTYPE extends FieldType("integer", true, types.IntegerType, RelationalDatabaseHandler)
+  case object INTTYPE extends FieldType("integer", true, types.IntegerType)
 
-  case object LONGTYPE extends FieldType("long", true, types.LongType, RelationalDatabaseHandler)
+  case object LONGTYPE extends FieldType("long", true, types.LongType)
 
-  case object FLOATTYPE extends FieldType("float", false, types.FloatType, RelationalDatabaseHandler)
+  case object FLOATTYPE extends FieldType("float", false, types.FloatType)
 
-  case object DOUBLETYPE extends FieldType("double", false, types.DoubleType, RelationalDatabaseHandler)
+  case object DOUBLETYPE extends FieldType("double", false, types.DoubleType)
 
-  case object STRINGTYPE extends FieldType("string", true, types.StringType, RelationalDatabaseHandler)
+  case object STRINGTYPE extends FieldType("string", true, types.StringType)
 
-  case object TEXTTYPE extends FieldType("text", false, types.StringType, TextRetrievalHandler)
+  case object TEXTTYPE extends FieldType("text", false, types.StringType)
 
-  case object BOOLEANTYPE extends FieldType("boolean", false, types.BooleanType, RelationalDatabaseHandler)
+  case object BOOLEANTYPE extends FieldType("boolean", false, types.BooleanType)
 
-  case object FEATURETYPE extends FieldType("feature", false, new FeatureVectorWrapperUDT, FeatureDatabaseHandler)
+  case object FEATURETYPE extends FieldType("feature", false, new FeatureVectorWrapperUDT)
 
-  case object UNRECOGNIZEDTYPE extends FieldType("", false, types.NullType, null)
+  case object UNRECOGNIZEDTYPE extends FieldType("", false, types.NullType)
 
   def values = Seq(INTTYPE, LONGTYPE, FLOATTYPE, DOUBLETYPE, STRINGTYPE, TEXTTYPE, BOOLEANTYPE, FEATURETYPE, AUTOTYPE)
 

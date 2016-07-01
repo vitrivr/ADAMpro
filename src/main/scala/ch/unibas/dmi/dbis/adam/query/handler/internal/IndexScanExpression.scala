@@ -3,6 +3,7 @@ package ch.unibas.dmi.dbis.adam.query.handler.internal
 import ch.unibas.dmi.dbis.adam.entity.Entity
 import ch.unibas.dmi.dbis.adam.entity.Entity._
 import ch.unibas.dmi.dbis.adam.exception.QueryNotConformException
+import ch.unibas.dmi.dbis.adam.helpers.scanweight.ScanWeightInspector
 import ch.unibas.dmi.dbis.adam.index.Index
 import ch.unibas.dmi.dbis.adam.index.Index._
 import ch.unibas.dmi.dbis.adam.main.AdamContext
@@ -31,7 +32,7 @@ case class IndexScanExpression(private[handler] val index: Index)(private val nn
         .filter(_.isSuccess)
         .map(_.get)
         .filter(_.isQueryConform(nnq)) //choose only indexes that are conform to query
-        .sortBy(-_.scanweight)
+        .sortBy(index => -ScanWeightInspector(index))
         .head
     )(nnq, id)(filterExpr)
   }
@@ -46,9 +47,7 @@ case class IndexScanExpression(private[handler] val index: Index)(private val nn
       throw QueryNotConformException()
     }
 
-    if (!index.entity.get.isQueryConform(nnq)) {
-      throw QueryNotConformException()
-    }
+    //TODO: is query conform
 
     val prefilter = if (filter.isDefined && filterExpr.isDefined) {
       val pk = index.entity.get.pk

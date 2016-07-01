@@ -1,7 +1,6 @@
 package ch.unibas.dmi.dbis.adam.query.progressive
 
 import ch.unibas.dmi.dbis.adam.main.AdamContext
-import ch.unibas.dmi.dbis.adam.query.datastructures.ProgressiveQueryStatusTracker
 import ch.unibas.dmi.dbis.adam.query.handler.generic.QueryExpression
 import ch.unibas.dmi.dbis.adam.utils.Logging
 import org.apache.spark.sql.DataFrame

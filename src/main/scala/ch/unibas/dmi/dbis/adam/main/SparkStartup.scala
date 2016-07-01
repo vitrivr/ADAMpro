@@ -3,7 +3,8 @@ package ch.unibas.dmi.dbis.adam.main
 import ch.unibas.dmi.dbis.adam.config.AdamConfig
 import ch.unibas.dmi.dbis.adam.datatypes.bitString.BitStringUDT
 import ch.unibas.dmi.dbis.adam.datatypes.feature.FeatureVectorWrapperUDT
-import ch.unibas.dmi.dbis.adam.handler.{RelationalDatabaseHandler, FlatFileHandler, HandlerCatalog}
+import ch.unibas.dmi.dbis.adam.storage.engine.instances.{ParquetEngine, PostgresqlEngine}
+import ch.unibas.dmi.dbis.adam.storage.handler.{IndexFlatFileHandler, FlatFileHandler, DatabaseHandler, StorageHandlerRegistry}
 import ch.unibas.dmi.dbis.adam.utils.Logging
 import org.apache.spark.sql.hive.HiveContext
 import org.apache.spark.{SparkConf, SparkContext}
@@ -43,14 +44,22 @@ object SparkStartup extends Logging {
     // sc.hadoopConfiguration.setInt( "parquet.block.size", blockSize )
     //also consider: https://issues.apache.org/jira/browse/SPARK-7263
 
-
     @transient implicit lazy val sqlContext = new HiveContext(sc)
   }
 
   val mainContext = Implicits.ac
   val contexts = Seq(mainContext)
 
-  val handler = HandlerCatalog
-  handler.register(FlatFileHandler)
-  handler.register(RelationalDatabaseHandler)
+  val registry = StorageHandlerRegistry
+  registry.register(new DatabaseHandler(new PostgresqlEngine(AdamConfig.jdbcUrl, AdamConfig.jdbcUser, AdamConfig.jdbcPassword)))
+
+  if (AdamConfig.isBaseOnHadoop) {
+    log.debug("storing data on Hadoop")
+    registry.register(new FlatFileHandler(new ParquetEngine(AdamConfig.basePath, AdamConfig.dataPath)))
+  } else {
+    log.debug("storing data locally")
+    registry.register(new FlatFileHandler(new ParquetEngine(AdamConfig.dataPath)))
+  }
+
+  val indexStorageHandler = new IndexFlatFileHandler(new ParquetEngine(AdamConfig.indexPath))
 }

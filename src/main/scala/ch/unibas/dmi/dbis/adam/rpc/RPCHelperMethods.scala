@@ -9,7 +9,7 @@ import ch.unibas.dmi.dbis.adam.exception.GeneralAdamException
 import ch.unibas.dmi.dbis.adam.http.grpc.DistanceMessage.DistanceType
 import ch.unibas.dmi.dbis.adam.http.grpc._
 import ch.unibas.dmi.dbis.adam.main.AdamContext
-import ch.unibas.dmi.dbis.adam.query.datastructures.QueryCacheOptions
+import ch.unibas.dmi.dbis.adam.query.QueryCacheOptions
 import ch.unibas.dmi.dbis.adam.query.distance._
 import ch.unibas.dmi.dbis.adam.query.handler.external.ExternalScanExpressions
 import ch.unibas.dmi.dbis.adam.query.handler.generic.QueryExpression

@@ -4,13 +4,14 @@ import ch.unibas.dmi.dbis.adam.entity.Entity
 import ch.unibas.dmi.dbis.adam.entity.Entity.EntityName
 import ch.unibas.dmi.dbis.adam.main.AdamContext
 import ch.unibas.dmi.dbis.adam.query.handler.generic.{ExpressionDetails, QueryExpression}
-import org.apache.http.impl.client.SystemDefaultHttpClient
-import org.apache.solr.client.solrj.SolrQuery
-import org.apache.solr.client.solrj.impl.HttpSolrClient
 import ch.unibas.dmi.dbis.adam.utils.Logging
+import org.apache.http.impl.client.SystemDefaultHttpClient
+import org.apache.solr.client.solrj.impl.HttpSolrClient
+import org.apache.solr.common.SolrInputDocument
 import org.apache.spark.annotation.Experimental
-import org.apache.spark.sql.types.{StringType, StructField, StructType}
-import org.apache.spark.sql.{DataFrame, Row}
+import org.apache.spark.sql.DataFrame
+
+import scala.util.{Success, Try}
 
 /**
   * adampro
@@ -18,79 +19,46 @@ import org.apache.spark.sql.{DataFrame, Row}
   * Ivan Giangreco
   * May 2016
   */
-@Experimental class SolrQueryHandler(url: String)(@transient implicit val ac: AdamContext) extends Logging {
-  val httpClient = new SystemDefaultHttpClient()
-  val client = new HttpSolrClient(url, httpClient)
+@Experimental class SolrQueryHandler(url: String)(@transient implicit val ac: AdamContext) extends ExternalQueryHandler with Logging {
+  val client = new HttpSolrClient(url, new SystemDefaultHttpClient())
 
-  //TODO: possibly add a join field
-  def query(entityname: EntityName, query: Map[String, String]): DataFrame = {
+  override def key: String = "solr-" + url
+
+  override def query(entityname: EntityName, query: Map[String, String], joinfield: Option[String]): DataFrame = {
     val entity = Entity.load(entityname).get
     val pk = entity.pk
 
-    val solrQuery = new SolrQuery();
+    var df = ac.sqlContext.read.format("solr").options(query).load
 
-    if (query.contains("query")) {
-      solrQuery.setQuery(query.get("query").get)
-    } else {
-      solrQuery.setQuery("*:*")
+    if (joinfield.isDefined && !pk.name.equals(joinfield.get)) {
+      df = df.withColumnRenamed(joinfield.get, pk.name)
     }
 
-    if (query.contains("filter")) {
-      solrQuery.addFilterQuery(query.get("filter").get.split(","): _*)
-    }
+    log.debug("results retrieved from solr")
+    df
+  }
 
-    val fields: Seq[String] = if (query.contains("fields")) {
-      val fields = query.get("fields").get.split(",")
+  override def insert(data: DataFrame, params: Map[String, String]): Try[Void] = {
+    val core = params.get("core").get
+    data.foreach({ datum =>
+      val doc = new SolrInputDocument()
 
-      if (fields.contains(query.getOrElse("pk", pk.name))) {
-        fields.drop(fields.indexOf(query.getOrElse("pk", pk.name)))
-      } else {
-        fields
+      datum.schema.fields.foreach { attribute =>
+        doc.addField(attribute.name, datum.getAs[Any](attribute.name))
       }
-    } else {
-      Seq()
-    }
-    solrQuery.setFields(fields.+:(query.getOrElse("pk", pk.name)): _*)
 
+      log.trace("datum inserted into solr")
+      client.add(doc)
+    })
+    client.commit()
 
-    if (query.contains("start")) {
-      solrQuery.setStart(query.get("start").get.toInt)
-    }
+    Success(null)
+  }
+}
 
-    if (query.contains("defType")) {
-      solrQuery.set("defType", query.get("defType").get)
-    }
-
-    //TODO: possibly use RDD, do not load all data at once
-    import scala.collection.JavaConverters._
-    val results = client
-      .query(solrQuery)
-      .getResults
-
-    log.debug(results.size() + " results retrieved from Solr")
-
-    val rows = results.asScala.toSeq
-      .map(doc => {
-        Row(
-          doc.get(query.getOrElse("pk", pk)),
-          fields.map(field => {
-            if (doc.containsKey(field)) {
-              doc.getFieldValue(field).toString
-            } else {
-              ""
-            }
-          })
-        )
-      })
-
-    val data = ac.sc.parallelize(rows)
-
-    val schema = StructType(
-      Seq(StructField(pk.name, entity.pk.fieldtype.datatype, false))
-        ++ fields.map(field => StructField(field, StringType, true))
-    )
-
-    ac.sqlContext.createDataFrame(data, schema)
+object SolrQueryHandler {
+  def getInsertionHandler(params: Map[String, String])(implicit ac: AdamContext): ExternalQueryHandler = {
+    new SolrQueryHandler(params.get("url").get) //possibly cache solr client
   }
 }
 
@@ -107,13 +75,20 @@ import org.apache.spark.sql.{DataFrame, Row}
   *               - defType
   * @param id
   */
-case class SolrScanExpression(entityname: EntityName, params: Map[String, String], id: Option[String] = None) extends QueryExpression(id) {
+case class SolrScanExpression(entityname: EntityName, params: Map[String, String], joinfield: Option[String] = None, id: Option[String] = None) extends QueryExpression(id) {
   override val info = ExpressionDetails(None, Some("Solr Scan Expression"), id, None)
 
-  override protected def run(filter : Option[DataFrame] = None)(implicit ac: AdamContext): Option[DataFrame] = {
-    //TODO: use filter?
-    val url = params.get("url").get
-    val client = new SolrQueryHandler(url) //possibly cache solr client
-    Some(client.query(entityname, params))
+  override protected def run(filter: Option[DataFrame] = None)(implicit ac: AdamContext): Option[DataFrame] = {
+    val client = new SolrQueryHandler(params.get("url").get) //possibly cache solr client
+    var df = client.query(entityname, params, joinfield)
+
+    if (filter.isDefined) {
+      val entity = Entity.load(entityname).get
+      val pk = entity.pk
+
+      df = df.join(filter.get, pk.name)
+    }
+
+    Some(df)
   }
 }

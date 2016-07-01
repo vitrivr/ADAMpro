@@ -1,5 +1,6 @@
 package ch.unibas.dmi.dbis.adam.query.handler.internal
 
+import ch.unibas.dmi.dbis.adam.catalog.CatalogOperator
 import ch.unibas.dmi.dbis.adam.entity.Entity
 import ch.unibas.dmi.dbis.adam.entity.Entity._
 import ch.unibas.dmi.dbis.adam.index.Index
@@ -10,7 +11,7 @@ import ch.unibas.dmi.dbis.adam.query.handler.internal.AggregationExpression.Empt
 import ch.unibas.dmi.dbis.adam.query.handler.internal.BooleanFilterExpression.BooleanFilterScanExpression
 import ch.unibas.dmi.dbis.adam.query.handler.internal.QueryHints._
 import ch.unibas.dmi.dbis.adam.query.query.{BooleanQuery, NearestNeighbourQuery}
-import ch.unibas.dmi.dbis.adam.storage.engine.CatalogOperator
+import ch.unibas.dmi.dbis.adam.helpers.scanweight.ScanWeightInspector
 import ch.unibas.dmi.dbis.adam.utils.Logging
 import org.apache.spark.sql.DataFrame
 
@@ -56,7 +57,7 @@ case class HintBasedScanExpression(private val entityname: EntityName, private v
 object HintBasedScanExpression extends Logging {
 
   def startPlanSearch(entityname: EntityName, nnq: Option[NearestNeighbourQuery], bq: Option[BooleanQuery], hints: Seq[QueryHint], withFallback: Boolean = true)(expr: Option[QueryExpression] = None)(implicit ac: AdamContext): QueryExpression = {
-    val indexes: Map[IndexTypeName, Seq[IndexName]] = CatalogOperator.listIndexes(entityname).groupBy(_._2).mapValues(_.map(_._1))
+    val indexes: Map[IndexTypeName, Seq[IndexName]] = CatalogOperator.listIndexes(Some(entityname)).groupBy(_._2).mapValues(_.map(_._1))
     var plan = getPlan(entityname, indexes, nnq, bq, hints)(expr)
 
     if (plan.isEmpty) {
@@ -112,11 +113,11 @@ object HintBasedScanExpression extends Logging {
             log.trace("measurement-based execution plan hint")
             val index = indexes.values.toSeq.flatten
               .map(indexname => Index.load(indexname, false).get)
-              .sortBy(-_.scanweight).head
+              .sortBy(index => -ScanWeightInspector(index)).head
 
             val entity = Entity.load(entityname).get
 
-            if (index.scanweight > entity.scanweight(nnq.get.column)) {
+            if (ScanWeightInspector(index) > ScanWeightInspector(entity, nnq.get.column)) {
               scan = Some(IndexScanExpression(index)(nnq.get)(scan))
             } else {
               scan = Some(SequentialScanExpression(entity)(nnq.get)(scan))
@@ -133,7 +134,7 @@ object HintBasedScanExpression extends Logging {
                 .map(indexname => Index.load(indexname, false).get)
                 .filter(_.isQueryConform(nnq.get)) //choose only indexes that are conform to query
                 .filterNot(_.isStale) //don't use stale indexes
-                .sortBy(-_.scanweight) //order by weight (highest weight first)
+                .sortBy(index => -ScanWeightInspector(index)) //order by weight (highest weight first)
 
               if (indexes.isEmpty) {
                 return None

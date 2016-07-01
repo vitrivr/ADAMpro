@@ -1,16 +1,16 @@
 package ch.unibas.dmi.dbis.adam.rpc
 
 import ch.unibas.dmi.dbis.adam.api._
+import ch.unibas.dmi.dbis.adam.catalog.CatalogOperator
 import ch.unibas.dmi.dbis.adam.datatypes.FieldTypes
 import ch.unibas.dmi.dbis.adam.datatypes.feature.{FeatureVectorWrapper, FeatureVectorWrapperUDT}
 import ch.unibas.dmi.dbis.adam.entity.{AttributeDefinition, Entity}
 import ch.unibas.dmi.dbis.adam.exception.GeneralAdamException
 import ch.unibas.dmi.dbis.adam.http.grpc.FieldDefinitionMessage.FieldType
 import ch.unibas.dmi.dbis.adam.http.grpc.{AckMessage, CreateEntityMessage, _}
-import ch.unibas.dmi.dbis.adam.index.repartition.PartitionerChoice
+import ch.unibas.dmi.dbis.adam.helpers.repartition.PartitionerChoice
 import ch.unibas.dmi.dbis.adam.index.structures.IndexTypes
 import ch.unibas.dmi.dbis.adam.main.{AdamContext, SparkStartup}
-import ch.unibas.dmi.dbis.adam.storage.engine.CatalogOperator
 import ch.unibas.dmi.dbis.adam.storage.partition.PartitionMode
 import ch.unibas.dmi.dbis.adam.utils.AdamImporter
 import io.grpc.stub.StreamObserver
