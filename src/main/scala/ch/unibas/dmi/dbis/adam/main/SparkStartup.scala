@@ -4,7 +4,7 @@ import ch.unibas.dmi.dbis.adam.config.AdamConfig
 import ch.unibas.dmi.dbis.adam.datatypes.bitString.BitStringUDT
 import ch.unibas.dmi.dbis.adam.datatypes.feature.FeatureVectorWrapperUDT
 import ch.unibas.dmi.dbis.adam.storage.engine.instances.{ParquetEngine, PostgresqlEngine}
-import ch.unibas.dmi.dbis.adam.storage.handler.{IndexFlatFileHandler, FlatFileHandler, DatabaseHandler, StorageHandlerRegistry}
+import ch.unibas.dmi.dbis.adam.storage.handler._
 import ch.unibas.dmi.dbis.adam.utils.Logging
 import org.apache.spark.sql.hive.HiveContext
 import org.apache.spark.{SparkConf, SparkContext}
@@ -60,6 +60,8 @@ object SparkStartup extends Logging {
     log.debug("storing data locally")
     registry.register(new FlatFileHandler(new ParquetEngine(AdamConfig.dataPath)))
   }
+
+  registry.register(new SolrHandler("http://localhost:32768/solr"))
 
   val indexStorageHandler = new IndexFlatFileHandler(new ParquetEngine(AdamConfig.indexPath))
 }

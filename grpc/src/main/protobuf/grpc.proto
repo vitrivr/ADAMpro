@@ -119,9 +119,10 @@ message FieldDefinitionMessage {
       FLOAT = 2;
       DOUBLE = 3;
       STRING = 4;
-      BOOLEAN = 5;
-      FEATURE = 6;
-      AUTO = 7;
+      TEXT = 5;
+      BOOLEAN = 6;
+      FEATURE = 7;
+      AUTO = 8;
     }
   FieldType fieldtype = 2;
   bool pk = 3;

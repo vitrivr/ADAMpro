@@ -61,6 +61,7 @@ class DataDefinitionRPC extends AdamDefinitionGrpc.AdamDefinition with Logging {
     case FieldType.INT => FieldTypes.INTTYPE
     case FieldType.LONG => FieldTypes.LONGTYPE
     case FieldType.STRING => FieldTypes.STRINGTYPE
+    case FieldType.TEXT => FieldTypes.TEXTTYPE
     case FieldType.FEATURE => FieldTypes.FEATURETYPE
     case _ => FieldTypes.UNRECOGNIZEDTYPE
   }

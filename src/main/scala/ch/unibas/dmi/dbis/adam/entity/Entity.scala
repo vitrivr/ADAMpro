@@ -8,6 +8,7 @@ import ch.unibas.dmi.dbis.adam.entity.Entity.EntityName
 import ch.unibas.dmi.dbis.adam.exception.{EntityExistingException, EntityNotExistingException, EntityNotProperlyDefinedException, GeneralAdamException}
 import ch.unibas.dmi.dbis.adam.index.Index
 import ch.unibas.dmi.dbis.adam.main.AdamContext
+import ch.unibas.dmi.dbis.adam.storage.handler.StorageHandler
 import ch.unibas.dmi.dbis.adam.utils.Logging
 import org.apache.spark.sql.functions.col
 import org.apache.spark.sql.types.{StructField, StructType}
@@ -44,11 +45,12 @@ case class Entity(val entityname: EntityName)(@transient implicit val ac: AdamCo
   /**
     * Gets the full entity data.
     *
-    * @param nameFilter filters for names
-    * @param typeFilter filters for field types
+    * @param nameFilter    filters for names
+    * @param typeFilter    filters for field types
+    * @param handlerFilter filters for storage handler
     * @return
     */
-  def data(nameFilter: Option[Seq[String]] = None, typeFilter: Option[Seq[FieldType]] = None): Option[DataFrame] = {
+  def data(nameFilter: Option[Seq[String]] = None, typeFilter: Option[Seq[FieldType]] = None, handlerFilter: Option[StorageHandler] = None): Option[DataFrame] = {
     //cache data join
     if (_data.isEmpty) {
       val handlerData = schema().filterNot(_.pk).filter(_.storagehandler.isDefined).groupBy(_.storagehandler.get).map { case (handler, attributes) =>
@@ -69,11 +71,17 @@ case class Entity(val entityname: EntityName)(@transient implicit val ac: AdamCo
     }
 
     //possibly filter for current call
-    if (nameFilter.isDefined || typeFilter.isDefined) {
-      _data.map(_.select(schema(nameFilter, typeFilter).map(attribute => col(attribute.name)): _*))
-    } else {
-      _data
+    var filteredData = _data
+
+    if(handlerFilter.isDefined){
+      //filter by handler, name and type
+      filteredData = filteredData.map(_.select(schema(nameFilter, typeFilter).filter(a => a.storagehandler.isDefined && a.storagehandler.get.equals(handlerFilter.get)).map(attribute => col(attribute.name)): _*))
+    } else if (nameFilter.isDefined || typeFilter.isDefined){
+      //filter by name and type
+      filteredData = filteredData.map(_.select(schema(nameFilter, typeFilter).map(attribute => col(attribute.name)): _*))
     }
+
+    filteredData
   }
 
   /**
@@ -132,13 +140,13 @@ case class Entity(val entityname: EntityName)(@transient implicit val ac: AdamCo
   def count: Long = {
     if (_tupleCount.isEmpty) {
       if (data().isEmpty) {
-        _tupleCount = Some(0)
+        _tupleCount = None
       } else {
         _tupleCount = Some(data().get.count())
       }
     }
 
-    _tupleCount.get
+    _tupleCount.getOrElse(0)
   }
 
 

@@ -1,12 +1,14 @@
 package ch.unibas.dmi.dbis.adam.api
 
+import ch.unibas.dmi.dbis.adam.datatypes.FieldTypes
+import ch.unibas.dmi.dbis.adam.datatypes.FieldTypes.FieldType
 import ch.unibas.dmi.dbis.adam.datatypes.feature.FeatureVectorWrapper
 import ch.unibas.dmi.dbis.adam.entity.Entity
 import ch.unibas.dmi.dbis.adam.entity.Entity.EntityName
 import ch.unibas.dmi.dbis.adam.main.AdamContext
 import ch.unibas.dmi.dbis.adam.utils.Logging
-import org.apache.spark.sql.types.{DataType, StructField, StructType, UserDefinedType}
-import org.apache.spark.sql.{Row, types}
+import org.apache.spark.sql.Row
+import org.apache.spark.sql.types.{StructField, StructType}
 
 import scala.util.{Failure, Random, Success, Try}
 
@@ -38,15 +40,16 @@ object RandomDataOp extends Logging {
       val schema = entity.get.schema()
 
       //generator
-      def randomGenerator(datatype: DataType): () => Any = {
-        datatype match {
-          case _: types.IntegerType => () => Random.nextInt
-          case _: types.LongType => () => Random.nextLong
-          case _: types.FloatType => () => Random.nextFloat
-          case _: types.DoubleType => () => Random.nextDouble
-          case _: types.StringType => () => Random.nextString(10)
-          case _: types.BooleanType => () => Random.nextBoolean
-          case _: UserDefinedType[_] => () => new FeatureVectorWrapper(Seq.fill(vectorSize)(Random.nextFloat()))
+      def randomGenerator(fieldtype: FieldType): () => Any = {
+        fieldtype match {
+          case FieldTypes.INTTYPE => () => Random.nextInt
+          case FieldTypes.LONGTYPE => () => Random.nextLong
+          case FieldTypes.FLOATTYPE => () => Random.nextFloat
+          case FieldTypes.DOUBLETYPE => () => Random.nextDouble
+          case FieldTypes.STRINGTYPE => () => generateRandomWord(10)
+          case FieldTypes.TEXTTYPE => () => generateRandomText(1000)
+          case FieldTypes.BOOLEANTYPE => () => Random.nextBoolean
+          case FieldTypes.FEATURETYPE => () => new FeatureVectorWrapper(Seq.fill(vectorSize)(Random.nextFloat()))
         }
       }
 
@@ -55,14 +58,18 @@ object RandomDataOp extends Logging {
       (0 until collectionSize).sliding(limit, limit).foreach { seq =>
         val rdd = ac.sc.parallelize(
           seq.map(idx => {
-            var data = schema.map(field => randomGenerator(field.fieldtype.datatype)())
+            var data = schema.map(field => randomGenerator(field.fieldtype)())
             Row(data: _*)
           })
         )
         val data = ac.sqlContext.createDataFrame(rdd, StructType(schema.map(field => StructField(field.name, field.fieldtype.datatype))))
 
         log.debug("inserting data batch")
-        entity.get.insert(data, true)
+        val status = entity.get.insert(data, true)
+
+        if(status.isFailure){
+          throw status.failed.get
+        }
       }
       log.debug("finished inserting")
       Success(null)
@@ -70,6 +77,13 @@ object RandomDataOp extends Logging {
       case e: Exception => Failure(e)
     }
   }
+
+  private def generateRandomText(words : Int) = {
+    (0 until words).map(x => generateRandomWord((Random.nextGaussian() * 10).toInt)).mkString(" ")
+  }
+
+  private def generateRandomWord(letters : Int) = (0 until letters).map(x => Random.nextInt(26)).map(x => ('a' + x).toChar).mkString
+
 }
 
 

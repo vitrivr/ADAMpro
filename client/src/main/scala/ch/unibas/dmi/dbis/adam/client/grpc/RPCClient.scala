@@ -325,6 +325,7 @@ class RPCClient(channel: ManagedChannel, definer: AdamDefinitionBlockingStub, se
     case "float" => FieldType.FLOAT
     case "double" => FieldType.DOUBLE
     case "string" => FieldType.STRING
+    case "text" => FieldType.TEXT
     case "boolean" => FieldType.BOOLEAN
     case _ => null
   }
