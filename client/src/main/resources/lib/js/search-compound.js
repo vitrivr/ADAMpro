@@ -143,6 +143,8 @@ $("#btnSubmit").click(function () {
         return;
     }
 
+    $("#resultbox").hide();
+
     var handler = function(data) {$.each(data.details.intermediate_responses, function (idx, val) {
         if (val.id.length > 0) {
             $("#" + val.id + " > .res").html("execution time: " + val.time + "ms" + "<br/>" + "results: " + val.results.length);
