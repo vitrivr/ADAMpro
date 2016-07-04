@@ -98,6 +98,7 @@ object CatalogOperator extends Logging {
       true
     } catch {
       case e: Exception =>
+        log.error("error in catalog", e)
         false
     }
   }
@@ -122,6 +123,7 @@ object CatalogOperator extends Logging {
       }
     } catch {
       case e: Exception =>
+        log.error("error in catalog", e)
         None
     }
   }
@@ -149,6 +151,7 @@ object CatalogOperator extends Logging {
       true
     } catch {
       case e: Exception =>
+        log.error("error in catalog", e)
         false
     }
   }
@@ -168,6 +171,7 @@ object CatalogOperator extends Logging {
       true
     } catch {
       case e: Exception =>
+        log.error("error in catalog", e)
         false
     }
   }
@@ -194,6 +198,7 @@ object CatalogOperator extends Logging {
       }
     } catch {
       case e: Exception =>
+        log.error("error in catalog", e)
         None
     }
   }
@@ -222,6 +227,7 @@ object CatalogOperator extends Logging {
       true
     } catch {
       case e: Exception =>
+        log.error("error in catalog", e)
         false
     }
   }
@@ -242,6 +248,7 @@ object CatalogOperator extends Logging {
       true
     } catch {
       case e: Exception =>
+        log.error("error in catalog", e)
         false
     }
   }
@@ -265,6 +272,7 @@ object CatalogOperator extends Logging {
       }
     } catch {
       case e: Exception =>
+        log.error("error in catalog", e)
         None
     }
   }
@@ -292,6 +300,7 @@ object CatalogOperator extends Logging {
       true
     } catch {
       case e: Exception =>
+        log.error("error in catalog", e)
         false
     }
   }
@@ -311,6 +320,7 @@ object CatalogOperator extends Logging {
       true
     } catch {
       case e: Exception =>
+        log.error("error in catalog", e)
         false
     }
   }
@@ -346,6 +356,7 @@ object CatalogOperator extends Logging {
       true
     } catch {
       case e: Exception =>
+        log.error("error in catalog", e)
         false
     }
   }
@@ -377,6 +388,7 @@ object CatalogOperator extends Logging {
       true
     } catch {
       case e: Exception =>
+        log.error("error in catalog", e)
         false
     }
   }
@@ -405,7 +417,7 @@ object CatalogOperator extends Logging {
       true
     } catch {
       case e: Exception =>
-        log.error("excpetion", e)
+        log.error("error in catalog", e)
         false
     }
   }
@@ -529,6 +541,7 @@ object CatalogOperator extends Logging {
       true
     } catch {
       case e: Exception =>
+        log.error("error in catalog", e)
         false
     }
   }
@@ -552,6 +565,7 @@ object CatalogOperator extends Logging {
       true
     } catch {
       case e: Exception =>
+        log.error("error in catalog", e)
         false
     }
   }
@@ -632,6 +646,7 @@ object CatalogOperator extends Logging {
       true
     } catch {
       case e: Exception =>
+        log.error("error in catalog", e)
         false
     }
   }
@@ -663,6 +678,7 @@ object CatalogOperator extends Logging {
       true
     } catch {
       case e: Exception =>
+        log.error("error in catalog", e)
         false
     }
   }

@@ -352,7 +352,7 @@ object Entity extends Logging {
           case (handler, attributes) =>
             val status = handler.create(entityname, attributes.++:(pk))
             if (status.isFailure) {
-              throw status.failed.get
+              log.error("failing on handler " + handler.name + ":" + status.failed.get)
             }
         }
       } else {
@@ -362,7 +362,7 @@ object Entity extends Logging {
           case (handler, attributes) =>
             val status = handler.create(entityname, attributes.++:(pk))
             if (status.isFailure) {
-              throw status.failed.get
+              log.error("failing on handler " + handler.name + ":" + status.failed.get)
             }
         }
       }

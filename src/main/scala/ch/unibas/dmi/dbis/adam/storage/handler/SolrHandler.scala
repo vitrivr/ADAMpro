@@ -45,7 +45,10 @@ import scala.util.{Failure, Success, Try}
       createReq.setConfigSet("basic_configs")
       createReq.process(client)
 
-      attributes.foreach {
+      //by appending _txt to the name of the attribute, solr will treat the field as a text field which is
+      //indexed and tokenized; furthermore this allows us to dynamically add fields!
+      //TODO: extend the suffixes based on the fieldtype
+      attributes.filterNot(_.pk).foreach {
         attribute =>
           CatalogOperator.updateAttributeOption(entityname, attribute.name, "solrfieldname", attribute.name + "_txt")
       }
@@ -120,10 +123,6 @@ import scala.util.{Failure, Success, Try}
           doc.addField("id", row.getAs[Any](entity.pk.name))
 
           schema.foreach { case (name, attribute) => {
-            //by appending _txt to the name of the attribute, solr will treat the field as a text field which is
-            //indexed and tokenized; furthermore this allows us to dynamically add fields!
-            //TODO: extend the suffixes based on the fieldtype
-            val name = CatalogOperator.getAttributeOption(entityname, attribute.name, "solrfieldname")
             doc.addField(name.getOrElse(attribute.name), row.getAs[String](attribute.name))
           }
           }
