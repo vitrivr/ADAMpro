@@ -6,6 +6,15 @@ var dataPollIntervalId = 0;
 $("#btnSubmit").click(function () {
     var entityname = $("#entityname").val();
     var attribute = $("#column").val();
+
+    if (entityname === null || entityname.length == 0) {
+        raiseError("Please specify an entity."); return;
+    }
+
+    if (attribute === null || attribute.length == 0) {
+        raiseError("Please specify an attribute."); return;
+    }
+
     var q = $("#query").val();
     var hints = $("#indextype").val();
 
