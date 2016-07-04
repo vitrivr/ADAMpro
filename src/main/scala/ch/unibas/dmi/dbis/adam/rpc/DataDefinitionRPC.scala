@@ -44,7 +44,7 @@ class DataDefinitionRPC extends AdamDefinitionGrpc.AdamDefinition with Logging {
     if (res.isSuccess) {
       Future.successful(AckMessage(code = AckMessage.Code.OK, res.get.entityname))
     } else {
-      log.error(res.failed.get.getMessage)
+      log.error(res.failed.get.getMessage, res.failed.get)
       Future.successful(AckMessage(code = AckMessage.Code.ERROR, message = res.failed.get.getMessage))
     }
   }
@@ -92,7 +92,7 @@ class DataDefinitionRPC extends AdamDefinitionGrpc.AdamDefinition with Logging {
     if (res.isSuccess) {
       Future.successful(AckMessage(code = AckMessage.Code.OK))
     } else {
-      log.error(res.failed.get.getMessage)
+      log.error(res.failed.get.getMessage, res.failed.get)
       Future.successful(AckMessage(code = AckMessage.Code.ERROR, message = res.failed.get.getMessage))
     }
   }
@@ -110,7 +110,7 @@ class DataDefinitionRPC extends AdamDefinitionGrpc.AdamDefinition with Logging {
     if (res.isSuccess) {
       Future.successful(AckMessage(code = AckMessage.Code.OK, res.get.toString))
     } else {
-      log.error(res.failed.get.getMessage)
+      log.error(res.failed.get.getMessage, res.failed.get)
       Future.successful(AckMessage(code = AckMessage.Code.ERROR, message = res.failed.get.getMessage))
     }
   }
@@ -187,7 +187,7 @@ class DataDefinitionRPC extends AdamDefinitionGrpc.AdamDefinition with Logging {
     if (res.isSuccess) {
       Future.successful(AckMessage(code = AckMessage.Code.OK, message = res.get.indexname))
     } else {
-      log.error(res.failed.get.getMessage)
+      log.error(res.failed.get.getMessage, res.failed.get)
       Future.successful(AckMessage(code = AckMessage.Code.ERROR, message = res.failed.get.getMessage))
     }
   }
@@ -204,7 +204,7 @@ class DataDefinitionRPC extends AdamDefinitionGrpc.AdamDefinition with Logging {
     if (res.isSuccess) {
       Future.successful(AckMessage(code = AckMessage.Code.OK))
     } else {
-      log.error(res.failed.get.getMessage)
+      log.error(res.failed.get.getMessage, res.failed.get)
       Future.successful(AckMessage(code = AckMessage.Code.ERROR, message = res.failed.get.getMessage))
     }
   }
@@ -221,7 +221,7 @@ class DataDefinitionRPC extends AdamDefinitionGrpc.AdamDefinition with Logging {
     if (res.isSuccess) {
       Future.successful(AckMessage(code = AckMessage.Code.OK))
     } else {
-      log.error(res.failed.get.getMessage)
+      log.error(res.failed.get.getMessage, res.failed.get)
       Future.successful(AckMessage(code = AckMessage.Code.ERROR, message = res.failed.get.getMessage))
     }
   }
@@ -238,7 +238,7 @@ class DataDefinitionRPC extends AdamDefinitionGrpc.AdamDefinition with Logging {
     if (res.isSuccess) {
       Future.successful(AckMessage(code = AckMessage.Code.OK))
     } else {
-      log.error(res.failed.get.getMessage)
+      log.error(res.failed.get.getMessage, res.failed.get)
       Future.successful(AckMessage(code = AckMessage.Code.ERROR, message = res.failed.get.getMessage))
     }
   }
@@ -255,7 +255,7 @@ class DataDefinitionRPC extends AdamDefinitionGrpc.AdamDefinition with Logging {
     if (res.isSuccess) {
       Future.successful(EntitiesMessage(Some(AckMessage(AckMessage.Code.OK)), res.get.map(_.toString())))
     } else {
-      log.error(res.failed.get.getMessage)
+      log.error(res.failed.get.getMessage, res.failed.get)
       Future.successful(EntitiesMessage(Some(AckMessage(code = AckMessage.Code.ERROR, message = res.failed.get.getMessage))))
     }
   }
@@ -272,7 +272,7 @@ class DataDefinitionRPC extends AdamDefinitionGrpc.AdamDefinition with Logging {
     if (res.isSuccess) {
       Future.successful(EntityPropertiesMessage(Some(AckMessage(AckMessage.Code.OK)), request.entity, res.get))
     } else {
-      log.error(res.failed.get.getMessage)
+      log.error(res.failed.get.getMessage, res.failed.get)
       Future.successful(EntityPropertiesMessage(Some(AckMessage(AckMessage.Code.ERROR, res.failed.get.getMessage))))
     }
   }
@@ -311,7 +311,7 @@ class DataDefinitionRPC extends AdamDefinitionGrpc.AdamDefinition with Logging {
     if (res.isSuccess) {
       Future.successful(AckMessage(AckMessage.Code.OK, res.get.indexname))
     } else {
-      log.error(res.failed.get.getMessage)
+      log.error(res.failed.get.getMessage, res.failed.get)
       Future.successful(AckMessage(code = AckMessage.Code.ERROR, message = res.failed.get.getMessage))
     }
   }
@@ -342,7 +342,7 @@ class DataDefinitionRPC extends AdamDefinitionGrpc.AdamDefinition with Logging {
     if (res.isSuccess) {
       Future.successful(AckMessage(AckMessage.Code.OK, res.get.entityname))
     } else {
-      log.error(res.failed.get.getMessage)
+      log.error(res.failed.get.getMessage, res.failed.get)
       Future.successful(AckMessage(code = AckMessage.Code.ERROR, message = res.failed.get.getMessage))
     }
   }
@@ -364,7 +364,7 @@ class DataDefinitionRPC extends AdamDefinitionGrpc.AdamDefinition with Logging {
     if (res.isSuccess) {
       Future.successful(AckMessage(AckMessage.Code.OK, request.entity))
     } else {
-      log.error(res.failed.get.getMessage)
+      log.error(res.failed.get.getMessage, res.failed.get)
       Future.successful(AckMessage(code = AckMessage.Code.ERROR, message = res.failed.get.getMessage))
     }
   }
@@ -382,7 +382,7 @@ class DataDefinitionRPC extends AdamDefinitionGrpc.AdamDefinition with Logging {
     if (res.isSuccess) {
       Future.successful(AckMessage(AckMessage.Code.OK, request.entity))
     } else {
-      log.error(res.failed.get.getMessage)
+      log.error(res.failed.get.getMessage, res.failed.get)
       Future.successful(AckMessage(code = AckMessage.Code.ERROR, message = res.failed.get.getMessage))
     }
   }
@@ -399,7 +399,7 @@ class DataDefinitionRPC extends AdamDefinitionGrpc.AdamDefinition with Logging {
     if (res.isSuccess) {
       Future.successful(AckMessage(AckMessage.Code.OK, request.entity))
     } else {
-      log.error(res.failed.get.getMessage)
+      log.error(res.failed.get.getMessage, res.failed.get)
       Future.successful(AckMessage(code = AckMessage.Code.ERROR, message = res.failed.get.getMessage))
     }
   }
@@ -418,7 +418,7 @@ class DataDefinitionRPC extends AdamDefinitionGrpc.AdamDefinition with Logging {
     if (res.isSuccess) {
       Future.successful(AckMessage(AckMessage.Code.OK))
     } else {
-      log.error(res.failed.get.getMessage)
+      log.error(res.failed.get.getMessage, res.failed.get)
       Future.successful(AckMessage(AckMessage.Code.ERROR))
     }
   }

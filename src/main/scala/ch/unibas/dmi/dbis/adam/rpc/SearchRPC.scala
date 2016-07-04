@@ -54,7 +54,7 @@ class SearchRPC extends AdamSearchGrpc.AdamSearch with Logging {
       if (res.isSuccess) {
         Future.successful(AckMessage(code = AckMessage.Code.OK, res.get.entityname))
       } else {
-        log.error(res.failed.get.getMessage)
+        log.error(res.failed.get.getMessage, res.failed.get)
         Future.successful(AckMessage(code = AckMessage.Code.ERROR, message = res.failed.get.getMessage))
       }
     }
@@ -86,7 +86,7 @@ class SearchRPC extends AdamSearchGrpc.AdamSearch with Logging {
       if (res.isSuccess) {
         Future.successful(QueryResultsMessage(Some(AckMessage(AckMessage.Code.OK)), Seq((prepareResults("", 1.toFloat, 0, "sequential scan", Some(res.get))))))
       } else {
-        log.error(res.failed.get.getMessage)
+        log.error(res.failed.get.getMessage, res.failed.get)
         Future.successful(QueryResultsMessage(Some(AckMessage(code = AckMessage.Code.ERROR, message = res.failed.get.getMessage))))
       }
     }
@@ -122,7 +122,7 @@ class SearchRPC extends AdamSearchGrpc.AdamSearch with Logging {
           results
         ))
       } else {
-        log.error(res.failed.get.getMessage)
+        log.error(res.failed.get.getMessage, res.failed.get)
         Future.successful(QueryResultsMessage(Some(AckMessage(code = AckMessage.Code.ERROR, message = res.failed.get.getMessage))))
       }
     }
@@ -201,7 +201,7 @@ class SearchRPC extends AdamSearchGrpc.AdamSearch with Logging {
       if (res.isSuccess) {
         Future.successful(QueryResultsMessage(Some(AckMessage(code = AckMessage.Code.OK)), Seq(prepareResults(request.queryid, 0, 0, "cache", Some(res.get)))))
       } else {
-        log.error(res.failed.get.getMessage)
+        log.error(res.failed.get.getMessage, res.failed.get)
         Future.failed(QueryNotCachedException())
       }
     }
