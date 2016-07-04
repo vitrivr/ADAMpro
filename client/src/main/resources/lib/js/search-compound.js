@@ -40,9 +40,9 @@ function setupPlumb(id){
 }
 
 
-function initNode(el) {
-    instance.draggable(el);
-    instance.makeSource(el, {
+function initNode(node) {
+    instance.draggable(node);
+    instance.makeSource(node, {
         filter: ".ep",
         anchor: "Continuous",
         connectorStyle: {strokeStyle: "#26a69a", lineWidth: 2, outlineColor: "transparent", outlineWidth: 4},
@@ -51,7 +51,7 @@ function initNode(el) {
             "action": "the-action"
         }
     });
-    instance.makeTarget(el, {
+    instance.makeTarget(node, {
         dropOptions: {hoverClass: "dragHover"},
         anchor: "Continuous",
         allowLoopback: true
