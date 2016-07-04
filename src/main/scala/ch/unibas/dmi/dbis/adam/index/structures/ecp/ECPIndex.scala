@@ -50,6 +50,7 @@ class ECPIndex(val indexname: IndexName, val entityname: EntityName, override pr
     import org.apache.spark.sql.functions.lit
     var results : DataFrame = null
     var i = 0
+    var counter = 0
     do  {
       val nns = data.filter(data(FieldNames.featureIndexColumnName) === centroids.value(i)._1).select(pk.name).withColumn(FieldNames.distanceColumnName, lit(centroids.value(i)._2).cast(DataTypes.FloatType))
       if(results != null) {
@@ -57,8 +58,9 @@ class ECPIndex(val indexname: IndexName, val entityname: EntityName, override pr
       } else {
         results = nns
       }
+      counter += nns.count().toInt
       i += 1
-    } while(i < centroids.value.length && results.count() < k)
+    } while(i < centroids.value.length && counter < k)
 
     results
   }
