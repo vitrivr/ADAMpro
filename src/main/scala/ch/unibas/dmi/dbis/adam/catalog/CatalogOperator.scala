@@ -165,7 +165,7 @@ object CatalogOperator extends Logging {
     */
   def deleteEntityOption(entityname: EntityName, key: String): Boolean = {
     try {
-      Await.result(DB.run(_attributeOptions.filter(_.entityname === entityname.toString).delete), MAX_WAITING_TIME)
+      Await.result(DB.run(_entityOptions.filter(_.entityname === entityname.toString).delete), MAX_WAITING_TIME)
 
       log.debug("delete entity option from catalog")
       true
