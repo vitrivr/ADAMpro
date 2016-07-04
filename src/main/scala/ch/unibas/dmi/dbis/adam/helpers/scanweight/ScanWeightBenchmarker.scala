@@ -39,11 +39,7 @@ private class ScanWeightBenchmarker(entityname: EntityName, attribute: String, n
   }
 
 
-  /**
-    * Benchmarks all paths and updates weight.
-    *
-    */
-  def benchmarkAndUpdate(): Unit = {
+  private def benchmarkAndUpdate(): Unit = {
     val indexes = entity.indexes
     val measurements = mutable.Map[String, Seq[Long]]()
 
@@ -129,30 +125,39 @@ object ScanWeightBenchmarker {
 
   val DEFAULT_WEIGHT: Float = 100
 
+  /**
+    * Benchmarks all indexes and the attributes of the given entity and updates weight.
+    *
+    * @param entityname name of entity
+    * @param attribute name of attribute
+    * @param nqueries number of queries to perform for benchmarking query time
+    * @param nruns number of runs per query to perform for benchmarking query time
+    */
   def apply(entityname: EntityName, attribute: String, nqueries : Int = NUMBER_OF_QUERIES, nruns : Int = NUMBER_OF_RUNS)(implicit ac: AdamContext): Unit = {
     new ScanWeightBenchmarker(entityname, attribute, nqueries, nruns).benchmarkAndUpdate()
   }
 
   /**
+    * Resets all weights.
     *
-    * @param entityname
-    * @param column
+    * @param entityname name of entity
+    * @param attribute name of attribute
     */
-  def resetWeights(entityname: EntityName, column: Option[String] = None)(implicit ac: AdamContext): Unit = {
+  def resetWeights(entityname: EntityName, attribute: Option[String] = None)(implicit ac: AdamContext): Unit = {
     val entity = Entity.load(entityname).get
     val indexes = entity.indexes.filter(_.isSuccess).map(_.get)
 
-    val cols = if (column.isEmpty) {
+    val cols = if (attribute.isEmpty) {
       entity.schema().filter(_.fieldtype == FieldTypes.FEATURETYPE).map(_.name)
     } else {
-      Seq(column.get)
+      Seq(attribute.get)
     }
 
     cols.foreach { col =>
       CatalogOperator.setEntityScanWeight(entityname, col)
     }
 
-    indexes.filter(_.attribute == column.get).foreach { index =>
+    indexes.filter(_.attribute == attribute.get).foreach { index =>
       CatalogOperator.setIndexScanWeight(index.indexname)
     }
   }

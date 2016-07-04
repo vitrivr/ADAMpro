@@ -19,9 +19,7 @@ import scala.util.{Failure, Random, Success, Try}
   */
 class IndexFlatFileHandler(private val engine: FileEngine) extends StorageHandler with Logging with Serializable {
   override val name: String = "index"
-
   override def supports = Seq()
-
   override def specializes: Seq[FieldType] = Seq()
 
   override def create(indexname: IndexName, attributes: Seq[AttributeDefinition], params: Map[String, String] = Map())(implicit ac: AdamContext): Try[Void] = {

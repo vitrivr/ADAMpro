@@ -2,7 +2,6 @@ package ch.unibas.dmi.dbis.adam.storage.handler
 
 import ch.unibas.dmi.dbis.adam.catalog.CatalogOperator
 import ch.unibas.dmi.dbis.adam.datatypes.FieldTypes
-import ch.unibas.dmi.dbis.adam.datatypes.FieldTypes.FieldType
 import ch.unibas.dmi.dbis.adam.entity.AttributeDefinition
 import ch.unibas.dmi.dbis.adam.entity.Entity._
 import ch.unibas.dmi.dbis.adam.exception.GeneralAdamException
@@ -22,7 +21,7 @@ import scala.util.{Failure, Random, Success, Try}
 class FlatFileHandler(private val engine: FileEngine) extends StorageHandler with Logging with Serializable {
   override val name: String = "feature"
   override def supports = Seq(FieldTypes.AUTOTYPE, FieldTypes.INTTYPE, FieldTypes.LONGTYPE, FieldTypes.STRINGTYPE, FieldTypes.FEATURETYPE)
-  override def specializes: Seq[FieldType] = Seq(FieldTypes.FEATURETYPE)
+  override def specializes = Seq(FieldTypes.FEATURETYPE)
 
   override def create(entityname: EntityName, attributes: Seq[AttributeDefinition], params : Map[String, String] = Map())(implicit ac: AdamContext): Try[Void] = {
     try {
@@ -51,24 +50,6 @@ class FlatFileHandler(private val engine: FileEngine) extends StorageHandler wit
       }
 
       engine.read(filename.get)
-    } catch {
-      case e: Exception =>
-        Failure(e)
-    }
-  }
-
-  override def drop(entityname: EntityName, params : Map[String, String] = Map())(implicit ac: AdamContext): Try[Void] = {
-    try {
-      val filename = CatalogOperator.getEntityOption(entityname, "filename")
-
-      if (filename.isEmpty) {
-        throw new GeneralAdamException("no filename specified in catalog, no fallback used")
-      }
-
-      engine.drop(filename.get)
-      CatalogOperator.deleteEntityOption(entityname, "filename")
-
-      Success(null)
     } catch {
       case e: Exception =>
         Failure(e)
@@ -105,6 +86,23 @@ class FlatFileHandler(private val engine: FileEngine) extends StorageHandler wit
     }
   }
 
+  override def drop(entityname: EntityName, params : Map[String, String] = Map())(implicit ac: AdamContext): Try[Void] = {
+    try {
+      val filename = CatalogOperator.getEntityOption(entityname, "filename")
+
+      if (filename.isEmpty) {
+        throw new GeneralAdamException("no filename specified in catalog, no fallback used")
+      }
+
+      engine.drop(filename.get)
+      CatalogOperator.deleteEntityOption(entityname, "filename")
+
+      Success(null)
+    } catch {
+      case e: Exception =>
+        Failure(e)
+    }
+  }
 
   override def equals(other: Any): Boolean =
     other match {

@@ -6,6 +6,8 @@ import slick.driver.PostgresDriver.api._
 /**
   * ADAMpro
   *
+  * Catalog to store all entities.
+  *
   * Ivan Giangreco
   * June 2016
   */

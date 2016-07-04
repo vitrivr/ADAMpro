@@ -46,7 +46,8 @@ object CatalogOperator extends Logging {
 
   //generate catalog tables in the beginning if not already existent
   private val metas = Await.result(DB.run(MTable.getTables), MAX_WAITING_TIME).toList.map(x => x.name.name).filter(apply().map(_._1).contains(_))
-  if(metas.isEmpty){ //schema might be empty
+  if (metas.isEmpty) {
+    //schema might be empty
     Await.result(DB.run(sqlu"""create schema if not exists adampro;"""), MAX_WAITING_TIME)
   }
   apply().filterNot(mdd => metas.contains(mdd._1)).foreach(mdd => {
@@ -103,6 +104,7 @@ object CatalogOperator extends Logging {
 
 
   /**
+    * Returns the metadata to an entity.
     *
     * @param entityname name of entity
     * @param key        name of key
@@ -126,6 +128,7 @@ object CatalogOperator extends Logging {
 
 
   /**
+    * Updates or inserts a metadata information to an entity.
     *
     * @param entityname name of entity
     * @param key        name of key
@@ -146,11 +149,12 @@ object CatalogOperator extends Logging {
       true
     } catch {
       case e: Exception =>
-       false
+        false
     }
   }
 
   /**
+    * Deletes the metadata to an entity.
     *
     * @param entityname name of entity
     * @param key        name of key
@@ -170,6 +174,7 @@ object CatalogOperator extends Logging {
 
 
   /**
+    * Gets the metadata to an attribute of an entity.
     *
     * @param entityname name of entity
     * @param attribute  name of attribute
@@ -195,6 +200,7 @@ object CatalogOperator extends Logging {
 
 
   /**
+    * Updates or inserts a metadata information to an attribute.
     *
     * @param entityname name of entity
     * @param attribute  name of attribute
@@ -221,6 +227,7 @@ object CatalogOperator extends Logging {
   }
 
   /**
+    * Deletes the metadata to an attribute.
     *
     * @param entityname name of entity
     * @param attribute  name of attribute
@@ -240,6 +247,7 @@ object CatalogOperator extends Logging {
   }
 
   /**
+    * Gets the metadata to an index.
     *
     * @param indexname name of index
     * @param key       name of key
@@ -263,6 +271,7 @@ object CatalogOperator extends Logging {
 
 
   /**
+    * Updates or inserts a metadata information to an index.
     *
     * @param indexname name of index
     * @param key       name of key
@@ -288,6 +297,7 @@ object CatalogOperator extends Logging {
   }
 
   /**
+    * Deletes the metadata to an index.
     *
     * @param indexname name of index
     * @param key       name of key
@@ -307,6 +317,7 @@ object CatalogOperator extends Logging {
 
 
   /**
+    * Returns the scan weight to an attribute of an entity.
     *
     * @param entityname    name of entity
     * @param attributename name of attribute
@@ -318,6 +329,7 @@ object CatalogOperator extends Logging {
   }
 
   /**
+    * Sets the scan weight to an attribute of an entity.
     *
     * @param entityname    name of entity
     * @param attributename name of attribute
@@ -339,6 +351,7 @@ object CatalogOperator extends Logging {
   }
 
   /**
+    * Gets the scan weight of an index.
     *
     * @param indexname name of index
     * @return
@@ -348,6 +361,7 @@ object CatalogOperator extends Logging {
   }
 
   /**
+    * Sets the scan weight of an index.
     *
     * @param indexname name of index
     * @param newWeight specify the new weight for the entity (the higher the more important), if no weight is
@@ -415,16 +429,17 @@ object CatalogOperator extends Logging {
     val query = _attributes.filter(_.entityname === entityname.toString()).filter(_.isPK).map(_.attributename).result
     val pkfield = Await.result(DB.run(query), MAX_WAITING_TIME).head
 
-    getFields(entityname, Some(pkfield)).head
+    getAttributes(entityname, Some(pkfield)).head
   }
 
   /**
+    * Returns the attributes of an entity.
     *
     * @param entityname name of entity
     * @param nameFilter filter for attribute name
     * @return
     */
-  def getFields(entityname: EntityName, nameFilter: Option[String] = None): Seq[AttributeDefinition] = {
+  def getAttributes(entityname: EntityName, nameFilter: Option[String] = None): Seq[AttributeDefinition] = {
     val attributesQuery = if (nameFilter.isDefined) {
       _attributes.filter(_.entityname === entityname.toString()).filter(_.attributename === nameFilter.get).result
     } else {

@@ -6,6 +6,8 @@ import slick.driver.PostgresDriver.api._
 /**
   * ADAMpro
   *
+  * Catalog to store the weights to each index.
+  *
   * Ivan Giangreco
   * June 2016
   */

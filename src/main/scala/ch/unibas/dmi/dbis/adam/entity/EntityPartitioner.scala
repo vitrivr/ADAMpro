@@ -1,9 +1,9 @@
 package ch.unibas.dmi.dbis.adam.entity
 
 import ch.unibas.dmi.dbis.adam.exception.GeneralAdamException
+import ch.unibas.dmi.dbis.adam.helpers.partition.PartitionMode
 import ch.unibas.dmi.dbis.adam.main.AdamContext
 import ch.unibas.dmi.dbis.adam.storage.handler.FlatFileHandler
-import ch.unibas.dmi.dbis.adam.storage.partition.PartitionMode
 import org.apache.spark.sql.functions.col
 import org.apache.spark.sql.{DataFrame, SaveMode}
 
@@ -17,6 +17,7 @@ import scala.util.{Failure, Success, Try}
   */
 object EntityPartitioner {
   /**
+    * Partitions the entity data.
     *
     * @param entity entity
     * @param nPartitions number of partitions

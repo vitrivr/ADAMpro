@@ -6,6 +6,8 @@ import slick.driver.PostgresDriver.api._
 /**
   * ADAMpro
   *
+  * Catalog for storing metadata to each attribute.
+  *
   * Ivan Giangreco
   * June 2016
   */

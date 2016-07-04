@@ -2,16 +2,15 @@ package ch.unibas.dmi.dbis.adam.storage.handler
 
 import ch.unibas.dmi.dbis.adam.catalog.CatalogOperator
 import ch.unibas.dmi.dbis.adam.datatypes.FieldTypes
-import ch.unibas.dmi.dbis.adam.datatypes.FieldTypes.FieldType
 import ch.unibas.dmi.dbis.adam.entity.AttributeDefinition
 import ch.unibas.dmi.dbis.adam.entity.Entity._
 import ch.unibas.dmi.dbis.adam.exception.GeneralAdamException
 import ch.unibas.dmi.dbis.adam.main.AdamContext
 import ch.unibas.dmi.dbis.adam.storage.engine.RelationalDatabaseEngine
 import ch.unibas.dmi.dbis.adam.utils.Logging
-import org.apache.spark.sql.{SaveMode, DataFrame}
+import org.apache.spark.sql.{DataFrame, SaveMode}
 
-import scala.util.{Failure, Success, Random, Try}
+import scala.util.{Failure, Random, Success, Try}
 
 /**
   * ADAMpro
@@ -22,7 +21,7 @@ import scala.util.{Failure, Success, Random, Try}
 class DatabaseHandler(private val engine : RelationalDatabaseEngine) extends StorageHandler with Logging with Serializable {
   override val name: String = "relational"
   override def supports = Seq(FieldTypes.AUTOTYPE, FieldTypes.INTTYPE, FieldTypes.LONGTYPE, FieldTypes.FLOATTYPE, FieldTypes.DOUBLETYPE, FieldTypes.STRINGTYPE, FieldTypes.BOOLEANTYPE)
-  override def specializes: Seq[FieldType] = Seq(FieldTypes.AUTOTYPE, FieldTypes.INTTYPE, FieldTypes.LONGTYPE, FieldTypes.FLOATTYPE, FieldTypes.DOUBLETYPE, FieldTypes.STRINGTYPE, FieldTypes.BOOLEANTYPE)
+  override def specializes = Seq(FieldTypes.AUTOTYPE, FieldTypes.INTTYPE, FieldTypes.LONGTYPE, FieldTypes.FLOATTYPE, FieldTypes.DOUBLETYPE, FieldTypes.STRINGTYPE, FieldTypes.BOOLEANTYPE)
 
 
   override def create(entityname: EntityName, attributes: Seq[AttributeDefinition], params : Map[String, String] = Map())(implicit ac: AdamContext): Try[Void] = {
@@ -58,24 +57,6 @@ class DatabaseHandler(private val engine : RelationalDatabaseEngine) extends Sto
     }
   }
 
-  override def drop(entityname: EntityName, params : Map[String, String] = Map())(implicit ac: AdamContext): Try[Void] = {
-    try {
-      val filename = CatalogOperator.getEntityOption(entityname, "tablename")
-
-      if (filename.isEmpty) {
-        throw new GeneralAdamException("no tablename specified in catalog, no fallback used")
-      }
-
-      engine.drop(filename.get)
-      CatalogOperator.deleteEntityOption(entityname, "tablename")
-
-      Success(null)
-    } catch {
-      case e: Exception =>
-        Failure(e)
-    }
-  }
-
   override def write(entityname: EntityName, df: DataFrame, mode: SaveMode = SaveMode.Append, params : Map[String, String] = Map())(implicit ac: AdamContext): Try[Void] = {
     try {
       val tablename = CatalogOperator.getEntityOption(entityname, "tablename")
@@ -104,6 +85,24 @@ class DatabaseHandler(private val engine : RelationalDatabaseEngine) extends Sto
     }
   }
 
+
+  override def drop(entityname: EntityName, params : Map[String, String] = Map())(implicit ac: AdamContext): Try[Void] = {
+    try {
+      val filename = CatalogOperator.getEntityOption(entityname, "tablename")
+
+      if (filename.isEmpty) {
+        throw new GeneralAdamException("no tablename specified in catalog, no fallback used")
+      }
+
+      engine.drop(filename.get)
+      CatalogOperator.deleteEntityOption(entityname, "tablename")
+
+      Success(null)
+    } catch {
+      case e: Exception =>
+        Failure(e)
+    }
+  }
 
   override def equals(other: Any): Boolean =
     other match {

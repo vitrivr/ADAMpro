@@ -8,8 +8,8 @@ import ch.unibas.dmi.dbis.adam.datatypes.feature.FeatureVectorWrapper
 import ch.unibas.dmi.dbis.adam.entity.Entity
 import ch.unibas.dmi.dbis.adam.entity.Entity._
 import ch.unibas.dmi.dbis.adam.exception.{GeneralAdamException, IndexNotExistingException, IndexNotProperlyDefinedException}
-import ch.unibas.dmi.dbis.adam.helpers.repartition.Partitioning.PartitionID
-import ch.unibas.dmi.dbis.adam.helpers.repartition.{PartitionerChoice, RandomPartitioner, SparkPartitioner}
+import ch.unibas.dmi.dbis.adam.helpers.partition.Partitioning.PartitionID
+import ch.unibas.dmi.dbis.adam.helpers.partition.{PartitionMode, PartitionerChoice, RandomPartitioner, SparkPartitioner}
 import ch.unibas.dmi.dbis.adam.index.Index.{IndexName, IndexTypeName}
 import ch.unibas.dmi.dbis.adam.index.structures.IndexTypes
 import ch.unibas.dmi.dbis.adam.main.{SparkStartup, AdamContext}
@@ -17,7 +17,6 @@ import ch.unibas.dmi.dbis.adam.query.distance.DistanceFunction
 import ch.unibas.dmi.dbis.adam.query.query.NearestNeighbourQuery
 import ch.unibas.dmi.dbis.adam.storage.engine.instances.ParquetEngine
 import ch.unibas.dmi.dbis.adam.storage.handler.IndexFlatFileHandler
-import ch.unibas.dmi.dbis.adam.storage.partition.PartitionMode
 import ch.unibas.dmi.dbis.adam.utils.Logging
 import org.apache.spark.HashPartitioner
 import org.apache.spark.rdd.RDD

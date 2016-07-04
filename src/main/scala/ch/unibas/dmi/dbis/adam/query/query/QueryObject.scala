@@ -2,7 +2,7 @@ package ch.unibas.dmi.dbis.adam.query.query
 
 import ch.unibas.dmi.dbis.adam.datatypes.feature.Feature._
 import ch.unibas.dmi.dbis.adam.entity.Entity
-import ch.unibas.dmi.dbis.adam.helpers.repartition.Partitioning.PartitionID
+import ch.unibas.dmi.dbis.adam.helpers.partition.Partitioning.PartitionID
 import ch.unibas.dmi.dbis.adam.index.Index
 import ch.unibas.dmi.dbis.adam.query.distance.DistanceFunction
 

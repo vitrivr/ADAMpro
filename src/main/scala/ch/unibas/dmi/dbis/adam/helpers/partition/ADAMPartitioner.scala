@@ -1,4 +1,4 @@
-package ch.unibas.dmi.dbis.adam.helpers.repartition
+package ch.unibas.dmi.dbis.adam.helpers.partition
 
 import ch.unibas.dmi.dbis.adam.utils.Logging
 

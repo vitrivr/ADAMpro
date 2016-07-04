@@ -232,7 +232,7 @@ case class Entity(val entityname: EntityName)(@transient implicit val ac: AdamCo
   def properties: Map[String, String] = {
     val lb = ListBuffer[(String, String)]()
 
-    lb.append("schema" -> CatalogOperator.getFields(entityname).map(field => field.name + "(" + field.fieldtype.name + ")").mkString(","))
+    lb.append("schema" -> CatalogOperator.getAttributes(entityname).map(field => field.name + "(" + field.fieldtype.name + ")").mkString(","))
     lb.append("indexes" -> CatalogOperator.listIndexes(Some(entityname)).mkString(", "))
 
     lb.toMap
@@ -248,7 +248,7 @@ case class Entity(val entityname: EntityName)(@transient implicit val ac: AdamCo
     */
   def schema(nameFilter: Option[Seq[String]] = None, typeFilter: Option[Seq[FieldType]] = None): Seq[AttributeDefinition] = {
     if (_schema.isEmpty) {
-      _schema = Some(CatalogOperator.getFields(entityname))
+      _schema = Some(CatalogOperator.getAttributes(entityname))
     }
 
     var tmpSchema = _schema.get

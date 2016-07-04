@@ -3,9 +3,8 @@ package ch.unibas.dmi.dbis.adam.index
 import ch.unibas.dmi.dbis.adam.catalog.CatalogOperator
 import ch.unibas.dmi.dbis.adam.config.FieldNames
 import ch.unibas.dmi.dbis.adam.exception.GeneralAdamException
-import ch.unibas.dmi.dbis.adam.helpers.repartition.{PartitionerChoice, RandomPartitioner, SparkPartitioner}
+import ch.unibas.dmi.dbis.adam.helpers.partition.{PartitionMode, PartitionerChoice, RandomPartitioner, SparkPartitioner}
 import ch.unibas.dmi.dbis.adam.main.AdamContext
-import ch.unibas.dmi.dbis.adam.storage.partition.PartitionMode
 import ch.unibas.dmi.dbis.adam.utils.Logging
 import org.apache.spark.HashPartitioner
 import org.apache.spark.sql.{DataFrame, SaveMode}
@@ -20,7 +19,7 @@ import scala.util.{Failure, Success, Try}
   */
 object IndexPartitioner extends Logging {
   /**
-    * Repartition index.
+    * Partitions the index data.
     *
     * @param index       index
     * @param nPartitions number of partitions
