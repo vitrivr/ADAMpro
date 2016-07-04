@@ -51,11 +51,11 @@ function guid() {
  */
 function entityCreate(entityname, attributes) {
     if (entityname === null || entityname.length == 0) {
-        raiseError("Please specify an entity.");
+        raiseError("Please specify an entity."); return;
     }
 
     if (attributes.length == 0) {
-        raiseError("Please specify at least one attribute.");
+        raiseError("Please specify at least one attribute."); return;
     }
 
     startTask();
@@ -93,7 +93,7 @@ function entityCreate(entityname, attributes) {
  */
 function entityFillData(entityname, ntuples, ndims) {
     if (entityname === null || entityname.length == 0) {
-        raiseError("Please specify an entity.");
+        raiseError("Please specify an entity."); return;
     }
 
     startTask();
@@ -206,7 +206,7 @@ function entityListGetSelect(parentid) {
  */
 function entityDetails(entityname, handler) {
     if (entityname === null || entityname.length == 0) {
-        raiseError("Please specify an entity.");
+        raiseError("Please specify an entity."); return;
     }
 
     startTask();
@@ -237,11 +237,11 @@ function entityDetails(entityname, handler) {
  */
 function entityPartition(entityname, attributes, materialize, replace, npartitions) {
     if (entityname === null || entityname.length == 0) {
-        raiseError("Please specify an entity.");
+        raiseError("Please specify an entity."); return;
     }
 
     if (npartitions <= 0) {
-        raiseError("Please specify a proper number of partitions.");
+        raiseError("Please specify a proper number of partitions."); return;
     }
 
     startTask();
@@ -279,7 +279,7 @@ function entityPartition(entityname, attributes, materialize, replace, npartitio
  */
 function entityRead(entityname, handler) {
     if (entityname === null || entityname.length == 0) {
-        raiseError("Please specify an entity.");
+        raiseError("Please specify an entity."); return;
     }
 
     startTask();
@@ -308,7 +308,7 @@ function entityRead(entityname, handler) {
  */
 function entityBenchmark(entityname, attribute) {
     if (entityname === null || entityname.length == 0) {
-        raiseError("Please specify an entity.");
+        raiseError("Please specify an entity."); return;
     }
 
     startTask();
@@ -335,7 +335,7 @@ function entityBenchmark(entityname, attribute) {
  */
 function entitySparsify(entityname, attribute) {
     if (entityname === null || entityname.length == 0) {
-        raiseError("Please specify an entity.");
+        raiseError("Please specify an entity."); return;
     }
 
     startTask();
@@ -362,7 +362,7 @@ function entitySparsify(entityname, attribute) {
  */
 function entityDrop(entityname) {
     if (entityname === null || entityname.length == 0) {
-        raiseError("Please specify an entity.");
+        raiseError("Please specify an entity."); return;
     }
 
     startTask();
@@ -398,7 +398,7 @@ function getIndexTypes() {
  */
 function indexCreateAll(entityname, attributes) {
     if (entityname === null || entityname.length == 0) {
-        raiseError("Please specify an entity.");
+        raiseError("Please specify an entity."); return;
     }
 
     startTask();
@@ -436,11 +436,11 @@ function indexCreateAll(entityname, attributes) {
  */
 function indexCreate(entityname, attribute, norm, indextype, options) {
     if (entityname === null || entityname.length == 0) {
-        raiseError("Please specify an entity.");
+        raiseError("Please specify an entity."); return;
     }
 
     if (attribute === null || attribute.length == 0) {
-        raiseError("Please specify an attribute.");
+        raiseError("Please specify an attribute."); return;
     }
 
     startTask();
@@ -481,11 +481,11 @@ function indexCreate(entityname, attribute, norm, indextype, options) {
  */
 function indexPartition(indexname, attributes, materialize, replace, npartitions) {
     if (indexname === null || indexname.length == 0) {
-        raiseError("Please specify an index.");
+        raiseError("Please specify an index."); return;
     }
 
     if (npartitions <= 0) {
-        raiseError("Please specify a proper number of partitions.");
+        raiseError("Please specify a proper number of partitions."); return;
     }
 
     startTask();
