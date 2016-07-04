@@ -100,7 +100,7 @@ abstract class GenericParquetEngine(filepath: String) extends Serializable {
 /**
   *
   */
-class ParquetHadoopStorage(basepath: String, filepath: String) extends GenericParquetEngine(filepath) with Serializable {
+class ParquetHadoopStorage(private val basepath: String, private val filepath: String) extends GenericParquetEngine(filepath) with Serializable {
   @transient val hadoopConf = new Configuration()
   hadoopConf.set("fs.defaultFS", basepath)
 
@@ -136,7 +136,7 @@ class ParquetHadoopStorage(basepath: String, filepath: String) extends GenericPa
 
   override def equals(other: Any): Boolean =
     other match {
-      case that: ParquetHadoopStorage => this.basepath.equals(basepath) && this.filepath.equals(filepath)
+      case that: ParquetHadoopStorage => this.basepath.equals(that.basepath) && this.filepath.equals(that.filepath)
       case _ => false
     }
 
@@ -152,7 +152,7 @@ class ParquetHadoopStorage(basepath: String, filepath: String) extends GenericPa
 /**
   *
   */
-class ParquetLocalEngine(filepath: String) extends GenericParquetEngine(filepath) with Serializable {
+class ParquetLocalEngine(private val filepath: String) extends GenericParquetEngine(filepath) with Serializable {
   val dataFolder = new File(filepath)
 
   if (!dataFolder.exists()) {
@@ -180,7 +180,7 @@ class ParquetLocalEngine(filepath: String) extends GenericParquetEngine(filepath
 
   override def equals(other: Any): Boolean =
     other match {
-      case that: ParquetHadoopStorage => this.filepath.equals(filepath)
+      case that: ParquetLocalEngine => this.filepath.equals(that.filepath)
       case _ => false
     }
 

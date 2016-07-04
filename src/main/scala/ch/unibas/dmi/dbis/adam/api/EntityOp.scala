@@ -1,7 +1,7 @@
 package ch.unibas.dmi.dbis.adam.api
 
 import ch.unibas.dmi.dbis.adam.entity.Entity._
-import ch.unibas.dmi.dbis.adam.entity.{EntityRepartitioner, AttributeDefinition, Entity}
+import ch.unibas.dmi.dbis.adam.entity.{EntityPartitioner, AttributeDefinition, Entity}
 import ch.unibas.dmi.dbis.adam.helpers.sparsify.SparsifyHelper
 import ch.unibas.dmi.dbis.adam.main.AdamContext
 import ch.unibas.dmi.dbis.adam.helpers.scanweight.{ScanWeightInspector, ScanWeightBenchmarker}
@@ -140,7 +140,7 @@ object EntityOp extends GenericOp {
     */
   def partition(entityname: EntityName, nPartitions: Int, joins: Option[DataFrame], cols: Option[Seq[String]], mode: PartitionMode.Value)(implicit ac: AdamContext): Try[Entity] = {
     execute("repartition entity " + entityname + " operation") {
-      EntityRepartitioner(Entity.load(entityname).get, nPartitions, joins, cols, mode)
+      EntityPartitioner(Entity.load(entityname).get, nPartitions, joins, cols, mode)
     }
   }
 

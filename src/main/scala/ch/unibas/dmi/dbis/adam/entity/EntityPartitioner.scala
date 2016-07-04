@@ -15,14 +15,24 @@ import scala.util.{Failure, Success, Try}
   * Ivan Giangreco
   * June 2016
   */
-object EntityRepartitioner {
+object EntityPartitioner {
+  /**
+    *
+    * @param entity entity
+    * @param nPartitions number of partitions
+    * @param join join with dataframe for partitioning
+    * @param cols columns according to which to partition the data
+    * @param mode mode of partitioning (replacing data, etc.)
+    * @return
+    */
   def apply(entity: Entity, nPartitions: Int, join: Option[DataFrame], cols: Option[Seq[String]], mode: PartitionMode.Value)(implicit ac: AdamContext): Try[Entity] = {
     //checks
     if (entity.featureData.isEmpty) {
-      return Failure(new GeneralAdamException("no feature data available for performing sparsifying"))
+      return Failure(new GeneralAdamException("no feature data available for performing repartitioning"))
     }
 
-    val partitionAttributes = entity.schema(cols)
+    val partitionAttributes = entity.schema(Some(cols.getOrElse(Seq(entity.pk.name))))
+
     if (!partitionAttributes.filterNot(_.pk).forall(_.storagehandler.isDefined)) {
       return Failure(new GeneralAdamException("repartitioning is only possible for defined handlers"))
     }
@@ -55,7 +65,9 @@ object EntityRepartitioner {
       data.repartition(nPartitions, data(entity.pk.name))
     }
 
-    val handler = partitionAttributes.head.storagehandler.get
+    val handler = partitionAttributes.filterNot(_.pk).headOption
+      .getOrElse(entity.schema().filter(_.storagehandler.isDefined).filter(_.storagehandler.get.isInstanceOf[FlatFileHandler]).head)
+          .storagehandler.get
 
     //select data which is available in the one handler
     val attributes = entity.schema().filterNot(_.pk).filter(_.storagehandler.get == handler).+:(entity.pk)

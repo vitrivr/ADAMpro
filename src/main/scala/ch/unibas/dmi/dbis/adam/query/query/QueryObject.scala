@@ -94,9 +94,16 @@ case class NearestNeighbourQuery(
                                   queryID: Option[String] = Some(java.util.UUID.randomUUID().toString))
   extends QueryObject(queryID) {
 
-  def isConform(entity : Entity): Boolean = true
+  def isConform(entity : Entity): Boolean = {
+    val columnExists = entity.schema(Some(Seq(column))).nonEmpty
+    //TODO: check dimensionality?
 
-  def isConform(index : Index) : Boolean = true
+    columnExists
+  }
+
+  def isConform(index : Index) : Boolean = {
+    true
+  }
 
   override def equals(that: Any): Boolean = {
     that match {
