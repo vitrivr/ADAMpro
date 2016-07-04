@@ -63,7 +63,6 @@ import scala.util.{Failure, Success, Try}
     val entity = Entity.load(entityname).get
     val schema = entity.schema().filterNot(_.pk)
       .filter(attribute => attribute.storagehandler.isDefined && attribute.storagehandler.get.isInstanceOf[SolrHandler])
-      .map(attribute => CatalogOperator.getAttributeOption(entityname, name, "solrfieldname") -> attribute)
 
     try {
       val query = new SolrQuery()
@@ -81,8 +80,8 @@ import scala.util.{Failure, Success, Try}
         val results = partClient.query(query).getResults
 
         it.filter(i => i < results.getNumFound).map(i => results.get(i.toInt)).map(doc => {
-          val data = schema.map { case (name, attribute) => {
-            val strings = doc.get(name.getOrElse(attribute.name)).asInstanceOf[util.ArrayList[String]]
+          val data = schema.map { attribute => {
+            val strings = doc.get(attribute.params.getOrElse("solrfieldname", attribute.name)).asInstanceOf[util.ArrayList[String]]
 
             if (strings != null && strings.size > 0) {
               strings.get(0)
@@ -96,7 +95,7 @@ import scala.util.{Failure, Success, Try}
         })
       })
 
-      val dfSchema = StructType(Seq(StructField(entity.pk.name + "-str", DataTypes.StringType)) ++ schema.map { case (name, attribute) => StructField(attribute.name, attribute.fieldtype.datatype) })
+      val dfSchema = StructType(Seq(StructField(entity.pk.name + "-str", DataTypes.StringType)) ++ schema.map { case attribute => StructField(attribute.name, attribute.fieldtype.datatype) })
       var df = ac.sqlContext.createDataFrame(rdd, dfSchema)
       df = df.withColumn(entity.pk.name, df.col(entity.pk.name + "-str").cast(entity.pk.fieldtype.datatype))
       df = df.drop(entity.pk.name + "-str")
@@ -113,7 +112,6 @@ import scala.util.{Failure, Success, Try}
       val entity = Entity.load(entityname).get
       val schema = entity.schema().filterNot(_.pk)
         .filter(attribute => attribute.storagehandler.isDefined && attribute.storagehandler.get.isInstanceOf[SolrHandler])
-        .map(attribute => CatalogOperator.getAttributeOption(entityname, name, "solrfieldname") -> attribute)
 
       df.foreachPartition(pit => {
         val partClient = new HttpSolrClient(url + "/" + entityname.toString)
@@ -122,8 +120,8 @@ import scala.util.{Failure, Success, Try}
           val doc = new SolrInputDocument()
           doc.addField("id", row.getAs[Any](entity.pk.name))
 
-          schema.foreach { case (name, attribute) => {
-            doc.addField(name.getOrElse(attribute.name), row.getAs[String](attribute.name))
+          schema.foreach { attribute => {
+            doc.addField(attribute.params.getOrElse("solrfieldname", attribute.name), row.getAs[String](attribute.name))
           }
           }
           partClient.add(doc)
