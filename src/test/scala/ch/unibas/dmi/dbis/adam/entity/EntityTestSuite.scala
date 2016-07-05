@@ -4,7 +4,6 @@ import ch.unibas.dmi.dbis.adam.AdamTestBase
 import ch.unibas.dmi.dbis.adam.api.EntityOp
 import ch.unibas.dmi.dbis.adam.datatypes.FieldTypes
 import ch.unibas.dmi.dbis.adam.datatypes.feature.{FeatureVectorWrapper, FeatureVectorWrapperUDT}
-import ch.unibas.dmi.dbis.adam.main.SparkStartup.Implicits._
 import org.apache.spark.sql.Row
 import org.apache.spark.sql.types._
 import org.scalatest.Matchers._
@@ -33,7 +32,8 @@ class EntityTestSuite extends AdamTestBase {
         val givenEntities = Entity.list
 
         When("a new random entity (without any metadata) is created")
-        Entity.create(entityname, Seq(AttributeDefinition("idfield", FieldTypes.LONGTYPE, true), AttributeDefinition("feature", FieldTypes.FEATURETYPE)))
+        val entity = Entity.create(entityname, Seq(AttributeDefinition("idfield", FieldTypes.LONGTYPE, true), AttributeDefinition("feature", FieldTypes.FEATURETYPE)))
+        assert(entity.isSuccess)
 
         Then("one entity should be created")
         val finalEntities = Entity.list
@@ -52,7 +52,8 @@ class EntityTestSuite extends AdamTestBase {
     scenario("drop an existing entity") {
       withEntityName { entityname =>
         Given("there exists one entity")
-        Entity.create(entityname, Seq(AttributeDefinition("idfield", FieldTypes.LONGTYPE, true), AttributeDefinition("feature", FieldTypes.FEATURETYPE)))
+        val entity = Entity.create(entityname, Seq(AttributeDefinition("idfield", FieldTypes.LONGTYPE, true), AttributeDefinition("feature", FieldTypes.FEATURETYPE)))
+        assert(entity.isSuccess)
         assert(Entity.list.contains(entityname.toLowerCase()))
 
         When("the entity is dropped")
@@ -72,7 +73,8 @@ class EntityTestSuite extends AdamTestBase {
         val givenEntities = Entity.list
 
         When("a new random entity (without any metadata) is created")
-        Entity.create(entityname, Seq(AttributeDefinition("idfield", FieldTypes.LONGTYPE, true), AttributeDefinition("feature1", FieldTypes.FEATURETYPE), AttributeDefinition("feature2", FieldTypes.FEATURETYPE)))
+        val entity = Entity.create(entityname, Seq(AttributeDefinition("idfield", FieldTypes.LONGTYPE, true), AttributeDefinition("feature1", FieldTypes.FEATURETYPE), AttributeDefinition("feature2", FieldTypes.FEATURETYPE)))
+        assert(entity.isSuccess)
 
         Then("one entity should be created")
         val finalEntities = Entity.list
@@ -106,6 +108,7 @@ class EntityTestSuite extends AdamTestBase {
         )
 
         val entity = Entity.create(entityname, fieldTemplate.map(ft => AttributeDefinition(ft.name, ft.fieldType, ft.pk)))
+        assert(entity.isSuccess)
 
         Then("the entity should be created")
         val entities = Entity.list
@@ -122,7 +125,7 @@ class EntityTestSuite extends AdamTestBase {
         }
 
         val dbNames = lb.toList.toMap //fields from relational database
-        val templateNames = fieldTemplate.filter(_.sqlType.length > 0).map(ft => ft.name -> ft.sqlType).toMap //fields that should be stored in relational database
+      val templateNames = fieldTemplate.filter(_.sqlType.length > 0).map(ft => ft.name -> ft.sqlType).toMap //fields that should be stored in relational database
 
         assert(dbNames.size == templateNames.size)
 

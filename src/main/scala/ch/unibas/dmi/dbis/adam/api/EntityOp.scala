@@ -125,7 +125,7 @@ object EntityOp extends GenericOp {
     */
   def properties(entityname: EntityName)(implicit ac: AdamContext): Try[Map[String, String]] = {
     execute("load properties of entity " + entityname + " operation") {
-      Success(Entity.load(entityname).get.properties)
+      Success(Entity.load(entityname).get.propertiesMap)
     }
   }
 

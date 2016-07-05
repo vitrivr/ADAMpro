@@ -4,9 +4,10 @@ import ch.unibas.dmi.dbis.adam.datatypes.FieldTypes.FieldType
 import ch.unibas.dmi.dbis.adam.entity.AttributeDefinition
 import ch.unibas.dmi.dbis.adam.entity.Entity.EntityName
 import ch.unibas.dmi.dbis.adam.main.AdamContext
+import ch.unibas.dmi.dbis.adam.utils.Logging
 import org.apache.spark.sql.{DataFrame, SaveMode}
 
-import scala.util.Try
+import scala.util.{Failure, Try}
 
 /**
   * ADAMpro
@@ -14,7 +15,7 @@ import scala.util.Try
   * Ivan Giangreco
   * June 2016
   */
-trait StorageHandler extends Serializable {
+trait StorageHandler extends Logging with Serializable {
   val name: String
 
   def supports: Seq[FieldType]
@@ -22,6 +23,25 @@ trait StorageHandler extends Serializable {
 
   //specializes should be contained in supports
   assert(specializes.forall(supports.contains(_)))
+
+
+  /**
+    * Executes operation.
+    *
+    * @param desc description to display in log
+    * @param op   operation to perform
+    * @return
+    */
+  protected def execute[T](desc: String)(op: => Try[T]): Try[T] = {
+    try {
+      log.trace("performed storage handler (" + name + ") operation: " + desc)
+      op
+    } catch {
+      case e: Exception =>
+        log.error("error in storage handler (" + name + ") operation: " + desc, e)
+        Failure(e)
+    }
+  }
 
   def create(entityname: EntityName, attributes: Seq[AttributeDefinition], params : Map[String, String] = Map())(implicit ac: AdamContext): Try[Void]
 

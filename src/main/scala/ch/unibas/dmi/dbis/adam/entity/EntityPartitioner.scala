@@ -28,7 +28,7 @@ object EntityPartitioner {
     */
   def apply(entity: Entity, nPartitions: Int, join: Option[DataFrame], cols: Option[Seq[String]], mode: PartitionMode.Value)(implicit ac: AdamContext): Try[Entity] = {
     //checks
-    if (entity.featureData.isEmpty) {
+    if (entity.getFeatureData.isEmpty) {
       return Failure(new GeneralAdamException("no feature data available for performing repartitioning"))
     }
 
@@ -47,7 +47,7 @@ object EntityPartitioner {
     }
 
     //collect data
-    var data = entity.data().get
+    var data = entity.getData().get
     if (join.isDefined) {
       data = data.join(join.get, entity.pk.name)
     }

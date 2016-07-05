@@ -18,7 +18,7 @@ object ScanWeightInspector {
     * @param attribute
     * @return
     */
-  def apply(entity : Entity, attribute : String) = CatalogOperator.getEntityScanWeight(entity.entityname, attribute)
+  def apply(entity : Entity, attribute : String) = CatalogOperator.getEntityScanWeight(entity.entityname, attribute).get
 
   /**
     * Sets the scan weight for the given entity.
@@ -28,7 +28,7 @@ object ScanWeightInspector {
     * @param weight
     * @return
     */
-  def set(entity : Entity, attribute : String, weight : Float) = CatalogOperator.setEntityScanWeight(entity.entityname, attribute, Some(weight))
+  def set(entity : Entity, attribute : String, weight : Float) = CatalogOperator.setEntityScanWeight(entity.entityname, attribute, weight)
 
   /**
     * Returns the scan weight for the given index.
@@ -36,7 +36,7 @@ object ScanWeightInspector {
     * @param index
     * @return
     */
-  def apply(index : Index) = CatalogOperator.getIndexScanWeight(index.indexname)
+  def apply(index : Index) = CatalogOperator.getIndexScanWeight(index.indexname).get
 
   /**
     * Sets the scan weight for the given index.
@@ -45,5 +45,5 @@ object ScanWeightInspector {
     * @param weight
     * @return
     */
-  def set(index : Index, weight : Float) = CatalogOperator.setIndexScanWeight(index.indexname, Some(weight))
+  def set(index : Index, weight : Float) = CatalogOperator.setIndexScanWeight(index.indexname, weight)
 }

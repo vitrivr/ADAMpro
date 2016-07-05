@@ -32,7 +32,7 @@ case class SequentialScanExpression(private val entity : Entity)(private val nnq
     ac.sc.setLocalProperty("spark.scheduler.pool", "sequential")
     ac.sc.setJobGroup(id.getOrElse(""), "sequential scan: " + entity.entityname.toString, interruptOnCancel = true)
 
-    var df = entity.data()
+    var df = entity.getData()
     var ids = mutable.Set[Any]()
 
     if (filter.isDefined) {

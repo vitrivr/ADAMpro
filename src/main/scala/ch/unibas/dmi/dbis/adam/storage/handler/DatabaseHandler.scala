@@ -10,7 +10,7 @@ import ch.unibas.dmi.dbis.adam.storage.engine.RelationalDatabaseEngine
 import ch.unibas.dmi.dbis.adam.utils.Logging
 import org.apache.spark.sql.{DataFrame, SaveMode}
 
-import scala.util.{Failure, Random, Success, Try}
+import scala.util.{Success, Random, Try}
 
 /**
   * ADAMpro
@@ -18,14 +18,38 @@ import scala.util.{Failure, Random, Success, Try}
   * Ivan Giangreco
   * July 2016
   */
-class DatabaseHandler(private val engine : RelationalDatabaseEngine) extends StorageHandler with Logging with Serializable {
-  override val name: String = "relational"
+class DatabaseHandler(private val engine: RelationalDatabaseEngine) extends StorageHandler with Logging with Serializable {
+  override val name = "relational"
   override def supports = Seq(FieldTypes.AUTOTYPE, FieldTypes.INTTYPE, FieldTypes.LONGTYPE, FieldTypes.FLOATTYPE, FieldTypes.DOUBLETYPE, FieldTypes.STRINGTYPE, FieldTypes.BOOLEANTYPE)
   override def specializes = Seq(FieldTypes.AUTOTYPE, FieldTypes.INTTYPE, FieldTypes.LONGTYPE, FieldTypes.FLOATTYPE, FieldTypes.DOUBLETYPE, FieldTypes.STRINGTYPE, FieldTypes.BOOLEANTYPE)
 
+  private val ENTITY_OPTION_NAME = "relational-tablename"
 
-  override def create(entityname: EntityName, attributes: Seq[AttributeDefinition], params : Map[String, String] = Map())(implicit ac: AdamContext): Try[Void] = {
-    try {
+
+  /**
+    *
+    * @param entityname
+    */
+  private def getTablename(entityname: EntityName): String = {
+    val tablename = CatalogOperator.getEntityOption(entityname, Some(ENTITY_OPTION_NAME)).get.get(ENTITY_OPTION_NAME)
+
+    if (tablename.isEmpty) {
+      throw new GeneralAdamException("no tablename specified in catalog, no fallback")
+    }
+
+    tablename.get
+  }
+
+
+  /**
+    *
+    * @param entityname
+    * @param attributes
+    * @param params
+    * @return
+    */
+  override def create(entityname: EntityName, attributes: Seq[AttributeDefinition], params: Map[String, String] = Map())(implicit ac: AdamContext): Try[Void] = {
+    execute("create") {
       var tablename = entityname
 
       while (engine.exists(tablename).get) {
@@ -34,75 +58,68 @@ class DatabaseHandler(private val engine : RelationalDatabaseEngine) extends Sto
 
       engine.create(tablename, attributes)
 
-      CatalogOperator.updateEntityOption(entityname, "tablename", tablename)
+      CatalogOperator.updateEntityOption(entityname, ENTITY_OPTION_NAME, tablename)
       Success(null)
-    } catch {
-      case e: Exception =>
-        Failure(e)
     }
   }
 
-  override def read(entityname: EntityName, params : Map[String, String] = Map())(implicit ac: AdamContext): Try[DataFrame] = {
-    try {
-      val tablename = CatalogOperator.getEntityOption(entityname, "tablename")
-
-      if (tablename.isEmpty) {
-        log.warn("no tablename specified in catalog, fallback to entityname")
-      }
-
-      engine.read(tablename.getOrElse(entityname))
-    } catch {
-      case e: Exception =>
-        Failure(e)
+  /**
+    *
+    * @param entityname
+    * @param params
+    * @return
+    */
+  override def read(entityname: EntityName, params: Map[String, String] = Map())(implicit ac: AdamContext): Try[DataFrame] = {
+    execute("read") {
+      engine.read(getTablename(entityname))
     }
   }
 
-  override def write(entityname: EntityName, df: DataFrame, mode: SaveMode = SaveMode.Append, params : Map[String, String] = Map())(implicit ac: AdamContext): Try[Void] = {
-    try {
-      val tablename = CatalogOperator.getEntityOption(entityname, "tablename")
-
-      if (tablename.isEmpty) {
-        throw new GeneralAdamException("no tablename specified in catalog, no fallback used")
-      }
+  /**
+    *
+    * @param entityname
+    * @param df
+    * @param mode
+    * @param params
+    * @return
+    */
+  override def write(entityname: EntityName, df: DataFrame, mode: SaveMode = SaveMode.Append, params: Map[String, String] = Map())(implicit ac: AdamContext): Try[Void] = {
+    execute("write") {
+      val tablename = getTablename(entityname)
 
       if (mode == SaveMode.Overwrite) {
         var newTablename = ""
         do {
-          newTablename = tablename.get + "-new" + Random.nextInt(999)
+          newTablename = tablename + "-new" + Random.nextInt(999)
         } while (engine.exists(newTablename).get)
 
         engine.write(newTablename, df)
 
-        CatalogOperator.updateEntityOption(entityname, "tablename", newTablename)
+        CatalogOperator.updateEntityOption(entityname, ENTITY_OPTION_NAME, newTablename)
 
-        engine.drop(tablename.get)
+        engine.drop(tablename)
       } else {
-        engine.write(tablename.get, df)
+        engine.write(tablename, df)
       }
-    } catch {
-      case e: Exception =>
-        Failure(e)
-    }
-  }
-
-
-  override def drop(entityname: EntityName, params : Map[String, String] = Map())(implicit ac: AdamContext): Try[Void] = {
-    try {
-      val filename = CatalogOperator.getEntityOption(entityname, "tablename")
-
-      if (filename.isEmpty) {
-        throw new GeneralAdamException("no tablename specified in catalog, no fallback used")
-      }
-
-      engine.drop(filename.get)
-      CatalogOperator.deleteEntityOption(entityname, "tablename")
 
       Success(null)
-    } catch {
-      case e: Exception =>
-        Failure(e)
     }
   }
+
+  /**
+    *
+    * @param entityname
+    * @param params
+    * @return
+    */
+  override def drop(entityname: EntityName, params: Map[String, String] = Map())(implicit ac: AdamContext): Try[Void] = {
+    execute("drop") {
+      engine.drop(getTablename(entityname))
+      CatalogOperator.deleteEntityOption(entityname, ENTITY_OPTION_NAME)
+      Success(null)
+    }
+  }
+
 
   override def equals(other: Any): Boolean =
     other match {

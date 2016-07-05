@@ -356,7 +356,7 @@ class DataDefinitionRPC extends AdamDefinitionGrpc.AdamDefinition with Logging {
   override def setScanWeight(request: WeightMessage): Future[AckMessage] = {
     log.debug("rpc call for changing weight of entity or index")
 
-    val res =  if(CatalogOperator.existsEntity(request.entity)){
+    val res =  if(CatalogOperator.existsEntity(request.entity).get){
       EntityOp.setScanWeight(request.entity, request.column, request.weight)
     } else {
       IndexOp.setScanWeight(request.entity, request.weight)

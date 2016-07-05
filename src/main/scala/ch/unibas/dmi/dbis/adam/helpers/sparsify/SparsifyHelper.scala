@@ -27,11 +27,11 @@ object SparsifyHelper {
     */
   def apply(entity: Entity, attributename: String)(implicit ac: AdamContext): Try[Entity] = {
     try {
-      if (entity.featureData.isEmpty) {
+      if (entity.getFeatureData.isEmpty) {
         return Failure(new GeneralAdamException("no feature data available for performing sparsifying"))
       }
 
-      var data = entity.data().get
+      var data = entity.getData().get
       val convertToSparse = udf((c: FeatureVectorWrapper) => {
         val vec = c.vector
 

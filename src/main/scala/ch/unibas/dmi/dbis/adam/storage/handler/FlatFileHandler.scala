@@ -10,7 +10,7 @@ import ch.unibas.dmi.dbis.adam.storage.engine.FileEngine
 import ch.unibas.dmi.dbis.adam.utils.Logging
 import org.apache.spark.sql.{DataFrame, SaveMode}
 
-import scala.util.{Failure, Random, Success, Try}
+import scala.util.{Random, Success, Try}
 
 /**
   * ADAMpro
@@ -19,12 +19,36 @@ import scala.util.{Failure, Random, Success, Try}
   * June 2016
   */
 class FlatFileHandler(private val engine: FileEngine) extends StorageHandler with Logging with Serializable {
-  override val name: String = "feature"
+  override val name = "feature"
   override def supports = Seq(FieldTypes.AUTOTYPE, FieldTypes.INTTYPE, FieldTypes.LONGTYPE, FieldTypes.STRINGTYPE, FieldTypes.FEATURETYPE)
   override def specializes = Seq(FieldTypes.FEATURETYPE)
 
+  private val ENTITY_OPTION_NAME = "feature-filename"
+
+  /**
+    *
+    * @param entityname
+    */
+  private def getFilename(entityname: EntityName): String = {
+    val filename = CatalogOperator.getEntityOption(entityname, Some(ENTITY_OPTION_NAME)).get.get(ENTITY_OPTION_NAME)
+
+    if (filename.isEmpty) {
+      throw new GeneralAdamException("no filename specified in catalog, no fallback")
+    }
+
+    filename.get
+  }
+
+
+  /**
+    *
+    * @param entityname
+    * @param attributes
+    * @param params
+    * @return
+    */
   override def create(entityname: EntityName, attributes: Seq[AttributeDefinition], params : Map[String, String] = Map())(implicit ac: AdamContext): Try[Void] = {
-    try {
+    execute("create") {
       var filename = entityname
 
       while (engine.exists(filename).get) {
@@ -33,74 +57,67 @@ class FlatFileHandler(private val engine: FileEngine) extends StorageHandler wit
 
       engine.create(filename, attributes)
 
-      CatalogOperator.updateEntityOption(entityname, "filename", filename)
+      CatalogOperator.updateEntityOption(entityname, ENTITY_OPTION_NAME, filename)
       Success(null)
-    } catch {
-      case e: Exception =>
-        Failure(e)
     }
   }
 
+  /**
+    *
+    * @param entityname
+    * @param params
+    * @return
+    */
   override def read(entityname: EntityName, params : Map[String, String] = Map())(implicit ac: AdamContext): Try[DataFrame] = {
-    try {
-      val filename = CatalogOperator.getEntityOption(entityname, "filename")
-
-      if (filename.isEmpty) {
-        log.warn("no filename specified in catalog, fallback to entityname")
-      }
-
-      engine.read(filename.get)
-    } catch {
-      case e: Exception =>
-        Failure(e)
+    execute("read") {
+      engine.read(getFilename(entityname))
     }
   }
 
+  /**
+    *
+    * @param entityname
+    * @param df
+    * @param mode
+    * @param params
+    * @return
+    */
   override def write(entityname: EntityName, df: DataFrame, mode: SaveMode = SaveMode.Append, params : Map[String, String] = Map())(implicit ac: AdamContext): Try[Void] = {
-    try {
-      val filename = CatalogOperator.getEntityOption(entityname, "filename")
-
-      if (filename.isEmpty) {
-        throw new GeneralAdamException("no filename specified in catalog, no fallback used")
-      }
+    execute("write") {
+      val filename = getFilename(entityname)
 
       val allowRepartitioning = params.getOrElse("allowRepartitioning", "false").toBoolean
 
       if (mode == SaveMode.Overwrite) {
         var newFilename = ""
         do {
-          newFilename = filename.get + "-new" + Random.nextInt(999)
+          newFilename = filename + "-new" + Random.nextInt(999)
         } while (engine.exists(newFilename).get)
 
         engine.write(newFilename, df, mode, allowRepartitioning)
 
-        CatalogOperator.updateEntityOption(entityname, "filename", newFilename)
+        CatalogOperator.updateEntityOption(entityname, ENTITY_OPTION_NAME, newFilename)
 
-        engine.drop(filename.get)
+        engine.drop(filename)
       } else {
-        engine.write(filename.get, df, mode, allowRepartitioning)
+        engine.write(filename, df, mode, allowRepartitioning)
       }
-    } catch {
-      case e: Exception =>
-        Failure(e)
+
+      Success(null)
     }
   }
 
+  /**
+    *
+    * @param entityname
+    * @param params
+    * @return
+    */
   override def drop(entityname: EntityName, params : Map[String, String] = Map())(implicit ac: AdamContext): Try[Void] = {
-    try {
-      val filename = CatalogOperator.getEntityOption(entityname, "filename")
-
-      if (filename.isEmpty) {
-        throw new GeneralAdamException("no filename specified in catalog, no fallback used")
-      }
-
-      engine.drop(filename.get)
-      CatalogOperator.deleteEntityOption(entityname, "filename")
-
+    execute("drop") {
+      engine.drop(getFilename(entityname))
+      CatalogOperator.deleteEntityOption(entityname, ENTITY_OPTION_NAME)
       Success(null)
-    } catch {
-      case e: Exception =>
-        Failure(e)
     }
   }
 

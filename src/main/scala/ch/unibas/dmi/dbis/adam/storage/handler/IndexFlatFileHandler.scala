@@ -3,13 +3,14 @@ package ch.unibas.dmi.dbis.adam.storage.handler
 import ch.unibas.dmi.dbis.adam.catalog.CatalogOperator
 import ch.unibas.dmi.dbis.adam.datatypes.FieldTypes.FieldType
 import ch.unibas.dmi.dbis.adam.entity.AttributeDefinition
+import ch.unibas.dmi.dbis.adam.exception.GeneralAdamException
 import ch.unibas.dmi.dbis.adam.index.Index.IndexName
 import ch.unibas.dmi.dbis.adam.main.AdamContext
 import ch.unibas.dmi.dbis.adam.storage.engine.FileEngine
 import ch.unibas.dmi.dbis.adam.utils.Logging
 import org.apache.spark.sql.{DataFrame, SaveMode}
 
-import scala.util.{Failure, Random, Success, Try}
+import scala.util.{Random, Success, Try}
 
 /**
   * ADAMpro
@@ -18,27 +19,63 @@ import scala.util.{Failure, Random, Success, Try}
   * July 2016
   */
 class IndexFlatFileHandler(private val engine: FileEngine) extends StorageHandler with Logging with Serializable {
-  override val name: String = "index"
+  override val name = "index"
   override def supports = Seq()
   override def specializes: Seq[FieldType] = Seq()
 
-  override def create(indexname: IndexName, attributes: Seq[AttributeDefinition], params: Map[String, String] = Map())(implicit ac: AdamContext): Try[Void] = {
-    Success(null)
+  private val INDEX_OPTION_NAME = "feature-filename"
+
+  /**
+    *
+    * @param indexname
+    */
+  private def getFilename(indexname: IndexName): String = {
+    var filename = CatalogOperator.getIndexOption(indexname, Some(INDEX_OPTION_NAME)).get.get(INDEX_OPTION_NAME)
+
+    if (filename.isEmpty) {
+      throw new GeneralAdamException("no filename specified in catalog, no fallback")
+    }
+
+    filename.get
   }
 
-  override def read(indexname: IndexName, params: Map[String, String] = Map())(implicit ac: AdamContext): Try[DataFrame] = {
-    try {
-      var filename = CatalogOperator.getIndexOption(indexname, "filename").getOrElse(indexname.toString)
-      engine.read(filename)
-    } catch {
-      case e: Exception =>
-        Failure(e)
+  /**
+    *
+    * @param indexname
+    * @param attributes
+    * @param params
+    * @return
+    */
+  override def create(indexname: IndexName, attributes: Seq[AttributeDefinition], params: Map[String, String] = Map())(implicit ac: AdamContext): Try[Void] = {
+    execute("create") {
+      var filename = indexname
+      CatalogOperator.updateIndexOption(indexname, INDEX_OPTION_NAME, filename)
     }
   }
 
+  /**
+    *
+    * @param indexname
+    * @param params
+    * @return
+    */
+  override def read(indexname: IndexName, params: Map[String, String] = Map())(implicit ac: AdamContext): Try[DataFrame] = {
+    execute("read") {
+      engine.read(getFilename(indexname))
+    }
+  }
+
+  /**
+    *
+    * @param indexname
+    * @param df
+    * @param mode
+    * @param params
+    * @return
+    */
   override def write(indexname: IndexName, df: DataFrame, mode: SaveMode = SaveMode.ErrorIfExists, params: Map[String, String] = Map())(implicit ac: AdamContext): Try[Void] = {
-    try {
-      var filename = CatalogOperator.getIndexOption(indexname, "filename").getOrElse(indexname.toString)
+    execute("write") {
+      var filename = getFilename(indexname)
 
       val allowRepartitioning = params.getOrElse("allowRepartitioning", "false").toBoolean
 
@@ -50,28 +87,29 @@ class IndexFlatFileHandler(private val engine: FileEngine) extends StorageHandle
 
         engine.write(newFilename, df, mode, allowRepartitioning)
 
-        CatalogOperator.updateIndexOption(indexname, "filename", newFilename)
+        CatalogOperator.updateIndexOption(indexname, INDEX_OPTION_NAME, newFilename)
 
         engine.drop(filename)
       } else {
         engine.write(filename, df, mode)
       }
-    } catch {
-      case e: Exception =>
-        Failure(e)
+
+      Success(null)
     }
   }
 
 
+  /**
+    *
+    * @param indexname
+    * @param params
+    * @return
+    */
   override def drop(indexname: IndexName, params: Map[String, String] = Map())(implicit ac: AdamContext): Try[Void] = {
-    try {
-      var filename = CatalogOperator.getIndexOption(indexname, "filename").getOrElse(indexname.toString)
-      engine.drop(filename)
-      CatalogOperator.deleteIndexOption(indexname, "filename")
+    execute("drop") {
+      engine.drop(getFilename(indexname))
+      CatalogOperator.deleteIndexOption(indexname, INDEX_OPTION_NAME)
       Success(null)
-    } catch {
-      case e: Exception =>
-        Failure(e)
     }
   }
 

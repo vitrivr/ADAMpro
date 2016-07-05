@@ -32,7 +32,7 @@ object IndexPartitioner extends Logging {
     */
   def apply(index: Index, nPartitions: Int, join: Option[DataFrame], cols: Option[Seq[String]], mode: PartitionMode.Value, partitioner: PartitionerChoice.Value = PartitionerChoice.SPARK, options: Map[String, String] = Map[String, String]())(implicit ac: AdamContext): Try[Index] = {
     log.debug("Repartitioning Index: " + index.indexname + " with partitioner " + partitioner)
-    var data = index.data.join(index.entity.get.data().get, index.pk.name)
+    var data = index.data.join(index.entity.get.getData().get, index.pk.name)
 
     //TODO: possibly consider replication
     //http://stackoverflow.com/questions/31624622/is-there-a-way-to-change-the-replication-factor-of-rdds-in-spark

@@ -27,11 +27,11 @@ private class ScanWeightBenchmarker(entityname: EntityName, attribute: String, n
   private val entity = Entity.load(entityname).get
 
   private val sampleQueries = {
-    if (entity.featureData.isEmpty) {
+    if (entity.getFeatureData.isEmpty) {
       throw new GeneralAdamException("missing feature data for benchmarker")
     }
 
-    val featureData = entity.featureData.get
+    val featureData = entity.getFeatureData.get
     val n = entity.count
     val fraction = Sampling.computeFractionForSampleSize(nqueries, n, withReplacement = false)
 
@@ -54,10 +54,10 @@ private class ScanWeightBenchmarker(entityname: EntityName, attribute: String, n
 
     val sumCost: Float = indBenchmarks.map(_._2).sum + seqCost
 
-    CatalogOperator.setEntityScanWeight(entityname, attribute, Some((1 + 1 - (seqCost / sumCost)) * ScanWeightBenchmarker.DEFAULT_WEIGHT))
+    CatalogOperator.setEntityScanWeight(entityname, attribute, (1 + 1 - (seqCost / sumCost)) * ScanWeightBenchmarker.DEFAULT_WEIGHT)
 
     indBenchmarks.foreach { case (index, indCost) =>
-      CatalogOperator.setIndexScanWeight(index.indexname, Some((1 + 1 - (seqCost / sumCost)) * ScanWeightBenchmarker.DEFAULT_WEIGHT))
+      CatalogOperator.setIndexScanWeight(index.indexname, (1 + 1 - (seqCost / sumCost)) * ScanWeightBenchmarker.DEFAULT_WEIGHT)
     }
   }
 
@@ -154,11 +154,11 @@ object ScanWeightBenchmarker {
     }
 
     cols.foreach { col =>
-      CatalogOperator.setEntityScanWeight(entityname, col)
+      CatalogOperator.setEntityScanWeight(entityname, col, ScanWeightBenchmarker.DEFAULT_WEIGHT)
     }
 
     indexes.filter(_.attribute == attribute.get).foreach { index =>
-      CatalogOperator.setIndexScanWeight(index.indexname)
+      CatalogOperator.setIndexScanWeight(index.indexname, ScanWeightBenchmarker.DEFAULT_WEIGHT)
     }
   }
 }

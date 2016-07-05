@@ -7,7 +7,7 @@ import ch.unibas.dmi.dbis.adam.datatypes.feature.Feature._
 import ch.unibas.dmi.dbis.adam.datatypes.feature.FeatureVectorWrapper
 import ch.unibas.dmi.dbis.adam.entity.Entity
 import ch.unibas.dmi.dbis.adam.entity.Entity._
-import ch.unibas.dmi.dbis.adam.exception.{GeneralAdamException, IndexNotExistingException, IndexNotProperlyDefinedException}
+import ch.unibas.dmi.dbis.adam.exception.{EntityNotExistingException, GeneralAdamException, IndexNotExistingException, IndexNotProperlyDefinedException}
 import ch.unibas.dmi.dbis.adam.helpers.partition.Partitioning.PartitionID
 import ch.unibas.dmi.dbis.adam.helpers.partition.{PartitionMode, PartitionerChoice, RandomPartitioner, SparkPartitioner}
 import ch.unibas.dmi.dbis.adam.index.Index.{IndexName, IndexTypeName}
@@ -24,6 +24,7 @@ import org.apache.spark.sql.{SaveMode, DataFrame}
 import org.scalatest.path
 
 import scala.collection.mutable
+import scala.collection.mutable.ListBuffer
 import scala.util.{Failure, Random, Success, Try}
 
 /**
@@ -35,12 +36,28 @@ import scala.util.{Failure, Random, Success, Try}
 //TODO: make indexes singleton? lock on entity?
 abstract class Index(@transient implicit val ac: AdamContext) extends Serializable with Logging {
   val indexname: IndexName
-
   val indextypename: IndexTypeName
 
+  /**
+    *
+    * @return
+    */
+  lazy val pk = CatalogOperator.getPrimaryKey(entityname).get
+
+  /**
+    * Gets the entity corresponding to the given index.
+    */
   lazy val entity = Entity.load(entityname)
 
+  /**
+    * Gets the entityname corresponding to the given index.
+    */
   val entityname: EntityName
+
+  /**
+    * Gets the indexed attribute.
+    */
+  lazy val attribute = CatalogOperator.getIndexAttribute(indexname).get
 
   /**
     * Confidence towards the index. Confidence of 1 means very confident in index results (i.e., precise results).
@@ -55,7 +72,17 @@ abstract class Index(@transient implicit val ac: AdamContext) extends Serializab
   /**
     *
     */
+  lazy val storage = SparkStartup.indexStorageHandler
+
+  /**
+    *
+    */
   private[index] var data: DataFrame
+
+  /**
+    * Gets the metadata attached to the index.
+    */
+  private[index] def metadata: Serializable
 
   /**
     * Counts the number of elements in the index.
@@ -65,23 +92,29 @@ abstract class Index(@transient implicit val ac: AdamContext) extends Serializab
   def count = data.count()
 
   /**
-    *
-    * @return
+    * Marks the data stale (e.g., if new data has been inserted to entity).
     */
-  def isStale = !CatalogOperator.isIndexUptodate(indexname)
+  def markStale(): Unit = {
+    CatalogOperator.makeIndexStale(indexname)
+  }
 
   /**
-    * Gets the metadata attached to the index.
-    *
-    * @return
+    * Is the index data stale.
     */
-  private[index] def metadata: Serializable
+  def isStale = !isUptodate
+
+  /**
+    * Is the index up to date.
+    */
+  def isUptodate = CatalogOperator.isIndexUptodate(indexname).get
 
   /**
     *
-    * @return
     */
-  def attribute = CatalogOperator.getIndexAttribute(indexname)
+  def drop(): Unit = {
+    val status = storage.drop(indexname)
+    CatalogOperator.dropIndex(indexname)
+  }
 
   /**
     * Returns whether the index can be used with the given query.
@@ -93,18 +126,6 @@ abstract class Index(@transient implicit val ac: AdamContext) extends Serializab
     */
   def isQueryConform(nnq: NearestNeighbourQuery): Boolean
 
-  /**
-    *
-    * @return
-    */
-  lazy val pk = CatalogOperator.getEntityPK(entityname)
-
-  /**
-    * Marks the data stale (e.g., if new data has been inserted to entity).
-    */
-  def markStale(): Unit = {
-    CatalogOperator.updateIndexToStale(indexname)
-  }
 
   /**
     * Scans the index.
@@ -179,6 +200,28 @@ abstract class Index(@transient implicit val ac: AdamContext) extends Serializab
     */
   protected def scan(data: DataFrame, q: FeatureVector, distance: DistanceFunction, options: Map[String, Any], k: Int): DataFrame
 
+
+  /**
+    * Returns stored index options.
+    */
+  def options = CatalogOperator.getIndexOption(indexname)
+
+
+  /**
+    * Returns a map of properties to the index. Useful for printing.
+    */
+  def propertiesMap: Map[String, String] = {
+    val lb = ListBuffer[(String, String)]()
+
+    lb.append("indexname" -> indexname)
+    lb.append("entityname" -> entityname)
+    lb.append("confidence" -> confidence.toString)
+    lb.append("attribute" -> attribute)
+    lb.append("stale" -> isStale.toString)
+
+    lb.toMap
+  }
+
   /**
     * Copies the index structure. Note that this is a volatile operation and no data is stored on disk. Note also
     * that it only returns a shallow copy.
@@ -237,7 +280,7 @@ object Index extends Logging {
     * @return
     */
   private[index] def createIndexName(entityname: EntityName, attribute: String, indextype: IndexTypeName): String = {
-    val indexes = CatalogOperator.listIndexes(Some(entityname), Some(indextype)).map(_._1)
+    val indexes = CatalogOperator.listIndexes(Some(entityname), Some(indextype)).get
 
     var indexname = ""
 
@@ -276,7 +319,7 @@ object Index extends Logging {
 
     val indexname = createIndexName(entity.entityname, attribute, indexgenerator.indextypename)
     //TODO: remove get
-    val rdd: RDD[IndexingTaskTuple[_]] = entity.getIndexableFeature(attribute).get.map { x => IndexingTaskTuple(x.getAs[Any](entity.pk.name), x.getAs[FeatureVectorWrapper](attribute).vector) }
+    val rdd: RDD[IndexingTaskTuple[_]] = entity.getAttributeData(attribute).get.map { x => IndexingTaskTuple(x.getAs[Any](entity.pk.name), x.getAs[FeatureVectorWrapper](attribute).vector) }
 
     val index = indexgenerator.index(indexname, entity.entityname, rdd)
     index.data = index
@@ -286,6 +329,7 @@ object Index extends Logging {
     //TODO: possibly store data with index?
 
     CatalogOperator.createIndex(indexname, entity.entityname, attribute, indexgenerator.indextypename, index.metadata)
+    storage.create(indexname, Seq()) //TODO: switch index to be an entity with specific fields
     val status = storage.write(indexname, index.data, SaveMode.ErrorIfExists, Map("allowRepartitioning" -> "true"))
 
     if (status.isFailure) {
@@ -301,7 +345,7 @@ object Index extends Logging {
     * @param indexname name of index
     * @return
     */
-  def exists(indexname: IndexName)(implicit ac: AdamContext): Boolean = CatalogOperator.existsIndex(indexname)
+  def exists(indexname: IndexName)(implicit ac: AdamContext): Boolean = CatalogOperator.existsIndex(indexname).get
 
   /**
     * Lists indexes.
@@ -311,7 +355,7 @@ object Index extends Logging {
     * @return
     */
   def list(entityname: Option[EntityName] = None, indextypename: Option[IndexTypeName] = None)(implicit ac: AdamContext): Seq[Try[Index]] = {
-    CatalogOperator.listIndexes(entityname, indextypename).map(index => load(index._1))
+    CatalogOperator.listIndexes(entityname, indextypename).get.map(load(_))
   }
 
   /**
@@ -350,14 +394,14 @@ object Index extends Logging {
       return Failure(df.failed.get)
     }
 
-    val entityname = CatalogOperator.getEntitynameFromIndex(indexname)
+    val entityname = CatalogOperator.getEntityName(indexname).get
     val meta = CatalogOperator.getIndexMeta(indexname)
 
     if (meta.isFailure) {
       return Failure(meta.failed.get)
     }
 
-    val indextypename = CatalogOperator.getIndexTypeName(indexname)
+    val indextypename = CatalogOperator.getIndexTypeName(indexname).get
 
     val index = indextypename.index(indexname, entityname, df.get, meta.get, ac)
 
@@ -371,13 +415,12 @@ object Index extends Logging {
     * @return true if index was dropped
     */
   def drop(indexname: IndexName)(implicit ac: AdamContext): Try[Void] = {
-    val status = storage.drop(indexname)
-    CatalogOperator.dropIndex(indexname)
-    IndexLRUCache.invalidate(indexname)
-
-    if (status.isFailure) {
-      log.error("data not dropped", status.failed.get)
+    if (!exists(indexname)) {
+      return Failure(EntityNotExistingException())
     }
+
+    Index.load(indexname).get.drop()
+    IndexLRUCache.invalidate(indexname)
 
     Success(null)
   }
@@ -389,7 +432,7 @@ object Index extends Logging {
     * @return
     */
   def dropAll(entityname: EntityName)(implicit ac: AdamContext): Try[Void] = {
-    val indexes = CatalogOperator.listIndexes(Some(entityname)).map(_._1)
+    val indexes = CatalogOperator.listIndexes(Some(entityname)).get
 
     indexes.foreach {
       indexname => drop(indexname)
@@ -397,10 +440,4 @@ object Index extends Logging {
 
     Success(null)
   }
-
-
 }
-
-
-
-

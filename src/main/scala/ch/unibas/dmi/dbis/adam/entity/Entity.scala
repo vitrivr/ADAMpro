@@ -25,22 +25,39 @@ import scala.util.{Failure, Success, Try}
   */
 //TODO: make entities singleton? lock on entity?
 case class Entity(val entityname: EntityName)(@transient implicit val ac: AdamContext) extends Serializable with Logging {
+  /**
+    * Gets the primary key.
+    *
+    * @return
+    */
+  val pk = CatalogOperator.getPrimaryKey(entityname).get
+
+  private var _schema: Option[Seq[AttributeDefinition]] = None
+
+  /**
+    * Schema of the entity.
+    *
+    * @return
+    */
+  def schema(nameFilter: Option[Seq[String]] = None, typeFilter: Option[Seq[FieldType]] = None): Seq[AttributeDefinition] = {
+    if (_schema.isEmpty) {
+      _schema = Some(CatalogOperator.getAttributes(entityname).get)
+    }
+
+    var tmpSchema = _schema.get
+
+    if (nameFilter.isDefined) {
+      tmpSchema = tmpSchema.filter(attribute => nameFilter.get.contains(attribute.name))
+    }
+
+    if (typeFilter.isDefined) {
+      tmpSchema = tmpSchema.filter(attribute => typeFilter.get.map(_.name).contains(attribute.fieldtype.name))
+    }
+
+    tmpSchema
+  }
+
   private var _data: Option[DataFrame] = None
-
-  /**
-    * Gets feature data.
-    *
-    * @return
-    */
-  def featureData: Option[DataFrame] = data(typeFilter = Some(Seq(FEATURETYPE)))
-
-  /**
-    * Gets feature column and pk column; use this for indexing purposes.
-    *
-    * @param attribute attribute that is indexed
-    * @return
-    */
-  private[adam] def getIndexableFeature(attribute: String)(implicit ac: AdamContext): Option[DataFrame] = data(Some(Seq(pk.name, attribute)))
 
   /**
     * Gets the full entity data.
@@ -50,7 +67,7 @@ case class Entity(val entityname: EntityName)(@transient implicit val ac: AdamCo
     * @param handlerFilter filters for storage handler
     * @return
     */
-  def data(nameFilter: Option[Seq[String]] = None, typeFilter: Option[Seq[FieldType]] = None, handlerFilter: Option[StorageHandler] = None): Option[DataFrame] = {
+  def getData(nameFilter: Option[Seq[String]] = None, typeFilter: Option[Seq[FieldType]] = None, handlerFilter: Option[StorageHandler] = None): Option[DataFrame] = {
     //cache data join
     if (_data.isEmpty) {
       val handlerData = schema().filterNot(_.pk).filter(_.storagehandler.isDefined).groupBy(_.storagehandler.get).map { case (handler, attributes) =>
@@ -73,16 +90,31 @@ case class Entity(val entityname: EntityName)(@transient implicit val ac: AdamCo
     //possibly filter for current call
     var filteredData = _data
 
-    if(handlerFilter.isDefined){
+    if (handlerFilter.isDefined) {
       //filter by handler, name and type
       filteredData = filteredData.map(_.select(schema(nameFilter, typeFilter).filter(a => a.storagehandler.isDefined && a.storagehandler.get.equals(handlerFilter.get)).map(attribute => col(attribute.name)): _*))
-    } else if (nameFilter.isDefined || typeFilter.isDefined){
+    } else if (nameFilter.isDefined || typeFilter.isDefined) {
       //filter by name and type
       filteredData = filteredData.map(_.select(schema(nameFilter, typeFilter).map(attribute => col(attribute.name)): _*))
     }
 
     filteredData
   }
+
+  /**
+    * Gets feature data.
+    *
+    * @return
+    */
+  def getFeatureData: Option[DataFrame] = getData(typeFilter = Some(Seq(FEATURETYPE)))
+
+  /**
+    * Gets feature column and pk column; use this for indexing purposes.
+    *
+    * @param attribute attribute that is indexed
+    * @return
+    */
+  def getAttributeData(attribute: String)(implicit ac: AdamContext): Option[DataFrame] = getData(Some(Seq(pk.name, attribute)))
 
   /**
     * Caches the data.
@@ -98,34 +130,7 @@ case class Entity(val entityname: EntityName)(@transient implicit val ac: AdamCo
       status
     }.filter(_.isSuccess).map(_.get.cache())
 
-    data().map(_.cache())
-  }
-
-  /**
-    * Marks the data stale (e.g., if new data has been inserted to entity).
-    */
-  def markStale(): Unit = {
-    _schema = None
-    _tupleCount = None
-    _data = None
-    indexes.map(_.map(_.markStale()))
-  }
-
-  /**
-    * Gets the primary key.
-    *
-    * @return
-    */
-  val pk = CatalogOperator.getEntityPK(entityname)
-
-
-  /**
-    * Returns all available indexes for the entity.
-    *
-    * @return
-    */
-  def indexes: Seq[Try[Index]] = {
-    CatalogOperator.listIndexes(Some(entityname)).map(index => Index.load(index._1))
+    getData().map(_.cache())
   }
 
 
@@ -139,10 +144,10 @@ case class Entity(val entityname: EntityName)(@transient implicit val ac: AdamCo
     */
   def count: Long = {
     if (_tupleCount.isEmpty) {
-      if (data().isEmpty) {
+      if (getData().isEmpty) {
         _tupleCount = None
       } else {
-        _tupleCount = Some(data().get.count())
+        _tupleCount = Some(getData().get.count())
       }
     }
 
@@ -156,7 +161,7 @@ case class Entity(val entityname: EntityName)(@transient implicit val ac: AdamCo
     * @param k number of elements to show in preview
     * @return
     */
-  def show(k: Int): Option[DataFrame] = data().map(_.limit(k))
+  def show(k: Int = 100): Option[DataFrame] = getData().map(_.limit(k))
 
 
   /**
@@ -215,12 +220,36 @@ case class Entity(val entityname: EntityName)(@transient implicit val ac: AdamCo
   }
 
   /**
+    * Returns all available indexes for the entity.
+    *
+    * @return
+    */
+  def indexes: Seq[Try[Index]] = {
+    CatalogOperator.listIndexes(Some(entityname)).get.map(index => Index.load(index))
+  }
+
+  /**
+    * Marks the data stale (e.g., if new data has been inserted to entity).
+    */
+  def markStale(): Unit = {
+    _schema = None
+    _tupleCount = None
+    _data = None
+    indexes.map(_.map(_.markStale()))
+  }
+
+  /**
+    * Deletes tuples from the entity
+    */
+  def delete(conditionExpr: String): Unit = ???
+
+  /**
     * Drops the data of the entity.
     */
   def drop(): Unit = {
     Index.dropAll(entityname)
 
-    schema().filter(_.storagehandler.isDefined).groupBy(_.storagehandler.get)
+    schema().filterNot(_.pk).filter(_.storagehandler.isDefined).groupBy(_.storagehandler.get)
       .foreach { case (handler, attributes) =>
         handler.drop(entityname)
       }
@@ -229,48 +258,23 @@ case class Entity(val entityname: EntityName)(@transient implicit val ac: AdamCo
   }
 
   /**
-    * Deletes tuples from the entity
+    * Returns stored entity options.
     */
-  def delete(conditionExpr: String): Unit = ???
-
+  def options = CatalogOperator.getEntityOption(entityname)
 
   /**
     * Returns a map of properties to the entity. Useful for printing.
     */
-  def properties: Map[String, String] = {
+  def propertiesMap: Map[String, String] = {
     val lb = ListBuffer[(String, String)]()
 
-    lb.append("schema" -> CatalogOperator.getAttributes(entityname).map(field => field.name + "(" + field.fieldtype.name + ")").mkString(","))
-    lb.append("indexes" -> CatalogOperator.listIndexes(Some(entityname)).mkString(", "))
+    lb.append("count" -> count.toString)
+    lb.append("schema" -> CatalogOperator.getAttributes(entityname).get.map(field => field.name + "(" + field.fieldtype.name + ")").mkString(","))
+    lb.append("indexes" -> indexes.filter(_.isSuccess).map(_.get.propertiesMap).map(_.mkString(", ")).mkString("; "))
 
     lb.toMap
   }
 
-
-  private var _schema: Option[Seq[AttributeDefinition]] = None
-
-  /**
-    * Schema of the entity.
-    *
-    * @return
-    */
-  def schema(nameFilter: Option[Seq[String]] = None, typeFilter: Option[Seq[FieldType]] = None): Seq[AttributeDefinition] = {
-    if (_schema.isEmpty) {
-      _schema = Some(CatalogOperator.getAttributes(entityname))
-    }
-
-    var tmpSchema = _schema.get
-
-    if (nameFilter.isDefined) {
-      tmpSchema = tmpSchema.filter(attribute => nameFilter.get.contains(attribute.name))
-    }
-
-    if (typeFilter.isDefined) {
-      tmpSchema = tmpSchema.filter(attribute => typeFilter.get.map(_.name).contains(attribute.fieldtype.name))
-    }
-
-    tmpSchema
-  }
 
   override def equals(that: Any): Boolean =
     that match {
@@ -291,7 +295,15 @@ object Entity extends Logging {
     * @param entityname name of entity
     * @return
     */
-  def exists(entityname: EntityName): Boolean = CatalogOperator.existsEntity(entityname)
+  def exists(entityname: EntityName): Boolean = {
+    val res = CatalogOperator.existsEntity(entityname)
+
+    if (res.isFailure) {
+      throw res.failed.get
+    }
+
+    res.get
+  }
 
   /**
     * Creates an entity.
@@ -376,27 +388,11 @@ object Entity extends Logging {
   }
 
   /**
-    * Drops an entity.
+    * Lists names of all entities.
     *
-    * @param entityname name of entity
-    * @param ifExists   if set to true, no error is raised if entity does not exist
-    * @return
+    * @return name of entities
     */
-  def drop(entityname: EntityName, ifExists: Boolean = false)(implicit ac: AdamContext): Try[Void] = {
-    if (!exists(entityname)) {
-      if (!ifExists) {
-        return Failure(EntityNotExistingException())
-      } else {
-        return Success(null)
-      }
-    }
-
-    Entity.load(entityname).get.drop()
-    EntityLRUCache.invalidate(entityname)
-
-    Success(null)
-  }
-
+  def list: Seq[EntityName] = CatalogOperator.listEntities().get
 
   /**
     * Loads an entity.
@@ -439,9 +435,24 @@ object Entity extends Logging {
 
 
   /**
-    * Lists names of all entities.
+    * Drops an entity.
     *
-    * @return name of entities
+    * @param entityname name of entity
+    * @param ifExists   if set to true, no error is raised if entity does not exist
+    * @return
     */
-  def list: Seq[EntityName] = CatalogOperator.listEntities()
+  def drop(entityname: EntityName, ifExists: Boolean = false)(implicit ac: AdamContext): Try[Void] = {
+    if (!exists(entityname)) {
+      if (!ifExists) {
+        return Failure(EntityNotExistingException())
+      } else {
+        return Success(null)
+      }
+    }
+
+    val status = Entity.load(entityname).get.drop()
+    EntityLRUCache.invalidate(entityname)
+
+    Success(null)
+  }
 }

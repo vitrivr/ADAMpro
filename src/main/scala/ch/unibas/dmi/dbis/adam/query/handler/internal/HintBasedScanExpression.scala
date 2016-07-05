@@ -57,7 +57,7 @@ case class HintBasedScanExpression(private val entityname: EntityName, private v
 object HintBasedScanExpression extends Logging {
 
   def startPlanSearch(entityname: EntityName, nnq: Option[NearestNeighbourQuery], bq: Option[BooleanQuery], hints: Seq[QueryHint], withFallback: Boolean = true)(expr: Option[QueryExpression] = None)(implicit ac: AdamContext): QueryExpression = {
-    val indexes: Map[IndexTypeName, Seq[IndexName]] = CatalogOperator.listIndexes(Some(entityname)).groupBy(_._2).mapValues(_.map(_._1))
+    val indexes: Map[IndexTypeName, Seq[IndexName]] = CatalogOperator.listIndexes(Some(entityname)).get.map(Index.load(_)).filter(_.isSuccess).map(_.get).groupBy(_.indextypename).mapValues(_.map(_.indexname))
     var plan = getPlan(entityname, indexes, nnq, bq, hints)(expr)
 
     if (plan.isEmpty) {
