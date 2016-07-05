@@ -12,7 +12,7 @@ import slick.driver.PostgresDriver.api._
   * July 2016
   */
 private[catalog] class EntityOptionsCatalog(tag: Tag) extends Table[(String, String, String)](tag, Some(CatalogOperator.SCHEMA), "ap_entityoptions") {
-  def entityname = column[String]("entityname")
+  def entityname = column[String]("entity")
 
   def key = column[String]("key")
 

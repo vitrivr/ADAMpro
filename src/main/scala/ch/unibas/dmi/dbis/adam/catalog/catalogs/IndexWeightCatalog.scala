@@ -12,7 +12,7 @@ import slick.driver.PostgresDriver.api._
   * June 2016
   */
 private[catalog] class IndexWeightCatalog(tag: Tag) extends Table[(String, Float)](tag, Some(CatalogOperator.SCHEMA), "ap_indexweight") {
-  def indexname = column[String]("indexname")
+  def indexname = column[String]("index")
 
   def weight = column[Float]("weight")
 

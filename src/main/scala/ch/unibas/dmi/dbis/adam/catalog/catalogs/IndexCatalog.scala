@@ -12,13 +12,13 @@ import slick.driver.PostgresDriver.api._
   * June 2016
   */
 private[catalog] class IndexCatalog(tag: Tag) extends Table[(String, String, String, String, Array[Byte], Boolean)](tag, Some(CatalogOperator.SCHEMA), "ap_index") {
-  def indexname = column[String]("indexname", O.PrimaryKey)
+  def indexname = column[String]("index", O.PrimaryKey)
 
-  def entityname = column[String]("entityname")
+  def entityname = column[String]("entity")
 
-  def attribute = column[String]("attribute")
+  def attributename = column[String]("attribute")
 
-  def indextypename = column[String]("indextypename")
+  def indextypename = column[String]("indextype")
 
   def meta = column[Array[Byte]]("meta")
 
@@ -27,11 +27,7 @@ private[catalog] class IndexCatalog(tag: Tag) extends Table[(String, String, Str
   /**
     * Special fields
     */
-  def * = (indexname, entityname, attribute, indextypename, meta, isUpToDate)
+  def * = (indexname, entityname, attributename, indextypename, meta, isUpToDate)
 
-  def entity = foreignKey("index_entity_fk", entityname, TableQuery[EntityCatalog])(_.entityname, onUpdate=ForeignKeyAction.Cascade, onDelete=ForeignKeyAction.Cascade)
-
-  def options = foreignKey("index_options_fk", indexname, TableQuery[IndexOptionsCatalog])(_.indexname)
-
-  def weights = foreignKey("index_weight_fk", indexname, TableQuery[IndexWeightCatalog])(_.indexname)
+  def attribute = foreignKey("index_attribute_fk", (entityname, attributename), TableQuery[AttributeCatalog])(t => (t.entityname, t.attributename), onUpdate=ForeignKeyAction.Cascade, onDelete=ForeignKeyAction.Cascade)
 }

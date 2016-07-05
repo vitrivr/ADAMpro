@@ -12,7 +12,7 @@ import slick.driver.PostgresDriver.api._
   * July 2016
   */
 private[catalog] class IndexOptionsCatalog(tag: Tag) extends Table[(String, String, String)](tag, Some(CatalogOperator.SCHEMA), "ap_indexoptions") {
-  def indexname = column[String]("indexname")
+  def indexname = column[String]("index")
 
   def key = column[String]("key")
 

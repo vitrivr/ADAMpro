@@ -29,39 +29,45 @@ import scala.util.{Failure, Success, Try}
   * August 2015
   */
 object CatalogOperator extends Logging {
-  def apply() = List(
-    ("entity", TableQuery[EntityCatalog]),
-    ("entityoptions", TableQuery[EntityOptionsCatalog]),
-    ("attribute", TableQuery[AttributeCatalog]),
-    ("attributeoptions", TableQuery[AttributeOptionsCatalog]),
-    ("attributeweight", TableQuery[AttributeWeightCatalog]),
-    ("index", TableQuery[IndexCatalog]),
-    ("indexoptions", TableQuery[IndexOptionsCatalog]),
-    ("indexweight", TableQuery[IndexWeightCatalog])
-  )
-
   private val MAX_WAITING_TIME: Duration = 100.seconds
   private val DB = Database.forURL(AdamConfig.jdbcUrl, driver = "org.postgresql.Driver", user = AdamConfig.jdbcUser, password = AdamConfig.jdbcPassword)
-  private[catalog] val SCHEMA = "adampro"
 
-  //generate catalog tables in the beginning if not already existent
-  private val metas = Await.result(DB.run(MTable.getTables), MAX_WAITING_TIME).toList.map(x => x.name.name).filter(apply().map(_._1).contains(_))
-  if (metas.isEmpty) {
-    //schema might be empty
-    Await.result(DB.run(sqlu"""create schema if not exists adampro;"""), MAX_WAITING_TIME)
-  }
-  apply().filterNot(mdd => metas.contains(mdd._1)).foreach(mdd => {
-    DB.run(mdd._2.schema.create)
-  })
+  private[catalog] val SCHEMA = "adampro"
 
   private val _entitites = TableQuery[EntityCatalog]
   private val _entityOptions = TableQuery[EntityOptionsCatalog]
   private val _attributes = TableQuery[AttributeCatalog]
   private val _attributeOptions = TableQuery[AttributeOptionsCatalog]
-  private val _attributeweight = TableQuery[AttributeWeightCatalog]
+  private val _attributeWeights = TableQuery[AttributeWeightCatalog]
   private val _indexes = TableQuery[IndexCatalog]
   private val _indexOptions = TableQuery[IndexOptionsCatalog]
-  private val _indexweights = TableQuery[IndexWeightCatalog]
+  private val _indexWeights = TableQuery[IndexWeightCatalog]
+
+  private[catalog] val CATALOGS = Seq(
+    _entitites, _entityOptions, _attributes, _attributeOptions, _attributeWeights, _indexes, _indexOptions, _indexWeights
+  )
+
+  private def init() {
+    try {
+      val tables = Await.result(DB.run(MTable.getTables), MAX_WAITING_TIME).toSeq.filter(_.name.schema.getOrElse("public").equals(SCHEMA)) map (_.name.name)
+
+      val actions: ListBuffer[DBIOAction[_, NoStream, _]] = new ListBuffer()
+      //schema might not exist yet
+      actions += sqlu"""create schema if not exists adampro;"""
+      CATALOGS.foreach { catalog =>
+        if (!tables.contains(catalog.baseTableRow.tableName)) {
+          actions += catalog.schema.create
+        } else {
+        }
+      }
+
+      Await.result(DB.run(DBIO.seq(actions.toArray: _*).transactionally), MAX_WAITING_TIME)
+    } catch {
+      case e: Exception => log.error("error in init", e)
+    }
+  }
+
+  init()
 
   private val DEFAULT_WEIGHT: Float = ScanWeightBenchmarker.DEFAULT_WEIGHT
 
@@ -80,7 +86,7 @@ object CatalogOperator extends Logging {
 
       val actions: ListBuffer[DBIOAction[_, NoStream, _]] = new ListBuffer()
 
-      actions += DBIO.seq(_entitites.+=(entityname))
+      actions += _entitites.+=(entityname)
 
       attributes.foreach { attribute =>
         actions += _attributes.+=(entityname, attribute.name, attribute.fieldtype.name, attribute.pk, attribute.unique, attribute.indexed, attribute.storagehandler.map(_.name).getOrElse(""))
@@ -89,7 +95,7 @@ object CatalogOperator extends Logging {
           actions += _attributeOptions.+=(entityname, attribute.name, key, value)
         }
 
-        actions += _attributeweight.+=(entityname, attribute.name, DEFAULT_WEIGHT)
+        actions += _attributeWeights.+=(entityname, attribute.name, DEFAULT_WEIGHT)
       }
 
       Await.result(DB.run(DBIO.seq(actions.toArray: _*).transactionally), MAX_WAITING_TIME)
@@ -335,7 +341,7 @@ object CatalogOperator extends Logging {
     */
 
   def getEntityScanWeight(entityname: EntityName, attributename: String): Float = {
-    Await.result(DB.run(_attributeweight.filter(_.entityname === entityname.toString).filter(_.attributename === attributename).map(_.weight).result.head), MAX_WAITING_TIME)
+    Await.result(DB.run(_attributeWeights.filter(_.entityname === entityname.toString).filter(_.attributename === attributename).map(_.weight).result.head), MAX_WAITING_TIME)
   }
 
   /**
@@ -349,7 +355,7 @@ object CatalogOperator extends Logging {
     */
   def setEntityScanWeight(entityname: EntityName, attributename: String, newWeight: Option[Float] = Some(DEFAULT_WEIGHT)): Boolean = {
     try {
-      val update = _attributeweight.filter(_.entityname === entityname.toString).filter(_.attributename === attributename).map(_.weight).update(newWeight.getOrElse(DEFAULT_WEIGHT))
+      val update = _attributeWeights.filter(_.entityname === entityname.toString).filter(_.attributename === attributename).map(_.weight).update(newWeight.getOrElse(DEFAULT_WEIGHT))
       Await.result(DB.run(update), MAX_WAITING_TIME)
 
       log.debug("updated weight in catalog")
@@ -368,7 +374,7 @@ object CatalogOperator extends Logging {
     * @return
     */
   def getIndexScanWeight(indexname: IndexName): Float = {
-    Await.result(DB.run(_indexweights.filter(_.indexname === indexname.toString).map(_.weight).result.head), MAX_WAITING_TIME)
+    Await.result(DB.run(_indexWeights.filter(_.indexname === indexname.toString).map(_.weight).result.head), MAX_WAITING_TIME)
   }
 
   /**
@@ -381,7 +387,7 @@ object CatalogOperator extends Logging {
     */
   def setIndexScanWeight(indexname: IndexName, newWeight: Option[Float] = Some(DEFAULT_WEIGHT)): Boolean = {
     try {
-      val update = _indexweights.filter(_.indexname === indexname.toString).map(_.weight).update(newWeight.getOrElse(DEFAULT_WEIGHT))
+      val update = _indexWeights.filter(_.indexname === indexname.toString).map(_.weight).update(newWeight.getOrElse(DEFAULT_WEIGHT))
       Await.result(DB.run(update), MAX_WAITING_TIME)
 
       log.debug("updated weight in catalog")
@@ -533,7 +539,7 @@ object CatalogOperator extends Logging {
       val actions: ListBuffer[DBIOAction[_, NoStream, _]] = new ListBuffer()
 
       actions += _indexes.+=((indexname, entityname, attributename, indextypename.name, meta, true))
-      actions += _indexweights.+=(indexname, DEFAULT_WEIGHT)
+      actions += _indexWeights.+=(indexname, DEFAULT_WEIGHT)
 
       Await.result(DB.run(DBIO.seq(actions.toArray: _*).transactionally), MAX_WAITING_TIME)
 
@@ -589,7 +595,7 @@ object CatalogOperator extends Logging {
       _indexes
     }
 
-    val query = filter.join(_indexweights).on(_.indexname === _.indexname).map { case (index, weights) => (index.indexname, index.indextypename, weights.weight) }.result
+    val query = filter.join(_indexWeights).on(_.indexname === _.indexname).map { case (index, weights) => (index.indexname, index.indextypename, weights.weight) }.result
     Await.result(DB.run(query), MAX_WAITING_TIME).map(index => (EntityNameHolder(index._1), IndexTypes.withName(index._2).get, index._3))
   }
 
@@ -599,7 +605,7 @@ object CatalogOperator extends Logging {
     * @return
     */
   def getIndexAttribute(indexname: IndexName): String = {
-    Await.result(DB.run(_indexes.filter(_.indexname === indexname.toString).map(_.attribute).result.head), MAX_WAITING_TIME)
+    Await.result(DB.run(_indexes.filter(_.indexname === indexname.toString).map(_.attributename).result.head), MAX_WAITING_TIME)
   }
 
   /**
@@ -641,7 +647,7 @@ object CatalogOperator extends Logging {
     */
   def updateIndexWeight(indexname: IndexName, newWeight: Option[Float] = Some(DEFAULT_WEIGHT)): Boolean = {
     try {
-      Await.result(DB.run(_indexweights.filter(_.indexname === indexname.toString).map(_.weight).update(newWeight.getOrElse(DEFAULT_WEIGHT))), MAX_WAITING_TIME)
+      Await.result(DB.run(_indexWeights.filter(_.indexname === indexname.toString).map(_.weight).update(newWeight.getOrElse(DEFAULT_WEIGHT))), MAX_WAITING_TIME)
       log.debug("updated weight in catalog")
       true
     } catch {
@@ -671,7 +677,7 @@ object CatalogOperator extends Logging {
       val actions: ListBuffer[DBIOAction[_, NoStream, _]] = new ListBuffer()
 
       actions += _indexes.filter(_.indexname === indexname.toString).map(_.isUpToDate).update(false)
-      actions += _indexweights.filter(_.indexname === indexname.toString).map(_.weight).update(0.toFloat)
+      actions += _indexWeights.filter(_.indexname === indexname.toString).map(_.weight).update(0.toFloat)
 
       Await.result(DB.run(DBIO.seq(actions.toArray: _*).transactionally), MAX_WAITING_TIME)
       log.debug("made indexes stale in catalog")
