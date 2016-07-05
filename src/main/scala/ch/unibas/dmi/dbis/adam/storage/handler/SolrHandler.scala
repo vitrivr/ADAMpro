@@ -63,21 +63,29 @@ import scala.util.{Failure, Success, Try}
     val entity = Entity.load(entityname).get
     val schema = entity.schema().filterNot(_.pk)
       .filter(attribute => attribute.storagehandler.isDefined && attribute.storagehandler.get.isInstanceOf[SolrHandler])
+    val schemaMap = schema.map(attribute => attribute.name -> attribute).toMap
 
     try {
-      val query = new SolrQuery()
-      query.setQuery(params.getOrElse("query", "*:*"))
-      if (params.contains("filter")) {
-        query.setFilterQueries(params.get("filter").get.split(",").toSeq: _*)
+      val solrQuery = new SolrQuery()
+      val query = if(params.contains("query")){
+        val originalQuery = params.get("query").get
+        val pattern = "([^:\"']+)|(\"[^\"]*\")|('[^']*')".r
+        pattern.findAllIn(originalQuery).zipWithIndex.map{case(txt,idx) => if(idx % 2 == 0){schemaMap.get(txt).map(_.params.getOrElse("solrfieldname", txt)).getOrElse(txt) + ":"} else {txt}}.mkString
+      } else {
+        "*:*"
       }
-      query.setRows(Integer.MAX_VALUE)
+      solrQuery.setQuery(query)
+      if (params.contains("filter")) {
+        solrQuery.setFilterQueries(params.get("filter").get.split(",").toSeq: _*)
+      }
+      solrQuery.setRows(Integer.MAX_VALUE)
 
       val client = new HttpSolrClient(url + "/" + entityname.toString)
-      val nresults = math.min(Integer.MAX_VALUE, client.query(query).getResults.getNumFound.toInt)
+      val nresults = math.min(Integer.MAX_VALUE, client.query(solrQuery).getResults.getNumFound.toInt)
 
       val rdd = ac.sc.range(0, nresults).mapPartitions(it => {
         val partClient = new HttpSolrClient(url + "/" + entityname.toString)
-        val results = partClient.query(query).getResults
+        val results = partClient.query(solrQuery).getResults
 
         it.filter(i => i < results.getNumFound).map(i => results.get(i.toInt)).map(doc => {
           val data = schema.map { attribute => {
