@@ -38,13 +38,11 @@ object CatalogOperator extends Logging {
   private val _entityOptions = TableQuery[EntityOptionsCatalog]
   private val _attributes = TableQuery[AttributeCatalog]
   private val _attributeOptions = TableQuery[AttributeOptionsCatalog]
-  private val _attributeWeights = TableQuery[AttributeWeightCatalog]
   private val _indexes = TableQuery[IndexCatalog]
   private val _indexOptions = TableQuery[IndexOptionsCatalog]
-  private val _indexWeights = TableQuery[IndexWeightCatalog]
 
   private[catalog] val CATALOGS = Seq(
-    _entitites, _entityOptions, _attributes, _attributeOptions, _attributeWeights, _indexes, _indexOptions, _indexWeights
+    _entitites, _entityOptions, _attributes, _attributeOptions, _indexes, _indexOptions
   )
 
   /**
@@ -115,8 +113,6 @@ object CatalogOperator extends Logging {
         attribute.params.foreach { case (key, value) =>
           dbActions += _attributeOptions.+=(entityname, attribute.name, key, value)
         }
-
-        dbActions += _attributeWeights.map(aw => (aw.entityname, aw.attributename)).+=(entityname, attribute.name)
       }
 
       Await.result(DB.run(DBIO.seq(dbActions.toArray: _*).transactionally), MAX_WAITING_TIME)
@@ -301,66 +297,6 @@ object CatalogOperator extends Logging {
 
 
   /**
-    * Returns the scan weight to an attribute of an entity.
-    *
-    * @param entityname    name of entity
-    * @param attributename name of attribute
-    * @return
-    */
-
-  def getEntityScanWeight(entityname: EntityName, attributename: String): Try[Float] = {
-    execute("get entity scan weight") {
-      val query = _attributeWeights.filter(_.entityname === entityname.toString).filter(_.attributename === attributename).map(_.weight).result.head
-      Await.result(DB.run(query), MAX_WAITING_TIME)
-    }
-  }
-
-  /**
-    * Sets the scan weight to an attribute of an entity.
-    *
-    * @param entityname    name of entity
-    * @param attributename name of attribute
-    * @param newWeight     specify the new weight for the entity (the higher the more important)
-    * @return
-    */
-  def setEntityScanWeight(entityname: EntityName, attributename: String, newWeight: Float): Try[Void] = {
-    execute("set entity scan weight") {
-      val update = _attributeWeights.filter(_.entityname === entityname.toString).filter(_.attributename === attributename).map(_.weight).update(newWeight)
-      Await.result(DB.run(update), MAX_WAITING_TIME)
-      null
-    }
-  }
-
-  /**
-    * Gets the scan weight of an index.
-    *
-    * @param indexname name of index
-    * @return
-    */
-  def getIndexScanWeight(indexname: IndexName): Try[Float] = {
-    execute("get index scan weight") {
-      val query = _indexWeights.filter(_.indexname === indexname.toString).map(_.weight).result.head
-      Await.result(DB.run(query), MAX_WAITING_TIME)
-    }
-  }
-
-  /**
-    * Sets the scan weight of an index.
-    *
-    * @param indexname name of index
-    * @param newWeight specify the new weight for the entity (the higher the more important)
-    * @return
-    */
-  def setIndexScanWeight(indexname: IndexName, newWeight: Float): Try[Void] = {
-    execute("set index scan weight") {
-      val update = _indexWeights.filter(_.indexname === indexname.toString).map(_.weight).update(newWeight)
-      Await.result(DB.run(update), MAX_WAITING_TIME)
-      null
-    }
-  }
-
-
-  /**
     * Drops entity from catalog.
     *
     * @param entityname name of entity
@@ -498,7 +434,6 @@ object CatalogOperator extends Logging {
       val actions: ListBuffer[DBIOAction[_, NoStream, _]] = new ListBuffer()
 
       actions += _indexes.+=((indexname, entityname, attributename, indextypename.name, meta, true))
-      actions += _indexWeights.map(_.indexname).+=(indexname)
 
       Await.result(DB.run(DBIO.seq(actions.toArray: _*).transactionally), MAX_WAITING_TIME)
       null
@@ -591,20 +526,6 @@ object CatalogOperator extends Logging {
     }
   }
 
-  /**
-    *
-    * @param indexname name of index
-    * @param newWeight specify the new weight for the index (the higher the more important), if no weight is
-    *                  specified the default weight is used
-    * @return
-    */
-  def updateIndexWeight(indexname: IndexName, newWeight: Float): Try[Void] = {
-    execute("update index weight") {
-      val query = _indexWeights.filter(_.indexname === indexname.toString).map(_.weight).update(newWeight)
-      Await.result(DB.run(query), MAX_WAITING_TIME)
-      null
-    }
-  }
 
   /**
     *
@@ -629,7 +550,6 @@ object CatalogOperator extends Logging {
       val actions: ListBuffer[DBIOAction[_, NoStream, _]] = new ListBuffer()
 
       actions += _indexes.filter(_.indexname === indexname.toString).map(_.isUpToDate).update(false)
-      actions += _indexWeights.filter(_.indexname === indexname.toString).map(_.weight).update(0.toFloat)
 
       Await.result(DB.run(DBIO.seq(actions.toArray: _*).transactionally), MAX_WAITING_TIME)
       null

@@ -54,10 +54,10 @@ private class ScanWeightBenchmarker(entityname: EntityName, attribute: String, n
 
     val sumCost: Float = indBenchmarks.map(_._2).sum + seqCost
 
-    CatalogOperator.setEntityScanWeight(entityname, attribute, (1 + 1 - (seqCost / sumCost)) * ScanWeightBenchmarker.DEFAULT_WEIGHT)
+    CatalogOperator.updateAttributeOption(entityname, attribute, ScanWeightInspector.SCANWEIGHT_OPTION_NAME, ((1 + 1 - (seqCost / sumCost)) * ScanWeightInspector.DEFAULT_WEIGHT).toString)
 
     indBenchmarks.foreach { case (index, indCost) =>
-      CatalogOperator.setIndexScanWeight(index.indexname, (1 + 1 - (seqCost / sumCost)) * ScanWeightBenchmarker.DEFAULT_WEIGHT)
+      CatalogOperator.updateIndexOption(index.indexname, ScanWeightInspector.SCANWEIGHT_OPTION_NAME, ((1 + 1 - (seqCost / sumCost)) * ScanWeightInspector.DEFAULT_WEIGHT).toString)
     }
   }
 
@@ -123,7 +123,6 @@ object ScanWeightBenchmarker {
   private val NUMBER_OF_QUERIES = 5
   private val NUMBER_OF_RUNS = 2
 
-  val DEFAULT_WEIGHT: Float = 100
 
   /**
     * Benchmarks all indexes and the attributes of the given entity and updates weight.
@@ -154,11 +153,11 @@ object ScanWeightBenchmarker {
     }
 
     cols.foreach { col =>
-      CatalogOperator.setEntityScanWeight(entityname, col, ScanWeightBenchmarker.DEFAULT_WEIGHT)
+      CatalogOperator.updateAttributeOption(entityname, col, ScanWeightInspector.SCANWEIGHT_OPTION_NAME, ScanWeightInspector.DEFAULT_WEIGHT.toString)
     }
 
     indexes.filter(_.attribute == attribute.get).foreach { index =>
-      CatalogOperator.setIndexScanWeight(index.indexname, ScanWeightBenchmarker.DEFAULT_WEIGHT)
+      CatalogOperator.updateIndexOption(index.indexname, ScanWeightInspector.SCANWEIGHT_OPTION_NAME, ScanWeightInspector.DEFAULT_WEIGHT.toString)
     }
   }
 }
