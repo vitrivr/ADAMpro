@@ -63,6 +63,7 @@ object IndexPartitioner extends Logging {
       case PartitionMode.CREATE_NEW =>
         val newName = Index.createIndexName(index.entityname, index.attribute, index.indextypename)
         CatalogOperator.createIndex(newName, index.entityname, index.attribute, index.indextypename, index.metadata)
+        Index.storage.create(newName, Seq()) //TODO: switch index to be an entity with specific fields
         val status = Index.storage.write(newName, data)
 
         if (status.isFailure) {
