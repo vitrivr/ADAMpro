@@ -33,6 +33,7 @@ class IndexFlatFileHandler(private val engine: FileEngine) extends StorageHandle
     var filename = CatalogOperator.getIndexOption(indexname, Some(INDEX_OPTION_NAME)).get.get(INDEX_OPTION_NAME)
 
     if (filename.isEmpty) {
+      log.error("filename missing from catalog for index " + indexname + "; create method has not been called")
       throw new GeneralAdamException("no filename specified in catalog, no fallback")
     }
 
