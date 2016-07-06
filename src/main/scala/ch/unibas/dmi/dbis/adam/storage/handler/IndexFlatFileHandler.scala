@@ -88,13 +88,8 @@ class IndexFlatFileHandler(private val engine: FileEngine) extends StorageHandle
       if (mode == SaveMode.Overwrite) {
         var newFilename = ""
         do {
-          if(filename.contains("-rep") && filename.contains("/")){
-            if(filename.lastIndexOf("-rep")>filename.lastIndexOf("/")){
+          if(filename.contains("-rep")){
               newFilename = filename.substring(0,filename.lastIndexOf("-")) + "-rep" + Random.nextInt(999)
-            }
-            else{
-              newFilename = filename + "-rep" + Random.nextInt(999)
-            }
           } else{
             newFilename = filename + "-rep" + Random.nextInt(999)
           }
