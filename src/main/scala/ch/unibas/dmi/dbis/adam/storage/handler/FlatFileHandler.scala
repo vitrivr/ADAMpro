@@ -33,6 +33,7 @@ class FlatFileHandler(private val engine: FileEngine) extends StorageHandler wit
     val filename = CatalogOperator.getEntityOption(entityname, Some(ENTITY_OPTION_NAME)).get.get(ENTITY_OPTION_NAME)
 
     if (filename.isEmpty) {
+      log.error("filename missing from catalog for entity " + entityname + "; create method has not been called")
       throw new GeneralAdamException("no filename specified in catalog, no fallback")
     }
 

@@ -34,6 +34,7 @@ class DatabaseHandler(private val engine: RelationalDatabaseEngine) extends Stor
     val tablename = CatalogOperator.getEntityOption(entityname, Some(ENTITY_OPTION_NAME)).get.get(ENTITY_OPTION_NAME)
 
     if (tablename.isEmpty) {
+      log.error("tablename missing from catalog for entity " + entityname + "; create method has not been called")
       throw new GeneralAdamException("no tablename specified in catalog, no fallback")
     }
 

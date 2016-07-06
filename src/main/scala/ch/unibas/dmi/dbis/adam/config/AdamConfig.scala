@@ -41,6 +41,8 @@ object AdamConfig extends Serializable with Logging {
   val jdbcUser = config.getString("adampro.jdbc.user")
   val jdbcPassword = config.getString("adampro.jdbc.password")
 
+  val solrUrl = config.getString("adampro.solr.url")
+
   val grpcPort = config.getInt("adampro.grpc.port")
 
   var evaluation = false

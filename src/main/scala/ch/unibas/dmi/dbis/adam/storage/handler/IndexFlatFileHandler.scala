@@ -33,6 +33,7 @@ class IndexFlatFileHandler(private val engine: FileEngine) extends StorageHandle
     var filename = CatalogOperator.getIndexOption(indexname, Some(INDEX_OPTION_NAME)).get.get(INDEX_OPTION_NAME)
 
     if (filename.isEmpty) {
+      log.error("filename missing from catalog for index " + indexname + "; create method has not been called")
       throw new GeneralAdamException("no filename specified in catalog, no fallback")
     }
 
@@ -49,6 +50,11 @@ class IndexFlatFileHandler(private val engine: FileEngine) extends StorageHandle
   override def create(indexname: IndexName, attributes: Seq[AttributeDefinition], params: Map[String, String] = Map())(implicit ac: AdamContext): Try[Void] = {
     execute("create") {
       var filename = indexname
+
+      while (engine.exists(filename).get) {
+        filename = filename + Random.nextInt(999).toString
+      }
+
       CatalogOperator.updateIndexOption(indexname, INDEX_OPTION_NAME, filename)
     }
   }

@@ -50,6 +50,7 @@ object SparkStartup extends Logging {
   val mainContext = Implicits.ac
   val contexts = Seq(mainContext)
 
+  //TODO: add dynamically based on config
   val registry = StorageHandlerRegistry
   registry.register(new DatabaseHandler(new PostgresqlEngine(AdamConfig.jdbcUrl, AdamConfig.jdbcUser, AdamConfig.jdbcPassword)))
 
@@ -61,7 +62,7 @@ object SparkStartup extends Logging {
     registry.register(new FlatFileHandler(new ParquetEngine(AdamConfig.dataPath)))
   }
 
-  registry.register(new SolrHandler("http://localhost:32768/solr"))
+  registry.register(new SolrHandler(AdamConfig.solrUrl))
 
   val indexStorageHandler = new IndexFlatFileHandler(new ParquetEngine(AdamConfig.indexPath))
 }
