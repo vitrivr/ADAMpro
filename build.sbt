@@ -43,6 +43,7 @@ resolvers ++= Seq(
   "Sonatype Releases" at "https://oss.sonatype.org/content/repositories/releases/"
 )
 resolvers += Resolver.sonatypeRepo("snapshots")
+resolvers += "Restlet Repositories" at "http://maven.restlet.org"
 
 //base libs
 val baseLibs = Seq(
