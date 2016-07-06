@@ -1,12 +1,11 @@
 package ch.unibas.dmi.dbis.adam.storage.handler
 
-import java.util
-
 import ch.unibas.dmi.dbis.adam.catalog.CatalogOperator
 import ch.unibas.dmi.dbis.adam.datatypes.FieldTypes
 import ch.unibas.dmi.dbis.adam.datatypes.FieldTypes.FieldType
 import ch.unibas.dmi.dbis.adam.entity.Entity.EntityName
 import ch.unibas.dmi.dbis.adam.entity.{AttributeDefinition, Entity}
+import ch.unibas.dmi.dbis.adam.exception.GeneralAdamException
 import ch.unibas.dmi.dbis.adam.main.AdamContext
 import ch.unibas.dmi.dbis.adam.utils.Logging
 import org.apache.solr.client.solrj.SolrQuery
@@ -14,10 +13,10 @@ import org.apache.solr.client.solrj.impl.HttpSolrClient
 import org.apache.solr.client.solrj.request.CoreAdminRequest
 import org.apache.solr.common.SolrInputDocument
 import org.apache.spark.annotation.Experimental
-import org.apache.spark.sql.types.{DataTypes, StructField, StructType}
+import org.apache.spark.sql.types.{StructField, StructType}
 import org.apache.spark.sql.{DataFrame, Row, SaveMode}
 
-import scala.util.{Failure, Success, Try}
+import scala.util.{Random, Success, Try}
 
 /**
   * ADAMpro
@@ -27,10 +26,28 @@ import scala.util.{Failure, Success, Try}
   */
 @Experimental class SolrHandler(private val url: String) extends StorageHandler with Logging with Serializable {
   override val name: String = "storing-solr"
+
   override def supports = Seq(FieldTypes.AUTOTYPE, FieldTypes.INTTYPE, FieldTypes.LONGTYPE, FieldTypes.FLOATTYPE, FieldTypes.DOUBLETYPE, FieldTypes.STRINGTYPE, FieldTypes.TEXTTYPE, FieldTypes.BOOLEANTYPE)
+
   override def specializes: Seq[FieldType] = Seq(FieldTypes.TEXTTYPE)
 
-  private val SOLR_OPTION_NAME = "storing-solr-fieldname"
+  private val SOLR_OPTION_ENTITYNAME = "storing-solr-corename"
+  private val SOLR_OPTION_FIELDNAME = "storing-solr-fieldname"
+
+  /**
+    *
+    * @param entityname
+    */
+  private def getCoreName(entityname: EntityName): String = {
+    val corename = CatalogOperator.getEntityOption(entityname, Some(SOLR_OPTION_ENTITYNAME)).get.get(SOLR_OPTION_ENTITYNAME)
+
+    if (corename.isEmpty) {
+      log.error("corename missing from catalog for entity " + entityname + "; create method has not been called")
+      throw new GeneralAdamException("no corename specified in catalog, no fallback")
+    }
+
+    corename.get
+  }
 
   /**
     *
@@ -40,43 +57,57 @@ import scala.util.{Failure, Success, Try}
     * @return
     */
   override def create(entityname: EntityName, attributes: Seq[AttributeDefinition], params: Map[String, String])(implicit ac: AdamContext): Try[Void] = {
-    try {
+    execute("create") {
       val client = new HttpSolrClient(url)
 
-      val req = CoreAdminRequest.getStatus(entityname, client)
-      val cores = (0 until req.getCoreStatus().size()).map { i => req.getCoreStatus().getName(i) }
+      var corename = entityname
+      while (exists(corename)) {
+        corename = corename + Random.nextInt(999).toString
+      }
+
+      CatalogOperator.updateEntityOption(entityname, SOLR_OPTION_ENTITYNAME, corename)
 
       val createReq = new CoreAdminRequest.Create()
-      createReq.setCoreName(entityname.toString)
-      createReq.setInstanceDir(entityname.toString)
+      createReq.setCoreName(corename)
+      createReq.setInstanceDir(corename)
       createReq.setConfigSet("basic_configs")
       createReq.process(client)
 
-      attributes.filterNot(_.pk).foreach {
+      attributes.foreach {
         attribute =>
-          CatalogOperator.updateAttributeOption(entityname, attribute.name, SOLR_OPTION_NAME, attribute.name + getSuffix(attribute.fieldtype))
+          CatalogOperator.updateAttributeOption(entityname, attribute.name, SOLR_OPTION_FIELDNAME, attribute.name + getSuffix(attribute.fieldtype))
       }
 
       Success(null)
-    } catch {
-      case e: Exception => Failure(e)
     }
   }
 
   /**
-    * Returns the dynamic suffix for storing the fieldtype in solr
+    * Check if corename exists already.
+    *
+    * @param corename
+    * @return
+    */
+  private def exists(corename: String): Boolean = {
+    CoreAdminRequest.getStatus(corename, new HttpSolrClient(url)).getCoreStatus(corename).get("instanceDir") != null
+  }
+
+  /**
+    * Returns the dynamic suffix for storing the fieldtype in solr.
+    *
     * @param fieldtype
     * @return
     */
-  private def getSuffix(fieldtype : FieldType) = fieldtype match {
+  private def getSuffix(fieldtype: FieldType) = fieldtype match {
     case FieldTypes.AUTOTYPE => "_l"
     case FieldTypes.INTTYPE => "_i"
     case FieldTypes.LONGTYPE => "_l"
-     case FieldTypes.FLOATTYPE => "_f"
+    case FieldTypes.FLOATTYPE => "_f"
     case FieldTypes.DOUBLETYPE => "_d"
     case FieldTypes.STRINGTYPE => "_s"
     case FieldTypes.TEXTTYPE => "_txt"
     case FieldTypes.BOOLEANTYPE => "_b"
+    case _ => "_s" //in case we do not know how to store the data, choose string
   }
 
   /**
@@ -86,71 +117,69 @@ import scala.util.{Failure, Success, Try}
     * @return
     */
   override def read(entityname: EntityName, params: Map[String, String])(implicit ac: AdamContext): Try[DataFrame] = {
-    val entity = Entity.load(entityname).get
-    val schema = entity.schema().filterNot(_.pk)
-      .filter(attribute => attribute.storagehandler.isDefined && attribute.storagehandler.get.isInstanceOf[SolrHandler])
+    execute("read") {
+      val corename = getCoreName(entityname)
+      val client = new HttpSolrClient(url + "/" + corename)
 
-    try {
+      val entity = Entity.load(entityname).get
+      val schema = entity.schema().filter(attribute => attribute.storagehandler.isDefined && attribute.storagehandler.get.isInstanceOf[SolrHandler])
+
+      //set query for retrieving data
       val solrQuery = new SolrQuery()
-      val query = if(params.contains("query")){
-        adjustAttributeName(params.get("query").get, schema)
-      } else {
-        "*:*"
-      }
+      val query = params.get("query").map(adjustAttributeName(_, schema)).getOrElse("*:*")
       solrQuery.setQuery(query)
-
       if (params.contains("filter")) {
         solrQuery.setFilterQueries(params.get("filter").get.split(",").toSeq: _*)
       }
       solrQuery.setRows(Integer.MAX_VALUE) //retrieve all rows
 
-      val client = new HttpSolrClient(url + "/" + entityname.toString)
       val nresults = math.min(Integer.MAX_VALUE, client.query(solrQuery).getResults.getNumFound.toInt)
 
       val rdd = ac.sc.range(0, nresults).mapPartitions(it => {
-        val partClient = new HttpSolrClient(url + "/" + entityname.toString)
-        val results = partClient.query(solrQuery).getResults
+        val results = new HttpSolrClient(url + "/" + corename).query(solrQuery).getResults
 
         it.filter(i => i < results.getNumFound).map(i => results.get(i.toInt)).map(doc => {
           val data = schema.map { attribute => {
-            //TODO: adjust for support of other data types
-            val strings = doc.get(attribute.params.getOrElse(SOLR_OPTION_NAME, attribute.name)).asInstanceOf[util.ArrayList[String]]
+            val fieldData = doc.get(attribute.params.getOrElse(SOLR_OPTION_FIELDNAME, attribute.name))
 
-            if (strings != null && strings.size > 0) {
-              strings.get(0)
-            } else {
-              ""
+            if (fieldData != null) {
+              fieldData match {
+                case list: java.util.ArrayList[String] => if (list.size() > 0) {
+                  list.get(0)
+                }
+                case any => any
+              }
             }
           }
           }
 
-          Row(Seq(doc.get(entity.pk.name)) ++ data: _*)
+          Row(data: _*)
         })
       })
 
-      //TODO: adjust for support of other data types
-      val dfSchema = StructType(Seq(StructField(entity.pk.name + "-str", DataTypes.StringType)) ++ schema.map { case attribute => StructField(attribute.name, attribute.fieldtype.datatype) })
-      var df = ac.sqlContext.createDataFrame(rdd, dfSchema)
-      df = df.withColumn(entity.pk.name, df.col(entity.pk.name + "-str").cast(entity.pk.fieldtype.datatype))
-      df = df.drop(entity.pk.name + "-str")
-
+      var df = ac.sqlContext.createDataFrame(rdd, StructType(schema.map(attribute => StructField(attribute.name, attribute.fieldtype.datatype))))
       Success(df)
-    } catch {
-      case e: Exception => Failure(e)
     }
   }
 
   /**
     * Adjusts the query, by replacing the names in front of the : with the dynamic name suffix
+    *
     * @param originalQuery
     * @param schema
     * @return
     */
-  private def adjustAttributeName(originalQuery : String, schema : Seq[AttributeDefinition]) : String = {
+  private def adjustAttributeName(originalQuery: String, schema: Seq[AttributeDefinition]): String = {
     val schemaMap = schema.map(attribute => attribute.name -> attribute).toMap
 
     val pattern = "([^:\"']+)|(\"[^\"]*\")|('[^']*')".r
-    pattern.findAllIn(originalQuery).zipWithIndex.map{case(txt,idx) => if(idx % 2 == 0){schemaMap.get(txt).map(_.params.getOrElse(SOLR_OPTION_NAME, txt)).getOrElse(txt) + ":"} else {txt}}.mkString
+    pattern.findAllIn(originalQuery).zipWithIndex.map { case (fieldname, idx) =>
+      if (idx % 2 == 0) {
+        schemaMap.get(fieldname).map(_.params.getOrElse(SOLR_OPTION_FIELDNAME, fieldname)).getOrElse(fieldname) + ":"
+      } else {
+        fieldname
+      }
+    }.mkString
   }
 
 
@@ -163,32 +192,29 @@ import scala.util.{Failure, Success, Try}
     * @return
     */
   override def write(entityname: EntityName, df: DataFrame, mode: SaveMode, params: Map[String, String])(implicit ac: AdamContext): Try[Void] = {
-    try {
+    execute("write") {
+      val corename = getCoreName(entityname)
+
       val entity = Entity.load(entityname).get
-      val schema = entity.schema().filterNot(_.pk)
-        .filter(attribute => attribute.storagehandler.isDefined && attribute.storagehandler.get.isInstanceOf[SolrHandler])
+      val schema = entity.schema().filter(attribute => attribute.storagehandler.isDefined && attribute.storagehandler.get.isInstanceOf[SolrHandler])
 
-      df.foreachPartition(pit => {
-        val partClient = new HttpSolrClient(url + "/" + entityname.toString)
+      df.foreachPartition { it =>
+        val partClient = new HttpSolrClient(url + "/" + corename)
 
-        pit.foreach { row => {
+        it.foreach { row =>
           val doc = new SolrInputDocument()
           doc.addField("id", row.getAs[Any](entity.pk.name))
 
-          schema.foreach { attribute => {
-            doc.addField(attribute.params.getOrElse(SOLR_OPTION_NAME, attribute.name), row.getAs[String](attribute.name))
-          }
+          schema.foreach { attribute =>
+            doc.addField(attribute.params.getOrElse(SOLR_OPTION_FIELDNAME, attribute.name), row.getAs[String](attribute.name))
           }
           partClient.add(doc)
         }
-          partClient.commit()
-        }
-      })
+
+        partClient.commit()
+      }
 
       Success(null)
-    } catch {
-      case e: Exception =>
-        Failure(e)
     }
   }
 
@@ -199,15 +225,17 @@ import scala.util.{Failure, Success, Try}
     * @return
     */
   override def drop(entityname: EntityName, params: Map[String, String])(implicit ac: AdamContext): Try[Void] = {
-    try {
+    execute("drop") {
+      val corename = getCoreName(entityname)
+
       val client = new HttpSolrClient(url)
 
       client.deleteByQuery(entityname.toString, "*:*")
-      client.commit(entityname.toString)
+      client.commit(corename)
+
+      //deleting core is not easily possible, therefore we just delete the data
 
       Success(null)
-    } catch {
-      case e: Exception => Failure(e)
     }
   }
 
