@@ -23,7 +23,7 @@ class FlatFileHandler(private val engine: FileEngine) extends StorageHandler wit
   override def supports = Seq(FieldTypes.AUTOTYPE, FieldTypes.INTTYPE, FieldTypes.LONGTYPE, FieldTypes.STRINGTYPE, FieldTypes.FEATURETYPE)
   override def specializes = Seq(FieldTypes.FEATURETYPE)
 
-  private val ENTITY_OPTION_NAME = "feature-filename"
+  private val ENTITY_OPTION_NAME = "storing-feature-filename"
 
   /**
     *

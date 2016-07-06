@@ -23,7 +23,7 @@ class DatabaseHandler(private val engine: RelationalDatabaseEngine) extends Stor
   override def supports = Seq(FieldTypes.AUTOTYPE, FieldTypes.INTTYPE, FieldTypes.LONGTYPE, FieldTypes.FLOATTYPE, FieldTypes.DOUBLETYPE, FieldTypes.STRINGTYPE, FieldTypes.BOOLEANTYPE)
   override def specializes = Seq(FieldTypes.AUTOTYPE, FieldTypes.INTTYPE, FieldTypes.LONGTYPE, FieldTypes.FLOATTYPE, FieldTypes.DOUBLETYPE, FieldTypes.STRINGTYPE, FieldTypes.BOOLEANTYPE)
 
-  private val ENTITY_OPTION_NAME = "relational-tablename"
+  private val ENTITY_OPTION_NAME = "storing-relational-tablename"
 
 
   /**
