@@ -57,7 +57,7 @@ private class ScanWeightBenchmarker(entityname: EntityName, attribute: String, n
     CatalogOperator.updateAttributeOption(entityname, attribute, ScanWeightInspector.SCANWEIGHT_OPTION_NAME, ((1 + 1 - (seqCost / sumCost)) * ScanWeightInspector.DEFAULT_WEIGHT).toString)
 
     indBenchmarks.foreach { case (index, indCost) =>
-      CatalogOperator.updateIndexOption(index.indexname, ScanWeightInspector.SCANWEIGHT_OPTION_NAME, ((1 + 1 - (seqCost / sumCost)) * ScanWeightInspector.DEFAULT_WEIGHT).toString)
+      CatalogOperator.updateIndexOption(index.indexname, ScanWeightInspector.SCANWEIGHT_OPTION_NAME, ((1 + 1 - (indCost / sumCost)) * ScanWeightInspector.DEFAULT_WEIGHT).toString)
     }
   }
 
