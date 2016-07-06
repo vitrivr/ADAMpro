@@ -49,6 +49,18 @@ service AdamSearch {
 
 //****  GLOBALS ****//
 
+enum AttributeType {
+  LONG = 0;
+  INT = 1;
+  FLOAT = 2;
+  DOUBLE = 3;
+  STRING = 4;
+  TEXT = 5;
+  BOOLEAN = 6;
+  FEATURE = 7;
+  AUTO = 8;
+}
+
 enum IndexType {
   ecp = 0;
   lsh = 1;
@@ -108,23 +120,12 @@ enum HandlerType {
 
 message CreateEntityMessage {
   string entity = 1;
-  repeated FieldDefinitionMessage fields = 2;
+  repeated AttributeDefinitionMessage attributes = 2;
 }
 
-message FieldDefinitionMessage {
+message AttributeDefinitionMessage {
   string name = 1;
-  enum FieldType {
-      LONG = 0;
-      INT = 1;
-      FLOAT = 2;
-      DOUBLE = 3;
-      STRING = 4;
-      TEXT = 5;
-      BOOLEAN = 6;
-      FEATURE = 7;
-      AUTO = 8;
-    }
-  FieldType fieldtype = 2;
+  AttributeType attributetype = 2;
   bool pk = 3;
   bool unique = 4;
   bool indexed = 5;
@@ -286,12 +287,12 @@ message ProjectionMessage {
     COUNT = 0;
     EXISTS = 1;
   }
-  message FieldnameMessage {
-    repeated string field = 1;
+  message AttributeNameMessage {
+    repeated string attribute = 1;
   }
   oneof submessage {
-    //either fieldnames are specified...
-    FieldnameMessage field = 1;
+    //either attributes are specified...
+    AttributeNameMessage attributes = 1;
     //...or an operation
     Operation op = 2;
   }
@@ -357,9 +358,9 @@ message BooleanQueryMessage {
   repeated WhereMessage where = 1;
 
   message WhereMessage {
-    string field = 1;
+    string attribute = 1;
     //if value starts on certain operators (e.g., != or IN), then the operation used in query is adapted, otherwise equality is used
-    string value = 2; //TODO: possibly adjust to DataMessage, but in that case make sure that using where only non-feature fields can be queried
+    string value = 2; //TODO: possibly adjust to DataMessage, but in that case make sure that using where only non-feature attributes can be queried using WHERE
   }
 
   message JoinMessage {

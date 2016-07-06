@@ -217,12 +217,12 @@ private[rpc] object RPCHelperMethods {
           case _ => Success(qe)
         }
       } else {
-        val fields = pm.getField.field
+        val attributes = pm.getAttributes.attribute
 
-        if (fields.isEmpty) {
+        if (attributes.isEmpty) {
           Success(qe)
         } else {
-          Success(ProjectionExpression(FieldNameProjection(fields), qe, queryid))
+          Success(ProjectionExpression(FieldNameProjection(attributes), qe, queryid))
         }
       }
     } catch {
@@ -309,7 +309,7 @@ private[rpc] object RPCHelperMethods {
   def prepareBQ(bq: BooleanQueryMessage): Try[BooleanQuery] = {
     try {
       val where = if (!bq.where.isEmpty) {
-        Some(bq.where.map(bqm => (bqm.field, bqm.value)))
+        Some(bq.where.map(bqm => (bqm.attribute, bqm.value)))
       } else {
         None
       }

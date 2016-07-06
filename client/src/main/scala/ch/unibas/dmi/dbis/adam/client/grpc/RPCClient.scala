@@ -7,7 +7,6 @@ import ch.unibas.dmi.dbis.adam.http.grpc.AdamDefinitionGrpc.AdamDefinitionBlocki
 import ch.unibas.dmi.dbis.adam.http.grpc.AdamSearchGrpc.{AdamSearchBlockingStub, AdamSearchStub}
 import ch.unibas.dmi.dbis.adam.http.grpc.DataMessage.Datatype
 import ch.unibas.dmi.dbis.adam.http.grpc.DistanceMessage.DistanceType
-import ch.unibas.dmi.dbis.adam.http.grpc.FieldDefinitionMessage.FieldType
 import ch.unibas.dmi.dbis.adam.http.grpc.RepartitionMessage.PartitionOptions
 import ch.unibas.dmi.dbis.adam.http.grpc._
 import io.grpc.okhttp.OkHttpChannelBuilder
@@ -57,7 +56,7 @@ class RPCClient(channel: ManagedChannel, definer: AdamDefinitionBlockingStub, se
   def entityCreate(entityname: String, attributes: Seq[EntityField]): Try[String] = {
     execute("create entity operation") {
       val fieldMessage = attributes.map(field =>
-        FieldDefinitionMessage(field.name, getFieldType(field.datatype), field.pk, false, field.indexed)
+        AttributeDefinitionMessage(field.name, getFieldType(field.datatype), field.pk, false, field.indexed)
       )
 
       val res = definer.createEntity(CreateEntityMessage(entityname, fieldMessage))
@@ -243,8 +242,8 @@ class RPCClient(channel: ManagedChannel, definer: AdamDefinitionBlockingStub, se
   def entityCreateAll(entityname: String, attributes: Seq[EntityField], norm: Int): Try[Void] = {
     execute("create all indexes operation") {
       val fieldMessage = attributes.map(field =>
-        FieldDefinitionMessage(field.name, getFieldType(field.datatype), false, false, field.indexed)
-      ).filter(_.fieldtype == FieldType.FEATURE)
+        AttributeDefinitionMessage(field.name, getFieldType(field.datatype), false, false, field.indexed)
+      ).filter(_.attributetype == AttributeType.FEATURE)
 
       fieldMessage.map { column =>
         val res = definer.generateAllIndexes(IndexMessage(entity = entityname, column = column.name, distance = Some(DistanceMessage(DistanceType.minkowski, options = Map("norm" -> norm.toString)))))
@@ -318,15 +317,15 @@ class RPCClient(channel: ManagedChannel, definer: AdamDefinitionBlockingStub, se
     * @param s
     * @return
     */
-  private def getFieldType(s: String): FieldDefinitionMessage.FieldType = s match {
-    case "feature" => FieldType.FEATURE
-    case "long" => FieldType.LONG
-    case "int" => FieldType.INT
-    case "float" => FieldType.FLOAT
-    case "double" => FieldType.DOUBLE
-    case "string" => FieldType.STRING
-    case "text" => FieldType.TEXT
-    case "boolean" => FieldType.BOOLEAN
+  private def getFieldType(s: String): AttributeType = s match {
+    case "feature" => AttributeType.FEATURE
+    case "long" => AttributeType.LONG
+    case "int" => AttributeType.INT
+    case "float" => AttributeType.FLOAT
+    case "double" => AttributeType.DOUBLE
+    case "string" => AttributeType.STRING
+    case "text" => AttributeType.TEXT
+    case "boolean" => AttributeType.BOOLEAN
     case _ => null
   }
 
