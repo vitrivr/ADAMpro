@@ -58,11 +58,11 @@ object RandomDataOp extends Logging {
       (0 until collectionSize).sliding(limit, limit).foreach { seq =>
         val rdd = ac.sc.parallelize(
           seq.map(idx => {
-            var data = schema.map(field => randomGenerator(field.fieldtype)())
+            var data = schema.filterNot(_.fieldtype == FieldTypes.AUTOTYPE).map(field => randomGenerator(field.fieldtype)())
             Row(data: _*)
           })
         )
-        val data = ac.sqlContext.createDataFrame(rdd, StructType(schema.map(field => StructField(field.name, field.fieldtype.datatype))))
+        val data = ac.sqlContext.createDataFrame(rdd, StructType(schema.filterNot(_.fieldtype == FieldTypes.AUTOTYPE).map(field => StructField(field.name, field.fieldtype.datatype))))
 
         log.debug("inserting data batch")
         val status = entity.get.insert(data, true)
@@ -74,7 +74,9 @@ object RandomDataOp extends Logging {
       log.debug("finished inserting")
       Success(null)
     } catch {
-      case e: Exception => Failure(e)
+      case e: Exception =>
+        log.error("error when generating random data", e)
+        Failure(e)
     }
   }
 
