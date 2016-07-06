@@ -20,7 +20,7 @@ import scala.util.Random
   * June 2016
   */
 class RPCClient(channel: ManagedChannel, definer: AdamDefinitionBlockingStub, searcherBlocking: AdamSearchBlockingStub, searcher: AdamSearchStub) extends AdamParEvalUtils {
-  val fw = new FileWriter("results"+Calendar.getInstance().getTime.getTime+".csv", true)
+  val fw = new FileWriter("results" + Calendar.getInstance().getTime.getTime + ".csv", true)
   val bw = new BufferedWriter(fw)
   val out = new PrintWriter(bw)
 
@@ -33,36 +33,62 @@ class RPCClient(channel: ManagedChannel, definer: AdamDefinitionBlockingStub, se
   /**
     * Evaluation Code
     */
-  val tupleSizes = Seq(1e6.toInt, 1e7.toInt, 1e8.toInt, 1e9.toInt)
-  val dimensions = Seq(10, 128, 500)
-  val partitions = Seq(1, 2, 4,  8, 16, 32, 64, 128)
+  val tupleSizes = Seq(1e5.toInt)
+  val dimensions = Seq(128)
+  val partitions = Seq(1, 2, 4, 8, 16, 32, 64, 128)
   val indices = Seq(IndexType.ecp, IndexType.vaf, IndexType.lsh, IndexType.pq, IndexType.sh)
   val partitioners = Seq(RepartitionMessage.Partitioner.CURRENT, RepartitionMessage.Partitioner.SPARK, RepartitionMessage.Partitioner.RANDOM)
+
 
   try
       for (tuples <- tupleSizes) {
         for (dim <- dimensions) {
-          System.out.println("New Round! "+tuples+" "+dim)
+          System.out.println("New Round! " + tuples + " " + dim)
           dropAllEntities()
-          val eName = ("silvan" + Math.abs(Random.nextInt())).filter(_ != '0')
+          var eName = ""
+          val entitymessage = definer.listEntities(EmptyMessage())
+          //check if entity with given count exists
+          for (entity <- entitymessage.entities) {
+            val c = definer.count(EntityNameMessage(entity))
+            if (c.message.toInt == tuples) {
+              eName = entity
+            }
+          }
 
-          definer.createEntity(CreateEntityMessage(eName, Seq(AttributeDefinitionMessage.apply("id", AttributeType.LONG, true, true, true), AttributeDefinitionMessage("feature", AttributeType.FEATURE, false, false, true))))
+          if(eName.equals("")) {
+            try {
+              dropAllEntities()
 
-          definer.generateRandomData(GenerateRandomDataMessage(eName, tuples, dim))
+            } catch {
+              case e: Exception => System.err.println("Drop Entity failed")
+            }
+            eName = ("silvan" + Math.abs(Random.nextInt())).filter(_ != '0')
 
+            definer.createEntity(CreateEntityMessage(eName, Seq(AttributeDefinitionMessage.apply("id", AttributeType.LONG, true, true, true), AttributeDefinitionMessage("feature", AttributeType.FEATURE, false, false, true))))
+
+            definer.generateRandomData(GenerateRandomDataMessage(eName, tuples, dim))
+          }
+
+          //Index generation
           for (index <- indices) {
-            val name = generateIndex(index, eName)
+            //TODO Check if index exists
+            val msg = definer.getEntityProperties(EntityNameMessage(eName))
+            var name = ""
+            if(!msg.properties.get("indexes").getOrElse("").contains(index.name)){
+              name = generateIndex(index, eName)
+              //TODO Ugly fix
+            }else name = eName+"_feature_"+index.name+"_0"
             for (part <- partitions) {
-              for(partitioner <- partitioners){
-                definer.repartitionIndexData(RepartitionMessage(name, part, option = RepartitionMessage.PartitionOptions.REPLACE_EXISTING,partitioner = partitioner))
+              for (partitioner <- partitioners) {
+                definer.repartitionIndexData(RepartitionMessage(name, part, option = RepartitionMessage.PartitionOptions.REPLACE_EXISTING, partitioner = partitioner))
                 val (avgTime, noResults) = timeQuery(name, dim, part)
                 appendToResults(tuples, dim, part, index.name, avgTime, k, noResults, partitioner)
               }
             }
-            try{
-              val res = definer.dropIndex(IndexNameMessage(name))
-              System.out.println(res)
-            }catch {
+            try {
+              //val res = definer.dropIndex(IndexNameMessage(name))
+              //System.out.println(res)
+            } catch {
               case e: Exception => System.err.println("Drop Index failed")
             }
           }
@@ -73,7 +99,7 @@ class RPCClient(channel: ManagedChannel, definer: AdamDefinitionBlockingStub, se
 
   def timeQuery(indexName: String, dim: Int, part: Int): (Float, Int) = {
 
-    val queryCount = 40
+    val queryCount = 10
     //1 free query to cache Index
     val res = searcherBlocking.doQuery(QueryMessage(nnq = Some(randomQueryMessage(dim, part)), from = Some(FromMessage(FromMessage.Source.Index(indexName)))))
     if (k > res.responses.head.results.size) {
@@ -87,11 +113,11 @@ class RPCClient(channel: ManagedChannel, definer: AdamDefinitionBlockingStub, se
     var counter = 0
     while (counter < queryCount) {
       val res = searcherBlocking.doQuery(QueryMessage(nnq = Some(randomQueryMessage(dim, part)), from = Some(FromMessage(FromMessage.Source.Index(indexName)))))
-      resSize+=res.responses.head.results.size
+      resSize += res.responses.head.results.size
       counter += 1
     }
     val stop = System.currentTimeMillis()
-    ((stop - start)/queryCount.toFloat,resSize/queryCount)
+    ((stop - start) / queryCount.toFloat, resSize / queryCount)
   }
 
   def randomQueryMessage(dim: Int, part: Int) = NearestNeighbourQueryMessage("feature", Some(FeatureVectorMessage().withDenseVector(DenseVectorMessage(Seq.fill(dim)(Random.nextFloat())))), None, getDistanceMsg, k, Map[String, String](), true, 1 until part)
@@ -114,7 +140,7 @@ class RPCClient(channel: ManagedChannel, definer: AdamDefinitionBlockingStub, se
   }
 
   def appendToResults(tuples: Int, dimensions: Int, partitions: Int, index: String, time: Float, k: Int = 0, noResults: Int = 0, partitioner: RepartitionMessage.Partitioner): Unit = {
-    out.println(Calendar.getInstance().getTime()+","+index + "," + tuples + "," + dimensions + "," + partitions + "," + time + "," + k+", "+ noResults+", "+partitioner.name)
+    out.println(Calendar.getInstance().getTime() + "," + index + "," + tuples + "," + dimensions + "," + partitions + "," + time + "," + k + ", " + noResults + ", " + partitioner.name)
     out.flush()
   }
 
