@@ -45,8 +45,8 @@ class RPCTestSuite extends AdamTestBase with ScalaFutures {
           definition.createEntity(
             CreateEntityMessage(entityname,
               Seq(
-                FieldDefinitionMessage("tid", FieldDefinitionMessage.FieldType.LONG, true),
-                FieldDefinitionMessage("feature", FieldDefinitionMessage.FieldType.FEATURE)
+                AttributeDefinitionMessage("tid", AttributeType.LONG, true),
+                AttributeDefinitionMessage("feature", AttributeType.FEATURE)
               )))
         Then("the entity should exist")
         assert(Entity.exists(entityname))
@@ -143,10 +143,10 @@ class RPCTestSuite extends AdamTestBase with ScalaFutures {
         Given("an entity")
         val createEntityFuture = definition.createEntity(CreateEntityMessage(entityname,
           Seq(
-            FieldDefinitionMessage("tid", FieldDefinitionMessage.FieldType.LONG, true),
-            FieldDefinitionMessage("stringfield", FieldDefinitionMessage.FieldType.STRING),
-            FieldDefinitionMessage("intfield", FieldDefinitionMessage.FieldType.INT),
-            FieldDefinitionMessage("featurefield", FieldDefinitionMessage.FieldType.FEATURE)
+            AttributeDefinitionMessage("tid", AttributeType.LONG, true),
+            AttributeDefinitionMessage("stringfield", AttributeType.STRING),
+            AttributeDefinitionMessage("intfield", AttributeType.INT),
+            AttributeDefinitionMessage("featurefield", AttributeType.FEATURE)
           )))
 
         val requestObserver: StreamObserver[InsertMessage] = definitionNb.insert(new StreamObserver[AckMessage]() {

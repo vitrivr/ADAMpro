@@ -6,14 +6,12 @@ import ch.unibas.dmi.dbis.adam.datatypes.FieldTypes
 import ch.unibas.dmi.dbis.adam.datatypes.feature.{FeatureVectorWrapper, FeatureVectorWrapperUDT}
 import ch.unibas.dmi.dbis.adam.entity.{AttributeDefinition, Entity}
 import ch.unibas.dmi.dbis.adam.exception.GeneralAdamException
-import ch.unibas.dmi.dbis.adam.http.grpc.FieldDefinitionMessage.FieldType
-import ch.unibas.dmi.dbis.adam.http.grpc.{AckMessage, CreateEntityMessage, _}
 import ch.unibas.dmi.dbis.adam.helpers.partition.{PartitionMode, PartitionerChoice}
+import ch.unibas.dmi.dbis.adam.http.grpc.{AckMessage, CreateEntityMessage, _}
 import ch.unibas.dmi.dbis.adam.index.structures.IndexTypes
 import ch.unibas.dmi.dbis.adam.main.{AdamContext, SparkStartup}
-import ch.unibas.dmi.dbis.adam.utils.AdamImporter
+import ch.unibas.dmi.dbis.adam.utils.{AdamImporter, Logging}
 import io.grpc.stub.StreamObserver
-import ch.unibas.dmi.dbis.adam.utils.Logging
 import org.apache.spark.sql.types.{DataType, StructField, StructType}
 import org.apache.spark.sql.{Row, types}
 
@@ -36,8 +34,8 @@ class DataDefinitionRPC extends AdamDefinitionGrpc.AdamDefinition with Logging {
   override def createEntity(request: CreateEntityMessage): Future[AckMessage] = {
     log.debug("rpc call for create entity operation")
     val entityname = request.entity
-    val fields = request.fields.map(field => {
-      AttributeDefinition(field.name, matchFields(field.fieldtype), field.pk, field.unique, field.indexed) //TODO: add handler type
+    val fields = request.attributes.map(attribute => {
+      AttributeDefinition(attribute.name, matchFields(attribute.attributetype), attribute.pk, attribute.unique, attribute.indexed) //TODO: add handler type
     })
     val res = EntityOp(entityname, fields)
 
@@ -54,15 +52,15 @@ class DataDefinitionRPC extends AdamDefinitionGrpc.AdamDefinition with Logging {
     * @param ft
     * @return
     */
-  private def matchFields(ft: FieldDefinitionMessage.FieldType) = ft match {
-    case FieldType.BOOLEAN => FieldTypes.BOOLEANTYPE
-    case FieldType.DOUBLE => FieldTypes.DOUBLETYPE
-    case FieldType.FLOAT => FieldTypes.FLOATTYPE
-    case FieldType.INT => FieldTypes.INTTYPE
-    case FieldType.LONG => FieldTypes.LONGTYPE
-    case FieldType.STRING => FieldTypes.STRINGTYPE
-    case FieldType.TEXT => FieldTypes.TEXTTYPE
-    case FieldType.FEATURE => FieldTypes.FEATURETYPE
+  private def matchFields(ft: AttributeType) = ft match {
+    case AttributeType.BOOLEAN => FieldTypes.BOOLEANTYPE
+    case AttributeType.DOUBLE => FieldTypes.DOUBLETYPE
+    case AttributeType.FLOAT => FieldTypes.FLOATTYPE
+    case AttributeType.INT => FieldTypes.INTTYPE
+    case AttributeType.LONG => FieldTypes.LONGTYPE
+    case AttributeType.STRING => FieldTypes.STRINGTYPE
+    case AttributeType.TEXT => FieldTypes.TEXTTYPE
+    case AttributeType.FEATURE => FieldTypes.FEATURETYPE
     case _ => FieldTypes.UNRECOGNIZEDTYPE
   }
 
