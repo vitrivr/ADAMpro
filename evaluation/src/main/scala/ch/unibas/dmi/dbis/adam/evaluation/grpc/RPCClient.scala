@@ -20,7 +20,7 @@ import scala.util.Random
   * June 2016
   */
 class RPCClient(channel: ManagedChannel, definer: AdamDefinitionBlockingStub, searcherBlocking: AdamSearchBlockingStub, searcher: AdamSearchStub) extends AdamParEvalUtils {
-  val fw = new FileWriter("results" + Calendar.getInstance().getTime.getTime + ".csv", true)
+  val fw = new FileWriter("results_" + Calendar.getInstance().getTime.toString + ".csv", true)
   val bw = new BufferedWriter(fw)
   val out = new PrintWriter(bw)
 
@@ -36,17 +36,18 @@ class RPCClient(channel: ManagedChannel, definer: AdamDefinitionBlockingStub, se
   val tupleSizes = Seq(1e5.toInt)
   val dimensions = Seq(128)
   val partitions = Seq(1, 2, 4, 8, 16, 32, 64, 128)
-  val indices = Seq(IndexType.ecp, IndexType.vaf, IndexType.lsh, IndexType.pq, IndexType.sh)
+  val indices = Seq(IndexType.ecp, IndexType.vaf, IndexType.lsh, IndexType.pq)
   val partitioners = Seq(RepartitionMessage.Partitioner.CURRENT, RepartitionMessage.Partitioner.SPARK, RepartitionMessage.Partitioner.RANDOM)
 
+  dropAllEntities()
 
   try
       for (tuples <- tupleSizes) {
         for (dim <- dimensions) {
           System.out.println("New Round! " + tuples + " " + dim)
-          dropAllEntities()
           var eName = ""
           val entitymessage = definer.listEntities(EmptyMessage())
+
           //check if entity with given count exists
           for (entity <- entitymessage.entities) {
             val c = definer.count(EntityNameMessage(entity))
@@ -71,13 +72,14 @@ class RPCClient(channel: ManagedChannel, definer: AdamDefinitionBlockingStub, se
 
           //Index generation
           for (index <- indices) {
-            //TODO Check if index exists
+            //Check if index exists
             val msg = definer.getEntityProperties(EntityNameMessage(eName))
             var name = ""
             if(!msg.properties.get("indexes").getOrElse("").contains(index.name)){
               name = generateIndex(index, eName)
               //TODO Ugly fix
             }else name = eName+"_feature_"+index.name+"_0"
+
             for (part <- partitions) {
               for (partitioner <- partitioners) {
                 definer.repartitionIndexData(RepartitionMessage(name, part, option = RepartitionMessage.PartitionOptions.REPLACE_EXISTING, partitioner = partitioner))
