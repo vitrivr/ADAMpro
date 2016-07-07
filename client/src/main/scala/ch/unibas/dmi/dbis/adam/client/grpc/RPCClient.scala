@@ -77,7 +77,7 @@ class RPCClient(channel: ManagedChannel, definer: AdamDefinitionBlockingStub, se
     */
   def entityFill(entityname: String, ntuples: Int, ndims: Int): Try[Void] = {
     execute("insert data operation") {
-      val res = definer.generateRandomData(GenerateRandomDataMessage(entityname, ntuples, ndims))
+      val res = definer.generateRandomData(GenerateRandomDataMessage(entityname, ntuples, Some(GenerateRandomDataMessage.VectorDataMessage(ndims, 0, 0, 1, false))))
 
       if (res.code == AckMessage.Code.OK) {
         return Success(null)
