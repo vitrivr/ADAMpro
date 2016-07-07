@@ -27,9 +27,8 @@ class RPCClient(channel: ManagedChannel, definer: AdamDefinitionBlockingStub, se
 
   /**
     *
-    * @param desc
-    * @param op
-    * @tparam T
+    * @param desc description
+    * @param op   operation
     * @return
     */
   def execute[T](desc: String)(op: => Try[T]): Try[T] = {
@@ -56,7 +55,7 @@ class RPCClient(channel: ManagedChannel, definer: AdamDefinitionBlockingStub, se
   def entityCreate(entityname: String, attributes: Seq[EntityField]): Try[String] = {
     execute("create entity operation") {
       val fieldMessage = attributes.map(field =>
-        AttributeDefinitionMessage(field.name, getFieldType(field.datatype), field.pk, false, field.indexed)
+        AttributeDefinitionMessage(field.name, getFieldType(field.datatype), field.pk, unique = false, indexed = field.indexed)
       )
 
       val res = definer.createEntity(CreateEntityMessage(entityname, fieldMessage))
@@ -77,7 +76,7 @@ class RPCClient(channel: ManagedChannel, definer: AdamDefinitionBlockingStub, se
     */
   def entityFill(entityname: String, ntuples: Int, ndims: Int): Try[Void] = {
     execute("insert data operation") {
-      val res = definer.generateRandomData(GenerateRandomDataMessage(entityname, ntuples, Some(GenerateRandomDataMessage.VectorDataMessage(ndims, 0, 0, 1, false))))
+      val res = definer.generateRandomData(GenerateRandomDataMessage(entityname, ntuples, Some(GenerateRandomDataMessage.VectorDataMessage(ndims, 0, 0, 1, sparse = false))))
 
       if (res.code == AckMessage.Code.OK) {
         return Success(null)
@@ -97,11 +96,9 @@ class RPCClient(channel: ManagedChannel, definer: AdamDefinitionBlockingStub, se
     * @return
     */
   def entityImport(host: String, database: String, username: String, password: String): Try[Void] = {
-    try {
+    execute("entity import operation") {
       definer.importData(ImportMessage(host, database, username, password))
       Success(null)
-    } catch {
-      case e: Exception => Failure(e)
     }
   }
 
@@ -212,7 +209,7 @@ class RPCClient(channel: ManagedChannel, definer: AdamDefinitionBlockingStub, se
     * @param attribute  name of feature attribute
     * @return
     */
-  def entitySparsify(entityname: String, attribute : String): Try[Void] = {
+  def entitySparsify(entityname: String, attribute: String): Try[Void] = {
     execute("benchmark entity scans and reset weights operation") {
       definer.sparsifyEntity(WeightMessage(entityname, attribute))
       Success(null)
@@ -242,17 +239,19 @@ class RPCClient(channel: ManagedChannel, definer: AdamDefinitionBlockingStub, se
   def entityCreateAll(entityname: String, attributes: Seq[EntityField], norm: Int): Try[Void] = {
     execute("create all indexes operation") {
       val fieldMessage = attributes.map(field =>
-        AttributeDefinitionMessage(field.name, getFieldType(field.datatype), false, false, field.indexed)
+        AttributeDefinitionMessage(field.name, getFieldType(field.datatype), pk = false, unique = false, indexed = field.indexed)
       ).filter(_.attributetype == AttributeType.FEATURE)
 
-      fieldMessage.map { column =>
-        val res = definer.generateAllIndexes(IndexMessage(entity = entityname, column = column.name, distance = Some(DistanceMessage(DistanceType.minkowski, options = Map("norm" -> norm.toString)))))
-        if (res.code != AckMessage.Code.OK) {
-          return Failure(new Exception(res.message))
-        }
+      val res = fieldMessage.map { column =>
+        definer.generateAllIndexes(IndexMessage(entity = entityname, column = column.name, distance = Some(DistanceMessage(DistanceType.minkowski, options = Map("norm" -> norm.toString)))))
       }
 
-      Success(null)
+      if (res.exists(_.code != AckMessage.Code.OK)) {
+        val message = res.filter(_.code != AckMessage.Code.OK).map(_.message).mkString("; ")
+        return Failure(new Exception(message))
+      } else {
+        Success(null)
+      }
     }
   }
 
@@ -314,7 +313,7 @@ class RPCClient(channel: ManagedChannel, definer: AdamDefinitionBlockingStub, se
 
   /**
     *
-    * @param s
+    * @param s string of field type name
     * @return
     */
   private def getFieldType(s: String): AttributeType = s match {
@@ -351,7 +350,7 @@ class RPCClient(channel: ManagedChannel, definer: AdamDefinitionBlockingStub, se
     * @param queryid    query id
     * @param entityname name of entity
     * @param q          vector
-    * @param attribute
+    * @param attribute  attribute name
     * @param hints      query hints
     * @param k          k of kNN
     * @param next       function for next result
@@ -376,7 +375,7 @@ class RPCClient(channel: ManagedChannel, definer: AdamDefinitionBlockingStub, se
         override def onNext(qr: QueryResultsMessage): Unit = {
           log.info("new progressive results arrived")
 
-          if (qr.ack.get.code == AckMessage.Code.OK && !qr.responses.isEmpty) {
+          if (qr.ack.get.code == AckMessage.Code.OK && qr.responses.nonEmpty) {
             val head = qr.responses.head
 
             val confidence = head.confidence
