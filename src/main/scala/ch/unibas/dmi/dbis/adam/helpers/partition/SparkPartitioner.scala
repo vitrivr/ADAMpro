@@ -14,7 +14,7 @@ import scala.util.Failure
   *
   * Created by silvan on 20.06.16.
   */
-class SparkPartitioner(nPart: Int) extends Partitioner with ADAMPartitioner with Logging {
+class SparkPartitioner(nPart: Int) extends Partitioner with ADAMPartitioner with Logging with Serializable{
   override def partitionerName = PartitionerChoice.SPARK
 
 

@@ -8,7 +8,7 @@ import scala.util.Random
 /**
   * Created by silvan on 21.06.16.
   */
-class RandomPartitioner(nPart: Int) extends Partitioner with ADAMPartitioner with Logging {
+class RandomPartitioner(nPart: Int) extends Partitioner with ADAMPartitioner with Logging with Serializable{
   override def numPartitions: Int = nPart
 
   /**

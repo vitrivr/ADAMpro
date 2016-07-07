@@ -64,6 +64,11 @@ fi
 
 ##TODO Setup Docker-containers which are needed
 
+git clone https://github.com/big-data-europe/docker-spark.git
+
+cd docker-spark/
+
+
 ##TODO Start those docker-containers
 
 ##TODO Worker/Master? Knowledge of other nodes in network?
