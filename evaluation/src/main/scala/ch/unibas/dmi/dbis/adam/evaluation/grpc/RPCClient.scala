@@ -67,8 +67,7 @@ class RPCClient(channel: ManagedChannel, definer: AdamDefinitionBlockingStub, se
 
             definer.createEntity(CreateEntityMessage(eName, Seq(AttributeDefinitionMessage.apply("id", AttributeType.LONG, true, true, true), AttributeDefinitionMessage("feature", AttributeType.FEATURE, false, false, true))))
 
-            definer.generateRandomData(GenerateRandomDataMessage(eName, tuples, dim))
-          }
+          definer.generateRandomData(GenerateRandomDataMessage(eName, tuples, Some(GenerateRandomDataMessage.VectorDataMessage(dim, 0, 0, 1, false))))
 
           //Index generation
           for (index <- indices) {

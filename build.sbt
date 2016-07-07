@@ -25,6 +25,9 @@ lazy val client = project.
 lazy val evaluation = project.
   settings(commonSettings: _*)
 
+lazy val chronos = project.
+  settings(commonSettings: _*)
+
 
 //build
 lazy val buildSettings = Seq(
@@ -40,7 +43,8 @@ scalacOptions ++= Seq("-target:jvm-1.7")
 
 //lib resolvers
 resolvers ++= Seq(
-  "Sonatype Releases" at "https://oss.sonatype.org/content/repositories/releases/"
+  "Sonatype Releases" at "https://oss.sonatype.org/content/repositories/releases/",
+  "Restlet Repositories" at "http://maven.restlet.org"
 )
 resolvers += Resolver.sonatypeRepo("snapshots")
 resolvers += "Restlet Repositories" at "http://maven.restlet.org"
