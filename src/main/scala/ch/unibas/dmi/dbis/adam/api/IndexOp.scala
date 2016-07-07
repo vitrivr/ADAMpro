@@ -23,6 +23,18 @@ import scala.util.{Failure, Success, Try}
   */
 object IndexOp extends GenericOp {
 
+
+  /**
+    * Lists all indexes.
+    *
+    * @param entityname name of entity
+    */
+  def list(entityname: EntityName)(implicit ac: AdamContext) : Try[Seq[(IndexName, IndexTypeName)]] = {
+    execute("list indexes for " + entityname) {
+      Success(Entity.load(entityname).get.indexes.filter(_.isSuccess).map(_.get).map(index => (index.indexname, index.indextypename)))
+    }
+  }
+
   /**
     * Creates an index.
     *

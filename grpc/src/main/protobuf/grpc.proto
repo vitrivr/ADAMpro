@@ -18,6 +18,7 @@ service AdamDefinition {
   rpc Index(IndexMessage) returns (AckMessage) {}
   rpc GenerateAllIndexes(IndexMessage) returns (AckMessage) {}
   rpc DropIndex(IndexNameMessage) returns (AckMessage) {}
+  rpc ListIndexes(EntityNameMessage) returns (IndexesMessage) {}
   //generates an entity with random data and with all available indexes (for demo purposes)
   rpc GenerateRandomData(GenerateRandomDataMessage) returns (AckMessage) {}
   rpc ListEntities(EmptyMessage) returns (EntitiesMessage) {}
@@ -397,6 +398,16 @@ enum Code {
 message EntitiesMessage {
   AckMessage ack = 1;
   repeated string entities = 2;
+}
+
+message IndexesMessage {
+  AckMessage ack = 1;
+
+  message IndexMessage {
+    string index = 1;
+    IndexType indextype = 2;
+  }
+  repeated IndexMessage indexes = 2;
 }
 
 message EntityPropertiesMessage {

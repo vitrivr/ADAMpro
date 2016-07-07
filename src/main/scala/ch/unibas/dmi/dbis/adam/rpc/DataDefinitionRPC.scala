@@ -230,6 +230,23 @@ class DataDefinitionRPC extends AdamDefinitionGrpc.AdamDefinition with Logging {
     * @param request
     * @return
     */
+  override def listIndexes(request : EntityNameMessage) : Future[IndexesMessage] = {
+    log.debug("rpc call for listing indexes")
+    val res = IndexOp.list(request.entity)
+
+    if (res.isSuccess) {
+      Future.successful(IndexesMessage(Some(AckMessage(AckMessage.Code.OK)), res.get.map(r => IndexesMessage.IndexMessage(r._1, r._2.indextype))))
+    } else {
+      log.error(res.failed.get.getMessage, res.failed.get)
+      Future.successful(IndexesMessage(Some(AckMessage(code = AckMessage.Code.ERROR, message = res.failed.get.getMessage))))
+    }
+  }
+
+  /**
+    *
+    * @param request
+    * @return
+    */
   override def generateRandomData(request: GenerateRandomDataMessage): Future[AckMessage] = {
     log.debug("rpc call for creating random data")
     val res = RandomDataOp(request.entity, request.ntuples, request.ndims)
