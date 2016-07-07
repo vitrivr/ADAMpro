@@ -47,7 +47,6 @@ resolvers ++= Seq(
   "Restlet Repositories" at "http://maven.restlet.org"
 )
 resolvers += Resolver.sonatypeRepo("snapshots")
-resolvers += "Restlet Repositories" at "http://maven.restlet.org"
 
 //base libs
 val baseLibs = Seq(
