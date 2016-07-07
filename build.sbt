@@ -25,6 +25,9 @@ lazy val client = project.
 lazy val evaluation = project.
   settings(commonSettings: _*)
 
+lazy val chronos = project.
+  settings(commonSettings: _*)
+
 
 //build
 lazy val buildSettings = Seq(
