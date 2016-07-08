@@ -20,7 +20,8 @@ class EvaluationJob(job : ChronosJob) extends ChronosJob(job) {
   private val measurement = (xml \ "evaluation" \ "measurement").head
 
   //adampro
-  val adam_master : String = getAttribute(adampro, "adam_master")
+  val adampro_url : String = getAttribute(adampro, "adampro_url")
+  val adampro_port : Int = getAttribute(adampro, "adampro_port").toInt
 
   //data parameters
   val data_tuples : Int = getAttribute(data, "tuples").toInt

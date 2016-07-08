@@ -1,5 +1,8 @@
 package ch.unibas.dmi.dbis.adam.chronos
 
+import java.util.Properties
+
+import ch.unibas.cs.dbis.chronos.agent.ChronosJob
 import ch.unibas.dmi.dbis.adam.rpc.RPCClient
 import ch.unibas.dmi.dbis.adam.rpc.datastructures.{RPCQueryObject, RPCAttributeDefinition}
 
@@ -12,9 +15,18 @@ import scala.util.Random
   * Ivan Giangreco
   * July 2016
   */
-class EvaluationExecution(job: EvaluationJob, client: RPCClient) {
+class EvaluationExecutor(job: EvaluationJob) {
+  def this(job : ChronosJob){
+    this(new EvaluationJob(job))
+  }
 
-  def run(): Unit = {
+  //rpc client
+  val client : RPCClient = RPCClient(job.adampro_url, job.adampro_port)
+
+  /**
+    * Runs evaluation.
+    */
+  def run(): Properties = {
     val entityname = generateString(10)
     val attributes = getAttributeDefinition()
 
@@ -51,6 +63,9 @@ class EvaluationExecution(job: EvaluationJob, client: RPCClient) {
         executeQuery(qo)
       }
     }
+
+    //TODO: fill properties
+    return new Properties()
   }
 
 
