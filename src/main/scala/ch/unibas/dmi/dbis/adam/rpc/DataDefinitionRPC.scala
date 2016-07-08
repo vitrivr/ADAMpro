@@ -1,6 +1,5 @@
 package ch.unibas.dmi.dbis.adam.rpc
 
-import ch.unibas.dmi.dbis.adam.api.RandomDataOp.VectorDataGenerationDetails
 import ch.unibas.dmi.dbis.adam.api._
 import ch.unibas.dmi.dbis.adam.catalog.CatalogOperator
 import ch.unibas.dmi.dbis.adam.datatypes.FieldTypes
@@ -251,19 +250,7 @@ class DataDefinitionRPC extends AdamDefinitionGrpc.AdamDefinition with Logging {
   override def generateRandomData(request: GenerateRandomDataMessage): Future[AckMessage] = {
     log.debug("rpc call for creating random data")
 
-    val vdetail = if(request.vectordata.isDefined){
-      val vd = request.vectordata.get
-      val ndims = vd.ndims
-      val sparsity = vd.sparsity
-      val min = vd.min
-      val max = vd.max
-      val sparse = vd.sparse
-      Some(VectorDataGenerationDetails(ndims, sparsity, min, max, sparse))
-    } else {
-      None
-    }
-
-    val res = RandomDataOp(request.entity, request.ntuples, vdetail)
+    val res = RandomDataOp(request.entity, request.ntuples, request.options)
 
     if (res.isSuccess) {
       Future.successful(AckMessage(code = AckMessage.Code.OK))

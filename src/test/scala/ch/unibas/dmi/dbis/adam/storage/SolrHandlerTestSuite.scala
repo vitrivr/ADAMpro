@@ -1,7 +1,6 @@
 package ch.unibas.dmi.dbis.adam.storage
 
 import ch.unibas.dmi.dbis.adam.AdamTestBase
-import ch.unibas.dmi.dbis.adam.api.RandomDataOp.VectorDataGenerationDetails
 import ch.unibas.dmi.dbis.adam.api.{RandomDataOp, EntityOp}
 import ch.unibas.dmi.dbis.adam.datatypes.FieldTypes
 import ch.unibas.dmi.dbis.adam.entity.{AttributeDefinition, Entity}
@@ -24,7 +23,7 @@ class SolrHandlerTestSuite extends AdamTestBase {
 
       EntityOp.create(entityname, attributes)
 
-      RandomDataOp.apply(entityname, ntuples, Some(VectorDataGenerationDetails(10, 0, 0, 1, false)))
+      RandomDataOp.apply(entityname, ntuples, Map("fv-dimensions" -> "10"))
 
       val data = Entity.load(entityname).get.getData().get.collect()
 
