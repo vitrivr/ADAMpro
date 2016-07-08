@@ -13,6 +13,7 @@ import scala.collection.mutable.ListBuffer
   * Ivan Giangreco
   * July 2016
   */
+//TODO: careful: duplicate code in client
 case class RPCQueryObject(var id: String, var operation: String, var options: Map[String, String], var targets: Option[Seq[RPCQueryObject]])  {
   /**
     *

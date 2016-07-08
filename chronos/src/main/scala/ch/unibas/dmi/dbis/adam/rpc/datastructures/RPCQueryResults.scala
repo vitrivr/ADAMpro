@@ -9,6 +9,7 @@ import ch.unibas.dmi.dbis.adam.http.grpc.QueryResultInfoMessage
   * Ivan Giangreco
   * July 2016
   */
+//TODO: careful: duplicate code in client
 case class RPCQueryResults(id: String, time: Long, results: Seq[Map[String, String]]) {
   def this(msg: QueryResultInfoMessage) {
     this(msg.queryid, msg.time, msg.results.map(result => result.data.map(attribute => {
