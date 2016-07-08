@@ -73,17 +73,23 @@ if [ $ROLE == "" ]; then
     ROLE="slave"
 fi
 
-##TODO Mount /target-Folder to container with conf-elements
 
 if [ $ROLE == "master" ]; then
     sudo docker stop spark-master
     sudo docker rm spark-master
+
+    sudo docker rmi adampar/spark-master:1.6.2-hadoop2.6
     sudo docker build -t adampar/spark-master:1.6.2-hadoop2.6 docker-spark/master
 
-    sudo docker run -d --net=host -p 7077:7077 -p 8080:8080 -p 6066:6066 --name spark-master -h spark-master -e ENABLE_INIT_DAEMON=false adampar/spark-master:1.6.2-hadoop2.6
+    sudo docker run -d -v /home/ubuntu/target:/target --net=host -p 7077:7077 -p 8080:8080 -p 6066:6066 -p 4040:4040 -p 8088:8088 -p 8042:8042 -p 5890:5890 --name spark-master -h spark-master -e ENABLE_INIT_DAEMON=false adampar/spark-master:1.6.2-hadoop2.6
 
+    sudo docker rm -f spark-submit
+    sudo docker rmi adampar/spark-submit:1.6.2-hadoop2.6
+
+    #TODO Relative to execution maybe
     sudo docker build -t adampar/spark-submit:1.6.2-hadoop2.6 docker-spark/submit
-    sudo docker run -d --net=host -p 7077:7077 --name spark-submit -h spark-submit -e ENABLE_INIT_DAEMON=false adampar/spark-submit:1.6.2-hadoop2.6
+
+    sudo docker run -d -v /home/ubuntu/target:/target --net=host --name spark-submit -h spark-submit -e ENABLE_INIT_DAEMON=false adampar/spark-submit:1.6.2-hadoop2.6
 fi
 
 if [ $ROLE == "slave" ]; then
