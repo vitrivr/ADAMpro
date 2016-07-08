@@ -11,7 +11,7 @@ import ch.unibas.dmi.dbis.adam.rpc.datastructures.{RPCQueryObject, RPCQueryResul
   */
 private[client] object Search {}
 
-private[client] case class SearchCompoundRequest(var id: String, var operation: String, var options: Map[String, String], var targets: Option[Seq[SearchCompoundRequest]]) {
+private[client] case class SearchRequest(var id: String, var operation: String, var options: Map[String, String], var targets: Option[Seq[SearchRequest]]) {
   def toRPCQueryObject : RPCQueryObject = {
     RPCQueryObject(id, operation, options, targets.map(_.map(_.toRPCQueryObject)))
   }
@@ -25,11 +25,6 @@ private[client] case class SearchResponseInfo(id: String, time: Long, results: S
   def this(qr: RPCQueryResults) {
     this(qr.id, qr.time, qr.results)
   }
-}
-
-
-private[client] case class SearchProgressiveRequest(val id: String, val entityname: String, attribute: String, query: String, hints: Seq[String], val k: Int) {
-  lazy val q = query.split(",").map(_.toFloat)
 }
 
 private[client] case class SearchProgressiveResponse(results: SearchProgressiveIntermediaryResponse, status: String)

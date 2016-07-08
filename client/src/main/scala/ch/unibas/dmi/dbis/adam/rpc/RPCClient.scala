@@ -8,7 +8,7 @@ import ch.unibas.dmi.dbis.adam.http.grpc.DataMessage.Datatype
 import ch.unibas.dmi.dbis.adam.http.grpc.DistanceMessage.DistanceType
 import ch.unibas.dmi.dbis.adam.http.grpc.RepartitionMessage.PartitionOptions
 import ch.unibas.dmi.dbis.adam.http.grpc._
-import ch.unibas.dmi.dbis.adam.rpc.datastructures.{RPCQueryResults, RPCQueryObject, RPCAttributeDefinition}
+import ch.unibas.dmi.dbis.adam.rpc.datastructures.{RPCAttributeDefinition, RPCQueryObject, RPCQueryResults}
 import ch.unibas.dmi.dbis.adam.utils.Logging
 import io.grpc.okhttp.OkHttpChannelBuilder
 import io.grpc.stub.StreamObserver
@@ -266,17 +266,16 @@ class RPCClient(channel: ManagedChannel, definer: AdamDefinitionBlockingStub, se
     * @param norm       norm for distance function
     * @return
     */
-  def entityCreateAllIndexes(entityname: String, attributes: Seq[RPCAttributeDefinition], norm: Int): Try[Void] = {
+  def entityCreateAllIndexes(entityname: String, attributes: Seq[String], norm: Int): Try[Seq[String]] = {
     execute("create all indexes operation") {
-      val res = attributes.filter(attribute => getFieldType(attribute.datatype) == AttributeType.FEATURE).map { column =>
-        definer.generateAllIndexes(IndexMessage(entity = entityname, column = column.name, distance = Some(DistanceMessage(DistanceType.minkowski, options = Map("norm" -> norm.toString)))))
+      val res = attributes.map { attribute => definer.generateAllIndexes(IndexMessage(entity = entityname, column = attribute, distance = Some(DistanceMessage(DistanceType.minkowski, options = Map("norm" -> norm.toString)))))
       }
 
       if (res.exists(_.code != AckMessage.Code.OK)) {
         val message = res.filter(_.code != AckMessage.Code.OK).map(_.message).mkString("; ")
         return Failure(new Exception(message))
       } else {
-        Success(null)
+        Success(res.flatMap(_.message.split(",")))
       }
     }
   }
@@ -292,9 +291,9 @@ class RPCClient(channel: ManagedChannel, definer: AdamDefinitionBlockingStub, se
     * @param options    index creation options
     * @return
     */
-  def indexCreate(entityname: String, attribute: String, indextype: IndexType, norm: Int, options: Map[String, String]): Try[String] = {
+  def indexCreate(entityname: String, attribute: String, indextype: String, norm: Int, options: Map[String, String]): Try[String] = {
     execute("create index operation") {
-      val indexMessage = IndexMessage(entityname, attribute, indextype, Some(DistanceMessage(DistanceType.minkowski, Map("norm" -> norm.toString))), options)
+      val indexMessage = IndexMessage(entityname, attribute, getIndexType(indextype), Some(DistanceMessage(DistanceType.minkowski, Map("norm" -> norm.toString))), options)
       val res = definer.index(indexMessage)
 
       if (res.code == AckMessage.Code.OK) {
@@ -303,6 +302,22 @@ class RPCClient(channel: ManagedChannel, definer: AdamDefinitionBlockingStub, se
         return Failure(new Exception(res.message))
       }
     }
+  }
+
+  /**
+    *
+    * @param s
+    * @return
+    */
+  private def getIndexType(s : String) = s match {
+    case "ecp" => IndexType.ecp
+    case "lsh" => IndexType.lsh
+    case "mi" => IndexType.mi
+    case "pq" => IndexType.pq
+    case "sh" => IndexType.sh
+    case "vaf" => IndexType.vaf
+    case "vav" => IndexType.vav
+    case _ => null
   }
 
 
@@ -346,7 +361,7 @@ class RPCClient(channel: ManagedChannel, definer: AdamDefinitionBlockingStub, se
     */
   def doQuery(qo: RPCQueryObject): Try[Seq[RPCQueryResults]] = {
     execute("compound query operation") {
-      val res = searcherBlocking.doQuery(qo.buildQuery)
+      val res = searcherBlocking.doQuery(qo.getQueryMessage)
       if (res.ack.get.code == AckMessage.Code.OK) {
         return Success(res.responses.map(new RPCQueryResults(_)))
       } else {
@@ -358,29 +373,20 @@ class RPCClient(channel: ManagedChannel, definer: AdamDefinitionBlockingStub, se
   /**
     * Perform a progressive search.
     *
-    * @param queryid    query id
-    * @param entityname name of entity
-    * @param q          vector
-    * @param attribute  attribute name
-    * @param hints      query hints
-    * @param k          k of kNN
+    * @param qo search request
     * @param next       function for next result
     * @param completed  function for final result
     * @return
     */
-  def searchProgressive(queryid: String, entityname: String, q: Seq[Float], attribute: String, hints: Seq[String], k: Int, next: (Try[(String, Double, String, Long, Seq[Map[String, String]])]) => (Unit), completed: (String) => (Unit)): Try[Void] = {
+  def doProgressiveQuery(qo: RPCQueryObject,  next: (Try[(String, Double, String, Long, Seq[Map[String, String]])]) => (Unit), completed: (String) => (Unit)): Try[Seq[RPCQueryResults]] = {
     execute("progressive query operation") {
-      val fv = FeatureVectorMessage().withDenseVector(DenseVectorMessage(q))
-      val nnq = NearestNeighbourQueryMessage(attribute, Some(fv), None, Option(DistanceMessage(DistanceType.minkowski, Map("norm" -> "2"))), k, indexOnly = true)
-      val request = QueryMessage(from = Some(FromMessage().withEntity(entityname)), hints = hints, nnq = Option(nnq))
-
       val so = new StreamObserver[QueryResultsMessage]() {
         override def onError(throwable: Throwable): Unit = {
           log.error("error in progressive querying", throwable)
         }
 
         override def onCompleted(): Unit = {
-          completed(queryid)
+          completed(qo.id)
         }
 
         override def onNext(qr: QueryResultsMessage): Unit = {
@@ -394,14 +400,14 @@ class RPCClient(channel: ManagedChannel, definer: AdamDefinitionBlockingStub, se
             val time = head.time
             val results = head.results.map(x => x.data.mapValues(x => ""))
 
-            next(Success(queryid, confidence, source, time, results))
+            next(Success(qo.id, confidence, source, time, results))
           } else {
             next(Failure(new Exception(qr.ack.get.message)))
           }
         }
       }
 
-      searcher.doProgressiveQuery(request, so)
+      searcher.doProgressiveQuery(qo.getQueryMessage, so)
       Success(null)
     }
   }

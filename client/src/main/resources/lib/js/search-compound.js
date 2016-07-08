@@ -207,37 +207,37 @@ function evaluate (id) {
     $("#" + id).data("results", null);
 
 
-    var result = {};
-    result.id = id;
-    result.operation = operation;
+    var params = {};
+    params.id = id;
+    params.operation = operation;
 
-    result.options = {};
-    result.options.subtype = $("#" + id).data("subtype");
+    params.options = {};
+    params.options.subtype = $("#" + id).data("subtype");
 
-    result.options.entityname = $("#entityname").val();
-    result.options.column = $("#column").val();
-    result.options.query = $("#query").val().replace("[", "").replace("]", "").trim();
-    result.options.sparsequery = $("#sparsequery").prop("checked");
+    params.options.entityname = $("#entityname").val();
+    params.options.attribute = $("#column").val();
+    params.options.query = $("#query").val().replace("[", "").replace("]", "").trim();
+    params.options.sparsequery = $("#sparsequery").prop("checked");
 
-    result.options.weights = $("#weights").val().replace("[", "").replace("]", "").trim();
-    result.options.sparseweights = $("#sparseweights").prop("checked");
+    params.options.weights = $("#weights").val().replace("[", "").replace("]", "").trim();
+    params.options.sparseweights = $("#sparseweights").prop("checked");
 
-    result.options.distance =  $("#distance").val();
+    params.options.distance =  $("#distance").val();
 
-    result.options.informationlevel = $("#informationlevel").val();
+    params.options.informationlevel = $("#informationlevel").val();
 
     if ($("#k").val().length > 0) {
-        result.options.k = $("#k").val();
+        params.options.k = $("#k").val();
     }
     $("#" + id + " > .settings").find(":input").each(function () {
         if ($(this).val().length > 0) {
-            result.options[$(this).attr('name')] = $(this).val();
+            params.options[$(this).attr('name')] = $(this).val();
         }
     });
 
     var targets = getTargets(id);
     if (targets.length > 0) {
-        result.targets = $.map(targets, function (val, i) {
+        params.targets = $.map(targets, function (val, i) {
             clearResults(val)
             return evaluate(val)
         });
@@ -247,7 +247,7 @@ function evaluate (id) {
         clearResults("box-start");
     }
 
-    return result;
+    return params;
 };
 
 function getTargets(id) {

@@ -1,7 +1,6 @@
 package ch.unibas.dmi.dbis.adam.client.web
 
 import ch.unibas.dmi.dbis.adam.client.web.datastructures._
-import ch.unibas.dmi.dbis.adam.http.grpc.IndexType
 import ch.unibas.dmi.dbis.adam.rpc.RPCClient
 import ch.unibas.dmi.dbis.adam.rpc.datastructures.RPCAttributeDefinition
 import com.twitter.finagle.http.Request
@@ -201,7 +200,7 @@ class AdamController(rpcClient: RPCClient) extends Controller {
     *
     */
   post("/entity/indexall") { request: IndexCreateAllRequest =>
-    val res = rpcClient.entityCreateAllIndexes(request.entityname, request.attributes.map(a => RPCAttributeDefinition(a.name, a.datatype, a.pk, false, a.indexed, None)), 2)
+    val res = rpcClient.entityCreateAllIndexes(request.entityname, request.attributes.map(_.name), 2)
 
 
     if (res.isSuccess) {
@@ -229,18 +228,7 @@ class AdamController(rpcClient: RPCClient) extends Controller {
     *
     */
   post("/entity/index/add") { request: IndexCreateRequest =>
-    val indextype = request.indextype match {
-      case "ecp" => IndexType.ecp
-      case "lsh" => IndexType.lsh
-      case "mi" => IndexType.mi
-      case "pq" => IndexType.pq
-      case "sh" => IndexType.sh
-      case "vaf" => IndexType.vaf
-      case "vav" => IndexType.vav
-      case _ => null
-    }
-
-    val res = rpcClient.indexCreate(request.entityname, request.attribute, indextype, request.norm, request.options)
+    val res = rpcClient.indexCreate(request.entityname, request.attribute, request.indextype, request.norm, request.options)
 
     if (res.isSuccess) {
       response.ok.json(GeneralResponse(200))
@@ -266,7 +254,7 @@ class AdamController(rpcClient: RPCClient) extends Controller {
   /**
     *
     */
-  post("/search/compound") { request: SearchCompoundRequest =>
+  post("/search/compound") { request: SearchRequest =>
     val res = rpcClient.doQuery(request.toRPCQueryObject)
     if (res.isSuccess) {
       response.ok.json(new SearchCompoundResponse(200, new SearchResponse(res.get)))
@@ -279,8 +267,8 @@ class AdamController(rpcClient: RPCClient) extends Controller {
   /**
     *
     */
-  post("/search/progressive") { request: SearchProgressiveRequest =>
-    val res = rpcClient.searchProgressive(request.id, request.entityname, request.q, request.attribute, request.hints, request.k, processProgressiveResults(request.id), completedProgressiveResults)
+  post("/search/progressive") { request: SearchRequest =>
+    val res = rpcClient.doProgressiveQuery(request.toRPCQueryObject, processProgressiveResults(request.id), completedProgressiveResults)
 
     progTempResults.synchronized {
       if (!progTempResults.contains(request.id)) {

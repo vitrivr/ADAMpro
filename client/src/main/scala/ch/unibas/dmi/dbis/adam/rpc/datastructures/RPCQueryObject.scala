@@ -17,9 +17,9 @@ case class RPCQueryObject(var id: String, var operation: String, var options: Ma
   /**
     *
     */
-  def buildQuery : QueryMessage = {
+  def getQueryMessage : QueryMessage = {
     this.prepare()
-    this.cqm()
+    this.qm()
   }
 
   private def entity = options.get("entityname").get
@@ -47,7 +47,7 @@ case class RPCQueryObject(var id: String, var operation: String, var options: Ma
   private def query = {
     val vals = options.get("query").get.split(",").map(_.toFloat)
 
-    if (options.getOrElse("sparsequery", "") == "true") {
+    if (options.get("sparsequery").map(_.toBoolean).getOrElse(false)) {
       val (vv, ii, size) = sparsify(vals)
       FeatureVectorMessage().withSparseVector(SparseVectorMessage(vv, ii, size))
     } else {
@@ -59,7 +59,7 @@ case class RPCQueryObject(var id: String, var operation: String, var options: Ma
     if (options.get("weights").isDefined && options.get("weights").get.length > 0) {
       val vals = options.get("weights").get.split(",").map(_.toFloat)
 
-      if (options.getOrElse("sparseweights", "") == "true") {
+      if (options.get("sparseweights").map(_.toBoolean).getOrElse(false)) {
         val (vv, ii, size) = sparsify(vals)
         Some(FeatureVectorMessage().withSparseVector(SparseVectorMessage(vv, ii, size)))
       } else {
@@ -106,11 +106,11 @@ case class RPCQueryObject(var id: String, var operation: String, var options: Ma
       Seq[Int]()
     }
 
-    val nnq = NearestNeighbourQueryMessage(options.getOrElse("column", "feature"), Some(query),
+    val nnq = NearestNeighbourQueryMessage(options.getOrElse("attribute", "feature"), Some(query),
       weights, Some(distance),
       options.get("k").getOrElse("100").toInt,
       options, //not overly clean solution, but not problematic to send too much information in this case
-      true,
+      options.get("indexonly").map(_.toBoolean).getOrElse(true),
       partitions)
 
     nnq
@@ -140,19 +140,34 @@ case class RPCQueryObject(var id: String, var operation: String, var options: Ma
     *
     * @return
     */
-  private def cqm(): QueryMessage = {
-    val query = if (targets.isEmpty || targets.get.isEmpty) {
+  private def qm(): QueryMessage = {
+    val fromExpression = if (targets.isEmpty || targets.get.isEmpty) {
       SubExpressionQueryMessage().withQm(QueryMessage(queryid = "sequential", from = Some(FromMessage().withEntity(entity)), nnq = Option(nnq), hints = Seq("sequential")))
     } else {
       targets.get.head.seqm()
     }
 
-    QueryMessage(
+    var qm = QueryMessage(
       queryid = id,
       //projection = Some(ProjectionMessage().withField(ProjectionMessage.FieldnameMessage.apply(Seq("id", "adamprodistance")))),
-      from = Some(FromMessage().withExpression(query)),
-      information = informationLevel())
+      information = informationLevel(),
+      hints = hints(),
+      nnq = Option(nnq))
+
+    if(operation == "progressive"){
+      qm = qm.withFrom(FromMessage().withEntity(entity))
+    } else {
+      qm = qm.withFrom(FromMessage().withExpression(fromExpression))
+    }
+
+    qm
   }
+
+  /**
+    *
+    * @return
+    */
+  private def hints() = options.get("hints").map(_.split(",").toSeq).getOrElse(Seq()).filterNot(_.length == 0)
 
   /**
     *
