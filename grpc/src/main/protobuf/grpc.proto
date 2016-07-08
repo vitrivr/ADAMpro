@@ -144,16 +144,7 @@ message IndexNameMessage {
 message GenerateRandomDataMessage {
   string entity = 1;
   int32 ntuples = 2;
-
-  message VectorDataMessage {
-    int32 ndims = 1;
-    float sparsity = 2;
-    float min = 3;
-    float max = 4;
-    bool sparse = 5;
-  }
-
-  VectorDataMessage vectordata = 3;
+  map<string, string> options = 3;
 }
 
 message InsertMessage {
