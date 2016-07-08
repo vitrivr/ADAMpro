@@ -71,7 +71,8 @@ class RPCClient(channel: ManagedChannel, definer: AdamDefinitionBlockingStub, se
       System.out.println("Generating new Entity")
       eName = Some(("silvan" + Math.abs(Random.nextInt())).filter(_ != '0'))
       definer.createEntity(CreateEntityMessage(eName.get, Seq(AttributeDefinitionMessage.apply("id", AttributeType.LONG, true, true, true), AttributeDefinitionMessage("feature", AttributeType.FEATURE, false, false, true))))
-      definer.generateRandomData(GenerateRandomDataMessage(eName.get,tuples, Some(GenerateRandomDataMessage.VectorDataMessage(dim,0,0,1,false))))
+      val options = Map("fv-dimensions" -> dim, "fv-min" -> 0, "fv-max" -> 1, "fv-sparse" -> false).mapValues(_.toString)
+      definer.generateRandomData(GenerateRandomDataMessage(eName.get,tuples, options))
     }
 
     eName.get
