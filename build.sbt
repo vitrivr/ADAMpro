@@ -181,7 +181,7 @@ runADAM := {
 }
 
 lazy val runCluster = taskKey[Unit]("Runs ADAMpro on a spark master @ specified URL.")
-runADAM := {
+runCluster := {
   assembly.value
   "./scripts/docker-runCluster.sh" !
 }
