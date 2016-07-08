@@ -68,15 +68,22 @@ class RPCClient(channel: ManagedChannel, definer: AdamDefinitionBlockingStub, se
   }
 
   /**
+    * Generate random data and fill into entity.
     *
     * @param entityname name of entity
-    * @param ntuples    number of tuples
-    * @param ndims      dimensionality for feature fields
+    * @param tuples     number of tuples
+    * @param dimensions dimensionality for feature fields
+    * @param sparsity   sparsity of data for feature fields
+    * @param min        min value for feature fields
+    * @param max        max value for feature fields
+    * @param sparse     is feature field sparse or dense
     * @return
     */
-  def entityFill(entityname: String, ntuples: Int, ndims: Int): Try[Void] = {
+  def entityGenerateRandomData(entityname: String, tuples: Int, dimensions: Int, sparsity: Float, min: Float, max: Float, sparse: Boolean): Try[Void] = {
     execute("insert data operation") {
-      val res = definer.generateRandomData(GenerateRandomDataMessage(entityname, ntuples, Some(GenerateRandomDataMessage.VectorDataMessage(ndims, 0, 0, 1, sparse = false))))
+
+      val options = Map("fv-dimensions" -> dimensions, "fv-sparsity" -> sparsity, "fv-min" -> min, "fv-max" -> max, "fv-sparse" -> sparse).mapValues(_.toString)
+      val res = definer.generateRandomData(GenerateRandomDataMessage(entityname, tuples, options))
 
       if (res.code == AckMessage.Code.OK) {
         return Success(null)
