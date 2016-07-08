@@ -12,6 +12,7 @@ lazy val commonSettings = Seq(
   scalaVersion := "2.10.6"
 )
 
+
 //projects
 lazy val root = (project in file(".")).
   settings(commonSettings: _*)
@@ -20,9 +21,6 @@ lazy val grpc = project.
   settings(commonSettings ++ Seq(assemblyOutputPath in assembly := baseDirectory.value / ".." / "lib" / "grpc-assembly-0.1-SNAPSHOT.jar"): _*)
 
 lazy val client = project.
-  settings(commonSettings: _*)
-
-lazy val evaluation = project.
   settings(commonSettings: _*)
 
 lazy val chronos = project.
