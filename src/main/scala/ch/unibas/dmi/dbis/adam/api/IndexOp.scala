@@ -68,7 +68,7 @@ object IndexOp extends GenericOp {
     * @param distance   distance function to use
     * @param properties further index specific properties
     */
-  def generateAll(entityname: EntityName, column: String, distance: DistanceFunction, properties: Map[String, String] = Map())(implicit ac: AdamContext): Try[Void] = {
+  def generateAll(entityname: EntityName, column: String, distance: DistanceFunction, properties: Map[String, String] = Map())(implicit ac: AdamContext): Try[Seq[IndexName]] = {
     execute("create all indexes for " + entityname) {
       val indexes = IndexTypes.values.map {
         apply(entityname, column, _, distance, properties)
@@ -77,7 +77,7 @@ object IndexOp extends GenericOp {
       //check and possibly clean up
       if (indexes.forall(_.isSuccess)) {
         //all indexes were created, return
-        return Success(null)
+        return Success(indexes.map(_.get.indexname))
       }
 
       log.error("not all indexes were created")

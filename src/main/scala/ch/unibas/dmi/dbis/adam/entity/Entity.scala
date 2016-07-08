@@ -270,7 +270,7 @@ case class Entity(val entityname: EntityName)(@transient implicit val ac: AdamCo
 
     lb.append("count" -> count.toString)
     lb.append("schema" -> CatalogOperator.getAttributes(entityname).get.map(field => field.name + "(" + field.fieldtype.name + ")").mkString(","))
-    lb.append("indexes" -> indexes.filter(_.isSuccess).map(_.get.propertiesMap).map(_.mkString(", ")).mkString("; "))
+    lb.append("indexes" -> indexes.filter(_.isSuccess).map(_.get.propertiesMap).map(_.mkString(", ")).mkString("; ")) //TODO: check how to print nicely
 
     lb.toMap
   }

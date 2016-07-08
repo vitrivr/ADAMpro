@@ -1,18 +1,18 @@
-package ch.unibas.dmi.dbis.adam.client.grpc
+package ch.unibas.dmi.dbis.adam.rpc
 
 import java.util.concurrent.TimeUnit
 
-import ch.unibas.dmi.dbis.adam.client.web.datastructures.{SearchResponse, SearchCompoundRequest, EntityField}
 import ch.unibas.dmi.dbis.adam.http.grpc.AdamDefinitionGrpc.AdamDefinitionBlockingStub
 import ch.unibas.dmi.dbis.adam.http.grpc.AdamSearchGrpc.{AdamSearchBlockingStub, AdamSearchStub}
 import ch.unibas.dmi.dbis.adam.http.grpc.DataMessage.Datatype
 import ch.unibas.dmi.dbis.adam.http.grpc.DistanceMessage.DistanceType
 import ch.unibas.dmi.dbis.adam.http.grpc.RepartitionMessage.PartitionOptions
 import ch.unibas.dmi.dbis.adam.http.grpc._
+import ch.unibas.dmi.dbis.adam.rpc.datastructures.{RPCAttributeDefinition, RPCQueryObject, RPCQueryResults}
+import ch.unibas.dmi.dbis.adam.utils.Logging
 import io.grpc.okhttp.OkHttpChannelBuilder
 import io.grpc.stub.StreamObserver
 import io.grpc.{ManagedChannel, ManagedChannelBuilder}
-import org.apache.log4j.Logger
 
 import scala.util.{Failure, Success, Try}
 
@@ -22,16 +22,14 @@ import scala.util.{Failure, Success, Try}
   * Ivan Giangreco
   * March 2016
   */
-class RPCClient(channel: ManagedChannel, definer: AdamDefinitionBlockingStub, searcherBlocking: AdamSearchBlockingStub, searcher: AdamSearchStub) {
-  val log = Logger.getLogger(getClass.getName)
-
+class RPCClient(channel: ManagedChannel, definer: AdamDefinitionBlockingStub, searcherBlocking: AdamSearchBlockingStub, searcher: AdamSearchStub) extends Logging {
   /**
     *
     * @param desc description
     * @param op   operation
     * @return
     */
-  def execute[T](desc: String)(op: => Try[T]): Try[T] = {
+  private def execute[T](desc: String)(op: => Try[T]): Try[T] = {
     try {
       log.debug("starting " + desc)
       val t1 = System.currentTimeMillis
@@ -47,18 +45,34 @@ class RPCClient(channel: ManagedChannel, definer: AdamDefinitionBlockingStub, se
   }
 
   /**
+    * Create an entity.
     *
     * @param entityname name of entity
     * @param attributes attributes of new entity
     * @return
     */
-  def entityCreate(entityname: String, attributes: Seq[EntityField]): Try[String] = {
+  def entityCreate(entityname: String, attributes: Seq[RPCAttributeDefinition]): Try[String] = {
     execute("create entity operation") {
-      val fieldMessage = attributes.map(field =>
-        AttributeDefinitionMessage(field.name, getFieldType(field.datatype), field.pk, unique = false, indexed = field.indexed)
-      )
+      val attributeMessages = attributes.map { attribute =>
+        val adm = AttributeDefinitionMessage(attribute.name, getFieldType(attribute.datatype), attribute.pk, unique = attribute.unique, indexed = attribute.indexed)
 
-      val res = definer.createEntity(CreateEntityMessage(entityname, fieldMessage))
+        //add handler information if available
+        if (attribute.storagehandlername.isDefined) {
+          val storagehandlername = attribute.storagehandlername.get
+
+          val handlertype = storagehandlername match {
+            case "relational" => HandlerType.relational
+            case "feature" => HandlerType.feature
+            case "solr" => HandlerType.solr
+          }
+
+          adm.withHandler(handlertype)
+        }
+
+        adm
+      }
+
+      val res = definer.createEntity(CreateEntityMessage(entityname, attributeMessages))
       if (res.code == AckMessage.Code.OK) {
         return Success(res.message)
       } else {
@@ -95,6 +109,7 @@ class RPCClient(channel: ManagedChannel, definer: AdamDefinitionBlockingStub, se
 
 
   /**
+    * Import data to entity.
     *
     * @param host     host
     * @param database database
@@ -111,6 +126,7 @@ class RPCClient(channel: ManagedChannel, definer: AdamDefinitionBlockingStub, se
 
 
   /**
+    * List all entities.
     *
     * @return
     */
@@ -122,6 +138,7 @@ class RPCClient(channel: ManagedChannel, definer: AdamDefinitionBlockingStub, se
 
 
   /**
+    * Get details for entity.
     *
     * @param entityname name of entity
     * @return
@@ -136,6 +153,7 @@ class RPCClient(channel: ManagedChannel, definer: AdamDefinitionBlockingStub, se
 
 
   /**
+    * Partition entity.
     *
     * @param entityname  name of entity
     * @param npartitions number of partitions
@@ -168,6 +186,7 @@ class RPCClient(channel: ManagedChannel, definer: AdamDefinitionBlockingStub, se
 
 
   /**
+    * Read data of entity.
     *
     * @param entityname name of entity
     */
@@ -198,12 +217,13 @@ class RPCClient(channel: ManagedChannel, definer: AdamDefinitionBlockingStub, se
 
 
   /**
+    * Benchmark entity and update scan weights.
     *
     * @param entityname name of entity
     * @param attribute  name of feature attribute
     * @return
     */
-  def entityBenchmark(entityname: String, attribute: String): Try[Void] = {
+  def entityBenchmarkAndUpdateScanWeights(entityname: String, attribute: String): Try[Void] = {
     execute("benchmark entity scans and reset weights operation") {
       definer.benchmarkAndUpdateScanWeights(WeightMessage(entityname, attribute))
       Success(null)
@@ -211,6 +231,7 @@ class RPCClient(channel: ManagedChannel, definer: AdamDefinitionBlockingStub, se
   }
 
   /**
+    * Sparsify entity and store feature vectors as sparse vectors.
     *
     * @param entityname name of entity
     * @param attribute  name of feature attribute
@@ -225,6 +246,7 @@ class RPCClient(channel: ManagedChannel, definer: AdamDefinitionBlockingStub, se
 
 
   /**
+    * Drop entity.
     *
     * @param entityname name of entity
     */
@@ -237,33 +259,30 @@ class RPCClient(channel: ManagedChannel, definer: AdamDefinitionBlockingStub, se
 
 
   /**
+    * Create all indexes for entity.
     *
     * @param entityname name of entity
     * @param attributes name of attributes
     * @param norm       norm for distance function
     * @return
     */
-  def entityCreateAll(entityname: String, attributes: Seq[EntityField], norm: Int): Try[Void] = {
+  def entityCreateAllIndexes(entityname: String, attributes: Seq[String], norm: Int): Try[Seq[String]] = {
     execute("create all indexes operation") {
-      val fieldMessage = attributes.map(field =>
-        AttributeDefinitionMessage(field.name, getFieldType(field.datatype), pk = false, unique = false, indexed = field.indexed)
-      ).filter(_.attributetype == AttributeType.FEATURE)
-
-      val res = fieldMessage.map { column =>
-        definer.generateAllIndexes(IndexMessage(entity = entityname, column = column.name, distance = Some(DistanceMessage(DistanceType.minkowski, options = Map("norm" -> norm.toString)))))
+      val res = attributes.map { attribute => definer.generateAllIndexes(IndexMessage(entity = entityname, column = attribute, distance = Some(DistanceMessage(DistanceType.minkowski, options = Map("norm" -> norm.toString)))))
       }
 
       if (res.exists(_.code != AckMessage.Code.OK)) {
         val message = res.filter(_.code != AckMessage.Code.OK).map(_.message).mkString("; ")
         return Failure(new Exception(message))
       } else {
-        Success(null)
+        Success(res.flatMap(_.message.split(",")))
       }
     }
   }
 
 
   /**
+    * Create specific index.
     *
     * @param entityname name of entity
     * @param attribute  name of attribute
@@ -272,9 +291,9 @@ class RPCClient(channel: ManagedChannel, definer: AdamDefinitionBlockingStub, se
     * @param options    index creation options
     * @return
     */
-  def indexCreate(entityname: String, attribute: String, indextype: IndexType, norm: Int, options: Map[String, String]): Try[String] = {
+  def indexCreate(entityname: String, attribute: String, indextype: String, norm: Int, options: Map[String, String]): Try[String] = {
     execute("create index operation") {
-      val indexMessage = IndexMessage(entityname, attribute, indextype, Some(DistanceMessage(DistanceType.minkowski, Map("norm" -> norm.toString))), options)
+      val indexMessage = IndexMessage(entityname, attribute, getIndexType(indextype), Some(DistanceMessage(DistanceType.minkowski, Map("norm" -> norm.toString))), options)
       val res = definer.index(indexMessage)
 
       if (res.code == AckMessage.Code.OK) {
@@ -285,8 +304,25 @@ class RPCClient(channel: ManagedChannel, definer: AdamDefinitionBlockingStub, se
     }
   }
 
+  /**
+    *
+    * @param s
+    * @return
+    */
+  private def getIndexType(s : String) = s match {
+    case "ecp" => IndexType.ecp
+    case "lsh" => IndexType.lsh
+    case "mi" => IndexType.mi
+    case "pq" => IndexType.pq
+    case "sh" => IndexType.sh
+    case "vaf" => IndexType.vaf
+    case "vav" => IndexType.vav
+    case _ => null
+  }
+
 
   /**
+    * Partition index.
     *
     * @param indexname   name of index
     * @param npartitions number of partitions
@@ -317,6 +353,73 @@ class RPCClient(channel: ManagedChannel, definer: AdamDefinitionBlockingStub, se
     }
   }
 
+  /**
+    * Perform a search.
+    *
+    * @param qo search request
+    * @return
+    */
+  def doQuery(qo: RPCQueryObject): Try[Seq[RPCQueryResults]] = {
+    execute("compound query operation") {
+      val res = searcherBlocking.doQuery(qo.getQueryMessage)
+      if (res.ack.get.code == AckMessage.Code.OK) {
+        return Success(res.responses.map(new RPCQueryResults(_)))
+      } else {
+        return Failure(new Exception(res.ack.get.message))
+      }
+    }
+  }
+
+  /**
+    * Perform a progressive search.
+    *
+    * @param qo search request
+    * @param next       function for next result
+    * @param completed  function for final result
+    * @return
+    */
+  def doProgressiveQuery(qo: RPCQueryObject,  next: (Try[(String, Double, String, Long, Seq[Map[String, String]])]) => (Unit), completed: (String) => (Unit)): Try[Seq[RPCQueryResults]] = {
+    execute("progressive query operation") {
+      val so = new StreamObserver[QueryResultsMessage]() {
+        override def onError(throwable: Throwable): Unit = {
+          log.error("error in progressive querying", throwable)
+        }
+
+        override def onCompleted(): Unit = {
+          completed(qo.id)
+        }
+
+        override def onNext(qr: QueryResultsMessage): Unit = {
+          log.info("new progressive results arrived")
+
+          if (qr.ack.get.code == AckMessage.Code.OK && qr.responses.nonEmpty) {
+            val head = qr.responses.head
+
+            val confidence = head.confidence
+            val source = head.source
+            val time = head.time
+            val results = head.results.map(x => x.data.mapValues(x => ""))
+
+            next(Success(qo.id, confidence, source, time, results))
+          } else {
+            next(Failure(new Exception(qr.ack.get.message)))
+          }
+        }
+      }
+
+      searcher.doProgressiveQuery(qo.getQueryMessage, so)
+      Success(null)
+    }
+  }
+
+  /**
+    * Shutdown connection.
+    */
+  def shutdown(): Unit = {
+    channel.shutdown.awaitTermination(5, TimeUnit.SECONDS)
+  }
+
+
 
   /**
     *
@@ -333,80 +436,6 @@ class RPCClient(channel: ManagedChannel, definer: AdamDefinitionBlockingStub, se
     case "text" => AttributeType.TEXT
     case "boolean" => AttributeType.BOOLEAN
     case _ => null
-  }
-
-
-  /**
-    *
-    * @param request search compound request
-    * @return
-    */
-  def searchCompound(request: SearchCompoundRequest): Try[SearchResponse] = {
-    execute("compound query operation") {
-      val res = searcherBlocking.doQuery(request.toRPCMessage())
-      if (res.ack.get.code == AckMessage.Code.OK) {
-        return Success(new SearchResponse(res))
-      } else {
-        return Failure(new Exception(res.ack.get.message))
-      }
-    }
-  }
-
-  /**
-    *
-    * @param queryid    query id
-    * @param entityname name of entity
-    * @param q          vector
-    * @param attribute  attribute name
-    * @param hints      query hints
-    * @param k          k of kNN
-    * @param next       function for next result
-    * @param completed  function for final result
-    * @return
-    */
-  def searchProgressive(queryid: String, entityname: String, q: Seq[Float], attribute: String, hints: Seq[String], k: Int, next: (Try[(String, Double, String, Long, Seq[Map[String, String]])]) => (Unit), completed: (String) => (Unit)): Try[Void] = {
-    execute("progressive query operation") {
-      val fv = FeatureVectorMessage().withDenseVector(DenseVectorMessage(q))
-      val nnq = NearestNeighbourQueryMessage(attribute, Some(fv), None, Option(DistanceMessage(DistanceType.minkowski, Map("norm" -> "2"))), k, indexOnly = true)
-      val request = QueryMessage(from = Some(FromMessage().withEntity(entityname)), hints = hints, nnq = Option(nnq))
-
-      val so = new StreamObserver[QueryResultsMessage]() {
-        override def onError(throwable: Throwable): Unit = {
-          log.error(throwable)
-        }
-
-        override def onCompleted(): Unit = {
-          completed(queryid)
-        }
-
-        override def onNext(qr: QueryResultsMessage): Unit = {
-          log.info("new progressive results arrived")
-
-          if (qr.ack.get.code == AckMessage.Code.OK && qr.responses.nonEmpty) {
-            val head = qr.responses.head
-
-            val confidence = head.confidence
-            val source = head.source
-            val time = head.time
-            val results = head.results.map(x => x.data.mapValues(x => ""))
-
-            next(Success(queryid, confidence, source, time, results))
-          } else {
-            next(Failure(new Exception(qr.ack.get.message)))
-          }
-        }
-      }
-
-      searcher.doProgressiveQuery(request, so)
-      Success(null)
-    }
-  }
-
-  /**
-    *
-    */
-  def shutdown(): Unit = {
-    channel.shutdown.awaitTermination(5, TimeUnit.SECONDS)
   }
 }
 

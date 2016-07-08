@@ -23,7 +23,7 @@ class ChronosAgent(ipAddressOrHostname: String) extends AbstractChronosAgent(ipA
     * @param job
     */
   override def aborded(job: ChronosJob): Unit = {
-    //TODO
+    //TODO: handle aborted status
   }
 
   /**
@@ -40,7 +40,10 @@ class ChronosAgent(ipAddressOrHostname: String) extends AbstractChronosAgent(ipA
     * @return
     */
   override def execute(job: ChronosJob, inputDirectory : File, outputDirectory : File): Properties = {
-    //TODO
-    return new Properties()
+    //TODO write to input and output directory
+    new EvaluationExecutor(job).run()
   }
+
+  //TODO: set status
+  //TODO: adjust logging
 }

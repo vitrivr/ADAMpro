@@ -35,10 +35,14 @@ class SimpleProgressivePathChooser()(implicit ac: AdamContext) extends Progressi
   override def getPaths(entityname: EntityName, nnq: NearestNeighbourQuery): Seq[QueryExpression] = {
     //TODO: choose better default
     IndexTypes.values
-      .map(indextypename => Index.list(Some(entityname), Some(indextypename)).filter(_.isSuccess).map(_.get).sortBy(index => - ScanWeightInspector(index)))
+      .map(indextypename => Index.list(Some(entityname), Some(indextypename)).filter(_.isSuccess).map(_.get)
+        .filter(_.isQueryConform(nnq))
+        .sortBy(index => -ScanWeightInspector(index)))
       .filterNot(_.isEmpty)
       .map(_.head)
-      .map(index => {IndexScanExpression(index)(nnq)()})
+      .map(index => {
+        IndexScanExpression(index)(nnq)()
+      })
   }
 }
 
@@ -61,7 +65,9 @@ class AllProgressivePathChooser(implicit ac: AdamContext) extends ProgressivePat
 class IndexTypeProgressivePathChooser(indextypenames: Seq[IndexTypeName])(implicit ac: AdamContext) extends ProgressivePathChooser {
   override def getPaths(entityname: EntityName, nnq: NearestNeighbourQuery): Seq[QueryExpression] = {
     indextypenames
-      .map(indextypename => Index.list(Some(entityname), Some(indextypename)).filter(_.isSuccess).map(_.get).sortBy(index => - ScanWeightInspector(index)).head)
+      .map(indextypename => Index.list(Some(entityname), Some(indextypename)).filter(_.isSuccess).map(_.get)
+        .filter(_.isQueryConform(nnq))
+        .sortBy(index => -ScanWeightInspector(index)).head)
       .map(index => IndexScanExpression(index)(nnq)())
   }
 }
@@ -84,7 +90,9 @@ class QueryHintsProgressivePathChooser(hints: Seq[QueryHint])(implicit ac: AdamC
   */
 class IndexnameSpecifiedProgressivePathChooser(indexnames: Seq[IndexName])(implicit ac: AdamContext) extends ProgressivePathChooser {
   override def getPaths(entityname: EntityName, nnq: NearestNeighbourQuery): Seq[QueryExpression] = {
-    indexnames.map(Index.load(_)).filter(_.isSuccess)
-      .map(index => IndexScanExpression(index.get)(nnq)())
+    //here we do not filter for query conformness, as the user has specified explicitly some index names
+    //and should get an exception otherwise
+    indexnames.map(Index.load(_)).map(_.get)
+      .map(index => IndexScanExpression(index)(nnq)())
   }
 }

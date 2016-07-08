@@ -116,7 +116,6 @@ $("#btnSubmit").click(function () {
         raiseError("Please specify an attribute."); return;
     }
 
-    var q = $("#query").val();
     var hints = $("#indextype").val();
 
     if ($("#k").val().length > 0) {
@@ -129,7 +128,23 @@ $("#btnSubmit").click(function () {
     var series = chart.series[0];
     var startTime = (new Date()).getTime();
 
-    searchProgressive(entityname, attribute, q, hints, k, function () {
+    var params = {};
+    params.id = guid();
+    params.operation = "progressive";
+
+    params.options = {};
+    params.options.entityname = $("#entityname").val();
+    params.options.attribute = $("#column").val();
+    params.options.query = $("#query").val().replace("[", "").replace("]", "").trim();
+    if ($("#k").val().length > 0) {
+        params.options.k = $("#k").val();
+    }
+    if ($("#indextype").val().length > 0) {
+        params.options.hints = $("#indextype").val();
+    }
+
+
+    searchProgressive(params.id, params, function () {
         successHandler(series);
     }, function (data, intervallId) {
         dataPollIntervalId = intervallId;

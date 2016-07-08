@@ -6,10 +6,10 @@ package ch.unibas.dmi.dbis.adam.client.web.datastructures
   * Ivan Giangreco
   * June 2016
   */
-object Index {}
+private[client] object Index {}
 
-case class IndexCreateRequest(entityname: String, attribute: String, norm: Int, indextype: String, options: Map[String, String])
+private[client] case class IndexCreateRequest(entityname: String, attribute: String, norm: Int, indextype: String, options: Map[String, String])
 
-case class IndexCreateAllRequest(entityname: String, attributes: Seq[EntityField])
+private[client] case class IndexCreateAllRequest(entityname: String, attributes: Seq[EntityField])
 
-case class IndexPartitionRequest(indexname: String, npartitions: Int, materialize: Boolean, replace: Boolean, attributes: Seq[String])
+private[client] case class IndexPartitionRequest(indexname: String, npartitions: Int, materialize: Boolean, replace: Boolean, attributes: Seq[String])

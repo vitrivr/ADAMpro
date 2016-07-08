@@ -545,27 +545,13 @@ function searchCompound(params, handler) {
 
 /**
  *
- * @param entityname
- * @param attribute
- * @param query
- * @param hints
- * @param k
+ * @param params
  * @param successHandler
  * @param updateHandler
  * @param errorHandler
  */
-function searchProgressive(entityname, attribute, query, hints, k, successHandler, updateHandler, errorHandler) {
+function searchProgressive(id, params, successHandler, updateHandler, errorHandler) {
     startTask();
-
-    var id = guid();
-
-    var params = {};
-    params.id = id;
-    params.entityname = entityname;
-    params.attribute = attribute;
-    params.query = query;
-    params.k = k;
-    params.hints = hints;
 
     $.ajax(ADAM_CLIENT_HOST + "/search/progressive", {
         data: JSON.stringify(params),

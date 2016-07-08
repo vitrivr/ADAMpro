@@ -168,6 +168,7 @@ class SearchRPC extends AdamSearchGrpc.AdamSearch with Logging {
           None
         }
 
+        //TODO: change here, so that we do not need to rely on "getEntity"
         val tracker = QueryOp.progressive(request.from.get.getEntity, nnq, bq , pathChooser, onComplete)
 
         //track on completed
