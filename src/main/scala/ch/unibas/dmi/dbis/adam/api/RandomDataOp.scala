@@ -45,7 +45,7 @@ object RandomDataOp extends Logging {
           throw new GeneralAdamException("please choose to create vectors with more than zero dimensions")
         }
 
-        if(vdetail.get.sparsity >= 0 && vdetail.get.sparsity <= 1.0){
+        if(!(vdetail.get.sparsity >= 0 && vdetail.get.sparsity <= 1.0)){
           throw new GeneralAdamException("sparsity should be between 0 and 1")
         }
       }
