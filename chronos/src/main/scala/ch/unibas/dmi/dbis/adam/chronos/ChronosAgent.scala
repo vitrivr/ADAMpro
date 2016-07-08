@@ -23,7 +23,7 @@ class ChronosAgent(ipAddressOrHostname: String) extends AbstractChronosAgent(ipA
     * @param job
     */
   override def aborded(job: ChronosJob): Unit = {
-    //TODO
+    //TODO: handle aborted status
   }
 
   /**
