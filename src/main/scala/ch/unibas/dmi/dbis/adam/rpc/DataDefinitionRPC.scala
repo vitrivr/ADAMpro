@@ -433,7 +433,7 @@ class DataDefinitionRPC extends AdamDefinitionGrpc.AdamDefinition with Logging {
     val res = IndexOp.generateAll(request.entity, request.column, distance)
 
     if (res.isSuccess) {
-      Future.successful(AckMessage(AckMessage.Code.OK))
+      Future.successful(AckMessage(AckMessage.Code.OK, res.get.mkString(",")))
     } else {
       log.error(res.failed.get.getMessage, res.failed.get)
       Future.successful(AckMessage(AckMessage.Code.ERROR))
