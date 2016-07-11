@@ -73,15 +73,23 @@ if [ $ROLE == "" ]; then
     ROLE="slave"
 fi
 
-
 if [ $ROLE == "master" ]; then
+
+    sudo docker network rm admapronw
+    sudo docker network create --driver bridge adampronw
+
+    sudo docker stop postgresql
+    sudo docker rm postgresql
+    sudo docker run --net=adampronw -p 5432:5432 -h postgresql --name postgresql --net-alias postgresql -d orchardup/postgresql:latest
+
+
     sudo docker stop spark-master
     sudo docker rm spark-master
 
     sudo docker rmi adampar/spark-master:1.6.2-hadoop2.6
     sudo docker build -t adampar/spark-master:1.6.2-hadoop2.6 docker-spark/master
 
-    sudo docker run -d -v /home/ubuntu/target:/target --net=host -p 7077:7077 -p 8080:8080 -p 6066:6066 -p 4040:4040 -p 8088:8088 -p 8042:8042 -p 5890:5890 --name spark-master -h spark-master -e ENABLE_INIT_DAEMON=false adampar/spark-master:1.6.2-hadoop2.6
+    sudo docker run -d -e "SPARK_CONF_DIR=/target/conf" -v /home/ubuntu/target:/target --net=host -p 8080:8080 -p 9000:9000 -p 7077:7077 -p 6066:6066 -p 4040:4040 -p 8088:8088 -p 8042:8042 -p 5890:5890 --hostname spark --name spark-master adampar/spark-master:1.6.2-hadoop2.6
 
     sudo docker rm -f spark-submit
     sudo docker rmi adampar/spark-submit:1.6.2-hadoop2.6

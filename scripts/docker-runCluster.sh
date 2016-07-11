@@ -4,20 +4,33 @@ export SPARK_MASTER=10.34.58.136
 
 DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && cd ".." && pwd )"
 
-##TODO Maybe it's better to have a submit-container on the local system?
+## Maybe it's better to have a submit-container on the local system?
 # But the submit-container relies on spark-hadoop so scp is slicker
+#TODO It's better because you don't have to scp everything
 
-ssh ubuntu@$SPARK_MASTEr sudo rm -r target/scala-2.10/
+#TODO Some debug flag when the jar is already on spark-master
 
-ssh ubuntu@$SPARK_MASTER mkdir -p target/scala-2.10/
+echo "ssh-ing into ubuntu"
+
+ssh ubuntu@$SPARK_MASTER sudo rm -r /home/ubuntu/target/
+
+ssh ubuntu@$SPARK_MASTER mkdir -p /home/ubuntu/target/scala-2.10/
+
+
+scp -r $DIR/conf ubuntu@$SPARK_MASTER:target/conf/
+ssh ubuntu@$SPARK_MASTER rm target/conf/application.conf
+
 ##Copy jar to SPARK_MASTER
+#TODO is this necessary with deploy-mode client??
+echo "scping"
+
 scp $DIR/target/scala-2.10/ADAMpro-assembly-0.1.0.jar ubuntu@$SPARK_MASTER:target/scala-2.10/ADAMpro-assembly-0.1.0.jar
-#For copying inside project
-# scp target/scala-2.10/ADAMpro-assembly-0.1.0.jar ubuntu@10.34.58.136:target/scala-2.10/ADAMpro-assembly-0.1.0.jar
 
-
+echo "scp done"
 #TODO Copy conf-folder
 
 #Launch spark-submit
 ssh ubuntu@$SPARK_MASTER sudo docker stop spark-submit
 ssh ubuntu@$SPARK_MASTER sudo docker start spark-submit
+
+echo "script done"
