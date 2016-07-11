@@ -356,15 +356,10 @@ class EvaluationExecutor(val job: EvaluationJob, logger: ChronosHttpClient#Chron
       client.doProgressiveQuery(qo,
         next = (res) => ({
           if (res.isSuccess) {
-            val confidence = res.get._2
-            val source = res.get._3
-            val time = res.get._4
-            val results = res.get._5
-
-            lb += (source + "confidence" -> confidence)
-            lb += (source + "source" -> source)
-            lb += (source + "time" -> time)
-            lb += (source + "results" -> results.mkString)
+            lb += (res.get.source + "confidence" -> res.get.confidence)
+            lb += (res.get.source + "source" -> res.get.source)
+            lb += (res.get.source + "time" -> res.get.time)
+            lb += (res.get.source + "results" -> res.get.results.head)
           } else {
             lb += ("failure" -> res.failed.get.getMessage)
           }

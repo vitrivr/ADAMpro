@@ -406,14 +406,7 @@ class RPCClient(channel: ManagedChannel, definer: AdamDefinitionBlockingStub, se
           log.info("new progressive results arrived")
 
           if (qr.ack.get.code == AckMessage.Code.OK && qr.responses.nonEmpty) {
-            val head = qr.responses.head
-
-            val confidence = head.confidence
-            val source = head.source
-            val time = head.time
-            val results = head.results.map(x => x.data.mapValues(_.toString()))
-
-            next(Success(RPCQueryResults(qo.id, time, results, confidence, source)))
+            next(Success(new RPCQueryResults(qr.responses.head)))
           } else {
             next(Failure(new Exception(qr.ack.get.message)))
           }
