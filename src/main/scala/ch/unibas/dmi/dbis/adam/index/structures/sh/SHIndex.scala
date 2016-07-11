@@ -27,7 +27,7 @@ class SHIndex(val indexname: IndexName, val entityname: EntityName, override pri
   override val indextypename: IndexTypeName = IndexTypes.SHINDEX
 
   override val lossy: Boolean = true
-  override val confidence = 0.toFloat
+  override val confidence = 0.5.toFloat
 
   /**
     *

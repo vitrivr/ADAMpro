@@ -21,7 +21,12 @@ import org.apache.spark.sql.types.DataTypes
   */
 class PQIndex(val indexname: IndexName, val entityname: EntityName, override private[index] var data : DataFrame, private[index] val metadata: PQIndexMetaData)(@transient override implicit val ac : AdamContext)
   extends Index {
+
   override val indextypename: IndexTypeName = IndexTypes.PQINDEX
+
+  override val lossy: Boolean = true
+  override val confidence: Float = 0.5.toFloat
+
 
   override def scan(data : DataFrame, q : FeatureVector, distance : DistanceFunction, options : Map[String, Any], k : Int): DataFrame = {
     log.debug("scanning PQ index " + indexname)
@@ -64,9 +69,6 @@ class PQIndex(val indexname: IndexName, val entityname: EntityName, override pri
 
     false
   }
-
-  override val confidence: Float = 0.toFloat
-  override val lossy: Boolean = true
 }
 
 

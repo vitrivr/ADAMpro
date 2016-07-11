@@ -112,6 +112,8 @@ private class ScanWeightBenchmarker(entityname: EntityName, attribute: String, n
     //remove measurements > or < 3 * stdev
     val clean = measurements.filterNot(m => m > mean + 3 * stdev).filterNot(m => m < mean - 3 * stdev)
 
+    //TODO: consider index score too; build cost model for index access
+
     //average time
     clean.sum.toFloat / clean.length.toFloat
   }

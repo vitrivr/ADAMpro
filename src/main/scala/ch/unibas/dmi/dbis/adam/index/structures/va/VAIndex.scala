@@ -34,6 +34,12 @@ class VAIndex(val indexname: IndexName, val entityname: EntityName, override pri
   override val lossy: Boolean = false
   override val confidence = 1.toFloat
 
+  override val score : Float = if(indextypename.equals(IndexTypes.VAFINDEX)){
+    0.9.toFloat //slightly less weight if fixed variable
+  } else {
+    1.toFloat
+  }
+
   /**
     *
     * @param data     rdd to scan

@@ -27,7 +27,7 @@ class LSHIndex(val indexname: IndexName, val entityname: EntityName, override pr
   override val indextypename: IndexTypeName = IndexTypes.LSHINDEX
 
   override val lossy: Boolean = true
-  override val confidence = 0.toFloat
+  override val confidence = 0.5.toFloat
 
   override def scan(data: DataFrame, q: FeatureVector, distance: DistanceFunction, options: Map[String, Any], k: Int): DataFrame = {
     log.debug("scanning LSH index " + indexname)
