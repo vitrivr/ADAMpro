@@ -398,7 +398,7 @@ class RPCClient(channel: ManagedChannel, definer: AdamDefinitionBlockingStub, se
             val confidence = head.confidence
             val source = head.source
             val time = head.time
-            val results = head.results.map(x => x.data.mapValues(x => ""))
+            val results = head.results.map(x => x.data.mapValues(_.toString()))
 
             next(Success(qo.id, confidence, source, time, results))
           } else {
