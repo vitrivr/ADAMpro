@@ -2,7 +2,7 @@ package ch.unibas.dmi.dbis.adam.client.web
 
 import ch.unibas.dmi.dbis.adam.client.web.datastructures._
 import ch.unibas.dmi.dbis.adam.rpc.RPCClient
-import ch.unibas.dmi.dbis.adam.rpc.datastructures.RPCAttributeDefinition
+import ch.unibas.dmi.dbis.adam.rpc.datastructures.{RPCQueryResults, RPCAttributeDefinition}
 import com.twitter.finagle.http.Request
 import com.twitter.finatra.http.Controller
 import org.apache.log4j.Logger
@@ -150,7 +150,7 @@ class AdamController(rpcClient: RPCClient) extends Controller {
     val res = rpcClient.entityRead(entityname.get)
 
     if (res.isSuccess) {
-      response.ok.json(EntityReadResponse(200, entityname.get, res.get))
+      response.ok.json(EntityReadResponse(200, entityname.get, res.get.map(_.results).head))
     } else {
       response.ok.json(GeneralResponse(500, res.failed.get.getMessage))
     }
@@ -283,21 +283,16 @@ class AdamController(rpcClient: RPCClient) extends Controller {
   }
 
 
-  private def processProgressiveResults(id : String)(res: Try[(String, Double, String, Long, Seq[Map[String, String]])]): Unit = {
+  private def processProgressiveResults(id : String)(res: Try[RPCQueryResults]): Unit = {
     if (res.isSuccess) {
+      val results = res.get
 
-      val confidence = res.get._2
-      val source = res.get._3
-      val time = res.get._4
-      val results = res.get._5
-
-
-      val sourcetype = if (source.length > 0) {
-        source.substring(0, source.indexOf("(")).toLowerCase.trim
+      val sourcetype = if (results.source.length > 0) {
+        results.source.substring(0, results.source.indexOf("(")).toLowerCase.trim
       } else {
         ""
       }
-      progTempResults.get(id).get += SearchProgressiveIntermediaryResponse(id, confidence, source, sourcetype, time, results, ProgressiveQueryStatus.RUNNING)
+      progTempResults.get(id).get += SearchProgressiveIntermediaryResponse(id, results.confidence, results.source, sourcetype, results.time, results.results, ProgressiveQueryStatus.RUNNING)
     } else {
       log.error(res.failed.get)
       completedProgressiveResults(id, res.failed.get.getMessage, ProgressiveQueryStatus.ERROR)

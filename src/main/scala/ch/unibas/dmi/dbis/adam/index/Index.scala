@@ -65,6 +65,11 @@ abstract class Index(@transient implicit val ac: AdamContext) extends Serializab
   def confidence: Float
 
   /**
+    * Score. Multiplier in index choice.
+    */
+  def score: Float = confidence
+
+  /**
     * Denotes whether the index leads to false negatives, i.e., elements are dropped although they shouldn't be.
     */
   def lossy: Boolean

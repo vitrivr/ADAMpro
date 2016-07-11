@@ -1,13 +1,15 @@
 package ch.unibas.dmi.dbis.adam.chronos
 
+import java.io.File
 import java.util.Properties
+import java.util.logging.{Level, LogRecord}
 
-import ch.unibas.cs.dbis.chronos.agent.ChronosJob
+import ch.unibas.cs.dbis.chronos.agent.{ChronosHttpClient, ChronosJob}
 import ch.unibas.dmi.dbis.adam.rpc.RPCClient
-import ch.unibas.dmi.dbis.adam.rpc.datastructures.{RPCQueryObject, RPCAttributeDefinition}
+import ch.unibas.dmi.dbis.adam.rpc.datastructures.{RPCAttributeDefinition, RPCQueryObject, RPCQueryResults}
 
 import scala.collection.mutable.ListBuffer
-import scala.util.Random
+import scala.util.{Random, Try}
 
 /**
   * ADAMpro
@@ -15,61 +17,131 @@ import scala.util.Random
   * Ivan Giangreco
   * July 2016
   */
-class EvaluationExecutor(job: EvaluationJob) {
-  def this(job : ChronosJob){
-    this(new EvaluationJob(job))
+class EvaluationExecutor(val job: EvaluationJob, logger: ChronosHttpClient#ChronosLogHandler, setStatus: (Double) => (Boolean), inputDirectory: File, outputDirectory: File) {
+  //rpc client
+  val client: RPCClient = RPCClient(job.adampro_url, job.adampro_port)
+
+  //if job has been aborted, running will be set to false so that no new queries are started
+  var running = true
+  var progress = 0.0
+
+  /**
+    *
+    * @param job
+    * @param logger
+    * @param setStatus
+    * @param inputDirectory
+    * @param outputDirectory
+    */
+  def this(job: ChronosJob, logger: ChronosHttpClient#ChronosLogHandler, setStatus: (Double) => (Boolean), inputDirectory: File, outputDirectory: File) {
+    this(new EvaluationJob(job), logger, setStatus, inputDirectory, outputDirectory)
   }
 
-  //rpc client
-  val client : RPCClient = RPCClient(job.adampro_url, job.adampro_port)
+
+  private var FEATURE_VECTOR_ATTRIBUTENAME = "fv0"
 
   /**
     * Runs evaluation.
     */
   def run(): Properties = {
+    val results = new ListBuffer[(String, Map[String, String])]()
     val entityname = generateString(10)
     val attributes = getAttributeDefinition()
 
     //create entity
+    logger.publish(new LogRecord(Level.INFO, "creating entity " + entityname + " (" + attributes.map(a => a.name + "(" + a.datatype + ")").mkString(",") + ")"))
     client.entityCreate(entityname, attributes)
 
     //insert random data
+    logger.publish(new LogRecord(Level.INFO, "inserting " + job.data_tuples + " tuples into " + entityname))
     client.entityGenerateRandomData(entityname, job.data_tuples, job.data_vector_dimensions, job.data_vector_sparsity, job.data_vector_min, job.data_vector_max, job.data_vector_sparse)
 
     val indexnames = if (job.execution_name == "sequential") {
       //no index
+      logger.publish(new LogRecord(Level.INFO, "creating no index for " + entityname))
       Seq()
     } else if (job.execution_name == "progressive") {
-      client.entityCreateAllIndexes(entityname, Seq("fv0"), 2).get
+      logger.publish(new LogRecord(Level.INFO, "creating all indexes for " + entityname))
+      client.entityCreateAllIndexes(entityname, Seq(FEATURE_VECTOR_ATTRIBUTENAME), 2).get
     } else {
-      Seq(client.indexCreate(entityname, "fv0", job.execution_name, 2, Map()).get)
+      logger.publish(new LogRecord(Level.INFO, "creating " + job.execution_name + " index for " + entityname))
+      Seq(client.indexCreate(entityname, FEATURE_VECTOR_ATTRIBUTENAME, job.execution_name, 2, Map()).get)
+    }
+
+    if (job.measurement_cache) {
+      indexnames.foreach { indexname =>
+        client.indexCache(indexname)
+      }
+
+      client.entityCache(entityname)
     }
 
     //partition
     getPartitionCombinations().foreach { case (e, i) =>
       if (e.isDefined) {
+        //TODO: adjust partitioner/column
         client.entityPartition(entityname, e.get, Seq(), true, true)
       }
 
       if (i.isDefined) {
+        //TODO: adjust partitioner/column
         indexnames.foreach(indexname => client.indexPartition(indexname, i.get, Seq(), true, true))
       }
 
       //collect queries
-      val queries = getQueries()
+      logger.publish(new LogRecord(Level.INFO, "generating queries to execute on " + entityname))
+      val queries = getQueries(entityname)
 
       //query execution
-      queries.foreach { qo =>
-        executeQuery(qo)
+      queries.zipWithIndex.foreach { case (qo, idx) =>
+        if (running) {
+          val runid = "r-" + idx.toString
+          logger.publish(new LogRecord(Level.INFO, "executing query for " + entityname + " (runid: " + runid + ")"))
+          val result = executeQuery(qo)
+          logger.publish(new LogRecord(Level.INFO, "executed query for " + entityname + " (runid: " + runid + ")"))
+
+          if (job.measurement_firstrun && idx == 0){
+            //ignore first run
+          } else {
+            results += (runid -> result)
+          }
+
+        } else {
+          logger.publish(new LogRecord(Level.INFO, "aborted job " + job.id + ", not running queries anymore"))
+        }
+
+        progress += 1 / queries.size.toFloat
       }
     }
 
-    //TODO: fill properties
-    return new Properties()
+    logger.publish(new LogRecord(Level.INFO, "all queries for job " + job.id + " have been run, preparing data and finishing execution"))
+
+    //fill properties
+    val prop = new Properties
+    results.foreach { case (runid, result) =>
+      result.map { case (k, v) => (runid + "_" + k) -> v } //remap key
+        .foreach { case (k, v) => prop.setProperty(k, v) } //set property
+    }
+
+    prop
   }
 
+  /**
+    * Aborts the further running of queries.
+    */
+  def abort() {
+    running = false
+  }
 
   /**
+    * Returns progress (0 - 1)
+    *
+    * @return
+    */
+  def getProgress: Double = progress
+
+  /**
+    * Gets a schema for an entity to create.
     *
     * @return
     */
@@ -80,7 +152,7 @@ class EvaluationExecutor(job: EvaluationJob) {
     lb.append(RPCAttributeDefinition("pk", job.data_vector_pk, true, true, true))
 
     //vector
-    lb.append(RPCAttributeDefinition("fv0", "feature"))
+    lb.append(RPCAttributeDefinition(FEATURE_VECTOR_ATTRIBUTENAME, "feature"))
 
     //metadata
     val metadata = Map("long" -> job.data_metadata_long, "int" -> job.data_metadata_int,
@@ -99,6 +171,7 @@ class EvaluationExecutor(job: EvaluationJob) {
   }
 
   /**
+    * Returns combinations of partitionings.
     *
     * @return
     */
@@ -120,31 +193,38 @@ class EvaluationExecutor(job: EvaluationJob) {
   }
 
   /**
+    * Gets queries.
     *
     * @return
     */
-  private def getQueries(): Seq[RPCQueryObject] = {
+  private def getQueries(entityname : String): Seq[RPCQueryObject] = {
     val lb = new ListBuffer[RPCQueryObject]()
 
+    val additionals = if (job.measurement_firstrun) { 1 } else { 0 }
+
     job.query_k.flatMap { k =>
-      val denseQueries = (0 to job.query_dense_n).map { i => getQuery(k, false) }
-      val sparseQueries = (0 to job.query_sparse_n).map { i => getQuery(k, true) }
+      val denseQueries = (0 to job.query_dense_n + additionals).map { i => getQuery(entityname, k, false) }
+      val sparseQueries = (0 to job.query_sparse_n + additionals).map { i => getQuery(entityname, k, true) }
 
       denseQueries union sparseQueries
     }
   }
 
   /**
+    * Gets single query.
     *
     * @param k
     * @param sparseQuery
     * @return
     */
-  def getQuery(k: Int, sparseQuery: Boolean): RPCQueryObject = {
+  def getQuery(entityname : String, k: Int, sparseQuery: Boolean): RPCQueryObject = {
     val lb = new ListBuffer[(String, String)]()
 
-    lb.append("k" -> k.toString)
+    lb.append("entityname" -> entityname)
 
+    lb.append("attribute" -> FEATURE_VECTOR_ATTRIBUTENAME)
+
+    lb.append("k" -> k.toString)
 
     lb.append("distance" -> job.query_distance)
 
@@ -155,7 +235,6 @@ class EvaluationExecutor(job: EvaluationJob) {
     if (job.query_sparseweighted) {
       lb.append("sparseweights" -> "true")
     }
-
 
     lb.append("query" -> generateFeatureVector(job.data_vector_dimensions, job.data_vector_sparsity, job.data_vector_min, job.data_vector_max).mkString(","))
 
@@ -176,6 +255,7 @@ class EvaluationExecutor(job: EvaluationJob) {
 
 
   /**
+    * Generates a feature vector.
     *
     * @param dimensions
     * @param sparsity
@@ -204,6 +284,7 @@ class EvaluationExecutor(job: EvaluationJob) {
   }
 
   /**
+    * Sparsifies a vector.
     *
     * @param vec
     * @return
@@ -227,6 +308,7 @@ class EvaluationExecutor(job: EvaluationJob) {
 
 
   /**
+    * Generates a string (only a-z).
     *
     * @param nletters
     * @return
@@ -235,19 +317,86 @@ class EvaluationExecutor(job: EvaluationJob) {
 
 
   /**
+    * Executes a query.
     *
     * @param qo
     */
-  private def executeQuery(qo: RPCQueryObject): Unit = {
-    if (job.execution_name == "progressive") {
-      client.doQuery(qo)
-      //TODO: add logging, storing results
-      //log
+  private def executeQuery(qo: RPCQueryObject): Map[String, String] = {
+    val lb = new ListBuffer[(String, Any)]()
+
+    lb ++= (job.getAllParameters())
+
+    logger.publish(new LogRecord(Level.FINEST, "executing query with parameters: " + job.getAllParameters().mkString))
+
+    lb += ("queryid" -> qo.id)
+    lb += ("operation" -> qo.operation)
+    lb += ("options" -> qo.options.mkString)
+    lb += ("debugQuery" -> qo.getQueryMessage.toString())
+
+    if (job.execution_name != "progressive") {
+      val t1 = System.currentTimeMillis
+
+      //do query
+      val res: Try[Seq[RPCQueryResults]] = client.doQuery(qo)
+
+
+      val t2 = System.currentTimeMillis
+
+      lb += ("starttime" -> t1)
+      lb += ("isSuccess" -> res.isSuccess)
+      lb += ("nResults" -> res.map(_.length).getOrElse(0))
+      lb += ("endtime" -> t2)
+
+      if (res.isSuccess) {
+        lb += ("measuredtime" -> res.get.map(_.time).mkString(";"))
+        lb += ("results" -> {
+          res.get.head.results.map(res => (res.get("pk") + "," + res.get("adamprodistance"))).mkString("(", "),(", ")")
+        })
+      } else {
+        lb += ("failure" -> res.failed.get.getMessage)
+      }
     } else {
-      client.doProgressiveQuery(qo, (res) => (), (comp) => ())
-      //TODO: add logging, storing results
-      //log
+      var isCompleted = false
+      val t1 = System.currentTimeMillis
+      var t2 = System.currentTimeMillis - 1 //returning -1 on error
+
+      //do progressive query
+      client.doProgressiveQuery(qo,
+        next = (res) => ({
+          if (res.isSuccess) {
+            lb += (res.get.source + "confidence" -> res.get.confidence)
+            lb += (res.get.source + "source" -> res.get.source)
+            lb += (res.get.source + "time" -> res.get.time)
+            lb += (res.get.source + "results" -> {
+              res.get.results.map(res => (res.get("pk") + "," + res.get("adamprodistance"))).mkString("(", "),(", ")")
+            })
+          } else {
+            lb += ("failure" -> res.failed.get.getMessage)
+          }
+        }),
+        completed = (id) => ({
+          isCompleted = true
+          t2 = System.currentTimeMillis
+        }))
+
+      while (!isCompleted) {
+        Thread.sleep(1000)
+      }
+
+      lb += ("starttime" -> t1)
+      lb += ("endtime" -> t2)
     }
+
+    lb.toMap.mapValues(_.toString)
   }
 
+
+  override def equals(that: Any): Boolean =
+    that match {
+      case that: EvaluationExecutor =>
+        this.job.id == that.job.id
+      case _ => false
+    }
+
+  override def hashCode: Int = job.id
 }

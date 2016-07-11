@@ -25,7 +25,7 @@ class ECPIndex(val indexname: IndexName, val entityname: EntityName, override pr
   override val indextypename: IndexTypeName = IndexTypes.ECPINDEX
 
   override val lossy: Boolean = true
-  override val confidence = 0.toFloat
+  override val confidence = 0.5.toFloat
 
   /**
     *
