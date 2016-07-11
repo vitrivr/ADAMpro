@@ -5,6 +5,8 @@ import java.util.Properties
 
 import ch.unibas.cs.dbis.chronos.agent.{AbstractChronosAgent, ChronosJob}
 
+import scala.collection.mutable
+
 /**
   * ADAMpro
   *
@@ -12,18 +14,18 @@ import ch.unibas.cs.dbis.chronos.agent.{AbstractChronosAgent, ChronosJob}
   * July 2016
   */
 class ChronosAgent(ipAddressOrHostname: String) extends AbstractChronosAgent(ipAddressOrHostname, 80, false, false) {
-
-  def main(args: Array[String]): Unit = {
-    val agent = new ChronosAgent("10.34.58.141")
-    agent.run()
-  }
+  val runningJobs = mutable.Map[Int, EvaluationExecutor]()
 
   /**
     *
     * @param job
     */
   override def aborded(job: ChronosJob): Unit = {
-    //TODO: handle aborted status
+    val executor = runningJobs.get(job.id)
+
+    if(executor.isDefined){
+      executor.get.abort()
+    }
   }
 
   /**
@@ -40,10 +42,43 @@ class ChronosAgent(ipAddressOrHostname: String) extends AbstractChronosAgent(ipA
     * @return
     */
   override def execute(job: ChronosJob, inputDirectory : File, outputDirectory : File): Properties = {
-    //TODO write to input and output directory
-    new EvaluationExecutor(job).run()
+    val logger = addChronosLogHandler(job)
+    val executor = new EvaluationExecutor(job, logger, setProgress(job)(_), inputDirectory, outputDirectory)
+
+    val thread = new Thread {
+      override def run {
+        // your custom behavior here
+      }
+    }
+    thread.start
+    Thread.sleep(50) // slow the loop down a bit
+
+
+
+    runningJobs +=  job.id -> executor
+    val results = executor.run()
+    runningJobs -= job.id
+
+    results
   }
 
-  //TODO: set status
-  //TODO: adjust logging
+  /**
+    *
+    * @param job
+    * @param status
+    */
+  private def setProgress(job : ChronosJob)(status : Double) : Boolean = {
+    this.setExecutionStatus(job.id, math.floor(status * 100).toByte)
+  }
+}
+
+object ChronosAgent {
+  /**
+    *
+    * @param args
+    */
+  def main(args: Array[String]): Unit = {
+    val agent = new ChronosAgent("chronos.dmi.unibas.ch")
+    agent.run()
+  }
 }
