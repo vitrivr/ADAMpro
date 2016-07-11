@@ -38,6 +38,8 @@ class EvaluationExecutor(val job: EvaluationJob, logger: ChronosHttpClient#Chron
   }
 
 
+  private var FEATURE_VECTOR_ATTRIBUTENAME = "fv0"
+
   /**
     * Runs evaluation.
     */
@@ -60,10 +62,10 @@ class EvaluationExecutor(val job: EvaluationJob, logger: ChronosHttpClient#Chron
       Seq()
     } else if (job.execution_name == "progressive") {
       logger.publish(new LogRecord(Level.INFO, "creating all indexes for " + entityname))
-      client.entityCreateAllIndexes(entityname, Seq("fv0"), 2).get
+      client.entityCreateAllIndexes(entityname, Seq(FEATURE_VECTOR_ATTRIBUTENAME), 2).get
     } else {
       logger.publish(new LogRecord(Level.INFO, "creating " + job.execution_name + " index for " + entityname))
-      Seq(client.indexCreate(entityname, "fv0", job.execution_name, 2, Map()).get)
+      Seq(client.indexCreate(entityname, FEATURE_VECTOR_ATTRIBUTENAME, job.execution_name, 2, Map()).get)
     }
 
     if (job.measurement_cache) {
@@ -86,12 +88,12 @@ class EvaluationExecutor(val job: EvaluationJob, logger: ChronosHttpClient#Chron
 
       //collect queries
       logger.publish(new LogRecord(Level.INFO, "generating queries to execute on " + entityname))
-      val queries = getQueries()
+      val queries = getQueries(entityname)
 
       //query execution
       queries.zipWithIndex.foreach { case (qo, idx) =>
         if (running) {
-          val runid = generateString(10)
+          val runid = "r-" + idx.toString
           logger.publish(new LogRecord(Level.INFO, "executing query for " + entityname + " (runid: " + runid + ")"))
           val result = executeQuery(qo)
           logger.publish(new LogRecord(Level.INFO, "executed query for " + entityname + " (runid: " + runid + ")"))
@@ -148,7 +150,7 @@ class EvaluationExecutor(val job: EvaluationJob, logger: ChronosHttpClient#Chron
     lb.append(RPCAttributeDefinition("pk", job.data_vector_pk, true, true, true))
 
     //vector
-    lb.append(RPCAttributeDefinition("fv0", "feature"))
+    lb.append(RPCAttributeDefinition(FEATURE_VECTOR_ATTRIBUTENAME, "feature"))
 
     //metadata
     val metadata = Map("long" -> job.data_metadata_long, "int" -> job.data_metadata_int,
@@ -193,14 +195,14 @@ class EvaluationExecutor(val job: EvaluationJob, logger: ChronosHttpClient#Chron
     *
     * @return
     */
-  private def getQueries(): Seq[RPCQueryObject] = {
+  private def getQueries(entityname : String): Seq[RPCQueryObject] = {
     val lb = new ListBuffer[RPCQueryObject]()
 
     val additionals = if (job.measurement_firstrun) { 1 } else { 0 }
 
     job.query_k.flatMap { k =>
-      val denseQueries = (0 to job.query_dense_n + additionals).map { i => getQuery(k, false) }
-      val sparseQueries = (0 to job.query_sparse_n + additionals).map { i => getQuery(k, true) }
+      val denseQueries = (0 to job.query_dense_n + additionals).map { i => getQuery(entityname, k, false) }
+      val sparseQueries = (0 to job.query_sparse_n + additionals).map { i => getQuery(entityname, k, true) }
 
       denseQueries union sparseQueries
     }
@@ -213,11 +215,14 @@ class EvaluationExecutor(val job: EvaluationJob, logger: ChronosHttpClient#Chron
     * @param sparseQuery
     * @return
     */
-  def getQuery(k: Int, sparseQuery: Boolean): RPCQueryObject = {
+  def getQuery(entityname : String, k: Int, sparseQuery: Boolean): RPCQueryObject = {
     val lb = new ListBuffer[(String, String)]()
 
-    lb.append("k" -> k.toString)
+    lb.append("entityname" -> entityname)
 
+    lb.append("attribute" -> FEATURE_VECTOR_ATTRIBUTENAME)
+
+    lb.append("k" -> k.toString)
 
     lb.append("distance" -> job.query_distance)
 
@@ -228,7 +233,6 @@ class EvaluationExecutor(val job: EvaluationJob, logger: ChronosHttpClient#Chron
     if (job.query_sparseweighted) {
       lb.append("sparseweights" -> "true")
     }
-
 
     lb.append("query" -> generateFeatureVector(job.data_vector_dimensions, job.data_vector_sparsity, job.data_vector_min, job.data_vector_max).mkString(","))
 
@@ -343,7 +347,9 @@ class EvaluationExecutor(val job: EvaluationJob, logger: ChronosHttpClient#Chron
 
       if (res.isSuccess) {
         lb += ("measuredtime" -> res.get.map(_.time).mkString(";"))
-        lb += ("results" -> res.get.map(r => (r.results).mkString).mkString(";;"))
+        lb += ("results" -> {
+          res.get.head.results.map(res => (res.get("pk") + "," + res.get("adamprodistance"))).mkString("(", "),(", ")")
+        })
       } else {
         lb += ("failure" -> res.failed.get.getMessage)
       }
@@ -359,7 +365,9 @@ class EvaluationExecutor(val job: EvaluationJob, logger: ChronosHttpClient#Chron
             lb += (res.get.source + "confidence" -> res.get.confidence)
             lb += (res.get.source + "source" -> res.get.source)
             lb += (res.get.source + "time" -> res.get.time)
-            lb += (res.get.source + "results" -> res.get.results.head)
+            lb += (res.get.source + "results" -> {
+              res.get.results.map(res => (res.get("pk") + "," + res.get("adamprodistance"))).mkString("(", "),(", ")")
+            })
           } else {
             lb += ("failure" -> res.failed.get.getMessage)
           }
