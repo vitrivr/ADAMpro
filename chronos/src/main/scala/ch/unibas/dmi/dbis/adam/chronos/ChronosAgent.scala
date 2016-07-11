@@ -78,7 +78,6 @@ object ChronosAgent {
     * @param args
     */
   def main(args: Array[String]): Unit = {
-    val agent = new ChronosAgent("chronos.dmi.unibas.ch")
-    agent.run()
+    new ChronosAgent("chronos.dmi.unibas.ch").run()
   }
 }

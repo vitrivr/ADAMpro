@@ -24,8 +24,8 @@ class EvaluationJob(job: ChronosJob) extends ChronosJob(job) {
   //that the parameters are properly logged
 
   //adampro
-  val adampro_url: String = getAttribute(adampro, "adampro_url")
-  val adampro_port: Int = getAttribute(adampro, "adampro_port").toInt
+  val adampro_url: String = getAttribute(adampro, "url")
+  val adampro_port: Int = getAttribute(adampro, "port").toInt
 
   //data parameters
   val data_tuples: Int = getAttribute(data, "tuples").toInt
@@ -49,23 +49,23 @@ class EvaluationJob(job: ChronosJob) extends ChronosJob(job) {
   val query_dense_n: Int = getAttribute(query, "dense_n").toInt
   val query_sparse_n: Int = getAttribute(query, "sparse_n").toInt
   val query_distance: String = getAttribute(query, "distance")
-  val query_denseweighted: Boolean = getAttribute(query, "denseweighted").toBoolean
-  val query_sparseweighted: Boolean = getAttribute(query, "sparseweighted").toBoolean
+  val query_denseweighted: Boolean = getBooleanAttribute(query, "denseweighted")
+  val query_sparseweighted: Boolean = getBooleanAttribute(query, "sparseweighted")
 
   //execution paths
   val execution_name: String = getAttribute(execution, "name")
-  val execution_withsequential: Boolean = getAttribute(execution, "withsequential").toBoolean
+  val execution_withsequential: Boolean = getBooleanAttribute(execution, "withsequential")
   val execution_hint: String = getAttribute(execution, "hint")
 
   //data access parameters
-  val access_entity_partitions: Seq[Int] = getAttribute(access, "entity_partitions").split(",").map(_.toInt)
+  val access_entity_partitions: Seq[Int] = getAttribute(access, "entity_partitions").split(",").filterNot(s => s.length < 0 || s.isEmpty).map(_.toInt)
   val access_entity_partitioner: String = getAttribute(access, "entity_partitioner")
-  val access_index_partitions: Seq[Int] = getAttribute(access, "index_partitions").split(",").map(_.toInt)
+  val access_index_partitions: Seq[Int] = getAttribute(access, "index_partitions").split(",").filterNot(s => s.length < 0 || s.isEmpty).map(_.toInt)
   val access_index_partitioner: String = getAttribute(access, "index_partitioner")
 
   //measurement parameters
-  val measurement_firstrun: Boolean = getAttribute(measurement, "firstrun").toBoolean
-  val measurement_cache: Boolean = getAttribute(measurement, "cache").toBoolean
+  val measurement_firstrun: Boolean = getBooleanAttribute(measurement, "firstrun")
+  val measurement_cache: Boolean = getBooleanAttribute(measurement, "cache")
 
 
   /**
@@ -84,6 +84,23 @@ class EvaluationJob(job: ChronosJob) extends ChronosJob(job) {
       ""
     } else {
       attributeNode.get.text
+    }
+  }
+
+  /**
+    *
+    * @param node
+    * @param key
+    * @param errorIfEmpty
+    * @return
+    */
+  private def getBooleanAttribute(node: Node, key: String, errorIfEmpty: Boolean = true) : Boolean = {
+    val result = getAttribute(node, key, errorIfEmpty)
+
+    if(result.isEmpty || result.length == 0){
+      false
+    } else {
+      (result == "1")
     }
   }
 

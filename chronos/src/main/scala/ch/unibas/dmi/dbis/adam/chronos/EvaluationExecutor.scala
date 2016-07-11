@@ -6,10 +6,10 @@ import java.util.logging.{Level, LogRecord}
 
 import ch.unibas.cs.dbis.chronos.agent.{ChronosHttpClient, ChronosJob}
 import ch.unibas.dmi.dbis.adam.rpc.RPCClient
-import ch.unibas.dmi.dbis.adam.rpc.datastructures.{RPCQueryObject, RPCAttributeDefinition}
+import ch.unibas.dmi.dbis.adam.rpc.datastructures.{RPCAttributeDefinition, RPCQueryObject, RPCQueryResults}
 
 import scala.collection.mutable.ListBuffer
-import scala.util.Random
+import scala.util.{Random, Try}
 
 /**
   * ADAMpro
@@ -315,7 +315,7 @@ class EvaluationExecutor(val job: EvaluationJob, logger: ChronosHttpClient#Chron
       val t1 = System.currentTimeMillis
 
       //do query
-      val res = client.doQuery(qo)
+      val res: Try[Seq[RPCQueryResults]] = client.doQuery(qo)
 
 
       val t2 = System.currentTimeMillis
@@ -334,6 +334,7 @@ class EvaluationExecutor(val job: EvaluationJob, logger: ChronosHttpClient#Chron
     } else {
       var isCompleted = false
       val t1 = System.currentTimeMillis
+      var t2 = System.currentTimeMillis - 1 //returning -1 on error
 
       //do progressive query
       client.doProgressiveQuery(qo,
@@ -354,13 +355,12 @@ class EvaluationExecutor(val job: EvaluationJob, logger: ChronosHttpClient#Chron
         }),
         completed = (id) => ({
           isCompleted = true
+          t2 = System.currentTimeMillis
         }))
 
       while (!isCompleted) {
         Thread.sleep(1000)
       }
-
-      val t2 = System.currentTimeMillis
 
       lb += ("starttime" -> t1)
       lb += ("endtime" -> t2)
