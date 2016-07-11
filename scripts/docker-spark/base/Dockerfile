@@ -1,26 +1,17 @@
-FROM java:8
-
-#Old Version MAINTAINER Erika Pauwels <erika.pauwels@tenforce.com>
+FROM sequenceiq/spark:v1.6.0onHadoop2.6.0
 
 MAINTAINER Silvan Heller <silvan.heller@unibas.ch>
 
-ENV ENABLE_INIT_DAEMON true
-ENV INIT_DAEMON_BASE_URI http://identifier/init-daemon
-ENV INIT_DAEMON_STEP spark_master_init
+RUN curl http://d3kbcqa49mib13.cloudfront.net/spark-1.6.2-bin-hadoop2.6.tgz | tar -xz -C /usr/local/
+RUN cd /usr/local && ln -s spark-1.6.2-bin-hadoop2.6 spark
+RUN $BOOTSTRAP && $HADOOP_PREFIX/bin/hadoop dfsadmin -safemode leave && $HADOOP_PREFIX/bin/hdfs dfs -put $SPARK_HOME-1.6.2-bin-hadoop2.6/lib /spark
 
-COPY wait-for-step.sh /
-COPY execute-step.sh /
-COPY finish-step.sh /
+ADD mapred-site.xml $HADOOP_PREFIX/etc/hadoop/mapred-site.xml
+ADD yarn-site.xml $HADOOP_PREFIX/etc/hadoop/yarn-site.xml
 
-COPY bde-spark.css /css/org/apache/spark/ui/static/timeline-view.css
+RUN curl -LO 'http://download.oracle.com/otn-pub/java/jdk/8u77-b03/jdk-8u77-linux-x64.rpm' -H 'Cookie: oraclelicense=accept-securebackup-cookie'
 
-RUN apt-get update \
-      && apt-get install -y curl \
-      && chmod +x *.sh \
-      && wget http://d3kbcqa49mib13.cloudfront.net/spark-1.6.2-bin-hadoop2.6.tgz \
-      && tar -xvzf spark-1.6.2-bin-hadoop2.6.tgz \
-      && mv spark-1.6.2-bin-hadoop2.6 spark \
-      && rm spark-1.6.2-bin-hadoop2.6.tgz \
-      && cd /css \
-      && jar uf /spark/lib/spark-assembly-1.6.2-hadoop2.6.0.jar org/apache/spark/ui/static/timeline-view.css \
-      && cd /
+RUN rpm -i jdk-8u77-linux-x64.rpm
+RUN rm jdk-8u77-linux-x64.rpm
+
+ENTRYPOINT ["/etc/bootstrap.sh"]

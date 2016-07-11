@@ -1,6 +1,7 @@
 FROM adampar/spark-base:1.6.2-hadoop2.6
 
 #Prev MAINTAINER Erika Pauwels <erika.pauwels@tenforce.com>
+#TODO Move env-Variables to script. Having them in the dockerfile is annyoing
 
 MAINTAINER Silvan Heller <silvan.heller@unibas.ch>
 

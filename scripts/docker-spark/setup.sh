@@ -42,30 +42,7 @@ if [ "" == "$PKG_OK" ]
     echo "git installed"
 fi
 
-#PKG_OK=$(dpkg-query -W --showformat='${Status}\n' virtualbox-5.0|grep "install ok installed")
-#echo Checking for virtualbox: $PKG_OK
-#if [ "" == "$PKG_OK" ]
-# then
-#    echo "No virtualbox. Setting up virtualbox."
-#    echo "deb http://download.virtualbox.org/virtualbox/debian xenial contrib" >> /etc/apt/sources.list
-#    wget -q https://www.virtualbox.org/download/oracle_vbox_2016.asc -O- | sudo apt-key add -
-#    wget -q https://www.virtualbox.org/download/oracle_vbox.asc -O- | sudo apt-key add -
-#
-#    sudo apt-get -qq update
-#    sudo apt-get -y -qq install virtualbox-5.0
-#    echo "vbox installed"
-#fi
-#
-#if [ ! -f /usr/local/bin/docker-machine ]; then
-#    echo "docker-machine not installed"
-#    curl -L https://github.com/docker/machine/releases/download/v0.7.0/docker-machine-`uname -s`-`uname -m` > /usr/local/bin/docker-machine && \
-#    chmod +x /usr/local/bin/docker-machine
-#    echo "docker-machine installed"
-#    #Here you should verify if default exists
-#    #Disabled at the moment since VBox needs BIOS-Things
-#    #sudo docker-machine create --driver virtualbox default
-#fi
-
+sudo docker rm adampar/spark-base:1.6.2-hadoop2.6
 sudo docker build -t adampar/spark-base:1.6.2-hadoop2.6 docker-spark/base/
 
 ROLE=$1
@@ -75,13 +52,9 @@ fi
 
 if [ $ROLE == "master" ]; then
 
-    sudo docker network rm admapronw
-    sudo docker network create --driver bridge adampronw
-
     sudo docker stop postgresql
     sudo docker rm postgresql
-    sudo docker run --net=adampronw -p 5432:5432 -h postgresql --name postgresql --net-alias postgresql -d orchardup/postgresql:latest
-
+    sudo docker run --net=host -p 5432:5432 -h postgresql --name postgresql -d orchardup/postgresql:latest
 
     sudo docker stop spark-master
     sudo docker rm spark-master
@@ -90,6 +63,9 @@ if [ $ROLE == "master" ]; then
     sudo docker build -t adampar/spark-master:1.6.2-hadoop2.6 docker-spark/master
 
     sudo docker run -d -e "SPARK_CONF_DIR=/target/conf" -v /home/ubuntu/target:/target --net=host -p 8080:8080 -p 9000:9000 -p 7077:7077 -p 6066:6066 -p 4040:4040 -p 8088:8088 -p 8042:8042 -p 5890:5890 --hostname spark --name spark-master adampar/spark-master:1.6.2-hadoop2.6
+fi
+
+if [ $ROLE == "submit" ]; then
 
     sudo docker rm -f spark-submit
     sudo docker rmi adampar/spark-submit:1.6.2-hadoop2.6
@@ -97,8 +73,10 @@ if [ $ROLE == "master" ]; then
     #TODO Relative to execution maybe
     sudo docker build -t adampar/spark-submit:1.6.2-hadoop2.6 docker-spark/submit
 
-    sudo docker run -d -v /home/ubuntu/target:/target --net=host --name spark-submit -h spark-submit -e ENABLE_INIT_DAEMON=false adampar/spark-submit:1.6.2-hadoop2.6
-fi
+    sudo docker run -d -v /home/ubuntu/target:/target --net=host --name spark-submit -h spark-submit adampar/spark-submit:1.6.2-hadoop2.6
+
+    fi
+
 
 if [ $ROLE == "slave" ]; then
     sudo docker stop spark-worker
