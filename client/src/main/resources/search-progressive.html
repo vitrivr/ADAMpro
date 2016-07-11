@@ -11,7 +11,8 @@
     
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/materialize/0.97.6/css/materialize.min.css">
     <link rel="stylesheet" href="./lib/css/app.css">
-    
+    <link rel="stylesheet" href="./lib/css/materialize-datatable.css">
+
     <script src="https://code.jquery.com/jquery-2.1.1.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/materialize/0.97.6/js/materialize.min.js"></script>
     <script src="./lib/js/config.js"></script>
@@ -87,7 +88,14 @@
 
 <div id="container" style="min-width: 400px; height: 400px; margin: 0 auto"></div>
 
+<div id="resultbox" class="material-table" style="display:none">
+   <div class="s12"><h5>Results</h5></div>
+    <div id="results" class="s12"></div>
+</div>
 
+
+<script src="http://cdn.datatables.net/1.10.12/js/jquery.dataTables.min.js"></script>
+<script src="./lib/js/materialize-datatable.js"></script>
 <script src="https://code.highcharts.com/highcharts.js"></script>
 <script src="https://code.highcharts.com/modules/exporting.js"></script>
 <script>
@@ -300,7 +308,51 @@ function updateHandler(startTime, series, data) {
             time: Math.abs(startTime - x),
             results: data.results.results.length,
             fillColor: "#26a69a",
-            radius: 10
+            radius: 10,
+            events: {
+                click: function () {
+                    $("#resultbox").show();
+
+                    var results = data.results.results;
+
+                    var tabid = "tab-" + indextypes.indexOf(data.results.sourcetype);
+
+                    var innerhtml = '';
+
+                    if (results != null && results.length > 0) {
+                        innerhtml += '<table id="' + tabid + '" class="striped highlight">';
+                        innerhtml += '<thead><tr>';
+
+                        $.each(results[0], function (key, value) {
+                            innerhtml += "<th>" + key + "</th>"
+                        });
+
+                        innerhtml += '</tr></thead>';
+                        innerhtml += '<tbody>';
+
+
+                        $.each(results, function (key, value) {
+                            innerhtml += "<tr>";
+                            $.each(value, function (attributekey, attributevalue) {
+                                if(attributekey == "adamprodistance"){
+                                    innerhtml += "<td class='dt-body-right'>" + attributevalue + "</td>"
+                                } else {
+                                    innerhtml += "<td>" + attributevalue + "</td>"
+                                }
+                            });
+                            innerhtml += "</tr>";
+                        });
+
+                        innerhtml += '</tbody>';
+
+                        innerhtml += '</table>';
+                    }
+
+                    $("#results").html(innerhtml);
+
+                    makeDatatable(tabid);
+                }
+            }
         }, true, true);
     } else if (data.status === "finished") {
         stopUpdating();

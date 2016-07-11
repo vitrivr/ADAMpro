@@ -9,9 +9,9 @@ import ch.unibas.dmi.dbis.adam.http.grpc.QueryResultInfoMessage
   * Ivan Giangreco
   * July 2016
   */
-case class RPCQueryResults(id: String, time: Long, results: Seq[Map[String, String]]) {
+case class RPCQueryResults(id: String, time: Long, source : String = "", confidence : Double = 0, results: Seq[Map[String, String]]) {
   def this(msg: QueryResultInfoMessage) {
-    this(msg.queryid, msg.time, msg.results.map(result => result.data.map(attribute => {
+    this(msg.queryid, msg.time, msg.source, msg.confidence, msg.results.map(result => result.data.map(attribute => {
       val key = attribute._1
       val value = attribute._2.datatype match {
         case Datatype.IntData(x) => x.toInt.toString

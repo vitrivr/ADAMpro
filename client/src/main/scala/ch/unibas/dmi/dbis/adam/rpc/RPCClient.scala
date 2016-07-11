@@ -4,7 +4,6 @@ import java.util.concurrent.TimeUnit
 
 import ch.unibas.dmi.dbis.adam.http.grpc.AdamDefinitionGrpc.AdamDefinitionBlockingStub
 import ch.unibas.dmi.dbis.adam.http.grpc.AdamSearchGrpc.{AdamSearchBlockingStub, AdamSearchStub}
-import ch.unibas.dmi.dbis.adam.http.grpc.DataMessage.Datatype
 import ch.unibas.dmi.dbis.adam.http.grpc.DistanceMessage.DistanceType
 import ch.unibas.dmi.dbis.adam.http.grpc.RepartitionMessage.PartitionOptions
 import ch.unibas.dmi.dbis.adam.http.grpc._
@@ -191,28 +190,10 @@ class RPCClient(channel: ManagedChannel, definer: AdamDefinitionBlockingStub, se
     *
     * @param entityname name of entity
     */
-  def entityRead(entityname: String): Try[Seq[Map[String, String]]] = {
+  def entityRead(entityname: String): Try[Seq[RPCQueryResults]] = {
     execute("get entity data operation") {
       val res = searcherBlocking.preview(EntityNameMessage(entityname))
-
-      val readable = res.responses.head.results.map(tuple => {
-        tuple.data.map(attribute => {
-          val key = attribute._1
-          val value = attribute._2.datatype match {
-            case Datatype.IntData(x) => x.toInt.toString
-            case Datatype.LongData(x) => x.toLong.toString
-            case Datatype.FloatData(x) => x.toFloat.toString
-            case Datatype.DoubleData(x) => x.toDouble.toString
-            case Datatype.StringData(x) => x.toString
-            case Datatype.BooleanData(x) => x.toString
-            case Datatype.FeatureData(x) => x.feature.denseVector.get.vector.mkString("[", ",", "]")
-            case _ => ""
-          }
-          key -> value
-        })
-      })
-
-      Success(readable)
+      Success(res.responses.map(new RPCQueryResults(_)))
     }
   }
 
@@ -261,7 +242,6 @@ class RPCClient(channel: ManagedChannel, definer: AdamDefinitionBlockingStub, se
     }
   }
 
-
   /**
     * Drop entity.
     *
@@ -273,7 +253,6 @@ class RPCClient(channel: ManagedChannel, definer: AdamDefinitionBlockingStub, se
       Success(null)
     }
   }
-
 
   /**
     * Create all indexes for entity.
@@ -412,7 +391,7 @@ class RPCClient(channel: ManagedChannel, definer: AdamDefinitionBlockingStub, se
     * @param completed  function for final result
     * @return
     */
-  def doProgressiveQuery(qo: RPCQueryObject,  next: (Try[(String, Double, String, Long, Seq[Map[String, String]])]) => (Unit), completed: (String) => (Unit)): Try[Seq[RPCQueryResults]] = {
+  def doProgressiveQuery(qo: RPCQueryObject,  next: (Try[RPCQueryResults]) => (Unit), completed: (String) => (Unit)): Try[Seq[RPCQueryResults]] = {
     execute("progressive query operation") {
       val so = new StreamObserver[QueryResultsMessage]() {
         override def onError(throwable: Throwable): Unit = {
@@ -427,14 +406,7 @@ class RPCClient(channel: ManagedChannel, definer: AdamDefinitionBlockingStub, se
           log.info("new progressive results arrived")
 
           if (qr.ack.get.code == AckMessage.Code.OK && qr.responses.nonEmpty) {
-            val head = qr.responses.head
-
-            val confidence = head.confidence
-            val source = head.source
-            val time = head.time
-            val results = head.results.map(x => x.data.mapValues(_.toString()))
-
-            next(Success(qo.id, confidence, source, time, results))
+            next(Success(new RPCQueryResults(qr.responses.head)))
           } else {
             next(Failure(new Exception(qr.ack.get.message)))
           }
