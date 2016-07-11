@@ -13,7 +13,7 @@ import scala.collection.mutable
   * Ivan Giangreco
   * July 2016
   */
-class ChronosAgent(ipAddressOrHostname: String) extends AbstractChronosAgent(ipAddressOrHostname, 80, false, false) {
+class ChronosAgent(ipAddressOrHostname: String) extends AbstractChronosAgent(ipAddressOrHostname, 80, false, true) {
   val runningJobs = mutable.Map[Int, EvaluationExecutor]()
 
   /**
