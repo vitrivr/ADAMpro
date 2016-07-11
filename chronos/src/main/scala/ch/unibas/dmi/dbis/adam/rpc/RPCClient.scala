@@ -218,6 +218,22 @@ class RPCClient(channel: ManagedChannel, definer: AdamDefinitionBlockingStub, se
 
 
   /**
+    * Caches an entity.
+    *
+    * @param entityname
+    */
+  def entityCache(entityname : String): Try[Boolean] ={
+    execute("cache entity") {
+      val res = searcherBlocking.cacheEntity(EntityNameMessage(entityname))
+      if (res.code.isOk) {
+        Success(res.code.isOk)
+      } else {
+        throw new Exception("caching not possible: " + res.message)
+      }
+    }
+  }
+
+  /**
     * Benchmark entity and update scan weights.
     *
     * @param entityname name of entity
@@ -300,7 +316,24 @@ class RPCClient(channel: ManagedChannel, definer: AdamDefinitionBlockingStub, se
       if (res.code == AckMessage.Code.OK) {
         return Success(res.message)
       } else {
-        return Failure(new Exception(res.message))
+        throw new Exception(res.message)
+      }
+    }
+  }
+
+
+  /**
+    * Caches an index.
+    *
+    * @param indexname
+    */
+  def indexCache(indexname : String): Try[Boolean] ={
+    execute("cache index") {
+      val res = searcherBlocking.cacheIndex(IndexNameMessage(indexname))
+      if (res.code.isOk) {
+        Success(res.code.isOk)
+      } else {
+        throw new Exception("caching not possible: " + res.message)
       }
     }
   }
@@ -346,10 +379,10 @@ class RPCClient(channel: ManagedChannel, definer: AdamDefinitionBlockingStub, se
 
       val res = definer.repartitionIndexData(RepartitionMessage(indexname, npartitions, attributes, option))
 
-      if (res.code == AckMessage.Code.OK) {
+      if (res.code.isOk) {
         Success(res.message)
       } else {
-        Failure(throw new Exception(res.message))
+        throw new Exception(res.message)
       }
     }
   }
@@ -363,10 +396,10 @@ class RPCClient(channel: ManagedChannel, definer: AdamDefinitionBlockingStub, se
   def doQuery(qo: RPCQueryObject): Try[Seq[RPCQueryResults]] = {
     execute("compound query operation") {
       val res = searcherBlocking.doQuery(qo.getQueryMessage)
-      if (res.ack.get.code == AckMessage.Code.OK) {
+      if (res.ack.get.code.isOk) {
         return Success(res.responses.map(new RPCQueryResults(_)))
       } else {
-        return Failure(new Exception(res.ack.get.message))
+        throw new Exception(res.ack.get.message)
       }
     }
   }

@@ -17,7 +17,7 @@ import scala.util.{Random, Try}
   * Ivan Giangreco
   * July 2016
   */
-class EvaluationExecutor(val job: EvaluationJob, logger: ChronosHttpClient#ChronosLogHandler, setStatus : (Double) => (Boolean), inputDirectory: File, outputDirectory: File) {
+class EvaluationExecutor(val job: EvaluationJob, logger: ChronosHttpClient#ChronosLogHandler, setStatus: (Double) => (Boolean), inputDirectory: File, outputDirectory: File) {
   //rpc client
   val client: RPCClient = RPCClient(job.adampro_url, job.adampro_port)
 
@@ -33,7 +33,7 @@ class EvaluationExecutor(val job: EvaluationJob, logger: ChronosHttpClient#Chron
     * @param inputDirectory
     * @param outputDirectory
     */
-  def this(job: ChronosJob, logger: ChronosHttpClient#ChronosLogHandler, setStatus : (Double) => (Boolean), inputDirectory: File, outputDirectory: File) {
+  def this(job: ChronosJob, logger: ChronosHttpClient#ChronosLogHandler, setStatus: (Double) => (Boolean), inputDirectory: File, outputDirectory: File) {
     this(new EvaluationJob(job), logger, setStatus, inputDirectory, outputDirectory)
   }
 
@@ -66,6 +66,14 @@ class EvaluationExecutor(val job: EvaluationJob, logger: ChronosHttpClient#Chron
       Seq(client.indexCreate(entityname, "fv0", job.execution_name, 2, Map()).get)
     }
 
+    if (job.measurement_cache) {
+      indexnames.foreach { indexname =>
+        client.indexCache(indexname)
+      }
+
+      client.entityCache(entityname)
+    }
+
     //partition
     getPartitionCombinations().foreach { case (e, i) =>
       if (e.isDefined) {
@@ -87,7 +95,13 @@ class EvaluationExecutor(val job: EvaluationJob, logger: ChronosHttpClient#Chron
           logger.publish(new LogRecord(Level.INFO, "executing query for " + entityname + " (runid: " + runid + ")"))
           val result = executeQuery(qo)
           logger.publish(new LogRecord(Level.INFO, "executed query for " + entityname + " (runid: " + runid + ")"))
-          results += (runid -> result)
+
+          if (job.measurement_firstrun && idx == 0){
+            //ignore first run
+          } else {
+            results += (runid -> result)
+          }
+
         } else {
           logger.publish(new LogRecord(Level.INFO, "aborted job " + job.id + ", not running queries anymore"))
         }
@@ -182,9 +196,11 @@ class EvaluationExecutor(val job: EvaluationJob, logger: ChronosHttpClient#Chron
   private def getQueries(): Seq[RPCQueryObject] = {
     val lb = new ListBuffer[RPCQueryObject]()
 
+    val additionals = if (job.measurement_firstrun) { 1 } else { 0 }
+
     job.query_k.flatMap { k =>
-      val denseQueries = (0 to job.query_dense_n).map { i => getQuery(k, false) }
-      val sparseQueries = (0 to job.query_sparse_n).map { i => getQuery(k, true) }
+      val denseQueries = (0 to job.query_dense_n + additionals).map { i => getQuery(k, false) }
+      val sparseQueries = (0 to job.query_sparse_n + additionals).map { i => getQuery(k, true) }
 
       denseQueries union sparseQueries
     }
