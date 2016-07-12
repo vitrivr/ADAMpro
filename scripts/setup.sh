@@ -1,20 +1,20 @@
 #!/usr/bin/env bash
 
 ##Author: Silvan Heller
-## Usage: setup.sh master or setup.sh slave
-
+## Usage: setup.sh master or setup.sh slave or submit
 
 echo "update & upgrade"
 sudo apt-get clean
 sudo apt-get -qq update
 sudo apt-get -y -qq upgrade
 sudo apt-get clean
+echo "update & upgrade done"
 
 PKG_OK=$(dpkg-query -W --showformat='${Status}\n' docker-engine |grep "install ok installed")
 echo Checking for docker: $PKG_OK
 if [ "" == "$PKG_OK" ]
  then
-    echo "No somelib. Setting up somelib."
+    echo "No docker. Setting up docker."
     sudo apt-get -y -qq install apt-transport-https ca-certificates
     sudo apt-key adv --keyserver hkp://p80.pool.sks-keyservers.net:80 --recv-keys 58118E89F3A912897C070ADBF76221572C52609D
     sudo rm /etc/apt/sources.list.d/docker.list
@@ -42,8 +42,11 @@ if [ "" == "$PKG_OK" ]
     echo "git installed"
 fi
 
-sudo docker rm adampar/spark-base:1.6.2-hadoop2.6
-sudo docker build -t adampar/spark-base:1.6.2-hadoop2.6 docker-spark/base/
+#sudo docker rmi adampar/spark-base:1.6.2-hadoop2.6
+#sudo docker build -t adampar/spark-base:1.6.2-hadoop2.6 docker-spark/base/
+
+#This assumes your folder structure contains target/ and scripts/ in the same folder
+DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && cd ".." && pwd )"
 
 ROLE=$1
 if [ $ROLE == "" ]; then
@@ -52,6 +55,7 @@ fi
 
 if [ $ROLE == "master" ]; then
 
+    echo "building master containers"
     sudo docker stop postgresql
     sudo docker rm postgresql
     sudo docker run --net=host -p 5432:5432 -h postgresql --name postgresql -d orchardup/postgresql:latest
@@ -62,19 +66,19 @@ if [ $ROLE == "master" ]; then
     sudo docker rmi adampar/spark-master:1.6.2-hadoop2.6
     sudo docker build -t adampar/spark-master:1.6.2-hadoop2.6 docker-spark/master
 
-    sudo docker run -d -e "SPARK_CONF_DIR=/target/conf" -v /home/ubuntu/target:/target --net=host -p 8080:8080 -p 9000:9000 -p 7077:7077 -p 6066:6066 -p 4040:4040 -p 8088:8088 -p 8042:8042 -p 5890:5890 --hostname spark --name spark-master adampar/spark-master:1.6.2-hadoop2.6
+    sudo docker run -d -e "SPARK_CONF_DIR=/target/conf" -v $DIR/target:/target --net=host -p 8080:8080 -p 9000:9000 -p 7077:7077 -p 6066:6066 -p 4040:4040 -p 8088:8088 -p 8042:8042 -p 5890:5890 --hostname spark --name spark-master adampar/spark-master:1.6.2-hadoop2.6
 fi
 
 if [ $ROLE == "submit" ]; then
 
+    echo "building subimt containers"
     sudo docker rm -f spark-submit
     sudo docker rmi adampar/spark-submit:1.6.2-hadoop2.6
 
     #TODO Relative to execution maybe
     sudo docker build -t adampar/spark-submit:1.6.2-hadoop2.6 docker-spark/submit
 
-    sudo docker run -d -v /home/ubuntu/target:/target --net=host --name spark-submit -h spark-submit adampar/spark-submit:1.6.2-hadoop2.6
-
+    sudo docker run -d -v $DIR/target:/target  -v ~/.ssh/id_rsa:/root/.ssh/id_rsa -v ~/.ssh/id_rsa.pub:/root/.ssh/id_rsa.pub --net=host --name spark-submit -h spark-submit adampar/spark-submit:1.6.2-hadoop2.6
     fi
 
 
