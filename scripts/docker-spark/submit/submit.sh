@@ -8,4 +8,7 @@ echo "Passing arguments ${SPARK_APPLICATION_ARGS}"
 /usr/local/spark/bin/spark-submit \
     --class ${SPARK_APPLICATION_MAIN_CLASS} \
     --master ${SPARK_MASTER_URL} \
+    --conf spark.driver.port=8087 \
+    --conf spark.blockManager.port=50543 \
+    --conf spark.fileserver.port=47957\
     ${SPARK_APPLICATION_JAR_LOCATION} ${SPARK_APPLICATION_ARGS}

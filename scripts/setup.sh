@@ -42,7 +42,10 @@ if [ "" == "$PKG_OK" ]
     echo "git installed"
 fi
 
-#Cleaning existing images
+#Cleaning existing images TODO Add rebuild-enable flag
+
+rm -r target/
+mkdir target/
 
 sudo docker stop spark-master
 sudo docker rm spark-master
@@ -53,14 +56,12 @@ sudo docker rmi adampar/spark-submit:1.6.2-hadoop2.6
 
 sudo docker stop spark-worker
 sudo docker rm spark-worker
+sudo docker rmi adampar/spark-worker:1.6.2-hadoop2.6
 
-
-#This assumes your folder structure contains target/ and scripts/ in the same folder
+#This assumes your folder structure contains target/ and scripts/ in the same folder if you are building the spark-submit dinner
 DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && cd ".." && pwd )"
 sudo docker rmi adampar/spark-base:1.6.2-hadoop2.6
 sudo docker build -t adampar/spark-base:1.6.2-hadoop2.6 $DIR/scripts/docker-spark/base/
-
-
 
 ROLE=$1
 if [ $ROLE == "" ]; then
@@ -75,20 +76,28 @@ if [ $ROLE == "master" ]; then
 
     sudo docker build -t adampar/spark-master:1.6.2-hadoop2.6 $DIR/scripts/docker-spark/master
 
-    #TODO Spark Conf deployment?
-    sudo docker run -d --net=host -p 8080:8080 -p 9000:9000 -p 7077:7077 -p 6066:6066 -p 4040:4040 -p 8088:8088 -p 8042:8042 -p 5890:5890 --hostname spark --name spark-master adampar/spark-master:1.6.2-hadoop2.6
+    ##9000 is for HDFS #8080, 7077 and 6066 are to listen to spark-submit / spark GUI ##8088, 8042 are legacy from the old code TODO are those necessary? ##5890 is the grpc-port TODO Needed here?
+    sudo docker run -d --net=host -p 8080:8080 -p 9000:9000 -p 7077:7077 -p 6066:6066 -p 8088:8088 -p 8042:8042 --hostname spark --name spark-master adampar/spark-master:1.6.2-hadoop2.6
+
+    echo "building submit containers"
+    sudo docker build -t adampar/spark-submit:1.6.2-hadoop2.6 $DIR/scripts/docker-spark/submit
+    #Port explanation see submit-container # 5890 is the grpc-port (needed here) # 4040 is for the application UI
+    sudo docker run -d -v $DIR/target:/target -p 50543:50543 -p 8087:8087 -p 47957:47957 -p 4040:4040  -p 8089:8089 -p 5890:5890 --net=host --name spark-submit -h spark-submit adampar/spark-submit:1.6.2-hadoop2.6
 fi
 
 if [ $ROLE == "submit" ]; then
     echo "building submit containers"
-    #TODO Relative to execution maybe
     sudo docker build -t adampar/spark-submit:1.6.2-hadoop2.6 $DIR/scripts/docker-spark/submit
 
-    sudo docker run -d -v $DIR/target:/target  -v ~/.ssh/id_rsa:/root/.ssh/id_rsa -v ~/.ssh/id_rsa.pub:/root/.ssh/id_rsa.pub --net=host --name spark-submit -h spark-submit adampar/spark-submit:1.6.2-hadoop2.6
+    #TODO Try if 8089 is necessary
+    #Old line sudo docker run -d -e "SPARK_LOCAL_IP=127.0.0.1" -v $DIR/target:/target  -v ~/.ssh/id_rsa:/root/.ssh/id_rsa -v ~/.ssh/id_rsa.pub:/root/.ssh/id_rsa.pub -p 50543:50543 -p 8087:8087 -p 47957:47957 -p 8089:8089 -p 8080:8080 -p 9000:9000 -p 7077:7077 -p 6066:6066 -p 4040:4040 -p 8088:8088 -p 8042:8042 -p 5890:5890 --net=host --name spark-submit -h spark-submit adampar/spark-submit:1.6.2-hadoop2.6
+    #Port explanation see submit-container
+    sudo docker run -d -v $DIR/target/conf/log4j.properties:/usr/local/spark/conf/log4j.properties -v $DIR/target:/target -p 50543:50543 -p 8087:8087 -p 47957:47957 -p 8089:8089 --net=host --name spark-submit -h spark-submit adampar/spark-submit:1.6.2-hadoop2.6
 fi
 
 
 if [ $ROLE == "worker" ]; then
     sudo docker build -t adampar/spark-worker:1.6.2-hadoop2.6 $DIR/scripts/docker-spark/worker
-    sudo docker run -d --net=host -p 8081:8081 --name spark-worker -h spark-worker -e ENABLE_INIT_DAEMON=false adampar/spark-worker:1.6.2-hadoop2.6
+    #Explanation see spark-master
+    sudo docker run -d --net=host -p 8081:8081 -p 9000:9000 -p 7077:7077 -p 6066:6066 -p 4040:4040 -p 8088:8088 -p 8042:8042 --name spark-worker -h spark-worker -e ENABLE_INIT_DAEMON=false adampar/spark-worker:1.6.2-hadoop2.6
 fi
