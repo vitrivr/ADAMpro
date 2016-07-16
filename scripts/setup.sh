@@ -82,7 +82,7 @@ if [ $ROLE == "master" ]; then
     echo "building submit containers"
     sudo docker build -t adampar/spark-submit:1.6.2-hadoop2.6 $DIR/scripts/docker-spark/submit
     #Port explanation see submit-container # 5890 is the grpc-port (needed here) # 4040 is for the application UI
-    sudo docker run -d -v $DIR/target:/target -p 50543:50543 -p 8087:8087 -p 47957:47957 -p 4040:4040  -p 8089:8089 -p 5890:5890 --net=host --name spark-submit -h spark-submit adampar/spark-submit:1.6.2-hadoop2.6
+    sudo docker run -d -v $DIR/target:/target -v $DIR/target/conf/log4j.properties:/usr/local/spark/conf/log4j.properties -p 50543:50543 -p 8087:8087 -p 47957:47957 -p 4040:4040  -p 8089:8089 -p 5890:5890 --net=host --name spark-submit -h spark-submit adampar/spark-submit:1.6.2-hadoop2.6
 fi
 
 if [ $ROLE == "submit" ]; then
