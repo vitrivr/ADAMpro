@@ -16,6 +16,7 @@ ssh ubuntu@$SPARK_MASTER sudo docker stop spark-submit
 ssh ubuntu@$SPARK_MASTER sudo rm -r /home/ubuntu/target/scala-2.10/
 ssh ubuntu@$SPARK_MASTER sudo rm -r /home/ubuntu/target/conf/
 ssh ubuntu@$SPARK_MASTER sudo mkdir -p /home/ubuntu/target/scala-2.10/
+ssh ubuntu@$SPARK_MASTER sudo chown -R ubuntu target/
 
 #Copy conf to host
 cp -R $DIR/conf $DIR/target/
@@ -25,7 +26,6 @@ scp -r $DIR/target/conf ubuntu@$SPARK_MASTER:target/conf/
 
 ##Copy jar to SPARK_MASTER
 echo "scping"
-ssh ubuntu@$SPARK_MASTER sudo chown -R ubuntu target/
 sudo scp $DIR/target/scala-2.10/ADAMpro-assembly-0.1.0.jar ubuntu@$SPARK_MASTER:target/scala-2.10/ADAMpro-assembly-0.1.0.jar
 echo "scp done"
 

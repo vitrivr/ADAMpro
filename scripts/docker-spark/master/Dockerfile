@@ -14,4 +14,6 @@ ENV SPARK_MASTER_LOG /spark/logs
 
 EXPOSE 8080 7077 6066
 
+RUN $HADOOP_PREFIX/bin/hdfs namenode -format
+
 CMD ["/bin/bash", "/master.sh"]

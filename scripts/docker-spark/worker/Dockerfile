@@ -11,5 +11,6 @@ ENV SPARK_WORKER_LOG /spark/logs
 ENV SPARK_MASTER "spark://10.34.58.136:7077"
 
 EXPOSE 8081
+RUN $HADOOP_PREFIX/bin/hdfs namenode -format
 
 CMD ["/bin/bash", "/worker.sh"]
