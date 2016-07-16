@@ -391,6 +391,7 @@ object Index extends Logging {
     */
   private[index] def loadIndexMetaData(indexname: IndexName)(implicit ac: AdamContext): Try[Index] = {
     if (!exists(indexname)) {
+      log.error("Index "+indexname + " does not exist!")
       Failure(IndexNotExistingException())
     }
 

@@ -30,7 +30,7 @@ object SparkStartup extends Logging {
     sparkConfig.setMaster(AdamConfig.master.get)
   }
 
-  object Implicits extends AdamContext {
+  object Implicits extends AdamContext with Logging{
     implicit lazy val ac = this
 
     @transient implicit lazy val sc = new SparkContext(sparkConfig)
@@ -64,5 +64,13 @@ object SparkStartup extends Logging {
 
   registry.register(new SolrHandler(AdamConfig.solrUrl))
 
-  val indexStorageHandler = new IndexFlatFileHandler(new ParquetEngine(AdamConfig.indexPath))
+  val indexStorageHandler = {
+    if(AdamConfig.isBaseOnHadoop){
+      log.debug("storing index data on Hadoop")
+      new IndexFlatFileHandler(new ParquetEngine(AdamConfig.basePath, AdamConfig.indexPath))
+    }else{
+      log.debug("storing index data locally")
+      new IndexFlatFileHandler(new ParquetEngine(AdamConfig.indexPath))
+    }
+  }
 }
