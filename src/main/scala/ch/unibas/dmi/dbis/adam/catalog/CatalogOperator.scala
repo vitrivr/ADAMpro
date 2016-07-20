@@ -2,7 +2,6 @@ package ch.unibas.dmi.dbis.adam.catalog
 
 import java.io._
 
-import breeze.linalg.unique
 import ch.unibas.dmi.dbis.adam.catalog.catalogs._
 import ch.unibas.dmi.dbis.adam.config.AdamConfig
 import ch.unibas.dmi.dbis.adam.datatypes.FieldTypes
@@ -505,7 +504,9 @@ object CatalogOperator extends Logging {
   def getIndexMeta(indexname: IndexName): Try[Any] = {
     execute("get index meta") {
       val query = _indexes.filter(_.indexname === indexname.toString).map(_.meta).result.head
+      log.debug("Loading class, query: "+query.toString)
       val data = Await.result(DB.run(query), MAX_WAITING_TIME)
+      log.debug("Loading class, data: " + data.toString)
 
       val bis = new ByteArrayInputStream(data)
       val ois = new ObjectInputStream(bis)
