@@ -10,7 +10,7 @@ object Partitioning extends Serializable{
   type PartitionID = Int
 }
 
-object PartitionMode extends Enumeration  with Serializable{
+object PartitionMode extends Enumeration with Serializable{
   val CREATE_NEW = Value("create new data (materialize)")
   val REPLACE_EXISTING = Value("replace existing data (materialize)")
   val CREATE_TEMP = Value("create temporary data in cache")
@@ -18,6 +18,7 @@ object PartitionMode extends Enumeration  with Serializable{
 
 object PartitionerChoice extends Enumeration with Serializable{
   val SPARK = Value("Let spark handle repartitioning")
+  val RANGE = Value("Spark's built-in Range Partitioner")
   val RANDOM = Value("Random Partitioning")
   val CURRENT = Value("Current implementation")
 }

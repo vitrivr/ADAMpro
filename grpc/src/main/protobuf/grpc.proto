@@ -180,6 +180,7 @@ message RepartitionMessage {
       SPARK = 0;
       RANDOM = 1;
       CURRENT = 2;
+      RANGE = 3;
     }
   Partitioner partitioner = 5;
   //for possible options see each Repartitioner

@@ -2,12 +2,16 @@ package ch.unibas.dmi.dbis.adam.index
 
 import ch.unibas.dmi.dbis.adam.catalog.CatalogOperator
 import ch.unibas.dmi.dbis.adam.config.FieldNames
+import ch.unibas.dmi.dbis.adam.entity.Entity
 import ch.unibas.dmi.dbis.adam.exception.GeneralAdamException
-import ch.unibas.dmi.dbis.adam.helpers.partition.{PartitionMode, PartitionerChoice, RandomPartitioner, SparkPartitioner}
+import ch.unibas.dmi.dbis.adam.helpers.partition._
+import ch.unibas.dmi.dbis.adam.index.structures.IndexTypes
 import ch.unibas.dmi.dbis.adam.main.AdamContext
 import ch.unibas.dmi.dbis.adam.utils.Logging
-import org.apache.spark.HashPartitioner
-import org.apache.spark.sql.{DataFrame, SaveMode}
+import org.apache.spark.{HashPartitioner, RangePartitioner}
+import org.apache.spark.rdd.RDD
+import org.apache.spark.sql.types.{StructField, StructType}
+import org.apache.spark.sql.{DataFrame, Row, SaveMode}
 
 import scala.util.{Failure, Success, Try}
 
@@ -43,20 +47,32 @@ object IndexPartitioner extends Logging {
     }
 
     //lazy because df.repartition() doesn't need it
-    lazy val toPartition = {
+    //Extracts an rdd (key, value) where value is the rdd-row and key is either cols.head or the pk
+    lazy val toPartition: RDD[(Any, Row)] = {
       if (cols.isDefined) data.map(r => (r.getAs[Any](cols.get.head), r)) else data.map(r => (r.getAs[Any](index.pk.name), r))
     }
 
+    //repartition
     data = partitioner match {
       case PartitionerChoice.SPARK =>
-        new SparkPartitioner(nPartitions).repartition(data, cols, Some(index))
+        SparkPartitioner(data, cols, Some(index.indexname), nPartitions)
       case PartitionerChoice.RANDOM =>
         ac.sqlContext.createDataFrame(toPartition.partitionBy(new RandomPartitioner(nPartitions)).map(_._2), data.schema)
       case PartitionerChoice.CURRENT => {
-        ac.sqlContext.createDataFrame(toPartition.partitionBy(new HashPartitioner(nPartitions)).map(_._2), data.schema)
+        val pqData: DataFrame = Entity.load(index.entityname).get.indexes.find(f => f.get.indextypename == IndexTypes.PQINDEX).get.get.data
+        val newPq = ac.sqlContext.createDataFrame(pqData.rdd, StructType(Seq(pqData.schema(index.pk.name), pqData.schema(FieldNames.featureIndexColumnName).copy(name = "pq_"+FieldNames.featureIndexColumnName))))
+        data = data.join(newPq, index.pk.name)
+        SparkPartitioner(data, Some(Seq("pq_"+FieldNames.featureIndexColumnName)), Some(index.indexname), nPartitions)
       }
+      case PartitionerChoice.RANGE =>
+        {
+          log.error("This operation is currently not supported")
+          data
+          //ac.sqlContext.createDataFrame(toPartition.partitionBy(new RangePartitioner[(Any, Row)](nPartitions, toPartition)))
+        }
     }
 
+    //TODO Does this scale with multiple feature vectors in one table?
     data = data.select(index.pk.name, FieldNames.featureIndexColumnName)
 
     mode match {
@@ -69,9 +85,7 @@ object IndexPartitioner extends Logging {
         if (status.isFailure) {
           throw status.failed.get
         }
-
         IndexLRUCache.invalidate(newName)
-
         Success(Index.load(newName).get)
 
       case PartitionMode.CREATE_TEMP =>
