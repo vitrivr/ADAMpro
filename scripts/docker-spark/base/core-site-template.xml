@@ -4,7 +4,7 @@
 <configuration>
     <property>
         <name>fs.default.name</name>
-        <value>hdfs://10.34.58.136:9000</value>
+        <value>hdfs://hadoop_master</value>
     </property>
 
 </configuration>

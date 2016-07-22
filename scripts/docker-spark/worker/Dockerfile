@@ -8,9 +8,9 @@ COPY worker.sh /
 
 ENV SPARK_WORKER_WEBUI_PORT 8081
 ENV SPARK_WORKER_LOG /spark/logs
-ENV SPARK_MASTER "spark://10.34.58.136:7077"
 
 EXPOSE 8081
+# TODO Does this work without a core-site.xml?
 RUN $HADOOP_PREFIX/bin/hdfs namenode -format
 
 CMD ["/bin/bash", "/worker.sh"]
