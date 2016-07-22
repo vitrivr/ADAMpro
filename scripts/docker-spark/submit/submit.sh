@@ -8,7 +8,7 @@ echo "Passing arguments ${SPARK_APPLICATION_ARGS}"
 sed  s/hadoop_master/$HADOOP_NAMENODE/ <$HADOOP_PREFIX/etc/hadoop/core-site-template.xml >$HADOOP_PREFIX/etc/hadoop/core-site.xml
 
 #TODO this can be spark_home, right?
-cp $HAOOP_PREFIX/etc/hadoop/core-site.xml /usr/local/spark/conf/core-site.xml
+cp $HADOOP_PREFIX/etc/hadoop/core-site.xml /usr/local/spark/conf/core-site.xml
 
 /usr/local/spark/bin/spark-submit \
     --class ${SPARK_APPLICATION_MAIN_CLASS} \

@@ -1,18 +1,19 @@
 #!/usr/bin/env bash
 
 ##Author: Silvan Heller
+
+## TODO Find better handling than getopts which only takes one char
+## TODO support multiple roles in one script
+## TODO port based on MASTER_PORT in the run -p flags
+
+################## USAGE ###########################################
+## -u installs docker and git
 ## -b rebuilds the spark-base image
 ## -r is either WORKER or MASTER or SUBMIT
 ## -s and -h are in format ip:port and are used for the spark master and the hadoop namenode. use :7077 and :9000 please :)
-## TODO Find better handling than getopts which only takes one char
 
-## This script assumes that in the folder where scripts/ is placed, you want to have a folder target/ where the conf-folder and the
+## This script assumes that in the folder where scripts/ is placed, you want to have a folder target/ where the conf-folder and the jar is going to be
 
-#First check if the necessary things are installed
-DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
-#sudo bash $DIR/install.sh
-
-echo "Installing and updating done, cleaning existing images"
 
 ##########################
 # Cleaning existing images
@@ -22,8 +23,7 @@ DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && cd ".." && pwd )"
 echo "Parsing hadoop- and spark-vars"
 
 #############################################
-## Create Core-site.xml and SPARK_MASTER before building containers
-## TODO If this is the way to go, how do we support multiple roles in one script
+## Extract vars before doing anything
 #############################################
 while getopts ':h:s:r:b' option; do
   case $option in
@@ -32,8 +32,8 @@ while getopts ':h:s:r:b' option; do
       export SPARK_MASTER=$OPTARG
       ;;
     h)
-        echo "-hadoop was triggered, Parameter: $OPTARG" >&2
-        export HADOOP_NAMENODE=$OPTARG
+      echo "-hadoop was triggered, Parameter: $OPTARG" >&2
+      export HADOOP_NAMENODE=$OPTARG
       ;;
 
     r)
@@ -41,8 +41,12 @@ while getopts ':h:s:r:b' option; do
       export ROLE=$OPTARG
       ;;
     b)
-        echo "-base was triggered"
+      echo "-base was triggered"
         export BASE="yes"
+      ;;
+    u)
+      echo "Installing docker and git, updating etc."
+      sudo bash $DIR/install.sh
       ;;
     :)
       echo "Error, Option -$OPTARG requires an argument." >&2
@@ -79,7 +83,6 @@ if [[ $BASE == "yes" ]]; then
 fi
 
 ## Builds Containers. The actual method call is below
-## TODO port based on MASTER_PORT in the run -p flags
 buildContainer() {
     echo "Building Container: $1"
     ROLE=$1
