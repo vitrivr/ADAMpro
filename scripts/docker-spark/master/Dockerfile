@@ -1,7 +1,8 @@
 FROM adampar/spark-base:1.6.2-hadoop2.6
 
 # based on the big-data-europe master container
-# Old Version MAINTAINER Erika Pauwels <erika.pauwels@tenforce.com>
+
+#TODO Currently this starts a Namenode AND spark-master. Maybe we could seperate these responsibilities
 
 MAINTAINER Silvan Heller <silvan.heller@unibas.ch>
 
@@ -13,8 +14,6 @@ ENV SPARK_MASTER_LOG /spark/logs
 # Maybe re-add in the future with yarn RUN $BOOTSTRAP
 
 EXPOSE 8080 7077 6066
-
-# TODO Does this work without a core-site.xml?
 
 RUN $HADOOP_PREFIX/bin/hdfs namenode -format
 

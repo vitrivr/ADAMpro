@@ -23,12 +23,13 @@ class RPCClient(channel: ManagedChannel, definer: AdamDefinitionBlockingStub, se
     * Evaluation Code
     */
   val tupleSizes = Seq(1e5.toInt)
-  val dimensions = Seq(128)
-  val partitions = Seq(1, 2, 4, 8, 16, 32, 64, 128)
-  val indices = Seq(IndexType.ecp, IndexType.vaf, IndexType.lsh, IndexType.pq, IndexType.sh)
-  val partitioners = Seq(RepartitionMessage.Partitioner.CURRENT, RepartitionMessage.Partitioner.SPARK, RepartitionMessage.Partitioner.RANDOM)
+  val dimensions = Seq(10)
+  //We use 1-3 Workers with 2 cores each
+  val partitions = Seq(1, 2, 3, 4, 6, 8, 16)
+  val indices = Seq(IndexType.ecp)
+  val partitioners = Seq(RepartitionMessage.Partitioner.SPARK)
 
-  dropAllEntities()
+  //dropAllEntities()
 
   try
       for (tuples <- tupleSizes) {
@@ -38,7 +39,9 @@ class RPCClient(channel: ManagedChannel, definer: AdamDefinitionBlockingStub, se
             //Index generation
             for (index <- indices) {
               val name = getOrGenIndex(index, eName)
-
+            }
+            for(index <- indices){
+              val name = getOrGenIndex(index, eName)
               for (part <- partitions) {
                 for (partitioner <- partitioners) {
                   definer.repartitionIndexData(RepartitionMessage(name, part, option = RepartitionMessage.PartitionOptions.REPLACE_EXISTING, partitioner = partitioner))
@@ -116,7 +119,7 @@ class RPCClient(channel: ManagedChannel, definer: AdamDefinitionBlockingStub, se
   }
 
   /** Generates a random query using Random.nextFloat() */
-  def randomQueryMessage(dim: Int, part: Int) = NearestNeighbourQueryMessage("feature", Some(FeatureVectorMessage().withDenseVector(DenseVectorMessage(Seq.fill(dim)(Random.nextFloat())))), None, getDistanceMsg, k, Map[String, String](), true, 1 until part)
+  def randomQueryMessage(dim: Int, part: Int) = NearestNeighbourQueryMessage("feature", Some(FeatureVectorMessage().withDenseVector(DenseVectorMessage(Seq.fill(dim)(Random.nextFloat())))), None, getDistanceMsg, k, Map[String, String](), indexOnly = false, 1 until part)
 
   /** Drops all entities */
   def dropAllEntities() = {
@@ -124,6 +127,9 @@ class RPCClient(channel: ManagedChannel, definer: AdamDefinitionBlockingStub, se
 
     for (entity <- entityList.entities) {
       val dropEnt = definer.dropEntity(EntityNameMessage(entity))
+      if(dropEnt.code.isError){
+        System.err.println("Error when dropping Entity "+entity +": "+dropEnt.message)
+      }
     }
   }
 
