@@ -1,8 +1,10 @@
 package ch.unibas.dmi.dbis.adam.evaluation
 
 import java.io.{BufferedWriter, FileWriter, PrintWriter}
+import java.text.SimpleDateFormat
 import java.util.Calendar
 
+import adampro.grpc.shaded.com.google.api.client.util.DateTime
 import ch.unibas.dmi.dbis.adam.http.grpc.RepartitionMessage
 
 /**
@@ -10,7 +12,8 @@ import ch.unibas.dmi.dbis.adam.http.grpc.RepartitionMessage
   */
 trait EvaluationResultLogger {
 
-  val fw = new FileWriter("results_" + Calendar.getInstance().getTime.toString + ".csv", true)
+  val sdf = new SimpleDateFormat("MMdd_HHmm")
+  val fw = new FileWriter("results_" +sdf.format(Calendar.getInstance().getTime())+ ".csv", true)
   val bw = new BufferedWriter(fw)
   val out = new PrintWriter(bw)
 

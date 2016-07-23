@@ -18,18 +18,22 @@ import scala.util.Random
   */
 class RPCClient(channel: ManagedChannel, definer: AdamDefinitionBlockingStub, searcherBlocking: AdamSearchBlockingStub, searcher: AdamSearchStub) extends AdamParEvalUtils with EvaluationResultLogger {
 
+  //k=10k to get sensible partition information
   val k = 100
+
+  val numQ = 1
+
   /**
     * Evaluation Code
     */
   val tupleSizes = Seq(1e5.toInt)
   val dimensions = Seq(10)
   //We use 1-3 Workers with 2 cores each
-  val partitions = Seq(1, 2, 3, 4, 6, 8, 16)
+  val partitions = Seq(8, 16, 200)
   val indices = Seq(IndexType.ecp)
   val partitioners = Seq(RepartitionMessage.Partitioner.SPARK)
 
-  //dropAllEntities()
+  dropAllEntities()
 
   try
       for (tuples <- tupleSizes) {
@@ -97,7 +101,7 @@ class RPCClient(channel: ManagedChannel, definer: AdamDefinitionBlockingStub, se
 
   def timeQuery(indexName: String, dim: Int, part: Int): (Float, Int) = {
 
-    val queryCount = 10
+    val queryCount = numQ
     //1 free query to cache Index
     val res = searcherBlocking.doQuery(QueryMessage(nnq = Some(randomQueryMessage(dim, part)), from = Some(FromMessage(FromMessage.Source.Index(indexName)))))
     if (k > res.responses.head.results.size) {
@@ -119,13 +123,16 @@ class RPCClient(channel: ManagedChannel, definer: AdamDefinitionBlockingStub, se
   }
 
   /** Generates a random query using Random.nextFloat() */
-  def randomQueryMessage(dim: Int, part: Int) = NearestNeighbourQueryMessage("feature", Some(FeatureVectorMessage().withDenseVector(DenseVectorMessage(Seq.fill(dim)(Random.nextFloat())))), None, getDistanceMsg, k, Map[String, String](), indexOnly = false, 1 until part)
+  def randomQueryMessage(dim: Int, part: Int) = NearestNeighbourQueryMessage("feature", Some(FeatureVectorMessage().withDenseVector(DenseVectorMessage(Seq.fill(dim)(Random.nextFloat())))), None, getDistanceMsg, k, Map[String, String]("locality"-> "true"), indexOnly = false, 1 until part)
 
   /** Drops all entities */
   def dropAllEntities() = {
     val entityList = definer.listEntities(EmptyMessage())
 
     for (entity <- entityList.entities) {
+      System.out.println("Dropping Entity: "+entity)
+      val props = definer.getEntityProperties(EntityNameMessage(entity))
+      System.out.println(props)
       val dropEnt = definer.dropEntity(EntityNameMessage(entity))
       if(dropEnt.code.isError){
         System.err.println("Error when dropping Entity "+entity +": "+dropEnt.message)
