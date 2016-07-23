@@ -223,6 +223,13 @@ abstract class Index(@transient implicit val ac: AdamContext) extends Serializab
     lb.append("confidence" -> confidence.toString)
     lb.append("attribute" -> attribute)
     lb.append("stale" -> isStale.toString)
+    lb.append("partitions" -> data.rdd.getNumPartitions.toString)
+    val partInfo: RDD[(Int, Int)] = data.rdd.mapPartitionsWithIndex((idx, f) => {
+      Iterator((idx, f.size))
+    })
+    val part = ListBuffer[(String, String)]()
+    partInfo.collect().map(f => part.append(f._1.toString -> f._2.toString))
+    lb.append("PartitionCount" -> part.toMap.mkString(", "))
 
     lb.toMap
   }

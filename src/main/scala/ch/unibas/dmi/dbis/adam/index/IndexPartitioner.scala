@@ -53,16 +53,25 @@ object IndexPartitioner extends Logging {
     }
 
     //repartition
+    // TODO Some Feedback about how the data is distributed now
+    // rdd.mapPartitions(iter => Array(iter.size).iterator, true)
     data = partitioner match {
       case PartitionerChoice.SPARK =>
         SparkPartitioner(data, cols, Some(index.indexname), nPartitions)
       case PartitionerChoice.RANDOM =>
         ac.sqlContext.createDataFrame(toPartition.partitionBy(new RandomPartitioner(nPartitions)).map(_._2), data.schema)
       case PartitionerChoice.CURRENT => {
-        val pqData: DataFrame = Entity.load(index.entityname).get.indexes.find(f => f.get.indextypename == IndexTypes.PQINDEX).get.get.data
-        val newPq = ac.sqlContext.createDataFrame(pqData.rdd, StructType(Seq(pqData.schema(index.pk.name), pqData.schema(FieldNames.featureIndexColumnName).copy(name = "pq_"+FieldNames.featureIndexColumnName))))
-        data = data.join(newPq, index.pk.name)
-        SparkPartitioner(data, Some(Seq("pq_"+FieldNames.featureIndexColumnName)), Some(index.indexname), nPartitions)
+        try{
+          val pqData: DataFrame = Entity.load(index.entityname).get.indexes.find(f => f.get.indextypename == IndexTypes.PQINDEX).get.get.data
+          val newPq = ac.sqlContext.createDataFrame(pqData.rdd, StructType(Seq(pqData.schema(index.pk.name), pqData.schema(FieldNames.featureIndexColumnName).copy(name = "pq_"+FieldNames.featureIndexColumnName))))
+          data = data.join(newPq, index.pk.name)
+          SparkPartitioner(data, Some(Seq("pq_"+FieldNames.featureIndexColumnName)), Some(index.indexname), nPartitions)
+        }catch{
+          case e: java.util.NoSuchElementException => {
+            log.error("Repartitioning with this mode is not possible because the index does not exist", e)
+            data
+          }
+        }
       }
       case PartitionerChoice.RANGE =>
         {
