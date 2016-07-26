@@ -252,7 +252,7 @@ class AdamTestBase extends FeatureSpec with GivenWhenThen with Eventually with I
     val nnbqres = getResults("groundtruth/100nn-bq-results.tsv")
 
     //nnq options
-    val options = Map()
+    val options = Map[String, String]()
 
 
     EvaluationSet(entity.get, data, feature, ManhattanDistance, nnres.length, Option(where), options, nnres, nnbqres)
