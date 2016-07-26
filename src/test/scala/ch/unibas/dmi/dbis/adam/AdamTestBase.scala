@@ -26,7 +26,7 @@ import scala.util.Random
   */
 class AdamTestBase extends FeatureSpec with GivenWhenThen with Eventually with IntegrationPatience with Logging {
   val startup = SparkStartup
-  implicit val ac : AdamContext = startup.mainContext
+  implicit val ac: AdamContext = startup.mainContext
 
   /**
     * Precision
@@ -132,12 +132,13 @@ class AdamTestBase extends FeatureSpec with GivenWhenThen with Eventually with I
     * @param distance
     * @param k
     * @param where
+    * @param options
     * @param nnResults
     * @param nnbqResults
     */
   case class EvaluationSet(entity: Entity, fullData: DataFrame,
                            feature: FeatureVectorWrapper, distance: MinkowskiDistance, k: Int,
-                           where: Option[Seq[(String, String)]],
+                           where: Option[Seq[(String, String)]], options: Map[String, String],
                            nnResults: Seq[(Double, Long)], nnbqResults: Seq[(Double, Long)])
 
   /**
@@ -250,8 +251,11 @@ class AdamTestBase extends FeatureSpec with GivenWhenThen with Eventually with I
     //100 nn results and bq
     val nnbqres = getResults("groundtruth/100nn-bq-results.tsv")
 
+    //nnq options
+    val options = Map()
 
-    EvaluationSet(entity.get, data, feature, ManhattanDistance, nnres.length, Option(where), nnres, nnbqres)
+
+    EvaluationSet(entity.get, data, feature, ManhattanDistance, nnres.length, Option(where), options, nnres, nnbqres)
   }
 
 
