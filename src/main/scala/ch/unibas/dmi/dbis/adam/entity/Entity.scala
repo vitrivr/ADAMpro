@@ -249,12 +249,23 @@ case class Entity(val entityname: EntityName)(@transient implicit val ac: AdamCo
   def drop(): Unit = {
     Index.dropAll(entityname)
 
-    schema().filterNot(_.pk).filter(_.storagehandler.isDefined).groupBy(_.storagehandler.get)
-      .foreach { case (handler, attributes) =>
-        handler.drop(entityname)
-      }
+    try {
+      schema().filterNot(_.pk).filter(_.storagehandler.isDefined).groupBy(_.storagehandler.get)
+        .foreach { case (handler, attributes) =>
+          try {
+            handler.drop(entityname)
+          } catch {
+            case e: Exception =>
+              log.error("exception when dropping entity " + entityname, e)
+          }
+        }
 
-    CatalogOperator.dropEntity(entityname)
+    } catch {
+      case e: Exception =>
+        log.error("exception when dropping entity " + entityname, e)
+    } finally {
+      CatalogOperator.dropEntity(entityname)
+    }
   }
 
   /**
@@ -450,7 +461,7 @@ object Entity extends Logging {
       }
     }
 
-    val status = Entity.load(entityname).get.drop()
+    Entity.load(entityname).get.drop()
     EntityLRUCache.invalidate(entityname)
 
     Success(null)

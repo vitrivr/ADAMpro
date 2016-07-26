@@ -117,8 +117,14 @@ abstract class Index(@transient implicit val ac: AdamContext) extends Serializab
     *
     */
   def drop(): Unit = {
-    val status = storage.drop(indexname)
-    CatalogOperator.dropIndex(indexname)
+    try {
+      storage.drop(indexname)
+    } catch {
+      case e: Exception =>
+        log.error("exception when dropping index " + indexname, e)
+    } finally {
+      CatalogOperator.dropIndex(indexname)
+    }
   }
 
   /**
