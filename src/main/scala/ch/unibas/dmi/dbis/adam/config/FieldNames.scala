@@ -10,5 +10,8 @@ object FieldNames {
   val distanceColumnName = "adamprodistance"
   val featureIndexColumnName = "adamproindexfeature"
 
+  val partitionColumnName = "adampropartition"
+  val provenanceColumnName = "adamproprovenance"
+
   val reservedNames = Seq(distanceColumnName, featureIndexColumnName)
 }
