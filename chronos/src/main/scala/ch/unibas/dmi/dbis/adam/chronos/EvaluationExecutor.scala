@@ -9,8 +9,9 @@ import ch.unibas.dmi.dbis.adam.http.grpc.RepartitionMessage
 import ch.unibas.dmi.dbis.adam.rpc.RPCClient
 import ch.unibas.dmi.dbis.adam.rpc.datastructures.{RPCAttributeDefinition, RPCQueryObject, RPCQueryResults}
 
+import scala.collection.mutable
 import scala.collection.mutable.ListBuffer
-import scala.util.{Random, Try}
+import scala.util.{Failure, Random, Try}
 
 /**
   * ADAMpro
@@ -100,6 +101,7 @@ class EvaluationExecutor(val job: EvaluationJob, logger: ChronosHttpClient#Chron
       logger.publish(new LogRecord(Level.INFO, "generating queries to execute on " + entityName))
       val queries = getQueries(entityName)
 
+      //determine perfect results
       if(job.result_quality){
         logger.publish(new LogRecord(Level.INFO, "Result Quality will be measured"))
       }
@@ -346,12 +348,25 @@ class EvaluationExecutor(val job: EvaluationJob, logger: ChronosHttpClient#Chron
     lb += ("options" -> qo.options.mkString)
     lb += ("debugQuery" -> qo.getQueryMessage.toString())
 
+    var truth: Seq[RPCQueryResults] = null
+
+    if(job.result_quality){
+      val opt = collection.mutable.Map() ++ qo.options
+      opt.put("indexonly", "false")
+      val res = client.doQuery(qo.copy(options = opt.toMap))
+      if(res.isSuccess){
+        truth = res.get
+      } else{
+        lb+=("quality_failure" -> res.failed.get.getMessage)
+      }
+    }
+
+    //TODO Resultquality Progressive Results
     if (job.execution_name != "progressive") {
       val t1 = System.currentTimeMillis
 
       //do query
       val res: Try[Seq[RPCQueryResults]] = client.doQuery(qo)
-
 
       val t2 = System.currentTimeMillis
 
@@ -366,7 +381,20 @@ class EvaluationExecutor(val job: EvaluationJob, logger: ChronosHttpClient#Chron
           //TODO Maybe FieldNames should go in the grpc-File so we can use them here
           res.get.head.results.map(res => (res.get("pk") + "," + res.get("adamprodistance"))).mkString("(", "),(", ")")
         })
-        //TODO Resultquality?
+
+        var agreements = 0
+        res.get.head.results.foreach( res => {
+          //Simple matching
+          if(truth.head.results.exists(f => f.get("pk").get.equals(res.get("pk").get))){
+            agreements+=1
+          }
+        })
+
+        //simple hits/total
+        lb+= ("successrate" -> agreements/qo.options.get("k").get.toInt)
+
+        //TODO Compare here
+
       } else {
         lb += ("failure" -> res.failed.get.getMessage)
       }

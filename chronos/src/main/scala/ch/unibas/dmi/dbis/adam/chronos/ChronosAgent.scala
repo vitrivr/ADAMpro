@@ -59,7 +59,6 @@ class ChronosAgent(ipAddressOrHostname: String) extends AbstractChronosAgent(ipA
     runningJobs +=  job.id -> executor
     val results = executor.run()
     runningJobs -= job.id
-    executor.abort()
 
     results
   }
