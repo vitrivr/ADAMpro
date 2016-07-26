@@ -62,6 +62,10 @@ IFS=':' read -r -a array <<< "$SPARK_MASTER"
 SPARK_MASTER_IP=${array[0]}
 SPARK_MASTER_PORT=${array[1]}
 
+IFS=':' read -r -a array <<< "$HADOOP_NAMENODE"
+HADOOP_MASTER_IP=${array[0]}
+HADOOP_MASTER_PORT=${array[1]}
+
 echo "Building Containers"
 
 if [[ $BASE == "yes" ]]; then
@@ -107,7 +111,7 @@ buildContainer() {
         sudo docker run -d -e "SPARK_MASTER_PORT=$SPARK_MASTER_PORT" \
          -e "SPARK_MASTER_IP=$SPARK_MASTER_IP" \
          -e "HADOOP_NAMENODE=$HADOOP_NAMENODE" \
-         -p 8080:8080 -p 9000:9000 -p 7077:7077 -p 6066:6066 -p 8088:8088 -p 8042:8042 \
+         -p 8080:8080 -p $HADOOP_MASTER_PORT:$HADOOP_MASTER_PORT -p $SPARK_MASTER_PORT:$SPARK_MASTER_PORT -p 6066:6066 -p 8088:8088 -p 8042:8042 \
          --net=host --hostname spark --name spark-master \
          adampar/spark-master:1.6.2-hadoop2.6
     fi
@@ -125,7 +129,7 @@ buildContainer() {
         sudo docker run -d \
          -e "SPARK_MASTER=spark://$SPARK_MASTER" \
          -e "HADOOP_NAMENODE=$HADOOP_NAMENODE" \
-         -p 8081:8081 -p 9000:9000 -p 7077:7077 -p 6066:6066 -p 4040:4040 -p 8088:8088 -p 8042:8042 \
+         -p 8081:8081 -p $HADOOP_MASTER_PORT:$HADOOP_MASTER_PORT -p $SPARK_MASTER_PORT:$SPARK_MASTER_PORT -p 6066:6066 -p 4040:4040 -p 8088:8088 -p 8042:8042 \
          --net=host --name spark-worker -h spark-worker \
          adampar/spark-worker:1.6.2-hadoop2.6
     fi
