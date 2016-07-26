@@ -7,10 +7,13 @@ import ch.unibas.dmi.dbis.adam.index.Index.{IndexName, IndexTypeName}
 import ch.unibas.dmi.dbis.adam.index._
 import ch.unibas.dmi.dbis.adam.index.structures.IndexTypes
 import ch.unibas.dmi.dbis.adam.main.AdamContext
+import ch.unibas.dmi.dbis.adam.query.distance.Distance.Distance
 import ch.unibas.dmi.dbis.adam.query.distance.DistanceFunction
 import ch.unibas.dmi.dbis.adam.query.query.NearestNeighbourQuery
-import org.apache.spark.sql.DataFrame
-import org.apache.spark.sql.types.DataTypes
+import org.apache.spark.broadcast.Broadcast
+import org.apache.spark.rdd.RDD
+import org.apache.spark.sql.{DataFrame, Row}
+import org.apache.spark.sql.types.{DataTypes, StructField, StructType}
 
 
 /**
@@ -48,21 +51,76 @@ class ECPIndex(val indexname: IndexName, val entityname: EntityName, override pr
 
     //iterate over all centroids until the result-count is over k
     import org.apache.spark.sql.functions.lit
-    var results : DataFrame = null
+    var results: DataFrame = null
     var i = 0
     var counter = 0
-    do  {
+    do {
+      //the distance returned here is the distance to the centroid, not the distance to the tuple
       val nns = data.filter(data(FieldNames.featureIndexColumnName) === centroids.value(i)._1).select(pk.name).withColumn(FieldNames.distanceColumnName, lit(centroids.value(i)._2).cast(DataTypes.FloatType))
-      if(results != null) {
+
+      if (results != null) {
         results = results.unionAll(nns)
       } else {
         results = nns
       }
       counter += nns.count().toInt
       i += 1
-    } while(i < centroids.value.length && counter < k)
+    } while (i < centroids.value.length && counter < k)
 
-    results
+    log.debug(options.toString())
+    if (options.getOrElse("locality", "false").equals("false")) {
+      results
+    } else {
+      val partInfo: RDD[(Int, Int)] = results.rdd.mapPartitionsWithIndex((idx, f) => {
+        Iterator((idx, f.size))
+      })
+
+      log.debug("results number of partitions: " + results.rdd.getNumPartitions)
+      log.debug("results partitioning info: ")
+      val arr2 = partInfo.collect()
+      for (i <- arr2) {
+        log.debug(i.toString)
+      }
+
+      log.debug("Starting id lookup")
+      val ids = results.map(f => f.getAs[Long](pk.name)).collect()
+      log.debug("Collected ids")
+
+      //TODO When doing Replication, handle first here
+      val origins : Array[(Long, Int)] = ids.map(f => (f, findInPartition(f, data).first()))
+      log.debug("Found tuples in Partitions")
+
+      val counts: Map[Int, Array[(Long, Int)]] = origins.groupBy[Int]((f: (Long, Int)) => f._2)
+
+      for (i <- counts) {
+        log.debug("Partition " + i._1 + " contained: " + i._2.length + " Tuples")
+      }
+
+      val rdd: RDD[Row] = ac.sc.parallelize(origins.map(f => Row(f._1,f._2)))
+      ac.sqlContext.createDataFrame(rdd,StructType(Seq(StructField(pk.name,DataTypes.LongType))))
+      val originDF = ac.sqlContext.createDataFrame(rdd,  StructType(Seq(StructField(pk.name,DataTypes.LongType), StructField(FieldNames.provenanceColumnName,DataTypes.IntegerType))))
+      log.debug("Results schema: "+results.schema.treeString)
+      log.debug("origin Info Schema: "+originDF.schema.treeString)
+      val temp: DataFrame = results.join(originDF, pk.name)
+      log.debug("temp schema: "+temp.schema.treeString)
+      log.debug("temp count: " + temp.count().toString)
+      if(temp.count()>=1){
+        log.debug("Example row: "+temp.first().toString())
+      }
+      temp
+    }
+
+  }
+
+  def findInPartition(id: Long, data: DataFrame): RDD[Int] = {
+    val res = data.rdd.mapPartitionsWithIndex((idx, it) => {
+      if (it.exists(row => row.getAs[Long](pk.name) == id)) {
+        Iterator(idx)
+      } else {
+        Iterator()
+      }
+    })
+    res
   }
 
   override def isQueryConform(nnq: NearestNeighbourQuery): Boolean = true
