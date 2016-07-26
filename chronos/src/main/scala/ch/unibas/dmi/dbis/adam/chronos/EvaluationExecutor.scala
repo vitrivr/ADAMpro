@@ -100,11 +100,16 @@ class EvaluationExecutor(val job: EvaluationJob, logger: ChronosHttpClient#Chron
       logger.publish(new LogRecord(Level.INFO, "generating queries to execute on " + entityName))
       val queries = getQueries(entityName)
 
+      if(job.result_quality){
+        logger.publish(new LogRecord(Level.INFO, "Result Quality will be measured"))
+      }
+
       //query execution
       queries.zipWithIndex.foreach { case (qo, idx) =>
         if (running) {
           val runid = "r-" + idx.toString
           logger.publish(new LogRecord(Level.INFO, "executing query for " + entityName + " (runid: " + runid + ")"))
+          //TODO Compare Results in ExecuteQuery or here?
           val result = executeQuery(qo)
           logger.publish(new LogRecord(Level.INFO, "executed query for " + entityName + " (runid: " + runid + ")"))
 
@@ -361,6 +366,7 @@ class EvaluationExecutor(val job: EvaluationJob, logger: ChronosHttpClient#Chron
           //TODO Maybe FieldNames should go in the grpc-File so we can use them here
           res.get.head.results.map(res => (res.get("pk") + "," + res.get("adamprodistance"))).mkString("(", "),(", ")")
         })
+        //TODO Resultquality?
       } else {
         lb += ("failure" -> res.failed.get.getMessage)
       }

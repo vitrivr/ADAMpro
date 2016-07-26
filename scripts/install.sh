@@ -4,6 +4,8 @@
 ### Install docker-engine, git, update & upgrade everything
 ########################################
 
+
+##TODO Modify so it works on other ubuntus than 16.04
 echo "update & upgrade"
 sudo apt-get clean
 sudo apt-get -qq update

@@ -66,6 +66,7 @@ class EvaluationJob(job: ChronosJob) extends ChronosJob(job) {
   //measurement parameters
   val measurement_firstrun: Boolean = getBooleanAttribute(measurement, "firstrun")
   val measurement_cache: Boolean = getBooleanAttribute(measurement, "cache")
+  val result_quality: Boolean = getBooleanAttribute(measurement, "result_quality")
 
 
   /**

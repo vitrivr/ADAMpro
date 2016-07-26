@@ -17,6 +17,7 @@ class ChronosAgent(ipAddressOrHostname: String) extends AbstractChronosAgent(ipA
   val runningJobs = mutable.Map[Int, EvaluationExecutor]()
 
   /**
+    * This is a typo in the Chronos-jar.
     *
     * @param job
     */
@@ -58,6 +59,7 @@ class ChronosAgent(ipAddressOrHostname: String) extends AbstractChronosAgent(ipA
     runningJobs +=  job.id -> executor
     val results = executor.run()
     runningJobs -= job.id
+    executor.abort()
 
     results
   }
