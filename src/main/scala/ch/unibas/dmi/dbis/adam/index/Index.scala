@@ -308,40 +308,44 @@ object Index extends Logging {
     * @return index
     */
   def createIndex(entity: Entity, attribute: String, indexgenerator: IndexGenerator)(implicit ac: AdamContext): Try[Index] = {
-    if (!entity.schema().map(_.name).contains(attribute)) {
-      return Failure(new IndexNotProperlyDefinedException("attribute not existing in entity " + entity.entityname + entity.schema().map(_.name).mkString("(", ",", ")")))
+    try {
+      if (!entity.schema().map(_.name).contains(attribute)) {
+        return Failure(new IndexNotProperlyDefinedException("attribute not existing in entity " + entity.entityname + entity.schema().map(_.name).mkString("(", ",", ")")))
+      }
+
+      val columnFieldtype = entity.schema().filter(_.name == attribute).map(_.fieldtype).head
+      if (columnFieldtype != FEATURETYPE) {
+        return Failure(new IndexNotProperlyDefinedException(attribute + " is of type " + columnFieldtype.name + ", not feature"))
+      }
+
+      val count = entity.count
+      if (count < IndexGenerator.MINIMUM_NUMBER_OF_TUPLE) {
+        return Failure(new IndexNotProperlyDefinedException("not enough tuples for creating index, needs at least " + IndexGenerator.MINIMUM_NUMBER_OF_TUPLE + " but has only " + count))
+      }
+
+      val indexname = createIndexName(entity.entityname, attribute, indexgenerator.indextypename)
+      //TODO: remove get
+      val rdd: RDD[IndexingTaskTuple[_]] = entity.getAttributeData(attribute).get.map { x => IndexingTaskTuple(x.getAs[Any](entity.pk.name), x.getAs[FeatureVectorWrapper](attribute).vector) }
+
+      val index = indexgenerator.index(indexname, entity.entityname, rdd)
+      index.data = index
+        .data
+        .withColumnRenamed("id", entity.pk.name)
+        .withColumnRenamed("value", FieldNames.featureIndexColumnName)
+      //TODO: possibly store data with index?
+
+      CatalogOperator.createIndex(indexname, entity.entityname, attribute, indexgenerator.indextypename, index.metadata)
+      storage.create(indexname, Seq()) //TODO: switch index to be an entity with specific fields
+      val status = storage.write(indexname, index.data, SaveMode.ErrorIfExists, Map("allowRepartitioning" -> "true"))
+
+      if (status.isFailure) {
+        throw status.failed.get
+      }
+
+      Index.load(indexname, false)
+    } catch {
+      case e: Exception => Failure(e)
     }
-
-    val columnFieldtype = entity.schema().filter(_.name == attribute).map(_.fieldtype).head
-    if (columnFieldtype != FEATURETYPE) {
-      return Failure(new IndexNotProperlyDefinedException(attribute + " is of type " + columnFieldtype.name + ", not feature"))
-    }
-
-    val count = entity.count
-    if (count < IndexGenerator.MINIMUM_NUMBER_OF_TUPLE) {
-      return Failure(new IndexNotProperlyDefinedException("not enough tuples for creating index, needs at least " + IndexGenerator.MINIMUM_NUMBER_OF_TUPLE + " but has only " + count))
-    }
-
-    val indexname = createIndexName(entity.entityname, attribute, indexgenerator.indextypename)
-    //TODO: remove get
-    val rdd: RDD[IndexingTaskTuple[_]] = entity.getAttributeData(attribute).get.map { x => IndexingTaskTuple(x.getAs[Any](entity.pk.name), x.getAs[FeatureVectorWrapper](attribute).vector) }
-
-    val index = indexgenerator.index(indexname, entity.entityname, rdd)
-    index.data = index
-      .data
-      .withColumnRenamed("id", entity.pk.name)
-      .withColumnRenamed("value", FieldNames.featureIndexColumnName)
-    //TODO: possibly store data with index?
-
-    CatalogOperator.createIndex(indexname, entity.entityname, attribute, indexgenerator.indextypename, index.metadata)
-    storage.create(indexname, Seq()) //TODO: switch index to be an entity with specific fields
-    val status = storage.write(indexname, index.data, SaveMode.ErrorIfExists, Map("allowRepartitioning" -> "true"))
-
-    if (status.isFailure) {
-      throw status.failed.get
-    }
-
-    Index.load(indexname, false)
   }
 
   /**
@@ -370,17 +374,22 @@ object Index extends Logging {
     * @return
     */
   def load(indexname: IndexName, cache: Boolean = false)(implicit ac: AdamContext): Try[Index] = {
-    if (!IndexLRUCache.contains(indexname) && !exists(indexname)) {
-      return Failure(new IndexNotExistingException())
+    try {
+
+      if (!IndexLRUCache.contains(indexname) && !exists(indexname)) {
+        return Failure(new IndexNotExistingException())
+      }
+
+      val index = IndexLRUCache.get(indexname)
+
+      if (cache) {
+        index.get.data.rdd.setName(indexname).cache()
+      }
+
+      index
+    } catch {
+      case e: Exception => Failure(e)
     }
-
-    val index = IndexLRUCache.get(indexname)
-
-    if (cache) {
-      index.get.data.rdd.setName(indexname).cache()
-    }
-
-    index
   }
 
   /**
@@ -394,23 +403,27 @@ object Index extends Logging {
       Failure(IndexNotExistingException())
     }
 
-    val df = storage.read(indexname)
-    if (df.isFailure) {
-      return Failure(df.failed.get)
+    try {
+      val df = storage.read(indexname)
+      if (df.isFailure) {
+        return Failure(df.failed.get)
+      }
+
+      val entityname = CatalogOperator.getEntityName(indexname).get
+      val meta = CatalogOperator.getIndexMeta(indexname)
+
+      if (meta.isFailure) {
+        return Failure(meta.failed.get)
+      }
+
+      val indextypename = CatalogOperator.getIndexTypeName(indexname).get
+
+      val index = indextypename.index(indexname, entityname, df.get, meta.get, ac)
+
+      Success(index)
+    } catch {
+      case e: Exception => Failure(e)
     }
-
-    val entityname = CatalogOperator.getEntityName(indexname).get
-    val meta = CatalogOperator.getIndexMeta(indexname)
-
-    if (meta.isFailure) {
-      return Failure(meta.failed.get)
-    }
-
-    val indextypename = CatalogOperator.getIndexTypeName(indexname).get
-
-    val index = indextypename.index(indexname, entityname, df.get, meta.get, ac)
-
-    Success(index)
   }
 
   /**
@@ -420,14 +433,18 @@ object Index extends Logging {
     * @return true if index was dropped
     */
   def drop(indexname: IndexName)(implicit ac: AdamContext): Try[Void] = {
-    if (!exists(indexname)) {
-      return Failure(EntityNotExistingException())
+    try {
+      if (!exists(indexname)) {
+        return Failure(EntityNotExistingException())
+      }
+
+      Index.load(indexname).get.drop()
+      IndexLRUCache.invalidate(indexname)
+
+      Success(null)
+    } catch {
+      case e: Exception => Failure(e)
     }
-
-    Index.load(indexname).get.drop()
-    IndexLRUCache.invalidate(indexname)
-
-    Success(null)
   }
 
   /**
