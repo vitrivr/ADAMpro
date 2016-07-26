@@ -33,10 +33,10 @@ class RPCClient(channel: ManagedChannel, definer: AdamDefinitionBlockingStub, se
   val tupleSizes = Seq(1e5.toInt)
   val dimensions = Seq(10)
   val partitions = Seq(4, 8, 16, 64, 128, 200)
-  val indices = Seq(IndexType.ecp)
+  val indices = Seq(IndexType.sh)
   val partitioners = Seq(RepartitionMessage.Partitioner.SPARK)
 
-  //dropAllEntities()
+  dropAllEntities()
 
   try
       for (tuples <- tupleSizes) {

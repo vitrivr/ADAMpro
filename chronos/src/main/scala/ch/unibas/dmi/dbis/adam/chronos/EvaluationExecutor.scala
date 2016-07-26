@@ -5,6 +5,7 @@ import java.util.Properties
 import java.util.logging.{Level, LogRecord}
 
 import ch.unibas.cs.dbis.chronos.agent.{ChronosHttpClient, ChronosJob}
+import ch.unibas.dmi.dbis.adam.http.grpc.RepartitionMessage
 import ch.unibas.dmi.dbis.adam.rpc.RPCClient
 import ch.unibas.dmi.dbis.adam.rpc.datastructures.{RPCAttributeDefinition, RPCQueryObject, RPCQueryResults}
 
@@ -45,27 +46,29 @@ class EvaluationExecutor(val job: EvaluationJob, logger: ChronosHttpClient#Chron
     */
   def run(): Properties = {
     val results = new ListBuffer[(String, Map[String, String])]()
-    val entityname = generateString(10)
+    val entityName = generateString(10)
     val attributes = getAttributeDefinition()
 
     //create entity
-    logger.publish(new LogRecord(Level.INFO, "creating entity " + entityname + " (" + attributes.map(a => a.name + "(" + a.datatype + ")").mkString(",") + ")"))
-    client.entityCreate(entityname, attributes)
+    logger.publish(new LogRecord(Level.INFO, "creating entity " + entityName + " (" + attributes.map(a => a.name + "(" + a.datatype + ")").mkString(",") + ")"))
+    client.entityCreate(entityName, attributes)
 
     //insert random data
-    logger.publish(new LogRecord(Level.INFO, "inserting " + job.data_tuples + " tuples into " + entityname))
-    client.entityGenerateRandomData(entityname, job.data_tuples, job.data_vector_dimensions, job.data_vector_sparsity, job.data_vector_min, job.data_vector_max, job.data_vector_sparse)
+    //TODO Data Generator
+    logger.publish(new LogRecord(Level.INFO, "inserting " + job.data_tuples + " tuples into " + entityName))
+    client.entityGenerateRandomData(entityName, job.data_tuples, job.data_vector_dimensions, job.data_vector_sparsity, job.data_vector_min, job.data_vector_max, job.data_vector_sparse)
 
+    //TODO Add Norm to Job
     val indexnames = if (job.execution_name == "sequential") {
       //no index
-      logger.publish(new LogRecord(Level.INFO, "creating no index for " + entityname))
+      logger.publish(new LogRecord(Level.INFO, "creating no index for " + entityName))
       Seq()
     } else if (job.execution_name == "progressive") {
-      logger.publish(new LogRecord(Level.INFO, "creating all indexes for " + entityname))
-      client.entityCreateAllIndexes(entityname, Seq(FEATURE_VECTOR_ATTRIBUTENAME), 2).get
+      logger.publish(new LogRecord(Level.INFO, "creating all indexes for " + entityName))
+      client.entityCreateAllIndexes(entityName, Seq(FEATURE_VECTOR_ATTRIBUTENAME), 2).get
     } else {
-      logger.publish(new LogRecord(Level.INFO, "creating " + job.execution_name + " index for " + entityname))
-      Seq(client.indexCreate(entityname, FEATURE_VECTOR_ATTRIBUTENAME, job.execution_name, 2, Map()).get)
+      logger.publish(new LogRecord(Level.INFO, "creating " + job.execution_name + " index for " + entityName))
+      Seq(client.indexCreate(entityName, FEATURE_VECTOR_ATTRIBUTENAME, job.execution_name, 2, Map()).get)
     }
 
     if (job.measurement_cache) {
@@ -73,32 +76,37 @@ class EvaluationExecutor(val job: EvaluationJob, logger: ChronosHttpClient#Chron
         client.indexCache(indexname)
       }
 
-      client.entityCache(entityname)
+      client.entityCache(entityName)
     }
 
     //partition
+    //TODO Why generate new Jobs for each index but not for each partition?
     getPartitionCombinations().foreach { case (e, i) =>
       if (e.isDefined) {
-        //TODO: adjust partitioner/column
-        client.entityPartition(entityname, e.get, Seq(), true, true)
+        if(RepartitionMessage.Partitioner.values.find(p => p.name == job.access_entity_partitioner).isDefined){
+          client.entityPartition(entityName, e.get, Seq(), true, true, RepartitionMessage.Partitioner.values.find(p => p.name == job.access_entity_partitioner).get)
+        } else client.entityPartition(entityName, e.get, Seq(), true, true)
+        //TODO: Add Column in job
       }
 
       if (i.isDefined) {
-        //TODO: adjust partitioner/column
-        indexnames.foreach(indexname => client.indexPartition(indexname, i.get, Seq(), true, true))
+        //TODO: Add Column in Job
+        if(RepartitionMessage.Partitioner.values.find(p => p.name == job.access_index_partitioner).isDefined){
+          indexnames.foreach(indexname => client.indexPartition(indexname, i.get, Seq(), true, true, RepartitionMessage.Partitioner.values.find(p => p.name == job.access_index_partitioner).get))
+        } else indexnames.foreach(indexname => client.indexPartition(indexname, i.get, Seq(), true, true))
       }
 
       //collect queries
-      logger.publish(new LogRecord(Level.INFO, "generating queries to execute on " + entityname))
-      val queries = getQueries(entityname)
+      logger.publish(new LogRecord(Level.INFO, "generating queries to execute on " + entityName))
+      val queries = getQueries(entityName)
 
       //query execution
       queries.zipWithIndex.foreach { case (qo, idx) =>
         if (running) {
           val runid = "r-" + idx.toString
-          logger.publish(new LogRecord(Level.INFO, "executing query for " + entityname + " (runid: " + runid + ")"))
+          logger.publish(new LogRecord(Level.INFO, "executing query for " + entityName + " (runid: " + runid + ")"))
           val result = executeQuery(qo)
-          logger.publish(new LogRecord(Level.INFO, "executed query for " + entityname + " (runid: " + runid + ")"))
+          logger.publish(new LogRecord(Level.INFO, "executed query for " + entityName + " (runid: " + runid + ")"))
 
           if (job.measurement_firstrun && idx == 0){
             //ignore first run
@@ -350,6 +358,7 @@ class EvaluationExecutor(val job: EvaluationJob, logger: ChronosHttpClient#Chron
       if (res.isSuccess) {
         lb += ("measuredtime" -> res.get.map(_.time).mkString(";"))
         lb += ("results" -> {
+          //TODO Maybe FieldNames should go in the grpc-File so we can use them here
           res.get.head.results.map(res => (res.get("pk") + "," + res.get("adamprodistance"))).mkString("(", "),(", ")")
         })
       } else {
