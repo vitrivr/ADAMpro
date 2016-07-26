@@ -1,5 +1,6 @@
 package ch.unibas.dmi.dbis.adam.query.handler.internal
 
+import ch.unibas.dmi.dbis.adam.config.FieldNames
 import ch.unibas.dmi.dbis.adam.entity.Entity
 import ch.unibas.dmi.dbis.adam.entity.Entity._
 import ch.unibas.dmi.dbis.adam.exception.QueryNotConformException
@@ -10,7 +11,9 @@ import ch.unibas.dmi.dbis.adam.main.AdamContext
 import ch.unibas.dmi.dbis.adam.query.handler.generic.{ExpressionDetails, QueryExpression}
 import ch.unibas.dmi.dbis.adam.query.query.NearestNeighbourQuery
 import ch.unibas.dmi.dbis.adam.utils.Logging
-import org.apache.spark.sql.DataFrame
+import org.apache.spark.rdd.RDD
+import org.apache.spark.sql.{DataFrame, Row}
+import org.apache.spark.sql.types.{DataType, DataTypes, StructField, StructType}
 
 /**
   * adamtwo
@@ -97,6 +100,11 @@ object IndexScanExpression extends Logging {
     * @return
     */
   def scan(index: Index)(filter: Option[DataFrame], nnq: NearestNeighbourQuery, id: Option[String] = None)(implicit ac: AdamContext): DataFrame = {
-    index.scan(nnq, filter)
+    val df = index.scan(nnq, filter)
+    val idOrigins = df.rdd.mapPartitionsWithIndex((idx, it) => {
+      it.map(f => Row(f.getAs[Long](index.pk.name), idx))
+    })
+    val originDF = ac.sqlContext.createDataFrame(idOrigins, StructType(Seq(StructField(index.pk.name, DataTypes.LongType), StructField(FieldNames.provenanceColumnName,DataTypes.IntegerType))))
+    df.join(originDF,index.pk.name)
   }
 }

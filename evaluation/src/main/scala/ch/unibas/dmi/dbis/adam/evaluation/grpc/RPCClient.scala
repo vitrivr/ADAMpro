@@ -8,6 +8,8 @@ import ch.unibas.dmi.dbis.adam.http.grpc._
 import io.grpc.okhttp.OkHttpChannelBuilder
 import io.grpc.{ManagedChannel, ManagedChannelBuilder}
 
+import scala.collection.mutable
+import scala.collection.mutable.ListBuffer
 import scala.util.Random
 
 /**
@@ -21,19 +23,20 @@ class RPCClient(channel: ManagedChannel, definer: AdamDefinitionBlockingStub, se
   //k=10k to get sensible partition information
   val k = 100
 
-  val numQ = 1
+  val provenance = "true"
+
+  val numQ = 2
 
   /**
     * Evaluation Code
     */
   val tupleSizes = Seq(1e5.toInt)
   val dimensions = Seq(10)
-  //We use 1-3 Workers with 2 cores each
-  val partitions = Seq(8, 16, 200)
+  val partitions = Seq(4, 8, 16, 64, 128, 200)
   val indices = Seq(IndexType.ecp)
   val partitioners = Seq(RepartitionMessage.Partitioner.SPARK)
 
-  dropAllEntities()
+  //dropAllEntities()
 
   try
       for (tuples <- tupleSizes) {
@@ -47,8 +50,12 @@ class RPCClient(channel: ManagedChannel, definer: AdamDefinitionBlockingStub, se
             for(index <- indices){
               val name = getOrGenIndex(index, eName)
               for (part <- partitions) {
+                System.out.println("Repartitioning: "+part)
                 for (partitioner <- partitioners) {
-                  definer.repartitionIndexData(RepartitionMessage(name, part, option = RepartitionMessage.PartitionOptions.REPLACE_EXISTING, partitioner = partitioner))
+                  definer.repartitionIndexData(RepartitionMessage(name, numberOfPartitions = part, option = RepartitionMessage.PartitionOptions.REPLACE_EXISTING, partitioner = partitioner))
+                  val props = definer.getEntityProperties(EntityNameMessage(eName))
+                  //TODO Verify Dimension Count
+                  System.out.println(props)
                   val (avgTime, noResults) = timeQuery(name, dim, part)
                   appendToResults(tuples, dim, part, index.name, avgTime, k, noResults, partitioner)
                 }
@@ -98,23 +105,25 @@ class RPCClient(channel: ManagedChannel, definer: AdamDefinitionBlockingStub, se
     name
   }
 
-
+  //TODO Log individual queries in chronos
   def timeQuery(indexName: String, dim: Int, part: Int): (Float, Int) = {
-
     val queryCount = numQ
-    //1 free query to cache Index
     val res = searcherBlocking.doQuery(QueryMessage(nnq = Some(randomQueryMessage(dim, part)), from = Some(FromMessage(FromMessage.Source.Index(indexName)))))
-    if (k > res.responses.head.results.size) {
-      System.err.println("Should be " + k + ", but actually only " + res.responses.head.results.size)
-    }
-
-    var resSize = 0
 
     //Average over Queries
+    var resSize = 0
     val start = System.currentTimeMillis()
     var counter = 0
     while (counter < queryCount) {
       val res = searcherBlocking.doQuery(QueryMessage(nnq = Some(randomQueryMessage(dim, part)), from = Some(FromMessage(FromMessage.Source.Index(indexName)))))
+      System.out.println(res.responses.head.results.head.data.toString())
+      val partInfo = mutable.HashMap[Int, Int]()
+      res.responses.map(f => f.results.map(r => {
+        val key = r.data.getOrElse("adamproprovenance", DataMessage.defaultInstance).getIntData
+        val value = partInfo.getOrElse(key, 0)
+        partInfo.put(key, value+1)
+      }))
+      System.out.println(partInfo.toString())
       resSize += res.responses.head.results.size
       counter += 1
     }
@@ -123,7 +132,7 @@ class RPCClient(channel: ManagedChannel, definer: AdamDefinitionBlockingStub, se
   }
 
   /** Generates a random query using Random.nextFloat() */
-  def randomQueryMessage(dim: Int, part: Int) = NearestNeighbourQueryMessage("feature", Some(FeatureVectorMessage().withDenseVector(DenseVectorMessage(Seq.fill(dim)(Random.nextFloat())))), None, getDistanceMsg, k, Map[String, String]("locality"-> "true"), indexOnly = false, 1 until part)
+  def randomQueryMessage(dim: Int, part: Int) = NearestNeighbourQueryMessage("feature", Some(FeatureVectorMessage().withDenseVector(DenseVectorMessage(Seq.fill(dim)(Random.nextFloat())))), None, getDistanceMsg, k, Map[String, String]("locality"-> provenance), indexOnly = true, 1 until part)
 
   /** Drops all entities */
   def dropAllEntities() = {

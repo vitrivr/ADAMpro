@@ -21,4 +21,5 @@ object PartitionerChoice extends Enumeration with Serializable{
   val RANGE = Value("Spark's built-in Range Partitioner")
   val RANDOM = Value("Random Partitioning")
   val CURRENT = Value("Current implementation")
+  val SH = Value("Partition By SH-Key")
 }

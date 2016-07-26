@@ -65,6 +65,7 @@ object IndexPartitioner extends Logging {
           val pqData: DataFrame = Entity.load(index.entityname).get.indexes.find(f => f.get.indextypename == IndexTypes.PQINDEX).get.get.data
           val newPq = ac.sqlContext.createDataFrame(pqData.rdd, StructType(Seq(pqData.schema(index.pk.name), pqData.schema(FieldNames.featureIndexColumnName).copy(name = "pq_"+FieldNames.featureIndexColumnName))))
           data = data.join(newPq, index.pk.name)
+          //Spark's default Partition which uses HashPartitioning
           SparkPartitioner(data, Some(Seq("pq_"+FieldNames.featureIndexColumnName)), Some(index.indexname), nPartitions)
         }catch{
           case e: java.util.NoSuchElementException => {
@@ -75,13 +76,11 @@ object IndexPartitioner extends Logging {
       }
       case PartitionerChoice.RANGE =>
         {
-          log.error("This operation is currently not supported")
-          data
+          //TODO This needs implicit ordering?
+          throw new UnsupportedOperationException
           //ac.sqlContext.createDataFrame(toPartition.partitionBy(new RangePartitioner[(Any, Row)](nPartitions, toPartition)))
         }
     }
-
-    //TODO Does this scale with multiple feature vectors in one table?
     data = data.select(index.pk.name, FieldNames.featureIndexColumnName)
 
     mode match {
