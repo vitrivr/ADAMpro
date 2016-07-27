@@ -265,6 +265,8 @@ class EvaluationExecutor(val job: EvaluationJob, logger: ChronosHttpClient#Chron
 
     lb.append("hints" -> job.execution_hint)
 
+    //Targets = None is this correct?
+    //TODO Add indexname?
     RPCQueryObject(generateString(10), job.execution_name, lb.toMap, None)
   }
 
@@ -353,11 +355,14 @@ class EvaluationExecutor(val job: EvaluationJob, logger: ChronosHttpClient#Chron
     if(job.result_quality){
       val opt = collection.mutable.Map() ++ qo.options
       opt.put("indexonly", "false")
-      val res = client.doQuery(qo.copy(options = opt.toMap))
-      if(res.isSuccess){
-        truth = res.get
+      //logger.publish(new LogRecord(Level.FINEST, "Resultquality query: "+ qo.getQueryMessage.nnq.get.query.get.feature.denseVector.get.vector.mkString(",")))
+      val truthQuery = client.doQuery(qo.copy(options = opt.toMap))
+      if(truthQuery.isSuccess){
+        truth = truthQuery.get
+        logger.publish(new LogRecord(Level.FINEST, "Succeeded in Retrieving "+truthQuery.get.head.results.size+" Results for the query."))
+        logger.publish(new LogRecord(Level.FINEST, "Example result "+ truthQuery.get.head.results.head.mkString(", ")))
       } else{
-        lb+=("quality_failure" -> res.failed.get.getMessage)
+        lb+=("quality_query_failure" -> truthQuery.failed.get.getMessage)
       }
     }
 
@@ -366,6 +371,8 @@ class EvaluationExecutor(val job: EvaluationJob, logger: ChronosHttpClient#Chron
       val t1 = System.currentTimeMillis
 
       //do query
+      logger.publish(new LogRecord(Level.FINEST, "Executing query with options: "+qo.options.mkString(",")))
+      logger.publish(new LogRecord(Level.FINEST, "querymessage: "+qo.getQueryMessage.toString()))
       val res: Try[Seq[RPCQueryResults]] = client.doQuery(qo)
 
       val t2 = System.currentTimeMillis
@@ -382,6 +389,7 @@ class EvaluationExecutor(val job: EvaluationJob, logger: ChronosHttpClient#Chron
           res.get.head.results.map(res => (res.get("pk") + "," + res.get("adamprodistance"))).mkString("(", "),(", ")")
         })
 
+        //Measure Result Quality
         var agreements = 0
         res.get.head.results.foreach( res => {
           //Simple matching
@@ -389,9 +397,12 @@ class EvaluationExecutor(val job: EvaluationJob, logger: ChronosHttpClient#Chron
             agreements+=1
           }
         })
+        logger.publish(new LogRecord(Level.FINEST, "Returned Candidates: "+res.get.head.results.length))
+        logger.publish(new LogRecord(Level.FINEST, "Agreements: "+agreements))
 
         //simple hits/total
-        lb+= ("successrate" -> agreements/qo.options.get("k").get.toInt)
+        lb+= ("successrate" -> agreements.toFloat/qo.options.get("k").get.toFloat)
+        logger.publish(new LogRecord(Level.FINEST, "Percentage match: "+agreements.toFloat/qo.options.get("k").get.toFloat))
 
         //TODO Compare here
 

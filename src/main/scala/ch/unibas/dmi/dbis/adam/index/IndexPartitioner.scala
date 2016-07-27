@@ -2,6 +2,7 @@ package ch.unibas.dmi.dbis.adam.index
 
 import ch.unibas.dmi.dbis.adam.catalog.CatalogOperator
 import ch.unibas.dmi.dbis.adam.config.FieldNames
+import ch.unibas.dmi.dbis.adam.datatypes.bitString.BitString
 import ch.unibas.dmi.dbis.adam.entity.Entity
 import ch.unibas.dmi.dbis.adam.exception.GeneralAdamException
 import ch.unibas.dmi.dbis.adam.helpers.partition._
@@ -61,16 +62,22 @@ object IndexPartitioner extends Logging {
       case PartitionerChoice.RANDOM =>
         ac.sqlContext.createDataFrame(toPartition.partitionBy(new RandomPartitioner(nPartitions)).map(_._2), data.schema)
       case PartitionerChoice.CURRENT => {
+        val indextype = IndexTypes.SHINDEX
         try{
-          val pqData: DataFrame = Entity.load(index.entityname).get.indexes.find(f => f.get.indextypename == IndexTypes.PQINDEX).get.get.data
-          val newPq = ac.sqlContext.createDataFrame(pqData.rdd, StructType(Seq(pqData.schema(index.pk.name), pqData.schema(FieldNames.featureIndexColumnName).copy(name = "pq_"+FieldNames.featureIndexColumnName))))
-          data = data.join(newPq, index.pk.name)
-          //Spark's default Partition which uses HashPartitioning
-          SparkPartitioner(data, Some(Seq("pq_"+FieldNames.featureIndexColumnName)), Some(index.indexname), nPartitions)
+          //TODO Switch from Info log
+          val originSchema = data.schema
+          val joinDF = Entity.load(index.entityname).get.indexes.find(f => f.get.indextypename == indextype).get.get.data.withColumnRenamed(FieldNames.featureIndexColumnName, "ap_partkey")
+          log.info(joinDF.schema.treeString)
+          data = data.join(joinDF, index.pk.name)
+          log.info(data.schema.treeString)
+          //Hack alert: Length of the bitstring is determined by sampling the first row of the rdd...
+          val repartitioned: RDD[(Any, Row)] = data.map(r => (r.getAs[Any]("ap_partkey"), r)).partitionBy(new SHPartitioner(nPartitions, joinDF.head().getAs[BitString[_]]("ap_partkey").toByteArray.length))
+          val reparRDD = repartitioned.mapPartitions((it) => {it.map(f => Row(f._2.getAs(index.pk.name), f._2.getAs(FieldNames.featureIndexColumnName)))})
+          ac.sqlContext.createDataFrame(reparRDD, originSchema)
         }catch{
           case e: java.util.NoSuchElementException => {
-            log.error("Repartitioning with this mode is not possible because the index does not exist", e)
-            data
+            log.error("Repartitioning with this mode is not possible because the index: "+indextype.name + " does not exist", e)
+            throw new GeneralAdamException("Index: "+indextype.name+" does not exist, aborting repartitioning")
           }
         }
       }
