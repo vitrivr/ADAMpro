@@ -24,7 +24,7 @@ import scala.concurrent.{Await, Future}
 abstract class AggregationExpression(private val left: QueryExpression, private val right: QueryExpression, order: ExpressionEvaluationOrder.Order = ExpressionEvaluationOrder.Parallel, options : Map[String, String] = Map(), id: Option[String] = None)(@transient implicit val ac: AdamContext) extends QueryExpression(id) {
   children ++= Seq(left, right)
 
-  override val info = ExpressionDetails(None, Some("Aggregation Expression (" + aggregationName + ")"), id, None)
+  override val info = ExpressionDetails(None, Some("Aggregation Expression (" + aggregationName + ", " + order.toString + ")"), id, None)
   def aggregationName : String
 
   override protected def run(filter: Option[DataFrame] = None)(implicit ac: AdamContext): Option[DataFrame] = {
@@ -103,7 +103,7 @@ object AggregationExpression {
     * @param r right expression
     */
   case class UnionExpression(l: QueryExpression, r: QueryExpression, options : Map[String, String] = Map(), id: Option[String] = None)(implicit ac: AdamContext) extends AggregationExpression(l, r, ExpressionEvaluationOrder.Parallel, options, id) {
-    override val aggregationName = "UNION"
+    override def aggregationName = "UNION"
 
     override protected def aggregate(leftResult: DataFrame, rightResult: DataFrame, pk: String): DataFrame = {
       val left = leftResult.select(pk)
@@ -121,7 +121,7 @@ object AggregationExpression {
     * @param order execution order
     */
   case class IntersectExpression(l: QueryExpression, r: QueryExpression, order: ExpressionEvaluationOrder.Order = ExpressionEvaluationOrder.Parallel, options : Map[String, String] = Map(),  id: Option[String] = None)(implicit ac: AdamContext) extends AggregationExpression(l, r, order, options, id) {
-    override val aggregationName = "INTERSECT"
+    override def aggregationName = "INTERSECT"
 
     override protected def aggregate(leftResult: DataFrame, rightResult: DataFrame, pk: String): DataFrame = {
       val left = leftResult.select(pk)
@@ -139,7 +139,7 @@ object AggregationExpression {
     * @param order execution order
     */
   case class ExceptExpression(l: QueryExpression, r: QueryExpression, order: ExpressionEvaluationOrder.Order = ExpressionEvaluationOrder.Parallel, options : Map[String, String] = Map(), id: Option[String] = None)(implicit ac: AdamContext) extends AggregationExpression(l, r, order, options, id) {
-    override val aggregationName = "EXCEPT"
+    override def aggregationName = "EXCEPT"
 
     override protected def aggregate(leftResult: DataFrame, rightResult: DataFrame, pk: String): DataFrame = {
       val left = leftResult.select(pk)
