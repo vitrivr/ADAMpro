@@ -36,32 +36,19 @@ private[rpc] object RPCHelperMethods {
 
   /**
     *
-    * @param request
+    * @param qm
     * @return
     */
-  implicit def toExpression(request: QueryMessage)(implicit ac: AdamContext): Try[QueryExpression] = {
+  implicit def toExpression(qm: QueryMessage)(implicit ac: AdamContext): Try[QueryExpression] = {
     try {
-      val queryid = prepareQueryId(request.queryid)
+      val queryid = prepareQueryId(qm.queryid)
 
-      val entityname = request.from.get.source.entity
-      val indexname = request.from.get.source.index
-      val subexpression = request.from.get.source.expression
+      val entityname = qm.from.get.source.entity
+      val indexname = qm.from.get.source.index
+      val subexpression = qm.from.get.source.expression
 
-      val bq = if(request.bq.isDefined){
-        val prepared = prepareBQ(request.bq.get)
-
-        if (prepared.isFailure) {
-          return Failure(prepared.failed.get)
-        } else {
-          Some(prepared.get)
-        }
-      } else {
-        None
-      }
-
-
-      val nnq = if (request.nnq.isDefined) {
-        val prepared = prepareNNQ(request.nnq.get)
+      val bq = if(qm.bq.isDefined){
+        val prepared = prepareBQ(qm.bq.get)
 
         if (prepared.isFailure) {
           return Failure(prepared.failed.get)
@@ -73,24 +60,37 @@ private[rpc] object RPCHelperMethods {
       }
 
 
-      val hints = QueryHints.withName(request.hints)
+      val nnq = if (qm.nnq.isDefined) {
+        val prepared = prepareNNQ(qm.nnq.get)
 
-      val time = request.time
+        if (prepared.isFailure) {
+          return Failure(prepared.failed.get)
+        } else {
+          Some(prepared.get)
+        }
+      } else {
+        None
+      }
+
+
+      val hints = QueryHints.withName(qm.hints)
+
+      val time = qm.time
 
       //TODO: use cache options
-      val cacheOptions = prepareCacheExpression(request.readFromCache, request.putInCache)
+      val cacheOptions = prepareCacheExpression(qm.readFromCache, qm.putInCache)
 
       var scan: QueryExpression = null
 
       //selection
       scan = if (time > 0) {
-        new TimedScanExpression(entityname.get, nnq.get, preparePaths(request.hints), Duration(time, TimeUnit.MILLISECONDS), queryid)()
+        new TimedScanExpression(entityname.get, nnq.get, preparePaths(qm.hints), Duration(time, TimeUnit.MILLISECONDS), queryid)()
       } else if (subexpression.isDefined) {
         new CompoundQueryExpression(toExpression(subexpression).get, queryid)
       } else if (entityname.isDefined) {
         HintBasedScanExpression(entityname.get, nnq, bq, hints, true, queryid)()
-      } else if (request.from.get.source.isIndexes) {
-        val indexes = request.from.get.getIndexes.indexes
+      } else if (qm.from.get.source.isIndexes) {
+        val indexes = qm.from.get.getIndexes.indexes
         new CompoundIndexScanExpression(indexes.map(index => new IndexScanExpression(index)(nnq.get, queryid)()))(nnq.get, queryid)()
       } else if (indexname.isDefined) {
         var scan: Option[QueryExpression] = None
@@ -109,8 +109,8 @@ private[rpc] object RPCHelperMethods {
       }
 
       //projection
-      if (request.projection.isDefined) {
-        val projection = prepareProjectionExpression(request.projection.get, scan, queryid)
+      if (qm.projection.isDefined) {
+        val projection = prepareProjectionExpression(qm.projection.get, scan, queryid)
 
         if (projection.isSuccess) {
           scan = projection.get
@@ -127,17 +127,17 @@ private[rpc] object RPCHelperMethods {
 
   /**
     *
-    * @param request
+    * @param ehqm
     * @return
     */
-  implicit def toExpression(request: ExternalHandlerQueryMessage)(implicit ac: AdamContext): Try[QueryExpression] = {
+  implicit def toExpression(ehqm: ExternalHandlerQueryMessage)(implicit ac: AdamContext): Try[QueryExpression] = {
     try {
-      val handler = request.handler
-      val entityname = request.entity
-      val params = request.params
-      val queryid = prepareQueryId(request.queryid)
+      val handler = ehqm.handler
+      val entityname = ehqm.entity
+      val params = ehqm.params
+      val queryid = prepareQueryId(ehqm.queryid)
 
-      Success(ExternalScanExpressions.toQueryExpression(handler, entityname, request.params, queryid))
+      Success(ExternalScanExpressions.toQueryExpression(handler, entityname, ehqm.params, queryid))
     } catch {
       case e: Exception => Failure(e)
     }
@@ -145,33 +145,33 @@ private[rpc] object RPCHelperMethods {
 
   /**
     *
-    * @param request
+    * @param eqm
     * @return
     */
-  implicit def toExpression(request: ExpressionQueryMessage)(implicit ac: AdamContext): Try[QueryExpression] = {
+  implicit def toExpression(eqm: ExpressionQueryMessage)(implicit ac: AdamContext): Try[QueryExpression] = {
     try {
-      val order = request.order match {
+      val order = eqm.order match {
         case ExpressionQueryMessage.OperationOrder.LEFTFIRST => ExpressionEvaluationOrder.LeftFirst
         case ExpressionQueryMessage.OperationOrder.RIGHTFIRST => ExpressionEvaluationOrder.RightFirst
         case ExpressionQueryMessage.OperationOrder.PARALLEL => ExpressionEvaluationOrder.Parallel
         case _ => null
       }
 
-      val queryid = prepareQueryId(request.queryid)
+      val queryid = prepareQueryId(eqm.queryid)
 
-      val left = toExpression(request.left)
+      val left = toExpression(eqm.left)
       if (left.isFailure) {
         return Failure(left.failed.get)
       }
 
-      val right = toExpression(request.right)
+      val right = toExpression(eqm.right)
       if (right.isFailure) {
         return Failure(right.failed.get)
       }
 
       //TODO: possibly add options to aggregation operations
 
-      request.operation match {
+      eqm.operation match {
         case ExpressionQueryMessage.Operation.UNION => Success(UnionExpression(left.get, right.get, Map(), queryid))
         case ExpressionQueryMessage.Operation.INTERSECT => Success(IntersectExpression(left.get, right.get, order, Map(),queryid))
         case ExpressionQueryMessage.Operation.EXCEPT => Success(ExceptExpression(left.get, right.get, order, Map(),queryid))
@@ -203,7 +203,7 @@ private[rpc] object RPCHelperMethods {
       case e: Exception => Failure(e)
     }
   }
-
+  
 
   /**
     *
@@ -355,11 +355,11 @@ private[rpc] object RPCHelperMethods {
 
   /**
     *
-    * @param message
+    * @param ilm
     * @return
     */
-  def prepareInformationLevel(message: Seq[QueryMessage.InformationLevel]): Seq[InformationLevel] = {
-    val levels = message.map { level =>
+  def prepareInformationLevel(ilm: Seq[QueryMessage.InformationLevel]): Seq[InformationLevel] = {
+    val levels = ilm.map { level =>
       level match {
         case QueryMessage.InformationLevel.INFORMATION_FULL_TREE => InformationLevels.FULL_TREE
         case QueryMessage.InformationLevel.INFORMATION_LAST_STEP_ONLY => InformationLevels.LAST_STEP_ONLY
