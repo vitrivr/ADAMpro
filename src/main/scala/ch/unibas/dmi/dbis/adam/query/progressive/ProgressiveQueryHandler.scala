@@ -3,7 +3,7 @@ package ch.unibas.dmi.dbis.adam.query.progressive
 import ch.unibas.dmi.dbis.adam.entity.Entity.EntityName
 import ch.unibas.dmi.dbis.adam.exception.GeneralAdamException
 import ch.unibas.dmi.dbis.adam.main.AdamContext
-import ch.unibas.dmi.dbis.adam.query.handler.generic.QueryExpression
+import ch.unibas.dmi.dbis.adam.query.handler.generic.{QueryEvaluationOptions, QueryExpression}
 import ch.unibas.dmi.dbis.adam.query.handler.internal.BooleanFilterExpression.BooleanFilterScanExpression
 import ch.unibas.dmi.dbis.adam.query.query.{BooleanQuery, NearestNeighbourQuery}
 import ch.unibas.dmi.dbis.adam.utils.Logging
@@ -28,12 +28,13 @@ object ProgressiveQueryHandler extends Logging {
     * @param bq          information for boolean query
     * @param pathChooser progressive query path chooser
     * @param onComplete  function to execute on complete
+    * @param options     options applied when evaluating query
     * @param id          query id
     * @return
     */
-  def progressiveQuery[U](entityname: EntityName, nnq: NearestNeighbourQuery, bq: Option[BooleanQuery], pathChooser: ProgressivePathChooser, onComplete: Try[ProgressiveObservation] => U, id: Option[String] = None)(implicit ac: AdamContext): ProgressiveQueryStatusTracker = {
+  def progressiveQuery[U](entityname: EntityName, nnq: NearestNeighbourQuery, bq: Option[BooleanQuery], pathChooser: ProgressivePathChooser, onComplete: Try[ProgressiveObservation] => U, options: Option[QueryEvaluationOptions] = None, id: Option[String] = None)(implicit ac: AdamContext): ProgressiveQueryStatusTracker = {
     val filter = if (bq.isDefined) {
-      new BooleanFilterScanExpression(entityname)(bq.get)().prepareTree().evaluate()
+      new BooleanFilterScanExpression(entityname)(bq.get)().prepareTree().evaluate(options)
     } else {
       None
     }
@@ -41,11 +42,11 @@ object ProgressiveQueryHandler extends Logging {
     val paths = pathChooser.getPaths(entityname, nnq)
     val distinctPaths = paths.distinct
 
-    if(paths.length != distinctPaths.length){
+    if (paths.length != distinctPaths.length) {
       log.debug("removed " + (distinctPaths.length - paths.length) + " paths for progressive querying, which were duplicates")
     }
 
-    progressiveQuery(distinctPaths, filter, onComplete, id)
+    progressiveQuery(distinctPaths, filter, onComplete, options, id)
   }
 
 
@@ -55,10 +56,11 @@ object ProgressiveQueryHandler extends Logging {
     *
     * @param exprs      query expressions to execute
     * @param onComplete function to execute on complete
+    * @param options    options applied when evaluating query
     * @param id         query id
     * @return a tracker for the progressive query
     */
-  private def progressiveQuery[U](exprs: Seq[QueryExpression], filter: Option[DataFrame], onComplete: Try[ProgressiveObservation] => U, id: Option[String] = None)(implicit ac: AdamContext): ProgressiveQueryStatusTracker = {
+  private def progressiveQuery[U](exprs: Seq[QueryExpression], filter: Option[DataFrame], onComplete: Try[ProgressiveObservation] => U, options: Option[QueryEvaluationOptions] = None, id: Option[String] = None)(implicit ac: AdamContext): ProgressiveQueryStatusTracker = {
     val tracker = new ProgressiveQueryStatusTracker(id.getOrElse(""))
     log.debug("performing progressive query with " + exprs.length + " paths: " + exprs.map(expr => expr.info.scantype.getOrElse("<missing scantype>") + " (" + expr.info.source.getOrElse("<missing source>") + ")").mkString(", "))
 
@@ -78,12 +80,13 @@ object ProgressiveQueryHandler extends Logging {
     * @param bq          information for boolean query
     * @param pathChooser progressive query path chooser
     * @param timelimit   maximum time to wait for results
+    * @param options     options applied when evaluating query
     * @param id          query id
     * @return
     */
-  def timedProgressiveQuery[U](entityname: EntityName, nnq: NearestNeighbourQuery, bq: Option[BooleanQuery], pathChooser: ProgressivePathChooser, timelimit: Duration, id: Option[String] = None)(implicit ac: AdamContext): ProgressiveObservation = {
+  def timedProgressiveQuery[U](entityname: EntityName, nnq: NearestNeighbourQuery, bq: Option[BooleanQuery], pathChooser: ProgressivePathChooser, timelimit: Duration, options: Option[QueryEvaluationOptions] = None, id: Option[String] = None)(implicit ac: AdamContext): ProgressiveObservation = {
     val filter = if (bq.isDefined) {
-      new BooleanFilterScanExpression(entityname)(bq.get)().prepareTree().evaluate()
+      new BooleanFilterScanExpression(entityname)(bq.get)().prepareTree().evaluate(options)
     } else {
       None
     }
@@ -91,11 +94,11 @@ object ProgressiveQueryHandler extends Logging {
     val paths = pathChooser.getPaths(entityname, nnq).distinct
     val distinctPaths = paths.distinct
 
-    if(paths.length != distinctPaths.length){
+    if (paths.length != distinctPaths.length) {
       log.debug("removed " + (distinctPaths.length - paths.length) + " paths for progressive querying, which were duplicates")
     }
 
-    timedProgressiveQuery(distinctPaths, timelimit, filter, id)
+    timedProgressiveQuery(distinctPaths, timelimit, filter, options, id)
   }
 
 
@@ -105,12 +108,13 @@ object ProgressiveQueryHandler extends Logging {
     *
     * @param exprs     query expressions to execute
     * @param timelimit maximum time to wait  for results
+    * @param options   options applied when evaluating query
     * @param id        query id
     * @return the results available together with a confidence score
     */
-  def timedProgressiveQuery(exprs: Seq[QueryExpression], timelimit: Duration, filter: Option[DataFrame], id: Option[String] = None)(implicit ac: AdamContext): ProgressiveObservation = {
+  def timedProgressiveQuery(exprs: Seq[QueryExpression], timelimit: Duration, filter: Option[DataFrame], options: Option[QueryEvaluationOptions] = None, id: Option[String] = None)(implicit ac: AdamContext): ProgressiveObservation = {
     log.debug("timed progressive query performs kNN query")
-    val tracker = progressiveQuery[Unit](exprs, filter, (observation: Try[ProgressiveObservation]) => ())
+    val tracker = progressiveQuery[Unit](exprs, filter, (observation: Try[ProgressiveObservation]) => (), options)
 
     val timerFuture = Future {
       val sleepTime = Duration(500.toLong, "millis")

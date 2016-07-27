@@ -16,4 +16,5 @@ object InformationLevels {
   case object LAST_STEP_ONLY extends InformationLevel("only last results")
   case object INTERMEDIATE_RESULTS extends InformationLevel("with intermediate results")
   case object PARTITION_PROVENANCE extends InformationLevel("partition provenance")
+  case object SOURCE_PROVENANCE extends InformationLevel("source provenance")
 }

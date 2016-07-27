@@ -177,7 +177,7 @@ case class RPCQueryObject(var id: String, var operation: String, var options: Ma
     val option = options.getOrElse("informationlevel", "final_only")
 
     option match {
-      case "all" => Seq(INFORMATION_FULL_TREE, INFORMATION_INTERMEDIATE_RESULTS, WITH_PROVENANCE_PARTITION_INFORMATION)
+      case "all" => Seq(INFORMATION_FULL_TREE, INFORMATION_INTERMEDIATE_RESULTS, WITH_PROVENANCE_PARTITION_INFORMATION, WITH_PROVENANCE_SOURCE_INFORMATION)
       case "all_noprovenance" => Seq(INFORMATION_FULL_TREE, INFORMATION_INTERMEDIATE_RESULTS)
       case "minimal" => Seq(INFORMATION_LAST_STEP_ONLY)
       case _ => Seq(INFORMATION_FULL_TREE, INFORMATION_INTERMEDIATE_RESULTS)

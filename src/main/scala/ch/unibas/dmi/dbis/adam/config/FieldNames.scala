@@ -11,6 +11,7 @@ object FieldNames {
   val featureIndexColumnName = "ap_indexfeature"
 
   val partitionColumnName = "ap_partition"
+  val sourceColumnName = "ap_source"
 
-  val reservedNames = Seq(distanceColumnName, featureIndexColumnName, partitionColumnName)
+  val reservedNames = Seq(distanceColumnName, featureIndexColumnName, partitionColumnName, sourceColumnName)
 }

@@ -41,11 +41,17 @@ case class CompoundIndexScanExpression(private val exprs: Seq[IndexScanExpressio
       expr.evaluate(options)
     })
 
-    val res = results.filter(_.isDefined).map(_.get).reduce[DataFrame] { case (a, b) => a.select(entity.pk.name, FieldNames.distanceColumnName).unionAll(b.select(entity.pk.name, FieldNames.distanceColumnName)) }
+    var result = results.filter(_.isDefined).map(_.get).reduce[DataFrame] { case (a, b) => a.select(entity.pk.name, FieldNames.distanceColumnName).unionAll(b.select(entity.pk.name, FieldNames.distanceColumnName)) }
       .groupBy(entity.pk.name).agg(count("*").alias("adampro_result_appears_in_n_joins"))
       .withColumn(FieldNames.distanceColumnName, distUDF(col("adampro_result_appears_in_n_joins")))
 
-    Some(res.select(entity.pk.name, FieldNames.distanceColumnName))
+    result = result.select(entity.pk.name, FieldNames.distanceColumnName)
+
+    if (options.isDefined && options.get.storeSourceProvenance) {
+      result = result.withColumn(FieldNames.sourceColumnName, lit(info.scantype.getOrElse("undefined")))
+    }
+
+    Some(result)
   }
 
   val distUDF = udf((count: Int) => {

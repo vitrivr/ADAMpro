@@ -21,7 +21,6 @@ import scala.util.{Failure, Success, Try}
   * Ivan Giangreco
   * March 2016
   */
-//TODO: careful: duplicate code in client
 class RPCClient(channel: ManagedChannel, definer: AdamDefinitionBlockingStub, searcherBlocking: AdamSearchBlockingStub, searcher: AdamSearchStub) extends Logging {
   /**
     *

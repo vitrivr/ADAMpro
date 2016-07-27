@@ -1,5 +1,6 @@
 package ch.unibas.dmi.dbis.adam.query.handler.internal
 
+import ch.unibas.dmi.dbis.adam.config.FieldNames
 import ch.unibas.dmi.dbis.adam.entity.Entity
 import ch.unibas.dmi.dbis.adam.entity.Entity._
 import ch.unibas.dmi.dbis.adam.main.AdamContext
@@ -7,6 +8,7 @@ import ch.unibas.dmi.dbis.adam.query.handler.generic.{QueryEvaluationOptions, Ex
 import ch.unibas.dmi.dbis.adam.query.query.BooleanQuery
 import ch.unibas.dmi.dbis.adam.utils.Logging
 import org.apache.spark.sql.DataFrame
+import org.apache.spark.sql.functions._
 
 import scala.collection.mutable
 
@@ -88,13 +90,17 @@ object BooleanFilterExpression extends Logging {
 
       ac.sc.setJobGroup(id.getOrElse(""), "boolean filter scan", interruptOnCancel = true)
 
-      var df = expr.evaluate(options)
+      var result = expr.evaluate(options)
 
       if (filter.isDefined) {
-        df = df.map(_.join(filter.get))
+        result = result.map(_.join(filter.get))
       }
 
-      df.map(BooleanFilterExpression.filter(_, bq))
+      if (result.isDefined && options.isDefined && options.get.storeSourceProvenance) {
+        result = Some(result.get.withColumn(FieldNames.sourceColumnName, lit(info.scantype.getOrElse("undefined"))))
+      }
+
+      result.map(BooleanFilterExpression.filter(_, bq))
     }
 
     override def equals(that: Any): Boolean =

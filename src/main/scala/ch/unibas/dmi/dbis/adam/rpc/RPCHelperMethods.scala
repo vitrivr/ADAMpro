@@ -12,7 +12,7 @@ import ch.unibas.dmi.dbis.adam.main.AdamContext
 import ch.unibas.dmi.dbis.adam.query.QueryCacheOptions
 import ch.unibas.dmi.dbis.adam.query.distance._
 import ch.unibas.dmi.dbis.adam.query.handler.external.ExternalScanExpressions
-import ch.unibas.dmi.dbis.adam.query.handler.generic.QueryExpression
+import ch.unibas.dmi.dbis.adam.query.handler.generic.{QueryEvaluationOptions, QueryExpression}
 import ch.unibas.dmi.dbis.adam.query.handler.internal.AggregationExpression._
 import ch.unibas.dmi.dbis.adam.query.handler.internal.BooleanFilterExpression.BooleanFilterScanExpression
 import ch.unibas.dmi.dbis.adam.query.handler.internal.ProjectionExpression.{CountOperationProjection, ExistsOperationProjection, FieldNameProjection, ProjectionField}
@@ -203,7 +203,18 @@ private[rpc] object RPCHelperMethods {
       case e: Exception => Failure(e)
     }
   }
-  
+
+  /**
+    *
+    * @param qm
+    */
+  def prepareEvaluationOptions(qm : QueryMessage): Option[QueryEvaluationOptions] = {
+    //source provenance option
+    val storeSourceProvenance = prepareInformationLevel(qm.information).contains(InformationLevels.SOURCE_PROVENANCE)
+
+    Some(QueryEvaluationOptions(storeSourceProvenance))
+  }
+
 
   /**
     *
@@ -365,6 +376,7 @@ private[rpc] object RPCHelperMethods {
         case QueryMessage.InformationLevel.INFORMATION_LAST_STEP_ONLY => InformationLevels.LAST_STEP_ONLY
         case QueryMessage.InformationLevel.INFORMATION_INTERMEDIATE_RESULTS => InformationLevels.INTERMEDIATE_RESULTS
         case QueryMessage.InformationLevel.WITH_PROVENANCE_PARTITION_INFORMATION => InformationLevels.PARTITION_PROVENANCE
+        case QueryMessage.InformationLevel.WITH_PROVENANCE_SOURCE_INFORMATION => InformationLevels.SOURCE_PROVENANCE
         case _ => null
       }
     }.filterNot(_ == null)

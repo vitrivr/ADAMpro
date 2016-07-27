@@ -1,7 +1,7 @@
 package ch.unibas.dmi.dbis.adam.query.progressive
 
 import ch.unibas.dmi.dbis.adam.main.AdamContext
-import ch.unibas.dmi.dbis.adam.query.handler.generic.QueryExpression
+import ch.unibas.dmi.dbis.adam.query.handler.generic.{QueryEvaluationOptions, QueryExpression}
 import ch.unibas.dmi.dbis.adam.utils.Logging
 import org.apache.spark.sql.DataFrame
 
@@ -16,13 +16,13 @@ import scala.util.{Failure, Success, Try}
   * Ivan Giangreco
   * October 2015
   */
-class ScanFuture[U](expression: QueryExpression, filter : Option[DataFrame], onComplete: Try[ProgressiveObservation] => U, val tracker: ProgressiveQueryStatusTracker)(implicit ac: AdamContext) extends Logging{
+class ScanFuture[U](expression: QueryExpression, filter : Option[DataFrame], onComplete: Try[ProgressiveObservation] => U, val tracker: ProgressiveQueryStatusTracker, options: Option[QueryEvaluationOptions] = None)(implicit ac: AdamContext) extends Logging{
   tracker.register(this)
 
   val t1 = System.currentTimeMillis()
 
   val future = Future {
-    expression.prepareTree().evaluate()
+    expression.prepareTree().evaluate(options)
   }
   future.onSuccess({
     case res =>

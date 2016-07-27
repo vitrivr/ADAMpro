@@ -43,7 +43,7 @@ case class TimedScanExpression(private val exprs: Seq[QueryExpression], private 
       None
     }
 
-    val res = ProgressiveQueryHandler.timedProgressiveQuery(exprs, timelimit, prefilter, id)
+    val res = ProgressiveQueryHandler.timedProgressiveQuery(exprs, timelimit, prefilter, options, id)
 
     confidence = Some(res.confidence)
     res.results
