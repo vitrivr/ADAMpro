@@ -31,9 +31,9 @@ class RPCClient(channel: ManagedChannel, definer: AdamDefinitionBlockingStub, se
     */
   val tupleSizes = Seq(1e5.toInt)
   val dimensions = Seq(10)
-  val partitions = Seq(4, 8, 16)
-  val indices = Seq(IndexType.sh, IndexType.vaf)
-  val partitioners = Seq(RepartitionMessage.Partitioner.SPARK, RepartitionMessage.Partitioner.CURRENT)
+  val partitions = Seq(4, 16, 200)
+  val indices = Seq(IndexType.sh)
+  val partitioners = Seq(RepartitionMessage.Partitioner.CURRENT, RepartitionMessage.Partitioner.SPARK)
 
   dropAllEntities()
 
@@ -123,7 +123,8 @@ class RPCClient(channel: ManagedChannel, definer: AdamDefinitionBlockingStub, se
         val value = partInfo.getOrElse(key, 0)
         partInfo.put(key, value + 1)
       }))
-      System.out.println("Partition Info: " + partInfo.toString())
+      System.out.println("Query done ,Partition Info: " + partInfo.toString())
+      System.out.println("Reponses size: "+res.responses.head.results.size)
       resSize += res.responses.head.results.size
       counter += 1
     }
