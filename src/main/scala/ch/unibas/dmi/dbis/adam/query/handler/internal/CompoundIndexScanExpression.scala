@@ -13,6 +13,8 @@ import org.apache.spark.sql.functions._
   *
   * Ivan Giangreco
   * June 2016
+  *
+  * Scans multiple indices and combines unprecise results.
   */
 @Experimental
 case class CompoundIndexScanExpression(private val exprs: Seq[IndexScanExpression])(nnq: NearestNeighbourQuery, id: Option[String] = None)(filterExpr: Option[QueryExpression] = None)(@transient implicit val ac: AdamContext) extends QueryExpression(id) {
