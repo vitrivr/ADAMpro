@@ -2,7 +2,7 @@ package ch.unibas.dmi.dbis.adam.query.handler.internal
 
 import ch.unibas.dmi.dbis.adam.config.FieldNames
 import ch.unibas.dmi.dbis.adam.main.AdamContext
-import ch.unibas.dmi.dbis.adam.query.handler.generic.{ExpressionDetails, QueryExpression}
+import ch.unibas.dmi.dbis.adam.query.handler.generic.{QueryEvaluationOptions, ExpressionDetails, QueryExpression}
 import ch.unibas.dmi.dbis.adam.query.query.NearestNeighbourQuery
 import org.apache.http.annotation.Experimental
 import org.apache.spark.sql.DataFrame
@@ -28,7 +28,7 @@ case class CompoundIndexScanExpression(private val exprs: Seq[IndexScanExpressio
 
   val entity = exprs.head.index.entity.get
 
-  override protected def run(filter: Option[DataFrame] = None)(implicit ac: AdamContext): Option[DataFrame] = {
+  override protected def run(options : Option[QueryEvaluationOptions], filter: Option[DataFrame] = None)(implicit ac: AdamContext): Option[DataFrame] = {
     log.debug("evaluate compound query index scan")
 
     ac.sc.setJobGroup(id.getOrElse(""), "compound query index scan", interruptOnCancel = true)
@@ -36,7 +36,7 @@ case class CompoundIndexScanExpression(private val exprs: Seq[IndexScanExpressio
     exprs.map(_.filter = filter)
     val results = exprs.map(expr => {
       //make sure that index only is queried and not a sequential scan too!
-      expr.evaluate()
+      expr.evaluate(options)
     })
 
     val res = results.filter(_.isDefined).map(_.get).reduce[DataFrame] { case (a, b) => a.select(entity.pk.name, FieldNames.distanceColumnName).unionAll(b.select(entity.pk.name, FieldNames.distanceColumnName)) }

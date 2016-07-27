@@ -7,7 +7,7 @@ import ch.unibas.dmi.dbis.adam.helpers.scanweight.ScanWeightInspector
 import ch.unibas.dmi.dbis.adam.index.Index
 import ch.unibas.dmi.dbis.adam.index.Index._
 import ch.unibas.dmi.dbis.adam.main.AdamContext
-import ch.unibas.dmi.dbis.adam.query.handler.generic.{ExpressionDetails, QueryExpression}
+import ch.unibas.dmi.dbis.adam.query.handler.generic.{QueryEvaluationOptions, ExpressionDetails, QueryExpression}
 import ch.unibas.dmi.dbis.adam.query.query.NearestNeighbourQuery
 import ch.unibas.dmi.dbis.adam.utils.Logging
 import org.apache.spark.sql.DataFrame
@@ -37,7 +37,7 @@ case class IndexScanExpression(private[handler] val index: Index)(private val nn
     )(nnq, id)(filterExpr)
   }
 
-  override protected def run(filter: Option[DataFrame] = None)(implicit ac: AdamContext): Option[DataFrame] = {
+  override protected def run(options : Option[QueryEvaluationOptions], filter: Option[DataFrame] = None)(implicit ac: AdamContext): Option[DataFrame] = {
     log.debug("performing index scan operation")
 
     ac.sc.setLocalProperty("spark.scheduler.pool", "index")
@@ -51,11 +51,11 @@ case class IndexScanExpression(private[handler] val index: Index)(private val nn
 
     val prefilter = if (filter.isDefined && filterExpr.isDefined) {
       val pk = index.entity.get.pk
-      Some(filter.get.select(pk.name).join(filterExpr.get.evaluate().get, pk.name))
+      Some(filter.get.select(pk.name).join(filterExpr.get.evaluate(options).get, pk.name))
     } else if (filter.isDefined) {
       filter
     } else if (filterExpr.isDefined) {
-      filterExpr.get.evaluate()
+      filterExpr.get.evaluate(options)
     } else {
       None
     }

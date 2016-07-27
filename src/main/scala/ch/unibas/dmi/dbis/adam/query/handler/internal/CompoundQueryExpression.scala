@@ -1,7 +1,7 @@
 package ch.unibas.dmi.dbis.adam.query.handler.internal
 
 import ch.unibas.dmi.dbis.adam.main.AdamContext
-import ch.unibas.dmi.dbis.adam.query.handler.generic.{ExpressionDetails, QueryExpression}
+import ch.unibas.dmi.dbis.adam.query.handler.generic.{QueryEvaluationOptions, ExpressionDetails, QueryExpression}
 import org.apache.spark.sql.DataFrame
 
 /**
@@ -14,13 +14,13 @@ case class CompoundQueryExpression(private val expr : QueryExpression, id: Optio
   override val info = ExpressionDetails(None, Some("Compound Query Expression"), id, None)
   children ++= Seq(expr)
 
-  override protected def run(filter : Option[DataFrame] = None)(implicit ac: AdamContext): Option[DataFrame] = {
+  override protected def run(options : Option[QueryEvaluationOptions], filter : Option[DataFrame] = None)(implicit ac: AdamContext): Option[DataFrame] = {
     log.debug("evaluate compound query")
 
     ac.sc.setJobGroup(id.getOrElse(""), "compound query", interruptOnCancel = true)
 
     expr.filter = filter
-    expr.evaluate()
+    expr.evaluate(options)
   }
 
   override def equals(that: Any): Boolean =

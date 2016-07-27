@@ -54,13 +54,13 @@ abstract class QueryExpression(id: Option[String]) extends Serializable with Log
     *
     * @return
     */
-  def evaluate()(implicit ac: AdamContext): Option[DataFrame] = {
+  def evaluate(options : Option[QueryEvaluationOptions] = None)(implicit ac: AdamContext): Option[DataFrame] = {
     if (!prepared) {
       log.warn("expression should be prepared before running")
     }
 
     val t1 = System.currentTimeMillis
-    results = run(filter)
+    results = run(options, filter)
     run = true
     val t2 = System.currentTimeMillis
 
@@ -76,7 +76,7 @@ abstract class QueryExpression(id: Option[String]) extends Serializable with Log
     * @param filter filter to apply to data
     * @return
     */
-  protected def run(filter: Option[DataFrame])(implicit ac: AdamContext): Option[DataFrame]
+  protected def run(options : Option[QueryEvaluationOptions], filter: Option[DataFrame])(implicit ac: AdamContext): Option[DataFrame]
 
 
   /**

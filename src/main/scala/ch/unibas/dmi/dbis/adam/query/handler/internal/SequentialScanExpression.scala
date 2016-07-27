@@ -5,7 +5,7 @@ import ch.unibas.dmi.dbis.adam.datatypes.feature.FeatureVectorWrapper
 import ch.unibas.dmi.dbis.adam.entity.Entity
 import ch.unibas.dmi.dbis.adam.entity.Entity.EntityName
 import ch.unibas.dmi.dbis.adam.main.AdamContext
-import ch.unibas.dmi.dbis.adam.query.handler.generic.{ExpressionDetails, QueryExpression}
+import ch.unibas.dmi.dbis.adam.query.handler.generic.{QueryEvaluationOptions, ExpressionDetails, QueryExpression}
 import ch.unibas.dmi.dbis.adam.query.query.NearestNeighbourQuery
 import ch.unibas.dmi.dbis.adam.utils.Logging
 import org.apache.spark.sql.DataFrame
@@ -26,7 +26,7 @@ case class SequentialScanExpression(private val entity : Entity)(private val nnq
     this(Entity.load(entityname).get)(nnq, id)(filterExpr)
   }
 
-  override protected def run(filter: Option[DataFrame] = None)(implicit ac: AdamContext): Option[DataFrame] = {
+  override protected def run(options : Option[QueryEvaluationOptions], filter: Option[DataFrame] = None)(implicit ac: AdamContext): Option[DataFrame] = {
     log.debug("perform sequential scan")
 
     ac.sc.setLocalProperty("spark.scheduler.pool", "sequential")
@@ -41,7 +41,7 @@ case class SequentialScanExpression(private val entity : Entity)(private val nnq
 
     if (filterExpr.isDefined) {
       filterExpr.get.filter = filter
-      ids ++= filterExpr.get.evaluate().get.select(entity.pk.name).collect().map(_.getAs[Any](entity.pk.name))
+      ids ++= filterExpr.get.evaluate(options).get.select(entity.pk.name).collect().map(_.getAs[Any](entity.pk.name))
     }
 
     if (ids.nonEmpty) {

@@ -7,7 +7,7 @@ import ch.unibas.dmi.dbis.adam.datatypes.FieldTypes
 import ch.unibas.dmi.dbis.adam.entity.AttributeDefinition
 import ch.unibas.dmi.dbis.adam.main.AdamContext
 import ch.unibas.dmi.dbis.adam.query.Result
-import ch.unibas.dmi.dbis.adam.query.handler.generic.{ExpressionDetails, QueryExpression}
+import ch.unibas.dmi.dbis.adam.query.handler.generic.{QueryEvaluationOptions, ExpressionDetails, QueryExpression}
 import ch.unibas.dmi.dbis.adam.query.handler.internal.AggregationExpression.ExpressionEvaluationOrder
 import org.apache.spark.sql.{DataFrame, Row}
 
@@ -27,15 +27,15 @@ abstract class AggregationExpression(private val left: QueryExpression, private 
   override val info = ExpressionDetails(None, Some("Aggregation Expression (" + aggregationName + ", " + order.toString + ")"), id, None)
   def aggregationName : String
 
-  override protected def run(filter: Option[DataFrame] = None)(implicit ac: AdamContext): Option[DataFrame] = {
+  override protected def run(options : Option[QueryEvaluationOptions], filter: Option[DataFrame] = None)(implicit ac: AdamContext): Option[DataFrame] = {
     log.debug("run aggregation operation")
 
     ac.sc.setJobGroup(id.getOrElse(""), "aggregation", interruptOnCancel = true)
 
     val result = order match {
-      case ExpressionEvaluationOrder.LeftFirst => asymmetric(left, right, filter)
-      case ExpressionEvaluationOrder.RightFirst => asymmetric(right, left, filter)
-      case ExpressionEvaluationOrder.Parallel => symmetric(left, right, filter)
+      case ExpressionEvaluationOrder.LeftFirst => asymmetric(left, right, options, filter)
+      case ExpressionEvaluationOrder.RightFirst => asymmetric(right, left, options, filter)
+      case ExpressionEvaluationOrder.Parallel => symmetric(left, right, options, filter)
     }
 
     Some(result)
@@ -57,23 +57,23 @@ abstract class AggregationExpression(private val left: QueryExpression, private 
     result
   }
 
-  private def asymmetric(first: QueryExpression, second: QueryExpression, filter: Option[DataFrame] = None): DataFrame = {
+  private def asymmetric(first: QueryExpression, second: QueryExpression, options : Option[QueryEvaluationOptions], filter: Option[DataFrame] = None): DataFrame = {
     first.filter = filter
-    val firstResult = first.evaluate()
+    val firstResult = first.evaluate(options)
 
     //TODO: possilby consider fuzzy sets rather than ignoring distance
     val pk = firstResult.get.schema.fields.filterNot(_.name == FieldNames.distanceColumnName).head.name
     second.filter = firstResult.map(_.select(pk))
-    val secondResult = second.evaluate()
+    val secondResult = second.evaluate(options)
 
     secondResult.get
   }
 
-  private def symmetric(first: QueryExpression, second: QueryExpression, filter: Option[DataFrame] = None): DataFrame = {
+  private def symmetric(first: QueryExpression, second: QueryExpression, options : Option[QueryEvaluationOptions], filter: Option[DataFrame] = None): DataFrame = {
     first.filter = filter
-    val ffut = Future(first.evaluate())
+    val ffut = Future(first.evaluate(options))
     second.filter = filter
-    val sfut = Future(second.evaluate())
+    val sfut = Future(second.evaluate(options))
 
     val f = for (firstResult <- ffut; secondResult <- sfut)
     //TODO: possilby consider fuzzy sets rather than ignoring distance
@@ -157,7 +157,7 @@ object AggregationExpression {
   case class EmptyExpression(id: Option[String] = None) extends QueryExpression(id) {
     override val info = ExpressionDetails(None, Some("Empty Expression"), id, None)
 
-    override protected def run(filter: Option[DataFrame] = None)(implicit ac: AdamContext): Option[DataFrame] = {
+    override protected def run(options : Option[QueryEvaluationOptions], filter: Option[DataFrame] = None)(implicit ac: AdamContext): Option[DataFrame] = {
       val rdd = ac.sc.emptyRDD[Row]
       Some(ac.sqlContext.createDataFrame(rdd, Result.resultSchema(AttributeDefinition("", FieldTypes.STRINGTYPE))))
     }
