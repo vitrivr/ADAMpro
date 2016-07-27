@@ -1,8 +1,7 @@
 package ch.unibas.dmi.dbis.adam.helpers.partition
 
-import ch.unibas.dmi.dbis.adam.entity.{Entity, EntityNameHolder}
-import ch.unibas.dmi.dbis.adam.index.Index
-import ch.unibas.dmi.dbis.adam.utils.Logging
+import ch.unibas.dmi.dbis.adam.entity.EntityNameHolder
+import ch.unibas.dmi.dbis.adam.main.AdamContext
 import org.apache.spark.sql.DataFrame
 
 /**
@@ -23,5 +22,5 @@ trait ADAMPartitioner{
     * @param nPartitions how many partitions shall be created
     * @return the partitioned DataFrame
     */
-  def apply(data: DataFrame, cols: Option[Seq[String]] = None, indexName: Option[EntityNameHolder] = None, nPartitions: Int)  : DataFrame
+  def apply(data: DataFrame, cols: Option[Seq[String]] = None, indexName: Option[EntityNameHolder] = None, nPartitions: Int)(implicit ac: AdamContext)  : DataFrame
 }

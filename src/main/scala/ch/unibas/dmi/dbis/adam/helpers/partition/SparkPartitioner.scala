@@ -3,6 +3,7 @@ package ch.unibas.dmi.dbis.adam.helpers.partition
 import ch.unibas.dmi.dbis.adam.entity.{Entity, EntityNameHolder}
 import ch.unibas.dmi.dbis.adam.exception.GeneralAdamException
 import ch.unibas.dmi.dbis.adam.index.Index
+import ch.unibas.dmi.dbis.adam.main.AdamContext
 import ch.unibas.dmi.dbis.adam.utils.Logging
 import org.apache.spark.sql.DataFrame
 import org.apache.spark.sql.functions._
@@ -20,7 +21,7 @@ import scala.util.Failure
 object SparkPartitioner extends ADAMPartitioner with Logging{
   override def partitionerName = PartitionerChoice.SPARK
 
-  override def apply(data: DataFrame, cols: Option[Seq[String]], indexName: Option[EntityNameHolder], nPartitions: Int): DataFrame = {
+  override def apply(data: DataFrame, cols: Option[Seq[String]], indexName: Option[EntityNameHolder], nPartitions: Int)(implicit ac: AdamContext): DataFrame = {
     if (cols.isDefined) {
       val entityColNames = data.schema.map(_.name)
       if (!cols.get.forall(name => entityColNames.contains(name))) {

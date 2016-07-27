@@ -1,6 +1,7 @@
 package ch.unibas.dmi.dbis.adam.helpers.partition
 
 import ch.unibas.dmi.dbis.adam.entity.EntityNameHolder
+import ch.unibas.dmi.dbis.adam.main.AdamContext
 import ch.unibas.dmi.dbis.adam.utils.Logging
 import org.apache.spark.Partitioner
 import org.apache.spark.sql.DataFrame
@@ -25,5 +26,5 @@ class RandomPartitioner(nPart: Int) extends Partitioner with ADAMPartitioner wit
   override def partitionerName = PartitionerChoice.RANDOM
 
   @deprecated
-  override def apply(data: DataFrame, cols: Option[Seq[String]], indexName: Option[EntityNameHolder], nPartitions: Int): DataFrame = throw new UnsupportedOperationException
+  override def apply(data: DataFrame, cols: Option[Seq[String]], indexName: Option[EntityNameHolder], nPartitions: Int)(implicit ac: AdamContext): DataFrame = throw new UnsupportedOperationException
 }
