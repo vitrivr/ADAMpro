@@ -284,7 +284,10 @@ case class Entity(val entityname: EntityName)(@transient implicit val ac: AdamCo
     try {
       lb.append("indexes" -> indexes.filter(_.isSuccess).map(_.get.propertiesMap).map(_.mkString(", ")).mkString("; ")) //TODO: check how to print nicely
     }catch {
-      case e: Exception => lb.append("indexes "-> "loading Indexes failed. At least index is faulty in this entity")
+      case _: Exception | _: com.google.common.util.concurrent.ExecutionError => {
+        log.error("Index property loading failed.")
+        lb.append("indexes "-> "loading Indexes failed. At least index is faulty in this entity")
+      }
     }
     lb.toMap
   }

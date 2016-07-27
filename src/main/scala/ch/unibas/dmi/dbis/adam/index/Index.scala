@@ -473,7 +473,23 @@ object Index extends Logging {
     val indexes = CatalogOperator.listIndexes(Some(entityname)).get
 
     indexes.foreach {
-      indexname => drop(indexname)
+      indexname => {
+          try{
+            val test = drop(indexname)
+            if(test.isFailure){
+              log.error("Error when dropping index: "+indexname)
+              CatalogOperator.dropIndex(indexname)
+              IndexLRUCache.invalidate(indexname)
+            }
+          }catch{
+            //Neither ExecutionError nor Throwable extend Exceptions, so they need to be manually specified :)
+            case _:java.lang.AssertionError | _ : com.google.common.util.concurrent.ExecutionError => {
+              log.error("ExecutionError does not extend throwable... Error when dropping index: "+indexname)
+              CatalogOperator.dropIndex(indexname)
+              IndexLRUCache.invalidate(indexname)
+            }
+          }
+      }
     }
 
     Success(null)
