@@ -107,7 +107,7 @@ trait BitString[A] extends Serializable {
     *
     * @return
     */
-  protected def getBitIndexes: Seq[Int]
+  def getBitIndexes: Seq[Int]
 }
 
 

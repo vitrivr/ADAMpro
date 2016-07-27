@@ -2,16 +2,13 @@ package ch.unibas.dmi.dbis.adam.index
 
 import ch.unibas.dmi.dbis.adam.catalog.CatalogOperator
 import ch.unibas.dmi.dbis.adam.config.FieldNames
-import ch.unibas.dmi.dbis.adam.datatypes.bitString.BitString
 import ch.unibas.dmi.dbis.adam.entity.Entity
 import ch.unibas.dmi.dbis.adam.exception.GeneralAdamException
 import ch.unibas.dmi.dbis.adam.helpers.partition._
 import ch.unibas.dmi.dbis.adam.index.structures.IndexTypes
 import ch.unibas.dmi.dbis.adam.main.AdamContext
 import ch.unibas.dmi.dbis.adam.utils.Logging
-import org.apache.spark.{HashPartitioner, RangePartitioner}
 import org.apache.spark.rdd.RDD
-import org.apache.spark.sql.types.{StructField, StructType}
 import org.apache.spark.sql.{DataFrame, Row, SaveMode}
 
 import scala.util.{Failure, Success, Try}
@@ -54,8 +51,6 @@ object IndexPartitioner extends Logging {
     }
 
     //repartition
-    // TODO Some Feedback about how the data is distributed now
-    // rdd.mapPartitions(iter => Array(iter.size).iterator, true)
     data = partitioner match {
       case PartitionerChoice.SPARK =>
         SparkPartitioner(data, cols, Some(index.indexname), nPartitions)
@@ -64,14 +59,15 @@ object IndexPartitioner extends Logging {
       case PartitionerChoice.CURRENT => {
         val indextype = IndexTypes.SHINDEX
         try{
-          //TODO Switch from Info log
+          //TODO Switch from Info log. Extract code below to SHPartitioner
           val originSchema = data.schema
-          val joinDF = Entity.load(index.entityname).get.indexes.find(f => f.get.indextypename == indextype).get.get.data.withColumnRenamed(FieldNames.featureIndexColumnName, "ap_partkey")
+          val joinDF = Entity.load(index.entityname).get.indexes.find(f => f.get.indextypename == indextype).get.get.data.withColumnRenamed(FieldNames.featureIndexColumnName, FieldNames.partitionKey)
           log.info(joinDF.schema.treeString)
           data = data.join(joinDF, index.pk.name)
           log.info(data.schema.treeString)
           //Hack alert: Length of the bitstring is determined by sampling the first row of the rdd...
-          val repartitioned: RDD[(Any, Row)] = data.map(r => (r.getAs[Any]("ap_partkey"), r)).partitionBy(new SHPartitioner(nPartitions, joinDF.head().getAs[BitString[_]]("ap_partkey").toByteArray.length))
+          //TODO Currently this is hardcoded now since we can't get bitlength from the index
+          val repartitioned: RDD[(Any, Row)] = data.map(r => (r.getAs[Any](FieldNames.partitionKey), r)).partitionBy(new SHPartitioner(nPartitions, 20))
           val reparRDD = repartitioned.mapPartitions((it) => {it.map(f => Row(f._2.getAs(index.pk.name), f._2.getAs(FieldNames.featureIndexColumnName)))})
           ac.sqlContext.createDataFrame(reparRDD, originSchema)
         }catch{
