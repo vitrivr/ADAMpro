@@ -5,10 +5,11 @@ import ch.unibas.dmi.dbis.adam.datatypes.feature.FeatureVectorWrapper
 import ch.unibas.dmi.dbis.adam.entity.Entity
 import ch.unibas.dmi.dbis.adam.entity.Entity.EntityName
 import ch.unibas.dmi.dbis.adam.main.AdamContext
-import ch.unibas.dmi.dbis.adam.query.handler.generic.{ExpressionDetails, QueryExpression}
+import ch.unibas.dmi.dbis.adam.query.handler.generic.{ExpressionDetails, QueryEvaluationOptions, QueryExpression}
 import ch.unibas.dmi.dbis.adam.query.query.NearestNeighbourQuery
 import ch.unibas.dmi.dbis.adam.utils.Logging
 import org.apache.spark.sql.DataFrame
+import org.apache.spark.sql.functions._
 
 import scala.collection.mutable
 
@@ -18,21 +19,29 @@ import scala.collection.mutable
   * Ivan Giangreco
   * May 2016
   */
-case class SequentialScanExpression(private val entity : Entity)(private val nnq: NearestNeighbourQuery, id: Option[String] = None)(filterExpr: Option[QueryExpression] = None)(@transient implicit val ac: AdamContext) extends QueryExpression(id) {
+case class SequentialScanExpression(private val entity: Entity)(private val nnq: NearestNeighbourQuery, id: Option[String] = None)(filterExpr: Option[QueryExpression] = None)(@transient implicit val ac: AdamContext) extends QueryExpression(id) {
   override val info = ExpressionDetails(Some(entity.entityname), Some("Sequential Scan Expression"), id, None)
+  val sourceDescription = {
+    if(filterExpr.isDefined){
+      filterExpr.get.info.scantype.getOrElse("undefined") + "->" + info.scantype.getOrElse("undefined")
+    } else {
+      info.scantype.getOrElse("undefined")
+    }
+  }
+
   children ++= filterExpr.map(Seq(_)).getOrElse(Seq())
 
   def this(entityname: EntityName)(nnq: NearestNeighbourQuery, id: Option[String] = None)(filterExpr: Option[QueryExpression] = None)(implicit ac: AdamContext) {
     this(Entity.load(entityname).get)(nnq, id)(filterExpr)
   }
 
-  override protected def run(filter: Option[DataFrame] = None)(implicit ac: AdamContext): Option[DataFrame] = {
+  override protected def run(options: Option[QueryEvaluationOptions], filter: Option[DataFrame] = None)(implicit ac: AdamContext): Option[DataFrame] = {
     log.debug("perform sequential scan")
 
     ac.sc.setLocalProperty("spark.scheduler.pool", "sequential")
     ac.sc.setJobGroup(id.getOrElse(""), "sequential scan: " + entity.entityname.toString, interruptOnCancel = true)
 
-    var df = entity.getData()
+    var result = entity.getData()
     var ids = mutable.Set[Any]()
 
     if (filter.isDefined) {
@@ -41,18 +50,22 @@ case class SequentialScanExpression(private val entity : Entity)(private val nnq
 
     if (filterExpr.isDefined) {
       filterExpr.get.filter = filter
-      ids ++= filterExpr.get.evaluate().get.select(entity.pk.name).collect().map(_.getAs[Any](entity.pk.name))
+      ids ++= filterExpr.get.evaluate(options).get.select(entity.pk.name).collect().map(_.getAs[Any](entity.pk.name))
     }
 
     if (ids.nonEmpty) {
       val idsbc = ac.sc.broadcast(ids)
-      df = df.map(d => {
+      result = result.map(d => {
         val rdd = d.rdd.filter(x => idsbc.value.contains(x.getAs[Any](entity.pk.name)))
         ac.sqlContext.createDataFrame(rdd, d.schema)
       })
     }
 
-    df.map(SequentialScanExpression.scan(_, nnq))
+    if (result.isDefined && options.isDefined && options.get.storeSourceProvenance) {
+      result = Some(result.get.withColumn(FieldNames.sourceColumnName, lit(sourceDescription)))
+    }
+
+    result.map(SequentialScanExpression.scan(_, nnq))
   }
 
   override def equals(other: Any): Boolean =

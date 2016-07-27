@@ -45,21 +45,9 @@ class ChronosAgent(ipAddressOrHostname: String) extends AbstractChronosAgent(ipA
   override def execute(job: ChronosJob, inputDirectory : File, outputDirectory : File): Properties = {
     val logger = addChronosLogHandler(job)
     val executor = new EvaluationExecutor(job, logger, setProgress(job)(_), inputDirectory, outputDirectory)
-
-    val thread = new Thread {
-      override def run {
-        // your custom behavior here
-      }
-    }
-    thread.start
-    Thread.sleep(50) // slow the loop down a bit
-
-
-
     runningJobs +=  job.id -> executor
     val results = executor.run()
     runningJobs -= job.id
-
     results
   }
 

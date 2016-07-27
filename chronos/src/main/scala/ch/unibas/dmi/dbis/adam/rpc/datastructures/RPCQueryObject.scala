@@ -2,7 +2,7 @@ package ch.unibas.dmi.dbis.adam.rpc.datastructures
 
 import ch.unibas.dmi.dbis.adam.http.grpc.BooleanQueryMessage.WhereMessage
 import ch.unibas.dmi.dbis.adam.http.grpc.QueryMessage.InformationLevel
-import ch.unibas.dmi.dbis.adam.http.grpc.QueryMessage.InformationLevel.{INFORMATION_FULL_TREE, INFORMATION_INTERMEDIATE_RESULTS, INFORMATION_LAST_STEP_ONLY}
+import ch.unibas.dmi.dbis.adam.http.grpc.QueryMessage.InformationLevel._
 import ch.unibas.dmi.dbis.adam.http.grpc._
 
 import scala.collection.mutable.ListBuffer
@@ -178,8 +178,9 @@ case class RPCQueryObject(var id: String, var operation: String, var options: Ma
     val option = options.getOrElse("informationlevel", "final_only")
 
     option match {
-      case "full_tree" => Seq(INFORMATION_FULL_TREE, INFORMATION_INTERMEDIATE_RESULTS)
-      case "final_only" => Seq(INFORMATION_LAST_STEP_ONLY)
+      case "all" => Seq(INFORMATION_FULL_TREE, INFORMATION_INTERMEDIATE_RESULTS, WITH_PROVENANCE_PARTITION_INFORMATION, WITH_PROVENANCE_SOURCE_INFORMATION)
+      case "all_noprovenance" => Seq(INFORMATION_FULL_TREE, INFORMATION_INTERMEDIATE_RESULTS)
+      case "minimal" => Seq(INFORMATION_LAST_STEP_ONLY)
       case _ => Seq(INFORMATION_FULL_TREE, INFORMATION_INTERMEDIATE_RESULTS)
     }
   }

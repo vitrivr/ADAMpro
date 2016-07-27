@@ -102,13 +102,14 @@ class SearchRPC extends AdamSearchGrpc.AdamSearch with Logging {
   override def doQuery(request: QueryMessage): Future[QueryResultsMessage] = {
     time("rpc call for query operation") {
       val expression = RPCHelperMethods.toExpression(request)
+      val evaluationOptions = RPCHelperMethods.prepareEvaluationOptions(request)
       val informationLevel = RPCHelperMethods.prepareInformationLevel(request.information)
 
       if (expression.isFailure) {
         Future.successful(QueryResultsMessage(Some(AckMessage(code = AckMessage.Code.ERROR, message = expression.failed.get.getMessage))))
       }
 
-      val res = QueryOp(expression.get)
+      val res = QueryOp(expression.get, evaluationOptions)
 
       log.debug("\n ------------------- \n" + expression.get.mkString(0) + "\n ------------------- \n")
 
@@ -168,8 +169,10 @@ class SearchRPC extends AdamSearchGrpc.AdamSearch with Logging {
           None
         }
 
+        val evaluationOptions = RPCHelperMethods.prepareEvaluationOptions(request)
+
         //TODO: change here, so that we do not need to rely on "getEntity"
-        val tracker = QueryOp.progressive(request.from.get.getEntity, nnq, bq , pathChooser, onComplete)
+        val tracker = QueryOp.progressive(request.from.get.getEntity, nnq, bq , pathChooser, onComplete, evaluationOptions)
 
         //track on completed
         while (!tracker.get.isCompleted) {

@@ -1,6 +1,5 @@
 package ch.unibas.dmi.dbis.adam.query.handler.internal
 
-import ch.unibas.dmi.dbis.adam.config.FieldNames
 import ch.unibas.dmi.dbis.adam.entity.Entity
 import ch.unibas.dmi.dbis.adam.entity.Entity._
 import ch.unibas.dmi.dbis.adam.exception.QueryNotConformException
@@ -8,12 +7,11 @@ import ch.unibas.dmi.dbis.adam.helpers.scanweight.ScanWeightInspector
 import ch.unibas.dmi.dbis.adam.index.Index
 import ch.unibas.dmi.dbis.adam.index.Index._
 import ch.unibas.dmi.dbis.adam.main.AdamContext
-import ch.unibas.dmi.dbis.adam.query.handler.generic.{ExpressionDetails, QueryExpression}
+import ch.unibas.dmi.dbis.adam.query.handler.generic.{QueryEvaluationOptions, ExpressionDetails, QueryExpression}
 import ch.unibas.dmi.dbis.adam.query.query.NearestNeighbourQuery
 import ch.unibas.dmi.dbis.adam.utils.Logging
-import org.apache.spark.rdd.RDD
-import org.apache.spark.sql.{DataFrame, Row}
-import org.apache.spark.sql.types.{DataType, DataTypes, StructField, StructType}
+import org.apache.spark.sql.DataFrame
+import org.apache.spark.sql.functions._
 
 /**
   * adamtwo
@@ -23,6 +21,14 @@ import org.apache.spark.sql.types.{DataType, DataTypes, StructField, StructType}
   */
 case class IndexScanExpression(private[handler] val index: Index)(private val nnq: NearestNeighbourQuery, id: Option[String] = None)(filterExpr: Option[QueryExpression] = None)(@transient implicit val ac: AdamContext) extends QueryExpression(id) {
   override val info = ExpressionDetails(Some(index.indextypename.name + " (" + index.indexname + ")"), Some("Index Scan Expression"), id, Some(index.confidence))
+  val sourceDescription = {
+    if (filterExpr.isDefined) {
+      filterExpr.get.info.scantype.getOrElse("undefined") + "->" + info.scantype.getOrElse("undefined")
+    } else {
+      info.scantype.getOrElse("undefined")
+    }
+  }
+
   children ++= filterExpr.map(Seq(_)).getOrElse(Seq())
 
   def this(indexname: IndexName)(nnq: NearestNeighbourQuery, id: Option[String] = None)(filterExpr: Option[QueryExpression] = None)(implicit ac: AdamContext) {
@@ -40,7 +46,7 @@ case class IndexScanExpression(private[handler] val index: Index)(private val nn
     )(nnq, id)(filterExpr)
   }
 
-  override protected def run(filter: Option[DataFrame] = None)(implicit ac: AdamContext): Option[DataFrame] = {
+  override protected def run(options: Option[QueryEvaluationOptions], filter: Option[DataFrame] = None)(implicit ac: AdamContext): Option[DataFrame] = {
     log.debug("performing index scan operation")
 
     ac.sc.setLocalProperty("spark.scheduler.pool", "index")
@@ -50,20 +56,26 @@ case class IndexScanExpression(private[handler] val index: Index)(private val nn
       throw QueryNotConformException()
     }
 
-    //TODO: is query conform
+    //TODO: check if is query conform
 
     val prefilter = if (filter.isDefined && filterExpr.isDefined) {
       val pk = index.entity.get.pk
-      Some(filter.get.select(pk.name).join(filterExpr.get.evaluate().get, pk.name))
+      Some(filter.get.select(pk.name).join(filterExpr.get.evaluate(options).get, pk.name))
     } else if (filter.isDefined) {
       filter
     } else if (filterExpr.isDefined) {
-      filterExpr.get.evaluate()
+      filterExpr.get.evaluate(options)
     } else {
       None
     }
 
-    Some(IndexScanExpression.scan(index)(prefilter, nnq, id))
+    var result = IndexScanExpression.scan(index)(prefilter, nnq, id)
+
+    if (options.isDefined && options.get.storeSourceProvenance) {
+      result = result.withColumn(FieldNames.sourceColumnName, lit(sourceDescription))
+    }
+
+    Some(result)
   }
 
   override def prepareTree(): QueryExpression = {
@@ -100,11 +112,6 @@ object IndexScanExpression extends Logging {
     * @return
     */
   def scan(index: Index)(filter: Option[DataFrame], nnq: NearestNeighbourQuery, id: Option[String] = None)(implicit ac: AdamContext): DataFrame = {
-    val df = index.scan(nnq, filter)
-    val idOrigins = df.rdd.mapPartitionsWithIndex((idx, it) => {
-      it.map(f => Row(f.getAs[Long](index.pk.name), idx))
-    })
-    val originDF = ac.sqlContext.createDataFrame(idOrigins, StructType(Seq(StructField(index.pk.name, DataTypes.LongType), StructField(FieldNames.provenanceColumnName,DataTypes.IntegerType))))
-    df.join(originDF,index.pk.name)
+    index.scan(nnq, filter)
   }
 }

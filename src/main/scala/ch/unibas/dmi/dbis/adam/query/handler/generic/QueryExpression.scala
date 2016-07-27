@@ -2,10 +2,12 @@ package ch.unibas.dmi.dbis.adam.query.handler.generic
 
 import java.util.concurrent.TimeUnit
 
+import ch.unibas.dmi.dbis.adam.config.FieldNames
 import ch.unibas.dmi.dbis.adam.main.AdamContext
 import ch.unibas.dmi.dbis.adam.query.information.InformationLevels._
 import ch.unibas.dmi.dbis.adam.utils.Logging
-import org.apache.spark.sql.DataFrame
+import org.apache.spark.sql.types.IntegerType
+import org.apache.spark.sql.{DataFrame, Row}
 
 import scala.collection.mutable.ListBuffer
 import scala.concurrent.duration.Duration
@@ -49,15 +51,16 @@ abstract class QueryExpression(id: Option[String]) extends Serializable with Log
 
   /**
     * Evaluates the query expression. Note that you should run prepareTree() before evaluating a query expression.
+    *
     * @return
     */
-  def evaluate()(implicit ac: AdamContext): Option[DataFrame] = {
+  def evaluate(options : Option[QueryEvaluationOptions] = None)(implicit ac: AdamContext): Option[DataFrame] = {
     if (!prepared) {
       log.warn("expression should be prepared before running")
     }
 
     val t1 = System.currentTimeMillis
-    results = run(filter)
+    results = run(options, filter)
     run = true
     val t2 = System.currentTimeMillis
 
@@ -73,7 +76,7 @@ abstract class QueryExpression(id: Option[String]) extends Serializable with Log
     * @param filter filter to apply to data
     * @return
     */
-  protected def run(filter: Option[DataFrame])(implicit ac: AdamContext): Option[DataFrame]
+  protected def run(options : Option[QueryEvaluationOptions], filter: Option[DataFrame])(implicit ac: AdamContext): Option[DataFrame]
 
 
   /**
@@ -82,7 +85,7 @@ abstract class QueryExpression(id: Option[String]) extends Serializable with Log
     * @param levels degree of detail in collecting information
     * @return
     */
-  def information(levels: Seq[InformationLevel]): ListBuffer[ExpressionDetails] = {
+  def information(levels: Seq[InformationLevel])(implicit ac: AdamContext): ListBuffer[ExpressionDetails] = {
     var withResults: Boolean = true
     var maxDepth: Int = Int.MaxValue
 
@@ -90,9 +93,10 @@ abstract class QueryExpression(id: Option[String]) extends Serializable with Log
       case FULL_TREE => maxDepth = Int.MaxValue
       case INTERMEDIATE_RESULTS => withResults = true
       case LAST_STEP_ONLY => maxDepth = 0
+      case _ => {}
     }
 
-    information(0, maxDepth, withResults)
+    information(0, maxDepth, levels, withResults = withResults)
   }
 
 
@@ -101,8 +105,8 @@ abstract class QueryExpression(id: Option[String]) extends Serializable with Log
     *
     * @return
     */
-  def information(): ExpressionDetails = {
-    information(0, 0, withResults = true).head
+  def information()(implicit ac: AdamContext): ExpressionDetails = {
+    information(0, 0, Seq(), withResults = true).head
   }
 
   /**
@@ -114,13 +118,20 @@ abstract class QueryExpression(id: Option[String]) extends Serializable with Log
     * @param lb           list buffer to write information to
     * @return
     */
-  private def information(currentDepth: Int = 0, maxDepth: Int = Int.MaxValue, withResults: Boolean, lb: ListBuffer[ExpressionDetails] = new ListBuffer[ExpressionDetails]()): ListBuffer[ExpressionDetails] = {
+  private def information(currentDepth: Int = 0, maxDepth: Int = Int.MaxValue, levels: Seq[InformationLevel], withResults: Boolean, lb: ListBuffer[ExpressionDetails] = new ListBuffer[ExpressionDetails]())(implicit ac: AdamContext): ListBuffer[ExpressionDetails] = {
     if (!run) {
       log.warn("expression should be run before trying to receive information")
     }
 
     if (withResults || currentDepth == 0) {
-      info.results = results
+      var _results = results
+
+      if (_results.isDefined && levels.contains(PARTITION_PROVENANCE)) {
+        val rdd = results.get.rdd.mapPartitionsWithIndex((idx, iter) => iter.map(r => Row(r.toSeq ++ Seq(idx): _*)), preservesPartitioning = true)
+        _results = Some(ac.sqlContext.createDataFrame(rdd, results.get.schema.add(FieldNames.partitionColumnName, IntegerType)))
+      }
+
+      info.results = _results
     }
 
     lb += info
@@ -130,7 +141,7 @@ abstract class QueryExpression(id: Option[String]) extends Serializable with Log
     }
 
     children.foreach {
-      child => child.information(currentDepth + 1, maxDepth, withResults, lb)
+      child => child.information(currentDepth + 1, maxDepth, levels, withResults, lb)
     }
 
     lb

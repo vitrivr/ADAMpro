@@ -1,7 +1,7 @@
 package ch.unibas.dmi.dbis.adam.query.handler.internal
 
 import ch.unibas.dmi.dbis.adam.main.AdamContext
-import ch.unibas.dmi.dbis.adam.query.handler.generic.{ExpressionDetails, QueryExpression}
+import ch.unibas.dmi.dbis.adam.query.handler.generic.{QueryEvaluationOptions, ExpressionDetails, QueryExpression}
 import ch.unibas.dmi.dbis.adam.query.handler.internal.ProjectionExpression.ProjectionField
 import ch.unibas.dmi.dbis.adam.utils.Logging
 import org.apache.spark.sql.types.{BooleanType, LongType, StructField, StructType}
@@ -17,9 +17,9 @@ case class ProjectionExpression(private val projection: ProjectionField, private
   override val info = ExpressionDetails(None, Some("Projection Expression"), id, None)
   children ++= Seq(expr)
 
-  override protected def run(filter: Option[DataFrame] = None)(implicit ac: AdamContext): Option[DataFrame] = {
+  override protected def run(options : Option[QueryEvaluationOptions], filter: Option[DataFrame] = None)(implicit ac: AdamContext): Option[DataFrame] = {
     log.debug("performing projection on data")
-    expr.evaluate().map(projection.f)
+    expr.evaluate(options).map(projection.f)
   }
 
   override def equals(that: Any): Boolean =

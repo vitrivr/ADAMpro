@@ -148,7 +148,7 @@ class QueryTestSuite extends AdamTestBase with ScalaFutures {
 
         When("performing a kNN query")
         val nnq = NearestNeighbourQuery("featurefield", es.feature.vector, None, es.distance, es.k, false, es.options)
-        val results = QueryOp.index(es.entity.entityname, IndexTypes.VAFINDEX, nnq, None).get.get
+        val results = QueryOp.entityIndex(es.entity.entityname, IndexTypes.VAFINDEX, nnq, None).get.get
           .map(r => (r.getAs[Float](FieldNames.distanceColumnName), r.getAs[Long]("tid"))).collect() //get here TID of metadata
           .sortBy(_._1).toSeq
 

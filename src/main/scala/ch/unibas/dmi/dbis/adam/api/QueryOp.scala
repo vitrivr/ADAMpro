@@ -4,7 +4,7 @@ import ch.unibas.dmi.dbis.adam.entity.Entity._
 import ch.unibas.dmi.dbis.adam.index.Index
 import ch.unibas.dmi.dbis.adam.index.Index.{IndexName, IndexTypeName}
 import ch.unibas.dmi.dbis.adam.main.AdamContext
-import ch.unibas.dmi.dbis.adam.query.handler.generic.QueryExpression
+import ch.unibas.dmi.dbis.adam.query.handler.generic.{QueryEvaluationOptions, QueryExpression}
 import ch.unibas.dmi.dbis.adam.query.handler.internal.BooleanFilterExpression.BooleanFilterScanExpression
 import ch.unibas.dmi.dbis.adam.query.handler.internal._
 import ch.unibas.dmi.dbis.adam.query.progressive.{ProgressiveQueryStatusTracker, ProgressiveObservation, ProgressivePathChooser, ProgressiveQueryHandler}
@@ -25,12 +25,13 @@ object QueryOp extends GenericOp {
   /**
     * Executes a query expression.
     *
-    * @param q query expression
+    * @param q       query expression
+    * @param options options applied when evaluating query
     * @return
     */
-  def apply(q: QueryExpression)(implicit ac: AdamContext): Try[Option[DataFrame]] = {
+  def apply(q: QueryExpression, options: Option[QueryEvaluationOptions] = None)(implicit ac: AdamContext): Try[Option[DataFrame]] = {
     execute("query execution operation") {
-      Success(q.prepareTree().evaluate())
+      Success(q.prepareTree().evaluate(options))
     }
   }
 
@@ -41,9 +42,10 @@ object QueryOp extends GenericOp {
     * @param entityname name of entity
     * @param nnq        information for nearest neighbour query
     * @param bq         information for boolean query
+    * @param options    options applied when evaluating query
     * @return
     */
-  def sequential(entityname: EntityName, nnq: NearestNeighbourQuery, bq: Option[BooleanQuery])(implicit ac: AdamContext): Try[Option[DataFrame]] = {
+  def sequential(entityname: EntityName, nnq: NearestNeighbourQuery, bq: Option[BooleanQuery], options: Option[QueryEvaluationOptions] = None)(implicit ac: AdamContext): Try[Option[DataFrame]] = {
     execute("sequential query operation") {
       var scan: Option[QueryExpression] = None
 
@@ -54,7 +56,7 @@ object QueryOp extends GenericOp {
 
       scan = Some(new SequentialScanExpression(entityname)(nnq)(scan))
 
-      return Success(scan.get.prepareTree().evaluate())
+      return Success(scan.get.prepareTree().evaluate(options))
     }
   }
 
@@ -63,9 +65,10 @@ object QueryOp extends GenericOp {
     *
     * @param indexname name of index
     * @param nnq       information for nearest neighbour query
+    * @param options   options applied when evaluating query
     * @return
     */
-  def index(indexname: IndexName, nnq: NearestNeighbourQuery, bq: Option[BooleanQuery])(implicit ac: AdamContext): Try[Option[DataFrame]] = {
+  def index(indexname: IndexName, nnq: NearestNeighbourQuery, bq: Option[BooleanQuery], options: Option[QueryEvaluationOptions] = None)(implicit ac: AdamContext): Try[Option[DataFrame]] = {
     execute("specified index query operation") {
       val index = Index.load(indexname).get
 
@@ -78,7 +81,7 @@ object QueryOp extends GenericOp {
 
       scan = Some(IndexScanExpression(index)(nnq)(scan))
 
-      Success(scan.get.prepareTree().evaluate())
+      Success(scan.get.prepareTree().evaluate(options))
     }
   }
 
@@ -88,9 +91,10 @@ object QueryOp extends GenericOp {
     * @param entityname    name of entity
     * @param indextypename name of index type
     * @param nnq           information for nearest neighbour query
+    * @param options       options applied when evaluating query
     * @return
     */
-  def index(entityname: EntityName, indextypename: IndexTypeName, nnq: NearestNeighbourQuery, bq: Option[BooleanQuery])(implicit ac: AdamContext): Try[Option[DataFrame]] = {
+  def entityIndex(entityname: EntityName, indextypename: IndexTypeName, nnq: NearestNeighbourQuery, bq: Option[BooleanQuery], options: Option[QueryEvaluationOptions] = None)(implicit ac: AdamContext): Try[Option[DataFrame]] = {
     execute("index query operation") {
       var scan: Option[QueryExpression] = None
 
@@ -101,7 +105,7 @@ object QueryOp extends GenericOp {
 
       scan = Some(new IndexScanExpression(entityname, indextypename)(nnq)(scan))
 
-      Success(scan.get.prepareTree().evaluate())
+      Success(scan.get.prepareTree().evaluate(options))
     }
   }
 
@@ -113,10 +117,11 @@ object QueryOp extends GenericOp {
     * @param nnq         information for nearest neighbour query
     * @param pathChooser progressive query path chooser
     * @param onComplete  operation to perform as soon as one index returns results
+    * @param options     options applied when evaluating query
     * @return a tracker for the progressive query
     */
-  def progressive[U](entityname: EntityName, nnq: NearestNeighbourQuery, bq: Option[BooleanQuery], pathChooser: ProgressivePathChooser, onComplete: Try[ProgressiveObservation] => U)(implicit ac: AdamContext): Try[ProgressiveQueryStatusTracker] = {
-    Success(ProgressiveQueryHandler.progressiveQuery(entityname, nnq, bq, pathChooser, onComplete))
+  def progressive[U](entityname: EntityName, nnq: NearestNeighbourQuery, bq: Option[BooleanQuery], pathChooser: ProgressivePathChooser, onComplete: Try[ProgressiveObservation] => U, options: Option[QueryEvaluationOptions] = None)(implicit ac: AdamContext): Try[ProgressiveQueryStatusTracker] = {
+    Success(ProgressiveQueryHandler.progressiveQuery(entityname, nnq, bq, pathChooser, onComplete, options))
   }
 
 
@@ -128,23 +133,25 @@ object QueryOp extends GenericOp {
     * @param nnq         information for nearest neighbour query
     * @param pathChooser progressive query path chooser
     * @param timelimit   maximum time to wait
+    * @param options     options applied when evaluating query
     * @return the results available together with a confidence score
     */
-  def timedProgressive(entityname: EntityName, nnq: NearestNeighbourQuery, bq: Option[BooleanQuery], pathChooser: ProgressivePathChooser, timelimit: Duration)(implicit ac: AdamContext): Try[ProgressiveObservation] = {
+  def timedProgressive(entityname: EntityName, nnq: NearestNeighbourQuery, bq: Option[BooleanQuery], pathChooser: ProgressivePathChooser, timelimit: Duration, options: Option[QueryEvaluationOptions] = None)(implicit ac: AdamContext): Try[ProgressiveObservation] = {
     execute("timed progressive query operation") {
-      Success(ProgressiveQueryHandler.timedProgressiveQuery(entityname, nnq, bq, pathChooser, timelimit))
+      Success(ProgressiveQueryHandler.timedProgressiveQuery(entityname, nnq, bq, pathChooser, timelimit, options))
     }
   }
 
   /**
     * Performs a query which uses index compounding for pre-filtering.
     *
-    * @param expr query expression
+    * @param expr    query expression
+    * @param options options applied when evaluating query
     * @return
     */
-  def compoundQuery(expr: QueryExpression)(implicit ac: AdamContext): Try[Option[DataFrame]] = {
+  def compoundQuery(expr: QueryExpression, options: Option[QueryEvaluationOptions] = None)(implicit ac: AdamContext): Try[Option[DataFrame]] = {
     execute("compound query operation") {
-      Success(CompoundQueryExpression(expr).evaluate())
+      Success(CompoundQueryExpression(expr).evaluate(options))
     }
   }
 
@@ -153,8 +160,9 @@ object QueryOp extends GenericOp {
     *
     * @param entityname name of entitty
     * @param bq         information for boolean query
+    * @param options    options applied when evaluating query
     */
-  def booleanQuery(entityname: EntityName, bq: Option[BooleanQuery])(implicit ac: AdamContext): Try[Option[DataFrame]] = {
+  def booleanQuery(entityname: EntityName, bq: Option[BooleanQuery], options: Option[QueryEvaluationOptions] = None)(implicit ac: AdamContext): Try[Option[DataFrame]] = {
     execute("boolean query operation") {
       var scan: Option[QueryExpression] = None
 
@@ -163,7 +171,7 @@ object QueryOp extends GenericOp {
         scan = Some(new BooleanFilterScanExpression(entityname)(bq.get)(scan))
       }
 
-      return Success(scan.get.evaluate())
+      return Success(scan.get.evaluate(options))
     }
   }
 }

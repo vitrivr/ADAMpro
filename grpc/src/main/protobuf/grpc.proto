@@ -249,8 +249,10 @@ message QueryMessage {
       INFORMATION_LAST_STEP_ONLY = 1;
       //returns all intermediate results (slow!)
       INFORMATION_INTERMEDIATE_RESULTS = 2;
-      //WITH_PROVENANCE_PARTITION_INFORMATION = 2;
-      //WITH_PROVENANCE_INDEX_INFORMATION = 3;
+      //returns the provenance partition of the data
+      WITH_PROVENANCE_PARTITION_INFORMATION = 3;
+      //returns the provenance source of the data
+      WITH_PROVENANCE_SOURCE_INFORMATION = 4;
     }
   repeated InformationLevel information = 12;
 }

@@ -1,12 +1,14 @@
 package ch.unibas.dmi.dbis.adam.query.handler.internal
 
+import ch.unibas.dmi.dbis.adam.config.FieldNames
 import ch.unibas.dmi.dbis.adam.entity.Entity
 import ch.unibas.dmi.dbis.adam.entity.Entity._
 import ch.unibas.dmi.dbis.adam.main.AdamContext
-import ch.unibas.dmi.dbis.adam.query.handler.generic.{ExpressionDetails, QueryExpression}
+import ch.unibas.dmi.dbis.adam.query.handler.generic.{QueryEvaluationOptions, ExpressionDetails, QueryExpression}
 import ch.unibas.dmi.dbis.adam.query.query.BooleanQuery
 import ch.unibas.dmi.dbis.adam.utils.Logging
 import org.apache.spark.sql.DataFrame
+import org.apache.spark.sql.functions._
 
 import scala.collection.mutable
 
@@ -31,7 +33,7 @@ object BooleanFilterExpression extends Logging {
       this(Entity.load(entityname).get)(bq, id)(filterExpr)(ac)
     }
 
-    override protected def run(filter: Option[DataFrame] = None)(implicit ac: AdamContext): Option[DataFrame] = {
+    override protected def run(options : Option[QueryEvaluationOptions], filter: Option[DataFrame] = None)(implicit ac: AdamContext): Option[DataFrame] = {
       log.debug("run boolean filter operation on entity")
 
       ac.sc.setJobGroup(id.getOrElse(""), "boolean filter scan", interruptOnCancel = true)
@@ -46,7 +48,7 @@ object BooleanFilterExpression extends Logging {
 
       if (filterExpr.isDefined) {
         filterExpr.get.filter = filter
-        ids ++= filterExpr.get.evaluate().get.select(entity.pk.name).collect().map(_.getAs[Any](entity.pk.name))
+        ids ++= filterExpr.get.evaluate(options).get.select(entity.pk.name).collect().map(_.getAs[Any](entity.pk.name))
       }
 
       if (ids.nonEmpty) {
@@ -83,18 +85,22 @@ object BooleanFilterExpression extends Logging {
     override val info = ExpressionDetails(None, Some("Ad-Hoc Boolean-Scan Expression"), id, None)
     children ++= Seq(expr)
 
-    override protected def run(filter: Option[DataFrame] = None)(implicit ac: AdamContext): Option[DataFrame] = {
+    override protected def run(options : Option[QueryEvaluationOptions], filter: Option[DataFrame] = None)(implicit ac: AdamContext): Option[DataFrame] = {
       log.debug("run boolean filter operation on data")
 
       ac.sc.setJobGroup(id.getOrElse(""), "boolean filter scan", interruptOnCancel = true)
 
-      var df = expr.evaluate()
+      var result = expr.evaluate(options)
 
       if (filter.isDefined) {
-        df = df.map(_.join(filter.get))
+        result = result.map(_.join(filter.get))
       }
 
-      df.map(BooleanFilterExpression.filter(_, bq))
+      if (result.isDefined && options.isDefined && options.get.storeSourceProvenance) {
+        result = Some(result.get.withColumn(FieldNames.sourceColumnName, lit(info.scantype.getOrElse("undefined"))))
+      }
+
+      result.map(BooleanFilterExpression.filter(_, bq))
     }
 
     override def equals(that: Any): Boolean =
