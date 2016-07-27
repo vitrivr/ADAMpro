@@ -7,11 +7,10 @@ package ch.unibas.dmi.dbis.adam.config
   * March 2016
   */
 object FieldNames {
-  val distanceColumnName = "adamprodistance"
-  val featureIndexColumnName = "adamproindexfeature"
+  val distanceColumnName = "ap_distance"
+  val featureIndexColumnName = "ap_indexfeature"
 
-  val partitionColumnName = "adampropartition"
-  val provenanceColumnName = "adamproprovenance"
+  val partitionColumnName = "ap_partition"
 
-  val reservedNames = Seq(distanceColumnName, featureIndexColumnName)
+  val reservedNames = Seq(distanceColumnName, featureIndexColumnName, partitionColumnName)
 }
