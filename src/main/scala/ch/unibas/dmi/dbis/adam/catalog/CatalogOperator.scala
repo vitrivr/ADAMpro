@@ -171,7 +171,7 @@ object CatalogOperator extends Logging {
     */
   def deleteEntityOption(entityname: EntityName, key: String): Try[Void] = {
     execute("delete entity") {
-      val query = _entityOptions.filter(_.entityname === entityname.toString).delete
+      val query = _entityOptions.filter(_.entityname === entityname.toString).filter(_.key === key).delete
       Await.result(DB.run(query), MAX_WAITING_TIME)
       null
     }
@@ -232,7 +232,7 @@ object CatalogOperator extends Logging {
     */
   def deleteAttributeOption(entityname: EntityName, attribute: String, key: String): Try[Void] = {
     execute("delete attribute option") {
-      val query = _attributeOptions.filter(_.entityname === entityname.toString).filter(_.attributename === attribute).delete
+      val query = _attributeOptions.filter(_.entityname === entityname.toString).filter(_.attributename === attribute).filter(_.key === key).delete
       Await.result(DB.run(query), MAX_WAITING_TIME)
       null
     }
@@ -288,7 +288,7 @@ object CatalogOperator extends Logging {
     */
   def deleteIndexOption(indexname: IndexName, key: String): Try[Void] = {
     execute("delete index option") {
-      val query = _indexOptions.filter(_.indexname === indexname.toString).delete
+      val query = _indexOptions.filter(_.indexname === indexname.toString).filter(_.key === key).delete
       Await.result(DB.run(query), MAX_WAITING_TIME)
       null
     }

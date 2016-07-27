@@ -9,7 +9,6 @@ import io.grpc.okhttp.OkHttpChannelBuilder
 import io.grpc.{ManagedChannel, ManagedChannelBuilder}
 
 import scala.collection.mutable
-import scala.collection.mutable.ListBuffer
 import scala.util.Random
 
 /**
@@ -116,14 +115,14 @@ class RPCClient(channel: ManagedChannel, definer: AdamDefinitionBlockingStub, se
     var counter = 0
     while (counter < queryCount) {
       val res = searcherBlocking.doQuery(QueryMessage(nnq = Some(randomQueryMessage(dim, part)), from = Some(FromMessage(FromMessage.Source.Index(indexName)))))
-      System.out.println(res.responses.head.results.head.data.toString())
+
       val partInfo = mutable.HashMap[Int, Int]()
       res.responses.map(f => f.results.map(r => {
         val key = r.data.getOrElse("adamproprovenance", DataMessage.defaultInstance).getIntData
         val value = partInfo.getOrElse(key, 0)
         partInfo.put(key, value+1)
       }))
-      System.out.println(partInfo.toString())
+      System.out.println("Partition Info: "+partInfo.toString())
       resSize += res.responses.head.results.size
       counter += 1
     }

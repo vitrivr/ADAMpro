@@ -169,10 +169,12 @@ private[rpc] object RPCHelperMethods {
         return Failure(right.failed.get)
       }
 
+      //TODO: possibly add options to aggregation operations
+
       request.operation match {
-        case ExpressionQueryMessage.Operation.UNION => Success(UnionExpression(left.get, right.get, queryid))
-        case ExpressionQueryMessage.Operation.INTERSECT => Success(IntersectExpression(left.get, right.get, order, queryid))
-        case ExpressionQueryMessage.Operation.EXCEPT => Success(ExceptExpression(left.get, right.get, order, queryid))
+        case ExpressionQueryMessage.Operation.UNION => Success(UnionExpression(left.get, right.get, Map(), queryid))
+        case ExpressionQueryMessage.Operation.INTERSECT => Success(IntersectExpression(left.get, right.get, order, Map(),queryid))
+        case ExpressionQueryMessage.Operation.EXCEPT => Success(ExceptExpression(left.get, right.get, order, Map(),queryid))
         case _ => Failure(new Exception("operation unknown"))
       }
     } catch {

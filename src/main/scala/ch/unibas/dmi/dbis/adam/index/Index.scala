@@ -20,7 +20,8 @@ import ch.unibas.dmi.dbis.adam.storage.handler.IndexFlatFileHandler
 import ch.unibas.dmi.dbis.adam.utils.Logging
 import org.apache.spark.HashPartitioner
 import org.apache.spark.rdd.RDD
-import org.apache.spark.sql.{SaveMode, DataFrame}
+import org.apache.spark.sql.types._
+import org.apache.spark.sql.{Row, SaveMode, DataFrame}
 import org.scalatest.path
 
 import scala.collection.mutable
@@ -191,7 +192,8 @@ abstract class Index(@transient implicit val ac: AdamContext) extends Serializab
       df = ac.sqlContext.createDataFrame(rdd, df.schema)
     }
 
-    val results = scan(df, q, distance, options, k)
+    var results = scan(df, q, distance, options, k)
+
     val t2 = System.currentTimeMillis
 
     log.debug(indexname + " returning tuples in " + (t2 - t1) + " msecs")
@@ -230,12 +232,12 @@ abstract class Index(@transient implicit val ac: AdamContext) extends Serializab
     lb.append("attribute" -> attribute)
     lb.append("stale" -> isStale.toString)
     lb.append("partitions" -> data.rdd.getNumPartitions.toString)
-    val partInfo: RDD[(Int, Int)] = data.rdd.mapPartitionsWithIndex((idx, f) => {
-      Iterator((idx, f.size))
+
+    //TODO: possibly add flag for displaying or not
+    val partitionInfo = data.rdd.mapPartitionsWithIndex((idx, f) => {
+      Iterator((idx, f.length))
     })
-    val part = ListBuffer[(String, String)]()
-    partInfo.collect().map(f => part.append(f._1.toString -> f._2.toString))
-    lb.append("PartitionCount" -> part.toMap.mkString(", "))
+    lb.append("tuplesPerPartition" -> partitionInfo.collect().map{case(id,length) => "(" + id + "," + length + ")"}.mkString)
 
     lb.toMap
   }
