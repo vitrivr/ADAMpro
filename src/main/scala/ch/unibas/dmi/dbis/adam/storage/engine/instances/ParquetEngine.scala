@@ -63,11 +63,11 @@ class ParquetEngine(private val subengine: GenericParquetEngine) extends FileEng
   override def hashCode: Int = subengine.hashCode
 }
 
-abstract class GenericParquetEngine(filepath: String) extends Serializable {
+abstract class GenericParquetEngine(filepath: String) extends Logging with Serializable {
   def read(filename: String)(implicit ac: AdamContext): Try[DataFrame] = {
     try {
       if (!exists(filename).get) {
-        Failure(throw new GeneralAdamException("no file found at " + filename))
+        throw new GeneralAdamException("no file found at " + filename)
       }
 
       Success(ac.sqlContext.read.parquet(filepath + "/" + filename))
@@ -100,8 +100,8 @@ abstract class GenericParquetEngine(filepath: String) extends Serializable {
 /**
   *
   */
-class ParquetHadoopStorage(private val basepath: String, private val filepath: String) extends GenericParquetEngine(filepath) with Serializable {
-  @transient val hadoopConf = new Configuration()
+class ParquetHadoopStorage(private val basepath: String, private val filepath: String) extends GenericParquetEngine(filepath) with Logging with Serializable {
+  @transient private val hadoopConf = new Configuration()
   hadoopConf.set("fs.defaultFS", basepath)
 
   if (!FileSystem.get(new Path("/").toUri, hadoopConf).exists(new Path(filepath))) {
@@ -110,9 +110,7 @@ class ParquetHadoopStorage(private val basepath: String, private val filepath: S
 
   override def drop(filename: String)(implicit ac: AdamContext): Try[Void] = {
     try {
-      val hadoopConf = new Configuration()
-      hadoopConf.set("fs.defaultFS", AdamConfig.basePath)
-      val hdfs = FileSystem.get(new Path(AdamConfig.dataPath).toUri, hadoopConf)
+      val hdfs = FileSystem.get(new Path(filepath).toUri, hadoopConf)
       val drop = hdfs.delete(new org.apache.hadoop.fs.Path(filename), true)
 
       if (drop) {
@@ -128,7 +126,9 @@ class ParquetHadoopStorage(private val basepath: String, private val filepath: S
 
   override def exists(filename: String)(implicit ac: AdamContext): Try[Boolean] = {
     try {
-      Success(FileSystem.get(new Path(AdamConfig.dataPath).toUri, hadoopConf).exists(new org.apache.hadoop.fs.Path(filename)))
+      val exists = FileSystem.get(hadoopConf).exists(new org.apache.hadoop.fs.Path(filepath + "/" + filename))
+
+      Success(exists)
     } catch {
       case e: Exception => Failure(e)
     }
@@ -152,7 +152,7 @@ class ParquetHadoopStorage(private val basepath: String, private val filepath: S
 /**
   *
   */
-class ParquetLocalEngine(private val filepath: String) extends GenericParquetEngine(filepath) with Serializable {
+class ParquetLocalEngine(private val filepath: String) extends GenericParquetEngine(filepath) with Logging with Serializable {
   val dataFolder = new File(filepath)
 
   if (!dataFolder.exists()) {
