@@ -2,6 +2,7 @@ package ch.unibas.dmi.dbis.adam.index
 
 import ch.unibas.dmi.dbis.adam.catalog.CatalogOperator
 import ch.unibas.dmi.dbis.adam.config.FieldNames
+import ch.unibas.dmi.dbis.adam.datatypes.bitString.BitString
 import ch.unibas.dmi.dbis.adam.entity.Entity
 import ch.unibas.dmi.dbis.adam.exception.GeneralAdamException
 import ch.unibas.dmi.dbis.adam.helpers.partition._
@@ -59,17 +60,30 @@ object IndexPartitioner extends Logging {
       case PartitionerChoice.CURRENT => {
         val indextype = IndexTypes.SHINDEX
         try{
+          log.debug("\n --------------- \n Partitioning to "+nPartitions+" with Current Implementation")
           //TODO Switch from Info log. Extract code below to SHPartitioner
           val originSchema = data.schema
+          //log.debug("Original schema: \n "+originSchema.treeString)
+
+          log.info("Sampled BitString from the original DF "+data.head().getAs[BitString[_]](FieldNames.featureIndexColumnName).getBitIndexes.mkString(", "))
+
+          //TODO The direct access to the data param here is also not pretty
           val joinDF = Entity.load(index.entityname).get.indexes.find(f => f.get.indextypename == indextype).get.get.data.withColumnRenamed(FieldNames.featureIndexColumnName, FieldNames.partitionKey)
-          log.info(joinDF.schema.treeString)
+          //log.info("Join Schema: \n "+joinDF.schema.treeString)
+          //log.info("Sampled BitString from the joinDF: "+joinDF.head().getAs[BitString[_]](FieldNames.partitionKey).getBitIndexes.mkString(", "))
+
           data = data.join(joinDF, index.pk.name)
-          log.info(data.schema.treeString)
-          //Hack alert: Length of the bitstring is determined by sampling the first row of the rdd...
+          //log.info("Joined Schema: \n " +data.schema.treeString)
+          //log.info("Sampled BitString from the joined df: oriringal feature - "+data.head().getAs[BitString[_]](FieldNames.featureIndexColumnName).getBitIndexes.mkString(", ")+" | partKey - "+data.head().getAs[BitString[_]](FieldNames.partitionKey).getBitIndexes.mkString(", "))
+
           //TODO Currently this is hardcoded now since we can't get bitlength from the index
           val repartitioned: RDD[(Any, Row)] = data.map(r => (r.getAs[Any](FieldNames.partitionKey), r)).partitionBy(new SHPartitioner(nPartitions, 20))
-          val reparRDD = repartitioned.mapPartitions((it) => {it.map(f => Row(f._2.getAs(index.pk.name), f._2.getAs(FieldNames.featureIndexColumnName)))})
-          ac.sqlContext.createDataFrame(reparRDD, originSchema)
+
+          val reparRDD: RDD[Row] = repartitioned.mapPartitions((it) => {it.map(f => Row(f._2.getAs(index.pk.name), f._2.getAs(FieldNames.featureIndexColumnName)))})
+          val retDF = ac.sqlContext.createDataFrame(reparRDD, originSchema)
+          //log.info("New DF schema: \n"+retDF.schema.treeString)
+          //log.info("Sampled BitString from the repartitioned DF "+retDF.head().getAs[BitString[_]](FieldNames.featureIndexColumnName).getBitIndexes.mkString(", ")+" | data partKey - "+data.head().getAs[BitString[_]](FieldNames.partitionKey).getBitIndexes.mkString(", ") + " | joinDF partKey - " + joinDF.head().getAs[BitString[_]](FieldNames.partitionKey).getBitIndexes.mkString(", ") )
+          retDF
         }catch{
           case e: java.util.NoSuchElementException => {
             log.error("Repartitioning with this mode is not possible because the index: "+indextype.name + " does not exist", e)
@@ -85,6 +99,8 @@ object IndexPartitioner extends Logging {
         }
     }
     data = data.select(index.pk.name, FieldNames.featureIndexColumnName)
+    log.debug("New Data Schema: "+data.schema.treeString)
+    log.debug("Sampled Row: "+data.head.toString() + "| "+data.head.getAs[BitString[_]](FieldNames.featureIndexColumnName).getBitIndexes.mkString(", "))
 
     mode match {
       case PartitionMode.CREATE_NEW =>

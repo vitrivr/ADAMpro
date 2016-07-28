@@ -2,10 +2,8 @@ package ch.unibas.dmi.dbis.adam.helpers.partition
 
 import ch.unibas.dmi.dbis.adam.config.FieldNames
 import ch.unibas.dmi.dbis.adam.datatypes.bitString.BitString
-import ch.unibas.dmi.dbis.adam.entity.{Entity, EntityNameHolder}
+import ch.unibas.dmi.dbis.adam.entity.EntityNameHolder
 import ch.unibas.dmi.dbis.adam.exception.GeneralAdamException
-import ch.unibas.dmi.dbis.adam.index.Index
-import ch.unibas.dmi.dbis.adam.index.IndexPartitioner._
 import ch.unibas.dmi.dbis.adam.index.structures.IndexTypes
 import ch.unibas.dmi.dbis.adam.main.AdamContext
 import ch.unibas.dmi.dbis.adam.utils.Logging
@@ -39,7 +37,8 @@ class SHPartitioner(nPart: Int, noBits: Int) extends Partitioner with ADAMPartit
   override def getPartition(key: Any): Int = {
     val bitString = key.asInstanceOf[BitString[_]]
     //TODO Rounding behavior...
-    //log.info("Getting partition for bitstring: "+bitString.toByteArray.mkString(", "))
+    val string = bitString.toByteArray.mkString(",")
+    //log.info("Getting partition for bitstring: "+string)
     val bits: Seq[Int] = bitString.getBitIndexes
     //log.info("Bits set at positions: "+bitString.getBitIndexes.mkString(", "))
     //Is 6 Correct here? It's the static thing in the BitSet that the bitString is supposed to abstract
@@ -49,15 +48,26 @@ class SHPartitioner(nPart: Int, noBits: Int) extends Partitioner with ADAMPartit
       //log.debug("Byte "+f+" is set, "+f)
       number += Math.pow(2, f).toInt
     })
-    //log.info("Bitstring was converted to number: "+number)
+    //log.info("Bitstring "+string+" was converted to number: "+number)
     val partition = number / gap
-    //log.info("Bitstring was assigned partition: "+partition)
+    //log.info("Bitstring "+string+" was assigned partition: "+partition)
     partition
   }
 
   override def partitionerName = PartitionerChoice.SH
 
+  /**
+    * Not functional atm
+    * @param data DataFrame you want to partition
+    * @param cols Columns you want to perform the partition on. If none are provided, the index pk is used instead
+    * @param indexName If this is index-data, you can specify the name of the index here. Will be used to determine pk.
+    *                  If no indexName is provided, we just partition by the head of the dataframe-schema
+    * @param nPartitions how many partitions shall be created
+    * @param ac
+    * @return the partitioned DataFrame
+    */
   override def apply(data: DataFrame, cols: Option[Seq[String]], indexName: Option[EntityNameHolder], nPartitions: Int)(implicit ac: AdamContext): DataFrame = {
+    throw new UnsupportedOperationException
     val indextype = IndexTypes.SHINDEX
     if(indexName.isEmpty){
       throw new GeneralAdamException("Indexname was not specified")

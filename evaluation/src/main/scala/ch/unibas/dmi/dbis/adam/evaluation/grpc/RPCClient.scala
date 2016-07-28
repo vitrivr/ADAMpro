@@ -19,21 +19,18 @@ import scala.util.Random
   */
 class RPCClient(channel: ManagedChannel, definer: AdamDefinitionBlockingStub, searcherBlocking: AdamSearchBlockingStub, searcher: AdamSearchStub) extends AdamParEvalUtils with EvaluationResultLogger {
 
-  //k=10k to get sensible partition information
   val k = 100
 
-  val provenance = "true"
-
-  val numQ = 2
-
   /**
-    * Evaluation Code
+    * Evaluation Params
     */
+  val indexOnly = false
+  val numQ = 2
   val tupleSizes = Seq(1e5.toInt)
   val dimensions = Seq(10)
-  val partitions = Seq(4, 16, 200)
+  val partitions = Seq(4, 16, 32, 200)
   val indices = Seq(IndexType.sh)
-  val partitioners = Seq(RepartitionMessage.Partitioner.CURRENT, RepartitionMessage.Partitioner.SPARK)
+  val partitioners = Seq( RepartitionMessage.Partitioner.CURRENT)
 
   dropAllEntities()
 
@@ -47,12 +44,20 @@ class RPCClient(channel: ManagedChannel, definer: AdamDefinitionBlockingStub, se
             val name = getOrGenIndex(index, eName)
           }
           for (index <- indices) {
-            val name = getOrGenIndex(index, eName)
+            var name = getOrGenIndex(index, eName)
             for (part <- partitions) {
               System.out.println("Repartitioning: " + part)
               for (partitioner <- partitioners) {
-                System.out.println("Repartitioning with " + partitioner.name)
-                definer.repartitionIndexData(RepartitionMessage(name, numberOfPartitions = part, option = RepartitionMessage.PartitionOptions.REPLACE_EXISTING, partitioner = partitioner))
+                System.out.println("\n ---------------------- \n Repartitioning with " + partitioner.name + ", partitions: "+part)
+
+                val repmsg = definer.repartitionIndexData(RepartitionMessage(name, numberOfPartitions = part, option = RepartitionMessage.PartitionOptions.CREATE_NEW, partitioner = partitioner))
+                System.out.println("Repartition Message: "+repmsg.message)
+                name = repmsg.message
+                val props = definer.getEntityProperties(EntityNameMessage(eName))
+
+                System.out.println("\n ----------------------- Repartitioned, entity Properties: \n "+props)
+                System.out.println("----------------")
+
                 val (avgTime, noResults) = timeQuery(name, dim, part)
                 //TODO Maybe Result Quality
                 appendToResults(tuples, dim, part, index.name, avgTime, k, noResults, partitioner)
@@ -115,6 +120,7 @@ class RPCClient(channel: ManagedChannel, definer: AdamDefinitionBlockingStub, se
     while (counter < queryCount) {
       val res = searcherBlocking.doQuery(QueryMessage(nnq = Some(randomQueryMessage(dim, part)), from = Some(FromMessage(FromMessage.Source.Index(indexName))), information = Seq(QueryMessage.InformationLevel.WITH_PROVENANCE_PARTITION_INFORMATION, QueryMessage.InformationLevel.WITH_PROVENANCE_SOURCE_INFORMATION)))
 
+      System.out.println("\" Randomly \" generated Query: "+randomQueryMessage(dim, part).query.get.feature.denseVector.get.vector.mkString(","))
       //System.out.println("Example Data: " + res.responses.head.results.head.data.mkString(", "))
 
       val partInfo = mutable.HashMap[Int, Int]()
@@ -125,6 +131,18 @@ class RPCClient(channel: ManagedChannel, definer: AdamDefinitionBlockingStub, se
       }))
       System.out.println("Query done ,Partition Info: " + partInfo.toString())
       System.out.println("Reponses size: "+res.responses.head.results.size)
+      System.out.println("Sample response: "+res.responses.head.results.head.data.mkString(", "))
+
+      val sorted: Seq[QueryResultTupleMessage] = res.responses.head.results.sortBy(f => f.data.get("ap_distance").get.getFloatData)
+
+      val top100Info = mutable.HashMap[Int, Int]()
+      sorted.take(100).map(f => {
+        val key = f.data.getOrElse("ap_partition", DataMessage.defaultInstance).getIntData
+        val value = top100Info.getOrElse(key, 0)
+        top100Info.put(key, value + 1)
+      })
+      System.out.println("Top 100 Partition Info: "+top100Info.mkString(", "))
+      System.out.println("\n ----------------- \n")
       resSize += res.responses.head.results.size
       counter += 1
     }
@@ -133,7 +151,7 @@ class RPCClient(channel: ManagedChannel, definer: AdamDefinitionBlockingStub, se
   }
 
   /** Generates a random query using Random.nextFloat() */
-  def randomQueryMessage(dim: Int, part: Int) = NearestNeighbourQueryMessage("feature", Some(FeatureVectorMessage().withDenseVector(DenseVectorMessage(Seq.fill(dim)(Random.nextFloat())))), None, getDistanceMsg, k, Map[String, String]("locality" -> provenance), indexOnly = true, 1 until part)
+  def randomQueryMessage(dim: Int, part: Int) = NearestNeighbourQueryMessage("feature", Some(FeatureVectorMessage().withDenseVector(DenseVectorMessage(Seq.fill(dim)(Random.nextFloat())))), None, getDistanceMsg, k, Map[String, String](), indexOnly = indexOnly, 1 until part)
 
   /** Drops all entities */
   def dropAllEntities() = {
@@ -152,7 +170,7 @@ class RPCClient(channel: ManagedChannel, definer: AdamDefinitionBlockingStub, se
       if (dropEnt.code.isError) {
         System.err.println("Error when dropping Entity " + entity + ": " + dropEnt.message)
       }
-
+      System.out.println("\n Dropped Entity \n")
     }
   }
 
