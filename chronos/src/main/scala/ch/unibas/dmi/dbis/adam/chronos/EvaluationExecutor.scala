@@ -64,8 +64,8 @@ class EvaluationExecutor(val job: EvaluationJob, logger: ChronosHttpClient#Chron
       logger.publish(new LogRecord(Level.INFO, "creating all indexes for " + entityname))
       client.entityCreateAllIndexes(entityname, Seq(FEATURE_VECTOR_ATTRIBUTENAME), 2).get
     } else {
-      logger.publish(new LogRecord(Level.INFO, "creating " + job.execution_name + " index for " + entityname))
-      Seq(client.indexCreate(entityname, FEATURE_VECTOR_ATTRIBUTENAME, job.execution_name, 2, Map()).get)
+      logger.publish(new LogRecord(Level.INFO, "creating " + job.execution_subtype + " index for " + entityname))
+      Seq(client.indexCreate(entityname, FEATURE_VECTOR_ATTRIBUTENAME, job.execution_subtype, 2, Map()).get)
     }
 
     if (job.measurement_cache) {
@@ -249,6 +249,10 @@ class EvaluationExecutor(val job: EvaluationJob, logger: ChronosHttpClient#Chron
     lb.append("informationlevel" -> "final_only")
 
     lb.append("hints" -> job.execution_hint)
+
+    if(job.execution_name == "index"){
+      lb.append("subtype" -> job.execution_subtype)
+    }
 
     RPCQueryObject(generateString(10), job.execution_name, lb.toMap, None)
   }
