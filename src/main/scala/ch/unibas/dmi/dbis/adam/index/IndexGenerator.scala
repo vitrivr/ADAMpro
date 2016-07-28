@@ -30,5 +30,5 @@ trait IndexGenerator extends Serializable with Logging {
 }
 
 object IndexGenerator {
-  private[index] val MINIMUM_NUMBER_OF_TUPLE = 10
+  private[index] val MINIMUM_NUMBER_OF_TUPLE = 1000
 }
