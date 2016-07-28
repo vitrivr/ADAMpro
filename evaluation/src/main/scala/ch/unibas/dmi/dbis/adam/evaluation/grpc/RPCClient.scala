@@ -118,9 +118,11 @@ class RPCClient(channel: ManagedChannel, definer: AdamDefinitionBlockingStub, se
     val start = System.currentTimeMillis()
     var counter = 0
     while (counter < queryCount) {
-      val res = searcherBlocking.doQuery(QueryMessage(nnq = Some(randomQueryMessage(dim, part)), from = Some(FromMessage(FromMessage.Source.Index(indexName))), information = Seq(QueryMessage.InformationLevel.WITH_PROVENANCE_PARTITION_INFORMATION, QueryMessage.InformationLevel.WITH_PROVENANCE_SOURCE_INFORMATION)))
+      val qm = QueryMessage(nnq = Some(randomQueryMessage(dim, part)), from = Some(FromMessage(FromMessage.Source.Index(indexName))), information = Seq(QueryMessage.InformationLevel.WITH_PROVENANCE_PARTITION_INFORMATION, QueryMessage.InformationLevel.WITH_PROVENANCE_SOURCE_INFORMATION))
 
-      System.out.println("\" Randomly \" generated Query: "+randomQueryMessage(dim, part).query.get.feature.denseVector.get.vector.mkString(","))
+      val res = searcherBlocking.doQuery(qm)
+
+      System.out.println("\" Randomly \" generated Query: "+qm.nnq.get.query.get.feature.denseVector.get.vector.mkString(","))
       //System.out.println("Example Data: " + res.responses.head.results.head.data.mkString(", "))
 
       val partInfo = mutable.HashMap[Int, Int]()
