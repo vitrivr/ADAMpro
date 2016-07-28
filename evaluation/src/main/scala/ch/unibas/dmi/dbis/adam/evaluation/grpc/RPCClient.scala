@@ -24,11 +24,11 @@ class RPCClient(channel: ManagedChannel, definer: AdamDefinitionBlockingStub, se
   /**
     * Evaluation Params
     */
-  val indexOnly = false
+  val indexOnly = true
   val numQ = 2
-  val tupleSizes = Seq(1e5.toInt)
+  val tupleSizes = Seq(1e3.toInt)
   val dimensions = Seq(10)
-  val partitions = Seq(4, 16, 32, 200)
+  val partitions = Seq(4)
   val indices = Seq(IndexType.sh)
   val partitioners = Seq( RepartitionMessage.Partitioner.CURRENT)
 
@@ -48,7 +48,7 @@ class RPCClient(channel: ManagedChannel, definer: AdamDefinitionBlockingStub, se
             for (part <- partitions) {
               System.out.println("Repartitioning: " + part)
               for (partitioner <- partitioners) {
-                System.out.println("\n ---------------------- \n Repartitioning with " + partitioner.name + ", partitions: "+part)
+                System.out.println("\n ---------------------- \n Repartitioning with " + partitioner.name + ", partitions: "+part +" index: "+index)
 
                 val repmsg = definer.repartitionIndexData(RepartitionMessage(name, numberOfPartitions = part, option = RepartitionMessage.PartitionOptions.CREATE_NEW, partitioner = partitioner))
                 System.out.println("Repartition Message: "+repmsg.message)
@@ -135,7 +135,10 @@ class RPCClient(channel: ManagedChannel, definer: AdamDefinitionBlockingStub, se
       System.out.println("Reponses size: "+res.responses.head.results.size)
       System.out.println("Sample response: "+res.responses.head.results.head.data.mkString(", "))
 
-      val sorted: Seq[QueryResultTupleMessage] = res.responses.head.results.sortBy(f => f.data.get("ap_distance").get.getFloatData)
+      //TODO Does take take from partitions?
+      val sorted = res.responses.head.results.sortBy(f => f.data.get("ap_distance").get.getFloatData)
+
+      System.out.println("Sorted: "+sorted.zipWithIndex.map(f => System.out.println(f._2 +" | "+f._1.data.mkString(", "))))
 
       val top100Info = mutable.HashMap[Int, Int]()
       sorted.take(100).map(f => {

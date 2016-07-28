@@ -86,6 +86,12 @@ abstract class Index(@transient implicit val ac: AdamContext) extends Serializab
   private[index] var data: DataFrame
 
   /**
+    * @experimental
+    * @return
+    */
+  def getData : DataFrame = data
+
+  /**
     * Gets the metadata attached to the index.
     */
   private[index] def metadata: Serializable
