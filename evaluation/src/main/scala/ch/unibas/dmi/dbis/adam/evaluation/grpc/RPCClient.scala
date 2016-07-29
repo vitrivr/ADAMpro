@@ -26,11 +26,11 @@ class RPCClient(channel: ManagedChannel, definer: AdamDefinitionBlockingStub, se
     */
   val indexOnly = true
   val numQ = 2
-  val tupleSizes = Seq(1e3.toInt)
+  val tupleSizes = Seq(1e5.toInt)
   val dimensions = Seq(10)
-  val partitions = Seq(4)
+  val partitions = Seq(4, 16, 200)
   val indices = Seq(IndexType.sh)
-  val partitioners = Seq( RepartitionMessage.Partitioner.CURRENT)
+  val partitioners = Seq( RepartitionMessage.Partitioner.CURRENT, RepartitionMessage.Partitioner.SPARK)
 
   dropAllEntities()
 
@@ -50,12 +50,12 @@ class RPCClient(channel: ManagedChannel, definer: AdamDefinitionBlockingStub, se
               for (partitioner <- partitioners) {
                 System.out.println("\n ---------------------- \n Repartitioning with " + partitioner.name + ", partitions: "+part +" index: "+index)
 
-                val repmsg = definer.repartitionIndexData(RepartitionMessage(name, numberOfPartitions = part, option = RepartitionMessage.PartitionOptions.CREATE_NEW, partitioner = partitioner))
+                val repmsg = definer.repartitionIndexData(RepartitionMessage(name, numberOfPartitions = part, option = RepartitionMessage.PartitionOptions.REPLACE_EXISTING, partitioner = partitioner))
                 System.out.println("Repartition Message: "+repmsg.message)
                 name = repmsg.message
                 val props = definer.getEntityProperties(EntityNameMessage(eName))
 
-                System.out.println("\n ----------------------- Repartitioned, entity Properties: \n "+props)
+                System.out.println("\n ----------------------- \n Repartitioned, entity Properties: \n "+props +" \n ------------------------- \n")
                 System.out.println("----------------")
 
                 val (avgTime, noResults) = timeQuery(name, dim, part)
@@ -119,11 +119,7 @@ class RPCClient(channel: ManagedChannel, definer: AdamDefinitionBlockingStub, se
     var counter = 0
     while (counter < queryCount) {
       val qm = QueryMessage(nnq = Some(randomQueryMessage(dim, part)), from = Some(FromMessage(FromMessage.Source.Index(indexName))), information = Seq(QueryMessage.InformationLevel.WITH_PROVENANCE_PARTITION_INFORMATION, QueryMessage.InformationLevel.WITH_PROVENANCE_SOURCE_INFORMATION))
-
       val res = searcherBlocking.doQuery(qm)
-
-      System.out.println("\" Randomly \" generated Query: "+qm.nnq.get.query.get.feature.denseVector.get.vector.mkString(","))
-      //System.out.println("Example Data: " + res.responses.head.results.head.data.mkString(", "))
 
       val partInfo = mutable.HashMap[Int, Int]()
       res.responses.map(f => f.results.map(r => {
@@ -137,8 +133,6 @@ class RPCClient(channel: ManagedChannel, definer: AdamDefinitionBlockingStub, se
 
       //TODO Does take take from partitions?
       val sorted = res.responses.head.results.sortBy(f => f.data.get("ap_distance").get.getFloatData)
-
-      System.out.println("Sorted: "+sorted.zipWithIndex.map(f => System.out.println(f._2 +" | "+f._1.data.mkString(", "))))
 
       val top100Info = mutable.HashMap[Int, Int]()
       sorted.take(100).map(f => {

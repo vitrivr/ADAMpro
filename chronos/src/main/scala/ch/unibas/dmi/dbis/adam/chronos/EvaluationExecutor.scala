@@ -9,9 +9,8 @@ import ch.unibas.dmi.dbis.adam.http.grpc.RepartitionMessage
 import ch.unibas.dmi.dbis.adam.rpc.RPCClient
 import ch.unibas.dmi.dbis.adam.rpc.datastructures.{RPCAttributeDefinition, RPCQueryObject, RPCQueryResults}
 
-import scala.collection.mutable
 import scala.collection.mutable.ListBuffer
-import scala.util.{Failure, Random, Try}
+import scala.util.{Random, Try}
 
 /**
   * ADAMpro
@@ -83,8 +82,8 @@ class EvaluationExecutor(val job: EvaluationJob, logger: ChronosHttpClient#Chron
     getPartitionCombinations().foreach { case (e, i) =>
       if (e.isDefined) {
         if(RepartitionMessage.Partitioner.values.find(p => p.name == job.access_entity_partitioner).isDefined){
-          client.entityPartition(entityName, e.get, Seq(), true, true, RepartitionMessage.Partitioner.values.find(p => p.name == job.access_entity_partitioner).get)
-        } else client.entityPartition(entityName, e.get, Seq(), true, true)
+          client.entityPartition(entityname, e.get, Seq(), true, true, RepartitionMessage.Partitioner.values.find(p => p.name == job.access_entity_partitioner).get)
+        } else client.entityPartition(entityname, e.get, Seq(), true, true)
         //TODO: Add Column in job
       }
 
@@ -96,7 +95,7 @@ class EvaluationExecutor(val job: EvaluationJob, logger: ChronosHttpClient#Chron
       }
 
       //collect queries
-      logger.publish(new LogRecord(Level.INFO, "generating queries to execute on " + entityName))
+      logger.publish(new LogRecord(Level.INFO, "generating queries to execute on " + entityname))
       val queries = getQueries(entityname)
 
       //determine perfect results

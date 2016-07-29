@@ -43,7 +43,6 @@ class SHPartitioner(nPart: Int) extends Partitioner with ADAMPartitioner with Lo
     val bitString = key.asInstanceOf[BitString[_]]
     //TODO Rounding behavior...
     //TODO Partition by hamming distance and not by number...
-    val string = bitString.toByteArray.mkString(",")
     val bits: Seq[Int] = bitString.getBitIndexes
     var number = 0
     bits.foreach(f => {

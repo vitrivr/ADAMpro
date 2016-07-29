@@ -161,7 +161,7 @@ class RPCClient(channel: ManagedChannel, definer: AdamDefinitionBlockingStub, se
     * @param replace     replace partitioning
     * @return
     */
-  def entityPartition(entityname: String, npartitions: Int, attributes: Seq[String] = Seq(), materialize: Boolean, replace: Boolean): Try[String] = {
+  def entityPartition(entityname: String, npartitions: Int, attributes: Seq[String] = Seq(), materialize: Boolean, replace: Boolean, partitioner: RepartitionMessage.Partitioner = RepartitionMessage.Partitioner.SPARK): Try[String] = {
     execute("repartition entity operation") {
       val option = if (replace) {
         PartitionOptions.REPLACE_EXISTING
@@ -173,7 +173,7 @@ class RPCClient(channel: ManagedChannel, definer: AdamDefinitionBlockingStub, se
         PartitionOptions.CREATE_NEW
       }
 
-      val res = definer.repartitionEntityData(RepartitionMessage(entityname, npartitions, attributes, option))
+      val res = definer.repartitionEntityData(RepartitionMessage(entityname, npartitions, attributes, option, partitioner))
 
       if (res.code == AckMessage.Code.OK) {
         Success(res.message)
@@ -343,7 +343,7 @@ class RPCClient(channel: ManagedChannel, definer: AdamDefinitionBlockingStub, se
     * @param replace     replace partitioning
     * @return
     */
-  def indexPartition(indexname: String, npartitions: Int, attributes: Seq[String] = Seq(), materialize: Boolean, replace: Boolean): Try[String] = {
+  def indexPartition(indexname: String, npartitions: Int, attributes: Seq[String] = Seq(), materialize: Boolean, replace: Boolean, partitioner: RepartitionMessage.Partitioner = RepartitionMessage.Partitioner.SPARK): Try[String] = {
     execute("partition index operation") {
       val option = if (replace) {
         PartitionOptions.REPLACE_EXISTING
@@ -355,7 +355,7 @@ class RPCClient(channel: ManagedChannel, definer: AdamDefinitionBlockingStub, se
         PartitionOptions.CREATE_NEW
       }
 
-      val res = definer.repartitionIndexData(RepartitionMessage(indexname, npartitions, attributes, option))
+      val res = definer.repartitionIndexData(RepartitionMessage(indexname, npartitions, attributes, option, partitioner))
 
       if (res.code.isOk) {
         Success(res.message)
