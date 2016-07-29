@@ -29,9 +29,9 @@ object IndexOp extends GenericOp {
     *
     * @param entityname name of entity
     */
-  def list(entityname: EntityName)(implicit ac: AdamContext): Try[Seq[(IndexName, IndexTypeName)]] = {
+  def list(entityname: EntityName)(implicit ac: AdamContext): Try[Seq[(IndexName, String, IndexTypeName)]] = {
     execute("list indexes for " + entityname) {
-      Success(Entity.load(entityname).get.indexes.filter(_.isSuccess).map(_.get).map(index => (index.indexname, index.indextypename)))
+      Success(Entity.load(entityname).get.indexes.filter(_.isSuccess).map(_.get).map(index => (index.indexname, index.attribute, index.indextypename)))
     }
   }
 

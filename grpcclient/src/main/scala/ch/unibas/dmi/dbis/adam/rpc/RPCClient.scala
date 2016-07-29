@@ -317,6 +317,18 @@ class RPCClient(channel: ManagedChannel, definer: AdamDefinitionBlockingStub, se
   }
 
   /**
+    * List all indexes for given entity.
+    *
+    * @param entityname name of entity
+    * @return (indexname, attribute, indextypename)
+    */
+  def indexList(entityname : String): Try[Seq[(String, String, IndexType)]] = {
+    execute("list indexes operation") {
+      Success(definer.listIndexes(EntityNameMessage(entityname)).indexes.map(i => (i.index, i.attribute, i.indextype)))
+    }
+  }
+
+  /**
     * Check if index exists.
     *
     * @param entityname name of entity
