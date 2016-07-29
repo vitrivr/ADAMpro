@@ -102,7 +102,7 @@ case class NearestNeighbourQuery(
   }
 
   def isConform(index : Index) : Boolean = {
-    true
+    index.isQueryConform(this)
   }
 
   override def equals(that: Any): Boolean = {

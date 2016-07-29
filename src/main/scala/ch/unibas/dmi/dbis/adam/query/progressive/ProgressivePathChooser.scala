@@ -36,7 +36,7 @@ class SimpleProgressivePathChooser()(implicit ac: AdamContext) extends Progressi
     //TODO: choose better default
     IndexTypes.values
       .map(indextypename => Index.list(Some(entityname), Some(indextypename)).filter(_.isSuccess).map(_.get)
-        .filter(_.isQueryConform(nnq))
+        .filter(nnq.isConform(_))
         .sortBy(index => -ScanWeightInspector(index)))
       .filterNot(_.isEmpty)
       .map(_.head)
@@ -66,7 +66,7 @@ class IndexTypeProgressivePathChooser(indextypenames: Seq[IndexTypeName])(implic
   override def getPaths(entityname: EntityName, nnq: NearestNeighbourQuery): Seq[QueryExpression] = {
     indextypenames
       .map(indextypename => Index.list(Some(entityname), Some(indextypename)).filter(_.isSuccess).map(_.get)
-        .filter(_.isQueryConform(nnq))
+        .filter(nnq.isConform(_))
         .sortBy(index => -ScanWeightInspector(index)).head)
       .map(index => IndexScanExpression(index)(nnq)())
   }

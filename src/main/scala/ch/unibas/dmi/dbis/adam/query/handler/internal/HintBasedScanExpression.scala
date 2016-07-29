@@ -132,7 +132,7 @@ object HintBasedScanExpression extends Logging {
             if (indexChoice.isDefined) {
               val indexes = indexChoice.get
                 .map(indexname => Index.load(indexname, false).get)
-                .filter(_.isQueryConform(nnq.get)) //choose only indexes that are conform to query
+                .filter(nnq.get.isConform(_)) //choose only indexes that are conform to query
                 .filterNot(_.isStale) //don't use stale indexes
                 .sortBy(index => -ScanWeightInspector(index)) //order by weight (highest weight first)
 
