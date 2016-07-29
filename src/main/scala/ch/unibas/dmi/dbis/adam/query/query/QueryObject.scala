@@ -74,7 +74,7 @@ case class BooleanQuery(
 /**
   * Nearest neighbour query parameters.
   *
-  * @param column     name of column to perform query on
+  * @param attribute     name of attribute to perform query on
   * @param q          query vector
   * @param distance   distance function
   * @param k          number of elements to retrieve
@@ -84,7 +84,7 @@ case class BooleanQuery(
   * @param options    options to pass to handler
   */
 case class NearestNeighbourQuery(
-                                  column: String,
+                                  attribute: String,
                                   q: FeatureVector,
                                   weights: Option[FeatureVector],
                                   distance: DistanceFunction,
@@ -99,18 +99,18 @@ case class NearestNeighbourQuery(
     if (options.getOrElse("nochecks", "false").equals("true")) {
       true
     } else {
-      //check if column exists
-      val columnExists = entity.schema(Some(Seq(column))).nonEmpty
+      //check if attribute exists
+      val attributeExists = entity.schema(Some(Seq(attribute))).nonEmpty
 
       //check if feature data exists and dimensionality is correct
       val featureData = if (entity.getFeatureData.isDefined) {
-        val dimensionality = entity.getFeatureData.get.select(column).head().getAs[FeatureVectorWrapper](column).vector.length
+        val dimensionality = entity.getFeatureData.get.select(attribute).head().getAs[FeatureVectorWrapper](attribute).vector.length
         dimensionality == q.length
       } else {
         false
       }
 
-      columnExists && featureData
+      attributeExists && featureData
     }
   }
 
@@ -125,7 +125,7 @@ case class NearestNeighbourQuery(
   override def equals(that: Any): Boolean = {
     that match {
       case that: NearestNeighbourQuery =>
-        this.column.equals(that.column) &&
+        this.attribute.equals(that.attribute) &&
           this.q.equals(that.q) &&
           this.weights.isDefined == that.weights.isDefined &&
           this.weights.map(w1 => that.weights.exists(w2 => w1.equals(w2))).getOrElse(true)
@@ -142,7 +142,7 @@ case class NearestNeighbourQuery(
   override def hashCode(): Int = {
     val prime = 31
     var result = 1
-    result = prime * result + column.hashCode
+    result = prime * result + attribute.hashCode
     result = prime * result + q.hashCode()
     result = prime * result + weights.map(_.hashCode()).getOrElse(0)
     result = prime * result + distance.getClass.hashCode()

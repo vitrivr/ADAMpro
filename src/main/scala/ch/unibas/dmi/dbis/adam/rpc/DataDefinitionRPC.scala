@@ -104,7 +104,7 @@ class DataDefinitionRPC extends AdamDefinitionGrpc.AdamDefinition with Logging {
     */
   override def sparsifyEntity(request: WeightMessage): Future[AckMessage] = {
     log.debug("rpc call for compress operation")
-    val res = EntityOp.sparsify(request.entity, request.column)
+    val res = EntityOp.sparsify(request.entity, request.attribute)
 
     if (res.isSuccess) {
       Future.successful(AckMessage(code = AckMessage.Code.OK))
@@ -199,7 +199,7 @@ class DataDefinitionRPC extends AdamDefinitionGrpc.AdamDefinition with Logging {
 
     val distance = RPCHelperMethods.prepareDistance(request.distance)
 
-    val res = IndexOp(request.entity, request.column, indextypename.get, distance, request.options)
+    val res = IndexOp(request.entity, request.attribute, indextypename.get, distance, request.options)
 
     if (res.isSuccess) {
       Future.successful(AckMessage(code = AckMessage.Code.OK, message = res.get.indexname))
@@ -338,10 +338,10 @@ class DataDefinitionRPC extends AdamDefinitionGrpc.AdamDefinition with Logging {
   override def repartitionIndexData(request: RepartitionMessage): Future[AckMessage] = {
     log.debug("rpc call for repartitioning index")
 
-    val cols = if (request.columns.isEmpty) {
+    val cols = if (request.attributes.isEmpty) {
       None
     } else {
-      Some(request.columns)
+      Some(request.attributes)
     }
 
     val option = request.option match {
@@ -377,10 +377,10 @@ class DataDefinitionRPC extends AdamDefinitionGrpc.AdamDefinition with Logging {
   override def repartitionEntityData(request: RepartitionMessage): Future[AckMessage] = {
     log.debug("rpc call for repartitioning entity")
 
-    val cols = if (request.columns.isEmpty) {
+    val cols = if (request.attributes.isEmpty) {
       None
     } else {
-      Some(request.columns)
+      Some(request.attributes)
     }
 
     val option = request.option match {
@@ -409,7 +409,7 @@ class DataDefinitionRPC extends AdamDefinitionGrpc.AdamDefinition with Logging {
     log.debug("rpc call for changing weight of entity or index")
 
     val res = if (CatalogOperator.existsEntity(request.entity).get) {
-      EntityOp.setScanWeight(request.entity, request.column, request.weight)
+      EntityOp.setScanWeight(request.entity, request.attribute, request.weight)
     } else {
       IndexOp.setScanWeight(request.entity, request.weight)
     }
@@ -430,7 +430,7 @@ class DataDefinitionRPC extends AdamDefinitionGrpc.AdamDefinition with Logging {
     */
   override def benchmarkAndUpdateScanWeights(request: WeightMessage): Future[AckMessage] = {
     log.debug("rpc call for benchmarking entity and index")
-    val res = EntityOp.benchmarkAndSetScanWeights(request.entity, request.column)
+    val res = EntityOp.benchmarkAndSetScanWeights(request.entity, request.attribute)
 
     if (res.isSuccess) {
       Future.successful(AckMessage(AckMessage.Code.OK, request.entity))
@@ -466,7 +466,7 @@ class DataDefinitionRPC extends AdamDefinitionGrpc.AdamDefinition with Logging {
     log.debug("rpc call for generating all indexes")
 
     val distance = RPCHelperMethods.prepareDistance(request.distance)
-    val res = IndexOp.generateAll(request.entity, request.column, distance)
+    val res = IndexOp.generateAll(request.entity, request.attribute, distance)
 
     if (res.isSuccess) {
       Future.successful(AckMessage(AckMessage.Code.OK, res.get.mkString(",")))

@@ -111,7 +111,7 @@ object SequentialScanExpression extends Logging {
       }
     })
 
-    df.withColumn(FieldNames.distanceColumnName, distUDF(df(nnq.column)))
+    df.withColumn(FieldNames.distanceColumnName, distUDF(df(nnq.attribute)))
       .orderBy(col(FieldNames.distanceColumnName))
       .limit(nnq.k)
   }

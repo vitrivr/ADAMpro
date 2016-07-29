@@ -79,12 +79,12 @@ class EvaluationExecutor(val job: EvaluationJob, logger: ChronosHttpClient#Chron
     //partition
     getPartitionCombinations().foreach { case (e, i) =>
       if (e.isDefined) {
-        //TODO: adjust partitioner/column
+        //TODO: adjust partitioner/attribute
         client.entityPartition(entityname, e.get, Seq(), true, true)
       }
 
       if (i.isDefined) {
-        //TODO: adjust partitioner/column
+        //TODO: adjust partitioner/attribute
         indexnames.foreach(indexname => client.indexPartition(indexname, i.get, Seq(), true, true))
       }
 

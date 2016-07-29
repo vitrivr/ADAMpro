@@ -138,7 +138,7 @@ $("#btnSubmit").click(function () {
         return;
     }
 
-    if ($("#column").val().length === 0) {
+    if ($("#attribute").val().length === 0) {
         showAlert(" Please specify an attribute.");
         return;
     }
@@ -215,7 +215,7 @@ function evaluate (id) {
     params.options.subtype = $("#" + id).data("subtype");
 
     params.options.entityname = $("#entityname").val();
-    params.options.attribute = $("#column").val();
+    params.options.attribute = $("#attribute").val();
     params.options.query = $("#query").val().replace("[", "").replace("]", "").trim();
     params.options.sparsequery = $("#sparsequery").prop("checked");
 

@@ -57,8 +57,8 @@
     </div>
     <div class="row">
         <div class="input-field col s4">
-            <input id="column" type="text">
-            <label for="column">name of attribute</label>
+            <input id="attribute" type="text"">
+            <label for="attribute">name of attribute</label>
         </div>
         <div class="input-field col s4">
             <select id="indextype">
@@ -189,7 +189,7 @@ $(document).ready(function () {
 //prepare operation
 $("#btnSubmit").click(function () {
     var entityname = $("#entityname").val();
-    var column = $("#column").val();
+    var attribute = $("#attribute").val();
 
     if($("#norm").val()){
         var norm = $("#norm").val();
@@ -206,7 +206,7 @@ $("#btnSubmit").click(function () {
         }
     })
 
-    indexCreate(entityname, column, norm, indextype, options);
+    indexCreate(entityname, attribute, norm, indextype, options);
 });
 
 

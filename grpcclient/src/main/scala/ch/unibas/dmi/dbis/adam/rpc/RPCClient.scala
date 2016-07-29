@@ -280,7 +280,7 @@ class RPCClient(channel: ManagedChannel, definer: AdamDefinitionBlockingStub, se
     */
   def entityCreateAllIndexes(entityname: String, attributes: Seq[String], norm: Int): Try[Seq[String]] = {
     execute("create all indexes operation") {
-      val res = attributes.map { attribute => definer.generateAllIndexes(IndexMessage(entity = entityname, column = attribute, distance = Some(DistanceMessage(DistanceType.minkowski, options = Map("norm" -> norm.toString)))))
+      val res = attributes.map { attribute => definer.generateAllIndexes(IndexMessage(entity = entityname, attribute = attribute, distance = Some(DistanceMessage(DistanceType.minkowski, options = Map("norm" -> norm.toString)))))
       }
 
       if (res.exists(_.code != AckMessage.Code.OK)) {

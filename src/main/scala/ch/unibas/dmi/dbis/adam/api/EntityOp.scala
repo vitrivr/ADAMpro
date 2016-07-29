@@ -93,7 +93,7 @@ object EntityOp extends GenericOp {
     * Inserts data into the entity.
     *
     * @param entityname name of entity
-    * @param df         data frame containing all columns (of both the feature storage and the metadata storage)
+    * @param df         data frame containing all attributes (of both the feature storage and the metadata storage)
     *
     */
   def insert(entityname: EntityName, df: DataFrame)(implicit ac: AdamContext): Try[Void] = {
@@ -134,7 +134,7 @@ object EntityOp extends GenericOp {
     *
     * @param entityname  name of entity
     * @param nPartitions number of partitions
-    * @param cols        columns to partition after
+    * @param cols        attributes to partition after
     * @param mode        partition mode (e.g., create new index, replace current index, etc.)
     * @return
     */
@@ -148,12 +148,12 @@ object EntityOp extends GenericOp {
     * Benchmarks entity and indexes corresponding to entity and adjusts scan weights.
     *
     * @param entityname name of entity
-    * @param column     name of column
+    * @param attribute     name of attribute
     * @return
     */
-  def benchmarkAndSetScanWeights(entityname: EntityName, column: String)(implicit ac: AdamContext): Try[Void] = {
-    execute("benchmark entity and indexes of " + entityname + "(" + column + ")" + "and adjust weights operation") {
-      ScanWeightBenchmarker(entityname, column)
+  def benchmarkAndSetScanWeights(entityname: EntityName, attribute: String)(implicit ac: AdamContext): Try[Void] = {
+    execute("benchmark entity and indexes of " + entityname + "(" + attribute + ")" + "and adjust weights operation") {
+      ScanWeightBenchmarker(entityname, attribute)
       Success(null)
     }
   }
@@ -162,13 +162,13 @@ object EntityOp extends GenericOp {
     * Sets the weight of the entity to make it more important in the search
     *
     * @param entityname name of entity
-    * @param column     name of column
+    * @param attribute     name of attribute
     * @param weight     new weight to set (the higher, the more important the index is)
     * @return
     */
-  def setScanWeight(entityname: EntityName, column: String, weight: Float)(implicit ac: AdamContext): Try[Void] = {
-    execute("set entity weight for " + entityname + "(" + column + ")" + " operation") {
-      ScanWeightInspector.set(Entity.load(entityname).get, column, weight)
+  def setScanWeight(entityname: EntityName, attribute: String, weight: Float)(implicit ac: AdamContext): Try[Void] = {
+    execute("set entity weight for " + entityname + "(" + attribute + ")" + " operation") {
+      ScanWeightInspector.set(Entity.load(entityname).get, attribute, weight)
       Success(null)
     }
   }

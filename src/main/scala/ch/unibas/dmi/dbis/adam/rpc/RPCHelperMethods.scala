@@ -265,7 +265,7 @@ private[rpc] object RPCHelperMethods {
         return Failure(new GeneralAdamException("no query specified"))
       }
 
-      Success(NearestNeighbourQuery(nnq.column, fv, nnq.weights.map(prepareFeatureVector(_)), distance, nnq.k, nnq.indexOnly, nnq.options, partitions))
+      Success(NearestNeighbourQuery(nnq.attribute, fv, nnq.weights.map(prepareFeatureVector(_)), distance, nnq.k, nnq.indexOnly, nnq.options, partitions))
     } catch {
       case e: Exception => Failure(e)
     }

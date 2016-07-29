@@ -109,7 +109,7 @@ case class Entity(val entityname: EntityName)(@transient implicit val ac: AdamCo
   def getFeatureData: Option[DataFrame] = getData(typeFilter = Some(Seq(FEATURETYPE)))
 
   /**
-    * Gets feature column and pk column; use this for indexing purposes.
+    * Gets feature attribute and pk attribute; use this for indexing purposes.
     *
     * @param attribute attribute that is indexed
     * @return
