@@ -84,7 +84,7 @@ class LSHIndexer(numHashTables: Int, numHashes: Int, distance: DistanceFunction,
 
     log.trace("LSH finished training")
 
-    LSHIndexMetaData(hashTables, radius.toFloat, distance)
+    LSHIndexMetaData(hashTables.toArray, radius.toFloat, distance)
   }
 }
 

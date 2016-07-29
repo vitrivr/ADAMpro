@@ -1,0 +1,229 @@
+<!doctype html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
+    <meta name="viewport" content="width=device-width">
+    
+    <title>ADAMpro</title>
+    
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+    
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/materialize/0.97.6/css/materialize.min.css">
+    <link rel="stylesheet" href="./lib/css/app.css">
+    
+    <script src="https://code.jquery.com/jquery-2.1.1.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/materialize/0.97.6/js/materialize.min.js"></script>
+    <script src="./lib/js/config.js"></script>
+    <script src="./lib/js/app.js"></script>
+</head>
+
+<body>
+<div id="progress" class="progress" style="margin:0px; display:none;">
+    <div class="indeterminate"></div>
+</div>
+
+<nav>
+    <div class="nav-wrapper blue-grey darken-3" style="padding: 0px 50px 0px 50px">
+        <a href="#!" class="brand-logo right" style="padding-right: 20px;">ADAMpro <img src="./lib/imgs/logo.png" style="height:40px; padding: 5px; margin-top: 10px;"/></a>
+        <ul class="hide-on-med-and-down left">
+
+            <li style="padding-left: 20px; padding-right: 20px; font-weight: bold;"><i class="material-icons left" style="margin-right:5px;">playlist_add</i>ENTITY</li>
+
+            <li><a href="entity-list.html">List</a></li>
+            <li><a href="entity-create.html">Create</a></li>
+            <li><a href="entity-fill.html">Fill</a></li>
+            <li><a href="entity-read.html">Read</a></li>
+            <li><a href="entity-repartition.html">Repartition</a></li>
+
+            <li style="border-left: white 1px solid; padding-left: 20px; padding-right: 20px; font-weight: bold;"><i class="material-icons left" style="margin-right:5px;">filter_list</i>INDEX</li>
+            <li><a href="index-create.html">Create</a></li>
+            <li><a href="index-repartition.html">Repartition</a></li>
+
+            <li style="border-left: white 1px solid; padding-left: 20px; padding-right: 20px; font-weight: bold;"><i class="material-icons left" style="margin-right:5px;">search</i>SEARCH</li>
+            <li><a href="search-compound.html">Compound</a></li>
+            <li><a href="search-progressive.html">Progressive</a></li>
+
+        </ul>
+    </div>
+</nav>
+
+<div class='container' style='width:90%'><div class='row'><h1 style='font-size:40pt;'>Create<span style='font-size:20pt; padding-left: 20px'>Index</span></h1></div>
+
+
+<div class="row">
+    <div class="row">
+        <div id="centityname" class="input-field col s4"></div>
+    </div>
+    <div class="row">
+        <div class="input-field col s4">
+            <input id="column" type="text">
+            <label for="column">name of attribute</label>
+        </div>
+        <div class="input-field col s4">
+            <select id="indextype">
+                <option value="ecp">eCP Index</option>
+                <option value="lsh">LSH Index</option>
+                <option value="mi">MI Index</option>
+                <option value="pq">PQ Index</option>
+                <option value="sh">SH Index</option>
+                <option value="vaf">VAF Index</option>
+                <option value="vav">VAV Index</option>
+            </select>
+            <label>index type</label>
+        </div>
+    </div>
+    <div class="row">
+        <div class="input-field col s4">
+            <input id="norm" type="text" placeholder="2">
+            <label for="norm">Minkowski norm</label>
+        </div>
+    </div>
+    <div id="ecp-info" class="row indexinfo">
+        <div class="input-field col s4">
+            <input id="ecp-leadertype" name="leadertype" type="text" placeholder="simple">
+            <label for="ecp-leadertype">leader type (simple/centroid)</label>
+        </div>
+        <div class="input-field col s4">
+            <input id="ecp-ntraining" name="ntraining" type="text" placeholder="sqrt(n)">
+            <label for="ecp-ntraining">training size</label>
+        </div>
+    </div>
+    <div id="lsh-info" class="row indexinfo" style="display:none;">
+        <div class="input-field col s4">
+            <input id="lsh-numHashTables" name="nhashtables" type="text" placeholder="64">
+            <label for="lsh-numHashTables">number of hashtables</label>
+        </div>
+        <div class="input-field col s4">
+            <input id="lsh-numHashes" name="nhashes" type="text" placeholder="64">
+            <label for="lsh-numHashes">number of hashes</label>
+        </div>
+        <div class="col s4 offset-s4"></div>
+        <div class="input-field col s4">
+            <input id="lsh-ntraining" name="ntraining" type="text" placeholder="500">
+            <label for="lsh-ntraining">training size</label>
+        </div>
+    </div>
+    <div id="mi-info" class="row indexinfo" style="display:none;">
+        <div class="input-field col s4">
+            <input id="mi-nrefs" name="nrefs" type="text" placeholder="2 * math.sqrt(n)">
+            <label for="mi-nrefs">number of reference objects</label>
+        </div>        
+        <div class="col s8 offset-s8"></div>
+        <div class="input-field col s4">
+            <input id="pq-ki" name="nsq" type="text" placeholder="min(100, nrefs)">
+            <label for="pq-ki">number of closest reference objects used in index</label>
+        </div>
+        <div class="input-field col s4">
+            <input id="pq-ks" name="nsq" type="text" placeholder="min(100, nrefs)">
+            <label for="pq-ks">number of closest reference objects used in the query</label>
+        </div>
+    </div>
+    <div id="pq-info" class="row indexinfo" style="display:none;">
+        <div class="input-field col s4">
+            <input id="pq-nsq" name="nsq" type="text" placeholder="8">
+            <label for="pq-nsq">number of subquantizers</label>
+        </div>
+        <div class="input-field col s4">
+            <input id="pq-ntraining" name="ntraining" type="text" placeholder="500">
+            <label for="pq-ntraining">training size</label>
+        </div>
+    </div>
+    <div id="sh-info" class="row indexinfo" style="display:none;">
+        <div class="input-field col s4">
+            <input id="sh-nbits" name="nbits" type="text" placeholder="dims * 2">
+            <label for="sh-nbits">number of bits</label>
+        </div>
+        <div class="input-field col s4">
+            <input id="sh-ntraining" name="ntraining" type="text" placeholder="500">
+            <label for="sh-ntraining">training size</label>
+        </div>
+    </div>
+    <div id="vaf-info" class="row indexinfo" style="display:none;">
+        <div class="input-field col s4">
+            <input id="vaf-nmarks" name="nmarks" type="text" placeholder="64">
+            <label for="vaf-nmarks">number of marks per dimension</label>
+        </div>
+        <div class="input-field col s4">
+            <input id="vaf-marktype" name="marktype" type="text" placeholder="equifrequent">
+            <label for="vaf-marktype">type of marks generator</label>
+        </div>
+        <div class="col s4 offset-s4"></div>
+        <div class="input-field col s4">
+            <input id="vaf-signature-nbits-dim" name="signature-nbits-dim" type="text"
+                   placeholder="ceil(log2(marks))">
+            <label for="vaf-signature-nbits-dim">number of bits per dimension (for fixed signature generator only)</label>
+        </div>
+        <div class="input-field col s4">
+            <input id="vaf-ntraining" name="ntraining" type="text" placeholder="1000">
+            <label for="vaf-ntraining">training size</label>
+        </div>
+    </div>
+    <div id="vav-info" class="row indexinfo" style="display:none;">
+        <div class="input-field col s4">
+            <input id="vav-marktype" name="marktype" type="text" placeholder="equifrequent">
+            <label for="vav-marktype">type of marks generator</label>
+        </div>
+        <div class="col s8 offset-s8"></div>
+        <div class="input-field col s4">
+            <input id="vav-signature-nbits" name="signature-nbits" type="text" placeholder="dims * 8">
+            <label for="vav-signature-nbits">number of bits in total</label>
+        </div>
+        <div class="input-field col s4">
+            <input id="vav-ntraining" name="ntraining" type="text" placeholder="1000">
+            <label for="vav-ntraining">training size</label>
+        </div>
+    </div>
+    <div class="row" style="padding-top: 40px;">
+        <button class="btn waves-effect waves-light red" name="action" id="btnSubmit">
+            Create
+        </button>
+    </div>
+</div>
+
+<script>
+$(document).ready(function () {
+    entityListGetSelect("centityname");
+});
+
+//prepare operation
+$("#btnSubmit").click(function () {
+    var entityname = $("#entityname").val();
+    var column = $("#column").val();
+
+    if($("#norm").val()){
+        var norm = $("#norm").val();
+    } else {
+        var norm = $("#norm").attr("placeholder");
+    }
+
+    var indextype = $("#indextype").val();
+    var options = {};
+
+    $("#" + indextype + "-info :input").each(function () {
+        if ($(this).val() != null && $(this).val().length > 0) {
+            options[this.name] = $(this).val();
+        }
+    })
+
+    indexCreate(entityname, column, norm, indextype, options);
+});
+
+
+$("#indextype").change(function (e) {
+    $(".indexinfo").hide();
+    var indextype = $("#indextype").val();
+    $("#" + indextype + "-info").fadeIn();
+});
+</script>
+<script>
+$(document).ready(function () {
+    $('select').material_select();
+});
+</script>
+
+</div>
+
+</body>
+</html>
+

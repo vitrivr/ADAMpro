@@ -41,7 +41,7 @@ case class IndexScanExpression(private[handler] val index: Index)(private val nn
       Entity.load(entityname).get.indexes
         .filter(_.isSuccess)
         .map(_.get)
-        .filter(_.isQueryConform(nnq)) //choose only indexes that are conform to query
+        .filter(nnq.isConform(_)) //choose only indexes that are conform to query
         .sortBy(index => -ScanWeightInspector(index))
         .head
     )(nnq, id)(filterExpr)
@@ -53,11 +53,9 @@ case class IndexScanExpression(private[handler] val index: Index)(private val nn
     ac.sc.setLocalProperty("spark.scheduler.pool", "index")
     ac.sc.setJobGroup(id.getOrElse(""), "index scan: " + index.indextypename.name, interruptOnCancel = true)
 
-    if (!index.isQueryConform(nnq)) {
+    if (!(nnq.isConform(index) && nnq.isConform(index.entity.get))) {
       throw QueryNotConformException()
     }
-
-    //TODO: check if is query conform
 
     val prefilter = if (filter.isDefined && filterExpr.isDefined) {
       val pk = index.entity.get.pk

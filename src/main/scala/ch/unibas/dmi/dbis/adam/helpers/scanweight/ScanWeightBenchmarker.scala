@@ -110,12 +110,12 @@ private class ScanWeightBenchmarker(entityname: EntityName, attribute: String, n
     val stdev = math.sqrt(measurements.map { measure => (measure - mean) * (measure - mean) }.sum / measurements.length.toFloat).toFloat
 
     //remove measurements > or < 3 * stdev
-    val clean = measurements.filterNot(m => m > mean + 3 * stdev).filterNot(m => m < mean - 3 * stdev)
+    val measuredCosts = measurements.filterNot(m => m > mean + 3 * stdev).filterNot(m => m < mean - 3 * stdev)
 
-    //TODO: consider index score too; build cost model for index access
+    //TODO: build cost model for index access and adjust cost
 
     //average time
-    clean.sum.toFloat / clean.length.toFloat
+    measuredCosts.sum.toFloat / measuredCosts.length.toFloat
   }
 
 

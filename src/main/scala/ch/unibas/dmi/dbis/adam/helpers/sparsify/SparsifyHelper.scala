@@ -50,7 +50,7 @@ object SparsifyHelper {
             nnz
           }
 
-          //TODO: possibly check here if nnz > 0.5 length then do not translate to sparse
+          //TODO: possibly check here if nnz > 0.5 length then do not translate to sparse (or possibly allow mixed)
 
           val ii = new Array[Int](numNonZeros)
           val vv = new Array[VectorBase](numNonZeros)

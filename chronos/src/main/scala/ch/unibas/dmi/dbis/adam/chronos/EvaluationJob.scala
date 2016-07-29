@@ -54,6 +54,7 @@ class EvaluationJob(job: ChronosJob) extends ChronosJob(job) {
 
   //execution paths
   val execution_name: String = getAttribute(execution, "name")
+  val execution_subtype: String = getAttribute(execution, "subtype")
   val execution_withsequential: Boolean = getBooleanAttribute(execution, "withsequential")
   val execution_hint: String = getAttribute(execution, "hint")
 

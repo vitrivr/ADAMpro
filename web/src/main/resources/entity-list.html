@@ -1,0 +1,137 @@
+<!doctype html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
+    <meta name="viewport" content="width=device-width">
+
+    <title>ADAMpro</title>
+
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/materialize/0.97.6/css/materialize.min.css">
+    <link rel="stylesheet" href="./lib/css/app.css">
+
+    <script src="https://code.jquery.com/jquery-2.1.1.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/materialize/0.97.6/js/materialize.min.js"></script>
+    <script src="./lib/js/config.js"></script>
+    <script src="./lib/js/app.js"></script>
+</head>
+
+<body>
+<div id="progress" class="progress" style="margin:0px; display:none;">
+    <div class="indeterminate"></div>
+</div>
+
+<nav>
+    <div class="nav-wrapper blue-grey darken-3" style="padding: 0px 50px 0px 50px">
+        <a href="#!" class="brand-logo right" style="padding-right: 20px;">ADAMpro <img src="./lib/imgs/logo.png" style="height:40px; padding: 5px; margin-top: 10px;"/></a>
+        <ul class="hide-on-med-and-down left">
+
+            <li style="padding-left: 20px; padding-right: 20px; font-weight: bold;"><i class="material-icons left" style="margin-right:5px;">playlist_add</i>ENTITY</li>
+
+            <li><a href="entity-list.html">List</a></li>
+            <li><a href="entity-create.html">Create</a></li>
+            <li><a href="entity-fill.html">Fill</a></li>
+            <li><a href="entity-read.html">Read</a></li>
+            <li><a href="entity-repartition.html">Repartition</a></li>
+
+            <li style="border-left: white 1px solid; padding-left: 20px; padding-right: 20px; font-weight: bold;"><i class="material-icons left" style="margin-right:5px;">filter_list</i>INDEX</li>
+            <li><a href="index-create.html">Create</a></li>
+            <li><a href="index-repartition.html">Repartition</a></li>
+
+            <li style="border-left: white 1px solid; padding-left: 20px; padding-right: 20px; font-weight: bold;"><i class="material-icons left" style="margin-right:5px;">search</i>SEARCH</li>
+            <li><a href="search-compound.html">Compound</a></li>
+            <li><a href="search-progressive.html">Progressive</a></li>
+
+        </ul>
+    </div>
+</nav>
+
+<div class='container' style='width:90%'><div class='row'><h1 style='font-size:40pt;'>List<span style='font-size:20pt; padding-left: 20px'>Entity</span></h1></div>
+
+<div class="row">
+    <div class="col s8">
+        <ul id="info" class="collection">
+        </ul>
+    </div>
+</div>
+
+</div>
+
+<script>
+$(document).ready(function () {
+    entityList(function(data){
+        jQuery.each(data.entities, function (index, entityname) {
+            var innerhtml = '';
+            innerhtml += "<li id='" + entityname + "' data-entityname='" + entityname + "' class='collection-item'" + " style='min-height: 80px;'>";
+            innerhtml += "<span class='title' style='font-size: 16px;'>" + entityname + "</span>";
+            innerhtml += "<div style='position: absolute; right: 0px;'>";
+            innerhtml += "<div class='fixed-action-btn horizontal' style='position:relative;'>";
+            innerhtml += "<a class='btn-floating btn-large red'><i class='material-icons'>menu</i></a>";
+            innerhtml += "<ul>";
+            innerhtml += "<li id='btn-" + entityname + "-info' ><span class='btn-floating blue'><i style='font-style:normal; font-weight:bold'>i</i></span></li>";
+            innerhtml += "<li id='btn-" + entityname + "-benchmark'><span  class='btn-floating yellow darken-1'><i style='font-style:normal; font-weight:bold'>B</i></span></li>";
+            innerhtml += "<li id='btn-" + entityname + "-sparsify'><span class='btn-floating green'><i style='font-style:normal; font-weight:bold'>S</i></span></span></li>";
+            innerhtml += "<li id='btn-" + entityname + "-delete'><span class='btn-floating red'><i class='material-icons'>delete</i></span></li>";
+            innerhtml += "</ul>";
+            innerhtml += "</div>";
+            innerhtml += "</div>";
+            innerhtml += "<div class='details' style='display:none'>";
+            innerhtml += "<table>";
+            innerhtml += "<tbody>";
+            innerhtml += "</tbody>";
+            innerhtml += "</table>";
+            innerhtml += "</div>";
+            innerhtml += "</li>";
+
+            $("#info").append(innerhtml);
+            $('#btn-' + entityname + '-info').bind("click", function(){infoHandler(entityname)});
+            $('#btn-' + entityname + '-benchmark').bind("click", function(){benchmarkHandler(entityname, "feature")});
+            $('#btn-' + entityname + '-sparsify').bind("click", function(){sparsifyHandler(entityname, "feature")});
+            $('#btn-' + entityname + '-delete').bind("click", function(){dropHandler(entityname)});
+        })
+    })
+});
+
+
+
+function infoHandler(entityname) {
+    $('#' + entityname + ' > div.details').show();
+    entityDetails(entityname, function(data){
+        var innerinnerhtml = '';
+
+        jQuery.each(data.details, function (key, value) {
+            innerinnerhtml += "<tr>";
+            innerinnerhtml += "<td style='font-weight: bold; font-size: 12px; padding: 0px 0px;' width='150px'>";
+            innerinnerhtml += key;
+            innerinnerhtml += "</td>";
+            innerinnerhtml += "<td style='font-size: 12px; padding: 0px 0px;'>";
+            innerinnerhtml += value;
+            innerinnerhtml += "</td>";
+            innerinnerhtml += "</tr>";
+        });
+
+        $('#' + entityname + ' > div > table > tbody').html(innerinnerhtml);
+        $('#btn-' + entityname + '-info').unbind("click", infoHandler);
+    })
+}
+
+
+function benchmarkHandler(entityname, attribute){
+    entityBenchmark(entityname, attribute);
+}
+
+function sparsifyHandler(entityname, attribute){
+    entitySparsify(entityname, attribute);
+}
+
+
+function dropHandler(entityname){
+    entityDrop(entityname);
+    $("#" + entityname).hide()
+}
+</script>
+
+</body>
+</html>

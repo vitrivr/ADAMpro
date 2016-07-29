@@ -28,7 +28,7 @@ class PQIndex(val indexname: IndexName, val entityname: EntityName, override pri
   override val confidence: Float = 0.5.toFloat
 
 
-  override def scan(data : DataFrame, q : FeatureVector, distance : DistanceFunction, options : Map[String, Any], k : Int): DataFrame = {
+  override def scan(data : DataFrame, q : FeatureVector, distance : DistanceFunction, options : Map[String, String], k : Int): DataFrame = {
     log.debug("scanning PQ index " + indexname)
 
     //precompute distance

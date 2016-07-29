@@ -47,29 +47,28 @@ class EvaluationExecutor(val job: EvaluationJob, logger: ChronosHttpClient#Chron
     */
   def run(): Properties = {
     val results = new ListBuffer[(String, Map[String, String])]()
-    val entityName = generateString(10)
+    val entityname = generateString(10)
     val attributes = getAttributeDefinition()
 
     //create entity
-    logger.publish(new LogRecord(Level.INFO, "creating entity " + entityName + " (" + attributes.map(a => a.name + "(" + a.datatype + ")").mkString(",") + ")"))
-    client.entityCreate(entityName, attributes)
+    logger.publish(new LogRecord(Level.INFO, "creating entity " + entityname + " (" + attributes.map(a => a.name + "(" + a.datatype + ")").mkString(",") + ")"))
+    client.entityCreate(entityname, attributes)
 
     //insert random data
-    //TODO Data Generator
-    logger.publish(new LogRecord(Level.INFO, "inserting " + job.data_tuples + " tuples into " + entityName))
-    client.entityGenerateRandomData(entityName, job.data_tuples, job.data_vector_dimensions, job.data_vector_sparsity, job.data_vector_min, job.data_vector_max, job.data_vector_sparse)
+    logger.publish(new LogRecord(Level.INFO, "inserting " + job.data_tuples + " tuples into " + entityname))
+    client.entityGenerateRandomData(entityname, job.data_tuples, job.data_vector_dimensions, job.data_vector_sparsity, job.data_vector_min, job.data_vector_max, job.data_vector_sparse)
 
     //TODO Add Norm to Job
     val indexnames = if (job.execution_name == "sequential") {
       //no index
-      logger.publish(new LogRecord(Level.INFO, "creating no index for " + entityName))
+      logger.publish(new LogRecord(Level.INFO, "creating no index for " + entityname))
       Seq()
     } else if (job.execution_name == "progressive") {
-      logger.publish(new LogRecord(Level.INFO, "creating all indexes for " + entityName))
-      client.entityCreateAllIndexes(entityName, Seq(FEATURE_VECTOR_ATTRIBUTENAME), 2).get
+      logger.publish(new LogRecord(Level.INFO, "creating all indexes for " + entityname))
+      client.entityCreateAllIndexes(entityname, Seq(FEATURE_VECTOR_ATTRIBUTENAME), 2).get
     } else {
-      logger.publish(new LogRecord(Level.INFO, "creating " + job.execution_name + " index for " + entityName))
-      Seq(client.indexCreate(entityName, FEATURE_VECTOR_ATTRIBUTENAME, job.execution_name, 2, Map()).get)
+      logger.publish(new LogRecord(Level.INFO, "creating " + job.execution_subtype + " index for " + entityname))
+      Seq(client.indexCreate(entityname, FEATURE_VECTOR_ATTRIBUTENAME, job.execution_subtype, 2, Map()).get)
     }
 
     if (job.measurement_cache) {
@@ -77,11 +76,10 @@ class EvaluationExecutor(val job: EvaluationJob, logger: ChronosHttpClient#Chron
         client.indexCache(indexname)
       }
 
-      client.entityCache(entityName)
+      client.entityCache(entityname)
     }
 
     //partition
-    //TODO Why generate new Jobs for each index but not for each partition?
     getPartitionCombinations().foreach { case (e, i) =>
       if (e.isDefined) {
         if(RepartitionMessage.Partitioner.values.find(p => p.name == job.access_entity_partitioner).isDefined){
@@ -99,7 +97,7 @@ class EvaluationExecutor(val job: EvaluationJob, logger: ChronosHttpClient#Chron
 
       //collect queries
       logger.publish(new LogRecord(Level.INFO, "generating queries to execute on " + entityName))
-      val queries = getQueries(entityName)
+      val queries = getQueries(entityname)
 
       //determine perfect results
       if(job.result_quality){
@@ -110,10 +108,9 @@ class EvaluationExecutor(val job: EvaluationJob, logger: ChronosHttpClient#Chron
       queries.zipWithIndex.foreach { case (qo, idx) =>
         if (running) {
           val runid = "r-" + idx.toString
-          logger.publish(new LogRecord(Level.INFO, "executing query for " + entityName + " (runid: " + runid + ")"))
-          //TODO Compare Results in ExecuteQuery or here?
+          logger.publish(new LogRecord(Level.INFO, "executing query for " + entityname + " (runid: " + runid + ")"))
           val result = executeQuery(qo)
-          logger.publish(new LogRecord(Level.INFO, "executed query for " + entityName + " (runid: " + runid + ")"))
+          logger.publish(new LogRecord(Level.INFO, "executed query for " + entityname + " (runid: " + runid + ")"))
 
           if (job.measurement_firstrun && idx == 0){
             //ignore first run
@@ -265,8 +262,10 @@ class EvaluationExecutor(val job: EvaluationJob, logger: ChronosHttpClient#Chron
 
     lb.append("hints" -> job.execution_hint)
 
-    //Targets = None is this correct?
-    //TODO Add indexname?
+    if(job.execution_name == "index"){
+      lb.append("subtype" -> job.execution_subtype)
+    }
+
     RPCQueryObject(generateString(10), job.execution_name, lb.toMap, None)
   }
 
@@ -374,6 +373,7 @@ class EvaluationExecutor(val job: EvaluationJob, logger: ChronosHttpClient#Chron
       logger.publish(new LogRecord(Level.FINEST, "Executing query with options: "+qo.options.mkString(",")))
       logger.publish(new LogRecord(Level.FINEST, "querymessage: "+qo.getQueryMessage.toString()))
       val res: Try[Seq[RPCQueryResults]] = client.doQuery(qo)
+
 
       val t2 = System.currentTimeMillis
 

@@ -177,7 +177,6 @@ abstract class Index(@transient implicit val ac: AdamContext) extends Serializab
       log.warn("index is stale but still used, please re-create " + indexname)
     }
 
-    //TODO: possibly join on other sources and keep all data
     var df = data
 
     //apply pre-filter
@@ -217,7 +216,7 @@ abstract class Index(@transient implicit val ac: AdamContext) extends Serializab
     * @param k        number of elements to retrieve (of the k nearest neighbor search), possibly more than k elements are returned
     * @return a set of candidate tuple ids, possibly together with a tentative score (the number of tuples will be greater than k)
     */
-  protected def scan(data: DataFrame, q: FeatureVector, distance: DistanceFunction, options: Map[String, Any], k: Int): DataFrame
+  protected def scan(data: DataFrame, q: FeatureVector, distance: DistanceFunction, options: Map[String, String], k: Int): DataFrame
 
 
   /**
@@ -273,7 +272,7 @@ abstract class Index(@transient implicit val ac: AdamContext) extends Serializab
 
       def isQueryConform(nnq: NearestNeighbourQuery): Boolean = current.isQueryConform(nnq)
 
-      protected def scan(data: DataFrame, q: FeatureVector, distance: DistanceFunction, options: Map[String, Any], k: Int) = current.scan(data, q, distance, options, k)
+      protected def scan(data: DataFrame, q: FeatureVector, distance: DistanceFunction, options: Map[String, String], k: Int) = current.scan(data, q, distance, options, k)
 
       private[index] var data: DataFrame = current.data
     }
@@ -345,7 +344,6 @@ object Index extends Logging {
       }
 
       val indexname = createIndexName(entity.entityname, attribute, indexgenerator.indextypename)
-      //TODO: remove get
       val rdd: RDD[IndexingTaskTuple[_]] = entity.getAttributeData(attribute).get.map { x => IndexingTaskTuple(x.getAs[Any](entity.pk.name), x.getAs[FeatureVectorWrapper](attribute).vector) }
 
       val index = indexgenerator.index(indexname, entity.entityname, rdd)
@@ -353,10 +351,9 @@ object Index extends Logging {
         .data
         .withColumnRenamed("id", entity.pk.name)
         .withColumnRenamed("value", FieldNames.featureIndexColumnName)
-      //TODO: possibly store data with index?
 
       CatalogOperator.createIndex(indexname, entity.entityname, attribute, indexgenerator.indextypename, index.metadata)
-      storage.create(indexname, Seq()) //TODO: switch index to be an entity with specific fields
+      storage.create(indexname, Seq()) //TODO: possibly switch index to be an entity with specific fields?
       val status = storage.write(indexname, index.data, SaveMode.ErrorIfExists, Map("allowRepartitioning" -> "true"))
 
       if (status.isFailure) {

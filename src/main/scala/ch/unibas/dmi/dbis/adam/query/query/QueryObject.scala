@@ -1,6 +1,7 @@
 package ch.unibas.dmi.dbis.adam.query.query
 
 import ch.unibas.dmi.dbis.adam.datatypes.feature.Feature._
+import ch.unibas.dmi.dbis.adam.datatypes.feature.FeatureVectorWrapper
 import ch.unibas.dmi.dbis.adam.entity.Entity
 import ch.unibas.dmi.dbis.adam.helpers.partition.Partitioning.PartitionID
 import ch.unibas.dmi.dbis.adam.index.Index
@@ -12,7 +13,7 @@ import ch.unibas.dmi.dbis.adam.query.distance.DistanceFunction
   * Ivan Giangreco
   * November 2015
   */
-class Query(qo : Seq[QueryObject], queryID: Option[String] = Some(java.util.UUID.randomUUID().toString)) extends Serializable
+class Query(qo: Seq[QueryObject], queryID: Option[String] = Some(java.util.UUID.randomUUID().toString)) extends Serializable
 
 abstract class QueryObject(queryID: Option[String] = Some(java.util.UUID.randomUUID().toString)) extends Serializable {}
 
@@ -94,29 +95,45 @@ case class NearestNeighbourQuery(
                                   queryID: Option[String] = Some(java.util.UUID.randomUUID().toString))
   extends QueryObject(queryID) {
 
-  def isConform(entity : Entity): Boolean = {
-    val columnExists = entity.schema(Some(Seq(column))).nonEmpty
-    //TODO: check dimensionality?
+  def isConform(entity: Entity): Boolean = {
+    if (options.getOrElse("nochecks", "false").equals("true")) {
+      true
+    } else {
+      //check if column exists
+      val columnExists = entity.schema(Some(Seq(column))).nonEmpty
 
-    columnExists
+      //check if feature data exists and dimensionality is correct
+      val featureData = if (entity.getFeatureData.isDefined) {
+        val dimensionality = entity.getFeatureData.get.select(column).head().getAs[FeatureVectorWrapper](column).vector.length
+        dimensionality == q.length
+      } else {
+        false
+      }
+
+      columnExists && featureData
+    }
   }
 
-  def isConform(index : Index) : Boolean = {
-    true
+  def isConform(index: Index): Boolean = {
+    if (options.getOrElse("nochecks", "false").equals("true")) {
+      true
+    } else {
+      index.isQueryConform(this)
+    }
   }
 
   override def equals(that: Any): Boolean = {
     that match {
       case that: NearestNeighbourQuery =>
         this.column.equals(that.column) &&
-        this.q.equals(that.q) &&
-        this.weights.isDefined == that.weights.isDefined &&
-        this.weights.map(w1 => that.weights.map(w2 => w1.equals(w2)).getOrElse(false)).getOrElse(true)
+          this.q.equals(that.q) &&
+          this.weights.isDefined == that.weights.isDefined &&
+          this.weights.map(w1 => that.weights.exists(w2 => w1.equals(w2))).getOrElse(true)
         this.distance.getClass.equals(that.distance.getClass) &&
-        this.k == that.k &&
-        this.indexOnly == that.indexOnly &&
-        this.partitions.isDefined == that.partitions.isDefined &&
-        this.partitions.map(p1 => that.partitions.map(p2 => p1.equals(p2)).getOrElse(false)).getOrElse(true)
+          this.k == that.k &&
+          this.indexOnly == that.indexOnly &&
+          this.partitions.isDefined == that.partitions.isDefined &&
+          this.partitions.map(p1 => that.partitions.exists(p2 => p1.equals(p2))).getOrElse(true)
       case _ =>
         false
     }

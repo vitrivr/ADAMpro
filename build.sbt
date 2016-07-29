@@ -24,10 +24,13 @@ lazy val evaluation = project.
 lazy val grpc = project.
   settings(commonSettings ++ Seq(assemblyOutputPath in assembly := baseDirectory.value / ".." / "lib" / "grpc-assembly-0.1-SNAPSHOT.jar"): _*)
 
-lazy val client = project.
+lazy val grpcclient = project.
   settings(commonSettings: _*)
 
-lazy val chronos = project.
+lazy val chronos = project.dependsOn(grpcclient).
+  settings(commonSettings: _*)
+
+lazy val web = project.dependsOn(grpcclient).
   settings(commonSettings: _*)
 
 
