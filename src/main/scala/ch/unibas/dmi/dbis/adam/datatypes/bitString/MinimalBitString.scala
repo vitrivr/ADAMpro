@@ -127,6 +127,10 @@ class MinimalBitString(private val values: BitSet) extends BitString[MinimalBitS
 
     bitInteger
   }
+
+  override def toString(): String ={
+    getBitIndexes.mkString(", ")
+  }
 }
 
 
