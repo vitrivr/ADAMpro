@@ -44,16 +44,14 @@ class SHPartitioner(nPart: Int) extends Partitioner with ADAMPartitioner with Lo
     //TODO Rounding behavior...
     //TODO Partition by hamming distance and not by number...
     val string = bitString.toByteArray.mkString(",")
-    //log.info("Getting partition for bitstring: "+string)
     val bits: Seq[Int] = bitString.getBitIndexes
     var number = 0
     bits.foreach(f => {
-      //log.debug("Byte "+f+" is set, "+f)
       number += Math.pow(2, f).toInt
     })
-    //log.info("Bitstring "+string+" was converted to number: "+number)
+
     val partition = number / gap
-    //log.info("Bitstring "+string+" was assigned partition: "+partition)
+
     partition
   }
 
@@ -65,29 +63,21 @@ class SHPartitioner(nPart: Int) extends Partitioner with ADAMPartitioner with Lo
       throw new GeneralAdamException("Indexname was not specified")
     }
     try {
-      //This line causes you to load the data from the first index that is found
+      //This line causes you to load the data from the first index that is found which matches the type
       val joinDF = Entity.load(Index.load(indexName.get).get.entityname).get.indexes.find(f => f.get.indextypename == indextype).get.get.getData.withColumnRenamed(FieldNames.featureIndexColumnName, FieldNames.partitionKey)
 
       val joinedDF = data.join(joinDF, FieldNames.pk)
-      log.debug("joinedDF")
-      joinedDF.show(2)
-      log.debug(joinedDF.first().getAs(FieldNames.partitionKey).getClass+" | "+joinedDF.first().getAs(FieldNames.partitionKey).toString)
-      val test = joinDF.map(f => f)
-      test.first().mkString(", ")
-      val mapped: RDD[(BitString[_], Row)] = joinedDF.map(f => (f.getAs[BitString[_]](FieldNames.partitionKey), f))
-      log.debug(mapped.first().toString())
 
       val repartitioned: RDD[(Any, Row)] = joinedDF.map(r => (r.getAs[Any](FieldNames.partitionKey), r)).partitionBy(new SHPartitioner(nPartitions))
-
-      log.debug("Sampled from repartitioned: "+repartitioned.first()._2.mkString(", ") +repartitioned.first()._2.getAs[BitString[_]](1).getBitIndexes.mkString(","))
       val reparRDD = repartitioned.mapPartitions((it) => {
         it.map(f => f._2)
-      })
-      log.debug("Sampled from return RDD: "+reparRDD.first().mkString(", ") +" | "+reparRDD.first().getAs[BitString[_]](1).getBitIndexes.mkString(","))
+      }, true)
+
       val res = ac.sqlContext.createDataFrame(reparRDD, joinedDF.schema)
       res.show(2)
       val end = res.select(FieldNames.pk, FieldNames.featureIndexColumnName)
       end.show(2)
+
       res
     } catch {
       case e: java.util.NoSuchElementException => {
