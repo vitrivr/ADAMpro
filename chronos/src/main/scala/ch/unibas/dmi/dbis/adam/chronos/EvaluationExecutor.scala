@@ -151,6 +151,10 @@ class EvaluationExecutor(val job: EvaluationJob, logger: ChronosHttpClient#Chron
         .foreach { case (k, v) => prop.setProperty(k, v) } //set property
     }
 
+    if(job.data_enforcecreation) {
+      client.entityDrop(entityname)
+    }
+
     prop
   }
 
