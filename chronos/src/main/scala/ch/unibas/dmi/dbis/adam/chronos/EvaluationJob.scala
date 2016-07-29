@@ -28,6 +28,8 @@ class EvaluationJob(job: ChronosJob) extends ChronosJob(job) {
   val adampro_port: Int = getAttribute(adampro, "port").toInt
 
   //data parameters
+  val data_enforcecreation: Boolean = getBooleanAttribute(data, "enforcecreation")
+
   val data_tuples: Int = getAttribute(data, "tuples").toInt
   val data_vector_dimensions: Int = getAttribute(data, "vector_dimensions").toInt
   val data_vector_sparsity: Float = getAttribute(data, "vector_sparsity").toFloat
@@ -95,10 +97,10 @@ class EvaluationJob(job: ChronosJob) extends ChronosJob(job) {
     * @param errorIfEmpty
     * @return
     */
-  private def getBooleanAttribute(node: Node, key: String, errorIfEmpty: Boolean = true) : Boolean = {
+  private def getBooleanAttribute(node: Node, key: String, errorIfEmpty: Boolean = true): Boolean = {
     val result = getAttribute(node, key, errorIfEmpty)
 
-    if(result.isEmpty || result.length == 0){
+    if (result.isEmpty || result.length == 0) {
       false
     } else {
       (result == "1")
@@ -112,6 +114,7 @@ class EvaluationJob(job: ChronosJob) extends ChronosJob(job) {
   def getAllParameters(): Map[String, String] = {
     val lb = new ListBuffer[(String, Any)]()
 
+    lb += ("data_enforcecreation" -> data_enforcecreation)
     lb += ("data_tuples" -> data_tuples)
     lb += ("data_vector_dimensions" -> data_vector_dimensions)
     lb += ("data_vector_sparsity" -> data_vector_sparsity)
