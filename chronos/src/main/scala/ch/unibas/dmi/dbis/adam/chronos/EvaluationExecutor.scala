@@ -402,10 +402,33 @@ class EvaluationExecutor(val job: EvaluationJob, logger: ChronosHttpClient#Chron
       lb += ("endtime" -> t2)
 
       if (res.isSuccess) {
+        //time
         lb += ("measuredtime" -> res.get.map(_.time).mkString(";"))
+
+        //results
         lb += ("results" -> {
           res.get.head.results.map(res => (res.get("pk") + "," + res.get("adamprodistance"))).mkString("(", "),(", ")")
         })
+
+        //result quality
+        if(job.measurement_resultquality){
+          //perform sequential query
+          val opt = collection.mutable.Map() ++ qo.options
+          opt -= "hints"
+          opt += "hints" -> "sequential"
+          val gtruth = client.doQuery(qo.copy(options = opt.toMap))
+
+          if(gtruth.isSuccess){
+            val gtruthPKs = gtruth.get.map(_.results.map(_.get("pk")))
+            val resPKs = res.get.map(_.results.map(_.get("pk")))
+
+            val agreements = gtruthPKs.intersect(resPKs).length
+            //simple hits/total
+            lb+= ("resultquality" -> agreements / qo.options.get("k").get.toInt)
+          } else{
+            lb+= ("resultquality" -> gtruth.failed.get.getMessage)
+          }
+        }
       } else {
         lb += ("failure" -> res.failed.get.getMessage)
       }
