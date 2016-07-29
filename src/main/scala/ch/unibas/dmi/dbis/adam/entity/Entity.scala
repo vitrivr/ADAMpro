@@ -7,7 +7,7 @@ import ch.unibas.dmi.dbis.adam.datatypes.FieldTypes._
 import ch.unibas.dmi.dbis.adam.entity.Entity.EntityName
 import ch.unibas.dmi.dbis.adam.exception.{EntityExistingException, EntityNotExistingException, EntityNotProperlyDefinedException, GeneralAdamException}
 import ch.unibas.dmi.dbis.adam.index.Index
-import ch.unibas.dmi.dbis.adam.main.AdamContext
+import ch.unibas.dmi.dbis.adam.main.{SparkStartup, AdamContext}
 import ch.unibas.dmi.dbis.adam.storage.handler.StorageHandler
 import ch.unibas.dmi.dbis.adam.utils.Logging
 import org.apache.spark.sql.functions.col
@@ -281,7 +281,7 @@ case class Entity(val entityname: EntityName)(@transient implicit val ac: AdamCo
 
     lb.append("count" -> count.toString)
     lb.append("schema" -> CatalogOperator.getAttributes(entityname).get.map(field => field.name + "(" + field.fieldtype.name + ")").mkString(","))
-    lb.append("indexes" -> indexes.filter(_.isSuccess).map(_.get.propertiesMap).map(_.mkString(", ")).mkString("; ")) //TODO: check how to print nicely
+    lb.append("indexes" -> indexes.filter(_.isSuccess).map(_.get.propertiesMap).map(_.mkString(", ")).mkString("; "))
 
     lb.toMap
   }
@@ -379,8 +379,6 @@ object Entity extends Logging {
             }
         }
       } else {
-        val tmp = creationAttributes.filterNot(_.pk).filter(_.storagehandler.isDefined).groupBy(_.storagehandler.get)
-
         creationAttributes.filterNot(_.pk).filter(_.storagehandler.isDefined).groupBy(_.storagehandler.get).foreach {
           case (handler, attributes) =>
             val status = handler.create(entityname, attributes.++:(pk))
@@ -393,7 +391,19 @@ object Entity extends Logging {
       Success(Entity(entityname)(ac))
     } catch {
       case e: Exception =>
-        //TODO: possibly drop what has been already created
+        //drop everything created in handlers
+        SparkStartup.registry.handlers.values.foreach{
+          handler =>
+            try {
+              handler.drop(entityname)
+            } catch {
+              case e : Exception => //careful: if entity has not been created yet in handler then we may get an exception
+            }
+        }
+
+        //drop from catalog
+        CatalogOperator.dropEntity(entityname, true)
+
         Failure(e)
     }
   }
