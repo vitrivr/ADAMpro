@@ -1,8 +1,14 @@
-name := "ADAMpro-client"
+name := "ADAMpro-web"
+
+resolvers ++= Seq(
+  "Twitter Maven" at "http://maven.twttr.com",
+  "Finatra Repo" at "http://twitter.github.com/finatra"
+)
 
 libraryDependencies ++= Seq(
   "com.google.protobuf" % "protobuf-java" % "3.0.0-beta-2",
   "io.grpc" % "grpc-okhttp" % "0.12.0",
+  "com.twitter.finatra" %% "finatra-http" % "2.1.6",
   "org.slf4j" % "slf4j-simple" % "1.7.21"
 )
 

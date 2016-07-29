@@ -1,4 +1,4 @@
-package ch.unibas.dmi.dbis.adam.client.web
+package ch.unibas.dmi.dbis.adam.web
 
 import com.twitter.finagle.http.filter.Cors
 import com.twitter.finagle.http.filter.Cors.HttpFilter

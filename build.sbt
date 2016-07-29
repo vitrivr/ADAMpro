@@ -23,7 +23,10 @@ lazy val grpc = project.
 lazy val client = project.
   settings(commonSettings: _*)
 
-lazy val chronos = project.
+lazy val chronos = project.dependsOn(client).
+  settings(commonSettings: _*)
+
+lazy val web = project.dependsOn(client).
   settings(commonSettings: _*)
 
 

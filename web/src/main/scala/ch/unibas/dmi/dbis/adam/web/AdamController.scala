@@ -1,8 +1,8 @@
-package ch.unibas.dmi.dbis.adam.client.web
+package ch.unibas.dmi.dbis.adam.web
 
-import ch.unibas.dmi.dbis.adam.client.web.datastructures._
 import ch.unibas.dmi.dbis.adam.rpc.RPCClient
-import ch.unibas.dmi.dbis.adam.rpc.datastructures.{RPCQueryResults, RPCAttributeDefinition}
+import ch.unibas.dmi.dbis.adam.rpc.datastructures.{RPCAttributeDefinition, RPCQueryResults}
+import ch.unibas.dmi.dbis.adam.web.datastructures._
 import com.twitter.finagle.http.Request
 import com.twitter.finatra.http.Controller
 import org.apache.log4j.Logger
