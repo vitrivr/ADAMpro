@@ -82,7 +82,8 @@ val secondaryLibs = Seq(
   "it.unimi.dsi" % "fastutil" % "7.0.12",
   //Don't update this to 17 unless you are also upgrading Hadoop to 2.7
   /* http://stackoverflow.com/questions/36427291/illegalaccesserror-to-guavas-stopwatch-from-org-apache-hadoop-mapreduce-lib-inp */
-  "com.google.guava" % "guava" % "19.0" force()
+  "com.google.guava" % "guava" % "19.0" force(),
+  "com.googlecode.javaewah" % "JavaEWAH" % "1.1.6"
 ).map(
   _.excludeAll(
     ExclusionRule("org.scala-lang"),

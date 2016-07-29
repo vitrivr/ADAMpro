@@ -45,6 +45,31 @@ class FixedSignatureGenerator(val dimensions: Int, val bitsPerDimension: Int) ex
    * @param signature signature to translate to cell ids
    * @return
    */
-  @inline def toCells(signature: BitString[_]): Seq[Int] = signature.toInts(dimensions, bitsPerDimension)
+  @inline def toCells(signature: BitString[_]): Seq[Int] = {
+    assert(bitsPerDimension < 32)
+
+    val indexes = signature.getBitIndexes
+    var i = 0
+
+    val bitIntegers = new Array[Int](dimensions)
+    var dim = 1
+
+    var sum = 0
+
+    while (i < indexes.length) {
+      val index = indexes(i)
+
+      while (index >= sum + bitsPerDimension) {
+        sum += bitsPerDimension
+        dim += 1
+      }
+
+      bitIntegers(dimensions - dim) |= (1 << (index - sum))
+
+      i += 1
+    }
+
+    bitIntegers
+  }
 
 }
