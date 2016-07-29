@@ -392,7 +392,7 @@ object Entity extends Logging {
     } catch {
       case e: Exception =>
         //drop everything created in handlers
-        SparkStartup.registry.handlers.values.foreach{
+        SparkStartup.storageRegistry.handlers.values.foreach{
           handler =>
             try {
               handler.drop(entityname)

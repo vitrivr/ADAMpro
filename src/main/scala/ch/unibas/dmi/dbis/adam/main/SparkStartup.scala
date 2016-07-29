@@ -51,18 +51,18 @@ object SparkStartup extends Logging {
   val contexts = Seq(mainContext)
 
   //TODO: add dynamically based on config
-  val registry = StorageHandlerRegistry
-  registry.register(new DatabaseHandler(new PostgresqlEngine(AdamConfig.jdbcUrl, AdamConfig.jdbcUser, AdamConfig.jdbcPassword)))
+  val storageRegistry = StorageHandlerRegistry
+  storageRegistry.register(new DatabaseHandler(new PostgresqlEngine(AdamConfig.jdbcUrl, AdamConfig.jdbcUser, AdamConfig.jdbcPassword)))
 
   if (AdamConfig.isBaseOnHadoop) {
     log.debug("storing data on Hadoop")
-    registry.register(new FlatFileHandler(new ParquetEngine(AdamConfig.basePath, AdamConfig.dataPath)))
+    storageRegistry.register(new FlatFileHandler(new ParquetEngine(AdamConfig.basePath, AdamConfig.dataPath)))
   } else {
     log.debug("storing data locally")
-    registry.register(new FlatFileHandler(new ParquetEngine(AdamConfig.dataPath)))
+    storageRegistry.register(new FlatFileHandler(new ParquetEngine(AdamConfig.dataPath)))
   }
 
-  registry.register(new SolrHandler(AdamConfig.solrUrl))
+  storageRegistry.register(new SolrHandler(AdamConfig.solrUrl))
 
   val indexStorageHandler = if (AdamConfig.isBaseOnHadoop) {
     log.debug("storing data on Hadoop")
