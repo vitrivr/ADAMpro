@@ -28,12 +28,11 @@ trait ProgressivePathChooser {
 }
 
 /**
-  * Chooses from all index types one (with sequential scan after index scan).
+  * Chooses from all index types one (with sequential scan after index scan) and sequential scan separately.
   *
   */
 class SimpleProgressivePathChooser()(implicit ac: AdamContext) extends ProgressivePathChooser {
   override def getPaths(entityname: EntityName, nnq: NearestNeighbourQuery): Seq[QueryExpression] = {
-    //TODO: choose better default
     IndexTypes.values
       .map(indextypename => Index.list(Some(entityname), Some(indextypename)).filter(_.isSuccess).map(_.get)
         .filter(nnq.isConform(_))
@@ -42,7 +41,7 @@ class SimpleProgressivePathChooser()(implicit ac: AdamContext) extends Progressi
       .map(_.head)
       .map(index => {
         IndexScanExpression(index)(nnq)()
-      })
+      }).+:(new SequentialScanExpression(entityname)(nnq)())
   }
 }
 
