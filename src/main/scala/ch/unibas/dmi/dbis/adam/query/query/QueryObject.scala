@@ -127,12 +127,12 @@ case class NearestNeighbourQuery(
         this.column.equals(that.column) &&
           this.q.equals(that.q) &&
           this.weights.isDefined == that.weights.isDefined &&
-          this.weights.map(w1 => that.weights.map(w2 => w1.equals(w2)).getOrElse(false)).getOrElse(true)
+          this.weights.map(w1 => that.weights.exists(w2 => w1.equals(w2))).getOrElse(true)
         this.distance.getClass.equals(that.distance.getClass) &&
           this.k == that.k &&
           this.indexOnly == that.indexOnly &&
           this.partitions.isDefined == that.partitions.isDefined &&
-          this.partitions.map(p1 => that.partitions.map(p2 => p1.equals(p2)).getOrElse(false)).getOrElse(true)
+          this.partitions.map(p1 => that.partitions.exists(p2 => p1.equals(p2))).getOrElse(true)
       case _ =>
         false
     }
