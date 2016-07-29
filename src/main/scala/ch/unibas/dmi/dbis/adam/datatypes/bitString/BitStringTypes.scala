@@ -8,5 +8,5 @@ package ch.unibas.dmi.dbis.adam.datatypes.bitString
  */
 object BitStringTypes {
   sealed abstract class BitStringType(val num : Byte, val factory : BitStringFactory)
-  case object MBS extends BitStringType(0, MinimalBitString)
+  case object EWAH extends BitStringType(0, EWAHBitString)
 }

@@ -58,5 +58,31 @@ class VariableSignatureGenerator (numberOfBitsPerDimension: Array[Int]) extends 
     * @param signature signature to translate to cell ids
    * @return
    */
-  @inline def toCells(signature: BitString[_]): Seq[Int] = signature.toInts(numberOfBitsPerDimension)
+  @inline def toCells(signature: BitString[_]): Seq[Int] = {
+    val lengths = numberOfBitsPerDimension
+    assert(lengths.count(_ > 32) < 1)
+
+    val indexes = signature.getBitIndexes
+    var i = 0
+
+    val bitIntegers = new Array[Int](lengths.length)
+    var dim = 1
+
+    var sum = 0
+
+    while (i < indexes.length) {
+      val index = indexes(i)
+
+      while (index >= sum + lengths(lengths.length - dim)) {
+        sum += lengths(lengths.length - dim)
+        dim += 1
+      }
+
+      bitIntegers(lengths.length - dim) |= (1 << (index - sum))
+
+      i += 1
+    }
+
+    bitIntegers
+  }
 }
