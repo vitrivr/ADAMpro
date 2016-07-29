@@ -319,14 +319,14 @@ class RPCClient(channel: ManagedChannel, definer: AdamDefinitionBlockingStub, se
   /**
     * Check if index exists.
     *
-    * @param indexname name of index
+    * @param entityname name of entity
     * @param attribute nmae of attribute
     * @param indextype type of index
     * @return
     */
-  def indexExists(indexname: String, attribute: String, indextype: String): Try[Boolean] = {
+  def indexExists(entityname: String, attribute: String, indextype: String): Try[Boolean] = {
     execute("index exists operation") {
-      val res = definer.existsIndex(IndexMessage(indexname, attribute, getIndexType(indextype)))
+      val res = definer.existsIndex(IndexMessage(entityname, attribute, getIndexType(indextype)))
       if (res.code == AckMessage.Code.OK) {
         return Success(res.message.toBoolean)
       } else {
