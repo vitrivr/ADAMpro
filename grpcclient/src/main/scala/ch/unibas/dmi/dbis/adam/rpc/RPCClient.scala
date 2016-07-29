@@ -81,6 +81,23 @@ class RPCClient(channel: ManagedChannel, definer: AdamDefinitionBlockingStub, se
   }
 
   /**
+    * Check if entity exists.
+    *
+    * @param entityname name of entity
+    * @return
+    */
+  def entityExists(entityname: String): Try[Boolean] = {
+    execute("entity exists operation") {
+      val res = definer.existsEntity(EntityNameMessage(entityname))
+      if (res.code == AckMessage.Code.OK) {
+        return Success(res.message.toBoolean)
+      } else {
+        return Failure(new Exception(res.message))
+      }
+    }
+  }
+
+  /**
     * Generate random data and fill into entity.
     *
     * @param entityname name of entity
@@ -202,7 +219,7 @@ class RPCClient(channel: ManagedChannel, definer: AdamDefinitionBlockingStub, se
     *
     * @param entityname
     */
-  def entityCache(entityname : String): Try[Boolean] ={
+  def entityCache(entityname: String): Try[Boolean] = {
     execute("cache entity") {
       val res = searcherBlocking.cacheEntity(EntityNameMessage(entityname))
       if (res.code.isOk) {
@@ -299,14 +316,33 @@ class RPCClient(channel: ManagedChannel, definer: AdamDefinitionBlockingStub, se
     }
   }
 
+  /**
+    * Check if index exists.
+    *
+    * @param indexname name of index
+    * @param attribute nmae of attribute
+    * @param indextype type of index
+    * @return
+    */
+  def indexExists(indexname: String, attribute: String, indextype: String): Try[Boolean] = {
+    execute("index exists operation") {
+      val res = definer.existsIndex(IndexMessage(indexname, attribute, getIndexType(indextype)))
+      if (res.code == AckMessage.Code.OK) {
+        return Success(res.message.toBoolean)
+      } else {
+        return Failure(new Exception(res.message))
+      }
+    }
+  }
+
 
   /**
     * Caches an index.
     *
     * @param indexname
     */
-  def indexCache(indexname : String): Try[Boolean] ={
-    execute("cache index") {
+  def indexCache(indexname: String): Try[Boolean] = {
+    execute("cache index operation") {
       val res = searcherBlocking.cacheIndex(IndexNameMessage(indexname))
       if (res.code.isOk) {
         Success(res.code.isOk)
@@ -321,7 +357,7 @@ class RPCClient(channel: ManagedChannel, definer: AdamDefinitionBlockingStub, se
     * @param s
     * @return
     */
-  private def getIndexType(s : String) = s match {
+  private def getIndexType(s: String) = s match {
     case "ecp" => IndexType.ecp
     case "lsh" => IndexType.lsh
     case "mi" => IndexType.mi
@@ -385,12 +421,12 @@ class RPCClient(channel: ManagedChannel, definer: AdamDefinitionBlockingStub, se
   /**
     * Perform a progressive search.
     *
-    * @param qo search request
-    * @param next       function for next result
-    * @param completed  function for final result
+    * @param qo        search request
+    * @param next      function for next result
+    * @param completed function for final result
     * @return
     */
-  def doProgressiveQuery(qo: RPCQueryObject,  next: (Try[RPCQueryResults]) => (Unit), completed: (String) => (Unit)): Try[Seq[RPCQueryResults]] = {
+  def doProgressiveQuery(qo: RPCQueryObject, next: (Try[RPCQueryResults]) => (Unit), completed: (String) => (Unit)): Try[Seq[RPCQueryResults]] = {
     execute("progressive query operation") {
       val so = new StreamObserver[QueryResultsMessage]() {
         override def onError(throwable: Throwable): Unit = {
@@ -423,7 +459,6 @@ class RPCClient(channel: ManagedChannel, definer: AdamDefinitionBlockingStub, se
   def shutdown(): Unit = {
     channel.shutdown.awaitTermination(5, TimeUnit.SECONDS)
   }
-
 
 
   /**

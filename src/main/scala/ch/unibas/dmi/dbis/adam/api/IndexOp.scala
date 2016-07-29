@@ -29,7 +29,7 @@ object IndexOp extends GenericOp {
     *
     * @param entityname name of entity
     */
-  def list(entityname: EntityName)(implicit ac: AdamContext) : Try[Seq[(IndexName, IndexTypeName)]] = {
+  def list(entityname: EntityName)(implicit ac: AdamContext): Try[Seq[(IndexName, IndexTypeName)]] = {
     execute("list indexes for " + entityname) {
       Success(Entity.load(entityname).get.indexes.filter(_.isSuccess).map(_.get).map(index => (index.indexname, index.indextypename)))
     }
@@ -39,25 +39,27 @@ object IndexOp extends GenericOp {
     * Creates an index.
     *
     * @param entityname    name of entity
+    * @param attribute     name of attribute
     * @param indextypename index type to use for indexing
     * @param distance      distance function to use
     * @param properties    further index specific properties
     */
-  def apply(entityname: EntityName, column: String, indextypename: IndexTypeName, distance: DistanceFunction, properties: Map[String, String] = Map())(implicit ac: AdamContext): Try[Index] = {
-    create(entityname, column, indextypename, distance, properties)
+  def apply(entityname: EntityName, attribute: String, indextypename: IndexTypeName, distance: DistanceFunction, properties: Map[String, String] = Map())(implicit ac: AdamContext): Try[Index] = {
+    create(entityname, attribute, indextypename, distance, properties)
   }
 
   /**
     * Creates an index.
     *
     * @param entityname    name of entity
+    * @param attribute     name of attribute
     * @param indextypename index type to use for indexing
     * @param distance      distance function to use
     * @param properties    further index specific properties
     */
-  def create(entityname: EntityName, column: String, indextypename: IndexTypeName, distance: DistanceFunction, properties: Map[String, String] = Map())(implicit ac: AdamContext): Try[Index] = {
+  def create(entityname: EntityName, attribute: String, indextypename: IndexTypeName, distance: DistanceFunction, properties: Map[String, String] = Map())(implicit ac: AdamContext): Try[Index] = {
     execute("create index for " + entityname) {
-      Index.createIndex(Entity.load(entityname).get, column, indextypename.indexer(distance, properties, ac))
+      Index.createIndex(Entity.load(entityname).get, attribute, indextypename.indexer(distance, properties, ac))
     }
   }
 
@@ -65,13 +67,14 @@ object IndexOp extends GenericOp {
     * Creates indexes of all available types.
     *
     * @param entityname name of entity
+    * @param attribute  name of attribute
     * @param distance   distance function to use
     * @param properties further index specific properties
     */
-  def generateAll(entityname: EntityName, column: String, distance: DistanceFunction, properties: Map[String, String] = Map())(implicit ac: AdamContext): Try[Seq[IndexName]] = {
+  def generateAll(entityname: EntityName, attribute: String, distance: DistanceFunction, properties: Map[String, String] = Map())(implicit ac: AdamContext): Try[Seq[IndexName]] = {
     execute("create all indexes for " + entityname) {
       val indexes = IndexTypes.values.map {
-        apply(entityname, column, _, distance, properties)
+        apply(entityname, attribute, _, distance, properties)
       }
 
       //check and possibly clean up
@@ -109,6 +112,21 @@ object IndexOp extends GenericOp {
 
 
   /**
+    * Checks if index exists
+    *
+    * @param entityname    name of entity
+    * @param attribute     name of attribute
+    * @param indextypename index type to use for indexing
+    * @return
+    */
+  def exists(entityname: EntityName, attribute: String, indextypename: IndexTypeName)(implicit ac: AdamContext): Try[Boolean] = {
+    execute("check index for " + entityname + "(" + attribute + ")" + " of type " + indextypename + " exists operation") {
+      Success(Index.exists(entityname, attribute, indextypename))
+    }
+  }
+
+
+  /**
     * Sets the weight of the index to make it more important in the search
     *
     * @param indexname name of index
@@ -139,13 +157,13 @@ object IndexOp extends GenericOp {
     *
     * @param indexname   name of index
     * @param nPartitions number of partitions
-    * @param cols        columns to partition after
+    * @param attributes  attributes to partition after
     * @param mode        partition mode (e.g., create new index, replace current index, etc.)
     * @return
     */
-  def partition(indexname: IndexName, nPartitions: Int, joins: Option[DataFrame], cols: Option[Seq[String]], mode: PartitionMode.Value, partitioner: PartitionerChoice.Value = PartitionerChoice.SPARK, options: Map[String, String] = Map[String, String]())(implicit ac: AdamContext): Try[Index] = {
+  def partition(indexname: IndexName, nPartitions: Int, joins: Option[DataFrame], attributes: Option[Seq[String]], mode: PartitionMode.Value, partitioner: PartitionerChoice.Value = PartitionerChoice.SPARK, options: Map[String, String] = Map[String, String]())(implicit ac: AdamContext): Try[Index] = {
     execute("repartition index " + indexname + " operation") {
-      IndexPartitioner(Index.load(indexname).get, nPartitions, joins, cols, mode, partitioner, options)
+      IndexPartitioner(Index.load(indexname).get, nPartitions, joins, attributes, mode, partitioner, options)
     }
   }
 

@@ -24,7 +24,7 @@ import scala.concurrent.Future
   * March 2016
   */
 class DataDefinitionRPC extends AdamDefinitionGrpc.AdamDefinition with Logging {
-  implicit def ac : AdamContext = SparkStartup.mainContext
+  implicit def ac: AdamContext = SparkStartup.mainContext
 
   /**
     *
@@ -78,6 +78,24 @@ class DataDefinitionRPC extends AdamDefinitionGrpc.AdamDefinition with Logging {
     case types.StringType => (x) => x.getStringData
     case _: FeatureVectorWrapperUDT => (x) => FeatureVectorWrapper(RPCHelperMethods.prepareFeatureVector(x.getFeatureData))
   }
+
+  /**
+    *
+    * @param request
+    * @return
+    */
+  override def existsEntity(request: EntityNameMessage): Future[AckMessage] = {
+    log.debug("rpc call for entity exists operation")
+    val res = EntityOp.exists(request.entity)
+
+    if (res.isSuccess) {
+      Future.successful(AckMessage(code = AckMessage.Code.OK, message = res.toString))
+    } else {
+      log.error(res.failed.get.getMessage, res.failed.get)
+      Future.successful(AckMessage(code = AckMessage.Code.ERROR, message = res.failed.get.getMessage))
+    }
+  }
+
 
   /**
     *
@@ -191,6 +209,7 @@ class DataDefinitionRPC extends AdamDefinitionGrpc.AdamDefinition with Logging {
     }
   }
 
+
   /**
     *
     * @param request
@@ -202,6 +221,23 @@ class DataDefinitionRPC extends AdamDefinitionGrpc.AdamDefinition with Logging {
 
     if (res.isSuccess) {
       Future.successful(AckMessage(code = AckMessage.Code.OK))
+    } else {
+      log.error(res.failed.get.getMessage, res.failed.get)
+      Future.successful(AckMessage(code = AckMessage.Code.ERROR, message = res.failed.get.getMessage))
+    }
+  }
+
+  /**
+    *
+    * @param request
+    * @return
+    */
+  override def existsIndex(request: IndexMessage): Future[AckMessage] = {
+    log.debug("rpc call for index exists operation")
+    val res = IndexOp.exists(request.entity)
+
+    if (res.isSuccess) {
+      Future.successful(AckMessage(code = AckMessage.Code.OK, message = res.toString))
     } else {
       log.error(res.failed.get.getMessage, res.failed.get)
       Future.successful(AckMessage(code = AckMessage.Code.ERROR, message = res.failed.get.getMessage))
@@ -230,7 +266,7 @@ class DataDefinitionRPC extends AdamDefinitionGrpc.AdamDefinition with Logging {
     * @param request
     * @return
     */
-  override def listIndexes(request : EntityNameMessage) : Future[IndexesMessage] = {
+  override def listIndexes(request: EntityNameMessage): Future[IndexesMessage] = {
     log.debug("rpc call for listing indexes")
     val res = IndexOp.list(request.entity)
 
@@ -316,7 +352,7 @@ class DataDefinitionRPC extends AdamDefinitionGrpc.AdamDefinition with Logging {
     }
 
     //Note that default is spark
-    val partitioner = request.partitioner match{
+    val partitioner = request.partitioner match {
       case RepartitionMessage.Partitioner.SPARK => PartitionerChoice.SPARK
       case RepartitionMessage.Partitioner.CURRENT => PartitionerChoice.CURRENT
       case RepartitionMessage.Partitioner.RANDOM => PartitionerChoice.RANDOM
@@ -372,7 +408,7 @@ class DataDefinitionRPC extends AdamDefinitionGrpc.AdamDefinition with Logging {
   override def setScanWeight(request: WeightMessage): Future[AckMessage] = {
     log.debug("rpc call for changing weight of entity or index")
 
-    val res =  if(CatalogOperator.existsEntity(request.entity).get){
+    val res = if (CatalogOperator.existsEntity(request.entity).get) {
       EntityOp.setScanWeight(request.entity, request.column, request.weight)
     } else {
       IndexOp.setScanWeight(request.entity, request.weight)

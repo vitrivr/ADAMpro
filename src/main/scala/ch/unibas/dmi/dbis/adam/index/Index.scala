@@ -236,7 +236,7 @@ abstract class Index(@transient implicit val ac: AdamContext) extends Serializab
     val partitionInfo = data.rdd.mapPartitionsWithIndex((idx, f) => {
       Iterator((idx, f.length))
     })
-    lb.append("tuplesPerPartition" -> partitionInfo.collect().map{case(id,length) => "(" + id + "," + length + ")"}.mkString)
+    lb.append("tuplesPerPartition" -> partitionInfo.collect().map { case (id, length) => "(" + id + "," + length + ")" }.mkString)
 
     lb.toMap
   }
@@ -367,6 +367,16 @@ object Index extends Logging {
     * @return
     */
   def exists(indexname: IndexName)(implicit ac: AdamContext): Boolean = CatalogOperator.existsIndex(indexname).get
+
+  /**
+    * Checks whether index exists.
+    *
+    * @param entityname    name of entity
+    * @param attribute     name of attribute
+    * @param indextypename index type to use for indexing
+    * @return
+    */
+  def exists(entityname: EntityName, attribute: String, indextypename: IndexTypeName)(implicit ac: AdamContext): Boolean = CatalogOperator.existsIndex(entityname, attribute, indextypename).get
 
   /**
     * Lists indexes.

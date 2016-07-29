@@ -408,6 +408,19 @@ object CatalogOperator extends Logging {
   }
 
   /**
+    * Checks whether index exists in catalog.
+    *
+    * @param indexname name of index
+    * @return
+    */
+  def existsIndex(entityname: EntityName, attribute: String, indextypename: IndexTypeName): Try[Boolean] = {
+    execute("exists index") {
+      val query = _indexes.filter(_.entityname === entityname.toString).filter(_.attributename === attribute).filter(_.indextypename === indextypename.toString).length.result
+      Await.result(DB.run(query), MAX_WAITING_TIME) > 0
+    }
+  }
+
+  /**
     * Creates index in catalog.
     *
     * @param indexname  name of index
