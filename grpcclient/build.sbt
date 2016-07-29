@@ -1,4 +1,4 @@
-name := "ADAMpro-client"
+name := "ADAMpro-grpcclient"
 
 libraryDependencies ++= Seq(
   "com.google.protobuf" % "protobuf-java" % "3.0.0-beta-2",
@@ -23,7 +23,5 @@ assemblyMergeStrategy in assembly := {
   case meta(_) => MergeStrategy.discard
   case x => MergeStrategy.last
 }
-
-mainClass in assembly := Some("ch.unibas.dmi.dbis.adam.client.main.ClientStartup")
 
 test in assembly := {}
