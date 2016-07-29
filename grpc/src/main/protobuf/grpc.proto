@@ -329,7 +329,10 @@ message NearestNeighbourQueryMessage {
   DistanceMessage distance = 4;
   //number of nearest neighbors to retrieve
   int32 k = 5;
-  //options to hand-over to scan
+  //options to hand-over to scan, e.g.
+  //nochecks - will not perform the isQueryConform check before executing query
+  //numOfQ - parameter for LSH and SH Index
+  //ks and max_pos_diff - parameter for for MI Index
   map<string, string> options = 6;
   //specifies whether only the candidates from the index search are returned and no exact distance computation is performed
   bool indexOnly = 7;

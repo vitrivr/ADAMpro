@@ -29,7 +29,7 @@ class LSHIndex(val indexname: IndexName, val entityname: EntityName, override pr
   override val lossy: Boolean = true
   override val confidence = 0.5.toFloat
 
-  override def scan(data: DataFrame, q: FeatureVector, distance: DistanceFunction, options: Map[String, Any], k: Int): DataFrame = {
+  override def scan(data: DataFrame, q: FeatureVector, distance: DistanceFunction, options: Map[String, String], k: Int): DataFrame = {
     log.debug("scanning LSH index " + indexname)
 
     val numOfQueries = options.getOrElse("numOfQ", "3").asInstanceOf[String].toInt

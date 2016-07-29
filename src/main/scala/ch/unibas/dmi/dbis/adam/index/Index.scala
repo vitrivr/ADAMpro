@@ -211,7 +211,7 @@ abstract class Index(@transient implicit val ac: AdamContext) extends Serializab
     * @param k        number of elements to retrieve (of the k nearest neighbor search), possibly more than k elements are returned
     * @return a set of candidate tuple ids, possibly together with a tentative score (the number of tuples will be greater than k)
     */
-  protected def scan(data: DataFrame, q: FeatureVector, distance: DistanceFunction, options: Map[String, Any], k: Int): DataFrame
+  protected def scan(data: DataFrame, q: FeatureVector, distance: DistanceFunction, options: Map[String, String], k: Int): DataFrame
 
 
   /**
@@ -267,7 +267,7 @@ abstract class Index(@transient implicit val ac: AdamContext) extends Serializab
 
       def isQueryConform(nnq: NearestNeighbourQuery): Boolean = current.isQueryConform(nnq)
 
-      protected def scan(data: DataFrame, q: FeatureVector, distance: DistanceFunction, options: Map[String, Any], k: Int) = current.scan(data, q, distance, options, k)
+      protected def scan(data: DataFrame, q: FeatureVector, distance: DistanceFunction, options: Map[String, String], k: Int) = current.scan(data, q, distance, options, k)
 
       private[index] var data: DataFrame = current.data
     }

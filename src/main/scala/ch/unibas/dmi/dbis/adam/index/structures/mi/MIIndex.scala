@@ -27,16 +27,16 @@ class MIIndex(val indexname: IndexName, val entityname: EntityName, override pri
   override val confidence = 0.5.toFloat
 
 
-  override def scan(data: DataFrame, q: FeatureVector, distance: DistanceFunction, options: Map[String, Any], k: Int): DataFrame = {
+  override def scan(data: DataFrame, q: FeatureVector, distance: DistanceFunction, options: Map[String, String], k: Int): DataFrame = {
     log.debug("scanning MI index " + indexname)
 
     val ki = metadata.ki
     //ks is the number of closest reference points to consider
-    val ks = options.mapValues(_.asInstanceOf[String].toInt).getOrElse("ks", metadata.ks)
+    val ks = options.mapValues(_.toInt).getOrElse("ks", metadata.ks)
     assert(ks <= ki)
 
     //maximum position difference, MPD, access just pairs whose position difference is below a threshold
-    val max_pos_diff = options.mapValues(_.asInstanceOf[String].toInt).getOrElse("max_pos_diff", ki)
+    val max_pos_diff = options.mapValues(_.toInt).getOrElse("max_pos_diff", ki)
 
     //take closest ks reference points
     val q_knp = metadata.refs.sortBy(ref => distance(ref.feature, q)).take(ks)
