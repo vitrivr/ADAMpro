@@ -89,10 +89,10 @@ class RPCClient(channel: ManagedChannel, definer: AdamDefinitionBlockingStub, se
   def entityExists(entityname: String): Try[Boolean] = {
     execute("entity exists operation") {
       val res = definer.existsEntity(EntityNameMessage(entityname))
-      if (res.code == AckMessage.Code.OK) {
-        return Success(res.message.toBoolean)
+      if (res.ack.get.code == AckMessage.Code.OK) {
+        return Success(res.exists)
       } else {
-        return Failure(new Exception(res.message))
+        return Failure(new Exception(res.ack.get.message))
       }
     }
   }
@@ -327,10 +327,10 @@ class RPCClient(channel: ManagedChannel, definer: AdamDefinitionBlockingStub, se
   def indexExists(entityname: String, attribute: String, indextype: String): Try[Boolean] = {
     execute("index exists operation") {
       val res = definer.existsIndex(IndexMessage(entityname, attribute, getIndexType(indextype)))
-      if (res.code == AckMessage.Code.OK) {
-        return Success(res.message.toBoolean)
+      if (res.ack.get.code == AckMessage.Code.OK) {
+        return Success(res.exists)
       } else {
-        return Failure(new Exception(res.message))
+        return Failure(new Exception(res.ack.get.message))
       }
     }
   }

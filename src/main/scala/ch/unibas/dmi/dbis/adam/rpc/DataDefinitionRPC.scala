@@ -84,15 +84,15 @@ class DataDefinitionRPC extends AdamDefinitionGrpc.AdamDefinition with Logging {
     * @param request
     * @return
     */
-  override def existsEntity(request: EntityNameMessage): Future[AckMessage] = {
+  override def existsEntity(request: EntityNameMessage): Future[ExistsMessage] = {
     log.debug("rpc call for entity exists operation")
     val res = EntityOp.exists(request.entity)
 
     if (res.isSuccess) {
-      Future.successful(AckMessage(code = AckMessage.Code.OK, message = res.toString))
+      Future.successful(ExistsMessage(Some(AckMessage(code = AckMessage.Code.OK)), res.get))
     } else {
       log.error(res.failed.get.getMessage, res.failed.get)
-      Future.successful(AckMessage(code = AckMessage.Code.ERROR, message = res.failed.get.getMessage))
+      Future.successful(ExistsMessage(Some(AckMessage(code = AckMessage.Code.ERROR, message = res.failed.get.getMessage))))
     }
   }
 
@@ -232,15 +232,15 @@ class DataDefinitionRPC extends AdamDefinitionGrpc.AdamDefinition with Logging {
     * @param request
     * @return
     */
-  override def existsIndex(request: IndexMessage): Future[AckMessage] = {
+  override def existsIndex(request: IndexMessage): Future[ExistsMessage] = {
     log.debug("rpc call for index exists operation")
     val res = IndexOp.exists(request.entity)
 
     if (res.isSuccess) {
-      Future.successful(AckMessage(code = AckMessage.Code.OK, message = res.toString))
+      Future.successful(ExistsMessage(Some(AckMessage(code = AckMessage.Code.OK)), res.get))
     } else {
       log.error(res.failed.get.getMessage, res.failed.get)
-      Future.successful(AckMessage(code = AckMessage.Code.ERROR, message = res.failed.get.getMessage))
+      Future.successful(ExistsMessage(Some(AckMessage(code = AckMessage.Code.ERROR, message = res.failed.get.getMessage))))
     }
   }
 

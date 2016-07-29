@@ -13,12 +13,12 @@ service AdamDefinition {
   rpc CreateEntity(CreateEntityMessage) returns (AckMessage) {}
   rpc Count(EntityNameMessage) returns (AckMessage) {}
   rpc DropEntity(EntityNameMessage) returns (AckMessage) {}
-  rpc ExistsEntity(EntityNameMessage) returns (AckMessage) {}
+  rpc ExistsEntity(EntityNameMessage) returns (ExistsMessage) {}
   rpc Insert(stream InsertMessage) returns (AckMessage) {}
   //creates an index on the data
   rpc Index(IndexMessage) returns (AckMessage) {}
   rpc GenerateAllIndexes(IndexMessage) returns (AckMessage) {}
-  rpc ExistsIndex(IndexMessage) returns (AckMessage) {}
+  rpc ExistsIndex(IndexMessage) returns (ExistsMessage) {}
   rpc DropIndex(IndexNameMessage) returns (AckMessage) {}
   rpc ListIndexes(EntityNameMessage) returns (IndexesMessage) {}
   //generates an entity with random data and with all available indexes (for demo purposes)
@@ -407,12 +407,18 @@ message EntitiesMessage {
   repeated string entities = 2;
 }
 
+message ExistsMessage {
+  AckMessage ack = 1;
+  bool exists = 2;
+}
+
 message IndexesMessage {
   AckMessage ack = 1;
 
   message IndexMessage {
     string index = 1;
-    IndexType indextype = 2;
+    string attribute = 2;
+    IndexType indextype = 3;
   }
   repeated IndexMessage indexes = 2;
 }
