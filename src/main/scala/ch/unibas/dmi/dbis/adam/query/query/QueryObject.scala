@@ -1,6 +1,7 @@
 package ch.unibas.dmi.dbis.adam.query.query
 
 import ch.unibas.dmi.dbis.adam.datatypes.feature.Feature._
+import ch.unibas.dmi.dbis.adam.datatypes.feature.FeatureVectorWrapper
 import ch.unibas.dmi.dbis.adam.entity.Entity
 import ch.unibas.dmi.dbis.adam.helpers.partition.Partitioning.PartitionID
 import ch.unibas.dmi.dbis.adam.index.Index
@@ -103,7 +104,7 @@ case class NearestNeighbourQuery(
 
       //check if feature data exists and dimensionality is correct
       val featureData = if (entity.getFeatureData.isDefined) {
-        val dimensionality = entity.getFeatureData.get.select(column).head().getAs[FeatureVector](column).length
+        val dimensionality = entity.getFeatureData.get.select(column).head().getAs[FeatureVectorWrapper](column).vector.length
         dimensionality == q.length
       } else {
         false

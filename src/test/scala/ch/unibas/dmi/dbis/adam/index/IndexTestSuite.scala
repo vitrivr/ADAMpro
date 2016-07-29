@@ -4,9 +4,8 @@ import ch.unibas.dmi.dbis.adam.AdamTestBase
 import ch.unibas.dmi.dbis.adam.api.{EntityOp, IndexOp}
 import ch.unibas.dmi.dbis.adam.datatypes.FieldTypes
 import ch.unibas.dmi.dbis.adam.datatypes.feature.{FeatureVectorWrapper, FeatureVectorWrapperUDT}
-import ch.unibas.dmi.dbis.adam.entity.{Entity, AttributeDefinition}
+import ch.unibas.dmi.dbis.adam.entity.{AttributeDefinition, Entity}
 import ch.unibas.dmi.dbis.adam.index.structures.IndexTypes
-import ch.unibas.dmi.dbis.adam.main.SparkStartup
 import ch.unibas.dmi.dbis.adam.query.distance.EuclideanDistance
 import org.apache.spark.sql.Row
 import org.apache.spark.sql.types.{LongType, StructField, StructType}
@@ -37,6 +36,12 @@ class IndexTestSuite extends AdamTestBase {
 
         When("creating the index")
         val index = IndexOp(entityname, "feature", IndexTypes.ECPINDEX, EuclideanDistance)
+
+        if(index.isFailure){
+          throw index.failed.get
+        }
+
+
         assert(index.isSuccess)
 
         Then("the index should be created")
