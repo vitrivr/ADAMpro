@@ -47,6 +47,12 @@ class EWAHBitString(private val bs: BitSet) extends BitString[EWAHBitString] wit
     bs.serialize(new DataOutputStream(baos))
     baos.toByteArray()
   }
+
+  /**
+    *
+    * @return
+    */
+  override def toString : String = bs.toString
 }
 
 
