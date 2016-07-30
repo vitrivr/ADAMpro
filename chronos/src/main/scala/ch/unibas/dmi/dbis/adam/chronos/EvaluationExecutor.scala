@@ -38,36 +38,58 @@ class EvaluationExecutor(val job: EvaluationJob, logger: ChronosHttpClient#Chron
     this(new EvaluationJob(job), logger, setStatus, inputDirectory, outputDirectory)
   }
 
-
-  private var FEATURE_VECTOR_ATTRIBUTENAME = "fv0"
+  private val ENTITY_NAME_PREFIX = "chr-eval-"
+  private val FEATURE_VECTOR_ATTRIBUTENAME = "fv0"
 
   /**
     * Runs evaluation.
     */
   def run(): Properties = {
     val results = new ListBuffer[(String, Map[String, String])]()
-    val entityname = generateString(10)
+
+    val entityname = if(job.data_enforcecreation) {
+      generateString(10)
+    } else {
+      getEntityName()
+    }
     val attributes = getAttributeDefinition()
 
+    var entityCreatedNewly = false
+
     //create entity
-    logger.publish(new LogRecord(Level.INFO, "creating entity " + entityname + " (" + attributes.map(a => a.name + "(" + a.datatype + ")").mkString(",") + ")"))
-    client.entityCreate(entityname, attributes)
+    if(client.entityExists(entityname).get){
+      logger.publish(new LogRecord(Level.INFO, "entity " + entityname + " exists already"))
+      entityCreatedNewly = false
+    } else {
+      logger.publish(new LogRecord(Level.INFO, "creating entity " + entityname + " (" + attributes.map(a => a.name + "(" + a.datatype + ")").mkString(",") + ")"))
+      entityCreatedNewly = true
+      client.entityCreate(entityname, attributes)
+    }
 
     //insert random data
     logger.publish(new LogRecord(Level.INFO, "inserting " + job.data_tuples + " tuples into " + entityname))
     client.entityGenerateRandomData(entityname, job.data_tuples, job.data_vector_dimensions, job.data_vector_sparsity, job.data_vector_min, job.data_vector_max, job.data_vector_sparse)
 
-    //TODO Add Norm to Job
+    var indexCreatedNewly = false
+
     val indexnames = if (job.execution_name == "sequential") {
       //no index
       logger.publish(new LogRecord(Level.INFO, "creating no index for " + entityname))
       Seq()
     } else if (job.execution_name == "progressive") {
       logger.publish(new LogRecord(Level.INFO, "creating all indexes for " + entityname))
+      indexCreatedNewly = true
       client.entityCreateAllIndexes(entityname, Seq(FEATURE_VECTOR_ATTRIBUTENAME), 2).get
     } else {
-      logger.publish(new LogRecord(Level.INFO, "creating " + job.execution_subtype + " index for " + entityname))
-      Seq(client.indexCreate(entityname, FEATURE_VECTOR_ATTRIBUTENAME, job.execution_subtype, 2, Map()).get)
+      if(client.indexExists(entityname, FEATURE_VECTOR_ATTRIBUTENAME, job.execution_subtype).get) {
+        logger.publish(new LogRecord(Level.INFO, job.execution_subtype + " index for " + entityname + " (" +  FEATURE_VECTOR_ATTRIBUTENAME + ") " + "exists already"))
+        indexCreatedNewly = false
+        client.indexList(entityname).get.filter(_._2 == FEATURE_VECTOR_ATTRIBUTENAME).filter(_._3 == job.execution_subtype).map(_._1)
+      } else {
+        logger.publish(new LogRecord(Level.INFO, "creating " + job.execution_subtype + " index for " + entityname))
+        indexCreatedNewly = true
+        Seq(client.indexCreate(entityname, FEATURE_VECTOR_ATTRIBUTENAME, job.execution_subtype, 2, Map()).get)
+      }
     }
 
     if (job.measurement_cache) {
@@ -98,17 +120,17 @@ class EvaluationExecutor(val job: EvaluationJob, logger: ChronosHttpClient#Chron
       logger.publish(new LogRecord(Level.INFO, "generating queries to execute on " + entityname))
       val queries = getQueries(entityname)
 
-      //determine perfect results
-      if(job.result_quality){
-        logger.publish(new LogRecord(Level.INFO, "Result Quality will be measured"))
-      }
-
       //query execution
       queries.zipWithIndex.foreach { case (qo, idx) =>
         if (running) {
           val runid = "r-" + idx.toString
           logger.publish(new LogRecord(Level.INFO, "executing query for " + entityname + " (runid: " + runid + ")"))
-          val result = executeQuery(qo)
+          var result = executeQuery(qo)
+
+          //further params to log
+          result += "entityCreatedNewly" -> entityCreatedNewly.toString
+          result += "indexCreatedNewly" -> indexCreatedNewly.toString
+
           logger.publish(new LogRecord(Level.INFO, "executed query for " + entityname + " (runid: " + runid + ")"))
 
           if (job.measurement_firstrun && idx == 0){
@@ -134,6 +156,10 @@ class EvaluationExecutor(val job: EvaluationJob, logger: ChronosHttpClient#Chron
         .foreach { case (k, v) => prop.setProperty(k, v) } //set property
     }
 
+    if(job.data_enforcecreation) {
+      client.entityDrop(entityname)
+    }
+
     prop
   }
 
@@ -150,6 +176,28 @@ class EvaluationExecutor(val job: EvaluationJob, logger: ChronosHttpClient#Chron
     * @return
     */
   def getProgress: Double = progress
+
+
+  private def getEntityName() : String = {
+    val prime = 31
+    var result = 1
+    result = prime * result + job.data_tuples.hashCode
+    result = prime * result + job.data_vector_dimensions.hashCode
+    result = prime * result + job.data_vector_min.hashCode
+    result = prime * result + job.data_vector_max.hashCode
+    result = prime * result + job.data_vector_sparse.hashCode
+    result = prime * result + job.data_vector_sparsity.hashCode
+    result = prime * result + job.data_metadata_boolean.hashCode
+    result = prime * result + job.data_metadata_double.hashCode
+    result = prime * result + job.data_metadata_float.hashCode
+    result = prime * result + job.data_metadata_int.hashCode
+    result = prime * result + job.data_metadata_string.hashCode
+    result = prime * result + job.data_metadata_long.hashCode
+    result = prime * result + job.data_metadata_text.hashCode
+    result = prime * result + job.data_vector_pk.hashCode
+
+    ENTITY_NAME_PREFIX + result
+  }
 
   /**
     * Gets a schema for an entity to create.
@@ -348,29 +396,10 @@ class EvaluationExecutor(val job: EvaluationJob, logger: ChronosHttpClient#Chron
     lb += ("options" -> qo.options.mkString)
     lb += ("debugQuery" -> qo.getQueryMessage.toString())
 
-    var truth: Seq[RPCQueryResults] = null
-
-    if(job.result_quality){
-      val opt = collection.mutable.Map() ++ qo.options
-      opt.put("indexonly", "false")
-      //logger.publish(new LogRecord(Level.FINEST, "Resultquality query: "+ qo.getQueryMessage.nnq.get.query.get.feature.denseVector.get.vector.mkString(",")))
-      val truthQuery = client.doQuery(qo.copy(options = opt.toMap))
-      if(truthQuery.isSuccess){
-        truth = truthQuery.get
-        logger.publish(new LogRecord(Level.FINEST, "Succeeded in Retrieving "+truthQuery.get.head.results.size+" Results for the query."))
-        logger.publish(new LogRecord(Level.FINEST, "Example result "+ truthQuery.get.head.results.head.mkString(", ")))
-      } else{
-        lb+=("quality_query_failure" -> truthQuery.failed.get.getMessage)
-      }
-    }
-
-    //TODO Resultquality Progressive Results
     if (job.execution_name != "progressive") {
       val t1 = System.currentTimeMillis
 
       //do query
-      logger.publish(new LogRecord(Level.FINEST, "Executing query with options: "+qo.options.mkString(",")))
-      logger.publish(new LogRecord(Level.FINEST, "querymessage: "+qo.getQueryMessage.toString()))
       val res: Try[Seq[RPCQueryResults]] = client.doQuery(qo)
 
 
@@ -382,29 +411,33 @@ class EvaluationExecutor(val job: EvaluationJob, logger: ChronosHttpClient#Chron
       lb += ("endtime" -> t2)
 
       if (res.isSuccess) {
+        //time
         lb += ("measuredtime" -> res.get.map(_.time).mkString(";"))
+
+        //results
         lb += ("results" -> {
-          //TODO Maybe FieldNames should go in the grpc-File so we can use them here
           res.get.head.results.map(res => (res.get("pk") + "," + res.get("adamprodistance"))).mkString("(", "),(", ")")
         })
 
-        //Measure Result Quality
-        var agreements = 0
-        res.get.head.results.foreach( res => {
-          //Simple matching
-          if(truth.head.results.exists(f => f.get("pk").get.equals(res.get("pk").get))){
-            agreements+=1
+        //result quality
+        if(job.measurement_resultquality){
+          //perform sequential query
+          val opt = collection.mutable.Map() ++ qo.options
+          opt -= "hints"
+          opt += "hints" -> "sequential"
+          val gtruth = client.doQuery(qo.copy(options = opt.toMap))
+
+          if(gtruth.isSuccess){
+            val gtruthPKs = gtruth.get.map(_.results.map(_.get("pk")))
+            val resPKs = res.get.map(_.results.map(_.get("pk")))
+
+            val agreements = gtruthPKs.intersect(resPKs).length
+            //simple hits/total
+            lb+= ("resultquality" -> agreements / qo.options.get("k").get.toInt)
+          } else{
+            lb+= ("resultquality" -> gtruth.failed.get.getMessage)
           }
-        })
-        logger.publish(new LogRecord(Level.FINEST, "Returned Candidates: "+res.get.head.results.length))
-        logger.publish(new LogRecord(Level.FINEST, "Agreements: "+agreements))
-
-        //simple hits/total
-        lb+= ("successrate" -> agreements.toFloat/qo.options.get("k").get.toFloat)
-        logger.publish(new LogRecord(Level.FINEST, "Percentage match: "+agreements.toFloat/qo.options.get("k").get.toFloat))
-
-        //TODO Compare here
-
+        }
       } else {
         lb += ("failure" -> res.failed.get.getMessage)
       }

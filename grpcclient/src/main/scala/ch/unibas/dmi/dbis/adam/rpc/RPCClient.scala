@@ -81,6 +81,23 @@ class RPCClient(channel: ManagedChannel, definer: AdamDefinitionBlockingStub, se
   }
 
   /**
+    * Check if entity exists.
+    *
+    * @param entityname name of entity
+    * @return
+    */
+  def entityExists(entityname: String): Try[Boolean] = {
+    execute("entity exists operation") {
+      val res = definer.existsEntity(EntityNameMessage(entityname))
+      if (res.ack.get.code == AckMessage.Code.OK) {
+        return Success(res.exists)
+      } else {
+        return Failure(new Exception(res.ack.get.message))
+      }
+    }
+  }
+
+  /**
     * Generate random data and fill into entity.
     *
     * @param entityname name of entity
@@ -202,7 +219,7 @@ class RPCClient(channel: ManagedChannel, definer: AdamDefinitionBlockingStub, se
     *
     * @param entityname
     */
-  def entityCache(entityname : String): Try[Boolean] ={
+  def entityCache(entityname: String): Try[Boolean] = {
     execute("cache entity") {
       val res = searcherBlocking.cacheEntity(EntityNameMessage(entityname))
       if (res.code.isOk) {
@@ -263,7 +280,7 @@ class RPCClient(channel: ManagedChannel, definer: AdamDefinitionBlockingStub, se
     */
   def entityCreateAllIndexes(entityname: String, attributes: Seq[String], norm: Int): Try[Seq[String]] = {
     execute("create all indexes operation") {
-      val res = attributes.map { attribute => definer.generateAllIndexes(IndexMessage(entity = entityname, column = attribute, distance = Some(DistanceMessage(DistanceType.minkowski, options = Map("norm" -> norm.toString)))))
+      val res = attributes.map { attribute => definer.generateAllIndexes(IndexMessage(entity = entityname, attribute = attribute, distance = Some(DistanceMessage(DistanceType.minkowski, options = Map("norm" -> norm.toString)))))
       }
 
       if (res.exists(_.code != AckMessage.Code.OK)) {
@@ -299,14 +316,45 @@ class RPCClient(channel: ManagedChannel, definer: AdamDefinitionBlockingStub, se
     }
   }
 
+  /**
+    * List all indexes for given entity.
+    *
+    * @param entityname name of entity
+    * @return (indexname, attribute, indextypename)
+    */
+  def indexList(entityname : String): Try[Seq[(String, String, IndexType)]] = {
+    execute("list indexes operation") {
+      Success(definer.listIndexes(EntityNameMessage(entityname)).indexes.map(i => (i.index, i.attribute, i.indextype)))
+    }
+  }
+
+  /**
+    * Check if index exists.
+    *
+    * @param entityname name of entity
+    * @param attribute nmae of attribute
+    * @param indextype type of index
+    * @return
+    */
+  def indexExists(entityname: String, attribute: String, indextype: String): Try[Boolean] = {
+    execute("index exists operation") {
+      val res = definer.existsIndex(IndexMessage(entityname, attribute, getIndexType(indextype)))
+      if (res.ack.get.code == AckMessage.Code.OK) {
+        return Success(res.exists)
+      } else {
+        return Failure(new Exception(res.ack.get.message))
+      }
+    }
+  }
+
 
   /**
     * Caches an index.
     *
     * @param indexname
     */
-  def indexCache(indexname : String): Try[Boolean] ={
-    execute("cache index") {
+  def indexCache(indexname: String): Try[Boolean] = {
+    execute("cache index operation") {
       val res = searcherBlocking.cacheIndex(IndexNameMessage(indexname))
       if (res.code.isOk) {
         Success(res.code.isOk)
@@ -321,7 +369,7 @@ class RPCClient(channel: ManagedChannel, definer: AdamDefinitionBlockingStub, se
     * @param s
     * @return
     */
-  private def getIndexType(s : String) = s match {
+  private def getIndexType(s: String) = s match {
     case "ecp" => IndexType.ecp
     case "lsh" => IndexType.lsh
     case "mi" => IndexType.mi
@@ -385,12 +433,12 @@ class RPCClient(channel: ManagedChannel, definer: AdamDefinitionBlockingStub, se
   /**
     * Perform a progressive search.
     *
-    * @param qo search request
-    * @param next       function for next result
-    * @param completed  function for final result
+    * @param qo        search request
+    * @param next      function for next result
+    * @param completed function for final result
     * @return
     */
-  def doProgressiveQuery(qo: RPCQueryObject,  next: (Try[RPCQueryResults]) => (Unit), completed: (String) => (Unit)): Try[Seq[RPCQueryResults]] = {
+  def doProgressiveQuery(qo: RPCQueryObject, next: (Try[RPCQueryResults]) => (Unit), completed: (String) => (Unit)): Try[Seq[RPCQueryResults]] = {
     execute("progressive query operation") {
       val so = new StreamObserver[QueryResultsMessage]() {
         override def onError(throwable: Throwable): Unit = {
@@ -423,7 +471,6 @@ class RPCClient(channel: ManagedChannel, definer: AdamDefinitionBlockingStub, se
   def shutdown(): Unit = {
     channel.shutdown.awaitTermination(5, TimeUnit.SECONDS)
   }
-
 
 
   /**

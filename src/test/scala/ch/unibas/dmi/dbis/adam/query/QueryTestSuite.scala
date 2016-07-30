@@ -359,7 +359,7 @@ class QueryTestSuite extends AdamTestBase with ScalaFutures {
             .map(r => (r.getAs[Long]("tid"))).collect().sorted
         }
 
-        //results (note we truly compare the id-column here and not the metadata "tid"
+        //results (note we truly compare the id-attribute here and not the metadata "tid"
         val vh1res = va1qh.prepareTree().evaluate().get.map(r => r.getAs[Long]("tid")).collect()
         val vh2res = va2qh.prepareTree().evaluate().get.map(r => r.getAs[Long]("tid")).collect()
 

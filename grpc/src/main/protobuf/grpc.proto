@@ -13,10 +13,12 @@ service AdamDefinition {
   rpc CreateEntity(CreateEntityMessage) returns (AckMessage) {}
   rpc Count(EntityNameMessage) returns (AckMessage) {}
   rpc DropEntity(EntityNameMessage) returns (AckMessage) {}
+  rpc ExistsEntity(EntityNameMessage) returns (ExistsMessage) {}
   rpc Insert(stream InsertMessage) returns (AckMessage) {}
   //creates an index on the data
   rpc Index(IndexMessage) returns (AckMessage) {}
   rpc GenerateAllIndexes(IndexMessage) returns (AckMessage) {}
+  rpc ExistsIndex(IndexMessage) returns (ExistsMessage) {}
   rpc DropIndex(IndexNameMessage) returns (AckMessage) {}
   rpc ListIndexes(EntityNameMessage) returns (IndexesMessage) {}
   //generates an entity with random data and with all available indexes (for demo purposes)
@@ -158,7 +160,7 @@ message InsertMessage {
 
 message IndexMessage {
   string entity = 1;
-  string column = 2;
+  string attribute = 2;
   IndexType indextype = 3;
   DistanceMessage distance = 4;
   //for possible options see each index structure
@@ -168,7 +170,7 @@ message IndexMessage {
 message RepartitionMessage {
   string entity = 1; //entity or index
   int32 numberOfPartitions = 2;
-  repeated string columns = 3;
+  repeated string attributes = 3;
   enum PartitionOptions {
       CREATE_NEW = 0;
       REPLACE_EXISTING = 1;
@@ -189,12 +191,12 @@ message RepartitionMessage {
 
 message UpdateWeightsMessage {
   string entity = 1;
-  string column = 2;
+  string attribute = 2;
 }
 
 message WeightMessage {
   string entity = 1; //entity or index
-  string column = 2;
+  string attribute = 2;
   float weight = 3;
 }
 
@@ -319,8 +321,8 @@ message IndexListMessage {
 }
 
 message NearestNeighbourQueryMessage {
-  //name of the column on which to perform the nearest neighbour query
-  string column = 1;
+  //name of the attribute on which to perform the nearest neighbour query
+  string attribute = 1;
   //query vector
   FeatureVectorMessage query = 2;
   //weights vector; the weights are element-wise multiplied when computing the distance
@@ -372,7 +374,7 @@ message BooleanQueryMessage {
 
   message JoinMessage {
     string table = 1;
-    repeated string columns = 2;
+    repeated string attributes = 2;
   }
 }
 
@@ -406,12 +408,18 @@ message EntitiesMessage {
   repeated string entities = 2;
 }
 
+message ExistsMessage {
+  AckMessage ack = 1;
+  bool exists = 2;
+}
+
 message IndexesMessage {
   AckMessage ack = 1;
 
   message IndexMessage {
     string index = 1;
-    IndexType indextype = 2;
+    string attribute = 2;
+    IndexType indextype = 3;
   }
   repeated IndexMessage indexes = 2;
 }

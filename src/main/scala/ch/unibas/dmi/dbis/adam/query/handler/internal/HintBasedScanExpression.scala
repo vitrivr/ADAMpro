@@ -117,7 +117,7 @@ object HintBasedScanExpression extends Logging {
 
             val entity = Entity.load(entityname).get
 
-            if (ScanWeightInspector(index) > ScanWeightInspector(entity, nnq.get.column)) {
+            if (ScanWeightInspector(index) > ScanWeightInspector(entity, nnq.get.attribute)) {
               scan = Some(IndexScanExpression(index)(nnq.get)(scan))
             } else {
               scan = Some(SequentialScanExpression(entity)(nnq.get)(scan))

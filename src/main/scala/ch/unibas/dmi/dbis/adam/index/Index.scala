@@ -242,7 +242,7 @@ abstract class Index(@transient implicit val ac: AdamContext) extends Serializab
     val partitionInfo = data.rdd.mapPartitionsWithIndex((idx, f) => {
       Iterator((idx, f.length))
     })
-    lb.append("tuplesPerPartition" -> partitionInfo.collect().map{case(id, length) => "(" + id + "," + length + ")"}.mkString)
+    lb.append("tuplesPerPartition" -> partitionInfo.collect().map { case (id, length) => "(" + id + "," + length + ")" }.mkString)
 
     lb.toMap
   }
@@ -375,6 +375,16 @@ object Index extends Logging {
   def exists(indexname: IndexName)(implicit ac: AdamContext): Boolean = CatalogOperator.existsIndex(indexname).get
 
   /**
+    * Checks whether index exists.
+    *
+    * @param entityname    name of entity
+    * @param attribute     name of attribute
+    * @param indextypename index type to use for indexing
+    * @return
+    */
+  def exists(entityname: EntityName, attribute: String, indextypename: IndexTypeName)(implicit ac: AdamContext): Boolean = CatalogOperator.existsIndex(entityname, attribute, indextypename).get
+
+  /**
     * Lists indexes.
     *
     * @param entityname    name of entity
@@ -418,7 +428,6 @@ object Index extends Logging {
     */
   private[index] def loadIndexMetaData(indexname: IndexName)(implicit ac: AdamContext): Try[Index] = {
     if (!exists(indexname)) {
-      log.error("Index "+indexname + " does not exist!")
       Failure(IndexNotExistingException())
     }
 
@@ -476,23 +485,7 @@ object Index extends Logging {
     val indexes = CatalogOperator.listIndexes(Some(entityname)).get
 
     indexes.foreach {
-      indexname => {
-          try{
-            val test = drop(indexname)
-            if(test.isFailure){
-              log.error("Error when dropping index: "+indexname)
-              CatalogOperator.dropIndex(indexname)
-              IndexLRUCache.invalidate(indexname)
-            }
-          }catch{
-            //Neither ExecutionError nor Throwable extend Exceptions, so they need to be manually specified :)
-            case _:java.lang.AssertionError | _ : com.google.common.util.concurrent.ExecutionError => {
-              log.error("ExecutionError does not extend throwable... Error when dropping index: "+indexname)
-              CatalogOperator.dropIndex(indexname)
-              IndexLRUCache.invalidate(indexname)
-            }
-          }
-      }
+      indexname => drop(indexname)
     }
 
     Success(null)
