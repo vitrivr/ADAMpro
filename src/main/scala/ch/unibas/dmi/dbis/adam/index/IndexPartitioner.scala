@@ -55,7 +55,7 @@ object IndexPartitioner extends Logging {
       case PartitionerChoice.RANDOM =>
         ac.sqlContext.createDataFrame(toPartition.partitionBy(new RandomPartitioner(nPartitions)).map(_._2), data.schema)
       case PartitionerChoice.CURRENT => {
-        new SHPartitioner(nPartitions).apply(data, cols, Some(index.indexname), nPartitions)
+        SHPartitioner(data, cols, Some(index.indexname), nPartitions)
       }
       case PartitionerChoice.RANGE =>
         {

@@ -3,16 +3,14 @@ package ch.unibas.dmi.dbis.adam.index.structures.sh
 import breeze.linalg.{Matrix, Vector, _}
 import ch.unibas.dmi.dbis.adam.config.FieldNames
 import ch.unibas.dmi.dbis.adam.datatypes.bitString.BitStringUDT
-import ch.unibas.dmi.dbis.adam.datatypes.feature.Feature
 import ch.unibas.dmi.dbis.adam.datatypes.feature.Feature.{VectorBase, _}
 import ch.unibas.dmi.dbis.adam.entity.Entity
 import ch.unibas.dmi.dbis.adam.entity.Entity._
 import ch.unibas.dmi.dbis.adam.index.Index.{IndexName, IndexTypeName}
 import ch.unibas.dmi.dbis.adam.index._
 import ch.unibas.dmi.dbis.adam.index.structures.IndexTypes
-import ch.unibas.dmi.dbis.adam.main.{AdamContext, SparkStartup}
+import ch.unibas.dmi.dbis.adam.main.AdamContext
 import ch.unibas.dmi.dbis.adam.query.distance.DistanceFunction
-import org.apache.log4j.Logger
 import org.apache.spark.rdd.RDD
 import org.apache.spark.sql.Row
 import org.apache.spark.sql.types.{StructField, StructType}
@@ -60,6 +58,7 @@ class SHIndexer(nbits: Option[Int], trainingSize: Int)(@transient implicit val a
     ))
 
     val df = ac.sqlContext.createDataFrame(indexdata, schema)
+    //CatalogOperator.updateIndexOption(indexname, SHIndex.noBitsOption,indexMetaData.noBits.toString)
     new SHIndex(indexname, entityname, df, indexMetaData)
   }
 
@@ -112,7 +111,9 @@ class SHIndexer(nbits: Option[Int], trainingSize: Int)(@transient implicit val a
 
     log.trace("SH finished training")
 
-    SHIndexMetaData(feigv, minProj, maxProj, modes.toDenseMatrix, radius)
+    val noBits = nbits.getOrElse(nfeatures*2)
+
+    SHIndexMetaData(feigv, minProj, maxProj, modes.toDenseMatrix, radius, noBits)
   }
 
 
