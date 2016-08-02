@@ -1,7 +1,7 @@
 package ch.unibas.dmi.dbis.adam.index.structures.sh
 
 import ch.unibas.dmi.dbis.adam.config.FieldNames
-import it.unimi.dsi.fastutil.ints.IntHeapPriorityQueue
+import it.unimi.dsi.fastutil.ints.{IntComparators, IntHeapPriorityQueue}
 import org.apache.spark.sql.Row
 
 import scala.collection.mutable.ListBuffer
@@ -14,7 +14,7 @@ import scala.collection.mutable.ListBuffer
   */
 class SHResultHandler[A](k: Int) {
   @transient private var elementsLeft = k
-  @transient private val queue =  new IntHeapPriorityQueue(2 * k)
+  @transient private val queue =  new IntHeapPriorityQueue(2 * k, IntComparators.OPPOSITE_COMPARATOR)
   @transient protected var ls = ListBuffer[SHResultElement[A]]()
 
   /**
@@ -30,9 +30,9 @@ class SHResultHandler[A](k: Int) {
         enqueue(score, tid)
         return true
       } else {
-        val peek = queue.firstInt()
+        val peek = queue.firstInt
         val score = r.getAs[Int](FieldNames.distanceColumnName)
-        if (peek < score) {
+        if (peek > score) {
           queue.dequeueInt()
           val tid = r.getAs[A](pk)
           enqueue(score, tid)
@@ -43,32 +43,6 @@ class SHResultHandler[A](k: Int) {
       }
     }
   }
-
-  /**
-    *
-    * @param res
-    * @return
-    */
-  def offer(res: SHResultElement[A]): Boolean = {
-    queue.synchronized {
-      if (elementsLeft > 0) {
-        elementsLeft -= 1
-        enqueue(res)
-        return true
-      } else {
-        val peek = queue.firstInt
-        val score = res.score
-        if (peek < score) {
-          queue.dequeueInt()
-          enqueue(res)
-          return true
-        } else {
-          return false
-        }
-      }
-    }
-  }
-
 
   /**
     *

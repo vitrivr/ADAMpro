@@ -41,20 +41,22 @@ class SHIndex(val indexname: IndexName, val entityname: EntityName, override pri
   override def scan(data : DataFrame, q : FeatureVector, distance : DistanceFunction, options : Map[String, String], k : Int): DataFrame = {
     log.debug("scanning SH index " + indexname)
 
-    val numOfQueries = options.getOrElse("numOfQ", "3").asInstanceOf[String].toInt
+    val numOfQueries = options.getOrElse("numOfQ", "3").toInt
 
     import MovableFeature.conv_feature2MovableFeature
     val originalQuery = SHUtils.hashFeature(q, metadata)
     //move the query around by the precomuted radius
-    val queries = ac.sc.broadcast(List.fill(numOfQueries)(SHUtils.hashFeature(q.move(metadata.radius), metadata)) ::: List(originalQuery))
+    //TODO: possibly adjust weight of computed queries vs. true query
+    val queries = ac.sc.broadcast(List.fill(numOfQueries)((1.0, SHUtils.hashFeature(q.move(metadata.radius), metadata))) ::: List((1.0, originalQuery)))
 
     import org.apache.spark.sql.functions.udf
     val distUDF = udf((c: BitString[_]) => {
       var i = 0
       var score = 0
       while (i < queries.value.length) {
-        val query = queries.value(i)
-        score += c.intersectionCount(query) //Hamming distance
+        val weight = queries.value(i)._1
+        val query = queries.value(i)._2
+        score += c.hammingDistance(query) //hamming distance
         i += 1
       }
 
