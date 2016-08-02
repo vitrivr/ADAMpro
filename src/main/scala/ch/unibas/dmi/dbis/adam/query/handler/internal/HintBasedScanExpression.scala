@@ -3,6 +3,7 @@ package ch.unibas.dmi.dbis.adam.query.handler.internal
 import ch.unibas.dmi.dbis.adam.catalog.CatalogOperator
 import ch.unibas.dmi.dbis.adam.entity.Entity
 import ch.unibas.dmi.dbis.adam.entity.Entity._
+import ch.unibas.dmi.dbis.adam.exception.GeneralAdamException
 import ch.unibas.dmi.dbis.adam.index.Index
 import ch.unibas.dmi.dbis.adam.index.Index._
 import ch.unibas.dmi.dbis.adam.main.AdamContext
@@ -62,11 +63,10 @@ object HintBasedScanExpression extends Logging {
 
     if (plan.isEmpty) {
       if (withFallback) {
-        log.trace("no query plan chosen, go to fallback")
+        log.warn("no query plan chosen, go to fallback")
         plan = getPlan(entityname, indexes, nnq, bq, Seq(QueryHints.FALLBACK_HINTS))(expr)
       } else {
-        log.warn("using hints no execution plan could be found, using empty plan")
-        plan = Some(EmptyExpression())
+        throw new GeneralAdamException("using hints no execution plan could be found, using empty plan")
       }
     }
 
