@@ -79,7 +79,7 @@ class LSHIndex(val indexname: IndexName, val entityname: EntityName, override pr
   }
 
   override def isQueryConform(nnq: NearestNeighbourQuery): Boolean = {
-    nnq.distance.getClass == metadata.distance.getClass
+    nnq.distance.equals(metadata.distance)
   }
 }
 
