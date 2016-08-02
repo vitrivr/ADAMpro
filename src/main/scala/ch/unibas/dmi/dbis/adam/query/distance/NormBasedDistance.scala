@@ -1,9 +1,7 @@
 package ch.unibas.dmi.dbis.adam.query.distance
 
-import breeze.linalg.{Vector, max}
-import breeze.numerics.abs
+import breeze.linalg.max
 import ch.unibas.dmi.dbis.adam.datatypes.feature.Feature._
-import ch.unibas.dmi.dbis.adam.query.distance.CorrelationDistance._
 import ch.unibas.dmi.dbis.adam.query.distance.Distance.Distance
 
 /**
@@ -14,8 +12,8 @@ import ch.unibas.dmi.dbis.adam.query.distance.Distance.Distance
   */
 object NormBasedDistance {
   def apply(n: Double) = n match {
-    case x if math.abs(n - 1) < 0.00001 => ManhattanDistance
-    case x if math.abs(n - 2) < 0.00001 => EuclideanDistance
+    case x if math.abs(n - 1) < 10E-6 => ManhattanDistance
+    case x if math.abs(n - 2) < 10E-6 => EuclideanDistance
     case n => new MinkowskiDistance(n)
   }
 }
@@ -39,13 +37,20 @@ object ManhattanDistance extends MinkowskiDistance(1) with Serializable {}
 /**
   * from Julia: sqrt(sum((x - y).^2 .* w))
   */
-object EuclideanDistance extends MinkowskiDistance(2) with Serializable {}
+object EuclideanDistance extends MinkowskiDistance(2) with Serializable {
+
+  override def equals(that: Any): Boolean = (this.getClass == that.getClass || that.getClass == SquaredEuclideanDistance.getClass)
+  override def hashCode(): Int = 0
+}
 
 /**
   * from Julia: sum((x - y).^2)
   */
 object SquaredEuclideanDistance extends MinkowskiDistance(2) with Serializable {
   override def normalize(cumSum: Distance): Distance = cumSum
+
+  override def equals(that: Any): Boolean = (this.getClass == that.getClass || that.getClass == EuclideanDistance.getClass)
+  override def hashCode(): Int = 0
 }
 
 /**
