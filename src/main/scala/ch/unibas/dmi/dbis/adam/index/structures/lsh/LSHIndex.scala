@@ -48,7 +48,7 @@ class LSHIndex(val indexname: IndexName, val entityname: EntityName, override pr
     val distUDF = udf((c: BitString[_]) => {
       var i = 0
       var score = 0
-      val cells = signatureGenerator.value.toBuckets(c)
+      val buckets = signatureGenerator.value.toBuckets(c)
 
       while (i < queries.value.length) {
         var j = 0
@@ -57,8 +57,8 @@ class LSHIndex(val indexname: IndexName, val entityname: EntityName, override pr
         val weight = queries.value(i)._1
         val query = queries.value(i)._2
 
-        while(j < cells.length){
-          if(cells(j) == query(j)){
+        while(j < buckets.length){
+          if(buckets(j) == query(j)){
             sum += 1
           }
 
