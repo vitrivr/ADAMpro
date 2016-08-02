@@ -23,4 +23,6 @@ trait ADAMPartitioner{
     * @return the partitioned DataFrame
     */
   def apply(data: DataFrame, cols: Option[Seq[String]] = None, indexName: Option[EntityNameHolder] = None, nPartitions: Int)(implicit ac: AdamContext)  : DataFrame
+
+  //TODO Maybe add a getPartition(q: FeatureVector):Int to the Interface?
 }

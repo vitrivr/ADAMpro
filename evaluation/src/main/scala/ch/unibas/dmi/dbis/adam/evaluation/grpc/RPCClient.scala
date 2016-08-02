@@ -26,13 +26,13 @@ class RPCClient(channel: ManagedChannel, definer: AdamDefinitionBlockingStub, se
     */
   val indexOnly = true
   val numQ = 2
-  val tupleSizes = Seq(1e4.toInt)
+  val tupleSizes = Seq(1e5.toInt)
   val dimensions = Seq(10)
-  val partitions = Seq(4, 16)
+  val partitions = Seq(4, 16, 200)
   val indices = Seq(IndexType.sh, IndexType.vaf)
   val partitioners = Seq( RepartitionMessage.Partitioner.CURRENT, RepartitionMessage.Partitioner.SPARK)
 
-  var dropPartitions = Seq(0.3)
+  var dropPartitions = Seq(0.0, 0.5)
 
   var eName = ""
 
@@ -118,34 +118,35 @@ class RPCClient(channel: ManagedChannel, definer: AdamDefinitionBlockingStub, se
 
     //Average over Queries
     var resSize = 0
-    val start = System.currentTimeMillis()
-    var counter = 0
+    var time = 0l
+    var queryCounter = 0
     var avgMiss = 0.0
-    while (counter < queryCount) {
-      System.out.println("---------\n new Query")
 
+    while (queryCounter < queryCount) {
+      System.out.println("--------- new Query, dropping: "+dropPerc+" of Partitions --------")
+
+      //Skipping Query
+      val start = System.currentTimeMillis()
       val nnq = Some(randomQueryMessage(dim, part, dropPerc))
       val qm = QueryMessage(nnq = nnq, from = Some(FromMessage(FromMessage.Source.Index(indexName))), information = Seq(QueryMessage.InformationLevel.WITH_PROVENANCE_PARTITION_INFORMATION, QueryMessage.InformationLevel.WITH_PROVENANCE_SOURCE_INFORMATION, QueryMessage.InformationLevel.INFORMATION_FULL_TREE))
       val dropRes = searcherBlocking.doQuery(qm)
-
-     //printPartInfo(dropRes)
+      val stop = System.currentTimeMillis()
+      time+=(stop-start)
 
       //truth
       val opt = collection.mutable.Map() ++ nnq.get.options
       opt -= "skipPart"
-      opt -= "hints"
-      opt += "hints" -> "sequential"
-      val truthM = QueryMessage(nnq = Some(nnq.get.copy(options = opt.toMap, indexOnly = false)), from = Some(FromMessage(FromMessage.Source.Entity(eName))), information = qm.information)
+      val truthM = QueryMessage(nnq = Some(nnq.get.copy(options = opt.toMap, indexOnly = false)), from = Some(FromMessage(FromMessage.Source.Entity(eName))), information = qm.information, hints = Seq("sequential"))
       val gtruth = searcherBlocking.doQuery(truthM)
-
-      System.out.println(truthM)
-      System.out.println("Groundtruth: "+gtruth.responses.head.results.size+" Example Result: "+gtruth.responses.head.results.head.data.mkString(","))
 
       //no skipping
       val noSkipOpt = collection.mutable.Map() ++ nnq.get.options
       noSkipOpt -= "skipPart"
-      noSkipOpt += "skipPart" -> "0.0"
       val noSkipRes = searcherBlocking.doQuery(QueryMessage(nnq = Some(qm.nnq.get.copy(options = noSkipOpt.toMap)), from = qm.from, information = qm.information))
+
+      System.out.println(dropRes.responses.head.results.size+" | "+dropRes.responses.head.results.head.data.mkString(", "))
+      System.out.println(gtruth.responses.head.results.size+" | "+gtruth.responses.head.results.head.data.mkString(", "))
+      System.out.println(noSkipRes.responses.head.results.size+" | "+noSkipRes.responses.head.results.head.data.mkString(", "))
 
       //Comparison Code
       val ratio = errorRatio(noSkipRes, dropRes)
@@ -158,21 +159,34 @@ class RPCClient(channel: ManagedChannel, definer: AdamDefinitionBlockingStub, se
       System.out.println("Top K Matches between truth and skip "+skipAgree)
 
       resSize += res.responses.head.results.size
-      counter += 1
+      queryCounter += 1
       avgMiss+=(agreements-skipAgree)
     }
-
-    val stop = System.currentTimeMillis()
-    ((stop - start) / queryCount.toFloat, resSize / queryCount, avgMiss/queryCount)
+    (time/ queryCount.toFloat, resSize / queryCount, avgMiss.toFloat/queryCount.toFloat)
   }
 
   def errorRatio(truth: QueryResultsMessage, guess:QueryResultsMessage) : Double = {
+    var perfectMatches = 0
     val truths = truth.responses.head.results.sortBy(_.data.get("ap_distance").get.getFloatData).zipWithIndex
     val guesses = guess.responses.head.results.sortBy(_.data.get("ap_distance").get.getFloatData).zipWithIndex.toArray
-    val errors: Seq[Float] = truths.map(el => if(el._2>=k) 0f else (guesses(el._2)._1.data.get("ap_distance").get.getFloatData)/(el._1.data.get("ap_distance").get.getFloatData))
+    val errors: Seq[Float] = truths.map(el => {
+      if(el._2>=k) 0f else {
+        if(el._1.data.get("ap_distance").get.getFloatData == 0){
+          perfectMatches+=1
+          0f
+        }else{
+          (guesses(el._2)._1.data.get("ap_distance").get.getFloatData)/(el._1.data.get("ap_distance").get.getFloatData)
+        }
+      }
+    })
+    if(perfectMatches>20){
+      System.out.println(perfectMatches+" perfect Matches. There might be a problem in the code")
+    }
     var err = 0.0
     for(f <- errors){
-      err+=f
+      if(err!=Double.NaN){
+        err+=f
+      }
     }
     err/k
   }
@@ -180,6 +194,7 @@ class RPCClient(channel: ManagedChannel, definer: AdamDefinitionBlockingStub, se
   def topKMatch(truth: QueryResultsMessage, guess: QueryResultsMessage) : Double = {
     val gtruthPKs = truth.responses.head.results.map(_.data.get("pk"))
     val resPKs = guess.responses.head.results.map(_.data.get("pk"))
+
     val ag= gtruthPKs.intersect(resPKs).length
 
     //simple hits/total
@@ -209,7 +224,7 @@ class RPCClient(channel: ManagedChannel, definer: AdamDefinitionBlockingStub, se
   }
 
   /** Generates a random query using Random.nextFloat() */
-  def randomQueryMessage(dim: Int, part: Int, skip: Double) = NearestNeighbourQueryMessage("feature", Some(FeatureVectorMessage().withDenseVector(DenseVectorMessage(Seq.fill(dim)(Random.nextFloat())))), None, getDistanceMsg, k, Map[String, String]("skipPart" -> skip.toString), indexOnly = indexOnly, 1 until part)
+  def randomQueryMessage(dim: Int, part: Int, skip: Double) = NearestNeighbourQueryMessage("feature", Some(FeatureVectorMessage().withDenseVector(DenseVectorMessage(Seq.fill(dim)(Random.nextFloat())))), None, getDistanceMsg, k, Map[String, String]("skipPart" -> skip.toString), indexOnly = indexOnly)
 
   /** Drops all entities */
   def dropAllEntities() = {

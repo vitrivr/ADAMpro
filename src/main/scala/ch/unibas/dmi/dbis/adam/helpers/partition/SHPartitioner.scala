@@ -29,7 +29,7 @@ class SHPartitioner(nPart: Int, noBits: Int) extends Partitioner with Logging {
   log.info("Number of Partitions: " + nPart)
   log.info("Number of Bits: " + noBits)
 
-  //Two Inital clusters are 1...1 and 0...0
+  //Two Inital clusters are 1...1 and 0...0 - TODO Is this fair?
   val upperBound = BitString(Seq.tabulate(noBits)(el => el))
   val lowerBound = BitString(Seq())
   var clusters = IndexedSeq(upperBound, lowerBound)
@@ -38,7 +38,8 @@ class SHPartitioner(nPart: Int, noBits: Int) extends Partitioner with Logging {
 
   //TODO Switch sampling here to real data
   //TODO Is it useful to incorporate assumptions of the distribution of data here?
-  //TODO Maybe switch to K-Means for to generate a set of initial guesses
+  //TODO Maybe switch to K-Means for to generate a set of initial guesses -> See PQ-Indexer
+  //TODO Maybe use PQ-Idea / eCP for Clustering
   var counter = 0
 
   while(counter< nPart - 2){
@@ -46,9 +47,9 @@ class SHPartitioner(nPart: Int, noBits: Int) extends Partitioner with Logging {
 
     //We take last here since we want the point with the biggest distance to existing cluster centers
     val best = samples.sortBy(el => getMinDistance(el)).last
-    log.debug("New cluster was chosen: "+best+" with distance: "+getMinDistance(best))
+    //log.debug("New cluster was chosen: "+best+" with distance: "+getMinDistance(best))
     clusters = clusters.+:(best)
-    log.debug("New Cluster list: "+clusters.mkString(" :: "))
+    //log.debug("New Cluster list: "+clusters.mkString(" :: "))
     counter+=1
   }
 
@@ -80,18 +81,22 @@ class SHPartitioner(nPart: Int, noBits: Int) extends Partitioner with Logging {
   def getClusters : IndexedSeq[BitString[_]] = clusters
 }
 
-class SHPartitionerMetaData(clusters: Seq[BitString[_]]) {
-}
-
 object SHPartitioner extends ADAMPartitioner with Logging {
+  /** Use this name to store Partitioner Clusters in the CatalogOperator*/
+  def clusterOptionName = "partitionClusters"
+  override def partitionerName = PartitionerChoice.SH
+
+  /**
+    * Loads the Information for the Partitioner and Index corresponding to the given entity and then returns the BitString
+    * @param q Queryvector
+    * @param eName Entity on which the SHIndex exists
+    * @return BitString hashed by the SHUtils
+    */
   def getBitString(q: FeatureVector, eName : EntityNameHolder)(implicit ac: AdamContext): BitString[_] = {
-    val index = Entity.load(Index.load(eName).get.entityname).get.indexes.find(f => f.get.indextypename == IndexTypes.SHINDEX).get.get
+    val index = Entity.load(eName).get.indexes.find(f => f.get.indextypename == IndexTypes.SHINDEX).get.get
     val metaData = CatalogOperator.getIndexMeta(index.indexname).get.asInstanceOf[SHIndexMetaData]
     SHUtils.hashFeature(q, metaData)
   }
-
-  def clusterOptionName = "partitionClusters"
-  override def partitionerName = PartitionerChoice.SH
 
   override def apply(data: DataFrame, cols: Option[Seq[String]], indexName: Option[EntityNameHolder], nPartitions: Int)(implicit ac: AdamContext): DataFrame = {
     val indextype = IndexTypes.SHINDEX
@@ -109,10 +114,6 @@ object SHPartitioner extends ADAMPartitioner with Logging {
       val partitioner =  new SHPartitioner(nPartitions, noBits)
 
       CatalogOperator.updateIndexOption(indexName.get,clusterOptionName,clusterToString(partitioner.getClusters))
-
-      //testing
-      val clusterString = CatalogOperator.getIndexOption(indexName.get).get.get(clusterOptionName).get
-      log.debug("Clusters from Catalog: "+clusterFromString(clusterString))
 
       val repartitioned: RDD[(Any, Row)] = joinedDF.map(r => (r.getAs[Any](FieldNames.partitionKey), r)).partitionBy(partitioner)
       val reparRDD = repartitioned.mapPartitions((it) => {
@@ -133,7 +134,7 @@ object SHPartitioner extends ADAMPartitioner with Logging {
     * Currently no error checks so we just assume the  partitioner exists
     */
   def getClusterList(eName: EntityNameHolder)(implicit ac: AdamContext) : IndexedSeq[BitString[_]] = {
-    val index = Entity.load(Index.load(eName).get.entityname).get.indexes.find(f => f.get.indextypename == IndexTypes.SHINDEX).get.get
+    val index = Entity.load(eName).get.indexes.find(f => f.get.indextypename == IndexTypes.SHINDEX).get.get
     clusterFromString(CatalogOperator.getIndexOption(index.indexname).get.get(clusterOptionName).get)
   }
 
