@@ -10,4 +10,4 @@ import ch.unibas.dmi.dbis.adam.query.distance.DistanceFunction
  * September 2015
  */
 private[lsh]
-case class LSHIndexMetaData(hashTables : Array[Hasher], radius : Float, distance : DistanceFunction) {}
+case class LSHIndexMetaData(hashTables : Array[Hasher], radius : Float, distance : DistanceFunction, m : Int) {}
