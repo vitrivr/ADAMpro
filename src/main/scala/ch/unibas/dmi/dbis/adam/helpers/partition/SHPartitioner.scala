@@ -66,7 +66,7 @@ class SHPartitioner(nPart: Int, noBits: Int) extends Partitioner with Logging {
   }
 
   /** Gets the minimum distance of a bitString compared to all current clusters */
-  def getMinDistance(c: BitString[_]) : Int = clusters.map(_.intersectionCount(c)).sortBy(el => el).head
+  def getMinDistance(c: BitString[_]) : Int = clusters.map(_.hammingDistance(c)).sortBy(el => el).head
 
   /**
     * We expect the key here to a bitstring.
@@ -74,7 +74,7 @@ class SHPartitioner(nPart: Int, noBits: Int) extends Partitioner with Logging {
     */
   override def getPartition(key: Any): Int = {
     val bitString = key.asInstanceOf[BitString[_]]
-    val cluster = clusters.zipWithIndex.map(f => (f._1.intersectionCount(bitString), f._2)).sortBy(_._1).head
+    val cluster = clusters.zipWithIndex.map(f => (f._1.hammingDistance(bitString), f._2)).sortBy(_._1).head
     cluster._2
   }
 

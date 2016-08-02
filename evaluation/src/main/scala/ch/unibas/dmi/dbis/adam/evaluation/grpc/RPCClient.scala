@@ -57,6 +57,9 @@ class RPCClient(channel: ManagedChannel, definer: AdamDefinitionBlockingStub, se
                 val repmsg = definer.repartitionIndexData(RepartitionMessage(name, numberOfPartitions = part, option = RepartitionMessage.PartitionOptions.REPLACE_EXISTING, partitioner = partitioner))
                 name = repmsg.message
 
+                val props = definer.getEntityProperties(EntityNameMessage(eName))
+                System.out.println(props.properties.get("indexes").get)
+
                 //TODO Index Partition Distribution
                 for(dropPerc <- dropPartitions){
                   val (avgTime, noResults, informationloss) = timeQuery(name, dim, part, dropPerc)
@@ -113,8 +116,10 @@ class RPCClient(channel: ManagedChannel, definer: AdamDefinitionBlockingStub, se
   //TODO Log individual queries in chronos
   def timeQuery(indexName: String, dim: Int, part: Int, dropPerc : Double): (Float, Int, Double) = {
     //Free query to cache index
+    val nnq = Some(randomQueryMessage(dim, part, 0.0))
+    searcherBlocking.doQuery(QueryMessage(nnq = nnq, from = Some(FromMessage(FromMessage.Source.Index(indexName)))))
+
     val queryCount = numQ
-    val res = searcherBlocking.doQuery(QueryMessage(nnq = Some(randomQueryMessage(dim, part, 0.0)), from = Some(FromMessage(FromMessage.Source.Index(indexName)))))
 
     //Average over Queries
     var resSize = 0
@@ -144,9 +149,9 @@ class RPCClient(channel: ManagedChannel, definer: AdamDefinitionBlockingStub, se
       noSkipOpt -= "skipPart"
       val noSkipRes = searcherBlocking.doQuery(QueryMessage(nnq = Some(qm.nnq.get.copy(options = noSkipOpt.toMap)), from = qm.from, information = qm.information))
 
-      System.out.println(dropRes.responses.head.results.size+" | "+dropRes.responses.head.results.head.data.mkString(", "))
-      System.out.println(gtruth.responses.head.results.size+" | "+gtruth.responses.head.results.head.data.mkString(", "))
-      System.out.println(noSkipRes.responses.head.results.size+" | "+noSkipRes.responses.head.results.head.data.mkString(", "))
+      //System.out.println(dropRes.responses.head.results.size+" | "+dropRes.responses.head.results.head.data.mkString(", "))
+      //System.out.println(gtruth.responses.head.results.size+" | "+gtruth.responses.head.results.head.data.mkString(", "))
+      //System.out.println(noSkipRes.responses.head.results.size+" | "+noSkipRes.responses.head.results.head.data.mkString(", "))
 
       //Comparison Code
       val ratio = errorRatio(noSkipRes, dropRes)
@@ -158,10 +163,12 @@ class RPCClient(channel: ManagedChannel, definer: AdamDefinitionBlockingStub, se
       val skipAgree = topKMatch(gtruth, dropRes)
       System.out.println("Top K Matches between truth and skip "+skipAgree)
 
-      resSize += res.responses.head.results.size
+      resSize += dropRes.responses.head.results.size
       queryCounter += 1
       avgMiss+=(agreements-skipAgree)
     }
+
+
     (time/ queryCount.toFloat, resSize / queryCount, avgMiss.toFloat/queryCount.toFloat)
   }
 
@@ -175,7 +182,11 @@ class RPCClient(channel: ManagedChannel, definer: AdamDefinitionBlockingStub, se
           perfectMatches+=1
           0f
         }else{
-          (guesses(el._2)._1.data.get("ap_distance").get.getFloatData)/(el._1.data.get("ap_distance").get.getFloatData)
+          if(el._2>=guesses.size){
+            0f
+          }else{
+            (guesses(el._2)._1.data.get("ap_distance").get.getFloatData)/(el._1.data.get("ap_distance").get.getFloatData)
+          }
         }
       }
     })
@@ -188,7 +199,7 @@ class RPCClient(channel: ManagedChannel, definer: AdamDefinitionBlockingStub, se
         err+=f
       }
     }
-    err/k
+    err/Math.min(k, guesses.size)
   }
 
   def topKMatch(truth: QueryResultsMessage, guess: QueryResultsMessage) : Double = {

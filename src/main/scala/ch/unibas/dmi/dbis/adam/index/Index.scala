@@ -200,7 +200,7 @@ abstract class Index(@transient implicit val ac: AdamContext) extends Serializab
         //TODO Store which partitioner is used and then let that partitioner handle dropping
         val clusters = SHPartitioner.getClusterList(this.entityname)
         val bitString = SHPartitioner.getBitString(q, this.entityname)
-        var sortedClusters = clusters.zipWithIndex.sortBy(_._1.intersectionCount(bitString))
+        var sortedClusters = clusters.zipWithIndex.sortBy(_._1.hammingDistance(bitString))
 
         log.debug("Skipping Partitions: "+sortedClusters.takeRight((sortedClusters.size*options.get("skipPart").get.toDouble).toInt))
 
