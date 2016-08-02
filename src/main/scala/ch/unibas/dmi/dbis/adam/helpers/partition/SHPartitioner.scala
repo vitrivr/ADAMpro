@@ -1,13 +1,17 @@
 package ch.unibas.dmi.dbis.adam.helpers.partition
 
+import java.io.{ByteArrayInputStream, ByteArrayOutputStream, ObjectInputStream, ObjectOutputStream}
+import java.util.Base64
+
 import ch.unibas.dmi.dbis.adam.catalog.CatalogOperator
 import ch.unibas.dmi.dbis.adam.config.FieldNames
 import ch.unibas.dmi.dbis.adam.datatypes.bitString.BitString
+import ch.unibas.dmi.dbis.adam.datatypes.feature.Feature.FeatureVector
 import ch.unibas.dmi.dbis.adam.entity.{Entity, EntityNameHolder}
 import ch.unibas.dmi.dbis.adam.exception.GeneralAdamException
 import ch.unibas.dmi.dbis.adam.index.Index
 import ch.unibas.dmi.dbis.adam.index.structures.IndexTypes
-import ch.unibas.dmi.dbis.adam.index.structures.sh.SHIndexMetaData
+import ch.unibas.dmi.dbis.adam.index.structures.sh.{SHIndexMetaData, SHUtils}
 import ch.unibas.dmi.dbis.adam.main.AdamContext
 import ch.unibas.dmi.dbis.adam.utils.Logging
 import org.apache.spark.Partitioner
@@ -34,12 +38,12 @@ class SHPartitioner(nPart: Int, noBits: Int) extends Partitioner with Logging {
 
   //TODO Switch sampling here to real data
   //TODO Is it useful to incorporate assumptions of the distribution of data here?
-  //TODO Here's a crazy idea: Generate Sets of Cluster centers and evaluate them. This method has the problem that it chooses cluster points which divide an existing space best but the other space doesn't get partitioned
-  //TODO Turns out that SH (or maybe the generated data) doesn't like to set a lot of bits from the first observations ??
+  //TODO Maybe switch to K-Means for to generate a set of initial guesses
   var counter = 0
 
   while(counter< nPart - 2){
     val samples = Seq.fill(noSamples)(generateRandomBitString(noBits))
+
     //We take last here since we want the point with the biggest distance to existing cluster centers
     val best = samples.sortBy(el => getMinDistance(el)).last
     log.debug("New cluster was chosen: "+best+" with distance: "+getMinDistance(best))
@@ -48,6 +52,7 @@ class SHPartitioner(nPart: Int, noBits: Int) extends Partitioner with Logging {
     counter+=1
   }
 
+  /** Generates a BitString with Random Bits set */
   def generateRandomBitString(len: Int) : BitString[_] = {
     val idxs = Seq.tabulate(len)(idx => idx)
 
@@ -69,12 +74,23 @@ class SHPartitioner(nPart: Int, noBits: Int) extends Partitioner with Logging {
   override def getPartition(key: Any): Int = {
     val bitString = key.asInstanceOf[BitString[_]]
     val cluster = clusters.zipWithIndex.map(f => (f._1.intersectionCount(bitString), f._2)).sortBy(_._1).head
-    //log.debug("BitString "+bitString+" was assigned to cluster: "+clusters.apply(cluster._2))
     cluster._2
   }
+
+  def getClusters : IndexedSeq[BitString[_]] = clusters
+}
+
+class SHPartitionerMetaData(clusters: Seq[BitString[_]]) {
 }
 
 object SHPartitioner extends ADAMPartitioner with Logging {
+  def getBitString(q: FeatureVector, eName : EntityNameHolder)(implicit ac: AdamContext): BitString[_] = {
+    val index = Entity.load(Index.load(eName).get.entityname).get.indexes.find(f => f.get.indextypename == IndexTypes.SHINDEX).get.get
+    val metaData = CatalogOperator.getIndexMeta(index.indexname).get.asInstanceOf[SHIndexMetaData]
+    SHUtils.hashFeature(q, metaData)
+  }
+
+  def clusterOptionName = "partitionClusters"
   override def partitionerName = PartitionerChoice.SH
 
   override def apply(data: DataFrame, cols: Option[Seq[String]], indexName: Option[EntityNameHolder], nPartitions: Int)(implicit ac: AdamContext): DataFrame = {
@@ -85,12 +101,20 @@ object SHPartitioner extends ADAMPartitioner with Logging {
     try {
       //This line causes you to load the data from the first index that is found which matches the type
       val index = Entity.load(Index.load(indexName.get).get.entityname).get.indexes.find(f => f.get.indextypename == indextype).get.get
-      val noBits = CatalogOperator.getIndexMeta(indexName.get).get.asInstanceOf[SHIndexMetaData].noBits
+      val noBits = CatalogOperator.getIndexMeta(index.indexname).get.asInstanceOf[SHIndexMetaData].noBits
 
       val joinDF = index.getData.withColumnRenamed(FieldNames.featureIndexColumnName, FieldNames.partitionKey)
       val joinedDF = data.join(joinDF, FieldNames.pk)
 
-      val repartitioned: RDD[(Any, Row)] = joinedDF.map(r => (r.getAs[Any](FieldNames.partitionKey), r)).partitionBy(new SHPartitioner(nPartitions, noBits))
+      val partitioner =  new SHPartitioner(nPartitions, noBits)
+
+      CatalogOperator.updateIndexOption(indexName.get,clusterOptionName,clusterToString(partitioner.getClusters))
+
+      //testing
+      val clusterString = CatalogOperator.getIndexOption(indexName.get).get.get(clusterOptionName).get
+      log.debug("Clusters from Catalog: "+clusterFromString(clusterString))
+
+      val repartitioned: RDD[(Any, Row)] = joinedDF.map(r => (r.getAs[Any](FieldNames.partitionKey), r)).partitionBy(partitioner)
       val reparRDD = repartitioned.mapPartitions((it) => {
         it.map(f => f._2)
       }, true)
@@ -102,5 +126,37 @@ object SHPartitioner extends ADAMPartitioner with Logging {
         throw new GeneralAdamException("Index: " + indextype.name + " does not exist, aborting repartitioning")
       }
     }
+  }
+
+  /**
+    * Returns a List of the cluster-centers or centroids or whatever bitStrings of interest for the SHPartitioner which was created for the index-structure
+    * Currently no error checks so we just assume the  partitioner exists
+    */
+  def getClusterList(eName: EntityNameHolder)(implicit ac: AdamContext) : IndexedSeq[BitString[_]] = {
+    val index = Entity.load(Index.load(eName).get.entityname).get.indexes.find(f => f.get.indextypename == IndexTypes.SHINDEX).get.get
+    clusterFromString(CatalogOperator.getIndexOption(index.indexname).get.get(clusterOptionName).get)
+  }
+
+
+
+  /** http://stackoverflow.com/questions/134492/how-to-serialize-an-object-into-a-string */
+  private def clusterFromString(s: String) : IndexedSeq[BitString[_]] = {
+    val data = Base64.getDecoder().decode( s )
+    val ois = new ObjectInputStream(
+      new ByteArrayInputStream(  data ) )
+    val o  = ois.readObject()
+    ois.close()
+    o.asInstanceOf[IndexedSeq[BitString[_]]]
+  }
+
+
+  /** http://stackoverflow.com/questions/134492/how-to-serialize-an-object-into-a-string */
+  private def clusterToString(clusterList : IndexedSeq[BitString[_]]) : String = {
+    val baos = new ByteArrayOutputStream()
+    val oos = new ObjectOutputStream( baos )
+    oos.writeObject( clusterList )
+    oos.close()
+    baos.close()
+    Base64.getEncoder().encodeToString(baos.toByteArray())
   }
 }

@@ -4,7 +4,6 @@ import java.io.{BufferedWriter, FileWriter, PrintWriter}
 import java.text.SimpleDateFormat
 import java.util.Calendar
 
-import adampro.grpc.shaded.com.google.api.client.util.DateTime
 import ch.unibas.dmi.dbis.adam.http.grpc.RepartitionMessage
 
 /**
@@ -17,8 +16,8 @@ trait EvaluationResultLogger {
   val bw = new BufferedWriter(fw)
   val out = new PrintWriter(bw)
 
-  def appendToResults(tuples: Int, dimensions: Int, partitions: Int, index: String, time: Float, k: Int = 0, noResults: Int = 0, partitioner: RepartitionMessage.Partitioner): Unit = {
-    out.println(Calendar.getInstance().getTime() + "," + index + "," + tuples + "," + dimensions + "," + partitions + "," + time + "," + k + "," + noResults + "," + partitioner.name)
+  def appendToResults(tuples: Int, dimensions: Int, partitions: Int, index: String, time: Float, k: Int = 0, noResults: Int = 0, partitioner: RepartitionMessage.Partitioner, informationLoss: Double, dropPerc: Double): Unit = {
+    out.println(Calendar.getInstance().getTime() + "," + index + "," + tuples + "," + dimensions + "," + partitions + "," + time + "," + k + "," + noResults + "," + partitioner.name+","+informationLoss+","+dropPerc)
     out.flush()
   }
 }

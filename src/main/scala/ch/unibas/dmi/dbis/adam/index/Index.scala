@@ -9,10 +9,10 @@ import ch.unibas.dmi.dbis.adam.entity.Entity
 import ch.unibas.dmi.dbis.adam.entity.Entity._
 import ch.unibas.dmi.dbis.adam.exception.{EntityNotExistingException, GeneralAdamException, IndexNotExistingException, IndexNotProperlyDefinedException}
 import ch.unibas.dmi.dbis.adam.helpers.partition.Partitioning.PartitionID
-import ch.unibas.dmi.dbis.adam.helpers.partition.{PartitionMode, PartitionerChoice, RandomPartitioner, SparkPartitioner}
+import ch.unibas.dmi.dbis.adam.helpers.partition._
 import ch.unibas.dmi.dbis.adam.index.Index.{IndexName, IndexTypeName}
 import ch.unibas.dmi.dbis.adam.index.structures.IndexTypes
-import ch.unibas.dmi.dbis.adam.main.{SparkStartup, AdamContext}
+import ch.unibas.dmi.dbis.adam.main.{AdamContext, SparkStartup}
 import ch.unibas.dmi.dbis.adam.query.distance.DistanceFunction
 import ch.unibas.dmi.dbis.adam.query.query.NearestNeighbourQuery
 import ch.unibas.dmi.dbis.adam.storage.engine.instances.ParquetEngine
@@ -21,7 +21,7 @@ import ch.unibas.dmi.dbis.adam.utils.Logging
 import org.apache.spark.HashPartitioner
 import org.apache.spark.rdd.RDD
 import org.apache.spark.sql.types._
-import org.apache.spark.sql.{Row, SaveMode, DataFrame}
+import org.apache.spark.sql.{DataFrame, Row, SaveMode}
 import org.scalatest.path
 
 import scala.collection.mutable
@@ -195,6 +195,19 @@ abstract class Index(@transient implicit val ac: AdamContext) extends Serializab
     if (partitions.isDefined) {
       val rdd = data.rdd.mapPartitionsWithIndex((idx, iter) => if (partitions.get.contains(idx)) iter else Iterator(), preservesPartitioning = true)
       df = ac.sqlContext.createDataFrame(rdd, df.schema)
+    } else{
+      if(options.get("skipPart").isDefined){
+        //TODO Store which partitioner is used and then let that partitioner handle dropping
+        val clusters = SHPartitioner.getClusterList(this.entityname)
+        val bitString = SHPartitioner.getBitString(q, this.entityname)
+        var sortedClusters = clusters.zipWithIndex.sortBy(_._1.intersectionCount(bitString))
+
+        log.debug("Skipping Partitions: "+sortedClusters.takeRight((sortedClusters.size*options.get("skipPart").get.toDouble).toInt))
+
+        sortedClusters = sortedClusters.drop((sortedClusters.size*options.get("skipPart").get.toDouble).toInt)
+        val rdd = data.rdd.mapPartitionsWithIndex((idx, iter) => if (sortedClusters.find(_._2==idx).isDefined) iter else Iterator(), preservesPartitioning = true)
+        df = ac.sqlContext.createDataFrame(rdd, df.schema)
+      }
     }
 
     var results = scan(df, q, distance, options, k)

@@ -10,7 +10,7 @@ import ch.unibas.dmi.dbis.adam.datatypes.feature.Feature._
  * Ivan Giangreco
  * September 2015
  */
-private[sh] object SHUtils {
+object SHUtils {
   /**
    *
    * @param f
