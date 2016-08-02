@@ -32,7 +32,7 @@ private[va] class VAResultHandler[A](k: Int) {
       } else {
         val peek = queue.firstFloat()
         val lower = r.getAs[Float]("lbound")
-        if (peek > lower) {
+        if (peek >= lower) {
           queue.dequeueFloat()
           val upper = r.getAs[Float]("ubound")
           val tid = r.getAs[A](pk : String)
@@ -44,32 +44,6 @@ private[va] class VAResultHandler[A](k: Int) {
       }
     }
   }
-
-  /**
-    *
-    * @param res
-    * @return
-    */
-  def offer(res: VAResultElement[A]): Boolean = {
-    queue.synchronized {
-      if (elementsLeft > 0) {
-        elementsLeft -= 1
-        enqueue(res)
-        return true
-      } else {
-        val peek = queue.firstFloat()
-        val lower = res.lower
-        if (peek > lower) {
-          queue.dequeueFloat()
-          enqueue(res)
-          return true
-        } else {
-          return false
-        }
-      }
-    }
-  }
-
 
   /**
     *

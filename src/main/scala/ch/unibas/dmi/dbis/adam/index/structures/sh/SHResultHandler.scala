@@ -32,7 +32,7 @@ class SHResultHandler[A](k: Int) {
       } else {
         val peek = queue.firstInt
         val score = r.getAs[Int](FieldNames.distanceColumnName)
-        if (peek > score) {
+        if (peek >= score) {
           queue.dequeueInt()
           val tid = r.getAs[A](pk)
           enqueue(score, tid)
