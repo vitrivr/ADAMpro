@@ -8,12 +8,14 @@ import ch.unibas.dmi.dbis.adam.entity.Entity._
 import ch.unibas.dmi.dbis.adam.index.Index
 import ch.unibas.dmi.dbis.adam.index.Index.{IndexName, IndexTypeName}
 import ch.unibas.dmi.dbis.adam.index.structures.IndexTypes
-import ch.unibas.dmi.dbis.adam.index.structures.sh.SHResultHandler
+import ch.unibas.dmi.dbis.adam.index.structures.lsh.signature.LSHSignatureGenerator
 import ch.unibas.dmi.dbis.adam.main.AdamContext
 import ch.unibas.dmi.dbis.adam.query.Result
 import ch.unibas.dmi.dbis.adam.query.distance.DistanceFunction
 import ch.unibas.dmi.dbis.adam.query.query.NearestNeighbourQuery
 import org.apache.spark.sql.{Row, DataFrame}
+import org.apache.spark.sql.functions.col
+
 
 /**
   * adamtwo
@@ -32,21 +34,38 @@ class LSHIndex(val indexname: IndexName, val entityname: EntityName, override pr
   override def scan(data: DataFrame, q: FeatureVector, distance: DistanceFunction, options: Map[String, String], k: Int): DataFrame = {
     log.debug("scanning LSH index " + indexname)
 
-    val numOfQueries = options.getOrElse("numOfQ", "3").asInstanceOf[String].toInt
+    val numOfQueries = options.getOrElse("numOfQ", "3").toInt
+
+    val signatureGenerator = ac.sc.broadcast( new LSHSignatureGenerator(metadata.hashTables, metadata.m))
 
     import MovableFeature.conv_feature2MovableFeature
-    val originalQuery = LSHUtils.hashFeature(q, metadata)
-
+    val originalQuery = signatureGenerator.value.toBuckets(q)
     //move the query around by the precomuted radius
-    val queries = ac.sc.broadcast(List.fill(numOfQueries)(LSHUtils.hashFeature(q.move(metadata.radius), metadata)) ::: List(originalQuery))
+    //TODO: possibly adjust weight of computed queries vs. true query
+    val queries = ac.sc.broadcast(List.fill(numOfQueries)((1.0, signatureGenerator.value.toBuckets(q.move(metadata.radius)))) ::: List((1.0, originalQuery)))
 
     import org.apache.spark.sql.functions.udf
     val distUDF = udf((c: BitString[_]) => {
       var i = 0
       var score = 0
+      val buckets = signatureGenerator.value.toBuckets(c)
+
       while (i < queries.value.length) {
-        val query = queries.value(i)
-        score += c.intersectionCount(query) //Hamming distance
+        var j = 0
+        var sum = 0
+
+        val weight = queries.value(i)._1
+        val query = queries.value(i)._2
+
+        while(j < buckets.length){
+          if(buckets(j) == query(j)){
+            sum += 1
+          }
+
+          j += 1
+        }
+
+        score += sum
         i += 1
       }
 
@@ -54,25 +73,13 @@ class LSHIndex(val indexname: IndexName, val entityname: EntityName, override pr
     })
 
 
-    val rddResults = data
+    data
       .withColumn(FieldNames.distanceColumnName, distUDF(data(FieldNames.featureIndexColumnName)))
-      .mapPartitions { items =>
-        val handler = new SHResultHandler(k) //use handler to take closest n elements
-        //(using this handler is necessary here, as if the closest element has distance 5, we want all closes elements with distance 5;
-        //the methods provided by Spark (e.g. take) do not allow this
-
-        items.foreach(item => {
-          handler.offer(item, this.pk.name)
-        })
-
-        handler.results.map(x => Row(x.tid, x.score.toFloat)).iterator
-      }
-
-    ac.sqlContext.createDataFrame(rddResults, Result.resultSchema(pk))
+      .filter(col(FieldNames.distanceColumnName) > 0)
   }
 
   override def isQueryConform(nnq: NearestNeighbourQuery): Boolean = {
-    nnq.distance.getClass == metadata.distance.getClass
+    nnq.distance.equals(metadata.distance)
   }
 }
 

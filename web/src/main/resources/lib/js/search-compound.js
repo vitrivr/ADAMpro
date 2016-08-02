@@ -214,6 +214,8 @@ function evaluate (id) {
     params.options = {};
     params.options.subtype = $("#" + id).data("subtype");
 
+    params.options.indexonly = "true";
+
     params.options.entityname = $("#entityname").val();
     params.options.attribute = $("#attribute").val();
     params.options.query = $("#query").val().replace("[", "").replace("]", "").trim();

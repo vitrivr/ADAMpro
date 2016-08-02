@@ -231,14 +231,15 @@ message QueryMessage {
   //include "index", "inexact", "ecp", "lsh", "mi", ""pq", "sh", "exact", "va", "vaf", "vav", "sequential", "predictive"
   //hints are used to chooose whether an index scan or a sequential scan, etc. should be used
   repeated string hints = 8;
+  bool useFallback = 9;
 
   //maximum duration of query in ms
-  int64 time = 9;
+  int64 time = 10;
 
   //read query from cache if available with same query id
-  bool readFromCache = 10;
+  bool readFromCache = 11;
   //put query into cache with given query id
-  bool putInCache = 11;
+  bool putInCache = 12;
 
   //the information level denotes how much information is returned by ADAMpro (note that depending on the level of information
   //the query might be performed slower!)
@@ -255,7 +256,7 @@ message QueryMessage {
       //returns the provenance source of the data
       WITH_PROVENANCE_SOURCE_INFORMATION = 4;
     }
-  repeated InformationLevel information = 12;
+  repeated InformationLevel information = 13;
 }
 
 message ExpressionQueryMessage {

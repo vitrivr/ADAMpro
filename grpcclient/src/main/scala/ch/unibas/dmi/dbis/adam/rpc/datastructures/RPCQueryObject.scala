@@ -110,7 +110,7 @@ case class RPCQueryObject(var id: String, var operation: String, var options: Ma
       weights, Some(distance),
       options.get("k").getOrElse("100").toInt,
       options, //not overly clean solution, but not problematic to send too much information in this case
-      options.get("indexonly").map(_.toBoolean).getOrElse(true),
+      options.get("indexonly").map(_.toBoolean).getOrElse(false),
       partitions)
 
     nnq

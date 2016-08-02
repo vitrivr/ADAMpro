@@ -27,11 +27,5 @@ class Hasher(private val functions: Array[LSHashFunction]) extends Serializable 
     * @param v feature vector to hash
     * @return
     */
-  def apply(v: FeatureVector, m: Int = 0): Int = {
-    if (m == 0) {
-      functions.map(f => f.hash(v)).hashCode()
-    } else {
-      functions.map(f => f.hash(v)).hashCode() % m
-    }
-  }
+  def apply(v: FeatureVector, m: Int): Int = functions.map(f => f.hash(v)).hashCode() % m
 }
