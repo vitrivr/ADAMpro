@@ -21,7 +21,7 @@ class EWAHBitString(private val bs: BitSet) extends BitString[EWAHBitString] wit
     * @param other bitstring to compare to
     * @return
     */
-  override def intersectionCount(other: EWAHBitString): Int = bs.andcardinality(other.bs)
+  override def hammingDistance(other: EWAHBitString): Int = bs.xorcardinality(other.bs)
 
   /**
     *

@@ -48,7 +48,7 @@ trait BitString[A] extends Serializable {
     * @param other bitstring to compare to
     * @return
     */
-  def intersectionCount(other: A): Int
+  def hammingDistance(other: A): Int
 
   /**
     * Hamming distance between two bit strings.
@@ -56,8 +56,8 @@ trait BitString[A] extends Serializable {
     * @param other bitstring to compare to
     * @return
     */
-  def intersectionCount(other: BitString[_]): Int = {
-    intersectionCount(other.asInstanceOf[A])
+  def hammingDistance(other: BitString[_]): Int = {
+    hammingDistance(other.asInstanceOf[A])
   }
 
   /**
