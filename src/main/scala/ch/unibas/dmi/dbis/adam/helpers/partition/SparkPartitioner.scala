@@ -15,6 +15,7 @@ import scala.util.{Failure, Random}
 
 /**
   * adampar
+  *
   * Uses Spark-Default Partitioning which is based on Hash Partitioning
   *
   * Created by silvan on 20.06.16.
@@ -22,7 +23,15 @@ import scala.util.{Failure, Random}
 object SparkPartitioner extends ADAMPartitioner with Logging with Serializable{
   override def partitionerName = PartitionerChoice.SPARK
 
-  //TODO
+  /**
+    * Uses sparks built-in Hash-Partitioner
+    *
+    * @param data DataFrame you want to partition
+    * @param cols Columns you want to perform the partition on. If none are provided, the index pk is used instead
+    * @param indexName Will be used to store partitioner information in the catalog
+    * @param nPartitions how many partitions shall be created
+    * @return the partitioned DataFrame
+    */
   override def apply(data: DataFrame, cols: Option[Seq[String]], indexName: Option[EntityNameHolder], nPartitions: Int)(implicit ac: AdamContext): DataFrame = {
     CatalogOperator.dropPartitioner(indexName.get)
     CatalogOperator.createPartitioner(indexName.get,nPartitions,null,SparkPartitioner)
@@ -44,7 +53,9 @@ object SparkPartitioner extends ADAMPartitioner with Logging with Serializable{
   }
 
   //TODO How do we enable a 'fair' comparison of this partitioner? Since it's based on a hashpartitioner we only know which partition this specific key will be assigned to.
-  //Drops just random partitions except the one where the hashpartitioner would put the FeatureVector atm
+  /**
+    * Drops just random partitions except the one where the hashpartitioner would put the FeatureVector atm
+    */
   override def getPartitions(q: FeatureVector, dropPercentage: Double, indexName: EntityNameHolder)(implicit ac: AdamContext): Seq[Int] = {
     val noPart = CatalogOperator.getNumberOfPartitions(indexName).get
     val part = new HashPartitioner(noPart).getPartition(q)
