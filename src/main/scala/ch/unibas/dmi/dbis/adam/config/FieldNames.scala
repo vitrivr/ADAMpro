@@ -7,7 +7,6 @@ package ch.unibas.dmi.dbis.adam.config
   * March 2016
   */
 object FieldNames {
-  val pk = "pk"   //TODO ap_pk and add to reservednames
 
   val distanceColumnName = "ap_distance"
   val featureIndexColumnName = "ap_indexfeature"

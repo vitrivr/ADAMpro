@@ -84,7 +84,7 @@ object SHPartitioner extends ADAMPartitioner with Logging with Serializable {
     val index = Entity.load(Index.load(indexName.get).get.entityname).get.indexes.find(f => f.get.indextypename == IndexTypes.SHINDEX).get.get
     val noBits = CatalogOperator.getIndexMeta(index.indexname).get.asInstanceOf[SHIndexMetaData].noBits
     val joinDF = index.getData.withColumnRenamed(FieldNames.featureIndexColumnName, FieldNames.partitionKey)
-    val joinedDF = data.join(joinDF, FieldNames.pk)
+    val joinedDF = data.join(joinDF, index.pk.name)
 
     val clusters = trainClusters(joinDF, nPartitions, noBits)
     val meta = new SHPartitionerMetaData(nPartitions, noBits, clusters)

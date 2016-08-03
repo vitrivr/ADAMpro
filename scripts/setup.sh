@@ -4,7 +4,6 @@
 
 ## TODO Find better handling than getopts which only takes one char
 ## TODO support multiple roles in one script
-## TODO port based on MASTER_PORT in the run -p flags
 
 ################## USAGE ###########################################
 ## -u installs docker and git
