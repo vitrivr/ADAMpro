@@ -23,19 +23,21 @@ class SHResultHandler[A](k: Int) {
     */
   def offer(r: Row, pk : String): Boolean = {
     queue.synchronized {
-      if (elementsLeft > 0) {
+      if (elementsLeft > 0) { //we have not yet inserted k elements, no checks therefore
         val score = r.getAs[Int](FieldNames.distanceColumnName)
         val tid = r.getAs[A](pk)
         elementsLeft -= 1
-        enqueue(score, tid)
+        enqueueAndAddToCandidates(score, tid)
         return true
-      } else {
+      } else { //we have already k elements, therefore check if new element is better
         val peek = queue.firstInt
         val score = r.getAs[Int](FieldNames.distanceColumnName)
         if (peek >= score) {
+          //if peek is larger than lower, then dequeue worst element and insert
+          //new element
           queue.dequeueInt()
           val tid = r.getAs[A](pk)
-          enqueue(score, tid)
+          enqueueAndAddToCandidates(score, tid)
           return true
         } else {
           return false
@@ -49,15 +51,15 @@ class SHResultHandler[A](k: Int) {
     * @param score
     * @param tid
     */
-  private def enqueue(score : Int, tid : A): Unit ={
-    enqueue(SHResultElement(score, tid))
+  private def enqueueAndAddToCandidates(score : Int, tid : A): Unit ={
+    enqueueAndAddToCandidates(SHResultElement(score, tid))
   }
 
   /**
     * 
     * @param res
     */
-  private def enqueue(res: SHResultElement[A]): Unit = {
+  private def enqueueAndAddToCandidates(res: SHResultElement[A]): Unit = {
     queue.enqueue(res.score)
     ls += res
   }
