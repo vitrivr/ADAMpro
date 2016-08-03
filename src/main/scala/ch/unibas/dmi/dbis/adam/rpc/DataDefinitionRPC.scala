@@ -357,6 +357,10 @@ class DataDefinitionRPC extends AdamDefinitionGrpc.AdamDefinition with Logging {
       case RepartitionMessage.Partitioner.CURRENT => PartitionerChoice.CURRENT
       case RepartitionMessage.Partitioner.RANDOM => PartitionerChoice.RANDOM
       case RepartitionMessage.Partitioner.RANGE => PartitionerChoice.RANGE
+      case RepartitionMessage.Partitioner.SH => PartitionerChoice.SH
+      case RepartitionMessage.Partitioner.PQ => PartitionerChoice.PQ
+      case RepartitionMessage.Partitioner.LSH => PartitionerChoice.LSH
+      case RepartitionMessage.Partitioner.ECP => PartitionerChoice.ECP
       case _ => PartitionerChoice.SPARK
     }
 

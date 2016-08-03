@@ -6,6 +6,7 @@ import ch.unibas.dmi.dbis.adam.exception.GeneralAdamException
 import ch.unibas.dmi.dbis.adam.helpers.partition._
 import ch.unibas.dmi.dbis.adam.main.AdamContext
 import ch.unibas.dmi.dbis.adam.utils.Logging
+import org.apache.spark.RangePartitioner
 import org.apache.spark.rdd.RDD
 import org.apache.spark.sql.{DataFrame, Row, SaveMode}
 
@@ -42,24 +43,31 @@ object IndexPartitioner extends Logging {
       data = data.join(join.get, index.pk.name)
     }
 
-    //lazy because df.repartition() doesn't need it
-    lazy val toPartition: RDD[(Any, Row)] = {
-      if (cols.isDefined) data.map(r => (r.getAs[Any](cols.get.head), r)) else data.map(r => (r.getAs[Any](index.pk.name), r))
-    }
-
     //repartition
     data = partitioner match {
       case PartitionerChoice.SPARK =>
         SparkPartitioner(data, cols, Some(index.indexname), nPartitions)
       case PartitionerChoice.RANDOM =>
-        ac.sqlContext.createDataFrame(toPartition.partitionBy(new RandomPartitioner(nPartitions)).map(_._2), data.schema)
+        RandomPartitioner(data, cols, Some(index.indexname), nPartitions)
       case PartitionerChoice.CURRENT => {
         SHPartitioner(data, cols, Some(index.indexname), nPartitions)
       }
+      case PartitionerChoice.SH => {
+        SHPartitioner(data, cols, Some(index.indexname), nPartitions)
+      }
+      case PartitionerChoice.ECP=> {
+        throw new UnsupportedOperationException
+      }
+      case PartitionerChoice.LSH => {
+        throw new UnsupportedOperationException
+      }
+      case PartitionerChoice.PQ => {
+        throw new UnsupportedOperationException
+      }
       case PartitionerChoice.RANGE =>
         {
-          //TODO This needs implicit ordering?
           throw new UnsupportedOperationException
+          //if (cols.isDefined) data.map(r => (r.getAs[Any](cols.get.head), r)) else data.map(r => (r.getAs[Any](index.pk.name), r))
           //ac.sqlContext.createDataFrame(toPartition.partitionBy(new RangePartitioner[(Any, Row)](nPartitions, toPartition)))
         }
     }
