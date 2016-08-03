@@ -25,11 +25,11 @@ class RPCClient(channel: ManagedChannel, definer: AdamDefinitionBlockingStub, se
     * Evaluation Params
     */
   val indexOnly = true
-  val numQ = 2
-  val tupleSizes = Seq(1e5.toInt)
+  val numQ = 1
+  val tupleSizes = Seq(1e3.toInt)
   val dimensions = Seq(10)
-  val partitions = Seq(4, 16, 200)
-  val indices = Seq(IndexType.sh, IndexType.vaf)
+  val partitions = Seq(4, 16)
+  val indices = Seq(IndexType.sh, IndexType.vaf, IndexType.ecp)
   val partitioners = Seq( RepartitionMessage.Partitioner.CURRENT, RepartitionMessage.Partitioner.SPARK)
 
   var dropPartitions = Seq(0.0, 0.5)
@@ -62,9 +62,9 @@ class RPCClient(channel: ManagedChannel, definer: AdamDefinitionBlockingStub, se
 
                 //TODO Index Partition Distribution
                 for(dropPerc <- dropPartitions){
-                  val (avgTime, noResults, informationloss) = timeQuery(name, dim, part, dropPerc)
+                  val (avgTime, noResults, informationloss, ratio) = timeQuery(name, dim, part, dropPerc)
 
-                  appendToResults(tuples, dim, part, index.name, avgTime, k, noResults, partitioner, informationloss, dropPerc)
+                  appendToResults(tuples, dim, part, index.name, avgTime, k, noResults, partitioner, informationloss, dropPerc, ratio)
                 }
               }
             }
@@ -114,7 +114,15 @@ class RPCClient(channel: ManagedChannel, definer: AdamDefinitionBlockingStub, se
   }
 
   //TODO Log individual queries in chronos
-  def timeQuery(indexName: String, dim: Int, part: Int, dropPerc : Double): (Float, Int, Double) = {
+  /**
+    *
+    * @param indexName
+    * @param dim
+    * @param part
+    * @param dropPerc
+    * @return avg Time, avg Result-size, avg top-k misses, avg loss of precision when comparing no skipping vs skipping
+    */
+  def timeQuery(indexName: String, dim: Int, part: Int, dropPerc : Double): (Float, Int, Double, Float) = {
     //Free query to cache index
     val nnq = Some(randomQueryMessage(dim, part, 0.0))
     searcherBlocking.doQuery(QueryMessage(nnq = nnq, from = Some(FromMessage(FromMessage.Source.Index(indexName)))))
@@ -126,6 +134,7 @@ class RPCClient(channel: ManagedChannel, definer: AdamDefinitionBlockingStub, se
     var time = 0l
     var queryCounter = 0
     var avgMiss = 0.0
+    var recallLoss = 0f
 
     while (queryCounter < queryCount) {
       System.out.println("--------- new Query, dropping: "+dropPerc+" of Partitions --------")
@@ -166,19 +175,23 @@ class RPCClient(channel: ManagedChannel, definer: AdamDefinitionBlockingStub, se
       resSize += dropRes.responses.head.results.size
       queryCounter += 1
       avgMiss+=(agreements-skipAgree)
+      recallLoss+=ratio
     }
 
 
-    (time/ queryCount.toFloat, resSize / queryCount, avgMiss.toFloat/queryCount.toFloat)
+    (time/ queryCount.toFloat, resSize / queryCount, avgMiss.toFloat/queryCount.toFloat, recallLoss/queryCount.toFloat)
   }
 
-  def errorRatio(truth: QueryResultsMessage, guess:QueryResultsMessage) : Double = {
+  def errorRatio(truth: QueryResultsMessage, guess:QueryResultsMessage) : Float = {
     var perfectMatches = 0
     val truths = truth.responses.head.results.sortBy(_.data.get("ap_distance").get.getFloatData).zipWithIndex
     val guesses = guess.responses.head.results.sortBy(_.data.get("ap_distance").get.getFloatData).zipWithIndex.toArray
+    if(guesses.size==0 || guesses.size<k){
+      System.err.println("You have given " + guesses.size+ " guesses to the errorRatio method.")
+    }
     val errors: Seq[Float] = truths.map(el => {
       if(el._2>=k) 0f else {
-        if(el._1.data.get("ap_distance").get.getFloatData == 0){
+        if(el._1.data.get("ap_distance").get.getFloatData == 0f){
           perfectMatches+=1
           0f
         }else{
@@ -191,9 +204,9 @@ class RPCClient(channel: ManagedChannel, definer: AdamDefinitionBlockingStub, se
       }
     })
     if(perfectMatches>20){
-      System.out.println(perfectMatches+" perfect Matches. There might be a problem in the code")
+      System.err.println(perfectMatches+" perfect Matches. There might be a problem in the code")
     }
-    var err = 0.0
+    var err = 0f
     for(f <- errors){
       if(err!=Double.NaN){
         err+=f

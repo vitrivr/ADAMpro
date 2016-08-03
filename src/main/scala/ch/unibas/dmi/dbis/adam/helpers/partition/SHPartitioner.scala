@@ -105,7 +105,7 @@ object SHPartitioner extends ADAMPartitioner with Logging with Serializable {
 
   /**
     * Loads the Information for the Partitioner and Index corresponding to the given entity and then returns the BitString
-    * TODO Maybe make this more independet from the entity
+    * TODO Maybe make this more independent from the entity
     * @param q     Queryvector
     * @param indexname The entity belonging to the Index should have an SH-Index
     * @return BitString hashed by the SHUtils
