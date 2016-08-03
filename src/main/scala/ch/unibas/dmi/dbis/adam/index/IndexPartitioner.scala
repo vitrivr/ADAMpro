@@ -56,7 +56,7 @@ object IndexPartitioner extends Logging {
         SHPartitioner(data, cols, Some(index.indexname), nPartitions)
       }
       case PartitionerChoice.ECP=> {
-        throw new UnsupportedOperationException
+        ECPPartitioner(data, cols, Some(index.indexname), nPartitions)
       }
       case PartitionerChoice.LSH => {
         throw new UnsupportedOperationException

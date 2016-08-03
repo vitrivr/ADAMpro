@@ -8,6 +8,13 @@ import org.apache.spark.sql.DataFrame
 /**
   * adampar
   *
+  * TODO Currently the partitioners have a lot of code which looks similar. Maybe in a separation-of concerns sense it would be good to have more methods here
+  * which call abstract methods. i.e. the Repartitioning-Code looks very similar and dropping the old and inserting the new Partitioner in the catalog is not something
+  * every Partitioner should have to think of
+  *
+  * TODO Also, currently one partitioner is stored per index in the Catalog. Maybe it would be smarter to store partitioners independently
+  * But then, you'd have to give them names, pks etc.
+  *
   * Created by silvan on 20.06.16.
   */
 abstract class ADAMPartitioner{
