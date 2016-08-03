@@ -25,22 +25,25 @@ class RPCClient(channel: ManagedChannel, definer: AdamDefinitionBlockingStub, se
     * Evaluation Params
     */
   val indexOnly = true
-  val numQ = 1
-  val tupleSizes = Seq(1e3.toInt)
-  val dimensions = Seq(10)
-  val partitions = Seq(4, 16)
-  val indices = Seq(IndexType.sh, IndexType.vaf, IndexType.ecp)
-  val partitioners = Seq( RepartitionMessage.Partitioner.CURRENT, RepartitionMessage.Partitioner.SPARK)
+  val numQ = 20
+  val tupleSizes = Seq(1e3.toInt, 1e6.toInt, 1e7.toInt, 1e8.toInt)
+  val dimensions = Seq(10, 128)
+  val partitions = Seq(3, 6, 12, 18, 50, 200, 1000)
+  val indices = Seq(IndexType.sh, IndexType.vaf, IndexType.ecp, IndexType.lsh, IndexType.pq)
+  val partitioners = Seq( RepartitionMessage.Partitioner.CURRENT, RepartitionMessage.Partitioner.SPARK, RepartitionMessage.Partitioner.ECP)
 
-  var dropPartitions = Seq(0.0, 0.5)
+  var dropPartitions = Seq(0.0, 0.1, 0.2, 0.3, 0.4, 0.5)
 
   var eName = ""
 
-  dropAllEntities()
+  //dropAllEntities()
 
   try
       for (tuples <- tupleSizes) {
+        //TODO this is really bad style
+        super.setTuples(tuples)
         for (dim <- dimensions) {
+          super.setDimensions(dim)
           System.out.println(" \n ------------------ \n New Round! " + tuples + " " + dim)
           eName = getOrGenEntity(tuples, dim)
           //Index generation
@@ -48,10 +51,13 @@ class RPCClient(channel: ManagedChannel, definer: AdamDefinitionBlockingStub, se
             val name = getOrGenIndex(index, eName)
           }
           for (index <- indices) {
+            super.setIndex(index.name)
             var name = getOrGenIndex(index, eName)
             for (part <- partitions) {
+              super.setPartitions(part)
               System.out.println("Repartitioning: " + part)
               for (partitioner <- partitioners) {
+                super.setPartitioner(partitioner)
                 System.out.println("\n ---------------------- \n Repartitioning with " + partitioner.name + ", partitions: "+part +" index: "+index)
 
                 val repmsg = definer.repartitionIndexData(RepartitionMessage(name, numberOfPartitions = part, option = RepartitionMessage.PartitionOptions.REPLACE_EXISTING, partitioner = partitioner))
@@ -62,6 +68,7 @@ class RPCClient(channel: ManagedChannel, definer: AdamDefinitionBlockingStub, se
 
                 //TODO Index Partition Distribution
                 for(dropPerc <- dropPartitions){
+                  super.setDropPerc(dropPerc)
                   val (avgTime, noResults, informationloss, ratio) = timeQuery(name, dim, part, dropPerc)
 
                   appendToResults(tuples, dim, part, index.name, avgTime, k, noResults, partitioner, informationloss, dropPerc, ratio)
@@ -122,7 +129,7 @@ class RPCClient(channel: ManagedChannel, definer: AdamDefinitionBlockingStub, se
     * @param dropPerc
     * @return avg Time, avg Result-size, avg top-k misses, avg loss of precision when comparing no skipping vs skipping
     */
-  def timeQuery(indexName: String, dim: Int, part: Int, dropPerc : Double): (Float, Int, Double, Float) = {
+  def timeQuery(indexName: String, dim: Int, part: Int, dropPerc : Double): (Float, Int, Float, Float) = {
     //Free query to cache index
     val nnq = Some(randomQueryMessage(dim, part, 0.0))
     searcherBlocking.doQuery(QueryMessage(nnq = nnq, from = Some(FromMessage(FromMessage.Source.Index(indexName)))))
@@ -133,7 +140,7 @@ class RPCClient(channel: ManagedChannel, definer: AdamDefinitionBlockingStub, se
     var resSize = 0
     var time = 0l
     var queryCounter = 0
-    var avgMiss = 0.0
+    var avgMiss = 0f
     var recallLoss = 0f
 
     while (queryCounter < queryCount) {
@@ -172,14 +179,17 @@ class RPCClient(channel: ManagedChannel, definer: AdamDefinitionBlockingStub, se
       val skipAgree = topKMatch(gtruth, dropRes)
       System.out.println("Top K Matches between truth and skip "+skipAgree)
 
+      val indexAgree = topKMatch(dropRes, noSkipRes)
+      System.out.println("Top K Matches between skip and no skip "+ indexAgree)
+
       resSize += dropRes.responses.head.results.size
       queryCounter += 1
-      avgMiss+=(agreements-skipAgree)
+      avgMiss+=indexAgree
       recallLoss+=ratio
+      super.write((stop-start),resSize,indexAgree,ratio,(agreements-skipAgree))
     }
 
-
-    (time/ queryCount.toFloat, resSize / queryCount, avgMiss.toFloat/queryCount.toFloat, recallLoss/queryCount.toFloat)
+    (time/ queryCount.toFloat, resSize / queryCount, avgMiss/queryCount.toFloat, recallLoss/queryCount.toFloat)
   }
 
   def errorRatio(truth: QueryResultsMessage, guess:QueryResultsMessage) : Float = {
@@ -193,7 +203,7 @@ class RPCClient(channel: ManagedChannel, definer: AdamDefinitionBlockingStub, se
       if(el._2>=k) 0f else {
         if(el._1.data.get("ap_distance").get.getFloatData == 0f){
           perfectMatches+=1
-          0f
+          1f
         }else{
           if(el._2>=guesses.size){
             0f
@@ -210,19 +220,20 @@ class RPCClient(channel: ManagedChannel, definer: AdamDefinitionBlockingStub, se
     for(f <- errors){
       if(err!=Double.NaN){
         err+=f
-      }
+      }else err+=1f
     }
-    err/Math.min(k, guesses.size)
+    err/Math.min(k, guesses.size).toFloat
   }
 
-  def topKMatch(truth: QueryResultsMessage, guess: QueryResultsMessage) : Double = {
-    val gtruthPKs = truth.responses.head.results.map(_.data.get("pk"))
+  def topKMatch(truth: QueryResultsMessage, guess: QueryResultsMessage) : Float = {
+    val truths = truth.responses.head.results.sortBy(_.data.get("ap_distance").get.getFloatData)
+
+    val gtruthPKs = truths.take(k).map(_.data.get("pk"))
     val resPKs = guess.responses.head.results.map(_.data.get("pk"))
 
     val ag= gtruthPKs.intersect(resPKs).length
 
-    //simple hits/total
-    ag
+    ag.toFloat/gtruthPKs.size.toFloat
   }
 
   def printPartInfo(res: QueryResultsMessage): Unit = {
