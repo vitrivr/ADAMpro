@@ -43,7 +43,6 @@ object IndexPartitioner extends Logging {
     }
 
     //lazy because df.repartition() doesn't need it
-    //Extracts an rdd (key, value) where value is the rdd-row and key is either cols.head or the pk
     lazy val toPartition: RDD[(Any, Row)] = {
       if (cols.isDefined) data.map(r => (r.getAs[Any](cols.get.head), r)) else data.map(r => (r.getAs[Any](index.pk.name), r))
     }

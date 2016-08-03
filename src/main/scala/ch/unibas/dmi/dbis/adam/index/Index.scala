@@ -86,7 +86,6 @@ abstract class Index(@transient implicit val ac: AdamContext) extends Serializab
   private[index] var data: DataFrame
 
   /**
-    * @experimental
     * @return
     */
   def getData : DataFrame = data
@@ -197,15 +196,10 @@ abstract class Index(@transient implicit val ac: AdamContext) extends Serializab
       df = ac.sqlContext.createDataFrame(rdd, df.schema)
     } else{
       if(options.get("skipPart").isDefined){
-        //TODO Store which partitioner is used and then let that partitioner handle dropping
-        val clusters = SHPartitioner.getClusterList(this.entityname)
-        val bitString = SHPartitioner.getBitString(q, this.entityname)
-        var sortedClusters = clusters.zipWithIndex.sortBy(_._1.hammingDistance(bitString))
-
-        log.debug("Skipping Partitions: "+sortedClusters.takeRight((sortedClusters.size*options.get("skipPart").get.toDouble).toInt))
-
-        sortedClusters = sortedClusters.drop((sortedClusters.size*options.get("skipPart").get.toDouble).toInt)
-        val rdd = data.rdd.mapPartitionsWithIndex((idx, iter) => if (sortedClusters.find(_._2==idx).isDefined) iter else Iterator(), preservesPartitioning = true)
+        val partitioner = CatalogOperator.getPartitioner(indexname).get
+        val toKeep = partitioner.getPartitions(q,options.get("skipPart").get.toDouble, indexname)
+        log.debug("Keeping Partitions: "+toKeep.mkString(", "))
+        val rdd = data.rdd.mapPartitionsWithIndex((idx, iter) => if (toKeep.find(_==idx).isDefined) iter else Iterator(), preservesPartitioning = true)
         df = ac.sqlContext.createDataFrame(rdd, df.schema)
       }
     }
