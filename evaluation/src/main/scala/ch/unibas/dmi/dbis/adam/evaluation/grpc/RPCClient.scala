@@ -27,9 +27,9 @@ class RPCClient(channel: ManagedChannel, definer: AdamDefinitionBlockingStub, se
     */
   val indexOnly = true
   val numQ = 20
-  val tupleSizes = Seq(1e3.toInt, 1e7.toInt, 1e8.toInt)
+  val tupleSizes = Seq(1e7.toInt, 1e8.toInt)
   val dimensions = Seq(10, 128)
-  val partitions = Seq(10, 50, 200, 1000)
+  val partitions = Seq(10, 20, 50, 200, 1000)
   val indices = Seq(IndexType.sh, IndexType.vaf, IndexType.ecp, IndexType.lsh, IndexType.pq)
   val partitioners = Seq( RepartitionMessage.Partitioner.CURRENT, RepartitionMessage.Partitioner.ECP)
 
@@ -42,7 +42,7 @@ class RPCClient(channel: ManagedChannel, definer: AdamDefinitionBlockingStub, se
 
   var eName = ""
 
-  dropAllEntities()
+  //dropAllEntities()
 
   try
       for (tuples <- tupleSizes) {
@@ -54,8 +54,9 @@ class RPCClient(channel: ManagedChannel, definer: AdamDefinitionBlockingStub, se
           for (index <- indices) {
             val name = getOrGenIndex(index, eName)
           }
-
-          truths += dim -> IndexedSeq.tabulate(numQ)( el => searcherBlocking.doQuery(QueryMessage(from = Some(FromMessage(FromMessage.Source.Index(getOrGenIndex(IndexType.vaf, eName)))), nnq = Some(queries.get(dim).get(el).copy(indexOnly = false)), hints = Seq("sequential"))))
+          System.out.println("Calculating Truths... ")
+          truths += dim -> IndexedSeq.tabulate(numQ)( el => searcherBlocking.doQuery(QueryMessage(from = Some(FromMessage(FromMessage.Source.Index(getOrGenIndex(IndexType.vaf, eName)))), nnq = Some(queries.get(dim).get(el).copy(indexOnly = false)))))
+          System.out.println("VA-Scans exectued")
           //System.out.println(truths.head._2.head.responses.head.results.head.data.mkString(", "))
           noSkipping.put(dim, mutable.Map[IndexType, Seq[QueryResultsMessage]]())
 
@@ -66,27 +67,19 @@ class RPCClient(channel: ManagedChannel, definer: AdamDefinitionBlockingStub, se
               super.setPartitions(part)
               for (partitioner <- partitioners) {
                 super.setPartitioner(partitioner)
-
                 System.out.println("\n ---------------------- \n Repartitioning with " + partitioner.name + ", partitions: "+part +" index: "+index)
-
                 val repmsg = definer.repartitionIndexData(RepartitionMessage(name, numberOfPartitions = part, option = RepartitionMessage.PartitionOptions.REPLACE_EXISTING, partitioner = partitioner))
                 name = repmsg.message
-
-                //val props = definer.getEntityProperties(EntityNameMessage(eName))
-                //System.out.println(props.properties.get("indexes").get)
 
                 //Free query to cache index
                 val nnq = Some(randomQueryMessage(dim, 0.0))
                 searcherBlocking.doQuery(QueryMessage(nnq = nnq, from = Some(FromMessage(FromMessage.Source.Index(name)))))
-
+                System.out.println("Calculating no-skip queries")
                 noSkipping.get(dim).get += index -> IndexedSeq.tabulate(numQ)(el => searcherBlocking.doQuery(QueryMessage(from = Some(FromMessage(FromMessage.Source.Index(name))), nnq = Some(queries.get(dim).get(el)))))
-                //System.out.println(noSkipping.head._2.head._2.head.responses.head.results.head.data.mkString(", "))
-
+                System.out.println("No-skip queries calculated")
                 for(dropPerc <- dropPartitions){
                   super.setDropPerc(dropPerc)
                   val (avgTime, noResults, informationloss, ratio) = timeQuery(index, name, dim, part, dropPerc)
-
-                  appendToResults(tuples, dim, part, index.name, avgTime, k, noResults, partitioner, informationloss, dropPerc, ratio)
                 }
               }
             }
@@ -106,8 +99,16 @@ class RPCClient(channel: ManagedChannel, definer: AdamDefinitionBlockingStub, se
         val props = definer.getEntityProperties(EntityNameMessage(entity))
         //TODO Verify Dimension Count
         System.out.println(props)
-        eName = Some(entity)
-        System.out.println("Entity found - " + eName.get)
+        val split = props.properties.get("Example_row").getOrElse("").split(":")
+        if(split.length<2){
+          eName = None
+        }else{
+          val vector = split(1).split(",")
+          if(vector.size==dim){
+            eName = Some(entity)
+            System.out.println("Entity found - " + eName.get)
+          }else None
+        }
       }
     }
 
@@ -145,16 +146,13 @@ class RPCClient(channel: ManagedChannel, definer: AdamDefinitionBlockingStub, se
     * @return avg Time, avg Result-size, avg top-k misses, avg loss of precision when comparing no skipping vs skipping
     */
   def timeQuery(index: IndexType, indexName: String, dim: Int, part: Int, dropPerc : Double): (Float, Int, Float, Float) = {
-
     val queryCount = numQ
-
     //Average over Queries
     var resSize = 0
     var time = 0l
     var queryCounter = 0
     var avgMiss = 0f
     var recallLoss = 0f
-
     while (queryCounter < queryCount) {
       //Skipping Query
       val start = System.currentTimeMillis()
@@ -181,10 +179,8 @@ class RPCClient(channel: ManagedChannel, definer: AdamDefinitionBlockingStub, se
       //System.out.println("Error Ratio between skip and no skip: "+ratio)
 
       val agreements = topKMatch(gtruth, noSkipRes)
-      //System.out.println("Top K Matches between truth and no skip: "+agreements)
 
       val skipAgree = topKMatch(gtruth, dropRes)
-      //System.out.println("Top K Matches between truth and skip "+skipAgree)
 
       val indexAgree = topKMatch(dropRes, noSkipRes)
       //System.out.println("Top K Matches between skip and no skip "+ indexAgree)
@@ -193,7 +189,7 @@ class RPCClient(channel: ManagedChannel, definer: AdamDefinitionBlockingStub, se
       queryCounter += 1
       avgMiss+=indexAgree
       recallLoss+=ratio
-      super.write(time = (stop-start).toInt,noResults=dropRes.responses.head.results.size,skipNoSkipK = indexAgree,ratioK = ratio, missingKTruth = (agreements-skipAgree).toInt)
+      super.write(time = (stop-start).toInt,noResults=dropRes.responses.head.results.size,skipNoSkipK = indexAgree,ratioK = ratio, missingKTruth = agreements*100-skipAgree*100)
     }
 
     (time/ queryCount.toFloat, resSize / queryCount, avgMiss/queryCount.toFloat, recallLoss/queryCount.toFloat)
@@ -236,10 +232,9 @@ class RPCClient(channel: ManagedChannel, definer: AdamDefinitionBlockingStub, se
     val truths = truth.responses.head.results.sortBy(_.data.get("ap_distance").get.getFloatData)
 
     val gtruthPKs = truths.take(k).map(_.data.get("pk"))
-    val resPKs = guess.responses.head.results.map(_.data.get("pk"))
+    val guessPKs = guess.responses.head.results.map(_.data.get("pk"))
 
-    val ag= gtruthPKs.intersect(resPKs).length
-
+    val ag= gtruthPKs.intersect(guessPKs).length
     ag.toFloat/gtruthPKs.size.toFloat
   }
 

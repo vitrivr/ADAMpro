@@ -23,7 +23,6 @@ trait EvaluationResultLogger {
     logDim = dim
   }
   def setPartitions(part: Int) = {
-    System.out.println("Set partitions in Logger: "+part)
     logPartitions = part
   }
   def setIndex(index: String) = {
