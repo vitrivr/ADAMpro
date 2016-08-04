@@ -1,7 +1,7 @@
 package ch.unibas.dmi.dbis.adam.index
 
 import ch.unibas.dmi.dbis.adam.catalog.CatalogOperator
-import ch.unibas.dmi.dbis.adam.config.FieldNames
+import ch.unibas.dmi.dbis.adam.config.{AdamConfig, FieldNames}
 import ch.unibas.dmi.dbis.adam.datatypes.FieldTypes.FEATURETYPE
 import ch.unibas.dmi.dbis.adam.datatypes.feature.Feature._
 import ch.unibas.dmi.dbis.adam.datatypes.feature.FeatureVectorWrapper
@@ -362,6 +362,8 @@ object Index extends Logging {
       CatalogOperator.createIndex(indexname, entity.entityname, attribute, indexgenerator.indextypename, index.metadata)
       storage.create(indexname, Seq()) //TODO: possibly switch index to be an entity with specific fields?
       val status = storage.write(indexname, index.data, SaveMode.ErrorIfExists, Map("allowRepartitioning" -> "true"))
+      CatalogOperator.createPartitioner(indexname, AdamConfig.defaultNumberOfPartitions ,null,SparkPartitioner)   //TODO Currently allowRepartitioning is set to true above so we use default no of partitions
+
 
       if (status.isFailure) {
         throw status.failed.get
