@@ -42,7 +42,7 @@ class RPCClient(channel: ManagedChannel, definer: AdamDefinitionBlockingStub, se
 
   var eName = ""
 
-  //dropAllEntities()
+  dropAllEntities()
 
   try
       for (tuples <- tupleSizes) {
@@ -206,7 +206,7 @@ class RPCClient(channel: ManagedChannel, definer: AdamDefinitionBlockingStub, se
       if(el._2>=k) 0f else {
         if(el._1.data.get("ap_distance").get.getFloatData == 0f){
           perfectMatches+=1
-          1f
+          (guesses(el._2)._1.data.get("ap_distance").get.getFloatData+1)/(el._1.data.get("ap_distance").get.getFloatData+1)
         }else{
           if(el._2>=guesses.size){
             0f
