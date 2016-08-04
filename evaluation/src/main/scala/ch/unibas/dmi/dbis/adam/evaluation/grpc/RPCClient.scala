@@ -20,56 +20,71 @@ import scala.util.Random
 class RPCClient(channel: ManagedChannel, definer: AdamDefinitionBlockingStub, searcherBlocking: AdamSearchBlockingStub, searcher: AdamSearchStub) extends AdamParEvalUtils with EvaluationResultLogger {
 
   val k = 100
+  super.setK(k)
 
   /**
     * Evaluation Params
     */
   val indexOnly = true
   val numQ = 20
-  val tupleSizes = Seq(1e3.toInt, 1e6.toInt, 1e7.toInt, 1e8.toInt)
+  val tupleSizes = Seq(1e3.toInt, 1e7.toInt, 1e8.toInt)
   val dimensions = Seq(10, 128)
-  val partitions = Seq(3, 6, 12, 18, 50, 200, 1000)
+  val partitions = Seq(10, 50, 200, 1000)
   val indices = Seq(IndexType.sh, IndexType.vaf, IndexType.ecp, IndexType.lsh, IndexType.pq)
-  val partitioners = Seq( RepartitionMessage.Partitioner.CURRENT, RepartitionMessage.Partitioner.SPARK, RepartitionMessage.Partitioner.ECP)
+  val partitioners = Seq( RepartitionMessage.Partitioner.CURRENT, RepartitionMessage.Partitioner.ECP)
 
   var dropPartitions = Seq(0.0, 0.1, 0.2, 0.3, 0.4, 0.5)
 
+  val queries = dimensions.map(f => f -> IndexedSeq.fill(numQ)(randomQueryMessage(f,0.0))).toMap
+
+  val truths = scala.collection.mutable.Map[Int, Seq[QueryResultsMessage]]()
+  val noSkipping = scala.collection.mutable.Map[Int, scala.collection.mutable.Map[IndexType, Seq[QueryResultsMessage]]]()
+
   var eName = ""
 
-  //dropAllEntities()
+  dropAllEntities()
 
   try
       for (tuples <- tupleSizes) {
-        //TODO this is really bad style
         super.setTuples(tuples)
         for (dim <- dimensions) {
           super.setDimensions(dim)
           System.out.println(" \n ------------------ \n New Round! " + tuples + " " + dim)
           eName = getOrGenEntity(tuples, dim)
-          //Index generation
           for (index <- indices) {
             val name = getOrGenIndex(index, eName)
           }
+
+          truths += dim -> IndexedSeq.tabulate(numQ)( el => searcherBlocking.doQuery(QueryMessage(from = Some(FromMessage(FromMessage.Source.Index(getOrGenIndex(IndexType.vaf, eName)))), nnq = Some(queries.get(dim).get(el).copy(indexOnly = false)), hints = Seq("sequential"))))
+          //System.out.println(truths.head._2.head.responses.head.results.head.data.mkString(", "))
+          noSkipping.put(dim, mutable.Map[IndexType, Seq[QueryResultsMessage]]())
+
           for (index <- indices) {
             super.setIndex(index.name)
             var name = getOrGenIndex(index, eName)
             for (part <- partitions) {
               super.setPartitions(part)
-              System.out.println("Repartitioning: " + part)
               for (partitioner <- partitioners) {
                 super.setPartitioner(partitioner)
+
                 System.out.println("\n ---------------------- \n Repartitioning with " + partitioner.name + ", partitions: "+part +" index: "+index)
 
                 val repmsg = definer.repartitionIndexData(RepartitionMessage(name, numberOfPartitions = part, option = RepartitionMessage.PartitionOptions.REPLACE_EXISTING, partitioner = partitioner))
                 name = repmsg.message
 
-                val props = definer.getEntityProperties(EntityNameMessage(eName))
-                System.out.println(props.properties.get("indexes").get)
+                //val props = definer.getEntityProperties(EntityNameMessage(eName))
+                //System.out.println(props.properties.get("indexes").get)
 
-                //TODO Index Partition Distribution
+                //Free query to cache index
+                val nnq = Some(randomQueryMessage(dim, 0.0))
+                searcherBlocking.doQuery(QueryMessage(nnq = nnq, from = Some(FromMessage(FromMessage.Source.Index(name)))))
+
+                noSkipping.get(dim).get += index -> IndexedSeq.tabulate(numQ)(el => searcherBlocking.doQuery(QueryMessage(from = Some(FromMessage(FromMessage.Source.Index(name))), nnq = Some(queries.get(dim).get(el)))))
+                //System.out.println(noSkipping.head._2.head._2.head.responses.head.results.head.data.mkString(", "))
+
                 for(dropPerc <- dropPartitions){
                   super.setDropPerc(dropPerc)
-                  val (avgTime, noResults, informationloss, ratio) = timeQuery(name, dim, part, dropPerc)
+                  val (avgTime, noResults, informationloss, ratio) = timeQuery(index, name, dim, part, dropPerc)
 
                   appendToResults(tuples, dim, part, index.name, avgTime, k, noResults, partitioner, informationloss, dropPerc, ratio)
                 }
@@ -115,7 +130,7 @@ class RPCClient(channel: ManagedChannel, definer: AdamDefinitionBlockingStub, se
       System.out.println("Index " + index.name + " does not exist, generating... ")
       name = generateIndex(index, eName)
     } else name = indexList.indexes.find(im => im.indextype == index).get.index
-    System.out.println("Index name: " + name)
+    //System.out.println("Index name: " + name)
 
     name
   }
@@ -129,10 +144,7 @@ class RPCClient(channel: ManagedChannel, definer: AdamDefinitionBlockingStub, se
     * @param dropPerc
     * @return avg Time, avg Result-size, avg top-k misses, avg loss of precision when comparing no skipping vs skipping
     */
-  def timeQuery(indexName: String, dim: Int, part: Int, dropPerc : Double): (Float, Int, Float, Float) = {
-    //Free query to cache index
-    val nnq = Some(randomQueryMessage(dim, part, 0.0))
-    searcherBlocking.doQuery(QueryMessage(nnq = nnq, from = Some(FromMessage(FromMessage.Source.Index(indexName)))))
+  def timeQuery(index: IndexType, indexName: String, dim: Int, part: Int, dropPerc : Double): (Float, Int, Float, Float) = {
 
     val queryCount = numQ
 
@@ -144,26 +156,21 @@ class RPCClient(channel: ManagedChannel, definer: AdamDefinitionBlockingStub, se
     var recallLoss = 0f
 
     while (queryCounter < queryCount) {
-      System.out.println("--------- new Query, dropping: "+dropPerc+" of Partitions --------")
-
       //Skipping Query
       val start = System.currentTimeMillis()
-      val nnq = Some(randomQueryMessage(dim, part, dropPerc))
-      val qm = QueryMessage(nnq = nnq, from = Some(FromMessage(FromMessage.Source.Index(indexName))), information = Seq(QueryMessage.InformationLevel.WITH_PROVENANCE_PARTITION_INFORMATION, QueryMessage.InformationLevel.WITH_PROVENANCE_SOURCE_INFORMATION, QueryMessage.InformationLevel.INFORMATION_FULL_TREE))
+      val nnq = Some(queries.get(dim).get(queryCounter))
+      val skipOpt: mutable.Map[String, String] = collection.mutable.Map() ++ nnq.get.options
+      skipOpt -= "skipPart"
+      skipOpt += "skipPart" -> dropPerc.toString
+      val qm = QueryMessage(nnq = Some(nnq.get.copy(options = skipOpt.toMap)), from = Some(FromMessage(FromMessage.Source.Index(indexName))), information = Seq(QueryMessage.InformationLevel.WITH_PROVENANCE_PARTITION_INFORMATION, QueryMessage.InformationLevel.WITH_PROVENANCE_SOURCE_INFORMATION, QueryMessage.InformationLevel.INFORMATION_FULL_TREE))
       val dropRes = searcherBlocking.doQuery(qm)
       val stop = System.currentTimeMillis()
       time+=(stop-start)
 
-      //truth
-      val opt = collection.mutable.Map() ++ nnq.get.options
-      opt -= "skipPart"
-      val truthM = QueryMessage(nnq = Some(nnq.get.copy(options = opt.toMap, indexOnly = false)), from = Some(FromMessage(FromMessage.Source.Entity(eName))), information = qm.information, hints = Seq("sequential"))
-      val gtruth = searcherBlocking.doQuery(truthM)
+      val gtruth = truths.get(dim).get(queryCounter)
 
       //no skipping
-      val noSkipOpt = collection.mutable.Map() ++ nnq.get.options
-      noSkipOpt -= "skipPart"
-      val noSkipRes = searcherBlocking.doQuery(QueryMessage(nnq = Some(qm.nnq.get.copy(options = noSkipOpt.toMap)), from = qm.from, information = qm.information))
+      val noSkipRes = noSkipping.get(dim).get.get(index).get(queryCounter)
 
       //System.out.println(dropRes.responses.head.results.size+" | "+dropRes.responses.head.results.head.data.mkString(", "))
       //System.out.println(gtruth.responses.head.results.size+" | "+gtruth.responses.head.results.head.data.mkString(", "))
@@ -171,22 +178,22 @@ class RPCClient(channel: ManagedChannel, definer: AdamDefinitionBlockingStub, se
 
       //Comparison Code
       val ratio = errorRatio(noSkipRes, dropRes)
-      System.out.println("Error Ratio between skip and no skip: "+ratio)
+      //System.out.println("Error Ratio between skip and no skip: "+ratio)
 
       val agreements = topKMatch(gtruth, noSkipRes)
-      System.out.println("Top K Matches between truth and no skip: "+agreements)
+      //System.out.println("Top K Matches between truth and no skip: "+agreements)
 
       val skipAgree = topKMatch(gtruth, dropRes)
-      System.out.println("Top K Matches between truth and skip "+skipAgree)
+      //System.out.println("Top K Matches between truth and skip "+skipAgree)
 
       val indexAgree = topKMatch(dropRes, noSkipRes)
-      System.out.println("Top K Matches between skip and no skip "+ indexAgree)
+      //System.out.println("Top K Matches between skip and no skip "+ indexAgree)
 
       resSize += dropRes.responses.head.results.size
       queryCounter += 1
       avgMiss+=indexAgree
       recallLoss+=ratio
-      super.write((stop-start),resSize,indexAgree,ratio,(agreements-skipAgree))
+      super.write(time = (stop-start).toInt,noResults=dropRes.responses.head.results.size,skipNoSkipK = indexAgree,ratioK = ratio, missingKTruth = (agreements-skipAgree).toInt)
     }
 
     (time/ queryCount.toFloat, resSize / queryCount, avgMiss/queryCount.toFloat, recallLoss/queryCount.toFloat)
@@ -259,7 +266,7 @@ class RPCClient(channel: ManagedChannel, definer: AdamDefinitionBlockingStub, se
   }
 
   /** Generates a random query using Random.nextFloat() */
-  def randomQueryMessage(dim: Int, part: Int, skip: Double) = NearestNeighbourQueryMessage("feature", Some(FeatureVectorMessage().withDenseVector(DenseVectorMessage(Seq.fill(dim)(Random.nextFloat())))), None, getDistanceMsg, k, Map[String, String]("skipPart" -> skip.toString), indexOnly = indexOnly)
+  def randomQueryMessage(dim: Int, skip: Double) = NearestNeighbourQueryMessage("feature", Some(FeatureVectorMessage().withDenseVector(DenseVectorMessage(Seq.fill(dim)(Random.nextFloat())))), None, getDistanceMsg, k, Map[String, String]("skipPart" -> skip.toString), indexOnly = indexOnly)
 
   /** Drops all entities */
   def dropAllEntities() = {
