@@ -26,7 +26,7 @@ class RPCClient(channel: ManagedChannel, definer: AdamDefinitionBlockingStub, se
     * Evaluation Params
     */
   val indexOnly = true
-  val numQ = 5
+  val numQ = 20
   val tupleSizes = Seq(1e7.toInt, 5e7.toInt, 1e8.toInt)
   val dimensions = Seq(10, 20, 128)
   val partitions = Seq(10, 20, 50, 100, 1000)
