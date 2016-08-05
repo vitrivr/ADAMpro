@@ -27,9 +27,9 @@ class RPCClient(channel: ManagedChannel, definer: AdamDefinitionBlockingStub, se
     */
   val indexOnly = true
   val numQ = 5
-  val tupleSizes = Seq(1e6.toInt)
-  val dimensions = Seq(10, 128)
-  val partitions = Seq(10, 20, 50, 200, 1000)
+  val tupleSizes = Seq(1e7.toInt, 5e7.toInt, 1e8.toInt)
+  val dimensions = Seq(10, 20, 128)
+  val partitions = Seq(10, 20, 50, 100, 1000)
   val indices = Seq(IndexType.sh, IndexType.vaf, IndexType.ecp, IndexType.lsh, IndexType.pq)
   val partitioners = Seq( RepartitionMessage.Partitioner.CURRENT, RepartitionMessage.Partitioner.ECP, RepartitionMessage.Partitioner.SPARK)
 
