@@ -26,23 +26,23 @@ class RPCClient(channel: ManagedChannel, definer: AdamDefinitionBlockingStub, se
     * Evaluation Params
     */
   val indexOnly = true
-  val numQ = 20
-  val tupleSizes = Seq(1e7.toInt, 1e8.toInt)
+  val numQ = 5
+  val tupleSizes = Seq(1e6.toInt)
   val dimensions = Seq(10, 128)
   val partitions = Seq(10, 20, 50, 200, 1000)
   val indices = Seq(IndexType.sh, IndexType.vaf, IndexType.ecp, IndexType.lsh, IndexType.pq)
-  val partitioners = Seq( RepartitionMessage.Partitioner.CURRENT, RepartitionMessage.Partitioner.ECP)
+  val partitioners = Seq( RepartitionMessage.Partitioner.CURRENT, RepartitionMessage.Partitioner.ECP, RepartitionMessage.Partitioner.SPARK)
 
-  var dropPartitions = Seq(0.0, 0.1, 0.2, 0.3, 0.4, 0.5)
+  var dropPartitions = Seq(0.0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.9)
 
   val queries = dimensions.map(f => f -> IndexedSeq.fill(numQ)(randomQueryMessage(f,0.0))).toMap
 
-  val truths = scala.collection.mutable.Map[Int, Seq[QueryResultsMessage]]()
+  val truths = scala.collection.mutable.Map[Int, IndexedSeq[Seq[QueryResultTupleMessage]]]()
   val noSkipping = scala.collection.mutable.Map[Int, scala.collection.mutable.Map[IndexType, Seq[QueryResultsMessage]]]()
 
   var eName = ""
 
-  dropAllEntities()
+  //dropAllEntities()
 
   try
       for (tuples <- tupleSizes) {
@@ -55,9 +55,11 @@ class RPCClient(channel: ManagedChannel, definer: AdamDefinitionBlockingStub, se
             val name = getOrGenIndex(index, eName)
           }
           System.out.println("Calculating Truths... ")
-          truths += dim -> IndexedSeq.tabulate(numQ)( el => searcherBlocking.doQuery(QueryMessage(from = Some(FromMessage(FromMessage.Source.Index(getOrGenIndex(IndexType.vaf, eName)))), nnq = Some(queries.get(dim).get(el).copy(indexOnly = false)))))
+          truths += dim -> IndexedSeq.tabulate(numQ)(el => searcherBlocking.doQuery(QueryMessage(from = Some(FromMessage(FromMessage.Source.Index(getOrGenIndex(IndexType.vaf, eName))))
+            , nnq = Some(queries.get(dim).get(el).copy(indexOnly = false))))
+              .responses.head.results.
+                sortBy(_.data.get("ap_distance").get.getFloatData).take(k))
           System.out.println("VA-Scans exectued")
-          //System.out.println(truths.head._2.head.responses.head.results.head.data.mkString(", "))
           noSkipping.put(dim, mutable.Map[IndexType, Seq[QueryResultsMessage]]())
 
           for (index <- indices) {
@@ -75,15 +77,19 @@ class RPCClient(channel: ManagedChannel, definer: AdamDefinitionBlockingStub, se
                 val nnq = Some(randomQueryMessage(dim, 0.0))
                 searcherBlocking.doQuery(QueryMessage(nnq = nnq, from = Some(FromMessage(FromMessage.Source.Index(name)))))
                 System.out.println("Calculating no-skip queries")
+                //TODO maybe only take 100 from dropres
                 noSkipping.get(dim).get += index -> IndexedSeq.tabulate(numQ)(el => searcherBlocking.doQuery(QueryMessage(from = Some(FromMessage(FromMessage.Source.Index(name))), nnq = Some(queries.get(dim).get(el)))))
                 System.out.println("No-skip queries calculated")
                 for(dropPerc <- dropPartitions){
                   super.setDropPerc(dropPerc)
                   val (avgTime, noResults, informationloss, ratio) = timeQuery(index, name, dim, part, dropPerc)
                 }
+                noSkipping.get(dim).get.clear()
               }
             }
           }
+          //TODO Maybe we have to clear queries here as well
+          truths-=dim
         }
       }
   finally out.close
@@ -97,7 +103,6 @@ class RPCClient(channel: ManagedChannel, definer: AdamDefinitionBlockingStub, se
       val c = definer.count(EntityNameMessage(entity))
       if (c.message.toInt == tuples) {
         val props = definer.getEntityProperties(EntityNameMessage(entity))
-        //TODO Verify Dimension Count
         System.out.println(props)
         val split = props.properties.get("Example_row").getOrElse("").split(":")
         if(split.length<2){
@@ -136,7 +141,6 @@ class RPCClient(channel: ManagedChannel, definer: AdamDefinitionBlockingStub, se
     name
   }
 
-  //TODO Log individual queries in chronos
   /**
     *
     * @param indexName
@@ -182,14 +186,15 @@ class RPCClient(channel: ManagedChannel, definer: AdamDefinitionBlockingStub, se
 
       val skipAgree = topKMatch(gtruth, dropRes)
 
-      val indexAgree = topKMatch(dropRes, noSkipRes)
+      val indexAgree = topKMatch(dropRes.responses.head.results.sortBy(_.data.get("ap_distance").get.getFloatData).take(100), noSkipRes)
       //System.out.println("Top K Matches between skip and no skip "+ indexAgree)
 
       resSize += dropRes.responses.head.results.size
       queryCounter += 1
       avgMiss+=indexAgree
       recallLoss+=ratio
-      super.write(time = (stop-start).toInt,noResults=dropRes.responses.head.results.size,skipNoSkipK = indexAgree,ratioK = ratio, missingKTruth = agreements*100-skipAgree*100)
+      super.write(time = (stop-start).toInt,noResults=dropRes.responses.head.results.size,skipNoSkipK = indexAgree,ratioK = ratio,
+        missingKTruth = agreements*100-skipAgree*100, topKNoSkip = agreements)
     }
 
     (time/ queryCount.toFloat, resSize / queryCount, avgMiss/queryCount.toFloat, recallLoss/queryCount.toFloat)
@@ -210,15 +215,10 @@ class RPCClient(channel: ManagedChannel, definer: AdamDefinitionBlockingStub, se
         }else{
           if(el._2>=guesses.size){
             0f
-          }else{
-            (guesses(el._2)._1.data.get("ap_distance").get.getFloatData)/(el._1.data.get("ap_distance").get.getFloatData)
-          }
+          }else (guesses(el._2)._1.data.get("ap_distance").get.getFloatData)/(el._1.data.get("ap_distance").get.getFloatData)
         }
       }
     })
-    if(perfectMatches>20){
-      System.err.println(perfectMatches+" perfect Matches. There might be a problem in the code")
-    }
     var err = 0f
     for(f <- errors){
       if(err!=Double.NaN){
@@ -228,10 +228,9 @@ class RPCClient(channel: ManagedChannel, definer: AdamDefinitionBlockingStub, se
     err/Math.min(k, guesses.size).toFloat
   }
 
-  def topKMatch(truth: QueryResultsMessage, guess: QueryResultsMessage) : Float = {
-    val truths = truth.responses.head.results.sortBy(_.data.get("ap_distance").get.getFloatData)
+  def topKMatch(truth: Seq[QueryResultTupleMessage], guess: QueryResultsMessage) : Float = {
 
-    val gtruthPKs = truths.take(k).map(_.data.get("pk"))
+    val gtruthPKs = truth.map(_.data.get("pk"))
     val guessPKs = guess.responses.head.results.map(_.data.get("pk"))
 
     val ag= gtruthPKs.intersect(guessPKs).length

@@ -51,21 +51,22 @@ trait EvaluationResultLogger {
   /** http://stackoverflow.com/questions/11106886/scala-doubles-and-precision */
   def round(f: Float, p: Int) : Float = {BigDecimal(f).setScale(p, BigDecimal.RoundingMode.HALF_UP).toFloat}
 
-  out.println("Time                        "+seperator+"idx"+seperator+"Tuples"+seperator+"Dim"+seperator+"Par"+seperator+"time"+
-  seperator+"k"+seperator+"#res    "+seperator+"partitioner"+seperator+"d%"+seperator+"sNS "+seperator+"err "+seperator+"missingK")
+  out.println("Time                        "+seperator+"idx"+seperator+String.format("%-10s", "Tuple")+seperator+"Dim"+seperator+"Par"+seperator+"time"+
+  seperator+"k"+seperator+"#res    "+seperator+"partitioner"+seperator+"d%"+seperator+"sNS "+seperator+"err "+seperator+"mK"+seperator+"top-K Hits")
   out.flush()
 
   //TODO Maybe rewrite this to option map
-  def write(time: Float, noResults: Int, skipNoSkipK: Float, ratioK: Float, missingKTruth: Float) = {
+  def write(time: Float, noResults: Int, skipNoSkipK: Float, ratioK: Float, missingKTruth: Float, topKNoSkip : Float) = {
     // http://stackoverflow.com/questions/9048132/scala-cant-recognize-which-method-to-call scala.Int is not a java.lang.Object
     val noResPadded = String.format("%08d", noResults : java.lang.Integer)
     val partitionerPadded = String.format("%-11s", partitioner.name)
     val sNsPadded = String.format("%3.2f", round(skipNoSkipK,2) : java.lang.Float)
     val ratioPadded = String.format("%3.2f", round(ratioK,2) : java.lang.Float)
+    val topKNSPadded = String.format("%3.2f", round(topKNoSkip,2) : java.lang.Float)
 
     out.println(Calendar.getInstance().getTime() + seperator + index + seperator+ logTuples + seperator+ logDim + seperator+ logPartitions + seperator+ time +
       seperator + logK + seperator + noResPadded + seperator+ partitionerPadded+seperator+dropPercentage+
-      seperator+sNsPadded+seperator+ratioPadded+seperator+round(missingKTruth,2))
+      seperator+sNsPadded+seperator+ratioPadded+seperator+round(missingKTruth,2)+seperator+topKNSPadded)
     out.flush()
   }
 
