@@ -62,7 +62,7 @@ object IndexPartitioner extends Logging {
         throw new UnsupportedOperationException
       }
       case PartitionerChoice.PQ => {
-        throw new UnsupportedOperationException
+        PQPartitioner(data, cols, Some(index.indexname), nPartitions)
       }
       case PartitionerChoice.RANGE =>
         {
