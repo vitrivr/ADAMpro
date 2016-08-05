@@ -7,7 +7,7 @@ import ch.unibas.dmi.dbis.adam.datatypes.feature.Feature
 import ch.unibas.dmi.dbis.adam.datatypes.feature.Feature.FeatureVector
 import ch.unibas.dmi.dbis.adam.entity.{Entity, EntityNameHolder}
 import ch.unibas.dmi.dbis.adam.exception.GeneralAdamException
-import ch.unibas.dmi.dbis.adam.index.Index
+import ch.unibas.dmi.dbis.adam.index.{Index, IndexingTaskTuple}
 import ch.unibas.dmi.dbis.adam.index.structures.IndexTypes
 import ch.unibas.dmi.dbis.adam.index.structures.sh.{SHIndexMetaData, SHUtils}
 import ch.unibas.dmi.dbis.adam.main.AdamContext
@@ -20,6 +20,9 @@ import org.apache.spark.rdd.RDD
 import org.apache.spark.sql.{DataFrame, Row}
 import org.apache.spark.util.random.Sampling
 
+import scala.collection.mutable.ListBuffer
+import scala.util.Random
+
 /**
   * Created by silvanheller on 26.07.16.
   */
@@ -29,15 +32,16 @@ class SHPartitioner(meta: SHPartitionerMetaData) extends Partitioner with Loggin
   /** We just expect the key to be a bitstring */
   override def getPartition(key: Any): Int = {
     val bitString = key.asInstanceOf[BitString[_]]
-    meta.getClusters.predict(Vectors.dense(SHPartitioner.toVector(bitString, meta.getNoBits).map(_.toDouble).toArray))
+    meta.getClusters.zipWithIndex.sortBy(_._1.hammingDistance(bitString)).head._2
   }
 }
 
 /**
   * Maybe it's useful to analyze the distribution of the data for training
   * See i.e. Hubness http://perun.pmf.uns.ac.rs/radovanovic/publications/2011-pakdd-khubs.pdf
-  * Currently uses simple K-Means. The spark k-means transforms the hamming space into a euclidian one. This needs to be evaluated
-  * Maybe in the future this could train an SH-Hashfunction on the training data / use the PQ-Idea / use eCP.
+  * Currently uses random leaders again. K-means in euclidian space failed.
+  * Maybe in the future this could train an SH-Hashfunction on the training data
+  * Maybe use multi-level leadership like they propose in the eCP-Paper.
   */
 object SHPartitioner extends ADAMPartitioner with Logging with Serializable {
 
@@ -46,36 +50,39 @@ object SHPartitioner extends ADAMPartitioner with Logging with Serializable {
     val bitstring = getBitString(q, indexName)
     val meta = CatalogOperator.getPartitionerMeta(indexName).get.asInstanceOf[SHPartitionerMetaData]
 
-    //This is really ugly code
-    def vectovec(f : Vector ) : FeatureVector= {
-      Feature.conv_stored2vector(Feature.conv_doublestored2floatstored(f.toArray))
-    }
-    val sorted = meta.getClusters.clusterCenters.zipWithIndex.sortBy(el => EuclideanDistance(q, vectovec(el._1)))
-    sorted.dropRight((sorted.size*dropPercentage).toInt).map(_._2).toSeq
+    val sorted = meta.getClusters.zipWithIndex.sortBy(_._1.hammingDistance(getBitString(q, indexName)))
+    sorted.dropRight((sorted.size*dropPercentage).toInt).map(_._2)
   }
 
   override def partitionerName = PartitionerChoice.SH
 
-  /** Trains a K-Means Model */
-  def trainClusters(joinDF: DataFrame, nPart: Int, noBits: Int)(implicit ac: AdamContext): KMeansModel = {
+  /** selects leaders at random. Could be better but is probably better than the spark k-means.*/
+  def trainClusters(joinDF: DataFrame, nPart: Int, noBits: Int)(implicit ac: AdamContext): IndexedSeq[BitString[_]] = {
     //TODO Magic Number
-    val trainingsize = 1000
+    val trainingsize = 400
     val n = joinDF.count
     val fraction = Sampling.computeFractionForSampleSize(trainingsize, n, false)
-    var trainData: Array[Row] = joinDF.sample(false, fraction).collect()
-    if (trainData.length < trainingsize) {
-      trainData = joinDF.take(trainingsize - trainData.length)
+
+    var leaders = ListBuffer[BitString[_]](BitString(Seq.tabulate(noBits)( el => if(Random.nextBoolean()) el else 0).filter(_!=0)))
+    log.debug("Random leader: "+leaders)
+    def getMinDistance(c: BitString[_]) : Int = leaders.sortBy(_.hammingDistance(c)).last.hammingDistance(c)
+
+    while(leaders.size<nPart){
+      val trainData = joinDF.sample(false, fraction).collect().map(_.getAs[BitString[_]](FieldNames.partitionKey))
+      leaders+=trainData.sortBy(r => getMinDistance(r)).last
     }
-    val ex = trainData.head.getAs[BitString[_]](FieldNames.partitionKey)
-    val vectors = ac.sc.parallelize(trainData.map(f => Vectors.dense(toVector(f.getAs[BitString[_]](FieldNames.partitionKey), noBits).map(f => f.toDouble).toArray)))
-    KMeans.train(vectors, nPart, 100)
+    leaders.toIndexedSeq
   }
 
-  /** Transforms a BitString to a Vector with 0 and 1. Needs to be here and not in the bs-interface because the bs doesn't know how long he could be */
-  def toVector(bs: BitString[_], noBits: Int) : scala.collection.immutable.Vector[Double] = {
-    Seq.tabulate(noBits)(el => if(bs.getBitIndexes.contains(el)) 1.0 else 0.0).toVector
-  }
-
+  /**
+    * Uses the train()-Function to train 'leaders' in the hamming space. Tuples will be assigned to leaders and then assigned Partitions based on their leaders.
+    *
+    * @param data DataFrame you want to partition
+    * @param cols Ignored here
+    * @param indexName Will be used to store partitioner information in the catalog
+    * @param nPartitions how many partitions shall be created
+    * @return the partitioned DataFrame
+    */
   override def apply(data: DataFrame, cols: Option[Seq[String]], indexName: Option[EntityNameHolder], nPartitions: Int)(implicit ac: AdamContext): DataFrame = {
     if (indexName.isEmpty) {
       throw new GeneralAdamException("Indexname was not specified")
@@ -118,10 +125,10 @@ object SHPartitioner extends ADAMPartitioner with Logging with Serializable {
 }
 
 /** Metadata Class to store Information */
-class SHPartitionerMetaData(nPart: Int, noBits: Int, clusters: KMeansModel) extends Serializable {
+class SHPartitionerMetaData(nPart: Int, noBits: Int, clusters: IndexedSeq[BitString[_]]) extends Serializable {
   def getNoPartitions: Int = nPart
 
   def getNoBits: Int = noBits
 
-  def getClusters: KMeansModel = clusters
+  def getClusters: IndexedSeq[BitString[_]] = clusters
 }
