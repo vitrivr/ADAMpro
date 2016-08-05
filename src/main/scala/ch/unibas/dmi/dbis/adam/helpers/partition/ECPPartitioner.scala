@@ -22,13 +22,10 @@ class ECPPartitioner(meta: ECPPartitionerMetaData, indexmeta: ECPIndexMetaData) 
 
   override def numPartitions: Int = meta.getNoPart
 
-  //TODO Verify if this works
   override def getPartition(key: Any): Int = {
     val leaderAssignment = key.asInstanceOf[Int]
-    log.debug("Parsed leader assignment: "+leaderAssignment)
     val leader = indexmeta.leaders.find(_.id==leaderAssignment).get
     val part = meta.getLeaders.sortBy(el => meta.getDistanceFunction(el.feature,leader.feature)).head.id.asInstanceOf[Int]
-    log.debug("Assigned Partition: "+part)
     part
   }
 }
@@ -45,9 +42,7 @@ object ECPPartitioner extends ADAMPartitioner with Logging with Serializable{
     val trainingSize = nPart
     val fraction = Sampling.computeFractionForSampleSize(trainingSize, indexmeta.leaders.size, withReplacement = false)
     val leaders = ac.sc.parallelize(indexmeta.leaders)
-    val l = leaders.sample(false, fraction).collect.take(nPart).zipWithIndex.map(f => IndexingTaskTuple(f._2,f._1.feature))
-    log.debug("Chosen leadrs: "+l.mkString(", "))
-    l
+    leaders.sample(false, fraction).collect.take(nPart).zipWithIndex.map(f => IndexingTaskTuple(f._2,f._1.feature))
   }
 
   /**
@@ -61,30 +56,25 @@ object ECPPartitioner extends ADAMPartitioner with Logging with Serializable{
     * @return the partitioned DataFrame
     */
   override def apply(data: DataFrame, cols: Option[Seq[String]], indexName: Option[EntityNameHolder], nPartitions: Int)(implicit ac: AdamContext): DataFrame = {
-    CatalogOperator.dropPartitioner(indexName.get)
 
     //loads the first ECPIndex
     val index = Entity.load(Index.load(indexName.get).get.entityname).get.indexes.find(f => f.get.indextypename == IndexTypes.ECPINDEX).get.get
     val joinDF = index.getData.withColumnRenamed(FieldNames.featureIndexColumnName, FieldNames.partitionKey)
-    joinDF.show(2)
     val joinedDF = data.join(joinDF, index.pk.name)
-    joinedDF.show(2)
     log.debug("repartitioning ")
 
     val indexmeta = CatalogOperator.getIndexMeta(index.indexname).get.asInstanceOf[ECPIndexMetaData]
     val leaders = sampleLeaders(indexmeta, nPartitions)
-    CatalogOperator.createPartitioner(indexName.get,nPartitions,new ECPPartitionerMetaData(nPartitions,leaders, indexmeta.distance),ECPPartitioner)
 
+    CatalogOperator.dropPartitioner(indexName.get)
+    CatalogOperator.createPartitioner(indexName.get,nPartitions,new ECPPartitionerMetaData(nPartitions,leaders, indexmeta.distance),ECPPartitioner)
     //repartition
     val partitioner = new ECPPartitioner(new ECPPartitionerMetaData(nPartitions,leaders, indexmeta.distance), indexmeta)
     val repartitioned: RDD[(Any, Row)] = joinedDF.map(r => (r.getAs[Any](FieldNames.partitionKey), r)).partitionBy(partitioner)
     val reparRDD = repartitioned.mapPartitions((it) => {
       it.map(f => f._2)
     }, true)
-    val ret = ac.sqlContext.createDataFrame(reparRDD, joinedDF.schema)
-    log.debug("repartitioned")
-    ret.show(2)
-    ret
+    ac.sqlContext.createDataFrame(reparRDD, joinedDF.schema)
   }
 
   /** Returns the partitions to be queried for a given Featurevector */
