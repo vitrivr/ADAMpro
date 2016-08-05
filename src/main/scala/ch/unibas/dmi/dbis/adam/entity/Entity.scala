@@ -470,6 +470,7 @@ object Entity extends Logging {
     * @return
     */
   def drop(entityname: EntityName, ifExists: Boolean = false)(implicit ac: AdamContext): Try[Void] = {
+    try{
     if (!exists(entityname)) {
       if (!ifExists) {
         return Failure(EntityNotExistingException())
@@ -482,5 +483,8 @@ object Entity extends Logging {
     EntityLRUCache.invalidate(entityname)
 
     Success(null)
+    } catch {
+      case e : Exception => Failure(e)
+    }
   }
 }

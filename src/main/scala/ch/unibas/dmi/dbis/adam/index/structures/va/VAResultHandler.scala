@@ -22,21 +22,23 @@ private[va] class VAResultHandler[A](k: Int) {
     */
   def offer(r: Row, pk : String): Boolean = {
     queue.synchronized {
-      if (elementsLeft > 0) {
+      if (elementsLeft > 0) { //we have not yet inserted k elements, no checks therefore
         val lower = r.getAs[Float]("lbound")
         val upper = r.getAs[Float]("ubound")
         val tid = r.getAs[A](pk)
         elementsLeft -= 1
-        enqueue(lower, upper, tid)
+        enqueueAndAddToCandidates(lower, upper, tid)
         return true
-      } else {
+      } else { //we have already k elements, therefore check if new element is better
         val peek = queue.firstFloat()
         val lower = r.getAs[Float]("lbound")
         if (peek >= lower) {
+          //if peek is larger than lower, then dequeue worst element and insert
+          //new element
           queue.dequeueFloat()
           val upper = r.getAs[Float]("ubound")
           val tid = r.getAs[A](pk : String)
-          enqueue(lower, upper, tid)
+          enqueueAndAddToCandidates(lower, upper, tid)
           return true
         } else {
           return false
@@ -51,15 +53,15 @@ private[va] class VAResultHandler[A](k: Int) {
     * @param upper
     * @param tid
     */
-  private def enqueue(lower : Float, upper : Float, tid : A): Unit ={
-    enqueue(VAResultElement(lower, upper, tid))
+  private def enqueueAndAddToCandidates(lower : Float, upper : Float, tid : A): Unit ={
+    enqueueAndAddToCandidates(VAResultElement(lower, upper, tid))
   }
 
   /**
     *
     * @param res
     */
-  private def enqueue(res: VAResultElement[A]): Unit = {
+  private def enqueueAndAddToCandidates(res: VAResultElement[A]): Unit = {
     queue.enqueue(res.upper)
     ls += res
   }
