@@ -1,14 +1,18 @@
 package ch.unibas.dmi.dbis.adam.evaluation.grpc
 
+import java.io.File
 
-import ch.unibas.dmi.dbis.adam.evaluation.{AdamParEvalUtils, EvaluationResultLogger}
+import ch.unibas.dmi.dbis.adam.evaluation.io.{FeatureVectorIO, QueryResultIO}
+import ch.unibas.dmi.dbis.adam.evaluation.utils.{AdamParEvalUtils, EvaluationResultLogger}
 import ch.unibas.dmi.dbis.adam.http.grpc.AdamDefinitionGrpc.AdamDefinitionBlockingStub
 import ch.unibas.dmi.dbis.adam.http.grpc.AdamSearchGrpc.{AdamSearchBlockingStub, AdamSearchStub}
+import ch.unibas.dmi.dbis.adam.http.grpc.RepartitionMessage.Partitioner
 import ch.unibas.dmi.dbis.adam.http.grpc._
 import io.grpc.okhttp.OkHttpChannelBuilder
 import io.grpc.{ManagedChannel, ManagedChannelBuilder}
 
 import scala.collection.mutable
+import scala.collection.mutable.ListBuffer
 import scala.util.Random
 
 /**
@@ -27,40 +31,34 @@ class RPCClient(channel: ManagedChannel, definer: AdamDefinitionBlockingStub, se
     */
   val indexOnly = true
   val numQ = 20
-  val tupleSizes = Seq(1e7.toInt, 5e7.toInt, 1e8.toInt)
-  val dimensions = Seq(10, 20, 128)
-  val partitions = Seq(10, 20, 50, 100, 1000)
+  val tupleSizes = Seq(1e5.toInt)
+  val dimensions = Seq(20)
+  val partitions = Seq(10, 20)
+  //Don't do 1K here it crashes on return because java.lang.OutOfMemoryError: GC overhead limit exceeded TODO Maybe this changes with the new commit?
   val indices = Seq(IndexType.sh, IndexType.vaf, IndexType.ecp, IndexType.lsh, IndexType.pq)
-  val partitioners = Seq( RepartitionMessage.Partitioner.CURRENT, RepartitionMessage.Partitioner.ECP, RepartitionMessage.Partitioner.SPARK)
+  val partitioners = Seq(RepartitionMessage.Partitioner.CURRENT, RepartitionMessage.Partitioner.ECP, RepartitionMessage.Partitioner.SPARK)
 
   var dropPartitions = Seq(0.0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.9)
 
-  val queries = dimensions.map(f => f -> IndexedSeq.fill(numQ)(randomQueryMessage(f,0.0))).toMap
-
-  val truths = scala.collection.mutable.Map[Int, IndexedSeq[Seq[QueryResultTupleMessage]]]()
-  val noSkipping = scala.collection.mutable.Map[Int, scala.collection.mutable.Map[IndexType, Seq[QueryResultsMessage]]]()
-
+  //Generate Queries
+  dimensions.map(dim => {
+    getOrGenQueries(dim)
+  })
   var eName = ""
 
   //dropAllEntities()
-
   try
       for (tuples <- tupleSizes) {
         super.setTuples(tuples)
         for (dim <- dimensions) {
           super.setDimensions(dim)
           System.out.println(" \n ------------------ \n New Round! " + tuples + " " + dim)
+
           eName = getOrGenEntity(tuples, dim)
           for (index <- indices) {
-            val name = getOrGenIndex(index, eName)
+            getOrGenIndex(index, eName)
           }
-          System.out.println("Calculating Truths... ")
-          truths += dim -> IndexedSeq.tabulate(numQ)(el => searcherBlocking.doQuery(QueryMessage(from = Some(FromMessage(FromMessage.Source.Index(getOrGenIndex(IndexType.vaf, eName))))
-            , nnq = Some(queries.get(dim).get(el).copy(indexOnly = false))))
-              .responses.head.results.
-                sortBy(_.data.get("ap_distance").get.getFloatData).take(k))
-          System.out.println("VA-Scans exectued")
-          noSkipping.put(dim, mutable.Map[IndexType, Seq[QueryResultsMessage]]())
+          getOrGenTruth(dim)
 
           for (index <- indices) {
             super.setIndex(index.name)
@@ -69,30 +67,73 @@ class RPCClient(channel: ManagedChannel, definer: AdamDefinitionBlockingStub, se
               super.setPartitions(part)
               for (partitioner <- partitioners) {
                 super.setPartitioner(partitioner)
-                System.out.println("\n ---------------------- \n Repartitioning with " + partitioner.name + ", partitions: "+part +" index: "+index)
+                System.out.println("\n ---------------------- \n Repartitioning with " + partitioner.name + ", partitions: " + part + " index: " + index)
                 val repmsg = definer.repartitionIndexData(RepartitionMessage(name, numberOfPartitions = part, option = RepartitionMessage.PartitionOptions.REPLACE_EXISTING, partitioner = partitioner))
                 name = repmsg.message
 
                 //Free query to cache index
                 val nnq = Some(randomQueryMessage(dim, 0.0))
                 searcherBlocking.doQuery(QueryMessage(nnq = nnq, from = Some(FromMessage(FromMessage.Source.Index(name)))))
-                System.out.println("Calculating no-skip queries")
-                //TODO maybe only take 100 from dropres
-                noSkipping.get(dim).get += index -> IndexedSeq.tabulate(numQ)(el => searcherBlocking.doQuery(QueryMessage(from = Some(FromMessage(FromMessage.Source.Index(name))), nnq = Some(queries.get(dim).get(el)))))
-                System.out.println("No-skip queries calculated")
-                for(dropPerc <- dropPartitions){
+
+                for (dropPerc <- dropPartitions) {
                   super.setDropPerc(dropPerc)
-                  val (avgTime, noResults, informationloss, ratio) = timeQuery(index, name, dim, part, dropPerc)
+                  timeQuery(index, name, dim, part, dropPerc)
                 }
-                noSkipping.get(dim).get.clear()
               }
             }
           }
-          //TODO Maybe we have to clear queries here as well
-          truths-=dim
         }
       }
-  finally out.close
+  finally out.close()
+
+  def getOrGenQueries(dim: Int): IndexedSeq[NearestNeighbourQueryMessage] = {
+    val file = new File("resources/queries_" + dim + ".qlist")
+    if (!file.exists()) {
+      val queries = IndexedSeq.fill(numQ)(randomQueryMessage(dim, 0.0))
+      FeatureVectorIO.writeToFile(new File("resources/queries_" + dim + ".qlist"), queries.map(nnq => nnq.query.get.getDenseVector.vector.toIndexedSeq))
+      queries
+    } else {
+      val queries = FeatureVectorIO.fromFile(file)
+      queries.map(vec => {
+        NearestNeighbourQueryMessage("feature", Some(FeatureVectorMessage().withDenseVector(DenseVectorMessage(vec))), None, getDistanceMsg, k, Map[String, String](), indexOnly = indexOnly)
+      })
+    }
+  }
+
+  def getOrGenNoSkip(dim: Int, index: IndexType, part: Int, partitioner: Partitioner): IndexedSeq[Seq[QueryResultTupleMessage]] = {
+    val file = new File("resources/noskip_" + dim + "_" + index + "_" + part + "_" + partitioner + ".reslist")
+    if (!file.exists()) {
+      System.out.println("Generating No-Skip results")
+      val name = getOrGenIndex(index, eName)
+      val queries = getOrGenQueries(dim)
+      val res = IndexedSeq.tabulate(numQ)(el => {
+        searcherBlocking.doQuery(QueryMessage(from = Some(FromMessage(FromMessage.Source.Index(name))), nnq = Some(queries(el)))).responses.head.results
+      })
+      QueryResultIO.writeToFile(file, res)
+      System.out.println("No-skip results generated")
+      res
+    } else QueryResultIO.fromFile(file)
+  }
+
+  def getOrGenTruth(dim: Int): IndexedSeq[Seq[QueryResultTupleMessage]] = {
+    val file = new File("resources/truths_" + dim + ".reslist")
+    if (file.exists()) {
+      QueryResultIO.fromFile(file)
+    } else {
+      System.out.println("Generating Truth")
+      val queries = getOrGenQueries(dim)
+      val res = IndexedSeq.tabulate(numQ)(el =>
+        searcherBlocking.doQuery(QueryMessage(from = Some(FromMessage(FromMessage.Source.Index(getOrGenIndex(IndexType.vaf, eName))))
+          , nnq = Some(queries(el).withIndexOnly(false))))
+          .responses.head.results)
+      val lb = ListBuffer[Seq[QueryResultTupleMessage]]()
+      res.foreach(q => q.sliding(10000).foreach(lb += _.sortBy(_.data("ap_distance").getFloatData).take(k)))
+      val topk = lb.map(_.sortBy(el => el.data("ap_distance").getFloatData).take(k)).toIndexedSeq
+      QueryResultIO.writeToFile(file, topk)
+      System.out.println("VA-Scans executed")
+      res
+    }
+  }
 
   /** Checks if an Entity with the given Tuple size and dimensions exists */
   def getOrGenEntity(tuples: Int, dim: Int): String = {
@@ -104,15 +145,15 @@ class RPCClient(channel: ManagedChannel, definer: AdamDefinitionBlockingStub, se
       if (c.message.toInt == tuples) {
         val props = definer.getEntityProperties(EntityNameMessage(entity))
         System.out.println(props)
-        val split = props.properties.get("Example_row").getOrElse("").split(":")
-        if(split.length<2){
+        val split = props.properties.getOrElse("Example_row", "").split(":")
+        if (split.length < 2) {
           eName = None
-        }else{
+        } else {
           val vector = split(1).split(",")
-          if(vector.size==dim){
+          if (vector.size == dim) {
             eName = Some(entity)
             System.out.println("Entity found - " + eName.get)
-          }else None
+          } else None
         }
       }
     }
@@ -120,7 +161,7 @@ class RPCClient(channel: ManagedChannel, definer: AdamDefinitionBlockingStub, se
     if (eName.isEmpty) {
       System.out.println("Generating new Entity")
       eName = Some(("silvan" + Math.abs(Random.nextInt())).filter(_ != '0'))
-      definer.createEntity(CreateEntityMessage(eName.get, Seq(AttributeDefinitionMessage.apply("pk", AttributeType.LONG, true, true, true), AttributeDefinitionMessage("feature", AttributeType.FEATURE, false, false, true))))
+      definer.createEntity(CreateEntityMessage(eName.get, Seq(AttributeDefinitionMessage.apply("pk", AttributeType.LONG, pk = true, unique = true, indexed = true), AttributeDefinitionMessage("feature", AttributeType.FEATURE, pk = false, unique = false, indexed = true))))
       val options = Map("fv-dimensions" -> dim, "fv-min" -> 0, "fv-max" -> 1, "fv-sparse" -> false).mapValues(_.toString)
       definer.generateRandomData(GenerateRandomDataMessage(eName.get, tuples, options))
     }
@@ -128,125 +169,93 @@ class RPCClient(channel: ManagedChannel, definer: AdamDefinitionBlockingStub, se
     eName.get
   }
 
-  /** Checks if Index exists and generates it otherwise */
-  def getOrGenIndex(index: IndexType, eName: String): String = {
-    val indexList = definer.listIndexes(EntityNameMessage(eName))
-    var name = ""
-    if (!indexList.indexes.exists(el => el.indextype == index)) {
-      System.out.println("Index " + index.name + " does not exist, generating... ")
-      name = generateIndex(index, eName)
-    } else name = indexList.indexes.find(im => im.indextype == index).get.index
-    //System.out.println("Index name: " + name)
+  /** Loads truths & noSkips from Filesystem and writes to quality-logger */
+  def timeQuery(index: IndexType, indexName: String, dim: Int, part: Int, dropPerc: Double): Unit = {
+    val queries = getOrGenQueries(dim)
+    val truths = getOrGenTruth(dim)
+    val noSkipping = getOrGenNoSkip(dim, index, part, super.getPartitioner)
 
-    name
-  }
-
-  /**
-    *
-    * @param indexName
-    * @param dim
-    * @param part
-    * @param dropPerc
-    * @return avg Time, avg Result-size, avg top-k misses, avg loss of precision when comparing no skipping vs skipping
-    */
-  def timeQuery(index: IndexType, indexName: String, dim: Int, part: Int, dropPerc : Double): (Float, Int, Float, Float) = {
     val queryCount = numQ
-    //Average over Queries
-    var resSize = 0
+
     var time = 0l
     var queryCounter = 0
-    var avgMiss = 0f
-    var recallLoss = 0f
     while (queryCounter < queryCount) {
       //Skipping Query
       val start = System.currentTimeMillis()
-      val nnq = Some(queries.get(dim).get(queryCounter))
+      val nnq = Some(queries(queryCounter))
       val skipOpt: mutable.Map[String, String] = collection.mutable.Map() ++ nnq.get.options
       skipOpt -= "skipPart"
       skipOpt += "skipPart" -> dropPerc.toString
-      val qm = QueryMessage(nnq = Some(nnq.get.copy(options = skipOpt.toMap)), from = Some(FromMessage(FromMessage.Source.Index(indexName))), information = Seq(QueryMessage.InformationLevel.WITH_PROVENANCE_PARTITION_INFORMATION, QueryMessage.InformationLevel.WITH_PROVENANCE_SOURCE_INFORMATION, QueryMessage.InformationLevel.INFORMATION_FULL_TREE))
-      val dropRes = searcherBlocking.doQuery(qm)
+
+      val qm = QueryMessage(nnq = Some(nnq.get.withOptions(skipOpt.toMap).withIndexOnly(indexOnly)),
+        from = Some(FromMessage(FromMessage.Source.Index(indexName))),
+        information = Seq())
+
+      val dropRes = searcherBlocking.doQuery(qm).responses.head.results
       val stop = System.currentTimeMillis()
-      time+=(stop-start)
-
-      val gtruth = truths.get(dim).get(queryCounter)
-
-      //no skipping
-      val noSkipRes = noSkipping.get(dim).get.get(index).get(queryCounter)
-
-      //System.out.println(dropRes.responses.head.results.size+" | "+dropRes.responses.head.results.head.data.mkString(", "))
-      //System.out.println(gtruth.responses.head.results.size+" | "+gtruth.responses.head.results.head.data.mkString(", "))
-      //System.out.println(noSkipRes.responses.head.results.size+" | "+noSkipRes.responses.head.results.head.data.mkString(", "))
+      time += (stop - start)
 
       //Comparison Code
+      val gtruth = truths(queryCounter)
+      val noSkipRes = noSkipping(queryCounter)
       val ratio = errorRatio(noSkipRes, dropRes)
-      //System.out.println("Error Ratio between skip and no skip: "+ratio)
-
       val agreements = topKMatch(gtruth, noSkipRes)
-
       val skipAgree = topKMatch(gtruth, dropRes)
 
-      val indexAgree = topKMatch(dropRes.responses.head.results.sortBy(_.data.get("ap_distance").get.getFloatData).take(100), noSkipRes)
-      //System.out.println("Top K Matches between skip and no skip "+ indexAgree)
-
-      resSize += dropRes.responses.head.results.size
+      super.write(time = (stop - start).toInt, noResults = dropRes.size, ratioK = ratio,
+        missingKTruth = agreements * 100 - skipAgree * 100, topKNoSkip = agreements)
       queryCounter += 1
-      avgMiss+=indexAgree
-      recallLoss+=ratio
-      super.write(time = (stop-start).toInt,noResults=dropRes.responses.head.results.size,skipNoSkipK = indexAgree,ratioK = ratio,
-        missingKTruth = agreements*100-skipAgree*100, topKNoSkip = agreements)
     }
-
-    (time/ queryCount.toFloat, resSize / queryCount, avgMiss/queryCount.toFloat, recallLoss/queryCount.toFloat)
   }
 
-  def errorRatio(truth: QueryResultsMessage, guess:QueryResultsMessage) : Float = {
+  /** Compares ap_distance of top k tuples. TODO This should be rewritten for the case t1=0 t2=n. */
+  def errorRatio(truth: Seq[QueryResultTupleMessage], guess: Seq[QueryResultTupleMessage]): Float = {
     var perfectMatches = 0
-    val truths = truth.responses.head.results.sortBy(_.data.get("ap_distance").get.getFloatData).zipWithIndex
-    val guesses = guess.responses.head.results.sortBy(_.data.get("ap_distance").get.getFloatData).zipWithIndex.toArray
-    if(guesses.size==0 || guesses.size<k){
-      System.err.println("You have given " + guesses.size+ " guesses to the errorRatio method.")
+    val truths = truth.sortBy(_.data("ap_distance").getFloatData).zipWithIndex
+    val guesses = guess.sortBy(_.data("ap_distance").getFloatData).zipWithIndex.toArray
+    if (guesses.length == 0 || guesses.length < k) {
+      System.err.println("You have given " + guesses.length + " guesses to the errorRatio method.")
     }
     val errors: Seq[Float] = truths.map(el => {
-      if(el._2>=k) 0f else {
-        if(el._1.data.get("ap_distance").get.getFloatData == 0f){
-          perfectMatches+=1
-          (guesses(el._2)._1.data.get("ap_distance").get.getFloatData+1)/(el._1.data.get("ap_distance").get.getFloatData+1)
-        }else{
-          if(el._2>=guesses.size){
-            0f
-          }else (guesses(el._2)._1.data.get("ap_distance").get.getFloatData)/(el._1.data.get("ap_distance").get.getFloatData)
+      if (el._2 >= k) 0f
+      else {
+        if (el._1.data("ap_distance").getFloatData == 0f) {
+          perfectMatches += 1
+          (guesses(el._2)._1.data("ap_distance").getFloatData + 1) / (el._1.data("ap_distance").getFloatData + 1)
+        } else {
+          if (el._2 >= guesses.length) 0f else guesses(el._2)._1.data("ap_distance").getFloatData / el._1.data("ap_distance").getFloatData
         }
       }
     })
     var err = 0f
-    for(f <- errors){
-      if(err!=Double.NaN){
-        err+=f
-      }else err+=1f
+    for (f <- errors) {
+      if (err != Double.NaN) {
+        err += f
+      } else err += 1f
     }
-    err/Math.min(k, guesses.size).toFloat
+    err / Math.min(k, Math.max(1, guesses.length)).toFloat  //sanity-check for division by 0
   }
 
-  def topKMatch(truth: Seq[QueryResultTupleMessage], guess: QueryResultsMessage) : Float = {
-
+  /** Simple top-K intersection count */
+  def topKMatch(truth: Seq[QueryResultTupleMessage], guess: Seq[QueryResultTupleMessage]): Float = {
     val gtruthPKs = truth.map(_.data.get("pk"))
-    val guessPKs = guess.responses.head.results.map(_.data.get("pk"))
+    val guessPKs = guess.map(_.data.get("pk"))
 
-    val ag= gtruthPKs.intersect(guessPKs).length
-    ag.toFloat/gtruthPKs.size.toFloat
+    val ag = gtruthPKs.intersect(guessPKs).length
+    ag.toFloat / Math.max(1, gtruthPKs.size.toFloat)  //sanity-check for division by 0
   }
 
+  /** Information about partitions */
   def printPartInfo(res: QueryResultsMessage): Unit = {
     val partInfo = mutable.HashMap[Int, Int]()
-    res.responses.map(f => f.results.map(r => {
+    res.responses.foreach(f => f.results.foreach(r => {
       val key = r.data.getOrElse("ap_partition", DataMessage.defaultInstance).getIntData
       val value = partInfo.getOrElse(key, 0)
       partInfo.put(key, value + 1)
       System.out.println("Query done ,Partition Info: " + partInfo.toString())
       System.out.println("Sample response: " + res.responses.head.results.head.data.mkString(", "))
 
-      val sorted = res.responses.head.results.sortBy(f => f.data.get("ap_distance").get.getFloatData)
+      val sorted = res.responses.head.results.sortBy(f => f.data("ap_distance").getFloatData)
 
       val top100Info = mutable.HashMap[Int, Int]()
       sorted.take(100).map(f => {
@@ -260,9 +269,9 @@ class RPCClient(channel: ManagedChannel, definer: AdamDefinitionBlockingStub, se
   }
 
   /** Generates a random query using Random.nextFloat() */
-  def randomQueryMessage(dim: Int, skip: Double) = NearestNeighbourQueryMessage("feature", Some(FeatureVectorMessage().withDenseVector(DenseVectorMessage(Seq.fill(dim)(Random.nextFloat())))), None, getDistanceMsg, k, Map[String, String]("skipPart" -> skip.toString), indexOnly = indexOnly)
+  def randomQueryMessage(dim: Int, skip: Double): NearestNeighbourQueryMessage = NearestNeighbourQueryMessage("feature", Some(FeatureVectorMessage().withDenseVector(DenseVectorMessage(Seq.fill(dim)(Random.nextFloat())))), None, getDistanceMsg, k, Map[String, String]("skipPart" -> skip.toString), indexOnly = indexOnly)
 
-  /** Drops all entities */
+  /** Drops all entities. Careful when using this operation*/
   def dropAllEntities() = {
     val entityList = definer.listEntities(EmptyMessage())
 
@@ -291,6 +300,18 @@ class RPCClient(channel: ManagedChannel, definer: AdamDefinitionBlockingStub, se
     val indexMsg = IndexMessage(eName, "feature", indexType, getDistanceMsg, Map[String, String]())
     val indexRes = definer.index(indexMsg)
     indexRes.message
+  }
+
+
+  /** Checks if Index exists and generates it otherwise */
+  def getOrGenIndex(index: IndexType, eName: String): String = {
+    val indexList = definer.listIndexes(EntityNameMessage(eName))
+    var name = ""
+    if (!indexList.indexes.exists(el => el.indextype == index)) {
+      System.out.println("Index " + index.name + " does not exist, generating... ")
+      name = generateIndex(index, eName)
+    } else name = indexList.indexes.find(im => im.indextype == index).get.index
+    name
   }
 
 

@@ -1,4 +1,4 @@
-package ch.unibas.dmi.dbis.adam.evaluation
+package ch.unibas.dmi.dbis.adam.evaluation.utils
 
 /**
   * Created by silvan on 06.06.16.
