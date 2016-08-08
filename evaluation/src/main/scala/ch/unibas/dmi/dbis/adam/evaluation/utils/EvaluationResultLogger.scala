@@ -63,20 +63,19 @@ trait EvaluationResultLogger {
   }
 
   out.println(String.format("%-29s", "time") + seperator + "idx" + seperator + String.format("%-7s", "Tuple") + seperator + "Dim" + seperator + "Par" + seperator + "time" +
-    seperator + "k" + seperator + "#res    " + seperator + "partitioner" + seperator + "d%" + seperator + "err " + seperator + "mK " + seperator + "top-K Hits")
+    seperator + "k" + seperator + "#res    " + seperator + "partitioner" + seperator + "d%" + seperator + "mK " + seperator + "top-K Hits")
   out.flush()
 
   //TODO Maybe rewrite this to option map
-  def write(time: Float, noResults: Int, ratioK: Float, missingKTruth: Float, topKNoSkip: Float) = {
+  def write(time: Float, noResults: Int, missingKTruth: Float, topKNoSkip: Float) = {
     //http://stackoverflow.com/questions/9048132/scala-cant-recognize-which-method-to-call scala.Int is not a java.lang.Object
     val noResPadded = String.format("%08d", noResults: java.lang.Integer)
     val partitionerPadded = String.format("%-11s", partitioner.name)
-    val ratioPadded = String.format("%3.2f", round(ratioK, 2): java.lang.Float)
     val topKNSPadded = String.format("%3.2f", round(topKNoSkip, 2): java.lang.Float)
 
     out.println(Calendar.getInstance.getTime + seperator + index + seperator + logTuples + seperator + logDim + seperator + logPartitions + seperator + time +
       seperator + logK + seperator + noResPadded + seperator + partitionerPadded + seperator + dropPercentage +
-      seperator + ratioPadded + seperator + String.format("%2.0f", round(missingKTruth, 2): java.lang.Float) + seperator + topKNSPadded)
+      seperator + String.format("%2.0f", round(missingKTruth, 2): java.lang.Float) + seperator + topKNSPadded)
     out.flush()
   }
 
