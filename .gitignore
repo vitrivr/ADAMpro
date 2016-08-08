@@ -9,5 +9,5 @@ build
 src/generated
 
 *.csv
-lib/grpc-assembly-0.1-SNAPSHOT.jar
-project/project/
+*.reslist
+*.qlist
