@@ -3,19 +3,15 @@ package ch.unibas.dmi.dbis.adam.helpers.partition
 import ch.unibas.dmi.dbis.adam.catalog.CatalogOperator
 import ch.unibas.dmi.dbis.adam.config.FieldNames
 import ch.unibas.dmi.dbis.adam.datatypes.bitString.BitString
-import ch.unibas.dmi.dbis.adam.datatypes.feature.Feature
 import ch.unibas.dmi.dbis.adam.datatypes.feature.Feature.FeatureVector
 import ch.unibas.dmi.dbis.adam.entity.{Entity, EntityNameHolder}
 import ch.unibas.dmi.dbis.adam.exception.GeneralAdamException
-import ch.unibas.dmi.dbis.adam.index.{Index, IndexingTaskTuple}
+import ch.unibas.dmi.dbis.adam.index.Index
 import ch.unibas.dmi.dbis.adam.index.structures.IndexTypes
 import ch.unibas.dmi.dbis.adam.index.structures.sh.{SHIndexMetaData, SHUtils}
 import ch.unibas.dmi.dbis.adam.main.AdamContext
-import ch.unibas.dmi.dbis.adam.query.distance.EuclideanDistance
 import ch.unibas.dmi.dbis.adam.utils.Logging
 import org.apache.spark.Partitioner
-import org.apache.spark.mllib.clustering.{KMeans, KMeansModel}
-import org.apache.spark.mllib.linalg.{Vector, Vectors}
 import org.apache.spark.rdd.RDD
 import org.apache.spark.sql.{DataFrame, Row}
 import org.apache.spark.util.random.Sampling
@@ -68,8 +64,10 @@ object SHPartitioner extends ADAMPartitioner with Logging with Serializable {
     def getMinDistance(c: BitString[_]) : Int = leaders.sortBy(_.hammingDistance(c)).last.hammingDistance(c)
 
     while(leaders.size<nPart){
-      val trainData = joinDF.sample(false, fraction).collect().map(_.getAs[BitString[_]](FieldNames.partitionKey))
+      var trainData: Array[BitString[_]] = joinDF.sample(false, fraction).collect().map(_.getAs[BitString[_]](FieldNames.partitionKey))
+      if(trainData.length<100) trainData = trainData ++ joinDF.take(100).map(el => el.getAs[BitString[_]](FieldNames.partitionKey))
       leaders+=trainData.sortBy(r => getMinDistance(r)).last
+      if(leaders.size%20==0) log.debug(leaders.size.toString)
     }
     leaders.toIndexedSeq
   }

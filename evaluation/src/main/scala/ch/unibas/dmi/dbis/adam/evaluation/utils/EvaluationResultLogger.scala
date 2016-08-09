@@ -57,30 +57,23 @@ trait EvaluationResultLogger {
 
   val seperator = "\t"
 
+  out.println(String.format("%-29s", "time") + seperator + "idx" + seperator + String.format("%-7s", "Tuple") + seperator + "Dim" + seperator + "Par" + seperator + "time" +
+    seperator + "k" + seperator + "#res    " + seperator + "partitioner" + seperator + "d%" + seperator + "mK " + seperator + "top-K Hits")
+  out.flush()
+
   /** http://stackoverflow.com/questions/11106886/scala-doubles-and-precision */
   def round(f: Float, p: Int): Float = {
     BigDecimal(f).setScale(p, BigDecimal.RoundingMode.HALF_UP).toFloat
   }
 
-  out.println(String.format("%-29s", "time") + seperator + "idx" + seperator + String.format("%-7s", "Tuple") + seperator + "Dim" + seperator + "Par" + seperator + "time" +
-    seperator + "k" + seperator + "#res    " + seperator + "partitioner" + seperator + "d%" + seperator + "mK " + seperator + "top-K Hits")
-  out.flush()
-
-  //TODO Maybe rewrite this to option map
-  def write(time: Float, noResults: Int, missingKTruth: Float, topKNoSkip: Float) = {
-    //http://stackoverflow.com/questions/9048132/scala-cant-recognize-which-method-to-call scala.Int is not a java.lang.Object
+  def write(time: Float, noResults: Int, topKSkip: Float, topKNoSkip: Float) = {
     val noResPadded = String.format("%08d", noResults: java.lang.Integer)
     val partitionerPadded = String.format("%-11s", partitioner.name)
     val topKNSPadded = String.format("%3.2f", round(topKNoSkip, 2): java.lang.Float)
 
     out.println(Calendar.getInstance.getTime + seperator + index + seperator + logTuples + seperator + logDim + seperator + logPartitions + seperator + time +
       seperator + logK + seperator + noResPadded + seperator + partitionerPadded + seperator + dropPercentage +
-      seperator + String.format("%2.0f", round(missingKTruth, 2): java.lang.Float) + seperator + topKNSPadded)
-    out.flush()
-  }
-
-  def appendToResults(tuples: Int, dimensions: Int, partitions: Int, index: String, time: Float, k: Int = 0, noResults: Int = 0, partitioner: RepartitionMessage.Partitioner, informationLoss: Double, dropPerc: Double, ratio: Float): Unit = {
-    out.println(Calendar.getInstance.getTime + "," + index + "," + tuples + "," + dimensions + "," + partitions + "," + time + "," + k + "," + noResults + "," + partitioner.name + "," + dropPerc + "," + informationLoss + "," + ratio + ",ALL")
+      seperator + String.format("%2.0f", round(topKSkip, 2): java.lang.Float) + seperator + topKNSPadded)
     out.flush()
   }
 }
