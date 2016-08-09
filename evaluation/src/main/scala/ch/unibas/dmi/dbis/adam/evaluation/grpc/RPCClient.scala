@@ -21,7 +21,7 @@ import scala.util.Random
   * Ivan Giangreco
   * June 2016
   */
-class RPCClient(channel: ManagedChannel, definer: AdamDefinitionBlockingStub, searcherBlocking: AdamSearchBlockingStub, searcher: AdamSearchStub) extends EvaluationResultLogger with AdamParEvalUtils with Logging{
+class RPCClient(channel: ManagedChannel, definer: AdamDefinitionBlockingStub, searcherBlocking: AdamSearchBlockingStub, searcher: AdamSearchStub) extends EvaluationResultLogger with AdamParEvalUtils with Logging {
 
   val k = 200
   super.setK(k)
@@ -31,7 +31,7 @@ class RPCClient(channel: ManagedChannel, definer: AdamDefinitionBlockingStub, se
     */
   val indexOnly = true
   val numQ = 5
-  val tupleSizes = Seq(1e5.toInt)
+  val tupleSizes = Seq(1e3.toInt)
   val dimensions = Seq(20, 64, 128)
   val partitions = Seq(10, 20, 50)
   val indices = Seq(IndexType.vaf)
@@ -71,7 +71,7 @@ class RPCClient(channel: ManagedChannel, definer: AdamDefinitionBlockingStub, se
                 //Free query to cache index
                 val nnq = Some(randomQueryMessage(dim, 0.0))
                 searcherBlocking.doQuery(QueryMessage(nnq = nnq, from = Some(FromMessage(FromMessage.Source.Index(name)))))
-
+                log.debug("Timing queries")
                 for (dropPerc <- dropPartitions) {
                   super.setDropPerc(dropPerc)
                   timeQuery(index, name, dim, part, dropPerc)
@@ -86,7 +86,7 @@ class RPCClient(channel: ManagedChannel, definer: AdamDefinitionBlockingStub, se
   def getOrGenQueries(dim: Int): IndexedSeq[NearestNeighbourQueryMessage] = {
     val file = new File("resources/" + eName + "/queries_" + dim + ".qlist")
     if (!file.exists()) {
-      log.debug("Generating Queries for "+dim+" Dimensions")
+      log.debug("Generating Queries for " + dim + " Dimensions")
       val queries = IndexedSeq.fill(numQ)(randomQueryMessage(dim, 0.0))
       SeqIO.storeNestedSeq(file, queries.map(nnq => nnq.query.get.getDenseVector.vector.toIndexedSeq))
       queries
@@ -102,7 +102,7 @@ class RPCClient(channel: ManagedChannel, definer: AdamDefinitionBlockingStub, se
   def getOrGenNoSkip(dim: Int, index: IndexType, part: Int, partitioner: Partitioner): IndexedSeq[Float] = {
     val file = new File("resources/" + eName + "/noskip_" + dim + "_" + index + "_" + part + "_" + partitioner + ".reslist")
     if (!file.exists()) {
-      log.debug("Generating No-Skip results")
+      log.debug("Generating No-Skip results for "+dim+", "+index+", "+part+", "+partitioner)
       val name = getOrGenIndex(index, eName)
       val queries = getOrGenQueries(dim)
       val truths = getOrGenTruth(dim)
@@ -112,13 +112,12 @@ class RPCClient(channel: ManagedChannel, definer: AdamDefinitionBlockingStub, se
       var counter = 0
       while (counter < queries.size) {
         val res = searcherBlocking.doQuery(QueryMessage(from = Some(FromMessage(FromMessage.Source.Index(name))), nnq = Some(queries(counter)))).responses.head.results
-        val topk = topKMatch(truths(dim), res)
+        val topk = topKMatch(truths(counter), res)
         lb += topk
         counter += 1
       }
       val res = lb.toIndexedSeq
       SeqIO.storeSeq(file, res)
-      log.debug("No-skip results generated")
       res
     } else SeqIO.readSeq(file)
   }
@@ -132,7 +131,7 @@ class RPCClient(channel: ManagedChannel, definer: AdamDefinitionBlockingStub, se
       SeqIO.readNestedSeq(file)
     } else {
       System.gc()
-      log.debug("Generating Truth for "+dim+" dimensions")
+      log.debug("Generating Truth for " + dim + " dimensions")
       val queries = getOrGenQueries(dim)
       val res: IndexedSeq[Iterator[Seq[QueryResultTupleMessage]]] = IndexedSeq.tabulate(numQ)(el =>
         searcherBlocking.doQuery(QueryMessage(from = Some(FromMessage(FromMessage.Source.Index(getOrGenIndex(IndexType.vaf, eName))))
@@ -156,6 +155,7 @@ class RPCClient(channel: ManagedChannel, definer: AdamDefinitionBlockingStub, se
         pks += lb.sortBy(_._1).map(_._2)
         counter += 1
       }
+      log.debug("Top-k keys generated")
       System.gc()
       val topk = pks.toIndexedSeq
 
@@ -167,10 +167,9 @@ class RPCClient(channel: ManagedChannel, definer: AdamDefinitionBlockingStub, se
   /** Checks if an Entity with the given Tuple size and dimensions exists */
   def getOrGenEntity(tuples: Int, dim: Int): String = {
     val eName = "sil_" + tuples + "_" + dim
-    val exists = definer.listEntities(EmptyMessage()).entities.find(_.equals("silvan_" + tuples + "_" + dim))
+    val exists = definer.listEntities(EmptyMessage()).entities.find(_.equals(eName))
     if (exists.isEmpty) {
-      log.debug("Existing entity names: "+definer.listEntities(EmptyMessage()).entities)
-      log.info("Generating new Entity")
+      log.info("Generating new Entity: " + eName)
       definer.createEntity(CreateEntityMessage(eName, Seq(AttributeDefinitionMessage.apply("pk", AttributeType.LONG, pk = true, unique = true, indexed = true),
         AttributeDefinitionMessage("feature", AttributeType.FEATURE, pk = false, unique = false, indexed = true))))
       val options = Map("fv-dimensions" -> dim, "fv-min" -> 0, "fv-max" -> 1, "fv-sparse" -> false).mapValues(_.toString)
@@ -269,7 +268,7 @@ class RPCClient(channel: ManagedChannel, definer: AdamDefinitionBlockingStub, se
       if (dropEnt.code.isError) {
         log.error("Error when dropping Entity " + entity + ": " + dropEnt.message)
       }
-      log.debug("Dropped Entity "+entity)
+      log.debug("Dropped Entity " + entity)
     }
   }
 

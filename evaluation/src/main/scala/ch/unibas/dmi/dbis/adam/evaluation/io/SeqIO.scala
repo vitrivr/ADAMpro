@@ -30,7 +30,8 @@ object SeqIO extends App {
       bw.flush()
     } finally bw.close()
   }
-  def readNestedSeq(file: File, delimiter: String = ":") : IndexedSeq[IndexedSeq[Float]] = {
+
+  def readNestedSeq(file: File, delimiter: String = ":"): IndexedSeq[IndexedSeq[Float]] = {
     val lb = ListBuffer[IndexedSeq[Float]]()
     var br: BufferedReader = null
     try {
@@ -38,7 +39,6 @@ object SeqIO extends App {
       var line = br.readLine()
       while (line != null) {
         val q = line.split(delimiter).map(_.toFloat)
-        System.out.println(q.head.getClass)
         if (line != "") {
           lb += q
         }
@@ -47,6 +47,7 @@ object SeqIO extends App {
     } finally br.close()
     lb.toIndexedSeq
   }
+
   def storeSeq(file: File, topk: IndexedSeq[Float], delimiter: String = ":"): Unit = {
     var bw: BufferedWriter = null
     if (file.getParentFile != null) {
