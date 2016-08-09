@@ -2,7 +2,7 @@ package ch.unibas.dmi.dbis.adam.evaluation.grpc
 
 import java.io.File
 
-import ch.unibas.dmi.dbis.adam.evaluation.io.{FeatureVectorIO, QueryResultIO}
+import ch.unibas.dmi.dbis.adam.evaluation.io.QueryResultIO
 import ch.unibas.dmi.dbis.adam.evaluation.utils.{AdamParEvalUtils, EvaluationResultLogger}
 import ch.unibas.dmi.dbis.adam.http.grpc.AdamDefinitionGrpc.AdamDefinitionBlockingStub
 import ch.unibas.dmi.dbis.adam.http.grpc.AdamSearchGrpc.{AdamSearchBlockingStub, AdamSearchStub}
@@ -30,7 +30,7 @@ class RPCClient(channel: ManagedChannel, definer: AdamDefinitionBlockingStub, se
     * Evaluation Params
     */
   val indexOnly = true
-  val numQ = 20
+  val numQ = 1
   val tupleSizes = Seq(1e7.toInt, 5e7.toInt)
   val dimensions = Seq(20, 128)
   val partitions = Seq(10, 20, 30)
@@ -43,6 +43,7 @@ class RPCClient(channel: ManagedChannel, definer: AdamDefinitionBlockingStub, se
   dimensions.map(dim => {
     getOrGenQueries(dim)
   })
+  System.gc()
   var eName = ""
 
   //dropAllEntities()
@@ -54,14 +55,17 @@ class RPCClient(channel: ManagedChannel, definer: AdamDefinitionBlockingStub, se
           System.out.println(" \n ------------------ \n New Round! " + tuples + " " + dim)
 
           eName = getOrGenEntity(tuples, dim)
+          System.gc()
           for (index <- indices) {
             getOrGenIndex(index, eName)
           }
           getOrGenTruth(dim)
+          System.gc()
 
           for (index <- indices) {
             super.setIndex(index.name)
             var name = getOrGenIndex(index, eName)
+            System.gc()
             for (part <- partitions) {
               super.setPartitions(part)
               for (partitioner <- partitioners) {
@@ -89,10 +93,10 @@ class RPCClient(channel: ManagedChannel, definer: AdamDefinitionBlockingStub, se
     val file = new File("resources/" + eName + "/queries_" + dim + ".qlist")
     if (!file.exists()) {
       val queries = IndexedSeq.fill(numQ)(randomQueryMessage(dim, 0.0))
-      FeatureVectorIO.writeToFile(new File("resources/queries_" + dim + ".qlist"), queries.map(nnq => nnq.query.get.getDenseVector.vector.toIndexedSeq))
+      QueryResultIO.storeNestedSeq(new File("resources/queries_" + dim + ".qlist"), queries.map(nnq => nnq.query.get.getDenseVector.vector.toIndexedSeq))
       queries
     } else {
-      val queries = FeatureVectorIO.fromFile(file)
+      val queries = QueryResultIO.readNestedSeq(file)
       queries.map(vec => {
         NearestNeighbourQueryMessage("feature", Some(FeatureVectorMessage().withDenseVector(DenseVectorMessage(vec))), None, getDistanceMsg, k, Map[String, String](), indexOnly = indexOnly)
       })
@@ -121,35 +125,53 @@ class RPCClient(channel: ManagedChannel, definer: AdamDefinitionBlockingStub, se
     if (!file.exists()) {
       val res = getOrGenNoSkip(dim, index, part, partitioner)
       val topk = res.zipWithIndex.map(el => el._1.sliding(1000).map(it => topKMatch(truths(el._2), it)).foldLeft(0f)((a, b) => a+b))
-      QueryResultIO.storeTopK(file, topk)
+      QueryResultIO.storeSeq(file, topk)
       topk
-    } else QueryResultIO.getTopK(file)
+    } else QueryResultIO.readSeq(file)
   }
 
-  def getOrGenTruth(dim: Int): IndexedSeq[Seq[QueryResultTupleMessage]] = {
+  def getOrGenTruth(dim: Int): IndexedSeq[IndexedSeq[Long]] = {
     val file = new File("resources/" + eName + "/truths_" + dim + ".reslist")
     if (file.exists()) {
-      QueryResultIO.fromFile(file)
+      QueryResultIO.readNestedSeq(file).map(_.map(_.toLong))
     } else {
       System.out.println("Generating Truth")
       val queries = getOrGenQueries(dim)
       val res: IndexedSeq[Iterator[Seq[QueryResultTupleMessage]]] = IndexedSeq.tabulate(numQ)(el =>
         searcherBlocking.doQuery(QueryMessage(from = Some(FromMessage(FromMessage.Source.Index(getOrGenIndex(IndexType.vaf, eName))))
           , nnq = Some(queries(el).withIndexOnly(false))))
-          .responses.head.results.sliding(5000).map((it: Seq[QueryResultTupleMessage]) => it.sortBy((el: QueryResultTupleMessage) => {
-          el.data("ap_distance").getFloatData
-        }).take(k)))
+          .responses.head.results.sliding(1000).map((it: Seq[QueryResultTupleMessage]) => {
+          it.sortBy((el: QueryResultTupleMessage) => {
+            el.data("ap_distance").getFloatData
+          }).take(k)
+        }))
+
       System.out.println("VA-Scans executed")
-      val lb = ListBuffer[Seq[QueryResultTupleMessage]]()
-      res.foreach(q => q.foreach(el => lb += el.sortBy(_.data("ap_distance").getFloatData).take(k)))
-      //Only store pk
-      val topk = lb.map(_.sortBy(el => el.data("ap_distance").getFloatData).take(k).map(el => el.withData(Map("pk" -> el.data("pk"))))).toIndexedSeq
-      QueryResultIO.writeToFile(file, topk)
+      System.gc()
+
+      var counter = 0
+      val pks = ListBuffer[IndexedSeq[Long]]()
+      while(counter<res.size){
+        var lb = IndexedSeq[(Float, Long)]()
+        while(res(counter).hasNext){
+          val it = res(counter).next()
+          val topk = it.sortBy(_.data("ap_distance").getFloatData).take(k)
+          lb = lb ++ topk.map(el => (el.data("ap_distance").getFloatData, el.data("pk").getLongData))
+        }
+        pks+=lb.sortBy(_._1).map(_._2)
+        counter+=1
+      }
+
+      val topk = pks.toIndexedSeq
+
+      QueryResultIO.storeNestedSeq(file, topk.map(_.map(_.toFloat)))
+      //QueryResultIO.writeToFile(file, topk)
       System.out.println("Groundtruth written to File")
       topk
     }
   }
 
+  //TODO Switch entityname to tuples+dim and then generate entities
   /** Checks if an Entity with the given Tuple size and dimensions exists */
   def getOrGenEntity(tuples: Int, dim: Int): String = {
     var eName: Option[String] = None
@@ -250,6 +272,12 @@ class RPCClient(channel: ManagedChannel, definer: AdamDefinitionBlockingStub, se
       } else err += 1f
     }
     err / Math.min(k, Math.max(1, guesses.length)).toFloat //sanity-check for division by 0
+  }
+
+  def topKMatch(truth: IndexedSeq[Long], guess : Seq[QueryResultTupleMessage]) : Float = {
+    val guessPKs = guess.map(_.data("pk").getLongData)
+    val ag = truth.intersect(guessPKs).length
+    ag.toFloat / Math.max(1, truth.size.toFloat) //sanity-check for division by 0
   }
 
   /** Simple top-K intersection count */
