@@ -26,12 +26,14 @@ class RPCClient(channel: ManagedChannel, definer: AdamDefinitionBlockingStub, se
   val k = 200
   super.setK(k)
 
+  val compareK = true
+
   /**
     * Evaluation Params
     */
   val indexOnly = true
   val numQ = 5
-  val tupleSizes = Seq(1e3.toInt)
+  val tupleSizes = Seq(1e5.toInt)
   val dimensions = Seq(20, 64, 128)
   val partitions = Seq(10, 20, 50)
   val indices = Seq(IndexType.vaf)
@@ -100,6 +102,7 @@ class RPCClient(channel: ManagedChannel, definer: AdamDefinitionBlockingStub, se
 
   /** We only store top-k matches */
   def getOrGenNoSkip(dim: Int, index: IndexType, part: Int, partitioner: Partitioner): IndexedSeq[Float] = {
+    if(!compareK) return IndexedSeq.fill(numQ)(1f)
     val file = new File("resources/" + eName + "/noskip_" + dim + "_" + index + "_" + part + "_" + partitioner + ".reslist")
     if (!file.exists()) {
       log.debug("Generating No-Skip results for "+dim+", "+index+", "+part+", "+partitioner)
@@ -115,6 +118,7 @@ class RPCClient(channel: ManagedChannel, definer: AdamDefinitionBlockingStub, se
         val topk = topKMatch(truths(counter), res)
         lb += topk
         counter += 1
+        log.debug(counter+"/"+queries.size)
       }
       val res = lb.toIndexedSeq
       SeqIO.storeSeq(file, res)
@@ -133,30 +137,18 @@ class RPCClient(channel: ManagedChannel, definer: AdamDefinitionBlockingStub, se
       System.gc()
       log.debug("Generating Truth for " + dim + " dimensions")
       val queries = getOrGenQueries(dim)
-      val res: IndexedSeq[Iterator[Seq[QueryResultTupleMessage]]] = IndexedSeq.tabulate(numQ)(el =>
-        searcherBlocking.doQuery(QueryMessage(from = Some(FromMessage(FromMessage.Source.Index(getOrGenIndex(IndexType.vaf, eName))))
-          , nnq = Some(queries(el).withIndexOnly(false))))
-          .responses.head.results.sliding(1000).map((it: Seq[QueryResultTupleMessage]) => {
-          it.sortBy((el: QueryResultTupleMessage) => {
-            el.data("ap_distance").getFloatData
-          }).take(k)
-        }))
 
-      log.debug("VA-Scans executed")
-      var counter = 0
+      //Switching to Counter because scala
+      var qCounter = 0
       val pks = ListBuffer[IndexedSeq[Float]]()
-      while (counter < res.size) {
-        var lb = IndexedSeq[(Float, Float)]()
-        while (res(counter).hasNext) {
-          val it = res(counter).next()
-          val topk = it.sortBy(_.data("ap_distance").getFloatData).take(k)
-          lb = lb ++ topk.map(el => (el.data("ap_distance").getFloatData, el.data("pk").getLongData.toFloat))
-        }
-        pks += lb.sortBy(_._1).map(_._2)
-        counter += 1
+      while(qCounter<numQ){
+        val qres = searcherBlocking.doQuery(QueryMessage(from = Some(FromMessage(FromMessage.Source.Index(getOrGenIndex(IndexType.vaf, eName))))
+          , nnq = Some(queries(qCounter).withIndexOnly(false))))
+          .responses.head.results
+        pks+=qres.map(t => (t.data("ap_distance").getFloatData, t.data("pk").getLongData.toFloat)).sortBy(_._1).take(k).map(_._2).toIndexedSeq
+        qCounter+=1
+        log.debug(qCounter+"/"+numQ)
       }
-      log.debug("Top-k keys generated")
-      System.gc()
       val topk = pks.toIndexedSeq
 
       SeqIO.storeNestedSeq(file, topk)
