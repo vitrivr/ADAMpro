@@ -45,8 +45,7 @@ object SHPartitioner extends ADAMPartitioner with Logging with Serializable {
   override def getPartitions(q: FeatureVector, dropPercentage: Double, indexName: EntityNameHolder)(implicit ac: AdamContext): Seq[Int] = {
     val bitstring = getBitString(q, indexName)
     val meta = CatalogOperator.getPartitionerMeta(indexName).get.asInstanceOf[SHPartitionerMetaData]
-
-    val sorted = meta.getClusters.zipWithIndex.sortBy(_._1.hammingDistance(getBitString(q, indexName)))
+    val sorted = meta.getClusters.zipWithIndex.sortBy(_._1.hammingDistance(bitstring))
     sorted.dropRight((sorted.size*dropPercentage).toInt).map(_._2)
   }
 
