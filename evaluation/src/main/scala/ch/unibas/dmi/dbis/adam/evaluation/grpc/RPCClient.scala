@@ -26,26 +26,21 @@ class RPCClient(channel: ManagedChannel, definer: AdamDefinitionBlockingStub, se
   val k = 200
   super.setK(k)
 
-  val compareK = true
+  val compareK = false
 
   /**
     * Evaluation Params
     */
   val indexOnly = true
   val numQ = 5
-  val tupleSizes = Seq(1e5.toInt)
+  val tupleSizes = Seq(1e6.toInt)
   val dimensions = Seq(20, 64, 128)
   val partitions = Seq(10, 20, 50)
   val indices = Seq(IndexType.vaf)
   val indicesToGenerate = Seq(IndexType.vaf, IndexType.sh, IndexType.ecp)
   val partitioners = Seq(RepartitionMessage.Partitioner.CURRENT, RepartitionMessage.Partitioner.ECP, RepartitionMessage.Partitioner.SPARK)
 
-  var dropPartitions = Seq(0.0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.9)
-
-  //Generate Queries
-  dimensions.map(dim => {
-    getOrGenQueries(dim)
-  })
+  var dropPartitions = Seq(0.1, 0.2, 0.3, 0.4, 0.5, 0.9)
   var eName = ""
   //dropAllEntities()
 
@@ -58,6 +53,7 @@ class RPCClient(channel: ManagedChannel, definer: AdamDefinitionBlockingStub, se
           for (index <- indicesToGenerate) {
             getOrGenIndex(index, eName)
           }
+          getOrGenQueries(dim)
           getOrGenTruth(dim)
           System.gc()
 
@@ -73,6 +69,7 @@ class RPCClient(channel: ManagedChannel, definer: AdamDefinitionBlockingStub, se
                 //Free query to cache index
                 val nnq = Some(randomQueryMessage(dim, 0.0))
                 searcherBlocking.doQuery(QueryMessage(nnq = nnq, from = Some(FromMessage(FromMessage.Source.Index(name)))))
+
                 log.debug("Timing queries")
                 for (dropPerc <- dropPartitions) {
                   super.setDropPerc(dropPerc)
@@ -84,6 +81,7 @@ class RPCClient(channel: ManagedChannel, definer: AdamDefinitionBlockingStub, se
         }
       }
   finally out.close()
+  log.debug("I'm done")
 
   def getOrGenQueries(dim: Int): IndexedSeq[NearestNeighbourQueryMessage] = {
     val file = new File("resources/" + eName + "/queries_" + dim + ".qlist")
@@ -135,8 +133,8 @@ class RPCClient(channel: ManagedChannel, definer: AdamDefinitionBlockingStub, se
       SeqIO.readNestedSeq(file)
     } else {
       System.gc()
-      log.debug("Generating Truth for " + dim + " dimensions")
       val queries = getOrGenQueries(dim)
+      log.debug("Generating Truth for " + dim + " dimensions")
 
       //Switching to Counter because scala
       var qCounter = 0
@@ -200,7 +198,7 @@ class RPCClient(channel: ManagedChannel, definer: AdamDefinitionBlockingStub, se
       val skipAgree = topKMatch(gtruth, dropRes)
 
       super.write(time = (stop - start).toInt, noResults = dropRes.size,
-        topKSkip = skipAgree * 100, topKNoSkip = agreements)
+        topKSkip = skipAgree, topKNoSkip = agreements)
       queryCounter += 1
     }
   }
@@ -261,6 +259,8 @@ class RPCClient(channel: ManagedChannel, definer: AdamDefinitionBlockingStub, se
         log.error("Error when dropping Entity " + entity + ": " + dropEnt.message)
       }
       log.debug("Dropped Entity " + entity)
+      val file = new File("resources/"+entity)
+      for(list <- Option(file.listFiles()) ;  child <- list) child.delete()
     }
   }
 
