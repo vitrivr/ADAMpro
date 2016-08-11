@@ -19,9 +19,9 @@ ssh ubuntu@$SPARK_MASTER sudo mkdir -p /home/ubuntu/target/scala-2.10/
 ssh ubuntu@$SPARK_MASTER sudo chown -R ubuntu target/
 
 #Copy conf to host
-sudo cp -R $DIR/conf $DIR/target/
-sudo rm $DIR/target/conf/application.conf
-sudo scp -r $DIR/target/conf ubuntu@$SPARK_MASTER:target/conf/
+cp -R $DIR/conf $DIR/target/
+rm $DIR/target/conf/application.conf
+scp -r $DIR/target/conf ubuntu@$SPARK_MASTER:target/conf/
 
 
 ##Copy jar to SPARK_MASTER
