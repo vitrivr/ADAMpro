@@ -63,8 +63,9 @@ trait EvaluationResultLogger extends Logging {
 
   val seperator = "\t"
 
-  out.println(String.format("%-29s", "time") + seperator + "idx" + seperator + String.format("%-7s", "Tuple") + seperator + "Dim" + seperator + "Par" + seperator + "time" +
-    seperator + "k" + seperator + "#res    " + seperator + "partitioner" + seperator + "d%" + seperator + "Hit " + seperator + "No-skip Hits")
+  /** Header line. Not formatted in line with results, but that's life*/
+  out.println("curr_time" + seperator + "idx" + seperator + "tuples" + seperator + "dimensions" + seperator + "partitions" + seperator + "time" +
+    seperator + "k" + seperator + "no_res" + seperator + "partitioner" + seperator + "skipPercentage" + seperator + "topk" + seperator + "noskip_topk")
   out.flush()
 
   /** http://stackoverflow.com/questions/11106886/scala-doubles-and-precision */
@@ -72,14 +73,14 @@ trait EvaluationResultLogger extends Logging {
     BigDecimal(f).setScale(p, BigDecimal.RoundingMode.HALF_UP).toFloat
   }
 
+  /** Pads some numbers for better readability */
   def write(time: Float, noResults: Int, topKSkip: Float, topKNoSkip: Float) = {
     val noResPadded = String.format("%08d", noResults: java.lang.Integer)
-    val partitionerPadded = String.format("%-11s", partitioner.name)
     val topKNSPadded = String.format("%3.2f", round(topKNoSkip, 2): java.lang.Float)
 
     out.println(Calendar.getInstance.getTime + seperator + index + seperator + logTuples + seperator + logDim + seperator + logPartitions + seperator + time +
-      seperator + logK + seperator + noResPadded + seperator + partitionerPadded + seperator + dropPercentage +
-      seperator + String.format("%2.0f", round(topKSkip, 2): java.lang.Float) + seperator + topKNSPadded)
+      seperator + logK + seperator + noResPadded + seperator + partitioner + seperator + dropPercentage +
+      seperator + round(topKSkip, 2)+ seperator + topKNSPadded)
     out.flush()
   }
 }
