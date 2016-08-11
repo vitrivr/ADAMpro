@@ -585,4 +585,57 @@ object CatalogOperator extends Logging {
       EntityNameHolder(name)
     }
   }
+
+  /**
+    * Adds a measurement to the catalog
+    *
+    * @param key
+    * @param value
+    * @return
+    */
+  def addMeasurement(key: String, value: Long): Try[Void] = {
+    execute("add measurement") {
+      val query = _measurements.+=(key, value)
+      DB.run(query)
+      null
+    }
+  }
+
+  /**
+    * Gets measurements for given key.
+    *
+    * @param key
+    * @return
+    */
+  def getMeasurements(key: String): Try[Seq[Long]] = {
+    execute("get measurement") {
+      val query = _measurements.filter(_.key === key).map(_.measurement).result
+      Await.result(DB.run(query), MAX_WAITING_TIME)
+    }
+  }
+
+  /**
+    * Drops measurements for given key.
+    *
+    * @param key
+    * @return
+    */
+  def dropMeasurements(key : String): Try[Void] = {
+    execute("drop measurements") {
+      Await.result(DB.run(_measurements.filter(_.key === key).delete), MAX_WAITING_TIME)
+      null
+    }
+  }
+
+  /**
+    * Drops measurements for given key.
+    *
+    * @return
+    */
+  def dropAllMeasurements(): Try[Void] = {
+    execute("drop all measurements") {
+      Await.result(DB.run(_measurements.delete), MAX_WAITING_TIME)
+      null
+    }
+  }
 }

@@ -75,6 +75,8 @@ object AdamConfig extends Serializable with Logging {
     None
   }
 
+  val logQueryExecutionTime = true
+
 
   /**
     * Cleans paths, e.g. replaces ~ by path to home folder

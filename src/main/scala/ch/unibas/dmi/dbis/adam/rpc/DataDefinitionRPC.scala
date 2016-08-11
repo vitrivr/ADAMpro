@@ -428,9 +428,9 @@ class DataDefinitionRPC extends AdamDefinitionGrpc.AdamDefinition with Logging {
     * @param request
     * @return
     */
-  override def benchmarkAndUpdateScanWeights(request: WeightMessage): Future[AckMessage] = {
+  override def adjustScanWeights(request: UpdateWeightsMessage): Future[AckMessage] = {
     log.debug("rpc call for benchmarking entity and index")
-    val res = EntityOp.benchmarkAndSetScanWeights(request.entity, request.attribute)
+    val res = EntityOp.adjustScanWeights(request.entity, request.attribute, request.benchmark)
 
     if (res.isSuccess) {
       Future.successful(AckMessage(AckMessage.Code.OK, request.entity))
