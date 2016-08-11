@@ -147,7 +147,12 @@ case class Entity(val entityname: EntityName)(@transient implicit val ac: AdamCo
       if (getData().isEmpty) {
         _tupleCount = None
       } else {
-        _tupleCount = Some(getData().get.count())
+        val cat = CatalogOperator.getEntityOption(this.entityname).get.get("count")
+        if(cat.isEmpty){
+          _tupleCount = Some(getData().get.count())
+          CatalogOperator.updateEntityOption(this.entityname,"count", _tupleCount.get.toString)
+        }
+        else _tupleCount = Some(cat.get.toLong)
       }
     }
 
@@ -210,6 +215,7 @@ case class Entity(val entityname: EntityName)(@transient implicit val ac: AdamCo
           throw status.failed.get
         }
       }
+      CatalogOperator.updateEntityOption(this.entityname,"count", getData().get.count().toString)
 
       Success(null)
     } catch {
