@@ -580,7 +580,8 @@ object CatalogOperator extends Logging {
     */
   def getEntityName(indexname: IndexName): Try[EntityName] = {
     execute("get entity name") {
-      val name = Await.result(DB.run(_indexes.filter(_.indexname === indexname.toString).map(_.entityname).result.head), MAX_WAITING_TIME)
+      val query = _indexes.filter(_.indexname === indexname.toString).map(_.entityname).result.head
+      val name = Await.result(DB.run(query), MAX_WAITING_TIME)
       EntityNameHolder(name)
     }
   }
