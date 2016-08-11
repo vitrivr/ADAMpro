@@ -21,7 +21,7 @@ import scala.util.Random
   * Ivan Giangreco
   * June 2016
   */
-class RPCClient(channel: ManagedChannel, definer: AdamDefinitionBlockingStub, searcherBlocking: AdamSearchBlockingStub, searcher: AdamSearchStub) extends EvaluationResultLogger with AdamParEvalUtils with Logging {
+class RPCClient(channel: ManagedChannel, definer: AdamDefinitionBlockingStub, searcherBlocking: AdamSearchBlockingStub, searcher: AdamSearchStub, host: String) extends EvaluationResultLogger with AdamParEvalUtils with Logging {
 
   val k = 200
   super.setK(k)
@@ -38,7 +38,7 @@ class RPCClient(channel: ManagedChannel, definer: AdamDefinitionBlockingStub, se
   val partitions = Seq(10, 20, 50)
   val indices = Seq(IndexType.vaf)
   val indicesToGenerate = Seq(IndexType.vaf, IndexType.sh, IndexType.ecp)
-  val partitioners = Seq(RepartitionMessage.Partitioner.CURRENT, RepartitionMessage.Partitioner.ECP, RepartitionMessage.Partitioner.SPARK)
+  val partitioners = Seq(RepartitionMessage.Partitioner.SH, RepartitionMessage.Partitioner.ECP, RepartitionMessage.Partitioner.SPARK)
 
   var dropPartitions = Seq(0.1, 0.2, 0.3, 0.4, 0.5, 0.9)
   var eName = ""
@@ -140,12 +140,14 @@ class RPCClient(channel: ManagedChannel, definer: AdamDefinitionBlockingStub, se
       var qCounter = 0
       val pks = ListBuffer[IndexedSeq[Float]]()
       while(qCounter<numQ){
+        val t1 = System.currentTimeMillis()
         val qres = searcherBlocking.doQuery(QueryMessage(from = Some(FromMessage(FromMessage.Source.Index(getOrGenIndex(IndexType.vaf, eName))))
           , nnq = Some(queries(qCounter).withIndexOnly(false))))
           .responses.head.results
+        val t2 = System.currentTimeMillis()
         pks+=qres.map(t => (t.data("ap_distance").getFloatData, t.data("pk").getLongData.toFloat)).sortBy(_._1).take(k).map(_._2).toIndexedSeq
         qCounter+=1
-        log.debug(qCounter+"/"+numQ)
+        log.debug(qCounter+"/"+numQ + ", time: " + (t2-t1))
       }
       val topk = pks.toIndexedSeq
 
@@ -156,7 +158,7 @@ class RPCClient(channel: ManagedChannel, definer: AdamDefinitionBlockingStub, se
 
   /** Checks if an Entity with the given Tuple size and dimensions exists */
   def getOrGenEntity(tuples: Int, dim: Int): String = {
-    val eName = "sil_" + tuples + "_" + dim
+    val eName = "sil_" + tuples + "_" + dim+"_"+host.replace(".","")
     val exists = definer.listEntities(EmptyMessage()).entities.find(_.equals(eName))
     if (exists.isEmpty) {
       log.info("Generating new Entity: " + eName)
@@ -164,7 +166,7 @@ class RPCClient(channel: ManagedChannel, definer: AdamDefinitionBlockingStub, se
         AttributeDefinitionMessage("feature", AttributeType.FEATURE, pk = false, unique = false, indexed = true))))
       val options = Map("fv-dimensions" -> dim, "fv-min" -> 0, "fv-max" -> 1, "fv-sparse" -> false).mapValues(_.toString)
       definer.generateRandomData(GenerateRandomDataMessage(eName, tuples, options))
-    }
+    } else log.info("Using existing entity: "+eName)
     eName
   }
 
@@ -179,7 +181,6 @@ class RPCClient(channel: ManagedChannel, definer: AdamDefinitionBlockingStub, se
     var queryCounter = 0
     while (queryCounter < queryCount) {
       //Skipping Query
-      val start = System.currentTimeMillis()
       val nnq = Some(queries(queryCounter))
       val skipOpt: mutable.Map[String, String] = collection.mutable.Map() ++ nnq.get.options
       skipOpt -= "skipPart"
@@ -188,7 +189,7 @@ class RPCClient(channel: ManagedChannel, definer: AdamDefinitionBlockingStub, se
       val qm = QueryMessage(nnq = Some(nnq.get.withOptions(skipOpt.toMap).withIndexOnly(indexOnly)),
         from = Some(FromMessage(FromMessage.Source.Index(indexName))),
         information = Seq())
-
+      val start = System.currentTimeMillis()
       val dropRes = searcherBlocking.doQuery(qm).responses.head.results
       val stop = System.currentTimeMillis()
 
@@ -292,7 +293,7 @@ object RPCClient {
       channel,
       AdamDefinitionGrpc.blockingStub(channel),
       AdamSearchGrpc.blockingStub(channel),
-      AdamSearchGrpc.stub(channel)
+      AdamSearchGrpc.stub(channel), host
     )
   }
 }
