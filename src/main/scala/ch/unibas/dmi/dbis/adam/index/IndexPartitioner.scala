@@ -6,9 +6,7 @@ import ch.unibas.dmi.dbis.adam.exception.GeneralAdamException
 import ch.unibas.dmi.dbis.adam.helpers.partition._
 import ch.unibas.dmi.dbis.adam.main.AdamContext
 import ch.unibas.dmi.dbis.adam.utils.Logging
-import org.apache.spark.RangePartitioner
-import org.apache.spark.rdd.RDD
-import org.apache.spark.sql.{DataFrame, Row, SaveMode}
+import org.apache.spark.sql.{DataFrame, SaveMode}
 
 import scala.util.{Failure, Success, Try}
 
@@ -50,7 +48,7 @@ object IndexPartitioner extends Logging {
       case PartitionerChoice.RANDOM =>
         RandomPartitioner(data, cols, Some(index.indexname), nPartitions)
       case PartitionerChoice.CURRENT => {
-        SHPartitioner(data, cols, Some(index.indexname), nPartitions)
+        SHHashingPartitioner(data, cols, Some(index.indexname), nPartitions)
       }
       case PartitionerChoice.SH => {
         SHPartitioner(data, cols, Some(index.indexname), nPartitions)

@@ -7,9 +7,9 @@ import ch.unibas.dmi.dbis.adam.datatypes.feature.Feature
 import ch.unibas.dmi.dbis.adam.datatypes.feature.Feature.FeatureVector
 import ch.unibas.dmi.dbis.adam.entity.{Entity, EntityNameHolder}
 import ch.unibas.dmi.dbis.adam.exception.GeneralAdamException
-import ch.unibas.dmi.dbis.adam.index.Index
 import ch.unibas.dmi.dbis.adam.index.structures.IndexTypes
-import ch.unibas.dmi.dbis.adam.index.structures.sh.{SHIndexMetaData, SHUtils}
+import ch.unibas.dmi.dbis.adam.index.structures.sh.{SHIndexMetaData, SHIndexer, SHUtils}
+import ch.unibas.dmi.dbis.adam.index.{Index, IndexingTaskTuple}
 import ch.unibas.dmi.dbis.adam.main.AdamContext
 import ch.unibas.dmi.dbis.adam.utils.Logging
 import org.apache.spark.Partitioner
@@ -17,71 +17,54 @@ import org.apache.spark.rdd.RDD
 import org.apache.spark.sql.{DataFrame, Row}
 import org.apache.spark.util.random.Sampling
 
-import scala.collection.mutable.ListBuffer
-import scala.util.Random
-
 /**
   * Created by silvanheller on 26.07.16.
   */
-class SHPartitioner(meta: SHPartitionerMetaData) extends Partitioner with Logging {
+class SHHashingPartitioner(meta: SHHashingPartitionerMetaData) extends Partitioner with Logging {
   override def numPartitions: Int = meta.getNoPartitions
 
   /** We just expect the key to be a bitstring */
   override def getPartition(key: Any): Int = {
     val bitString = key.asInstanceOf[BitString[_]]
-    meta.getClusters.zipWithIndex.sortBy(_._1.hammingDistance(bitString)).head._2
+    val hash = SHUtils.hashFeature(SHHashingPartitioner.toVector(bitString, meta.getNoBits), meta.getMeta)
+    var part = 0
+    hash.getBitIndexes.foreach(part+=Math.pow(2,_).toInt)
+    part
   }
 }
 
-/**
-  * Maybe it's useful to analyze the distribution of the data for training
-  * See i.e. Hubness http://perun.pmf.uns.ac.rs/radovanovic/publications/2011-pakdd-khubs.pdf
-  * Currently uses random leaders again. K-means in euclidian space failed.
-  * Maybe in the future this could train an SH-Hashfunction on the training data
-  * Maybe use multi-level leadership like they propose in the eCP-Paper.
-  */
-object SHPartitioner extends ADAMPartitioner with Logging with Serializable {
+
+object SHHashingPartitioner extends ADAMPartitioner with Logging with Serializable {
 
   /** Returns the partitions to be queried for a given Featurevector */
   override def getPartitions(q: FeatureVector, dropPercentage: Double, indexName: EntityNameHolder)(implicit ac: AdamContext): Seq[Int] = {
     val bitstring = getBitString(q, indexName)
-    val meta = CatalogOperator.getPartitionerMeta(indexName).get.asInstanceOf[SHPartitionerMetaData]
-    val sorted = meta.getClusters.zipWithIndex.sortBy(_._1.hammingDistance(bitstring))
-    sorted.dropRight((sorted.size*dropPercentage).toInt).map(_._2)
+    val meta = CatalogOperator.getPartitionerMeta(indexName).get.asInstanceOf[SHHashingPartitionerMetaData]
+    //TODO Generate all BitStrings of all Partitions here
+
+    //sorted.dropRight((sorted.size*dropPercentage).toInt).map(_._2)
+    Seq()
   }
 
-  override def partitionerName = PartitionerChoice.SH
+  override def partitionerName = PartitionerChoice.CURRENT
 
-  /** selects leaders at random. Could be better but is probably better than the spark k-means.*/
-  def trainClusters(joinDF: DataFrame, nPart: Int, noBits: Int)(implicit ac: AdamContext): IndexedSeq[BitString[_]] = {
+  def train(joinDF: DataFrame, nPart: Int, noBits: Int)(implicit ac: AdamContext): SHHashingPartitionerMetaData = {
     //TODO Magic Number
-    val trainingsize = 400
+    val trainingsize = 1000
     val n = joinDF.count
     val fraction = Sampling.computeFractionForSampleSize(trainingsize, n, false)
+    val trainData: Array[IndexingTaskTuple[_]] = joinDF.sample(false, fraction).collect().map(f => IndexingTaskTuple(0, toVector(f.getAs[BitString[_]](FieldNames.featureIndexColumnName), noBits)))
 
-    var leaders = ListBuffer[BitString[_]](BitString(Seq.tabulate(noBits)( el => if(Random.nextBoolean()) el else 0).filter(_!=0)))
-    log.debug("Random leader: "+leaders)
-    def getMinDistance(c: BitString[_]) : Int = leaders.sortBy(_.hammingDistance(c)).last.hammingDistance(c)
+    val indexmeta = SHIndexer.train(trainData, Some(noBits))
 
-    while(leaders.size<nPart){
-      var trainData: Array[BitString[_]] = joinDF.sample(false, fraction).collect().map(_.getAs[BitString[_]](FieldNames.partitionKey))
-      if(trainData.length<100) trainData = trainData ++ joinDF.take(100).map(el => el.getAs[BitString[_]](FieldNames.partitionKey))
-      leaders+=trainData.sortBy(r => getMinDistance(r)).last
-      if(leaders.size%20==0) log.debug(leaders.size.toString)
-    }
-    leaders.toIndexedSeq
+    new SHHashingPartitionerMetaData(nPart, noBits, indexmeta)
   }
 
+  def toVector(bs: BitString[_], noBits: Int) : FeatureVector = {
+    val seq = Seq.tabulate(noBits)(el => if(bs.getBitIndexes.contains(el)) 1.0 else 0.0).toVector
+    Feature.conv_stored2vector(Feature.conv_doublestored2floatstored(seq))
+  }
 
-  /**
-    * Uses the train()-Function to train 'leaders' in the hamming space. Tuples will be assigned to leaders and then assigned Partitions based on their leaders.
-    *
-    * @param data DataFrame you want to partition
-    * @param cols Ignored here
-    * @param indexName Will be used to store partitioner information in the catalog
-    * @param nPartitions how many partitions shall be created
-    * @return the partitioned DataFrame
-    */
   override def apply(data: DataFrame, cols: Option[Seq[String]], indexName: Option[EntityNameHolder], nPartitions: Int)(implicit ac: AdamContext): DataFrame = {
     if (indexName.isEmpty) {
       throw new GeneralAdamException("Indexname was not specified")
@@ -92,15 +75,14 @@ object SHPartitioner extends ADAMPartitioner with Logging with Serializable {
     val joinDF = index.getData.withColumnRenamed(FieldNames.featureIndexColumnName, FieldNames.partitionKey)
     val joinedDF = data.join(joinDF, index.pk.name)
 
-    val clusters = trainClusters(joinDF, nPartitions, noBits)
-    val meta = new SHPartitionerMetaData(nPartitions, noBits, clusters)
+    val meta = train(joinDF, nPartitions, noBits)
 
     //drop old partitioner, create new
     CatalogOperator.dropPartitioner(indexName.get).get
-    CatalogOperator.createPartitioner(indexName.get, nPartitions, meta, SHPartitioner)
+    CatalogOperator.createPartitioner(indexName.get, nPartitions, meta, SHHashingPartitioner)
 
     //repartition
-    val partitioner = new SHPartitioner(meta)
+    val partitioner = new SHHashingPartitioner(meta)
     val repartitioned: RDD[(Any, Row)] = joinedDF.map(r => (r.getAs[Any](FieldNames.partitionKey), r)).partitionBy(partitioner)
     val reparRDD = repartitioned.mapPartitions((it) => {
       it.map(f => f._2)
@@ -124,10 +106,10 @@ object SHPartitioner extends ADAMPartitioner with Logging with Serializable {
 }
 
 /** Metadata Class to store Information */
-class SHPartitionerMetaData(nPart: Int, noBits: Int, clusters: IndexedSeq[BitString[_]]) extends Serializable {
+class SHHashingPartitionerMetaData(nPart: Int, noBits: Int, indexmeta: SHIndexMetaData) extends Serializable {
   def getNoPartitions: Int = nPart
 
   def getNoBits: Int = noBits
 
-  def getClusters: IndexedSeq[BitString[_]] = clusters
+  def getMeta : SHIndexMetaData = indexmeta
 }

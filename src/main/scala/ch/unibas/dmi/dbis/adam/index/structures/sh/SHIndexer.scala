@@ -11,6 +11,7 @@ import ch.unibas.dmi.dbis.adam.index._
 import ch.unibas.dmi.dbis.adam.index.structures.IndexTypes
 import ch.unibas.dmi.dbis.adam.main.AdamContext
 import ch.unibas.dmi.dbis.adam.query.distance.DistanceFunction
+import ch.unibas.dmi.dbis.adam.utils.Logging
 import org.apache.spark.rdd.RDD
 import org.apache.spark.sql.Row
 import org.apache.spark.sql.types.{StructField, StructType}
@@ -42,7 +43,7 @@ class SHIndexer(nbits: Option[Int], trainingSize: Int)(@transient implicit val a
       trainData = data.take(IndexGenerator.MINIMUM_NUMBER_OF_TUPLE)
     }
 
-    val indexMetaData = train(trainData)
+    val indexMetaData = SHIndexer.train(trainData, nbits)
 
     log.debug("SH indexing...")
 
@@ -62,12 +63,32 @@ class SHIndexer(nbits: Option[Int], trainingSize: Int)(@transient implicit val a
     new SHIndex(indexname, entityname, df, indexMetaData)
   }
 
+
+}
+
+
+object SHIndexer extends Logging{
+  /**
+    * @param distance   distance function
+    * @param properties indexing properties
+    */
+  def apply(distance: DistanceFunction, properties: Map[String, String] = Map[String, String]())(implicit ac: AdamContext): IndexGenerator = {
+    val nbits = if (properties.get("nbits").isDefined) {
+      Some(properties.get("nbits").get.toInt)
+    } else {
+      None
+    }
+    val trainingSize = properties.getOrElse("ntraining", "500").toInt
+
+    new SHIndexer(nbits, trainingSize)
+  }
+
   /**
     *
     * @param trainData
     * @return
     */
-  private def train(trainData: Array[IndexingTaskTuple[_]]): SHIndexMetaData = {
+  def train(trainData: Array[IndexingTaskTuple[_]], nbits: Option[Int]): SHIndexMetaData = {
     log.trace("SH started training")
 
     val dTrainData = trainData.map(x => x.feature.map(x => x.toDouble).toArray)
@@ -115,6 +136,7 @@ class SHIndexer(nbits: Option[Int], trainingSize: Int)(@transient implicit val a
 
     SHIndexMetaData(feigv, minProj, maxProj, modes.toDenseMatrix, radius, noBits)
   }
+
 
 
   /**
@@ -173,23 +195,5 @@ class SHIndexer(nbits: Option[Int], trainingSize: Int)(@transient implicit val a
         selectedModes(idx, ::).:=(modes(so, ::))
     }
     selectedModes
-  }
-}
-
-
-object SHIndexer {
-  /**
-    * @param distance   distance function
-    * @param properties indexing properties
-    */
-  def apply(distance: DistanceFunction, properties: Map[String, String] = Map[String, String]())(implicit ac: AdamContext): IndexGenerator = {
-    val nbits = if (properties.get("nbits").isDefined) {
-      Some(properties.get("nbits").get.toInt)
-    } else {
-      None
-    }
-    val trainingSize = properties.getOrElse("ntraining", "500").toInt
-
-    new SHIndexer(nbits, trainingSize)
   }
 }
