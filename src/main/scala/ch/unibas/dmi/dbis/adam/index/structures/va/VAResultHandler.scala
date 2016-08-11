@@ -1,6 +1,9 @@
 package ch.unibas.dmi.dbis.adam.index.structures.va
 
-import it.unimi.dsi.fastutil.floats.{FloatComparators, FloatHeapPriorityQueue}
+import java.util.Comparator
+
+import it.unimi.dsi.fastutil.floats.{FloatComparator, FloatComparators, FloatHeapPriorityQueue}
+import it.unimi.dsi.fastutil.objects.ObjectHeapPriorityQueue
 import org.apache.spark.sql.Row
 
 import scala.collection.mutable.ListBuffer
@@ -14,6 +17,12 @@ import scala.collection.mutable.ListBuffer
 private[va] class VAResultHandler[A](k: Int) {
   @transient private var elementsLeft = k
   @transient private val queue =  new FloatHeapPriorityQueue(2 * k, FloatComparators.OPPOSITE_COMPARATOR)
+
+  @SerialVersionUID(1L)
+  protected class VAComparator(var comparator : FloatComparator) extends Comparator[VAResultElement[A]] with java.io.Serializable {
+    final def compare(a: VAResultElement[A], b: VAResultElement[A]): Int = comparator.compare(a.lower, b.lower)
+  }
+  @transient private val objQueue = new ObjectHeapPriorityQueue[VAResultElement[A]](new VAComparator(FloatComparators.OPPOSITE_COMPARATOR))
   @transient protected var ls = ListBuffer[VAResultElement[A]]()
 
   /**
@@ -30,10 +39,12 @@ private[va] class VAResultHandler[A](k: Int) {
         enqueueAndAddToCandidates(lower, upper, tid)
         return true
       } else { //we have already k elements, therefore check if new element is better
+        //peek is the upper bound
         val peek = queue.firstFloat()
         val lower = r.getAs[Float]("lbound")
         if (peek >= lower) {
           //if peek is larger than lower, then dequeue worst element and insert
+          // TODO Who gives us a guarantee that the enqueued upper bound is bigger than the dequeued
           //new element
           queue.dequeueFloat()
           val upper = r.getAs[Float]("ubound")
@@ -63,7 +74,11 @@ private[va] class VAResultHandler[A](k: Int) {
     */
   private def enqueueAndAddToCandidates(res: VAResultElement[A]): Unit = {
     queue.enqueue(res.upper)
-    ls += res
+    objQueue.enqueue(res)
+    while(objQueue.first().lower>queue.firstFloat()){
+      objQueue.dequeue()
+    }
+    //ls += res
   }
 
 
@@ -71,7 +86,12 @@ private[va] class VAResultHandler[A](k: Int) {
     *
     * @return
     */
-  def results = ls.toSeq
+  def results = {
+    while(objQueue.size()>0){
+      ls+=objQueue.dequeue()
+    }
+    ls.toSeq
+  }
 
 }
 
