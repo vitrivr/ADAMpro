@@ -410,7 +410,9 @@ object CatalogOperator extends Logging {
   /**
     * Checks whether index exists in catalog.
     *
-    * @param indexname name of index
+    * @param entityname name of index
+    * @param attribute  name of attribute
+    * @param indextypename
     * @return
     */
   def existsIndex(entityname: EntityName, attribute: String, indextypename: IndexTypeName): Try[Boolean] = {
