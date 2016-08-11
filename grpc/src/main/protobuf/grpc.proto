@@ -30,7 +30,7 @@ service AdamDefinition {
   rpc BenchmarkAndUpdateScanWeights(WeightMessage) returns (AckMessage) {}
   rpc ResetScanWeights(EntityNameMessage) returns (AckMessage) {}
   rpc SetScanWeight(WeightMessage) returns (AckMessage) {}
-  rpc SparsifyEntity(WeightMessage) returns (AckMessage) {}
+  rpc SparsifyEntity(SparsifyEntityMessage) returns (AckMessage) {}
   rpc ImportData(ImportMessage) returns (AckMessage) {}
 }
 
@@ -197,6 +197,11 @@ message WeightMessage {
   string entity = 1; //entity or index
   string attribute = 2;
   float weight = 3;
+}
+
+message SparsifyEntityMessage {
+  string entity = 1;
+  string attribute = 2;
 }
 
 message ImportMessage {

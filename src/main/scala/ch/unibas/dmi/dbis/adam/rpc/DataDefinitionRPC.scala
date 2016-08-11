@@ -102,7 +102,7 @@ class DataDefinitionRPC extends AdamDefinitionGrpc.AdamDefinition with Logging {
     * @param request
     * @return
     */
-  override def sparsifyEntity(request: WeightMessage): Future[AckMessage] = {
+  override def sparsifyEntity(request: SparsifyEntityMessage): Future[AckMessage] = {
     log.debug("rpc call for compress operation")
     val res = EntityOp.sparsify(request.entity, request.attribute)
 
