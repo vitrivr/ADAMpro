@@ -4,6 +4,7 @@
 
 ## TODO Find better handling than getopts which only takes one char
 ## TODO support multiple roles in one script
+## TODO Currently HDFS Master and Spark master on same node
 
 ################## USAGE ###########################################
 ## -u installs docker and git
@@ -25,7 +26,7 @@ echo "Parsing hadoop- and spark-vars"
 ## Extract vars before doing anything
 #############################################
 while getopts ':h:s:r:b' option; do
-  case $option in
+  case ${option} in
     s)
       echo "-spark was triggered, Parameter: $OPTARG" >&2
       export SPARK_MASTER=$OPTARG
@@ -64,6 +65,8 @@ SPARK_MASTER_PORT=${array[1]}
 IFS=':' read -r -a array <<< "$HADOOP_NAMENODE"
 HADOOP_MASTER_IP=${array[0]}
 HADOOP_MASTER_PORT=${array[1]}
+echo $HADOOP_MASTER_IP
+echo $HADOOP_MASTER_PORT
 
 echo "Building Containers"
 
@@ -122,7 +125,7 @@ buildContainer() {
 
         sudo docker build -t adampar/spark-worker:1.6.2-hadoop2.6 $DIR/scripts/docker-spark/worker
 
-        #Ports: 8081 is the UI, 9000 the HDFS Port -> TODO Scale this based on Input
+        #Ports: 8081 is the UI, 9000 the HDFS Port
         # 7077, 6066 are for jobs, 4040 for the Job UI
         # 8088 and 8042 are legacy ports TODO
         sudo docker run -d \
@@ -146,8 +149,9 @@ buildContainer() {
         # 5890 is the grpc-Port if you run the .jar on the submit-container
         # 50543, 8087, 8089 and 47957 are needed to communicate with the workers
         # 4040 is the Apllication UI
-        sudo docker run -d -v $DIR/target:/target -v $DIR/target/conf/log4j.properties:/usr/local/spark/conf/log4j.properties \
+        sudo docker run -d -v $DIR/target:/target \
         -e "HADOOP_NAMENODE=$HADOOP_NAMENODE" \
+        -e "SPARK_MASTER_URL=spark://"${SPARK_MASTER}\
          -p 50543:50543 -p 8087:8087 -p 47957:47957 -p 4040:4040  -p 8089:8089 -p 5890:5890 \
          --net=host --name spark-submit -h spark-submit \
          adampar/spark-submit:1.6.2-hadoop2.6

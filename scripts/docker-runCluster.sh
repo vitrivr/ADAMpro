@@ -26,7 +26,7 @@ scp -r $DIR/target/conf ubuntu@$SPARK_MASTER:target/conf/
 
 ##Copy jar to SPARK_MASTER
 echo "scping"
-sudo scp $DIR/target/scala-2.10/ADAMpro-assembly-0.1.0.jar ubuntu@$SPARK_MASTER:target/scala-2.10/ADAMpro-assembly-0.1.0.jar
+scp $DIR/target/scala-2.10/ADAMpro-assembly-0.1.0.jar ubuntu@$SPARK_MASTER:target/scala-2.10/ADAMpro-assembly-0.1.0.jar
 echo "scp done"
 
 #Currently the spark-submit job has a local file. Maybe putting the jar to hdfs or even distributing it to the workers makes more sense
