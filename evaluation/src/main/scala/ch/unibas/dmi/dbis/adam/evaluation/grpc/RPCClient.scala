@@ -55,7 +55,6 @@ class RPCClient(channel: ManagedChannel, definer: AdamDefinitionBlockingStub, se
           }
           getOrGenQueries(dim)
           getOrGenTruth(dim)
-          System.gc()
 
           for (index <- indices) {
             super.setIndex(index.name)
@@ -132,7 +131,6 @@ class RPCClient(channel: ManagedChannel, definer: AdamDefinitionBlockingStub, se
     if (file.exists()) {
       SeqIO.readNestedSeq(file)
     } else {
-      System.gc()
       val queries = getOrGenQueries(dim)
       log.debug("Generating Truth for " + dim + " dimensions")
 
