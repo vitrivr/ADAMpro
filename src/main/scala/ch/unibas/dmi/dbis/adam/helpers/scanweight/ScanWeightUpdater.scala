@@ -84,6 +84,8 @@ private class ScanWeightUpdater(entityname: EntityName, attribute: String, optio
     indBenchmarks.foreach { case (index, indCost) =>
       CatalogOperator.updateIndexOption(index.indexname, ScanWeightInspector.SCANWEIGHT_OPTION_NAME, ((1 + 1 - (indCost / sumCost)) * ScanWeightInspector.DEFAULT_WEIGHT).toString)
     }
+
+    //TODO: drop old measurements?
   }
 
 
