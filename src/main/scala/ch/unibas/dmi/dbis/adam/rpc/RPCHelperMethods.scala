@@ -91,7 +91,7 @@ private[rpc] object RPCHelperMethods {
         HintBasedScanExpression(entityname.get, nnq, bq, hints, qm.useFallback, queryid)()
       } else if (qm.from.get.source.isIndexes) {
         val indexes = qm.from.get.getIndexes.indexes
-        new CompoundIndexScanExpression(indexes.map(index => new IndexScanExpression(index)(nnq.get, queryid)()))(nnq.get, queryid)()
+        new StochasticIndexQueryExpression(indexes.map(index => new IndexScanExpression(index)(nnq.get, queryid)()))(nnq.get, queryid)()
       } else if (indexname.isDefined) {
         var scan: Option[QueryExpression] = None
 

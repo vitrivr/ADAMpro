@@ -10,7 +10,7 @@ import ch.unibas.dmi.dbis.adam.index.Index._
 import ch.unibas.dmi.dbis.adam.index.structures.IndexTypes
 import ch.unibas.dmi.dbis.adam.main.SparkStartup
 import ch.unibas.dmi.dbis.adam.query.handler.internal.AggregationExpression.{ExpressionEvaluationOrder, IntersectExpression}
-import ch.unibas.dmi.dbis.adam.query.handler.internal.{CompoundIndexScanExpression, CompoundQueryExpression, IndexScanExpression}
+import ch.unibas.dmi.dbis.adam.query.handler.internal.{StochasticIndexQueryExpression, CompoundQueryExpression, IndexScanExpression}
 import ch.unibas.dmi.dbis.adam.query.progressive.{AllProgressivePathChooser, ProgressiveObservation}
 import ch.unibas.dmi.dbis.adam.query.query.{BooleanQuery, NearestNeighbourQuery}
 import org.scalatest.concurrent.ScalaFutures
@@ -384,7 +384,7 @@ class QueryTestSuite extends AdamTestBase with ScalaFutures {
 
         val indexscans = es.entity.indexes.map(index => IndexScanExpression(index.get)(nnq)()(ac))
 
-        val results = CompoundIndexScanExpression(indexscans)(nnq)()(ac).prepareTree()
+        val results = StochasticIndexQueryExpression(indexscans)(nnq)()(ac).prepareTree()
           .evaluate()(ac).get.map(r => (r.getAs[Float](FieldNames.distanceColumnName), r.getAs[Long]("tid"))).collect() //get here TID of metadata
           .sortBy(x => (x._1, x._2)).toSeq
 
