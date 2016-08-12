@@ -2,7 +2,7 @@ syntax = "proto3";
 
 option java_package = "ch.unibas.dmi.dbis.adam.http";
 
-
+option java_outer_classname = "AdamGrpc";
 
 
 
