@@ -52,7 +52,7 @@ trait FileEngine extends Serializable with Logging {
   /**
     * Drop the entity from the file system.
     *
-    * @param filename relative filename to store features to
+    * @param filename relative filename to be dropped
     * @return true on success
     */
   def drop(filename: String)(implicit ac: AdamContext): Try[Void]
