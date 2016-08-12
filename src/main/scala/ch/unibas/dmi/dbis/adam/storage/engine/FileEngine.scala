@@ -33,7 +33,7 @@ trait FileEngine extends Serializable with Logging {
   /**
     * Read entity from file system.
     *
-    * @param filename relative filename to store features to
+    * @param filename relative filename to read features from
     * @return
     */
   def read(filename: String)(implicit ac: AdamContext): Try[DataFrame]
