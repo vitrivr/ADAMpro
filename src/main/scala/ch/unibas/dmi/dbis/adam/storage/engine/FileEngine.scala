@@ -44,6 +44,7 @@ trait FileEngine extends Serializable with Logging {
     * @param filename relative filename to store features to
     * @param df   data
     * @param mode save mode (append, overwrite, ...)
+    * @param allowRepartitioning whether to allow re-partitiniong of data when saving
     * @return true on success
     */
   def write(filename: String, df: DataFrame, mode: SaveMode = SaveMode.Append, allowRepartitioning: Boolean = false)(implicit ac: AdamContext): Try[Void]
