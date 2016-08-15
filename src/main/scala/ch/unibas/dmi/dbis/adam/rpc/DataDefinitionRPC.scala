@@ -102,7 +102,7 @@ class DataDefinitionRPC extends AdamDefinitionGrpc.AdamDefinition with Logging {
     * @param request
     * @return
     */
-  override def sparsifyEntity(request: WeightMessage): Future[AckMessage] = {
+  override def sparsifyEntity(request: SparsifyEntityMessage): Future[AckMessage] = {
     log.debug("rpc call for compress operation")
     val res = EntityOp.sparsify(request.entity, request.attribute)
 
@@ -437,9 +437,9 @@ class DataDefinitionRPC extends AdamDefinitionGrpc.AdamDefinition with Logging {
     * @param request
     * @return
     */
-  override def benchmarkAndUpdateScanWeights(request: WeightMessage): Future[AckMessage] = {
+  override def adjustScanWeights(request: UpdateWeightsMessage): Future[AckMessage] = {
     log.debug("rpc call for benchmarking entity and index")
-    val res = EntityOp.benchmarkAndSetScanWeights(request.entity, request.attribute)
+    val res = EntityOp.adjustScanWeights(request.entity, request.attribute, request.benchmark)
 
     if (res.isSuccess) {
       Future.successful(AckMessage(AckMessage.Code.OK, request.entity))

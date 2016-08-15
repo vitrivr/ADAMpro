@@ -13,6 +13,7 @@ import ch.unibas.dmi.dbis.adam.query.distance.DistanceFunction
   * Ivan Giangreco
   * November 2015
   */
+//TODO: use query class
 class Query(qo: Seq[QueryObject], queryID: Option[String] = Some(java.util.UUID.randomUUID().toString)) extends Serializable
 
 abstract class QueryObject(queryID: Option[String] = Some(java.util.UUID.randomUUID().toString)) extends Serializable {}

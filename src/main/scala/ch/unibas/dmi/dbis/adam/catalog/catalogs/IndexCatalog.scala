@@ -29,5 +29,7 @@ private[catalog] class IndexCatalog(tag: Tag) extends Table[(String, String, Str
     */
   def * = (indexname, entityname, attributename, indextypename, meta, isUpToDate)
 
+  def idx = index("idx_index_entityname", entityname)
+
   def attribute = foreignKey("index_attribute_fk", (entityname, attributename), TableQuery[AttributeCatalog])(t => (t.entityname, t.attributename), onUpdate=ForeignKeyAction.Cascade, onDelete=ForeignKeyAction.Cascade)
 }

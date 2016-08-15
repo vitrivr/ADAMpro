@@ -239,7 +239,7 @@ class RPCClient(channel: ManagedChannel, definer: AdamDefinitionBlockingStub, se
     */
   def entityBenchmarkAndUpdateScanWeights(entityname: String, attribute: String): Try[Void] = {
     execute("benchmark entity scans and reset weights operation") {
-      definer.benchmarkAndUpdateScanWeights(WeightMessage(entityname, attribute))
+      definer.adjustScanWeights(UpdateWeightsMessage(entityname, attribute))
       Success(null)
     }
   }
@@ -253,7 +253,7 @@ class RPCClient(channel: ManagedChannel, definer: AdamDefinitionBlockingStub, se
     */
   def entitySparsify(entityname: String, attribute: String): Try[Void] = {
     execute("benchmark entity scans and reset weights operation") {
-      definer.sparsifyEntity(WeightMessage(entityname, attribute))
+      definer.sparsifyEntity(SparsifyEntityMessage(entityname, attribute))
       Success(null)
     }
   }

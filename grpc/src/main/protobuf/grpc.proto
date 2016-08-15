@@ -2,7 +2,7 @@ syntax = "proto3";
 
 option java_package = "ch.unibas.dmi.dbis.adam.http";
 
-
+option java_outer_classname = "AdamGrpc";
 
 
 
@@ -27,10 +27,10 @@ service AdamDefinition {
   rpc GetEntityProperties(EntityNameMessage) returns (EntityPropertiesMessage) {}
   rpc RepartitionEntityData(RepartitionMessage) returns (AckMessage) {}
   rpc RepartitionIndexData(RepartitionMessage) returns (AckMessage) {}
-  rpc BenchmarkAndUpdateScanWeights(WeightMessage) returns (AckMessage) {}
+  rpc AdjustScanWeights(UpdateWeightsMessage) returns (AckMessage) {}
   rpc ResetScanWeights(EntityNameMessage) returns (AckMessage) {}
   rpc SetScanWeight(WeightMessage) returns (AckMessage) {}
-  rpc SparsifyEntity(WeightMessage) returns (AckMessage) {}
+  rpc SparsifyEntity(SparsifyEntityMessage) returns (AckMessage) {}
   rpc ImportData(ImportMessage) returns (AckMessage) {}
 }
 
@@ -196,12 +196,18 @@ message RepartitionMessage {
 message UpdateWeightsMessage {
   string entity = 1;
   string attribute = 2;
+  bool benchmark = 3;
 }
 
 message WeightMessage {
   string entity = 1; //entity or index
   string attribute = 2;
   float weight = 3;
+}
+
+message SparsifyEntityMessage {
+  string entity = 1;
+  string attribute = 2;
 }
 
 message ImportMessage {

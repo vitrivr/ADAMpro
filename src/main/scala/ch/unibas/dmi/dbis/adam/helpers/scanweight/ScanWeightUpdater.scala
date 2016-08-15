@@ -23,7 +23,7 @@ import scala.collection.mutable.ListBuffer
   * Ivan Giangreco
   * June 2016
   */
-private class ScanWeightBenchmarker(entityname: EntityName, attribute: String, nqueries : Int, nruns : Int)(@transient implicit val ac: AdamContext) extends Serializable with Logging {
+private class ScanWeightUpdater(entityname: EntityName, attribute: String, options: Map[String, String])(@transient implicit val ac: AdamContext) extends Serializable with Logging {
   private val entity = Entity.load(entityname).get
 
   private val sampleQueries = {
@@ -33,15 +33,16 @@ private class ScanWeightBenchmarker(entityname: EntityName, attribute: String, n
 
     val featureData = entity.getFeatureData.get
     val n = entity.count
-    val fraction = Sampling.computeFractionForSampleSize(nqueries, n, withReplacement = false)
+    val fraction = Sampling.computeFractionForSampleSize(options.get("nqueries").get.toInt, n, withReplacement = false)
 
     featureData.sample(withReplacement = false, fraction = fraction).map(r => r.getAs[FeatureVectorWrapper](attribute)).collect().toSeq
   }
 
-
+  /**
+    * Updates the scan weight by benchmarking and updating the score.
+    */
   private def benchmarkAndUpdate(): Unit = {
     val indexes = entity.indexes
-    val measurements = mutable.Map[String, Seq[Long]]()
 
     val seqExpr = SequentialScanExpression(entity)(_: NearestNeighbourQuery)()
     val seqCost = cost(performMeasurements(sampleQueries, seqExpr))
@@ -59,6 +60,32 @@ private class ScanWeightBenchmarker(entityname: EntityName, attribute: String, n
     indBenchmarks.foreach { case (index, indCost) =>
       CatalogOperator.updateIndexOption(index.indexname, ScanWeightInspector.SCANWEIGHT_OPTION_NAME, ((1 + 1 - (indCost / sumCost)) * ScanWeightInspector.DEFAULT_WEIGHT).toString)
     }
+  }
+
+  /**
+    * Updates the scan weight based on the catalog measurements stored.
+    */
+  private def updateUsingCatalogMeasurements(): Unit = {
+    val indexes = entity.indexes
+    val measurements = mutable.Map[String, Seq[Long]]()
+
+    val seqExpr = SequentialScanExpression(entity)(_: NearestNeighbourQuery)()
+    val seqCost = cost(CatalogOperator.getMeasurements(entityname).get)
+
+    val indBenchmarks = indexes.filter(_.isSuccess).map(_.get).map { index =>
+      val indScore = cost(CatalogOperator.getMeasurements(index.indexname).get)
+      (index, indScore)
+    }
+
+    val sumCost: Float = indBenchmarks.map(_._2).sum + seqCost
+
+    CatalogOperator.updateAttributeOption(entityname, attribute, ScanWeightInspector.SCANWEIGHT_OPTION_NAME, ((1 + 1 - (seqCost / sumCost)) * ScanWeightInspector.DEFAULT_WEIGHT).toString)
+
+    indBenchmarks.foreach { case (index, indCost) =>
+      CatalogOperator.updateIndexOption(index.indexname, ScanWeightInspector.SCANWEIGHT_OPTION_NAME, ((1 + 1 - (indCost / sumCost)) * ScanWeightInspector.DEFAULT_WEIGHT).toString)
+    }
+
+    //TODO: drop old measurements?
   }
 
 
@@ -92,7 +119,7 @@ private class ScanWeightBenchmarker(entityname: EntityName, attribute: String, n
       val nnq: NearestNeighbourQuery = NearestNeighbourQuery(attribute, q.vector, None, NormBasedDistance(1), 100, false)
       val expr = fexpr(nnq).prepareTree()
 
-      (0 to nruns).foreach { i =>
+      (0 to options.get("nruns").get.toInt).foreach { i =>
         lb += time(expr.evaluate())
       }
     }
@@ -106,6 +133,10 @@ private class ScanWeightBenchmarker(entityname: EntityName, attribute: String, n
     * @param measurements
     */
   private def cost(measurements: Seq[Long]): Float = {
+    if(measurements.isEmpty || measurements.length < ScanWeightUpdater.MINIMUM_NUMBER_OF_MEASUREMENTS){
+      return ScanWeightInspector.DEFAULT_WEIGHT
+    }
+
     val mean = measurements.sum.toFloat / measurements.length.toFloat
     val stdev = math.sqrt(measurements.map { measure => (measure - mean) * (measure - mean) }.sum / measurements.length.toFloat).toFloat
 
@@ -121,28 +152,33 @@ private class ScanWeightBenchmarker(entityname: EntityName, attribute: String, n
 
 }
 
-object ScanWeightBenchmarker {
+object ScanWeightUpdater {
   private val NUMBER_OF_QUERIES = 5
   private val NUMBER_OF_RUNS = 2
+  private val MINIMUM_NUMBER_OF_MEASUREMENTS = 10
 
 
   /**
     * Benchmarks all indexes and the attributes of the given entity and updates weight.
     *
     * @param entityname name of entity
-    * @param attribute name of attribute
-    * @param nqueries number of queries to perform for benchmarking query time
-    * @param nruns number of runs per query to perform for benchmarking query time
+    * @param attribute  name of attribute
     */
-  def apply(entityname: EntityName, attribute: String, nqueries : Int = NUMBER_OF_QUERIES, nruns : Int = NUMBER_OF_RUNS)(implicit ac: AdamContext): Unit = {
-    new ScanWeightBenchmarker(entityname, attribute, nqueries, nruns).benchmarkAndUpdate()
+  def apply(entityname: EntityName, attribute: String, benchmark: Boolean, options: Map[String, String] = Map("nqueries" -> NUMBER_OF_QUERIES.toString, "nruns" -> NUMBER_OF_RUNS.toString))(implicit ac: AdamContext): Unit = {
+    val swb = new ScanWeightUpdater(entityname, attribute, options)
+
+    if (benchmark) {
+      swb.benchmarkAndUpdate()
+    } else {
+      swb.updateUsingCatalogMeasurements()
+    }
   }
 
   /**
     * Resets all weights.
     *
     * @param entityname name of entity
-    * @param attribute name of attribute
+    * @param attribute  name of attribute
     */
   def resetWeights(entityname: EntityName, attribute: Option[String] = None)(implicit ac: AdamContext): Unit = {
     val entity = Entity.load(entityname).get

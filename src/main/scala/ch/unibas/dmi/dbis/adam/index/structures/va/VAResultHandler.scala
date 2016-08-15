@@ -11,44 +11,44 @@ import scala.collection.mutable.ListBuffer
 /**
   * adamtwo
   *
-  * Ivan Giangreco
+  * Ivan Giangreco, improvements by Silvan Heller
   * August 2015
   */
 private[va] class VAResultHandler[A](k: Int) {
   @transient private var elementsLeft = k
-  @transient private val queue =  new FloatHeapPriorityQueue(2 * k, FloatComparators.OPPOSITE_COMPARATOR)
 
-  @SerialVersionUID(1L)
-  protected class VAComparator(var comparator : FloatComparator) extends Comparator[VAResultElement[A]] with java.io.Serializable {
-    final def compare(a: VAResultElement[A], b: VAResultElement[A]): Int = comparator.compare(a.lower, b.lower)
+  @transient private val upperBoundQueue = new FloatHeapPriorityQueue(2 * k, FloatComparators.OPPOSITE_COMPARATOR)
+  @transient private val lowerBoundResultElementQueue = new ObjectHeapPriorityQueue[VAResultElement[A]](2 * k, new VAResultElementLowerBoundComparator(FloatComparators.OPPOSITE_COMPARATOR))
+
+  private class VAResultElementLowerBoundComparator(comparator: FloatComparator) extends Comparator[VAResultElement[_]] with Serializable {
+    final def compare(a: VAResultElement[_], b: VAResultElement[_]): Int = comparator.compare(a.lower, b.lower)
   }
-  @transient private val objQueue = new ObjectHeapPriorityQueue[VAResultElement[A]](new VAComparator(FloatComparators.OPPOSITE_COMPARATOR))
-  @transient protected var ls = ListBuffer[VAResultElement[A]]()
+
 
   /**
     *
     * @param r
     */
-  def offer(r: Row, pk : String): Boolean = {
-    queue.synchronized {
-      if (elementsLeft > 0) { //we have not yet inserted k elements, no checks therefore
+  def offer(r: Row, pk: String): Boolean = {
+    upperBoundQueue.synchronized {
+      if (elementsLeft > 0) {
+        //we have not yet inserted k elements, no checks therefore
         val lower = r.getAs[Float]("lbound")
         val upper = r.getAs[Float]("ubound")
         val tid = r.getAs[A](pk)
         elementsLeft -= 1
         enqueueAndAddToCandidates(lower, upper, tid)
         return true
-      } else { //we have already k elements, therefore check if new element is better
+      } else {
+        //we have already k elements, therefore check if new element is better
         //peek is the upper bound
-        val peek = queue.firstFloat()
+        val peek = upperBoundQueue.firstFloat()
         val lower = r.getAs[Float]("lbound")
         if (peek >= lower) {
-          //if peek is larger than lower, then dequeue worst element and insert
-          // TODO Who gives us a guarantee that the enqueued upper bound is bigger than the dequeued
-          //new element
-          queue.dequeueFloat()
+          //if peek is larger than lower, then dequeue worst element and insert new element
+          upperBoundQueue.dequeueFloat()
           val upper = r.getAs[Float]("ubound")
-          val tid = r.getAs[A](pk : String)
+          val tid = r.getAs[A](pk: String)
           enqueueAndAddToCandidates(lower, upper, tid)
           return true
         } else {
@@ -64,7 +64,7 @@ private[va] class VAResultHandler[A](k: Int) {
     * @param upper
     * @param tid
     */
-  private def enqueueAndAddToCandidates(lower : Float, upper : Float, tid : A): Unit ={
+  private def enqueueAndAddToCandidates(lower: Float, upper: Float, tid: A): Unit = {
     enqueueAndAddToCandidates(VAResultElement(lower, upper, tid))
   }
 
@@ -73,12 +73,11 @@ private[va] class VAResultHandler[A](k: Int) {
     * @param res
     */
   private def enqueueAndAddToCandidates(res: VAResultElement[A]): Unit = {
-    queue.enqueue(res.upper)
-    objQueue.enqueue(res)
-    while(objQueue.first().lower>queue.firstFloat()){
-      objQueue.dequeue()
+    upperBoundQueue.enqueue(res.upper)
+    lowerBoundResultElementQueue.enqueue(res)
+    while (lowerBoundResultElementQueue.first().lower > upperBoundQueue.firstFloat()) {
+      lowerBoundResultElementQueue.dequeue()
     }
-    //ls += res
   }
 
 
@@ -87,12 +86,16 @@ private[va] class VAResultHandler[A](k: Int) {
     * @return
     */
   def results = {
-    while(objQueue.size()>0){
-      ls+=objQueue.dequeue()
+    val ls = ListBuffer[VAResultElement[A]]()
+
+    while (lowerBoundResultElementQueue.size() > 0) {
+      ls += lowerBoundResultElementQueue.dequeue()
     }
+
     ls.toSeq
   }
 
 }
 
-case class VAResultElement[A](lower: Float, upper : Float, tid: A) {}
+case class VAResultElement[A](lower: Float, upper: Float, tid: A) {}
+

@@ -33,5 +33,7 @@ private[catalog] class AttributeCatalog(tag: Tag) extends Table[(String, String,
 
   def * = (entityname, attributename, fieldtype, isPK, isUnique, isIndexed, handlername)
 
+  def idx = index("idx_attribute_entityname", entityname)
+
   def entity = foreignKey("attribute_entity_fk", entityname, TableQuery[EntityCatalog])(_.entityname, onUpdate=ForeignKeyAction.Cascade, onDelete=ForeignKeyAction.Cascade)
 }

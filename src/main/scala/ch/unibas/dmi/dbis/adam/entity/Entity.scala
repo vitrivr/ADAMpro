@@ -134,8 +134,7 @@ case class Entity(val entityname: EntityName)(@transient implicit val ac: AdamCo
   }
 
 
-  private var _tupleCount: Option[Long] = None
-
+  val COUNT_KEY = "ntuples"
 
   /**
     * Returns number of elements in the entity.
@@ -143,20 +142,17 @@ case class Entity(val entityname: EntityName)(@transient implicit val ac: AdamCo
     * @return
     */
   def count: Long = {
-    if (_tupleCount.isEmpty) {
-      if (getData().isEmpty) {
-        _tupleCount = None
-      } else {
-        val cat = CatalogOperator.getEntityOption(this.entityname).get.get("count")
-        if(cat.isEmpty){
-          _tupleCount = Some(getData().get.count())
-          CatalogOperator.updateEntityOption(this.entityname,"count", _tupleCount.get.toString)
-        }
-        else _tupleCount = Some(cat.get.toLong)
+    var count = CatalogOperator.getEntityOption(entityname, Some(COUNT_KEY)).get.get(COUNT_KEY).map(_.toLong)
+
+
+    if (count.isEmpty) {
+      if (getData().isDefined) {
+        count = Some(getData().get.count())
+        CatalogOperator.updateEntityOption(entityname, COUNT_KEY, count.get.toString)
       }
     }
 
-    _tupleCount.getOrElse(0)
+    count.getOrElse(0)
   }
 
 
@@ -215,7 +211,6 @@ case class Entity(val entityname: EntityName)(@transient implicit val ac: AdamCo
           throw status.failed.get
         }
       }
-      CatalogOperator.updateEntityOption(this.entityname,"count", getData().get.count().toString)
 
       Success(null)
     } catch {
@@ -239,8 +234,9 @@ case class Entity(val entityname: EntityName)(@transient implicit val ac: AdamCo
     */
   def markStale(): Unit = {
     _schema = None
-    _tupleCount = None
     _data = None
+
+    CatalogOperator.deleteEntityOption(entityname, COUNT_KEY)
     indexes.map(_.map(_.markStale()))
   }
 

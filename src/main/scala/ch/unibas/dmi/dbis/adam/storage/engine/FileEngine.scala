@@ -33,7 +33,7 @@ trait FileEngine extends Serializable with Logging {
   /**
     * Read entity from file system.
     *
-    * @param filename relative filename to store features to
+    * @param filename relative filename to read features from
     * @return
     */
   def read(filename: String)(implicit ac: AdamContext): Try[DataFrame]
@@ -44,6 +44,7 @@ trait FileEngine extends Serializable with Logging {
     * @param filename relative filename to store features to
     * @param df   data
     * @param mode save mode (append, overwrite, ...)
+    * @param allowRepartitioning whether to allow re-partitiniong of data when saving
     * @return true on success
     */
   def write(filename: String, df: DataFrame, mode: SaveMode = SaveMode.Append, allowRepartitioning: Boolean = false)(implicit ac: AdamContext): Try[Void]
@@ -51,7 +52,7 @@ trait FileEngine extends Serializable with Logging {
   /**
     * Drop the entity from the file system.
     *
-    * @param filename relative filename to store features to
+    * @param filename relative filename to be dropped
     * @return true on success
     */
   def drop(filename: String)(implicit ac: AdamContext): Try[Void]

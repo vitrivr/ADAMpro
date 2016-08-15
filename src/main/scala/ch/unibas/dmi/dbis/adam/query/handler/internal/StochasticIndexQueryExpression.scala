@@ -17,7 +17,7 @@ import org.apache.spark.sql.functions._
   * Scans multiple indices and combines unprecise results.
   */
 @Experimental
-case class CompoundIndexScanExpression(private val exprs: Seq[IndexScanExpression])(nnq: NearestNeighbourQuery, id: Option[String] = None)(filterExpr: Option[QueryExpression] = None)(@transient implicit val ac: AdamContext) extends QueryExpression(id) {
+case class StochasticIndexQueryExpression(private val exprs: Seq[IndexScanExpression])(nnq: NearestNeighbourQuery, id: Option[String] = None)(filterExpr: Option[QueryExpression] = None)(@transient implicit val ac: AdamContext) extends QueryExpression(id) {
   override val info = ExpressionDetails(None, Some("Compound Query Index Scan Expression"), id, None)
   children ++= filterExpr.map(Seq(_)).getOrElse(Seq())
   //expres is not added to children as they would be "prepared" for querying, resulting possibly in a sequential scan
@@ -71,7 +71,7 @@ case class CompoundIndexScanExpression(private val exprs: Seq[IndexScanExpressio
 
   override def equals(that: Any): Boolean =
     that match {
-      case that: CompoundIndexScanExpression => this.exprs.equals(that.exprs)
+      case that: StochasticIndexQueryExpression => this.exprs.equals(that.exprs)
       case _ => exprs.equals(that)
     }
 

@@ -2,7 +2,8 @@ package ch.unibas.dmi.dbis.adam.query.handler.generic
 
 import java.util.concurrent.TimeUnit
 
-import ch.unibas.dmi.dbis.adam.config.FieldNames
+import ch.unibas.dmi.dbis.adam.catalog.CatalogOperator
+import ch.unibas.dmi.dbis.adam.config.{AdamConfig, FieldNames}
 import ch.unibas.dmi.dbis.adam.main.AdamContext
 import ch.unibas.dmi.dbis.adam.query.information.InformationLevels._
 import ch.unibas.dmi.dbis.adam.utils.Logging
@@ -64,8 +65,13 @@ abstract class QueryExpression(id: Option[String]) extends Serializable with Log
     run = true
     val t2 = System.currentTimeMillis
 
-    //TODO: possibly log time at production time and use a command to update based on the stored logs the weights of each index
-    info.time = Duration(t2 - t1, TimeUnit.MILLISECONDS)
+    val time = t2 - t1
+
+    if(AdamConfig.logQueryExecutionTime && info.source.isDefined){
+      CatalogOperator.addMeasurement(info.source.get, time)
+    }
+
+    info.time = Duration(time, TimeUnit.MILLISECONDS)
 
     results
   }

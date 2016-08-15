@@ -40,10 +40,11 @@ object CatalogOperator extends Logging {
   private val _attributeOptions = TableQuery[AttributeOptionsCatalog]
   private val _indexes = TableQuery[IndexCatalog]
   private val _indexOptions = TableQuery[IndexOptionsCatalog]
+  private val _measurements = TableQuery[MeasurementCatalog]
   private val _partitioners = TableQuery[PartitionerCatalog]
 
   private[catalog] val CATALOGS = Seq(
-    _entitites, _entityOptions, _attributes, _attributeOptions, _indexes, _indexOptions, _partitioners
+    _entitites, _entityOptions, _attributes, _attributeOptions, _indexes, _indexOptions, _partitioners, _measurements
   )
 
   /**
@@ -53,7 +54,7 @@ object CatalogOperator extends Logging {
     try {
       val tables = Await.result(DB.run(MTable.getTables), MAX_WAITING_TIME).toSeq.filter(_.name.schema.getOrElse("public").equals(SCHEMA)).map(_.name.name)
 
-      val actions: ListBuffer[DBIOAction[_, NoStream, _]] = new ListBuffer()
+      val actions = new ListBuffer[DBIOAction[_, NoStream, _]]()
       //schema might not exist yet
       actions += sqlu"""CREATE SCHEMA IF NOT exists adampro;"""
       CATALOGS.foreach { catalog =>
@@ -104,19 +105,19 @@ object CatalogOperator extends Logging {
         throw new EntityExistingException()
       }
 
-      val dbActions = new ListBuffer[DBIOAction[_, NoStream, _]]()
+      val actions = new ListBuffer[DBIOAction[_, NoStream, _]]()
 
-      dbActions += _entitites.+=(entityname)
+      actions += _entitites.+=(entityname)
 
       attributes.foreach { attribute =>
-        dbActions += _attributes.+=(entityname, attribute.name, attribute.fieldtype.name, attribute.pk, attribute.unique, attribute.indexed, attribute.storagehandler.map(_.name).getOrElse(""))
+        actions += _attributes.+=(entityname, attribute.name, attribute.fieldtype.name, attribute.pk, attribute.unique, attribute.indexed, attribute.storagehandler.map(_.name).getOrElse(""))
 
         attribute.params.foreach { case (key, value) =>
-          dbActions += _attributeOptions.+=(entityname, attribute.name, key, value)
+          actions += _attributeOptions.+=(entityname, attribute.name, key, value)
         }
       }
 
-      Await.result(DB.run(DBIO.seq(dbActions.toArray: _*).transactionally), MAX_WAITING_TIME)
+      Await.result(DB.run(DBIO.seq(actions.toArray: _*).transactionally), MAX_WAITING_TIME)
       null
     }
   }
@@ -153,7 +154,7 @@ object CatalogOperator extends Logging {
     */
   def updateEntityOption(entityname: EntityName, key: String, newValue: String): Try[Void] = {
     execute("update entity option") {
-      val actions: ListBuffer[DBIOAction[_, NoStream, _]] = new ListBuffer()
+      val actions = new ListBuffer[DBIOAction[_, NoStream, _]]()
 
       //upsert
       actions += _entityOptions.filter(_.entityname === entityname.toString()).filter(_.key === key).delete
@@ -213,7 +214,7 @@ object CatalogOperator extends Logging {
     */
   def updateAttributeOption(entityname: EntityName, attribute: String, key: String, newValue: String): Try[Void] = {
     execute("update attribute option") {
-      val actions: ListBuffer[DBIOAction[_, NoStream, _]] = new ListBuffer()
+      val actions = new ListBuffer[DBIOAction[_, NoStream, _]]()
 
       //upsert
       actions += _attributeOptions.filter(_.entityname === entityname.toString).filter(_.attributename === attribute).filter(_.key === key).delete
@@ -270,7 +271,7 @@ object CatalogOperator extends Logging {
     */
   def updateIndexOption(indexname: IndexName, key: String, newValue: String): Try[Void] = {
     execute("update index option") {
-      val actions: ListBuffer[DBIOAction[_, NoStream, _]] = new ListBuffer()
+      val actions = new ListBuffer[DBIOAction[_, NoStream, _]]()
 
       //upsert
       actions += _indexOptions.filter(_.indexname === indexname.toString).filter(_.key === key).delete
@@ -411,7 +412,9 @@ object CatalogOperator extends Logging {
   /**
     * Checks whether index exists in catalog.
     *
-    *
+    * @param entityname name of index
+    * @param attribute  name of attribute
+    * @param indextypename
     * @return
     */
   def existsIndex(entityname: EntityName, attribute: String, indextypename: IndexTypeName): Try[Boolean] = {
@@ -445,7 +448,7 @@ object CatalogOperator extends Logging {
       oos.close()
       bos.close()
 
-      val actions: ListBuffer[DBIOAction[_, NoStream, _]] = new ListBuffer()
+      val actions = new ListBuffer[DBIOAction[_, NoStream, _]]()
 
       actions += _indexes.+=((indexname, entityname, attributename, indextypename.name, meta, true))
 
@@ -519,9 +522,7 @@ object CatalogOperator extends Logging {
   def getIndexMeta(indexname: IndexName): Try[Any] = {
     execute("get index meta") {
       val query = _indexes.filter(_.indexname === indexname.toString).map(_.meta).result.head
-      log.trace("Loading class, query: "+query.toString)
       val data = Await.result(DB.run(query), MAX_WAITING_TIME)
-      log.trace("Loading class, data: " + data.toString)
 
       val bis = new ByteArrayInputStream(data)
       val ois = new ObjectInputStream(bis)
@@ -563,7 +564,7 @@ object CatalogOperator extends Logging {
     */
   def makeIndexStale(indexname: IndexName): Try[Void] = {
     execute("make index stale") {
-      val actions: ListBuffer[DBIOAction[_, NoStream, _]] = new ListBuffer()
+      val actions = new ListBuffer[DBIOAction[_, NoStream, _]]()
 
       actions += _indexes.filter(_.indexname === indexname.toString).map(_.isUpToDate).update(false)
 
@@ -580,7 +581,8 @@ object CatalogOperator extends Logging {
     */
   def getEntityName(indexname: IndexName): Try[EntityName] = {
     execute("get entity name") {
-      val name = Await.result(DB.run(_indexes.filter(_.indexname === indexname.toString).map(_.entityname).result.head), MAX_WAITING_TIME)
+      val query = _indexes.filter(_.indexname === indexname.toString).map(_.entityname).result.head
+      val name = Await.result(DB.run(query), MAX_WAITING_TIME)
       EntityNameHolder(name)
     }
   }
@@ -655,6 +657,59 @@ object CatalogOperator extends Logging {
         throw new IndexNotExistingException()
       }
       Await.result(DB.run(_partitioners.filter(_.indexname === indexname.toString).delete), MAX_WAITING_TIME)
+      null
+    }
+  }
+
+  /**
+    * Adds a measurement to the catalog
+    *
+    * @param key
+    * @param value
+    * @return
+    */
+  def addMeasurement(key: String, value: Long): Try[Void] = {
+    execute("add measurement") {
+      val query = _measurements.+=(key, value)
+      DB.run(query)
+      null
+    }
+  }
+
+  /**
+    * Gets measurements for given key.
+    *
+    * @param key
+    * @return
+    */
+  def getMeasurements(key: String): Try[Seq[Long]] = {
+    execute("get measurement") {
+      val query = _measurements.filter(_.key === key).map(_.measurement).result
+      Await.result(DB.run(query), MAX_WAITING_TIME)
+    }
+  }
+
+  /**
+    * Drops measurements for given key.
+    *
+    * @param key
+    * @return
+    */
+  def dropMeasurements(key : String): Try[Void] = {
+    execute("drop measurements") {
+      Await.result(DB.run(_measurements.filter(_.key === key).delete), MAX_WAITING_TIME)
+      null
+    }
+  }
+
+  /**
+    * Drops measurements for given key.
+    *
+    * @return
+    */
+  def dropAllMeasurements(): Try[Void] = {
+    execute("drop all measurements") {
+      Await.result(DB.run(_measurements.delete), MAX_WAITING_TIME)
       null
     }
   }
