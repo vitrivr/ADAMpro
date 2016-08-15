@@ -320,7 +320,11 @@ class DataDefinitionRPC extends AdamDefinitionGrpc.AdamDefinition with Logging {
     */
   override def getEntityProperties(request: EntityNameMessage): Future[EntityPropertiesMessage] = {
     log.debug("rpc call for returning entity properties")
-    val res = EntityOp.properties(request.entity)
+    val res = {
+      if(EntityOp.exists(request.entity).get){
+        EntityOp.properties(request.entity)
+      } else IndexOp.properties(request.entity)
+    }
 
     if (res.isSuccess) {
       Future.successful(EntityPropertiesMessage(Some(AckMessage(AckMessage.Code.OK)), request.entity, res.get))
