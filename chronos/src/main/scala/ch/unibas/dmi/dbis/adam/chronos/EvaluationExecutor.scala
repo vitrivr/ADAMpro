@@ -2,9 +2,9 @@ package ch.unibas.dmi.dbis.adam.chronos
 
 import java.io.File
 import java.util.Properties
-import java.util.logging.{Level, LogRecord}
+import java.util.logging.Logger
 
-import ch.unibas.cs.dbis.chronos.agent.{ChronosHttpClient, ChronosJob}
+import ch.unibas.cs.dbis.chronos.agent.ChronosJob
 import ch.unibas.dmi.dbis.adam.rpc.RPCClient
 import ch.unibas.dmi.dbis.adam.rpc.datastructures.{RPCAttributeDefinition, RPCQueryObject, RPCQueryResults}
 
@@ -17,7 +17,7 @@ import scala.util.{Random, Try}
   * Ivan Giangreco
   * July 2016
   */
-class EvaluationExecutor(val job: EvaluationJob, logger: ChronosHttpClient#ChronosLogHandler, setStatus: (Double) => (Boolean), inputDirectory: File, outputDirectory: File) {
+class EvaluationExecutor(val job: EvaluationJob, setStatus: (Double) => (Boolean), inputDirectory: File, outputDirectory: File) {
   //rpc client
   val client: RPCClient = RPCClient(job.adampro_url, job.adampro_port)
 
@@ -25,16 +25,17 @@ class EvaluationExecutor(val job: EvaluationJob, logger: ChronosHttpClient#Chron
   var running = true
   var progress = 0.0
 
+  var logger = Logger.getLogger("ADAMpro")
+
   /**
     *
     * @param job
-    * @param logger
     * @param setStatus
     * @param inputDirectory
     * @param outputDirectory
     */
-  def this(job: ChronosJob, logger: ChronosHttpClient#ChronosLogHandler, setStatus: (Double) => (Boolean), inputDirectory: File, outputDirectory: File) {
-    this(new EvaluationJob(job), logger, setStatus, inputDirectory, outputDirectory)
+  def this(job: ChronosJob, setStatus: (Double) => (Boolean), inputDirectory: File, outputDirectory: File) {
+    this(new EvaluationJob(job), setStatus, inputDirectory, outputDirectory)
   }
 
   private val ENTITY_NAME_PREFIX = "chr-eval-"
@@ -57,35 +58,35 @@ class EvaluationExecutor(val job: EvaluationJob, logger: ChronosHttpClient#Chron
 
     //create entity
     if(client.entityExists(entityname).get){
-      logger.publish(new LogRecord(Level.INFO, "entity " + entityname + " exists already"))
+      logger.info("entity " + entityname + " exists already")
       entityCreatedNewly = false
     } else {
-      logger.publish(new LogRecord(Level.INFO, "creating entity " + entityname + " (" + attributes.map(a => a.name + "(" + a.datatype + ")").mkString(",") + ")"))
+      logger.info("creating entity " + entityname + " (" + attributes.map(a => a.name + "(" + a.datatype + ")").mkString(",") + ")")
       entityCreatedNewly = true
       client.entityCreate(entityname, attributes)
     }
 
     //insert random data
-    logger.publish(new LogRecord(Level.INFO, "inserting " + job.data_tuples + " tuples into " + entityname))
+    logger.info("inserting " + job.data_tuples + " tuples into " + entityname)
     client.entityGenerateRandomData(entityname, job.data_tuples, job.data_vector_dimensions, job.data_vector_sparsity, job.data_vector_min, job.data_vector_max, job.data_vector_sparse)
 
     var indexCreatedNewly = false
 
     val indexnames = if (job.execution_name == "sequential") {
       //no index
-      logger.publish(new LogRecord(Level.INFO, "creating no index for " + entityname))
+      logger.info("creating no index for " + entityname)
       Seq()
     } else if (job.execution_name == "progressive") {
-      logger.publish(new LogRecord(Level.INFO, "creating all indexes for " + entityname))
+      logger.info("creating all indexes for " + entityname)
       indexCreatedNewly = true
       client.entityCreateAllIndexes(entityname, Seq(FEATURE_VECTOR_ATTRIBUTENAME), 2).get
     } else {
       if(client.indexExists(entityname, FEATURE_VECTOR_ATTRIBUTENAME, job.execution_subtype).get) {
-        logger.publish(new LogRecord(Level.INFO, job.execution_subtype + " index for " + entityname + " (" +  FEATURE_VECTOR_ATTRIBUTENAME + ") " + "exists already"))
+        logger.info(job.execution_subtype + " index for " + entityname + " (" +  FEATURE_VECTOR_ATTRIBUTENAME + ") " + "exists already")
         indexCreatedNewly = false
         client.indexList(entityname).get.filter(_._2 == FEATURE_VECTOR_ATTRIBUTENAME).filter(_._3 == job.execution_subtype).map(_._1)
       } else {
-        logger.publish(new LogRecord(Level.INFO, "creating " + job.execution_subtype + " index for " + entityname))
+        logger.info("creating " + job.execution_subtype + " index for " + entityname)
         indexCreatedNewly = true
         Seq(client.indexCreate(entityname, FEATURE_VECTOR_ATTRIBUTENAME, job.execution_subtype, 2, Map()).get)
       }
@@ -112,21 +113,21 @@ class EvaluationExecutor(val job: EvaluationJob, logger: ChronosHttpClient#Chron
       }
 
       //collect queries
-      logger.publish(new LogRecord(Level.INFO, "generating queries to execute on " + entityname))
+      logger.info("generating queries to execute on " + entityname)
       val queries = getQueries(entityname)
 
       //query execution
       queries.zipWithIndex.foreach { case (qo, idx) =>
         if (running) {
           val runid = "r-" + idx.toString
-          logger.publish(new LogRecord(Level.INFO, "executing query for " + entityname + " (runid: " + runid + ")"))
+          logger.info("executing query for " + entityname + " (runid: " + runid + ")")
           var result = executeQuery(qo)
 
           //further params to log
           result += "entityCreatedNewly" -> entityCreatedNewly.toString
           result += "indexCreatedNewly" -> indexCreatedNewly.toString
 
-          logger.publish(new LogRecord(Level.INFO, "executed query for " + entityname + " (runid: " + runid + ")"))
+          logger.info("executed query for " + entityname + " (runid: " + runid + ")")
 
           if (job.measurement_firstrun && idx == 0){
             //ignore first run
@@ -135,14 +136,14 @@ class EvaluationExecutor(val job: EvaluationJob, logger: ChronosHttpClient#Chron
           }
 
         } else {
-          logger.publish(new LogRecord(Level.INFO, "aborted job " + job.id + ", not running queries anymore"))
+          logger.info("aborted job " + job.id + ", not running queries anymore")
         }
 
         progress += 1 / queries.size.toFloat
       }
     }
 
-    logger.publish(new LogRecord(Level.INFO, "all queries for job " + job.id + " have been run, preparing data and finishing execution"))
+    logger.info("all queries for job " + job.id + " have been run, preparing data and finishing execution")
 
     //fill properties
     val prop = new Properties
@@ -384,7 +385,7 @@ class EvaluationExecutor(val job: EvaluationJob, logger: ChronosHttpClient#Chron
 
     lb ++= (job.getAllParameters())
 
-    logger.publish(new LogRecord(Level.FINEST, "executing query with parameters: " + job.getAllParameters().mkString))
+    logger.fine("executing query with parameters: " + job.getAllParameters().mkString)
 
     lb += ("queryid" -> qo.id)
     lb += ("operation" -> qo.operation)
