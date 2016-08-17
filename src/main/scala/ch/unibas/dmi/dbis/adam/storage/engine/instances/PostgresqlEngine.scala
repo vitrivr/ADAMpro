@@ -111,7 +111,7 @@ class PostgresqlEngine(private val url: String, private val user: String, privat
       val df = ac.sqlContext.read.format("jdbc").options(
         Map("url" -> url, "dbtable" -> tablename.toString(), "user" -> AdamConfig.jdbcUser, "password" -> AdamConfig.jdbcPassword, "driver" -> "org.postgresql.Driver")
       ).load()
-      Success(df)
+      Success(df.repartition(AdamConfig.defaultNumberOfPartitions))
     } catch {
       case e: Exception =>
         Failure(e)
