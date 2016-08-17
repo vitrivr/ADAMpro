@@ -1,6 +1,7 @@
 package ch.unibas.dmi.dbis.adam.storage.handler
 
 import ch.unibas.dmi.dbis.adam.catalog.CatalogOperator
+import ch.unibas.dmi.dbis.adam.config.FieldNames
 import ch.unibas.dmi.dbis.adam.datatypes.FieldTypes
 import ch.unibas.dmi.dbis.adam.datatypes.FieldTypes.FieldType
 import ch.unibas.dmi.dbis.adam.entity.Entity.EntityName
@@ -203,7 +204,7 @@ import scala.util.{Random, Success, Try}
 
         it.foreach { row =>
           val doc = new SolrInputDocument()
-          doc.addField("id", row.getAs[Any](entity.pk.name))
+          doc.addField(FieldNames.internalIdColumnName, row.getAs[Any](entity.pk.name))
 
           schema.foreach { attribute =>
             doc.addField(attribute.params.getOrElse(SOLR_OPTION_FIELDNAME, attribute.name), row.getAs[String](attribute.name))
