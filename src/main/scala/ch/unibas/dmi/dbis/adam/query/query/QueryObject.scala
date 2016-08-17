@@ -1,5 +1,6 @@
 package ch.unibas.dmi.dbis.adam.query.query
 
+import ch.unibas.dmi.dbis.adam.catalog.CatalogOperator
 import ch.unibas.dmi.dbis.adam.datatypes.feature.Feature._
 import ch.unibas.dmi.dbis.adam.datatypes.feature.FeatureVectorWrapper
 import ch.unibas.dmi.dbis.adam.entity.Entity
@@ -105,8 +106,14 @@ case class NearestNeighbourQuery(
 
       //check if feature data exists and dimensionality is correct
       val featureData = if (entity.getFeatureData.isDefined) {
-        val dimensionality = entity.getFeatureData.get.select(attribute).head().getAs[FeatureVectorWrapper](attribute).vector.length
-        dimensionality == q.length
+        var ndims = CatalogOperator.getAttributeOption(entity.entityname, attribute, Some("ndims")).get.get("ndims")
+
+        if(ndims.isEmpty){
+          ndims = Some(entity.getFeatureData.get.select(attribute).head().getAs[FeatureVectorWrapper](attribute).vector.length.toString)
+          CatalogOperator.updateAttributeOption(entity.entityname, attribute, "ndims", ndims.get)
+        }
+
+        ndims.get.toInt == q.length
       } else {
         false
       }
