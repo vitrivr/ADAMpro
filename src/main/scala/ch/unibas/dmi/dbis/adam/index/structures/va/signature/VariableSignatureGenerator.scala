@@ -62,7 +62,7 @@ class VariableSignatureGenerator (numberOfBitsPerDimension: Array[Int]) extends 
     val lengths = numberOfBitsPerDimension
     assert(lengths.count(_ > 32) < 1)
 
-    val indexes = signature.getBitIndexes
+    val it = signature.iterator
     var i = 0
 
     val bitIntegers = new Array[Int](lengths.length)
@@ -70,8 +70,8 @@ class VariableSignatureGenerator (numberOfBitsPerDimension: Array[Int]) extends 
 
     var sum = 0
 
-    while (i < indexes.length) {
-      val index = indexes(i)
+    while (it.hasNext) {
+      val index = it.next()
 
       while (index >= sum + lengths(lengths.length - dim)) {
         sum += lengths(lengths.length - dim)

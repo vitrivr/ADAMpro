@@ -5,8 +5,6 @@ import java.io.{ByteArrayInputStream, ByteArrayOutputStream, DataInputStream, Da
 import ch.unibas.dmi.dbis.adam.utils.Logging
 import com.googlecode.javaewah.datastructure.BitSet
 
-import scala.collection.mutable.ListBuffer
-
 /**
   * adamtwo
   *
@@ -27,16 +25,7 @@ class EWAHBitString(private val bs: BitSet) extends BitString[EWAHBitString] wit
     *
     * @return
     */
-  override def getBitIndexes: Seq[Int] = {
-    val lb = new ListBuffer[Int]()
-    val it = bs.intIterator()
-
-    while(it.hasNext){
-      lb += it.next()
-    }
-
-    lb.toSeq
-  }
+  override def iterator = bs.intIterator()
 
   /**
     *
