@@ -34,7 +34,8 @@ import scala.util.{Failure, Random, Success, Try}
   * Ivan Giangreco
   * August 2015
   */
-//TODO: make indexes singleton? lock on entity?
+//TODO: make indexes singleton? lock on index?
+//TODO: adjust architecture, move logic of loading data to here
 abstract class Index(@transient implicit val ac: AdamContext) extends Serializable with Logging {
   val indexname: IndexName
   val indextypename: IndexTypeName
@@ -314,7 +315,7 @@ object Index extends Logging {
 
 
   /**
-    * Creates an index.
+    * Creates an index. Performs preparatory tasks and checks.
     *
     * @param entity         entity
     * @param attribute      the attribute to index
@@ -338,6 +339,26 @@ object Index extends Logging {
       }
 
       val indexname = createIndexName(entity.entityname, attribute, indexgenerator.indextypename)
+
+      createIndex(indexname, entity, attribute, indexgenerator)
+    } catch {
+      case e: Exception => {
+        Failure(e)
+      }
+    }
+  }
+
+  /**
+    * Performs the creation of the index.
+    *
+    * @param indexname      name of the index
+    * @param entity         entity
+    * @param attribute      the attribute to index
+    * @param indexgenerator generator to create index
+    * @return index
+    */
+  private def createIndex(indexname: String, entity: Entity, attribute: String, indexgenerator: IndexGenerator)(implicit ac: AdamContext): Try[Index] = {
+    try {
       val rdd: RDD[IndexingTaskTuple[_]] = entity.getAttributeData(attribute).get.map { x => IndexingTaskTuple(x.getAs[Any](entity.pk.name), x.getAs[FeatureVectorWrapper](attribute).vector) }
 
       val index = indexgenerator.index(indexname, entity.entityname, rdd)
@@ -356,7 +377,10 @@ object Index extends Logging {
 
       Index.load(indexname, false)
     } catch {
-      case e: Exception => Failure(e)
+      case e: Exception => {
+        CatalogOperator.dropIndex(indexname)
+        Failure(e)
+      }
     }
   }
 
