@@ -3,7 +3,6 @@ package ch.unibas.dmi.dbis.adam.rpc
 import ch.unibas.dmi.dbis.adam.api.{EntityOp, IndexOp, QueryOp}
 import ch.unibas.dmi.dbis.adam.datatypes.feature.{FeatureVectorWrapper, FeatureVectorWrapperUDT}
 import ch.unibas.dmi.dbis.adam.exception.{GeneralAdamException, QueryNotCachedException}
-import ch.unibas.dmi.dbis.adam.http.grpc._
 import ch.unibas.dmi.dbis.adam.main.{SparkStartup, AdamContext}
 import ch.unibas.dmi.dbis.adam.query.QueryLRUCache
 import ch.unibas.dmi.dbis.adam.query.handler.internal.QueryHints
@@ -12,6 +11,7 @@ import io.grpc.stub.StreamObserver
 import ch.unibas.dmi.dbis.adam.utils.Logging
 import org.apache.spark.sql.DataFrame
 import org.apache.spark.sql.types._
+import org.vitrivr.adam.grpc.grpc._
 
 import scala.concurrent.Future
 import scala.util.Try
@@ -23,7 +23,7 @@ import scala.util.Try
   * March 2016
   */
 class SearchRPC extends AdamSearchGrpc.AdamSearch with Logging {
-  implicit def ac : AdamContext = SparkStartup.mainContext
+  implicit def ac: AdamContext = SparkStartup.mainContext
 
   /**
     *

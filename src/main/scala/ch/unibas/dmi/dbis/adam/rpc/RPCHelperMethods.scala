@@ -2,12 +2,9 @@ package ch.unibas.dmi.dbis.adam.rpc
 
 import java.util.concurrent.TimeUnit
 
-import breeze.stats.distributions.ChiSquared
 import ch.unibas.dmi.dbis.adam.datatypes.feature.Feature._
 import ch.unibas.dmi.dbis.adam.datatypes.feature.FeatureVectorWrapper
 import ch.unibas.dmi.dbis.adam.exception.GeneralAdamException
-import ch.unibas.dmi.dbis.adam.http.grpc.DistanceMessage.DistanceType
-import ch.unibas.dmi.dbis.adam.http.grpc._
 import ch.unibas.dmi.dbis.adam.main.AdamContext
 import ch.unibas.dmi.dbis.adam.query.QueryCacheOptions
 import ch.unibas.dmi.dbis.adam.query.distance._
@@ -21,7 +18,8 @@ import ch.unibas.dmi.dbis.adam.query.information.InformationLevels
 import ch.unibas.dmi.dbis.adam.query.information.InformationLevels.{InformationLevel, LAST_STEP_ONLY}
 import ch.unibas.dmi.dbis.adam.query.progressive.{QueryHintsProgressivePathChooser, SimpleProgressivePathChooser}
 import ch.unibas.dmi.dbis.adam.query.query.{BooleanQuery, NearestNeighbourQuery}
-import spire.std.option
+import org.vitrivr.adam.grpc.grpc.DistanceMessage.DistanceType
+import org.vitrivr.adam.grpc.grpc._
 
 import scala.concurrent.duration.Duration
 import scala.util.{Success, Failure, Try}

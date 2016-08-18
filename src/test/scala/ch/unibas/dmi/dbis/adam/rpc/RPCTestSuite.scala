@@ -4,13 +4,13 @@ import ch.unibas.dmi.dbis.adam.AdamTestBase
 import ch.unibas.dmi.dbis.adam.config.AdamConfig
 import ch.unibas.dmi.dbis.adam.datatypes.FieldTypes
 import ch.unibas.dmi.dbis.adam.entity.{Entity, AttributeDefinition}
-import ch.unibas.dmi.dbis.adam.http.grpc.BooleanQueryMessage.WhereMessage
-import ch.unibas.dmi.dbis.adam.http.grpc.InsertMessage.TupleInsertMessage
-import ch.unibas.dmi.dbis.adam.http.grpc._
 import ch.unibas.dmi.dbis.adam.main.RPCStartup
 import io.grpc.ManagedChannelBuilder
 import io.grpc.stub.StreamObserver
 import org.scalatest.concurrent.ScalaFutures
+import org.vitrivr.adam.grpc.grpc.BooleanQueryMessage.WhereMessage
+import org.vitrivr.adam.grpc.grpc.InsertMessage.TupleInsertMessage
+import org.vitrivr.adam.grpc.grpc._
 
 import scala.concurrent.duration._
 import scala.util.Random

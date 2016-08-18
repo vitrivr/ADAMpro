@@ -1,9 +1,9 @@
 package ch.unibas.dmi.dbis.adam.rpc.datastructures
 
-import ch.unibas.dmi.dbis.adam.http.grpc.BooleanQueryMessage.WhereMessage
-import ch.unibas.dmi.dbis.adam.http.grpc.QueryMessage.InformationLevel
-import ch.unibas.dmi.dbis.adam.http.grpc.QueryMessage.InformationLevel._
-import ch.unibas.dmi.dbis.adam.http.grpc._
+import org.vitrivr.adam.grpc.grpc.BooleanQueryMessage.WhereMessage
+import org.vitrivr.adam.grpc.grpc.QueryMessage.InformationLevel
+import org.vitrivr.adam.grpc.grpc.QueryMessage.InformationLevel._
+import org.vitrivr.adam.grpc.grpc._
 
 import scala.collection.mutable.ListBuffer
 

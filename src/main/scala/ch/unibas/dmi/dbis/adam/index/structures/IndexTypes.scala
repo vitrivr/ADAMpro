@@ -3,7 +3,6 @@ package ch.unibas.dmi.dbis.adam.index.structures
 import java.io.Serializable
 
 import ch.unibas.dmi.dbis.adam.entity.Entity._
-import ch.unibas.dmi.dbis.adam.http._
 import ch.unibas.dmi.dbis.adam.index.Index._
 import ch.unibas.dmi.dbis.adam.index.structures.ecp.{ECPIndex, ECPIndexer}
 import ch.unibas.dmi.dbis.adam.index.structures.lsh.{LSHIndex, LSHIndexer}
@@ -15,6 +14,7 @@ import ch.unibas.dmi.dbis.adam.index.{Index, IndexGenerator}
 import ch.unibas.dmi.dbis.adam.main.AdamContext
 import ch.unibas.dmi.dbis.adam.query.distance.DistanceFunction
 import org.apache.spark.sql.DataFrame
+import org.vitrivr.adam.grpc._
 
 /**
   * adamtwo

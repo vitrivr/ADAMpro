@@ -1,7 +1,8 @@
 package ch.unibas.dmi.dbis.adam.rpc.datastructures
 
-import ch.unibas.dmi.dbis.adam.http.grpc.DataMessage.Datatype
-import ch.unibas.dmi.dbis.adam.http.grpc.QueryResultInfoMessage
+
+import org.vitrivr.adam.grpc.grpc.DataMessage.Datatype
+import org.vitrivr.adam.grpc.grpc.QueryResultInfoMessage
 
 /**
   * ADAMpro

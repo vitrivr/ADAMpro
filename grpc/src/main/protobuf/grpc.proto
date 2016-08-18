@@ -1,6 +1,6 @@
 syntax = "proto3";
 
-option java_package = "ch.unibas.dmi.dbis.adam.http";
+option java_package = "org.vitrivr.adam.grpc";
 
 option java_outer_classname = "AdamGrpc";
 
