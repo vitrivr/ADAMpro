@@ -61,6 +61,8 @@ case class SequentialScanExpression(private val entity: Entity)(private val nnq:
       })
     }
 
+    //TODO: possibly join is faster? possibly the current implmentation is
+
     if (result.isDefined && options.isDefined && options.get.storeSourceProvenance) {
       result = Some(result.get.withColumn(FieldNames.sourceColumnName, lit(sourceDescription)))
     }
