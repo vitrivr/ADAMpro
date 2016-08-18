@@ -378,7 +378,7 @@ object Index extends Logging {
       Index.load(indexname, false)
     } catch {
       case e: Exception => {
-        CatalogOperator.dropIndex(indexname)
+        CatalogOperator.dropIndex(indexname, true)
         Failure(e)
       }
     }
