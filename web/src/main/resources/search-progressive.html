@@ -148,7 +148,7 @@ $("#btnSubmit").click(function () {
         params.options.k = $("#k").val();
     }
     if ($("#indextype").val().length > 0) {
-        params.options.hints = $("#indextype").val();
+        params.options.hints = $("#indextype").val().join();
     }
 
 
@@ -301,9 +301,8 @@ function updateHandler(startTime, series, data) {
         var x = (new Date()).getTime();
         series.addPoint({
             x: x,
-            y: indextypes.indexOf(data.results.sourcetype),
+            y: indextypes.indexOf(data.results.source),
             source: data.results.source,
-            sourcetype: data.results.sourcetype,
             confidence: data.results.confidence,
             time: Math.abs(startTime - x),
             results: data.results.results.length,
@@ -315,7 +314,7 @@ function updateHandler(startTime, series, data) {
 
                     var results = data.results.results;
 
-                    var tabid = "tab-" + indextypes.indexOf(data.results.sourcetype);
+                    var tabid = "tab-" + indextypes.indexOf(data.results.source);
 
                     var innerhtml = '';
 

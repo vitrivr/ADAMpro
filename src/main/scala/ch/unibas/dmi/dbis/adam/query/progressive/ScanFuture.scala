@@ -30,7 +30,7 @@ class ScanFuture[U](expression: QueryExpression, filter : Option[DataFrame], onC
 
         val information = expression.information()
         val typename = information.source
-        val info = Map[String, String]()
+        val info = information.info
 
         val observation = ProgressiveObservation(tracker.status, res, confidence.getOrElse(0), typename.getOrElse(""), info, t1, System.currentTimeMillis())
         if (!tracker.isCompleted) {

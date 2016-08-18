@@ -452,8 +452,9 @@ message QueryResultInfoMessage {
   int64 time = 4;
   //provenance information, source that returned results
   string source = 5;
+  map<string, string> info = 6;
   //result list
-  repeated QueryResultTupleMessage results = 6;
+  repeated QueryResultTupleMessage results = 7;
 }
 
 message QueryResultTupleMessage {

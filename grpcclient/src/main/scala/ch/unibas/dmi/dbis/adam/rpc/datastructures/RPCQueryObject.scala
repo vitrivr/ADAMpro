@@ -24,7 +24,7 @@ case class RPCQueryObject(var id: String, var operation: String, var options: Ma
 
   private def entity = options.get("entityname").get
 
-  private def subtype = options.get("subtype").getOrElse("")
+  private def subtype = options.getOrElse("subtype", "")
 
   private def sparsify(vec: Seq[Float]) = {
 

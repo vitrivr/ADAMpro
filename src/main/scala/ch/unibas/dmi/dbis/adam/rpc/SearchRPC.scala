@@ -84,14 +84,13 @@ class SearchRPC extends AdamSearchGrpc.AdamSearch with Logging {
       val res = EntityOp.preview(request.entity, 100)
 
       if (res.isSuccess) {
-        Future.successful(QueryResultsMessage(Some(AckMessage(AckMessage.Code.OK)), Seq((prepareResults("", 1.toFloat, 0, "sequential scan", Some(res.get))))))
+        Future.successful(QueryResultsMessage(Some(AckMessage(AckMessage.Code.OK)), Seq((prepareResults("", 1.toFloat, 0, "sequential scan", Map(), Some(res.get))))))
       } else {
         log.error(res.failed.get.getMessage, res.failed.get)
         Future.successful(QueryResultsMessage(Some(AckMessage(code = AckMessage.Code.ERROR, message = res.failed.get.getMessage))))
       }
     }
   }
-
 
 
   /**
@@ -115,7 +114,7 @@ class SearchRPC extends AdamSearchGrpc.AdamSearch with Logging {
 
       if (res.isSuccess) {
         val results = expression.get.information(informationLevel).map(res =>
-          prepareResults(res.id.getOrElse(""), res.confidence.getOrElse(0), res.time.toMillis, res.source.getOrElse(""), res.results)
+          prepareResults(res.id.getOrElse(""), res.confidence.getOrElse(0), res.time.toMillis, res.source.getOrElse(""), Map(), res.results)
         )
 
         Future.successful(QueryResultsMessage(
@@ -141,11 +140,11 @@ class SearchRPC extends AdamSearchGrpc.AdamSearch with Logging {
         //track on next
         val onComplete =
           (tpo: Try[ProgressiveObservation]) => {
-            if(tpo.isSuccess){
+            if (tpo.isSuccess) {
               val po = tpo.get
               responseObserver.onNext(
                 QueryResultsMessage(Some(AckMessage(AckMessage.Code.OK)),
-                  Seq(prepareResults(request.queryid, po.confidence, po.t2 - po.t1, po.source + " (" + po.info.getOrElse("name", "no details") + ")", po.results))))
+                  Seq(prepareResults(request.queryid, po.confidence, po.t2 - po.t1, po.source, po.info, po.results))))
             } else {
               responseObserver.onNext(
                 QueryResultsMessage(Some(AckMessage(AckMessage.Code.ERROR, tpo.failed.get.getMessage))))
@@ -158,12 +157,12 @@ class SearchRPC extends AdamSearchGrpc.AdamSearch with Logging {
           new QueryHintsProgressivePathChooser(request.hints.map(QueryHints.withName(_).get))
         }
 
-        val nnq = if(request.nnq.isDefined){
+        val nnq = if (request.nnq.isDefined) {
           RPCHelperMethods.prepareNNQ(request.nnq.get).get
         } else {
           throw new GeneralAdamException("nearest neighbour query necessary for progressive query")
         }
-        val bq = if(request.bq.isDefined){
+        val bq = if (request.bq.isDefined) {
           Some(RPCHelperMethods.prepareBQ(request.bq.get).get)
         } else {
           None
@@ -172,7 +171,7 @@ class SearchRPC extends AdamSearchGrpc.AdamSearch with Logging {
         val evaluationOptions = RPCHelperMethods.prepareEvaluationOptions(request)
 
         //TODO: change here, so that we do not need to rely on "getEntity"
-        val tracker = QueryOp.progressive(request.from.get.getEntity, nnq, bq , pathChooser, onComplete, evaluationOptions)
+        val tracker = QueryOp.progressive(request.from.get.getEntity, nnq, bq, pathChooser, onComplete, evaluationOptions)
 
         //track on completed
         while (!tracker.get.isCompleted) {
@@ -203,7 +202,7 @@ class SearchRPC extends AdamSearchGrpc.AdamSearch with Logging {
       val res = QueryLRUCache.get(request.queryid)
 
       if (res.isSuccess) {
-        Future.successful(QueryResultsMessage(Some(AckMessage(code = AckMessage.Code.OK)), Seq(prepareResults(request.queryid, 0, 0, "cache", Some(res.get)))))
+        Future.successful(QueryResultsMessage(Some(AckMessage(code = AckMessage.Code.OK)), Seq(prepareResults(request.queryid, 0, 0, "cache", Map(), Some(res.get)))))
       } else {
         log.error(res.failed.get.getMessage, res.failed.get)
         Future.failed(QueryNotCachedException())
@@ -218,10 +217,11 @@ class SearchRPC extends AdamSearchGrpc.AdamSearch with Logging {
     * @param confidence
     * @param time
     * @param source
+    * @param info
     * @param df
     * @return
     */
-  private def prepareResults(queryid: String, confidence: Float, time: Long, source: String, df: Option[DataFrame]): QueryResultInfoMessage = {
+  private def prepareResults(queryid: String, confidence: Float, time: Long, source: String, info: Map[String, String], df: Option[DataFrame]): QueryResultInfoMessage = {
     val results: Seq[QueryResultTupleMessage] = if (df.isDefined) {
       val cols = df.get.schema
 
@@ -236,7 +236,7 @@ class SearchRPC extends AdamSearchGrpc.AdamSearch with Logging {
                 case IntegerType => DataMessage().withIntData(row.getAs[Integer](col.name))
                 case LongType => DataMessage().withLongData(row.getAs[Long](col.name))
                 case StringType => DataMessage().withStringData(row.getAs[String](col.name))
-                case _ : FeatureVectorWrapperUDT => DataMessage().withFeatureData(FeatureVectorMessage().withDenseVector(DenseVectorMessage(row.getAs[FeatureVectorWrapper](col.name).toSeq)))
+                case _: FeatureVectorWrapperUDT => DataMessage().withFeatureData(FeatureVectorMessage().withDenseVector(DenseVectorMessage(row.getAs[FeatureVectorWrapper](col.name).toSeq)))
                 case _ => DataMessage().withStringData("")
               }
             }
@@ -251,6 +251,6 @@ class SearchRPC extends AdamSearchGrpc.AdamSearch with Logging {
       Seq()
     }
 
-    QueryResultInfoMessage(Some(AckMessage(AckMessage.Code.OK)), queryid, confidence, time, source, results)
+    QueryResultInfoMessage(Some(AckMessage(AckMessage.Code.OK)), queryid, confidence, time, source, info, results)
   }
 }
