@@ -32,14 +32,14 @@ class RPCClient(channel: ManagedChannel, definer: AdamDefinitionBlockingStub, se
     */
   val indexOnly = true
   val numQ = 5
-  val tupleSizes = Seq(1e4.toInt)
-  val dimensions = Seq(20)
-  val partitions = Seq(10)
+  val tupleSizes = Seq(1e5.toInt)
+  val dimensions = Seq(128)
+  val partitions = Seq(2, 4, 6, 10, 12, 18, 20, 50)
   val indices = Seq(IndexType.vaf)
   val indicesToGenerate = Seq(IndexType.vaf, IndexType.sh, IndexType.ecp)
   val partitioners = Seq(RepartitionMessage.Partitioner.SH, RepartitionMessage.Partitioner.ECP, RepartitionMessage.Partitioner.SPARK)
 
-  var dropPartitions = Seq(0.1, 0.2, 0.3, 0.4, 0.5, 0.9)
+  var dropPartitions = Seq(0.0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.9)
   var eName = ""
   val information = collection.mutable.Map[String, Any]()
   information.put("k", k)

@@ -184,9 +184,7 @@ message RepartitionMessage {
       CURRENT = 2;
       RANGE = 3;
       SH = 4;
-      PQ = 5;
       ECP = 6;
-      LSH = 7;
     }
   Partitioner partitioner = 5;
   //for possible options see each Repartitioner

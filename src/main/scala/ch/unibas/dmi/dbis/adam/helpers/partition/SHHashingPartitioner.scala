@@ -2,7 +2,7 @@ package ch.unibas.dmi.dbis.adam.helpers.partition
 
 import ch.unibas.dmi.dbis.adam.catalog.CatalogOperator
 import ch.unibas.dmi.dbis.adam.config.FieldNames
-import ch.unibas.dmi.dbis.adam.datatypes.bitString.BitString
+import ch.unibas.dmi.dbis.adam.datatypes.bitString.{BitString, EWAHBitString}
 import ch.unibas.dmi.dbis.adam.datatypes.feature.Feature
 import ch.unibas.dmi.dbis.adam.datatypes.feature.Feature.FeatureVector
 import ch.unibas.dmi.dbis.adam.entity.{Entity, EntityNameHolder}
@@ -12,10 +12,13 @@ import ch.unibas.dmi.dbis.adam.index.structures.sh.{SHIndexMetaData, SHIndexer, 
 import ch.unibas.dmi.dbis.adam.index.{Index, IndexingTaskTuple}
 import ch.unibas.dmi.dbis.adam.main.AdamContext
 import ch.unibas.dmi.dbis.adam.utils.Logging
+import com.googlecode.javaewah.datastructure.BitSet
 import org.apache.spark.Partitioner
 import org.apache.spark.rdd.RDD
 import org.apache.spark.sql.{DataFrame, Row}
 import org.apache.spark.util.random.Sampling
+
+import scala.collection.mutable.ListBuffer
 
 /**
   * Created by silvanheller on 26.07.16.
@@ -28,7 +31,9 @@ class SHHashingPartitioner(meta: SHHashingPartitionerMetaData) extends Partition
     val bitString = key.asInstanceOf[BitString[_]]
     val hash = SHUtils.hashFeature(SHHashingPartitioner.toVector(bitString, meta.getNoBits), meta.getMeta)
     var part = 0
-    hash.getBitIndexes.foreach(part+=Math.pow(2,_).toInt)
+    while(hash.iterator.hasNext){
+      part+=Math.pow(2,hash.iterator.next).toInt
+    }
     part
   }
 }
@@ -40,20 +45,38 @@ object SHHashingPartitioner extends ADAMPartitioner with Logging with Serializab
   override def getPartitions(q: FeatureVector, dropPercentage: Double, indexName: EntityNameHolder)(implicit ac: AdamContext): Seq[Int] = {
     val bitstring = getBitString(q, indexName)
     val meta = CatalogOperator.getPartitionerMeta(indexName).get.asInstanceOf[SHHashingPartitionerMetaData]
-    //TODO Generate all BitStrings of all Partitions here
+    val leaders = Seq.tabulate(meta.getNoPartitions)(el => EWAHBitString(convert(el)))
+    val sorted = leaders.zipWithIndex.sortBy(_._1.hammingDistance(bitstring))
+    sorted.dropRight((sorted.size*dropPercentage).toInt).map(_._2)
+  }
 
-    //sorted.dropRight((sorted.size*dropPercentage).toInt).map(_._2)
-    Seq()
+  /** Converts Long to BitSet*/
+  def convert(value: Long) : BitSet = {
+    val bits = new BitSet()
+    var index = 0
+    var modVal = value
+    while (modVal != 0L) {
+      if (modVal % 2L != 0) {
+        bits.set(index)
+      }
+      index+=1
+      modVal = modVal>>> 1
+    }
+    bits
   }
 
   override def partitionerName = PartitionerChoice.CURRENT
 
   def train(joinDF: DataFrame, nPart: Int, noBits: Int)(implicit ac: AdamContext): SHHashingPartitionerMetaData = {
     //TODO Magic Number
-    val trainingsize = 1000
+    val trainingsize = 1001
     val n = joinDF.count
     val fraction = Sampling.computeFractionForSampleSize(trainingsize, n, false)
-    val trainData: Array[IndexingTaskTuple[_]] = joinDF.sample(false, fraction).collect().map(f => IndexingTaskTuple(0, toVector(f.getAs[BitString[_]](FieldNames.featureIndexColumnName), noBits)))
+    var trainData: Array[IndexingTaskTuple[_]] = joinDF.sample(false, fraction).collect().map(f => IndexingTaskTuple(0, toVector(f.getAs[BitString[_]](FieldNames.partitionKey), noBits)))
+
+    if(trainData.length < trainingsize){
+      trainData = joinDF.take(trainingsize).map(f => IndexingTaskTuple(0,toVector(f.getAs[BitString[_]](FieldNames.partitionKey), noBits)))
+    }
 
     val indexmeta = SHIndexer.train(trainData, Some(noBits))
 
@@ -61,11 +84,22 @@ object SHHashingPartitioner extends ADAMPartitioner with Logging with Serializab
   }
 
   def toVector(bs: BitString[_], noBits: Int) : FeatureVector = {
-    val seq = Seq.tabulate(noBits)(el => if(bs.getBitIndexes.contains(el)) 1.0 else 0.0).toVector
-    Feature.conv_stored2vector(Feature.conv_doublestored2floatstored(seq))
+    val lb = ListBuffer[Double]()
+    var nxt = if(bs.iterator.hasNext) bs.iterator.next() else -1
+    var idx = 0
+    while(bs.iterator.hasNext && idx < noBits){
+      if(nxt==idx){
+        lb+=1d
+        nxt = bs.iterator.next()
+      } else lb+=0d
+      idx+=1
+    }
+    Feature.conv_stored2vector(Feature.conv_doublestored2floatstored(lb.toVector))
   }
 
   override def apply(data: DataFrame, cols: Option[Seq[String]], indexName: Option[EntityNameHolder], nPartitions: Int)(implicit ac: AdamContext): DataFrame = {
+    return data
+    //TODO Train is broken atm
     if (indexName.isEmpty) {
       throw new GeneralAdamException("Indexname was not specified")
     }

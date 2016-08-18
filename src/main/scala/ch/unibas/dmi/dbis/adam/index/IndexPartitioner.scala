@@ -43,31 +43,14 @@ object IndexPartitioner extends Logging {
 
     //repartition
     data = partitioner match {
-      case PartitionerChoice.SPARK =>
-        SparkPartitioner(data, cols, Some(index.indexname), nPartitions)
-      case PartitionerChoice.RANDOM =>
-        RandomPartitioner(data, cols, Some(index.indexname), nPartitions)
-      case PartitionerChoice.CURRENT => {
-        SHHashingPartitioner(data, cols, Some(index.indexname), nPartitions)
-      }
-      case PartitionerChoice.SH => {
-        SHPartitioner(data, cols, Some(index.indexname), nPartitions)
-      }
-      case PartitionerChoice.ECP=> {
-        ECPPartitioner(data, cols, Some(index.indexname), nPartitions)
-      }
-      case PartitionerChoice.LSH => {
-        throw new UnsupportedOperationException
-      }
-      case PartitionerChoice.PQ => {
-        PQPartitioner(data, cols, Some(index.indexname), nPartitions)
-      }
-      case PartitionerChoice.RANGE =>
-        {
-          throw new UnsupportedOperationException
+      case PartitionerChoice.SPARK => SparkPartitioner(data, cols, Some(index.indexname), nPartitions)
+      case PartitionerChoice.RANDOM => RandomPartitioner(data, cols, Some(index.indexname), nPartitions)
+      case PartitionerChoice.CURRENT => SHHashingPartitioner(data, cols, Some(index.indexname), nPartitions)
+      case PartitionerChoice.SH => SHPartitioner(data, cols, Some(index.indexname), nPartitions)
+      case PartitionerChoice.ECP=> ECPPartitioner(data, cols, Some(index.indexname), nPartitions)
+      case PartitionerChoice.RANGE => throw new UnsupportedOperationException
           //if (cols.isDefined) data.map(r => (r.getAs[Any](cols.get.head), r)) else data.map(r => (r.getAs[Any](index.pk.name), r))
           //ac.sqlContext.createDataFrame(toPartition.partitionBy(new RangePartitioner[(Any, Row)](nPartitions, toPartition)))
-        }
     }
     data = data.select(index.pk.name, FieldNames.featureIndexColumnName)
     log.debug("New Data Schema: "+data.schema.treeString)

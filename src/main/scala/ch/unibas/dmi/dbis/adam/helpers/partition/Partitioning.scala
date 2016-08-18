@@ -23,6 +23,4 @@ object PartitionerChoice extends Enumeration with Serializable{
   val CURRENT = Value("Current implementation")
   val SH = Value("Partition By SH-Key")
   val ECP = Value("Partition via ECP")
-  val PQ = Value("Partition via PQ")
-  val LSH = Value("Partition via LSH")
 }

@@ -51,6 +51,6 @@ object RandomPartitioner extends ADAMPartitioner{
     * */
   override def getPartitions(q: FeatureVector, dropPercentage: Double, indexName: EntityNameHolder)(implicit ac: AdamContext): Seq[Int] = {
     val nPart = CatalogOperator.getNumberOfPartitions(indexName).get
-    Random.shuffle((Seq.tabulate(nPart)(el => el))).drop((nPart*dropPercentage).toInt)
+    Random.shuffle(Seq.tabulate(nPart)(el => el)).drop((nPart*dropPercentage).toInt)
   }
 }

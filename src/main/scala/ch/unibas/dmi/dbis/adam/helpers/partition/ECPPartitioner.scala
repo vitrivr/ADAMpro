@@ -43,7 +43,7 @@ object ECPPartitioner extends ADAMPartitioner with Logging with Serializable{
     val trainingSize = nPart
     val fraction = Sampling.computeFractionForSampleSize(trainingSize, indexmeta.leaders.size, withReplacement = false)
     val leaders = ac.sc.parallelize(indexmeta.leaders)
-    leaders.sample(false, fraction).collect.take(nPart).zipWithIndex.map(f => IndexingTaskTuple(f._2,f._1.feature))
+    leaders.sample(withReplacement = false, fraction = fraction).collect.take(nPart).zipWithIndex.map(f => IndexingTaskTuple(f._2,f._1.feature))
   }
 
   /**

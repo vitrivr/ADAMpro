@@ -3,7 +3,6 @@ package ch.unibas.dmi.dbis.adam.helpers.partition
 import ch.unibas.dmi.dbis.adam.catalog.CatalogOperator
 import ch.unibas.dmi.dbis.adam.config.FieldNames
 import ch.unibas.dmi.dbis.adam.datatypes.bitString.BitString
-import ch.unibas.dmi.dbis.adam.datatypes.feature.Feature
 import ch.unibas.dmi.dbis.adam.datatypes.feature.Feature.FeatureVector
 import ch.unibas.dmi.dbis.adam.entity.{Entity, EntityNameHolder}
 import ch.unibas.dmi.dbis.adam.exception.GeneralAdamException
@@ -104,7 +103,7 @@ object SHPartitioner extends ADAMPartitioner with Logging with Serializable {
     val repartitioned: RDD[(Any, Row)] = joinedDF.map(r => (r.getAs[Any](FieldNames.partitionKey), r)).partitionBy(partitioner)
     val reparRDD = repartitioned.mapPartitions((it) => {
       it.map(f => f._2)
-    }, true)
+    }, preservesPartitioning = true)
 
     ac.sqlContext.createDataFrame(reparRDD, joinedDF.schema)
   }
