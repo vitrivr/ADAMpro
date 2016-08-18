@@ -9,7 +9,9 @@ import ch.unibas.dmi.dbis.adam.index.structures.IndexTypes
 import ch.unibas.dmi.dbis.adam.main.AdamContext
 import ch.unibas.dmi.dbis.adam.query.distance.DistanceFunction
 import ch.unibas.dmi.dbis.adam.query.query.NearestNeighbourQuery
+import org.apache.spark.broadcast.Broadcast
 import org.apache.spark.sql.DataFrame
+import org.apache.spark.sql.functions._
 import org.apache.spark.sql.types.DataTypes
 
 
@@ -40,27 +42,24 @@ class ECPIndex(val indexname: IndexName, val entityname: EntityName, override pr
     log.debug("scanning eCP index " + indexname)
 
     //for every leader, check its distance to the query-vector, then sort by distance.
-    val centroids = ac.sc.broadcast(metadata.leaders.map(l => {
-      (l.id, metadata.distance(q, l.feature))
-    }).sortBy(_._2))
+    val centroids = metadata.leaders.map(l => {
+      (l, metadata.distance(q, l.feature))
+    }).sortBy(_._2)
+
+    //take so many centroids up to the moment where the result-length is over k (therefore + 1)
+    val numberOfCentroidsToUse = centroids.map(_._1.count).scanLeft(0.toLong)(_ + _).takeWhile(_ < k).length + 1
+    val ids = ac.sc.broadcast(centroids.take(numberOfCentroidsToUse).map(_._1.id))
 
     log.trace("centroids prepared")
 
+    val distUDF = udf((idx : Int) => {
+      centroids(idx)._2
+    })
+
     //iterate over all centroids until the result-count is over k
-    import org.apache.spark.sql.functions.lit
-    var results : DataFrame = null
-    var i = 0
-    var counter = 0
-    do  {
-      val nns = data.filter(data(FieldNames.featureIndexColumnName) === centroids.value(i)._1).select(pk.name).withColumn(FieldNames.distanceColumnName, lit(centroids.value(i)._2).cast(DataTypes.FloatType))
-      if(results != null) {
-        results = results.unionAll(nns)
-      } else {
-        results = nns
-      }
-      counter += nns.count().toInt
-      i += 1
-    } while(i < centroids.value.length && counter < k)
+    import org.apache.spark.sql.functions._
+    val results = data.filter(col(FieldNames.featureIndexColumnName) isin (ids.value : _*))
+      .withColumn(FieldNames.distanceColumnName, distUDF(col(FieldNames.featureIndexColumnName)).cast(DataTypes.FloatType))
 
     results
   }
