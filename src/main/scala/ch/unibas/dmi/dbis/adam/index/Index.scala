@@ -479,6 +479,7 @@ object Index extends Logging {
     * @return true if index was dropped
     */
   def drop(indexname: IndexName)(implicit ac: AdamContext): Try[Void] = {
+    //TODO: tries to load index to drop; but what if index creation went wrong? -> cannot load index
     try {
       if (!exists(indexname)) {
         return Failure(EntityNotExistingException())
