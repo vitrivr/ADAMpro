@@ -10,6 +10,7 @@ import ch.unibas.dmi.dbis.adam.main.AdamContext
 import ch.unibas.dmi.dbis.adam.query.Result
 import ch.unibas.dmi.dbis.adam.query.distance.DistanceFunction
 import ch.unibas.dmi.dbis.adam.query.query.NearestNeighbourQuery
+import org.apache.spark.annotation.Experimental
 import org.apache.spark.sql.{Row, DataFrame}
 
 /**
@@ -18,7 +19,7 @@ import org.apache.spark.sql.{Row, DataFrame}
   * Ivan Giangreco
   * June 2016
   */
-class MIIndex(val indexname: IndexName, val entityname: EntityName, override private[index] var data: DataFrame, private[index] val metadata: MIIndexMetaData)(@transient override implicit val ac: AdamContext)
+@Experimental class MIIndex(val indexname: IndexName, val entityname: EntityName, override private[index] var data: DataFrame, private[index] val metadata: MIIndexMetaData)(@transient override implicit val ac: AdamContext)
   extends Index {
 
   override val indextypename: IndexTypeName = IndexTypes.MIINDEX
