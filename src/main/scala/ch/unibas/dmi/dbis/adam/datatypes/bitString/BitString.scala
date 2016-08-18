@@ -1,6 +1,7 @@
 package ch.unibas.dmi.dbis.adam.datatypes.bitString
 
 import ch.unibas.dmi.dbis.adam.utils.Logging
+import com.googlecode.javaewah.IntIterator
 import org.apache.spark.sql.types.{BinaryType, DataType, SQLUserDefinedType, UserDefinedType}
 
 /**
@@ -68,11 +69,11 @@ trait BitString[A] extends Serializable {
   def serialize: Array[Byte]
 
   /**
-    * Returns index position at which the bit is set to true.
+    * Iterator that returns the index position at which the bit is set to true.
     *
     * @return
     */
-  def getBitIndexes: Seq[Int]
+  def iterator : IntIterator
 }
 
 

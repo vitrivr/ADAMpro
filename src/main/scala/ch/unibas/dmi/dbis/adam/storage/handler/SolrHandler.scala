@@ -122,7 +122,7 @@ import scala.util.{Random, Success, Try}
       val client = new HttpSolrClient(url + "/" + corename)
 
       val entity = Entity.load(entityname).get
-      val schema = entity.schema().filter(attribute => attribute.storagehandler.isDefined && attribute.storagehandler.get.isInstanceOf[SolrHandler])
+      val schema = entity.schema().filter(attribute => attribute.storagehandler.isDefined && attribute.storagehandler.get.isInstanceOf[SolrHandler]) ++ Seq(entity.pk)
 
       //set query for retrieving data
       val solrQuery = new SolrQuery()
@@ -196,7 +196,7 @@ import scala.util.{Random, Success, Try}
       val corename = getCoreName(entityname)
 
       val entity = Entity.load(entityname).get
-      val schema = entity.schema().filter(attribute => attribute.storagehandler.isDefined && attribute.storagehandler.get.isInstanceOf[SolrHandler])
+      val schema = entity.schema().filter(attribute => attribute.storagehandler.isDefined && attribute.storagehandler.get.isInstanceOf[SolrHandler]) ++ Seq(entity.pk)
 
       df.foreachPartition { it =>
         val partClient = new HttpSolrClient(url + "/" + corename)

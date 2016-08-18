@@ -291,6 +291,7 @@ case class Entity(val entityname: EntityName)(@transient implicit val ac: AdamCo
         getData().get.head().mkString(":")
       }
     })
+    lb.append("partitions" -> getFeatureData.map(_.rdd.getNumPartitions).getOrElse(-1).toString)
 
     lb.toMap
   }

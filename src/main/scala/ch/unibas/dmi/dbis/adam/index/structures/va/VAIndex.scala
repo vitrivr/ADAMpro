@@ -56,10 +56,13 @@ class VAIndex(val indexname: IndexName, val entityname: EntityName, override pri
     val lbounds = ac.sc.broadcast(bounds._1)
     val ubounds = ac.sc.broadcast(bounds._2)
 
-    import org.apache.spark.sql.functions.udf
-    val distUDF = (bounds: Broadcast[Bounds]) => udf((c: BitString[_]) => {
-      val cells = metadata.signatureGenerator.toCells(c)
+    import org.apache.spark.sql.functions._
+    val cellsUDF = udf((c: BitString[_]) => {
+      metadata.signatureGenerator.toCells(c)
+    })
 
+
+    val distUDF = (bounds: Broadcast[Bounds]) => udf((cells: Seq[Int]) => {
       var bound: Float = 0
 
       var idx = 0
@@ -71,9 +74,11 @@ class VAIndex(val indexname: IndexName, val entityname: EntityName, override pri
       bound
     })
 
+
     val results = data
-      .withColumn("lbound", distUDF(lbounds)(data(FieldNames.featureIndexColumnName)))
-      .withColumn("ubound", distUDF(ubounds)(data(FieldNames.featureIndexColumnName))) //note that this is computed lazy!
+      .withColumn("ap_cells", cellsUDF(data(FieldNames.featureIndexColumnName)))
+      .withColumn("ap_lbound", distUDF(lbounds)(col("ap_cells")))
+      .withColumn("ap_ubound", distUDF(ubounds)(col("ap_cells"))) //note that this is computed lazy!
       .mapPartitions(p => {
       //in here  we compute for each partition the k nearest neighbours and collect the results
       val localRh = new VAResultHandler(k)
@@ -85,9 +90,10 @@ class VAIndex(val indexname: IndexName, val entityname: EntityName, override pri
 
       localRh.results.map(x => Row(x.tid, x.lower.toFloat)).iterator
     })
+
+
     //the most correct solution would be to re-do at this point the result handler with the pre-selected results again
     //but in most cases this will be less efficient than just considering all candidates
-
     ac.sqlContext.createDataFrame(results, Result.resultSchema(pk))
   }
 

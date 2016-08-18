@@ -48,7 +48,7 @@ class FixedSignatureGenerator(val dimensions: Int, val bitsPerDimension: Int) ex
   @inline def toCells(signature: BitString[_]): Seq[Int] = {
     assert(bitsPerDimension < 32)
 
-    val indexes = signature.getBitIndexes
+    val it = signature.iterator
     var i = 0
 
     val bitIntegers = new Array[Int](dimensions)
@@ -56,8 +56,8 @@ class FixedSignatureGenerator(val dimensions: Int, val bitsPerDimension: Int) ex
 
     var sum = 0
 
-    while (i < indexes.length) {
-      val index = indexes(i)
+    while (it.hasNext) {
+      val index = it.next()
 
       while (index >= sum + bitsPerDimension) {
         sum += bitsPerDimension

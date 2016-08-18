@@ -8,6 +8,8 @@ package ch.unibas.dmi.dbis.adam.config
   */
 object FieldNames {
 
+  val internalIdColumnName = "ap_id"
+
   val distanceColumnName = "ap_distance"
   val featureIndexColumnName = "ap_indexfeature"
 
@@ -16,5 +18,5 @@ object FieldNames {
 
   val partitionKey = "ap_partitionkey"
 
-  val reservedNames = Seq(distanceColumnName, featureIndexColumnName, partitionColumnName, sourceColumnName, partitionKey)
+  val reservedNames = Seq(internalIdColumnName, distanceColumnName, featureIndexColumnName, partitionColumnName, sourceColumnName, partitionKey)
 }
