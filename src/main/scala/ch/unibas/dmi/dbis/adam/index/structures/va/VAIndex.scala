@@ -52,13 +52,15 @@ class VAIndex(val indexname: IndexName, val entityname: EntityName, override pri
   override def scan(data: DataFrame, q: FeatureVector, distance: DistanceFunction, options: Map[String, String], k: Int): DataFrame = {
     log.debug("scanning VA-File index " + indexname)
 
+    val signatureGenerator = ac.sc.broadcast(metadata.signatureGenerator)
+
     val bounds = computeBounds(q, metadata.marks, distance.asInstanceOf[MinkowskiDistance])
     val lbounds = ac.sc.broadcast(bounds._1)
     val ubounds = ac.sc.broadcast(bounds._2)
 
     import org.apache.spark.sql.functions._
     val cellsUDF = udf((c: BitString[_]) => {
-      metadata.signatureGenerator.toCells(c)
+      signatureGenerator.value.toCells(c)
     })
 
 
@@ -88,7 +90,7 @@ class VAIndex(val indexname: IndexName, val entityname: EntityName, override pri
         localRh.offer(current, this.pk.name)
       }
 
-      localRh.results.map(x => Row(x.tid, x.lower.toFloat)).iterator
+      localRh.results.map(x => Row(x.tid, x.lower)).iterator
     })
 
 

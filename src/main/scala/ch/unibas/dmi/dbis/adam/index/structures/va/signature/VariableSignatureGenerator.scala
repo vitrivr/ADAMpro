@@ -23,6 +23,7 @@ class VariableSignatureGenerator (numberOfBitsPerDimension: Array[Int]) extends 
    * @return
    */
   def toSignature(cells: Seq[Int]): BitString[_] = {
+    val lengths = parNumberOfBitsPerDimension
     val setBits = ListBuffer[Int]()
 
     var bitSum = 0
@@ -39,13 +40,13 @@ class VariableSignatureGenerator (numberOfBitsPerDimension: Array[Int]) extends 
       do{
         bitPosition = cellBits.nextSetBit(fromPosition)
 
-        if(bitPosition != -1 && bitPosition < numberOfBitsPerDimension(dimIdx)){
+        if(bitPosition != -1 && bitPosition < lengths(dimIdx)){
            fromPosition = bitPosition + 1
            setBits.+=(bitPosition + bitSum)
         }
-      } while(bitPosition != -1 && bitPosition < numberOfBitsPerDimension(dimIdx))
+      } while(bitPosition != -1 && bitPosition < lengths(dimIdx))
 
-      bitSum += numberOfBitsPerDimension(dimIdx)
+      bitSum += lengths(dimIdx)
       i += 1
     }
 
@@ -59,7 +60,7 @@ class VariableSignatureGenerator (numberOfBitsPerDimension: Array[Int]) extends 
    * @return
    */
   @inline def toCells(signature: BitString[_]): Seq[Int] = {
-    val lengths = numberOfBitsPerDimension
+    val lengths = parNumberOfBitsPerDimension
     assert(lengths.count(_ > 32) < 1)
 
     val it = signature.iterator
