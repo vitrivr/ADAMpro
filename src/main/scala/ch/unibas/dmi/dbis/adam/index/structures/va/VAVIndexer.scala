@@ -34,6 +34,10 @@ class VAVIndexer(nbits: Option[Int], marksGenerator: MarksGenerator, trainingSiz
 
   /**
     *
+    * @param indexname name of index
+    * @param entityname name of entity
+    * @param data data to index
+    * @return
     */
   override def index(indexname: IndexName, entityname: EntityName, data: RDD[IndexingTaskTuple[_]]): Index = {
     val entity = Entity.load(entityname).get
