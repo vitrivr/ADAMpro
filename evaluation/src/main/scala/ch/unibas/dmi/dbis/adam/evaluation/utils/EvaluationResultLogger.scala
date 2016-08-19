@@ -13,7 +13,7 @@ object EvaluationResultLogger{
   private val seperator = "\t"
 
   /** Everything that gets logged */
-  private val names = Seq("tuples", "dimensions", "index", "partitioner", "partitions", "k", "skipPercentage", "time", "nores", "topk", "noskip_topk")
+  private val names = Seq("tuples", "dimensions", "index", "partitioner", "partitions", "k", "skipPercentage", "time", "nores", "skip_recall", "noskip_recall")
 
 
   /** Header line. Not formatted in line with results, but that's life */

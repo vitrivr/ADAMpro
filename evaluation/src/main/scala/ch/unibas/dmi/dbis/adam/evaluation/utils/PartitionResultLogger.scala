@@ -20,7 +20,10 @@ object PartitionResultLogger {
   out.flush()
 
   def write(values: Map[String, Any]): Unit = {
-    out.println(Calendar.getInstance.getTime + seperator + names.map(values(_)).mkString(seperator))
+    System.out.println(values("distribution"))
+    values("distribution").toString.split(":").map(el => (el.split(",")(0), el.split(",")(1))).foreach(el => {
+    out.println(Calendar.getInstance.getTime + seperator + names.filter(_!="distribution").map(values(_)).mkString(seperator)+seperator+el._1+seperator+el._2)
+    })
     out.flush()
   }
 

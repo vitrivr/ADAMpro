@@ -32,9 +32,9 @@ class RPCClient(channel: ManagedChannel, definer: AdamDefinitionBlockingStub, se
     */
   val indexOnly = true
   val numQ = 5
-  val tupleSizes = Seq(1e3.toInt)
-  val dimensions = Seq(20)
-  val partitions = Seq(2, 4, 6, 10, 12, 18, 20, 50)
+  val tupleSizes = Seq(1e6.toInt)
+  val dimensions = Seq(128)
+  val partitions = Seq(50)
   val indices = Seq(IndexType.vaf)
   val indicesToGenerate = Seq(IndexType.vaf, IndexType.sh, IndexType.ecp)
   val partitioners = Seq(RepartitionMessage.Partitioner.SH, RepartitionMessage.Partitioner.ECP, RepartitionMessage.Partitioner.SPARK)
@@ -201,40 +201,12 @@ class RPCClient(channel: ManagedChannel, definer: AdamDefinitionBlockingStub, se
 
       //Comparison Code
       val gtruth = truths(queryCounter)
-      val agreements = topKRes(queryCounter)
-      val skipAgree = topKMatch(gtruth, dropRes)
-      val res = information ++ Map("time" -> (stop - start), "nores" -> dropRes.size, "topk" -> skipAgree, "noskip_topk" -> agreements, "skipPercentage" -> dropPerc)
+      val noskipRecall = topKRes(queryCounter)
+      val skipRecall = topKMatch(gtruth, dropRes)
+      val res = information ++ Map("time" -> (stop - start), "nores" -> dropRes.size, "skip_recall" -> skipRecall, "noskip_recall" -> noskipRecall, "skipPercentage" -> dropPerc)
       EvaluationResultLogger.write(res toMap)
       queryCounter += 1
     }
-  }
-
-  /** Compares ap_distance of top k tuples. TODO This should be rewritten for the case t1=0 t2=n. */
-  def errorRatio(truth: Seq[QueryResultTupleMessage], guess: Seq[QueryResultTupleMessage]): Float = {
-    var perfectMatches = 0
-    val truths = truth.sortBy(_.data("ap_distance").getFloatData).zipWithIndex
-    val guesses = guess.sortBy(_.data("ap_distance").getFloatData).zipWithIndex.toArray
-    if (guesses.length == 0 || guesses.length < k) {
-      System.err.println("You have given " + guesses.length + " guesses to the errorRatio method.")
-    }
-    val errors: Seq[Float] = truths.map(el => {
-      if (el._2 >= k) 0f
-      else {
-        if (el._1.data("ap_distance").getFloatData == 0f) {
-          perfectMatches += 1
-          (guesses(el._2)._1.data("ap_distance").getFloatData + 1) / (el._1.data("ap_distance").getFloatData + 1)
-        } else {
-          if (el._2 >= guesses.length) 0f else guesses(el._2)._1.data("ap_distance").getFloatData / el._1.data("ap_distance").getFloatData
-        }
-      }
-    })
-    var err = 0f
-    for (f <- errors) {
-      if (err != Double.NaN) {
-        err += f
-      } else err += 1f
-    }
-    err / Math.min(k, Math.max(1, guesses.length)).toFloat //sanity-check for division by 0
   }
 
   /** Top-K intersection count normalized between 0 and 1 */
@@ -286,8 +258,6 @@ class RPCClient(channel: ManagedChannel, definer: AdamDefinitionBlockingStub, se
     } else name = indexList.indexes.find(im => im.indextype == index).get.index
     name
   }
-
-
 }
 
 object RPCClient {
