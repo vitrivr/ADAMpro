@@ -26,7 +26,7 @@ abstract class QueryExpression(id: Option[String]) extends Serializable with Log
   private var run = false
 
   private var results: Option[DataFrame] = None
-  val info = ExpressionDetails(None, None, id, None)
+  val info = ExpressionDetails(None, None, id, None, Map())
   protected var children: Seq[QueryExpression] = Seq()
 
   /**
@@ -172,7 +172,7 @@ abstract class QueryExpression(id: Option[String]) extends Serializable with Log
   }
 }
 
-case class ExpressionDetails(source: Option[String], scantype: Option[String], id: Option[String], confidence: Option[Float]) {
+case class ExpressionDetails(source: Option[String], scantype: Option[String], id: Option[String], confidence: Option[Float], info : Map[String, String] = Map()) {
   var time: Duration = Duration.Zero
   var results: Option[DataFrame] = None
 

@@ -302,7 +302,7 @@ object CatalogOperator extends Logging {
     * Drops entity from catalog.
     *
     * @param entityname name of entity
-    * @param ifExists   no error if does not exist
+    * @param ifExists   if true: no error if does not exist
     */
   def dropEntity(entityname: EntityName, ifExists: Boolean = false): Try[Void] = {
     execute("drop entity") {
@@ -461,12 +461,15 @@ object CatalogOperator extends Logging {
     * Drops index from catalog.
     *
     * @param indexname name of index
+    * @param ifExists   if true: no error if does not exist
     * @return
     */
-  def dropIndex(indexname: IndexName): Try[Void] = {
+  def dropIndex(indexname: IndexName, ifExists: Boolean = false): Try[Void] = {
     execute("drop index") {
       if (!existsIndex(indexname).get) {
-        throw new IndexNotExistingException()
+        if (!ifExists) {
+          throw new IndexNotExistingException()
+        }
       }
 
       //on delete cascade...

@@ -286,13 +286,7 @@ class AdamController(rpcClient: RPCClient) extends Controller {
   private def processProgressiveResults(id : String)(res: Try[RPCQueryResults]): Unit = {
     if (res.isSuccess) {
       val results = res.get
-
-      val sourcetype = if (results.source.length > 0) {
-        results.source.substring(0, results.source.indexOf("(")).toLowerCase.trim
-      } else {
-        ""
-      }
-      progTempResults.get(id).get += SearchProgressiveIntermediaryResponse(id, results.confidence, results.source, sourcetype, results.time, results.results, ProgressiveQueryStatus.RUNNING)
+      progTempResults.get(id).get += SearchProgressiveIntermediaryResponse(id, results.confidence, results.info.getOrElse("indextype", ""), results.time, results.results, ProgressiveQueryStatus.RUNNING)
     } else {
       log.error(res.failed.get)
       completedProgressiveResults(id, res.failed.get.getMessage, ProgressiveQueryStatus.ERROR)
@@ -307,7 +301,7 @@ class AdamController(rpcClient: RPCClient) extends Controller {
   }
 
   private def completedProgressiveResults(id : String, message : String, newStatus : ProgressiveQueryStatus.Value): Unit ={
-    progTempResults.get(id).get += SearchProgressiveIntermediaryResponse(id, 0.0, message, "", 0, Seq(), newStatus)
+    progTempResults.get(id).get += SearchProgressiveIntermediaryResponse(id, 0.0, message, 0, Seq(), newStatus)
     lazy val f = Future {
       Thread.sleep(10000);
       true

@@ -144,7 +144,7 @@ import scala.util.{Random, Success, Try}
 
             if (fieldData != null) {
               fieldData match {
-                case list: java.util.ArrayList[String] => if (list.size() > 0) {
+                case list: java.util.ArrayList[_] => if (list.size() > 0) {
                   list.get(0)
                 }
                 case any => any

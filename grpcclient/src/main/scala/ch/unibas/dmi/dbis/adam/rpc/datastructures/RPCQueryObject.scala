@@ -1,9 +1,9 @@
 package ch.unibas.dmi.dbis.adam.rpc.datastructures
 
-import ch.unibas.dmi.dbis.adam.http.grpc.BooleanQueryMessage.WhereMessage
-import ch.unibas.dmi.dbis.adam.http.grpc.QueryMessage.InformationLevel
-import ch.unibas.dmi.dbis.adam.http.grpc.QueryMessage.InformationLevel._
-import ch.unibas.dmi.dbis.adam.http.grpc._
+import org.vitrivr.adam.grpc.grpc.BooleanQueryMessage.WhereMessage
+import org.vitrivr.adam.grpc.grpc.QueryMessage.InformationLevel
+import org.vitrivr.adam.grpc.grpc.QueryMessage.InformationLevel._
+import org.vitrivr.adam.grpc.grpc._
 
 import scala.collection.mutable.ListBuffer
 
@@ -24,7 +24,7 @@ case class RPCQueryObject(var id: String, var operation: String, var options: Ma
 
   private def entity = options.get("entityname").get
 
-  private def subtype = options.get("subtype").getOrElse("")
+  private def subtype = options.getOrElse("subtype", "")
 
   private def sparsify(vec: Seq[Float]) = {
 

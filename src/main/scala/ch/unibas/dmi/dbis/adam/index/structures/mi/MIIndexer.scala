@@ -7,6 +7,7 @@ import ch.unibas.dmi.dbis.adam.index.structures.IndexTypes
 import ch.unibas.dmi.dbis.adam.index.{Index, IndexGenerator, IndexingTaskTuple}
 import ch.unibas.dmi.dbis.adam.main.AdamContext
 import ch.unibas.dmi.dbis.adam.query.distance.DistanceFunction
+import org.apache.spark.annotation.Experimental
 import org.apache.spark.rdd.RDD
 import org.apache.spark.sql.Row
 import org.apache.spark.sql.types._
@@ -18,7 +19,7 @@ import org.apache.spark.util.random.Sampling
   * Ivan Giangreco
   * June 2016
   */
-class MIIndexer(p_ki: Option[Int], p_ks: Option[Int], distance: DistanceFunction, nrefs: Option[Int])(@transient implicit val ac: AdamContext) extends IndexGenerator {
+@Experimental class MIIndexer(p_ki: Option[Int], p_ks: Option[Int], distance: DistanceFunction, nrefs: Option[Int])(@transient implicit val ac: AdamContext) extends IndexGenerator {
   override val indextypename: IndexTypeName = IndexTypes.MIINDEX
 
   /**

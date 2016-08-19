@@ -31,5 +31,5 @@ private[web] case class SearchProgressiveResponse(results: SearchProgressiveInte
 
 private[web] case class SearchProgressiveStartResponse(id: String)
 
-private[web] case class SearchProgressiveIntermediaryResponse(id: String, confidence: Double, source: String, sourcetype: String, time: Long, results: Seq[Map[String, String]], status: ProgressiveQueryStatus.Value)
+private[web] case class SearchProgressiveIntermediaryResponse(id: String, confidence: Double, source: String, time: Long, results: Seq[Map[String, String]], status: ProgressiveQueryStatus.Value)
 

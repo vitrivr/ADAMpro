@@ -2,16 +2,16 @@ package ch.unibas.dmi.dbis.adam.rpc
 
 import java.util.concurrent.TimeUnit
 
-import ch.unibas.dmi.dbis.adam.http.grpc.AdamDefinitionGrpc.AdamDefinitionBlockingStub
-import ch.unibas.dmi.dbis.adam.http.grpc.AdamSearchGrpc.{AdamSearchBlockingStub, AdamSearchStub}
-import ch.unibas.dmi.dbis.adam.http.grpc.DistanceMessage.DistanceType
-import ch.unibas.dmi.dbis.adam.http.grpc.RepartitionMessage.PartitionOptions
-import ch.unibas.dmi.dbis.adam.http.grpc._
 import ch.unibas.dmi.dbis.adam.rpc.datastructures.{RPCAttributeDefinition, RPCQueryObject, RPCQueryResults}
 import ch.unibas.dmi.dbis.adam.utils.Logging
 import io.grpc.okhttp.OkHttpChannelBuilder
 import io.grpc.stub.StreamObserver
 import io.grpc.{ManagedChannel, ManagedChannelBuilder}
+import org.vitrivr.adam.grpc.grpc.AdamDefinitionGrpc.AdamDefinitionBlockingStub
+import org.vitrivr.adam.grpc.grpc.AdamSearchGrpc.{AdamSearchStub, AdamSearchBlockingStub}
+import org.vitrivr.adam.grpc.grpc.DistanceMessage.DistanceType
+import org.vitrivr.adam.grpc.grpc.RepartitionMessage.PartitionOptions
+import org.vitrivr.adam.grpc.grpc._
 
 import scala.util.{Failure, Success, Try}
 

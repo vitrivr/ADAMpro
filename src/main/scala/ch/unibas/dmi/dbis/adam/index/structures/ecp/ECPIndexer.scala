@@ -65,17 +65,18 @@ class ECPIndexer(centroidBasedLeaders: Boolean, distance: DistanceFunction, trai
 
     val leaders = if (centroidBasedLeaders) {
       //compute centroid
-      indexdata.groupBy(_._2).map { case (id, data) =>
-        val vectors = data.map(x => x._3).toSeq
-        val newLeader = vectors.reduce((x, y) => x + y)./=(vectors.length.toFloat)
-        IndexingTaskTuple(id, newLeader)
-      }.collect()
+      indexdata.map(x => x._2 ->(x._3, 1))
+        .reduceByKey { case ((value1, count1), (value2, count2)) => (value1 + value2, count1 + count2) }
+        .mapValues { case (value, count) => (value / count.toFloat, count) }
+        .map(x => ECPLeader(x._1, x._2._1, x._2._2))
+        .collect.toSeq
     } else {
       //use feature vector chosen in beginning as leader
-      bcleaders.value
+      val counts = indexdata.map(x => x._2 -> 1).countByKey
+      bcleaders.value.map(x => ECPLeader(x.id, x.feature, counts(x.id))).toSeq
     }
 
-    new ECPIndex(indexname, entityname, df, ECPIndexMetaData(leaders.toSeq, distance))
+    new ECPIndex(indexname, entityname, df, ECPIndexMetaData(leaders, distance))
   }
 }
 

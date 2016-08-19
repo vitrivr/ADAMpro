@@ -7,13 +7,13 @@ import ch.unibas.dmi.dbis.adam.datatypes.feature.{FeatureVectorWrapper, FeatureV
 import ch.unibas.dmi.dbis.adam.entity.{AttributeDefinition, Entity}
 import ch.unibas.dmi.dbis.adam.exception.GeneralAdamException
 import ch.unibas.dmi.dbis.adam.helpers.partition.{PartitionMode, PartitionerChoice}
-import ch.unibas.dmi.dbis.adam.http.grpc.{AckMessage, CreateEntityMessage, _}
 import ch.unibas.dmi.dbis.adam.index.structures.IndexTypes
 import ch.unibas.dmi.dbis.adam.main.{AdamContext, SparkStartup}
 import ch.unibas.dmi.dbis.adam.utils.{AdamImporter, Logging}
 import io.grpc.stub.StreamObserver
 import org.apache.spark.sql.types.{DataType, StructField, StructType}
 import org.apache.spark.sql.{Row, types}
+import org.vitrivr.adam.grpc.grpc._
 
 import scala.concurrent.Future
 
