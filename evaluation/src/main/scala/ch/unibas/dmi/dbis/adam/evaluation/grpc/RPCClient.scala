@@ -4,12 +4,12 @@ import java.io.File
 
 import ch.unibas.dmi.dbis.adam.evaluation.io.SeqIO
 import ch.unibas.dmi.dbis.adam.evaluation.utils.{AdamParEvalUtils, EvaluationResultLogger, Logging, PartitionResultLogger}
-import ch.unibas.dmi.dbis.adam.http.grpc.AdamDefinitionGrpc.AdamDefinitionBlockingStub
-import ch.unibas.dmi.dbis.adam.http.grpc.AdamSearchGrpc.{AdamSearchBlockingStub, AdamSearchStub}
-import ch.unibas.dmi.dbis.adam.http.grpc.RepartitionMessage.Partitioner
-import ch.unibas.dmi.dbis.adam.http.grpc._
 import io.grpc.okhttp.OkHttpChannelBuilder
 import io.grpc.{ManagedChannel, ManagedChannelBuilder}
+import org.vitrivr.adam.grpc.grpc.AdamDefinitionGrpc.AdamDefinitionBlockingStub
+import org.vitrivr.adam.grpc.grpc.AdamSearchGrpc.{AdamSearchBlockingStub, AdamSearchStub}
+import org.vitrivr.adam.grpc.grpc.RepartitionMessage.Partitioner
+import org.vitrivr.adam.grpc.grpc._
 
 import scala.collection.mutable
 import scala.collection.mutable.ListBuffer
@@ -21,7 +21,7 @@ import scala.util.Random
   * Ivan Giangreco
   * June 2016
   */
-class RPCClient(channel: ManagedChannel, definer: AdamDefinitionBlockingStub, searcherBlocking: AdamSearchBlockingStub, searcher: AdamSearchStub, host: String) extends EvaluationResultLogger with AdamParEvalUtils with Logging {
+class RPCClient(channel: ManagedChannel, definer: AdamDefinitionBlockingStub, searcherBlocking: AdamSearchBlockingStub, searcher: AdamSearchStub, host: String) extends AdamParEvalUtils with Logging{
 
   val k = 200
 
@@ -32,8 +32,8 @@ class RPCClient(channel: ManagedChannel, definer: AdamDefinitionBlockingStub, se
     */
   val indexOnly = true
   val numQ = 5
-  val tupleSizes = Seq(1e5.toInt)
-  val dimensions = Seq(128)
+  val tupleSizes = Seq(1e3.toInt)
+  val dimensions = Seq(20)
   val partitions = Seq(2, 4, 6, 10, 12, 18, 20, 50)
   val indices = Seq(IndexType.vaf)
   val indicesToGenerate = Seq(IndexType.vaf, IndexType.sh, IndexType.ecp)
@@ -43,44 +43,44 @@ class RPCClient(channel: ManagedChannel, definer: AdamDefinitionBlockingStub, se
   var eName = ""
   val information = collection.mutable.Map[String, Any]()
   information.put("k", k)
+  PartitionResultLogger.init
+  EvaluationResultLogger.init
   //dropAllEntities()
 
-  try
-      for (tuples <- tupleSizes) {
-        information.put("tuples", tuples)
-        for (dim <- dimensions) {
-          information.put("dimensions", dim)
-          eName = getOrGenEntity(tuples, dim)
-          for (index <- indicesToGenerate) {
-            getOrGenIndex(index, eName)
-          }
-          getOrGenQueries(dim)
-          getOrGenTruth(dim)
+  for (tuples <- tupleSizes) {
+    information.put("tuples", tuples)
+    for (dim <- dimensions) {
+      information.put("dimensions", dim)
+      eName = getOrGenEntity(tuples, dim)
+      for (index <- indicesToGenerate) {
+        getOrGenIndex(index, eName)
+      }
+      getOrGenQueries(dim)
+      getOrGenTruth(dim)
 
-          for (index <- indices) {
-            information.put("index", index)
-            var name = getOrGenIndex(index, eName)
-            for (part <- partitions) {
-              information.put("partitions", part)
-              for (partitioner <- partitioners) {
-                information.put("partitioner", partitioner)
-                name = definer.repartitionIndexData(RepartitionMessage(name, numberOfPartitions = part, option = RepartitionMessage.PartitionOptions.REPLACE_EXISTING, partitioner = partitioner)).message
-                val props = definer.getEntityProperties(EntityNameMessage(name))
-                PartitionResultLogger.write(information + ("distribution" -> props.properties("tuplesPerPartition")) toMap)
-                //Free query to cache index
-                val nnq = Some(randomQueryMessage(dim, 0.0))
-                searcherBlocking.doQuery(QueryMessage(nnq = nnq, from = Some(FromMessage(FromMessage.Source.Index(name)))))
+      for (index <- indices) {
+        information.put("index", index)
+        var name = getOrGenIndex(index, eName)
+        for (part <- partitions) {
+          information.put("partitions", part)
+          for (partitioner <- partitioners) {
+            information.put("partitioner", partitioner)
+            name = definer.repartitionIndexData(RepartitionMessage(name, numberOfPartitions = part, option = RepartitionMessage.PartitionOptions.REPLACE_EXISTING, partitioner = partitioner)).message
+            val props = definer.getEntityProperties(EntityNameMessage(name))
+            PartitionResultLogger.write(information + ("distribution" -> props.properties("tuplesPerPartition")) toMap)
+            //Free query to cache index
+            val nnq = Some(randomQueryMessage(dim, 0.0))
+            searcherBlocking.doQuery(QueryMessage(nnq = nnq, from = Some(FromMessage(FromMessage.Source.Index(name)))))
 
-                log.debug("Timing queries")
-                for (dropPerc <- dropPartitions) {
-                  timeQuery(name, dropPerc)
-                }
-              }
+            log.debug("Timing queries")
+            for (dropPerc <- dropPartitions) {
+              timeQuery(name, dropPerc)
             }
           }
         }
       }
-  finally out.close()
+    }
+  }
   log.debug("I'm done")
 
   def repartition(): Unit = {
@@ -204,7 +204,7 @@ class RPCClient(channel: ManagedChannel, definer: AdamDefinitionBlockingStub, se
       val agreements = topKRes(queryCounter)
       val skipAgree = topKMatch(gtruth, dropRes)
       val res = information ++ Map("time" -> (stop - start), "nores" -> dropRes.size, "topk" -> skipAgree, "noskip_topk" -> agreements, "skipPercentage" -> dropPerc)
-      write(res toMap)
+      EvaluationResultLogger.write(res toMap)
       queryCounter += 1
     }
   }

@@ -4,11 +4,10 @@ import java.io.File
 import java.util.Properties
 import java.util.logging.Logger
 
-import ch.unibas.cs.dbis.chronos.agent.{ChronosHttpClient, ChronosJob}
-import ch.unibas.dmi.dbis.adam.http.grpc.RepartitionMessage
 import ch.unibas.cs.dbis.chronos.agent.ChronosJob
 import ch.unibas.dmi.dbis.adam.rpc.RPCClient
 import ch.unibas.dmi.dbis.adam.rpc.datastructures.{RPCAttributeDefinition, RPCQueryObject, RPCQueryResults}
+import org.vitrivr.adam.grpc.grpc.RepartitionMessage
 
 import scala.collection.mutable.ListBuffer
 import scala.util.{Random, Try}

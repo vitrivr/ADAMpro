@@ -9,9 +9,11 @@ import java.util.Calendar
   */
 object PartitionResultLogger {
 
-  val out = new PrintWriter(new BufferedWriter(new FileWriter("part_" + new SimpleDateFormat("MMdd_HHmm").format(Calendar.getInstance.getTime) + ".tsv", true)))
-  val seperator = "\t"
-  val names = Seq("index", "tuples", "dimensions", "partitions", "partitioner", "distribution")
+  /** stub */
+  def init : Unit = {}
+  private val out = new PrintWriter(new BufferedWriter(new FileWriter("part_" + new SimpleDateFormat("MMdd_HHmm").format(Calendar.getInstance.getTime) + ".tsv", true)))
+  private val seperator = "\t"
+  private val names = Seq("index", "tuples", "dimensions", "partitions", "partitioner", "distribution")
 
   /** Header */
   out.println("curr_time" + seperator + names.mkString(seperator))

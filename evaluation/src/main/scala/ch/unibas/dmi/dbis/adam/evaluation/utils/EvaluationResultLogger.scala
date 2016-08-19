@@ -7,12 +7,13 @@ import java.util.Calendar
 /**
   * Created by silvan on 08.07.16.
   */
-trait EvaluationResultLogger extends Logging {
-  val out = new PrintWriter(new BufferedWriter(new FileWriter("results_" + new SimpleDateFormat("MMdd_HHmm").format(Calendar.getInstance.getTime) + ".tsv", true)))
-  val seperator = "\t"
+object EvaluationResultLogger{
+  def init : Unit = {}
+  private val out = new PrintWriter(new BufferedWriter(new FileWriter("results_" + new SimpleDateFormat("MMdd_HHmm").format(Calendar.getInstance.getTime) + ".tsv", true)))
+  private val seperator = "\t"
 
   /** Everything that gets logged */
-  val names = Seq("tuples", "dimensions", "index", "partitioner", "partitions", "k", "skipPercentage", "time", "nores", "topk", "noskip_topk")
+  private val names = Seq("tuples", "dimensions", "index", "partitioner", "partitions", "k", "skipPercentage", "time", "nores", "topk", "noskip_topk")
 
 
   /** Header line. Not formatted in line with results, but that's life */
