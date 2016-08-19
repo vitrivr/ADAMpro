@@ -39,7 +39,7 @@ object ECPPartitioner extends ADAMPartitioner with Logging with Serializable{
     * This uses eCP on the eCP-leaders.
     * TODO Maybe use multi-layered eCP? -> How would we store that sensibly
     */
-  def sampleLeaders(indexmeta: ECPIndexMetaData, nPart: Int)(implicit ac: AdamContext) : Array[IndexingTaskTuple[Int]] = {
+  def trainLeaders(indexmeta: ECPIndexMetaData, nPart: Int)(implicit ac: AdamContext) : Array[IndexingTaskTuple[Int]] = {
     val trainingSize = nPart
     val fraction = Sampling.computeFractionForSampleSize(trainingSize, indexmeta.leaders.size, withReplacement = false)
     val leaders = ac.sc.parallelize(indexmeta.leaders)
@@ -56,7 +56,7 @@ object ECPPartitioner extends ADAMPartitioner with Logging with Serializable{
     * @param nPartitions how many partitions shall be created
     * @return the partitioned DataFrame
     */
-  override def apply(data: DataFrame, cols: Option[Seq[String]], indexName: Option[EntityNameHolder], nPartitions: Int)(implicit ac: AdamContext): DataFrame = {
+  override def apply(data: DataFrame, cols: Option[Seq[String]], indexName: Option[EntityNameHolder], nPartitions: Int, options : Map[String, String] = Map[String, String]())(implicit ac: AdamContext): DataFrame = {
 
     //loads the first ECPIndex
     val index = try {
@@ -67,7 +67,7 @@ object ECPPartitioner extends ADAMPartitioner with Logging with Serializable{
     log.debug("repartitioning ")
 
     val indexmeta = CatalogOperator.getIndexMeta(index.indexname).get.asInstanceOf[ECPIndexMetaData]
-    val leaders = sampleLeaders(indexmeta, nPartitions)
+    val leaders = trainLeaders(indexmeta, nPartitions)
 
     CatalogOperator.dropPartitioner(indexName.get)
     CatalogOperator.createPartitioner(indexName.get,nPartitions,new ECPPartitionerMetaData(nPartitions,leaders, indexmeta.distance),ECPPartitioner)

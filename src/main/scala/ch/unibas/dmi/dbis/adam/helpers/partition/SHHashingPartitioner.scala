@@ -97,7 +97,7 @@ object SHHashingPartitioner extends ADAMPartitioner with Logging with Serializab
     Feature.conv_stored2vector(Feature.conv_doublestored2floatstored(lb.toVector))
   }
 
-  override def apply(data: DataFrame, cols: Option[Seq[String]], indexName: Option[EntityNameHolder], nPartitions: Int)(implicit ac: AdamContext): DataFrame = {
+  override def apply(data: DataFrame, cols: Option[Seq[String]], indexName: Option[EntityNameHolder], nPartitions: Int, options:Map[String, String] = Map[String, String]())(implicit ac: AdamContext): DataFrame = {
     return data
     //TODO Train is broken atm
     if (indexName.isEmpty) {

@@ -81,7 +81,7 @@ object SHPartitioner extends ADAMPartitioner with Logging with Serializable {
     * @param nPartitions how many partitions shall be created
     * @return the partitioned DataFrame
     */
-  override def apply(data: DataFrame, cols: Option[Seq[String]], indexName: Option[EntityNameHolder], nPartitions: Int)(implicit ac: AdamContext): DataFrame = {
+  override def apply(data: DataFrame, cols: Option[Seq[String]], indexName: Option[EntityNameHolder], nPartitions: Int, options:Map[String, String] = Map[String, String]())(implicit ac: AdamContext): DataFrame = {
     if (indexName.isEmpty) {
       throw new GeneralAdamException("Indexname was not specified")
     }

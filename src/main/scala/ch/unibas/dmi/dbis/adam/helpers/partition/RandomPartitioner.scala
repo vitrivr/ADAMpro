@@ -38,7 +38,7 @@ object RandomPartitioner extends ADAMPartitioner{
     * @param nPartitions how many partitions shall be created
     * @return the partitioned DataFrame
     */
-  override def apply(data: DataFrame, cols: Option[Seq[String]], indexName: Option[EntityNameHolder], nPartitions: Int)(implicit ac: AdamContext): DataFrame = {
+  override def apply(data: DataFrame, cols: Option[Seq[String]], indexName: Option[EntityNameHolder], nPartitions: Int, options:Map[String, String] = Map[String, String]())(implicit ac: AdamContext): DataFrame = {
     val schema = data.schema
     CatalogOperator.dropPartitioner(indexName.get)
     CatalogOperator.createPartitioner(indexName.get,nPartitions,null,RandomPartitioner)

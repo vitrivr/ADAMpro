@@ -31,7 +31,7 @@ abstract class ADAMPartitioner{
     * @param nPartitions how many partitions shall be created
     * @return the partitioned DataFrame
     */
-  def apply(data: DataFrame, cols: Option[Seq[String]] = None, indexName: Option[EntityNameHolder] = None, nPartitions: Int)(implicit ac: AdamContext): DataFrame
+  def apply(data: DataFrame, cols: Option[Seq[String]] = None, indexName: Option[EntityNameHolder] = None, nPartitions: Int, options : Map[String, String] = Map[String, String]())(implicit ac: AdamContext): DataFrame
 
   /** Returns the partitions to be queried for a given Featurevector */
   def getPartitions(q: FeatureVector, dropPercentage: Double, indexName: EntityNameHolder)(implicit ac: AdamContext): Seq[Int]
