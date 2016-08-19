@@ -250,7 +250,7 @@ abstract class Index(@transient implicit val ac: AdamContext) extends Serializab
     val partitionInfo = data.rdd.mapPartitionsWithIndex((idx, f) => {
       Iterator((idx, f.length))
     })
-    lb.append("tuplesPerPartition" -> partitionInfo.collect().map { case (id, length) => "(" + id + "," + length + ")" }.mkString)
+    lb.append("tuplesPerPartition" -> partitionInfo.collect().map { case (id, length) => id + "," + length }.mkString(":"))
 
     lb.toMap
   }
