@@ -16,13 +16,12 @@ object PartitionResultLogger {
   private val names = Seq("index", "tuples", "dimensions", "partitions", "partitioner", "distribution")
 
   /** Header */
-  out.println("curr_time" + seperator + names.mkString(seperator))
+  out.println(names.mkString(seperator))
   out.flush()
 
   def write(values: Map[String, Any]): Unit = {
-    System.out.println(values("distribution"))
     values("distribution").toString.split(":").map(el => (el.split(",")(0), el.split(",")(1))).foreach(el => {
-    out.println(Calendar.getInstance.getTime + seperator + names.filter(_!="distribution").map(values(_)).mkString(seperator)+seperator+el._1+seperator+el._2)
+    out.println(names.filter(_!="distribution").map(values(_)).mkString(seperator)+seperator+el._1+seperator+el._2)
     })
     out.flush()
   }
