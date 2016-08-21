@@ -9,5 +9,5 @@ build
 src/generated
 
 *.csv
+*.tsv
 *.qlist
-resources/
