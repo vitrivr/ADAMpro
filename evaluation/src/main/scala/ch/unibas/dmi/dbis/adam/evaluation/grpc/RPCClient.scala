@@ -21,9 +21,10 @@ import scala.util.Random
   * Ivan Giangreco
   * June 2016
   */
-class RPCClient(channel: ManagedChannel, definer: AdamDefinitionBlockingStub, searcherBlocking: AdamSearchBlockingStub, searcher: AdamSearchStub, host: String) extends AdamParEvalUtils with Logging{
+class RPCClient(channel: ManagedChannel, definer: AdamDefinitionBlockingStub, searcherBlocking: AdamSearchBlockingStub, searcher: AdamSearchStub, host: String) extends AdamParEvalUtils with Logging {
 
   val k = 200
+  val pr = 10
 
   val compareK = false
 
@@ -31,21 +32,22 @@ class RPCClient(channel: ManagedChannel, definer: AdamDefinitionBlockingStub, se
     * Evaluation Params
     */
   val indexOnly = true
-  val numQ = 5
+  val numQ = 10
   val tupleSizes = Seq(1e6.toInt)
-  val dimensions = Seq(128)
-  val partitions = Seq(50)
+  val dimensions = Seq(20, 64, 128)
+  val partitions = Seq(1, 2, 4, 6, 8, 10, 12)
   val indices = Seq(IndexType.vaf)
   val indicesToGenerate = Seq(IndexType.vaf, IndexType.sh, IndexType.ecp)
-  val partitioners = Seq(RepartitionMessage.Partitioner.SH, RepartitionMessage.Partitioner.ECP, RepartitionMessage.Partitioner.SPARK)
+  val partitioners = Seq(RepartitionMessage.Partitioner.ECP, RepartitionMessage.Partitioner.SPARK, RepartitionMessage.Partitioner.SH)
 
-  var dropPartitions = Seq(0.0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.9)
+  var dropPartitions = Seq(0.0)
   var eName = ""
   val information = collection.mutable.Map[String, Any]()
   information.put("k", k)
   PartitionResultLogger.init
-  EvaluationResultLogger.init
+  EvaluationResultLogger.init(pr)
   //dropAllEntities()
+  //definer.dropEntity(EntityNameMessage("sil_" + 1e6.toInt + "_" + 128 + "_" + host.replace(".", "")))
 
   for (tuples <- tupleSizes) {
     information.put("tuples", tuples)
@@ -83,9 +85,6 @@ class RPCClient(channel: ManagedChannel, definer: AdamDefinitionBlockingStub, se
   }
   log.debug("I'm done")
 
-  def repartition(): Unit = {
-
-  }
 
   def getOrGenQueries(dim: Int): IndexedSeq[NearestNeighbourQueryMessage] = {
     val file = new File("resources/" + eName + "/queries_" + dim + ".qlist")
@@ -111,7 +110,6 @@ class RPCClient(channel: ManagedChannel, definer: AdamDefinitionBlockingStub, se
       val name = getOrGenIndex(index, eName)
       val queries = getOrGenQueries(dim)
       val truths = getOrGenTruth(dim)
-
       //While-Loop because performance and memory
       val lb = ListBuffer[Float]()
       var counter = 0
@@ -139,7 +137,6 @@ class RPCClient(channel: ManagedChannel, definer: AdamDefinitionBlockingStub, se
       val queries = getOrGenQueries(dim)
       log.debug("Generating Truth for " + dim + " dimensions")
 
-      //Switching to Counter because scala
       var qCounter = 0
       val pks = ListBuffer[IndexedSeq[Float]]()
       while (qCounter < numQ) {
@@ -202,12 +199,29 @@ class RPCClient(channel: ManagedChannel, definer: AdamDefinitionBlockingStub, se
       //Comparison Code
       val gtruth = truths(queryCounter)
       val noskipRecall = topKRes(queryCounter)
-      val skipRecall = topKMatch(gtruth, dropRes)
+      val skipRecall = recall(gtruth, dropRes, k)
+
+      val prValues = IndexedSeq.tabulate(pr)(el => (recall(gtruth, dropRes, el), precision(gtruth, dropRes, el)))
       val res = information ++ Map("time" -> (stop - start), "nores" -> dropRes.size, "skip_recall" -> skipRecall, "noskip_recall" -> noskipRecall, "skipPercentage" -> dropPerc)
-      EvaluationResultLogger.write(res toMap)
+      EvaluationResultLogger.writePR(res toMap, prValues)
       queryCounter += 1
     }
   }
+
+  /** Recall @ k */
+  def recall(truth: IndexedSeq[Float], guess: Seq[QueryResultTupleMessage], k: Int): Float = {
+    val guessPKs = guess.map(_.data("pk").getLongData.toFloat)
+    val ag = truth.take(k).intersect(guessPKs).length
+    ag.toFloat / Math.max(1, Math.min(k, truth.size)) //sanity-check for division and if k > truth.size
+  }
+
+  /** Precision @ k */
+  def precision(truth: IndexedSeq[Float], guess: Seq[QueryResultTupleMessage], k: Int): Float = {
+    val guessPKs = guess.map(_.data("pk").getLongData.toFloat)
+    val ag = truth.take(k).intersect(guessPKs).length
+    ag.toFloat / Math.max(1, Math.min(k, guess.size))
+  }
+
 
   /** Top-K intersection count normalized between 0 and 1 */
   def topKMatch(truth: IndexedSeq[Float], guess: Seq[QueryResultTupleMessage]): Float = {
