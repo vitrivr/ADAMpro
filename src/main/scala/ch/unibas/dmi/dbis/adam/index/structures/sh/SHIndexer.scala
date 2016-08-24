@@ -76,6 +76,8 @@ class SHIndexer(nbits: Option[Int], trainingSize: Int)(@transient implicit val a
 
     val nfeatures = dTrainData.head.length
 
+    //TODO: error in creation because dimensionality is wrong?
+
     val numComponents = math.min(nfeatures, nbits.getOrElse(nfeatures * 2))
 
     // pca
