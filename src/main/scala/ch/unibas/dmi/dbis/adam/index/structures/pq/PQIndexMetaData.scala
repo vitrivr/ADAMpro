@@ -11,4 +11,4 @@ import scala.collection.immutable.IndexedSeq
   * April 2016
   */
 private[pq]
-case class PQIndexMetaData(models : IndexedSeq[KMeansModel], nsq : Int) {}
+case class PQIndexMetaData(models : IndexedSeq[KMeansModel], nsq : Int) extends Serializable
