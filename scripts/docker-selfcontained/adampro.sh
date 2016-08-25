@@ -1,5 +1,7 @@
 #!/bin/bash
 
+service postgresql-9.4 stop
+
 : ${HADOOP_PREFIX:=/usr/local/hadoop}
 
 $HADOOP_PREFIX/etc/hadoop/hadoop-env.sh
@@ -31,6 +33,9 @@ hdfs dfsadmin -safemode leave
 $SPARK_HOME/bin/spark-submit --master "local[4]" --deploy-mode client --class ch.unibas.dmi.dbis.adam.main.Startup $ADAM_HOME/ADAMpro-assembly-0.1.0.jar &
 
 sleep 10 #sleep until ADAMpro is started
+
+# solr
+service solr start
 
 java -jar $ADAM_HOME/ADAMpro-web-assembly-0.1.0.jar
 

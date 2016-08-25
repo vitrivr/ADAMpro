@@ -12,6 +12,6 @@ adampro {
   }
 
   solr {
-    url = "http://HOSTNAME:32768/solr"
+    url = "http://HOSTNAME:8983/solr"
   }
 }

@@ -1,0 +1,34 @@
+#!/bin/bash
+#
+# chkconfig: 2345 20 20
+# short-description: Solr
+# description: Startup script for Apache Solr Server
+
+SOLR_DIR="/usr/local/solr" 
+
+case $1 in 
+      start) 
+            echo "Starting Solr..." 
+            $SOLR_DIR/bin/solr start -noprompt 
+            sleep 1 
+            lsof -i :8983 
+            ;; 
+      stop) 
+            echo "Stopping Solr..." 
+            $SOLR_DIR/bin/solr stop 
+            ;; 
+      restart) 
+            $0 stop 
+            sleep 2 
+            $0 start 
+            ;; 
+      status) 
+            $SOLR_DIR/bin/solr status 
+            ;; 
+      *) 
+            echo "Usage: $0 [start|stop|restart]" 
+            exit 1 
+            ;; 
+esac 
+
+exit 0

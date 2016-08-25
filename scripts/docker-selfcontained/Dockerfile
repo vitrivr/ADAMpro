@@ -39,13 +39,23 @@ RUN /usr/pgsql-9.4/bin/pg_ctl start &&\sleep 5 &&\/usr/pgsql-9.4/bin/psql --comm
 
 USER root
 
+# solr
+RUN curl  http://mirror.symnds.com/software/Apache/lucene/solr/6.1.0/solr-6.1.0.tgz | tar -xz -C /usr/local/
+RUN cd /usr/local && ln -s solr-6.1.0 solr
+RUN yum -y install lsof
+COPY solr /etc/init.d/solr
+RUN chmod 777 /etc/init.d/solr
+RUN chkconfig --add solr
+
 #port for postgresql
 EXPOSE 5432
-# port for spark
+# port for spark UI
 EXPOSE 4040
+# port for solr
+EXPOSE 8983
 # port for grpc
 EXPOSE 5890 
-# port for web UI
+# port for ADAMpro web UI
 EXPOSE 9099
 
 # bootstrap
