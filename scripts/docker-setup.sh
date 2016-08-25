@@ -16,7 +16,7 @@ DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && cd ".." && pwd )"
 mkdir -p $DIR/target # note that we mount the target folder to the docker VM
 
 if [[ "$(sudo docker images -q spark:j1.8-s1.6.1-h2.6> /dev/null)" == "" ]]; then
-  sudo docker build -t sparkj1.8 $DIR/scripts/docker
+  sudo docker build -t sparkj1.8 $DIR/scripts/docker-sparkonly
 fi
 
 cp -R $DIR/conf $DIR/target/
