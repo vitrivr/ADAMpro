@@ -13,7 +13,7 @@ import ch.unibas.dmi.dbis.adam.utils.Logging
   */
 object AdamConfig extends Serializable with Logging {
   val config = {
-    val externalConfig = getExternalConfigFile()
+    val externalConfig = getExternalConfigFile().map(_.resolve())
 
     val internalConfig =  if (!ConfigFactory.load().hasPath("adampro")) {
       //this is somewhat a hack to have different configurations depending on whether we have an assembly-jar or we
@@ -22,7 +22,7 @@ object AdamConfig extends Serializable with Logging {
       ConfigFactory.load("assembly.conf")
     } else {
       ConfigFactory.load()
-    }
+    }.resolve()
 
     //merge with internal
     val merged = if(externalConfig.isDefined){
@@ -101,7 +101,7 @@ object AdamConfig extends Serializable with Logging {
     val file = new File(path, name)
 
     if(file.exists()){
-      Some(ConfigFactory.parseFile(file).resolve())
+      Some(ConfigFactory.parseFile(file))
     } else {
       None
     }
