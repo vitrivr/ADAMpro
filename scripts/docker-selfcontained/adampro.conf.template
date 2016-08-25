@@ -1,0 +1,17 @@
+adampro {
+  hadoopUrl =  "hdfs://HOSTNAME:9000"
+  basePath = ${adampro.hadoopUrl}"/adampro/"
+
+  internalsPath = ${adampro.basePath}"/internals"
+  indexPath = ${adampro.basePath}"/index"
+  dataPath = ${adampro.basePath}"/data"
+  evaluationPath = ${adampro.basePath}"/evaluation"
+
+  jdbc {
+    url = "jdbc:postgresql://HOSTNAME:5432/adampro"
+  }
+
+  solr {
+    url = "http://HOSTNAME:32768/solr"
+  }
+}
