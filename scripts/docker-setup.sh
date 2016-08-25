@@ -9,7 +9,7 @@ eval "$(sudo docker-machine env default)"
 sudo docker network create --driver bridge adampronw
 
 # creates postgresql container
-sudo docker run --net=adampronw -p 5432:5432 -h postgresql --name postgresql --net-alias postgresql -d orchardup/postgresql:latest
+sudo docker run --net=adampronw -p 5432:5432 -e POSTGRES_PASSWORD=adampro -e POSTGRES_DB=adampro -e POSTGRES_USER=adampro  -h postgresql --name postgresql --net-alias postgresql -d postgres:latest
 
 # creates Spark container
 DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && cd ".." && pwd )"
