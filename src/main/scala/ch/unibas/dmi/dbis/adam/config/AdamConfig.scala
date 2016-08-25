@@ -25,11 +25,13 @@ object AdamConfig extends Serializable with Logging {
     }
 
     //merge with internal
-    if(externalConfig.isDefined){
+    val merged = if(externalConfig.isDefined){
       externalConfig.get.withFallback(internalConfig)
     } else {
       internalConfig
     }
+
+    merged.resolve()
   }
   log.debug(config.toString)
   config.checkValid(ConfigFactory.defaultReference(), "adampro")
@@ -99,7 +101,7 @@ object AdamConfig extends Serializable with Logging {
     val file = new File(path, name)
 
     if(file.exists()){
-      Some(ConfigFactory.parseFile(file))
+      Some(ConfigFactory.parseFile(file).resolve())
     } else {
       None
     }
