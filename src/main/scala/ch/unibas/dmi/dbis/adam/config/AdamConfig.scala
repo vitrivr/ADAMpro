@@ -2,7 +2,7 @@ package ch.unibas.dmi.dbis.adam.config
 
 import java.io.File
 
-import com.typesafe.config.ConfigFactory
+import com.typesafe.config.{Config, ConfigFactory}
 import ch.unibas.dmi.dbis.adam.utils.Logging
 
 /**
@@ -13,15 +13,22 @@ import ch.unibas.dmi.dbis.adam.utils.Logging
   */
 object AdamConfig extends Serializable with Logging {
   val config = {
-    val defaultConfig = ConfigFactory.load()
+    val externalConfig = getExternalConfigFile()
 
-    if(!defaultConfig.hasPath("adampro")){
+    val internalConfig =  if (!ConfigFactory.load().hasPath("adampro")) {
       //this is somewhat a hack to have different configurations depending on whether we have an assembly-jar or we
       //run the application "locally"
       log.info("using assembly.conf")
       ConfigFactory.load("assembly.conf")
     } else {
-      defaultConfig
+      ConfigFactory.load()
+    }
+
+    //merge with internal
+    if(externalConfig.isDefined){
+      externalConfig.get.withFallback(internalConfig)
+    } else {
+      internalConfig
     }
   }
   log.debug(config.toString)
@@ -37,7 +44,7 @@ object AdamConfig extends Serializable with Logging {
   val internalsPath = cleanPath(config.getString("adampro.internalsPath"))
   val schedulerFile = internalsPath + "/" + "scheduler.xml"
 
-  val jdbcUrl =  config.getString("adampro.jdbc.url")
+  val jdbcUrl = config.getString("adampro.jdbc.url")
   val jdbcUser = config.getString("adampro.jdbc.user")
   val jdbcPassword = config.getString("adampro.jdbc.password")
 
@@ -61,7 +68,7 @@ object AdamConfig extends Serializable with Logging {
   val maximumCacheSizeQueryResults = 1000
   val expireAfterAccessQueryResults = 60 //in minutes
 
-  val master = if(config.hasPath("adampro.master")){
+  val master = if (config.hasPath("adampro.master")) {
     Option(config.getString("adampro.master"))
   } else {
     None
@@ -69,7 +76,7 @@ object AdamConfig extends Serializable with Logging {
 
   val defaultNumberOfPartitions = 8
 
-  val localNodes = if(config.hasPath("adampro.localNodes")){
+  val localNodes = if (config.hasPath("adampro.localNodes")) {
     Option(config.getInt("adampro.localNodes"))
   } else {
     None
@@ -79,12 +86,33 @@ object AdamConfig extends Serializable with Logging {
 
 
   /**
+    * Reads external config file.
+    *
+    * @param name
+    * @return
+    */
+  private def getExternalConfigFile(name: String = "adampro.conf"): Option[Config] = {
+    var path = getClass().getProtectionDomain().getCodeSource().getLocation().getPath()
+    path = path.substring(0, path.lastIndexOf("/"))
+    path = path.replaceAll("%20", " ")
+
+    val file = new File(path, name)
+
+    if(file.exists()){
+      Some(ConfigFactory.parseFile(file))
+    } else {
+      None
+    }
+  }
+
+
+  /**
     * Cleans paths, e.g. replaces ~ by path to home folder
     *
     * @param s
     * @return
     */
-  private def cleanPath(s : String): String = {
+  private def cleanPath(s: String): String = {
     var newString = s
 
     if (newString.startsWith("~" + File.separator)) {
