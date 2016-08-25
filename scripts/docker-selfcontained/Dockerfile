@@ -16,18 +16,17 @@ RUN rm jdk-8u77-linux-x64.rpm
 ENV SPARK_HOME /usr/local/spark
 ENV ADAM_HOME /usr/local/adam
 
+# adding jar files
 RUN mkdir -p $ADAM_HOME
 RUN chmod 777 $ADAM_HOME
-COPY ADAMpro-assembly-0.1.0.jar $SPARK_HOME/ADAMpro-assembly-0.1.0.jar
-COPY ADAMpro-web-assembly-0.1.0.jar $SPARK_HOME/ADAMpro-web-assembly-0.1.0.jar
-COPY adampro.conf.template $SPARK_HOME/adampro.conf.template
+COPY ADAMpro-assembly-0.1.0.jar $ADAM_HOME/ADAMpro-assembly-0.1.0.jar
+COPY ADAMpro-web-assembly-0.1.0.jar $ADAM_HOME/ADAMpro-web-assembly-0.1.0.jar
+COPY adampro.conf.template $ADAM_HOME/adampro.conf.template
 
 # postgresql
+ENV PGDATA /var/lib/pgsql/data
 RUN rpm -Uvh http://yum.postgresql.org/9.4/redhat/rhel-6-x86_64/pgdg-redhat94-9.4-1.noarch.rpm
 RUN yum -y update postgresql94-server postgresql94
-
-ENV PGDATA /var/lib/pgsql/data
-
 RUN yum -y install postgresql94-server postgresql94
 RUN service postgresql-9.4 stop
 
@@ -35,7 +34,7 @@ USER postgres
 RUN /usr/pgsql-9.4/bin/initdb --encoding=UTF8
 RUN echo "host    all             all             0.0.0.0/0               trust" >> $PGDATA/pg_hba.conf
 RUN echo "listen_addresses='*'" >> $PGDATA/postgresql.conf
-
+## create adampro postgresql database
 RUN /usr/pgsql-9.4/bin/pg_ctl start &&\sleep 5 &&\/usr/pgsql-9.4/bin/psql --command "CREATE USER adampro WITH SUPERUSER PASSWORD 'adampro';" &&\/usr/pgsql-9.4/bin/createdb -O adampro adampro
 
 USER root
