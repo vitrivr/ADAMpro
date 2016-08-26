@@ -3,7 +3,6 @@ package ch.unibas.dmi.dbis.adam.utils
 import java.sql.{Connection, DriverManager}
 
 import ch.unibas.dmi.dbis.adam.api.{EntityOp, IndexOp}
-import ch.unibas.dmi.dbis.adam.config.AdamConfig
 import ch.unibas.dmi.dbis.adam.datatypes.FieldTypes
 import ch.unibas.dmi.dbis.adam.datatypes.FieldTypes.FEATURETYPE
 import ch.unibas.dmi.dbis.adam.datatypes.feature.FeatureVectorWrapper
@@ -116,7 +115,7 @@ class AdamImporter(url: String, user: String, password: String) extends Logging 
       }
 
       var schema = insertDF.schema.fields.map(field => {
-        if (featureFields.contains(field.name)) {
+        if (featureFields.contains(field.name) || field.name == "feature") {
           val newName = if (featureFields.length == 1) {
             "feature"
           } else {
