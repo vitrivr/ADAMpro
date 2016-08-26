@@ -48,7 +48,7 @@ class AdamImporter(url: String, user: String, password: String) extends Logging 
       }
 
       val df = ac.sqlContext.read.format("jdbc").options(
-        Map("url" -> url, "dbtable" -> (schemaname + "." + tablename), "user" -> AdamConfig.jdbcUser, "password" -> AdamConfig.jdbcPassword, "driver" -> "org.postgresql.Driver")
+        Map("url" -> url, "dbtable" -> (schemaname + "." + tablename), "user" -> user, "password" -> password, "driver" -> "org.postgresql.Driver")
       ).load()
 
       val conn = openConnection()
