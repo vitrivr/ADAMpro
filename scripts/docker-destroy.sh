@@ -4,12 +4,15 @@
 # removes all docker containers for ADAMpro. when starting containers again, the data is no longer available.
 ####################
 
-eval "$(sudo docker-machine env default)"
+docker stop solr
+docker rm solr
 
-sudo docker stop postgresql
-sudo docker rm postgresql
+docker stop postgresql
+docker rm postgresql
 
-sudo docker stop spark
-sudo docker rm spark
+docker stop spark
+docker rm spark
 
-sudo docker network rm adampronw
+docker network rm adampronw
+
+echo "Containers have been removed."

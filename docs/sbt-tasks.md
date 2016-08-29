@@ -6,4 +6,5 @@ sbt tasks
 *   `destroyDocker`: deletes the docker containers
 *   `startDocker`: starts the docker containers
 *   `stopDocker`: stops the docker containers without deleting them
-*   `runADAM`: runs ADAMpro in docker container, performs first an assembly of and then does a sparkSubmit
+*   `runDocker`: runs ADAMpro in docker container, performs first an assembly of and then does a sparkSubmit
+*   `buildDocker`: build a self-contained docker ADAMpro container (adampro:latest) with all necessary packages installed
