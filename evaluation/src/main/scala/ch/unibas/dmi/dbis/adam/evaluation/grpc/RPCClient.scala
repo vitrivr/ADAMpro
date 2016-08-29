@@ -1,6 +1,7 @@
 package ch.unibas.dmi.dbis.adam.evaluation.grpc
 
 import java.io.File
+import java.util.Scanner
 
 import ch.unibas.dmi.dbis.adam.evaluation.io.SeqIO
 import ch.unibas.dmi.dbis.adam.evaluation.utils.{AdamParEvalUtils, EvaluationResultLogger, Logging, PartitionResultLogger}
@@ -31,14 +32,14 @@ class RPCClient(channel: ManagedChannel, definer: AdamDefinitionBlockingStub, se
   /**
     * Evaluation Params
     */
-  val indexOnly = true
+  val indexOnly = false
   val numQ = 10
-  val tupleSizes = Seq(1e6.toInt)
+  val tupleSizes = Seq(1e7.toInt)
   val dimensions = Seq(20, 64, 128)
-  val partitions = Seq(1, 2, 4, 6, 8, 10, 12)
+  val partitions = Seq(1, 2, 4, 6, 8, 10, 12, 18, 50)
   val indices = Seq(IndexType.vaf)
-  val indicesToGenerate = Seq(IndexType.vaf, IndexType.sh, IndexType.ecp)
-  val partitioners = Seq(RepartitionMessage.Partitioner.ECP, RepartitionMessage.Partitioner.SPARK, RepartitionMessage.Partitioner.SH)
+  val indicesToGenerate = Seq(IndexType.vaf, IndexType.sh)
+  val partitioners = Seq(RepartitionMessage.Partitioner.SPARK, RepartitionMessage.Partitioner.SH)
 
   var dropPartitions = Seq(0.0)
   var eName = ""
@@ -71,6 +72,7 @@ class RPCClient(channel: ManagedChannel, definer: AdamDefinitionBlockingStub, se
             val props = definer.getEntityProperties(EntityNameMessage(name))
             PartitionResultLogger.write(information + ("distribution" -> props.properties("tuplesPerPartition")) toMap)
             //Free query to cache index
+            searcherBlocking.cacheIndex(IndexNameMessage(name))
             val nnq = Some(randomQueryMessage(dim, 0.0))
             searcherBlocking.doQuery(QueryMessage(nnq = nnq, from = Some(FromMessage(FromMessage.Source.Index(name)))))
 
@@ -235,6 +237,13 @@ class RPCClient(channel: ManagedChannel, definer: AdamDefinitionBlockingStub, se
 
   /** Drops all entities. Careful when using this operation */
   def dropAllEntities() = {
+
+    log.warn("You have requested to drop all entities on host: "+host+". Please confirm by entering the number 42.")
+    val keyboard = new Scanner(System.in);
+    val myint = keyboard.nextInt();
+    if(myint!=42){
+      System.exit(1)
+    }
     val entityList = definer.listEntities(EmptyMessage())
 
     for (entity <- entityList.entities) {

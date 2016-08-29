@@ -36,8 +36,6 @@ class SHPartitioner(meta: SHPartitionerMetaData) extends Partitioner with Loggin
   * Maybe it's useful to analyze the distribution of the data for training
   * See i.e. Hubness http://perun.pmf.uns.ac.rs/radovanovic/publications/2011-pakdd-khubs.pdf
   * Currently uses random leaders again. K-means in euclidian space failed.
-  * Maybe in the future this could train an SH-Hashfunction on the training data
-  * Maybe use multi-level leadership like they propose in the eCP-Paper.
   */
 object SHPartitioner extends ADAMPartitioner with Logging with Serializable {
 
@@ -51,20 +49,21 @@ object SHPartitioner extends ADAMPartitioner with Logging with Serializable {
 
   override def partitionerName = PartitionerChoice.SH
 
-  /** selects leaders at random. Could be better but is probably better than the spark k-means.*/
+  /** Sample 400 points and select the point with the biggest distance */
   def trainClusters(joinDF: DataFrame, nPart: Int, noBits: Int)(implicit ac: AdamContext): IndexedSeq[BitString[_]] = {
     //TODO Magic Number
     val trainingsize = 400
     val n = joinDF.count
     val fraction = Sampling.computeFractionForSampleSize(trainingsize, n, false)
 
+    //Choose one random leader initally
     var leaders = ListBuffer[BitString[_]](BitString(Seq.tabulate(noBits)( el => if(Random.nextBoolean()) el else 0).filter(_!=0)))
-    log.debug("Random leader: "+leaders)
+
     def getMinDistance(c: BitString[_]) : Int = leaders.sortBy(_.hammingDistance(c)).last.hammingDistance(c)
 
     while(leaders.size<nPart){
       var trainData: Array[BitString[_]] = joinDF.sample(false, fraction).collect().map(_.getAs[BitString[_]](FieldNames.partitionKey))
-      if(trainData.length<100) trainData = trainData ++ joinDF.take(100).map(el => el.getAs[BitString[_]](FieldNames.partitionKey))
+      if(trainData.length<100) trainData = trainData ++ joinDF.take(100).map(_.getAs[BitString[_]](FieldNames.partitionKey))
       leaders+=trainData.sortBy(r => getMinDistance(r)).last
       if(leaders.size%20==0) log.debug(leaders.size.toString)
     }

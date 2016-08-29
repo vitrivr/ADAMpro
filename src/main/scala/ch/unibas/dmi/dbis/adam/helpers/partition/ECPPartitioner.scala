@@ -37,7 +37,8 @@ object ECPPartitioner extends ADAMPartitioner with Logging with Serializable{
 
   /**
     * This uses eCP on the eCP-leaders.
-    * TODO Maybe use multi-layered eCP? -> How would we store that sensibly
+    * TODO Maybe use addditional n% leaders and drop largest & smallest, then reassign.
+    * -> This needs storing of count, see ecp-index code
     */
   def trainLeaders(indexmeta: ECPIndexMetaData, nPart: Int)(implicit ac: AdamContext) : Array[IndexingTaskTuple[Int]] = {
     val trainingSize = nPart
