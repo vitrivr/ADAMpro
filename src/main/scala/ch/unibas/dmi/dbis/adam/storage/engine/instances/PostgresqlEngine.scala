@@ -21,6 +21,8 @@ import scala.util.{Failure, Success, Try}
 class PostgresqlEngine(private val url: String, private val user: String, private val password: String) extends RelationalDatabaseEngine with Serializable  {
   Class.forName("org.postgresql.Driver")
 
+  private val SCHEMA = "public"
+
 
   /**
     * Opens a connection to the PostgreSQL database.
@@ -28,7 +30,9 @@ class PostgresqlEngine(private val url: String, private val user: String, privat
     * @return
     */
   private def openConnection(): Connection = {
-    DriverManager.getConnection(url, user, password)
+    val connection = DriverManager.getConnection(url, user, password)
+    connection.setSchema(SCHEMA)
+    connection
   }
 
   override def create(tablename: String, fields: Seq[AttributeDefinition])(implicit ac: AdamContext): Try[Option[String]] = {
@@ -126,6 +130,7 @@ class PostgresqlEngine(private val url: String, private val user: String, privat
       props.put("user", AdamConfig.jdbcUser)
       props.put("password", AdamConfig.jdbcPassword)
       props.put("driver", "org.postgresql.Driver")
+      props.put("currentSchema", SCHEMA)
       df.write.mode(mode).jdbc(url, tablename, props)
 
       Success(null)
