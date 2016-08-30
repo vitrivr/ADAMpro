@@ -196,7 +196,7 @@ import scala.util.{Random, Success, Try}
       val corename = getCoreName(entityname)
 
       val entity = Entity.load(entityname).get
-      val schema = entity.schema().filter(attribute => attribute.storagehandler.isDefined && attribute.storagehandler.get.isInstanceOf[SolrHandler]) ++ Seq(entity.pk)
+      var schema = entity.schema().filter(attribute => attribute.storagehandler.isDefined && attribute.storagehandler.get.isInstanceOf[SolrHandler]).filterNot(_.pk) ++ Seq(entity.pk)
 
       df.foreachPartition { it =>
         val partClient = new HttpSolrClient(url + "/" + corename)
