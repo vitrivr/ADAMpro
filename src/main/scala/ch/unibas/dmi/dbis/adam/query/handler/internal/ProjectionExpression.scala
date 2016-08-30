@@ -92,4 +92,18 @@ object ProjectionExpression extends Logging {
     override def hashCode(): Int = 1
   }
 
+  case class DistinctOperationProjection(implicit ac: AdamContext) extends ProjectionField {
+    override def f(df: DataFrame): DataFrame = {
+      df.distinct()
+    }
+
+    override def equals(that: Any): Boolean =
+      that match {
+        case that: DistinctOperationProjection => true
+        case _ => false
+      }
+
+    override def hashCode(): Int = 0
+  }
+
 }

@@ -125,7 +125,8 @@ class EntityTestSuite extends AdamTestBase {
         }
 
         val dbNames = lb.toList.toMap //fields from relational database
-      val templateNames = fieldTemplate.filter(_.sqlType.length > 0).map(ft => ft.name -> ft.sqlType).toMap //fields that should be stored in relational database
+        val templateNames = fieldTemplate.filter(_.sqlType.length > 0).map(ft => ft.name -> ft.sqlType).toMap //fields that should be stored in relational database
+
 
         assert(dbNames.size == templateNames.size)
 

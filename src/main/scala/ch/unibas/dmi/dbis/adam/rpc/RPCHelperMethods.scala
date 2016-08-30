@@ -12,7 +12,7 @@ import ch.unibas.dmi.dbis.adam.query.handler.external.ExternalScanExpressions
 import ch.unibas.dmi.dbis.adam.query.handler.generic.{QueryEvaluationOptions, QueryExpression}
 import ch.unibas.dmi.dbis.adam.query.handler.internal.AggregationExpression._
 import ch.unibas.dmi.dbis.adam.query.handler.internal.BooleanFilterExpression.BooleanFilterScanExpression
-import ch.unibas.dmi.dbis.adam.query.handler.internal.ProjectionExpression.{CountOperationProjection, ExistsOperationProjection, FieldNameProjection, ProjectionField}
+import ch.unibas.dmi.dbis.adam.query.handler.internal.ProjectionExpression._
 import ch.unibas.dmi.dbis.adam.query.handler.internal._
 import ch.unibas.dmi.dbis.adam.query.information.InformationLevels
 import ch.unibas.dmi.dbis.adam.query.information.InformationLevels.{InformationLevel, LAST_STEP_ONLY}
@@ -221,21 +221,24 @@ private[rpc] object RPCHelperMethods {
     */
   def prepareProjectionExpression(pm: ProjectionMessage, qe: QueryExpression, queryid: Option[String])(implicit ac: AdamContext): Try[QueryExpression] = {
     try {
-      if (pm.submessage.isOp) {
-        pm.getOp match {
-          case ProjectionMessage.Operation.COUNT => Success(ProjectionExpression(CountOperationProjection(), qe, queryid))
-          case ProjectionMessage.Operation.EXISTS => Success(ProjectionExpression(ExistsOperationProjection(), qe, queryid))
-          case _ => Success(qe)
-        }
-      } else {
-        val attributes = pm.getAttributes.attribute
+      val attributes = pm.getAttributes.attribute
 
-        if (attributes.isEmpty) {
-          Success(qe)
-        } else {
-          Success(ProjectionExpression(FieldNameProjection(attributes), qe, queryid))
+      var expr = qe
+
+      if (attributes.nonEmpty) {
+        expr = ProjectionExpression(FieldNameProjection(attributes), expr, queryid)
+      }
+
+      if(!pm.op.isUnrecognized){
+        expr = pm.op match {
+          case ProjectionMessage.Operation.COUNT => ProjectionExpression(CountOperationProjection(), expr, queryid)
+          case ProjectionMessage.Operation.EXISTS => ProjectionExpression(ExistsOperationProjection(), expr, queryid)
+          case ProjectionMessage.Operation.DISTINCT => ProjectionExpression(DistinctOperationProjection(), expr, queryid)
+          case _ => expr
         }
       }
+
+      Success(expr)
     } catch {
       case e: Exception => Failure(e)
     }

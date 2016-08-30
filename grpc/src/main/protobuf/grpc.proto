@@ -299,16 +299,14 @@ message ProjectionMessage {
   enum Operation {
     COUNT = 0;
     EXISTS = 1;
+    DISTINCT = 2;
   }
   message AttributeNameMessage {
     repeated string attribute = 1;
   }
-  oneof submessage {
-    //either attributes are specified...
-    AttributeNameMessage attributes = 1;
-    //...or an operation
-    Operation op = 2;
-  }
+
+  AttributeNameMessage attributes = 1;
+  Operation op = 2;
 }
 
 message FromMessage {
