@@ -9,10 +9,10 @@ ADAMPRODIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && cd ".." && pwd )"
 docker network create --driver bridge adampronw
 
 # creates postgresql container
-docker run --net=adampronw -p 5432:5432 -e POSTGRES_PASSWORD=adampro -e POSTGRES_DB=adampro -e POSTGRES_USER=adampro  -h postgresql --name postgresql --net-alias postgresql -d postgres:latest
+docker run --net=adampronw -p 5432:5432 -e POSTGRES_PASSWORD=adampro -e POSTGRES_DB=adampro -e POSTGRES_USER=adampro  -h postgresql --name postgresql --net-alias postgresql -d postgres:9.4
 
 # creates a solr container
-docker run --net=adampronw -p 8983:8983 -h solr --name solr --net-alias solr -d solr:latest
+docker run --net=adampronw -p 8983:8983 -h solr --name solr --net-alias solr -d solr:6.1
 
 # creates Spark container
 mkdir -p $ADAMPRODIR/target # note that we mount the target folder to the docker VM
