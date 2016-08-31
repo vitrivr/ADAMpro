@@ -156,7 +156,8 @@ class AdamTestBase extends FeatureSpec with GivenWhenThen with Eventually with I
     def readResourceFile(filename: String, hasHeader: Boolean = false): Seq[String] = {
       val stream = getClass.getResourceAsStream("/" + filename)
       val lines = scala.io.Source.fromInputStream(stream).getLines.toSeq
-
+      stream.close()
+      
       if (hasHeader) {
         lines.drop(1)
       } else {
