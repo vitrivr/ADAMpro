@@ -60,9 +60,9 @@ class RPCClient(channel: ManagedChannel, definer: AdamDefinitionBlockingStub, se
           val storagehandlername = attribute.storagehandlername.get
 
           val handlertype = storagehandlername match {
-            case "relational" => HandlerType.relational
-            case "feature" => HandlerType.feature
-            case "solr" => HandlerType.solr
+            case "relational" => HandlerType.RELATIONAL
+            case "file" => HandlerType.FILE
+            case "solr" => HandlerType.SOLR
           }
 
           adm.withHandler(handlertype)
