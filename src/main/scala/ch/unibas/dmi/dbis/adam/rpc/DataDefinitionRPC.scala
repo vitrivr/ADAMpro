@@ -439,7 +439,7 @@ class DataDefinitionRPC extends AdamDefinitionGrpc.AdamDefinition with Logging {
       Future.successful(AckMessage(AckMessage.Code.OK, res.get.mkString(",")))
     } else {
       log.error(res.failed.get.getMessage, res.failed.get)
-      Future.successful(AckMessage(AckMessage.Code.ERROR))
+      Future.successful(AckMessage(code = AckMessage.Code.ERROR, message = res.failed.get.getMessage))
     }
   }
 
@@ -456,7 +456,7 @@ class DataDefinitionRPC extends AdamDefinitionGrpc.AdamDefinition with Logging {
       Future.successful(AckMessage(AckMessage.Code.OK))
     } else {
       log.error(res.failed.get.getMessage, res.failed.get)
-      Future.successful(AckMessage(AckMessage.Code.ERROR))
+      Future.successful(AckMessage(code = AckMessage.Code.ERROR, message = res.failed.get.getMessage))
     }
   }
 
@@ -466,7 +466,7 @@ class DataDefinitionRPC extends AdamDefinitionGrpc.AdamDefinition with Logging {
     * @return
     */
   override def importDataFile(request: ImportDataFileMessage): Future[AckMessage] = {
-    log.debug("rpc call for importing data files")
+    log.debug("rpc call for importing entity from file")
 
     //create entity if necessary
     val entityname = if (request.destination.isCreateEntity) {
