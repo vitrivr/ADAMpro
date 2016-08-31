@@ -34,10 +34,10 @@ class DataDefinitionRPC extends AdamDefinitionGrpc.AdamDefinition with Logging {
   override def createEntity(request: CreateEntityMessage): Future[AckMessage] = {
     log.debug("rpc call for create entity operation")
     val entityname = request.entity
-    val fields = request.attributes.map(attribute => {
+    val attributes = request.attributes.map(attribute => {
       AttributeDefinition(attribute.name, matchFields(attribute.attributetype), attribute.pk, attribute.unique, attribute.indexed) //TODO: add handler type
     })
-    val res = EntityOp(entityname, fields)
+    val res = EntityOp(entityname, attributes)
 
     if (res.isSuccess) {
       Future.successful(AckMessage(code = AckMessage.Code.OK, res.get.entityname))
@@ -482,7 +482,16 @@ class DataDefinitionRPC extends AdamDefinitionGrpc.AdamDefinition with Logging {
     * @return
     */
   override def importData(request: ImportMessage): Future[AckMessage] = {
-    AdamImporter(request.host, request.database, request.username, request.password)
+    log.debug("rpc call for importing data from old ADAM")
+
+    val res = AdamImporter(request.host, request.database, request.username, request.password)
+    if (res.isSuccess) {
+      Future.successful(AckMessage(AckMessage.Code.OK))
+    } else {
+      log.error(res.failed.get.getMessage, res.failed.get)
+      Future.successful(AckMessage(AckMessage.Code.ERROR))
+    }
+  }
     Future.successful(AckMessage(AckMessage.Code.OK))
   }
 }
