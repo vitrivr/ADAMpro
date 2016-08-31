@@ -34,8 +34,16 @@ class DataDefinitionRPC extends AdamDefinitionGrpc.AdamDefinition with Logging {
   override def createEntity(request: CreateEntityMessage): Future[AckMessage] = {
     log.debug("rpc call for create entity operation")
     val entityname = request.entity
+
     val attributes = request.attributes.map(attribute => {
-      AttributeDefinition(attribute.name, matchFields(attribute.attributetype), attribute.pk, attribute.unique, attribute.indexed) //TODO: add handler type
+      val handler = attribute.handler match {
+        case HandlerType.relational => Some("relational")
+        case HandlerType.feature => Some("feature")
+        case HandlerType.solr => Some("solr")
+        case _ => None
+      }
+
+      AttributeDefinition(attribute.name, matchFields(attribute.attributetype), attribute.pk, attribute.unique, attribute.indexed, handler)
     })
     val res = EntityOp(entityname, attributes)
 

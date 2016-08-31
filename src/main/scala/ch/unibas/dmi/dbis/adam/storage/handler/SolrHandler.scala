@@ -25,7 +25,7 @@ import scala.util.{Random, Success, Try}
   * July 2016
   */
 @Experimental class SolrHandler(private val url: String) extends StorageHandler with Logging with Serializable {
-  override val name: String = "storing-solr"
+  override val name: String = "solr"
 
   override def supports = Seq(FieldTypes.AUTOTYPE, FieldTypes.INTTYPE, FieldTypes.LONGTYPE, FieldTypes.FLOATTYPE, FieldTypes.DOUBLETYPE, FieldTypes.STRINGTYPE, FieldTypes.TEXTTYPE, FieldTypes.BOOLEANTYPE)
 
