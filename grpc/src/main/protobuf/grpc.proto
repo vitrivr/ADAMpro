@@ -210,7 +210,6 @@ message SparsifyEntityMessage {
 }
 
 message ImportMessage {
-//EXPERIMENTAL!
   string host = 1;
   string database = 2;
   string username = 3;
