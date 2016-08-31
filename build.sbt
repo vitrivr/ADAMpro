@@ -80,10 +80,11 @@ val secondaryLibs = Seq(
   "org.apache.commons" % "commons-lang3" % "3.4" force(),
   "org.apache.commons" % "commons-math3" % "3.4.1" force(),
   "it.unimi.dsi" % "fastutil" % "7.0.12",
+  "com.googlecode.javaewah" % "JavaEWAH" % "1.1.6",
   //Don't update this to 17 unless you are also upgrading Hadoop to 2.7
   /* http://stackoverflow.com/questions/36427291/illegalaccesserror-to-guavas-stopwatch-from-org-apache-hadoop-mapreduce-lib-inp */
   "com.google.guava" % "guava" % "19.0" force(),
-  "com.googlecode.javaewah" % "JavaEWAH" % "1.1.6"
+  "com.google.protobuf" % "protobuf-java" % "3.0.0"
 ).map(
   _.excludeAll(
     ExclusionRule("org.scala-lang"),
@@ -141,6 +142,10 @@ assemblyMergeStrategy in assembly := {
   case meta(_) => MergeStrategy.discard
   case x => MergeStrategy.last
 }
+
+assemblyShadeRules in assembly := Seq(
+  ShadeRule.rename("com.google.protobuf.**" -> "adampro.root.shaded.com.google.protobuf.@1").inAll
+)
 
 mainClass in assembly := Some("ch.unibas.dmi.dbis.adam.main.Startup")
 

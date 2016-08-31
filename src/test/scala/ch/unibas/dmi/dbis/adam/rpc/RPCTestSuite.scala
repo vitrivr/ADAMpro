@@ -3,8 +3,9 @@ package ch.unibas.dmi.dbis.adam.rpc
 import ch.unibas.dmi.dbis.adam.AdamTestBase
 import ch.unibas.dmi.dbis.adam.config.AdamConfig
 import ch.unibas.dmi.dbis.adam.datatypes.FieldTypes
-import ch.unibas.dmi.dbis.adam.entity.{Entity, AttributeDefinition}
+import ch.unibas.dmi.dbis.adam.entity.{AttributeDefinition, Entity}
 import ch.unibas.dmi.dbis.adam.main.RPCStartup
+import com.google.protobuf.ByteString
 import io.grpc.ManagedChannelBuilder
 import io.grpc.stub.StreamObserver
 import org.scalatest.concurrent.ScalaFutures
@@ -177,10 +178,39 @@ class RPCTestSuite extends AdamTestBase with ScalaFutures {
           val inserted = definition.count(EntityNameMessage(entityname)).message.toInt == ntuples
           assert(inserted)
 
-          if(inserted){
+          if (inserted) {
             val results = search.doQuery(QueryMessage(queryid = "", from = Some(FromMessage().withEntity(entityname)), bq = Some(BooleanQueryMessage(Seq(WhereMessage("tid", tuples.head("tid").getLongData.toString))))))
             assert(results.ack.get.code == AckMessage.Code.OK)
           }
+        }
+
+      }
+    }
+  }
+
+  feature("data import") {
+    /**
+      *
+      */
+    scenario("import proto-based file") {
+      withEntityName { entityname =>
+        Given("an entity and a proto data file")
+        val createEntityMessage = CreateEntityMessage(entityname,
+          Seq(
+            AttributeDefinitionMessage("id", AttributeType.LONG, true),
+            AttributeDefinitionMessage("feature", AttributeType.FEATURE)
+          ))
+
+        val stream = getClass.getResourceAsStream("/groundtruth/" + "features_AverageColor.tmp")
+
+        When("tuples are imported")
+        definition.importDataFile(ImportDataFileMessage(file = ByteString.readFrom(stream)).withCreateEntity(createEntityMessage))
+
+        Then("the tuples should eventually be available")
+        eventually {
+          val response = definition.count(EntityNameMessage(entityname))
+          assert(response.code == AckMessage.Code.OK)
+          assert(response.message.toInt > 0)
         }
 
       }

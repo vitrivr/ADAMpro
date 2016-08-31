@@ -32,6 +32,7 @@ service AdamDefinition {
   rpc SetScanWeight(WeightMessage) returns (AckMessage) {}
   rpc SparsifyEntity(SparsifyEntityMessage) returns (AckMessage) {}
   rpc ImportData(ImportMessage) returns (AckMessage) {}
+  rpc ImportDataFile(ImportDataFileMessage) returns (AckMessage) {}
 }
 
 service AdamSearch {
@@ -213,7 +214,21 @@ message ImportMessage {
   string password = 4;
 }
 
+message ImportDataFileMessage {
+  oneof destination {
+    //the destination for the data is an existing
+    string entity = 1;
+    //or should be created
+    CreateEntityMessage createEntity = 2;
+  }
 
+  enum FileType {
+    UNKOWN = 0;
+  }
+
+  FileType filetype = 3;
+  bytes file = 4;
+}
 
 
 

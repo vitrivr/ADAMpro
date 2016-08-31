@@ -2,8 +2,10 @@ package ch.unibas.dmi.dbis.adam.rpc
 
 import java.util.concurrent.TimeUnit
 
+import ch.unibas.dmi.dbis.adam.datatypes.FieldTypes
 import ch.unibas.dmi.dbis.adam.datatypes.feature.Feature._
-import ch.unibas.dmi.dbis.adam.datatypes.feature.FeatureVectorWrapper
+import ch.unibas.dmi.dbis.adam.datatypes.feature.{FeatureVectorWrapperUDT, FeatureVectorWrapper}
+import ch.unibas.dmi.dbis.adam.entity.AttributeDefinition
 import ch.unibas.dmi.dbis.adam.exception.GeneralAdamException
 import ch.unibas.dmi.dbis.adam.main.AdamContext
 import ch.unibas.dmi.dbis.adam.query.QueryCacheOptions
@@ -18,6 +20,8 @@ import ch.unibas.dmi.dbis.adam.query.information.InformationLevels
 import ch.unibas.dmi.dbis.adam.query.information.InformationLevels.{InformationLevel, LAST_STEP_ONLY}
 import ch.unibas.dmi.dbis.adam.query.progressive.{QueryHintsProgressivePathChooser, SimpleProgressivePathChooser}
 import ch.unibas.dmi.dbis.adam.query.query.{BooleanQuery, NearestNeighbourQuery}
+import org.apache.spark.sql.types
+import org.apache.spark.sql.types.DataType
 import org.vitrivr.adam.grpc.grpc.DistanceMessage.DistanceType
 import org.vitrivr.adam.grpc.grpc._
 
@@ -45,7 +49,7 @@ private[rpc] object RPCHelperMethods {
       val indexname = qm.from.get.source.index
       val subexpression = qm.from.get.source.expression
 
-      val bq = if(qm.bq.isDefined){
+      val bq = if (qm.bq.isDefined) {
         val prepared = prepareBQ(qm.bq.get)
 
         if (prepared.isFailure) {
@@ -171,8 +175,8 @@ private[rpc] object RPCHelperMethods {
 
       eqm.operation match {
         case ExpressionQueryMessage.Operation.UNION => Success(UnionExpression(left.get, right.get, Map(), queryid))
-        case ExpressionQueryMessage.Operation.INTERSECT => Success(IntersectExpression(left.get, right.get, order, Map(),queryid))
-        case ExpressionQueryMessage.Operation.EXCEPT => Success(ExceptExpression(left.get, right.get, order, Map(),queryid))
+        case ExpressionQueryMessage.Operation.INTERSECT => Success(IntersectExpression(left.get, right.get, order, Map(), queryid))
+        case ExpressionQueryMessage.Operation.EXCEPT => Success(ExceptExpression(left.get, right.get, order, Map(), queryid))
         case _ => Failure(new Exception("operation unknown"))
       }
     } catch {
@@ -206,7 +210,7 @@ private[rpc] object RPCHelperMethods {
     *
     * @param qm
     */
-  def prepareEvaluationOptions(qm : QueryMessage): Option[QueryEvaluationOptions] = {
+  def prepareEvaluationOptions(qm: QueryMessage): Option[QueryEvaluationOptions] = {
     //source provenance option
     val storeSourceProvenance = prepareInformationLevel(qm.information).contains(InformationLevels.SOURCE_PROVENANCE)
 
@@ -229,7 +233,7 @@ private[rpc] object RPCHelperMethods {
         expr = ProjectionExpression(FieldNameProjection(attributes), expr, queryid)
       }
 
-      if(!pm.op.isUnrecognized){
+      if (!pm.op.isUnrecognized) {
         expr = pm.op match {
           case ProjectionMessage.Operation.COUNT => ProjectionExpression(CountOperationProjection(), expr, queryid)
           case ProjectionMessage.Operation.EXISTS => ProjectionExpression(ExistsOperationProjection(), expr, queryid)
@@ -260,7 +264,7 @@ private[rpc] object RPCHelperMethods {
         None
       }
 
-      val fv = if(nnq.query.isDefined){
+      val fv = if (nnq.query.isDefined) {
         prepareFeatureVector(nnq.query.get)
       } else {
         return Failure(new GeneralAdamException("no query specified"))
@@ -292,7 +296,7 @@ private[rpc] object RPCHelperMethods {
     * @return
     */
   def prepareDistance(dm: Option[DistanceMessage]): DistanceFunction = {
-    if(dm.isEmpty){
+    if (dm.isEmpty) {
       return NormBasedDistance(2)
     }
 
@@ -387,6 +391,54 @@ private[rpc] object RPCHelperMethods {
     } else {
       levels
     }
+  }
+
+  /**
+    *
+    */
+  def prepareAttributes(attributes: Seq[AttributeDefinitionMessage]): Seq[AttributeDefinition] = {
+    attributes.map(attribute => {
+      val handler = attribute.handler match {
+        case HandlerType.RELATIONAL => Some("relational")
+        case HandlerType.FILE => Some("file")
+        case HandlerType.SOLR => Some("solr")
+        case _ => None
+      }
+
+      AttributeDefinition(attribute.name, matchFields(attribute.attributetype), attribute.pk, attribute.unique, attribute.indexed, handler)
+    })
+  }
+
+  /**
+    *
+    * @param ft
+    * @return
+    */
+  private def matchFields(ft: AttributeType) = ft match {
+    case AttributeType.BOOLEAN => FieldTypes.BOOLEANTYPE
+    case AttributeType.DOUBLE => FieldTypes.DOUBLETYPE
+    case AttributeType.FLOAT => FieldTypes.FLOATTYPE
+    case AttributeType.INT => FieldTypes.INTTYPE
+    case AttributeType.LONG => FieldTypes.LONGTYPE
+    case AttributeType.STRING => FieldTypes.STRINGTYPE
+    case AttributeType.TEXT => FieldTypes.TEXTTYPE
+    case AttributeType.FEATURE => FieldTypes.FEATURETYPE
+    case _ => FieldTypes.UNRECOGNIZEDTYPE
+  }
+
+  /**
+    *
+    * @param datatype
+    * @return
+    */
+  def prepareDataTypeConverter(datatype: DataType): (DataMessage) => (Any) = datatype match {
+    case types.BooleanType => (x) => x.getBooleanData
+    case types.DoubleType => (x) => x.getBooleanData
+    case types.FloatType => (x) => x.getFloatData
+    case types.IntegerType => (x) => x.getIntData
+    case types.LongType => (x) => x.getLongData
+    case types.StringType => (x) => x.getStringData
+    case _: FeatureVectorWrapperUDT => (x) => FeatureVectorWrapper(RPCHelperMethods.prepareFeatureVector(x.getFeatureData))
   }
 }
 

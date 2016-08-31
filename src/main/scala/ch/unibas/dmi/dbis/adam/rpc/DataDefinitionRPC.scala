@@ -2,20 +2,19 @@ package ch.unibas.dmi.dbis.adam.rpc
 
 import ch.unibas.dmi.dbis.adam.api._
 import ch.unibas.dmi.dbis.adam.catalog.CatalogOperator
-import ch.unibas.dmi.dbis.adam.datatypes.FieldTypes
-import ch.unibas.dmi.dbis.adam.datatypes.feature.{FeatureVectorWrapper, FeatureVectorWrapperUDT}
-import ch.unibas.dmi.dbis.adam.entity.{AttributeDefinition, Entity}
+import ch.unibas.dmi.dbis.adam.entity.Entity
 import ch.unibas.dmi.dbis.adam.exception.GeneralAdamException
 import ch.unibas.dmi.dbis.adam.helpers.partition.{PartitionMode, PartitionerChoice}
 import ch.unibas.dmi.dbis.adam.index.structures.IndexTypes
 import ch.unibas.dmi.dbis.adam.main.{AdamContext, SparkStartup}
 import ch.unibas.dmi.dbis.adam.utils.{AdamImporter, Logging}
 import io.grpc.stub.StreamObserver
-import org.apache.spark.sql.types.{DataType, StructField, StructType}
-import org.apache.spark.sql.{Row, types}
+import org.apache.spark.sql.Row
+import org.apache.spark.sql.types.{StructField, StructType}
 import org.vitrivr.adam.grpc.grpc._
 
-import scala.concurrent.Future
+import scala.concurrent.duration._
+import scala.concurrent.{Await, Future}
 
 /**
   * adamtwo
@@ -35,16 +34,7 @@ class DataDefinitionRPC extends AdamDefinitionGrpc.AdamDefinition with Logging {
     log.debug("rpc call for create entity operation")
     val entityname = request.entity
 
-    val attributes = request.attributes.map(attribute => {
-      val handler = attribute.handler match {
-        case HandlerType.relational => Some("relational")
-        case HandlerType.feature => Some("feature")
-        case HandlerType.solr => Some("solr")
-        case _ => None
-      }
-
-      AttributeDefinition(attribute.name, matchFields(attribute.attributetype), attribute.pk, attribute.unique, attribute.indexed, handler)
-    })
+    val attributes = RPCHelperMethods.prepareAttributes(request.attributes)
     val res = EntityOp(entityname, attributes)
 
     if (res.isSuccess) {
@@ -55,37 +45,6 @@ class DataDefinitionRPC extends AdamDefinitionGrpc.AdamDefinition with Logging {
     }
   }
 
-  /**
-    *
-    * @param ft
-    * @return
-    */
-  private def matchFields(ft: AttributeType) = ft match {
-    case AttributeType.BOOLEAN => FieldTypes.BOOLEANTYPE
-    case AttributeType.DOUBLE => FieldTypes.DOUBLETYPE
-    case AttributeType.FLOAT => FieldTypes.FLOATTYPE
-    case AttributeType.INT => FieldTypes.INTTYPE
-    case AttributeType.LONG => FieldTypes.LONGTYPE
-    case AttributeType.STRING => FieldTypes.STRINGTYPE
-    case AttributeType.TEXT => FieldTypes.TEXTTYPE
-    case AttributeType.FEATURE => FieldTypes.FEATURETYPE
-    case _ => FieldTypes.UNRECOGNIZEDTYPE
-  }
-
-  /**
-    *
-    * @param datatype
-    * @return
-    */
-  private def converter(datatype: DataType): (DataMessage) => (Any) = datatype match {
-    case types.BooleanType => (x) => x.getBooleanData
-    case types.DoubleType => (x) => x.getBooleanData
-    case types.FloatType => (x) => x.getFloatData
-    case types.IntegerType => (x) => x.getIntData
-    case types.LongType => (x) => x.getLongData
-    case types.StringType => (x) => x.getStringData
-    case _: FeatureVectorWrapperUDT => (x) => FeatureVectorWrapper(RPCHelperMethods.prepareFeatureVector(x.getFeatureData))
-  }
 
   /**
     *
@@ -161,7 +120,7 @@ class DataDefinitionRPC extends AdamDefinitionGrpc.AdamDefinition with Logging {
           val data = schema.map(field => {
             val datum = tuple.data.get(field.name).getOrElse(null)
             if (datum != null) {
-              converter(field.fieldtype.datatype)(datum)
+              RPCHelperMethods.prepareDataTypeConverter(field.fieldtype.datatype)(datum)
             } else {
               null
             }
@@ -500,6 +459,39 @@ class DataDefinitionRPC extends AdamDefinitionGrpc.AdamDefinition with Logging {
       Future.successful(AckMessage(AckMessage.Code.ERROR))
     }
   }
-    Future.successful(AckMessage(AckMessage.Code.OK))
+
+  /**
+    *
+    * @param request
+    * @return
+    */
+  override def importDataFile(request: ImportDataFileMessage): Future[AckMessage] = {
+    log.debug("rpc call for importing data files")
+
+    //create entity if necessary
+    val entityname = if (request.destination.isCreateEntity) {
+      val res = Await.result(createEntity(request.getCreateEntity), 100.seconds)
+
+      if (res.code.isError) {
+        return Future.successful(res)
+      }
+
+      request.getCreateEntity.entity
+    } else {
+      request.getEntity
+    }
+
+    val filetype = request.filetype //not used at the moment
+    val data = request.file.toByteArray
+
+    val importer = new ProtoImporter(entityname)
+    val res = importer(data)
+
+    if (res.isSuccess) {
+      Future.successful(AckMessage(AckMessage.Code.OK))
+    } else {
+      log.error(res.failed.get.getMessage, res.failed.get)
+      Future.successful(AckMessage(AckMessage.Code.ERROR))
+    }
   }
 }
