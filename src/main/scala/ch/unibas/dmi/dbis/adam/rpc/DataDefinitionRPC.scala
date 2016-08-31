@@ -472,18 +472,19 @@ class DataDefinitionRPC extends AdamDefinitionGrpc.AdamDefinition with Logging {
 
     //create entity if necessary
     val entityname = if (request.destination.isCreateEntity || request.destination.isDefinitionfile) {
-      val fut = if (request.destination.isCreateEntity) {
-        createEntity(request.getCreateEntity)
+      val createEntityMessage =  if (request.destination.isCreateEntity) {
+        request.getCreateEntity
       } else {
-        createEntity(CreateEntityMessage.parseFrom(request.getDefinitionfile.toByteArray))
+       CreateEntityMessage.parseFrom(request.getDefinitionfile.toByteArray)
       }
-      val res = Await.result(fut, 100.seconds)
+
+      val res = Await.result(createEntity(createEntityMessage), 100.seconds)
 
       if (res.code.isError) {
         return Future.successful(res)
       }
 
-      request.getCreateEntity.entity
+      createEntityMessage.entity
     } else {
       request.getEntity
     }

@@ -1,6 +1,6 @@
 package ch.unibas.dmi.dbis.adam.rpc
 
-import java.io.ByteArrayInputStream
+import java.io._
 
 import ch.unibas.dmi.dbis.adam.api.EntityOp
 import ch.unibas.dmi.dbis.adam.datatypes.FieldTypes
@@ -8,11 +8,9 @@ import ch.unibas.dmi.dbis.adam.datatypes.FieldTypes.FieldType
 import ch.unibas.dmi.dbis.adam.datatypes.feature.{FeatureVectorWrapper, FeatureVectorWrapperUDT}
 import ch.unibas.dmi.dbis.adam.entity.Entity
 import ch.unibas.dmi.dbis.adam.entity.Entity.EntityName
-import ch.unibas.dmi.dbis.adam.exception.GeneralAdamException
 import ch.unibas.dmi.dbis.adam.main.AdamContext
 import ch.unibas.dmi.dbis.adam.utils.Logging
-import com.google.protobuf.CodedInputStream
-import com.sun.xml.internal.messaging.saaj.util.ByteOutputStream
+import com.google.protobuf.{CodedInputStream, ByteString}
 import org.apache.spark.annotation.Experimental
 import org.apache.spark.sql.Row
 import org.apache.spark.sql.types._
@@ -20,7 +18,7 @@ import org.vitrivr.adam.grpc.grpc.InsertMessage.TupleInsertMessage
 import org.vitrivr.adam.grpc.grpc._
 
 import scala.collection.mutable.ListBuffer
-import scala.util.{Failure, Success, Try}
+import scala.util.{Failure, Random, Success, Try}
 
 /**
   * ADAMpro
@@ -29,15 +27,12 @@ import scala.util.{Failure, Success, Try}
   * August 2016
   */
 @Experimental class ProtoImporterExporter(entityname: EntityName)(implicit ac: AdamContext) extends Logging {
-  //TODO: code is hacky; clean!
+  //TODO: code is hacky; clean! will only work for small collections!
 
   private val BATCH_SIZE = 10000
 
-  private val entity = Entity.load(entityname)
-  if (entity.isFailure) {
-    throw new GeneralAdamException("cannot load entity")
-  }
-  private val schema = entity.get.schema()
+  private val entity = Entity.load(entityname).get
+  private val schema = entity.schema()
 
 
   /**
@@ -47,14 +42,14 @@ import scala.util.{Failure, Success, Try}
     */
   def importData(data: Array[Byte]): Try[Void] = {
     try {
-      val in = CodedInputStream.newInstance(new ByteArrayInputStream(data))
+      val in = CodedInputStream.newInstance(data)
 
       val batch = new ListBuffer[Row]()
       var counter = 0
 
       while (!in.isAtEnd) {
         //parse
-        val tuple = TupleInsertMessage.parseFrom(in)
+        val tuple = TupleInsertMessage.parseDelimitedFrom(in).get
         val data = schema.map(field => {
           val datum = tuple.data.get(field.name).getOrElse(null)
           if (datum != null) {
@@ -91,9 +86,9 @@ import scala.util.{Failure, Success, Try}
     log.debug("inserting batch")
 
     val rdd = ac.sc.parallelize(rows)
-    val df = ac.sqlContext.createDataFrame(rdd, StructType(entity.get.schema().map(field => StructField(field.name, field.fieldtype.datatype))))
+    val df = ac.sqlContext.createDataFrame(rdd, StructType(entity.schema().map(field => StructField(field.name, field.fieldtype.datatype))))
 
-    val res = EntityOp.insert(entity.get.entityname, df)
+    val res = EntityOp.insert(entity.entityname, df)
 
     if (!res.isSuccess) {
       throw res.failed.get
@@ -102,13 +97,14 @@ import scala.util.{Failure, Success, Try}
 
 
   /**
+    * Exporter for data is currently very simplistic and not made for large collections of data.
     *
     * @return
     */
   def exportData(): Try[(Array[Byte], Array[Byte])] = {
     try {
       //data
-      val data = entity.get.getData()
+      val data = entity.getData()
       val cols = data.get.schema
 
       val messages = data.get.map(row => {
@@ -134,17 +130,18 @@ import scala.util.{Failure, Success, Try}
         TupleInsertMessage(metadata)
       })
 
-      //TODO: this will only work for small collections! (improve by replace collect, temporarily write to disk)
-      val dataout = new ByteOutputStream()
-      messages.collect().foreach(_.writeTo(dataout))
-      dataout.flush()
+      val tmpFile = File.createTempFile("adampro-export-" + entity.entityname + Random.nextLong(), ".tmp")
+      val fos = new FileOutputStream(tmpFile)
 
-      val datafile = dataout.getBytes
+      messages.collect().foreach { m =>
+        m.writeDelimitedTo(fos)
+        fos.flush()
+      }
 
+      fos.close()
 
       //catalog
-      val catalogout = new ByteOutputStream()
-      val attributes = entity.get.schema().map(attribute => {
+      val attributes = entity.schema().map(attribute => {
         val handler = attribute.storagehandler.get.name match {
           case "relational" => HandlerType.RELATIONAL
           case "file" => HandlerType.FILE
@@ -157,12 +154,7 @@ import scala.util.{Failure, Success, Try}
 
       val createEntity = new CreateEntityMessage(entityname, attributes)
 
-      createEntity.writeTo(catalogout)
-      catalogout.flush()
-
-      val catalogfile = catalogout.getBytes
-
-      Success((catalogfile, datafile))
+      Success((createEntity.toByteArray, ByteString.readFrom(new FileInputStream(tmpFile)).toByteArray))
     } catch {
       case e: Exception => Failure(e)
     }
