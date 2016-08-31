@@ -33,6 +33,7 @@ service AdamDefinition {
   rpc SparsifyEntity(SparsifyEntityMessage) returns (AckMessage) {}
   rpc ImportData(ImportMessage) returns (AckMessage) {}
   rpc ImportDataFile(ImportDataFileMessage) returns (AckMessage) {}
+  rpc ExportDataFile(EntityNameMessage) returns (ExportDataFileMessage) {}
 }
 
 service AdamSearch {
@@ -222,16 +223,17 @@ message ImportDataFileMessage {
     string entity = 1;
     //or should be created
     CreateEntityMessage createEntity = 2;
+    //or comes from a data definition file (created at export)
+    bytes definitionfile = 3;
   }
 
   enum FileType {
     UNKOWN = 0;
   }
 
-  FileType filetype = 3;
-  bytes file = 4;
+  FileType filetype = 4;
+  bytes datafile = 5;
 }
-
 
 
 
@@ -480,4 +482,10 @@ message QueryResultInfoMessage {
 
 message QueryResultTupleMessage {
   map<string, DataMessage> data = 1;
+}
+
+message ExportDataFileMessage {
+  AckMessage ack = 1;
+  bytes definitionfile = 2;
+  bytes datafile = 3;
 }

@@ -204,15 +204,45 @@ class RPCTestSuite extends AdamTestBase with ScalaFutures {
         val stream = getClass.getResourceAsStream("/groundtruth/" + "features_AverageColor.tmp")
 
         When("tuples are imported")
-        definition.importDataFile(ImportDataFileMessage(file = ByteString.readFrom(stream)).withCreateEntity(createEntityMessage))
+        definition.importDataFile(ImportDataFileMessage(datafile = ByteString.readFrom(stream)).withCreateEntity(createEntityMessage))
 
         Then("the tuples should eventually be available")
         eventually {
           val response = definition.count(EntityNameMessage(entityname))
+
+          log.info("found " + response.message + " tuples")
+
           assert(response.code == AckMessage.Code.OK)
           assert(response.message.toInt > 0)
         }
 
+      }
+    }
+
+    /**
+      *
+      */
+    scenario("export and import proto-based file") {
+      withEntityName { entityname =>
+        val NTUPLES = 1000
+
+        definition.createEntity(CreateEntityMessage(entityname, Seq(AttributeDefinitionMessage("id", AttributeType.LONG, true), AttributeDefinitionMessage("feature", AttributeType.FEATURE))))
+        definition.generateRandomData(GenerateRandomDataMessage(entityname, NTUPLES, Map("fv-dimensions" -> 100.toString)))
+
+        val count = definition.count(EntityNameMessage(entityname)).message.toInt
+        assert(count == NTUPLES)
+
+        val exported = definition.exportDataFile(EntityNameMessage(entityname))
+
+        definition.dropEntity(EntityNameMessage(entityname))
+
+        definition.importDataFile(ImportDataFileMessage().withDefinitionfile(exported.definitionfile).withDatafile(exported.datafile))
+
+        val countAfterImport = definition.count(EntityNameMessage(entityname)).message.toInt
+
+        log.info("found " + countAfterImport + " tuples")
+
+        assert(countAfterImport == NTUPLES)
       }
     }
 
