@@ -23,7 +23,7 @@ class IndexFlatFileHandler(private val engine: FileEngine) extends StorageHandle
   override def supports = Seq()
   override def specializes: Seq[FieldType] = Seq()
 
-  private val INDEX_OPTION_NAME = "storing-feature-filename"
+  private val INDEX_OPTION_NAME = "storing-index-filename"
 
   /**
     *

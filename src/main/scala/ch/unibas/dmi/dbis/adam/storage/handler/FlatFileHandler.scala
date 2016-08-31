@@ -19,11 +19,11 @@ import scala.util.{Random, Success, Try}
   * June 2016
   */
 class FlatFileHandler(private val engine: FileEngine) extends StorageHandler with Logging with Serializable {
-  override val name = "feature"
+  override val name = "file"
   override def supports = Seq(FieldTypes.AUTOTYPE, FieldTypes.INTTYPE, FieldTypes.LONGTYPE, FieldTypes.STRINGTYPE, FieldTypes.FEATURETYPE)
   override def specializes = Seq(FieldTypes.FEATURETYPE)
 
-  private val ENTITY_OPTION_NAME = "storing-feature-filename"
+  private val ENTITY_OPTION_NAME = "storing-file-filename"
 
   /**
     *
