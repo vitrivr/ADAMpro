@@ -54,25 +54,27 @@ service AdamSearch {
 //****  GLOBALS ****//
 
 enum AttributeType {
-  LONG = 0;
-  INT = 1;
-  FLOAT = 2;
-  DOUBLE = 3;
-  STRING = 4;
-  TEXT = 5;
-  BOOLEAN = 6;
-  FEATURE = 7;
-  AUTO = 8;
+  UNKOWNAT = 0;
+  LONG = 1;
+  INT = 2;
+  FLOAT = 3;
+  DOUBLE = 4;
+  STRING = 5;
+  TEXT = 6;
+  BOOLEAN = 7;
+  FEATURE = 8;
+  AUTO = 9;
 }
 
 enum IndexType {
-  ecp = 0;
-  lsh = 1;
-  mi = 2;
-  pq = 3;
-  sh = 4;
-  vaf = 5;
-  vav = 6;
+  UNKNOWNIT = 0;
+  ecp = 1;
+  lsh = 2;
+  mi = 3;
+  pq = 4;
+  sh = 5;
+  vaf = 6;
+  vav = 7;
 }
 
 message EmptyMessage {
@@ -114,9 +116,10 @@ message DataMessage {
 }
 
 enum HandlerType {
-  relational = 0;
-  feature = 1;
-  solr = 2;
+  UNKNOWNHT = 0;
+  RELATIONAL = 1;
+  FILE = 2;
+  SOLR = 3;
 }
 
 
@@ -284,15 +287,17 @@ message QueryMessage {
 message ExpressionQueryMessage {
   string queryid = 1;
   enum Operation {
-      UNION = 0;
-      INTERSECT = 1;
-      EXCEPT = 2;
+      UNKNOWNEXPOP = 0;
+      UNION = 1;
+      INTERSECT = 2;
+      EXCEPT = 3;
     }
 
    enum OperationOrder {
-      LEFTFIRST = 0;
-      RIGHTFIRST = 1;
-      PARALLEL = 2;
+      UNKNOWNOO = 0;
+      LEFTFIRST = 1;
+      RIGHTFIRST = 2;
+      PARALLEL = 3;
     }
 
    SubExpressionQueryMessage left = 2;
@@ -312,9 +317,10 @@ message SubExpressionQueryMessage {
 
 message ProjectionMessage {
   enum Operation {
-    COUNT = 0;
-    EXISTS = 1;
-    DISTINCT = 2;
+    UNKNOWNPROJOP = 0;
+    COUNT = 1;
+    EXISTS = 2;
+    DISTINCT = 3;
   }
   message AttributeNameMessage {
     repeated string attribute = 1;
@@ -365,18 +371,19 @@ message NearestNeighbourQueryMessage {
 
 message DistanceMessage {
   enum DistanceType {
-    chisquared = 0;
-    correlation = 1;
-    cosine = 2;
-    hamming = 3;
-    jaccard = 4;
-    kullbackleibler = 5;
-    chebyshev = 6;
-    euclidean = 7;
-    squaredeuclidean = 8;
-    manhattan = 9;
-    minkowski = 10; //add option 'norm'
-    spannorm = 11;
+    UNKNOWND = 0;
+    chisquared = 1;
+    correlation = 2;
+    cosine = 3;
+    hamming = 4;
+    jaccard = 5;
+    kullbackleibler = 6;
+    chebyshev = 7;
+    euclidean = 8;
+    squaredeuclidean = 9;
+    manhattan = 10;
+    minkowski = 11; //add option 'norm'
+    spannorm = 12;
   }
   DistanceType distancetype = 1;
   map<string, string> options = 2;
@@ -417,8 +424,8 @@ message CachedResultsMessage {
 //****  RESPONSES ****//
 message AckMessage {
 enum Code {
-  OK = 0;
-  ERROR = 1;
+  ERROR = 0;
+  OK = 1;
 }
   Code code = 1;
   string message = 2;
