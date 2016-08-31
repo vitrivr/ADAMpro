@@ -14,7 +14,7 @@ import org.apache.spark.sql.jdbc.AdamDialectRegistrar
 import org.apache.spark.sql.types.DataTypes
 
 import scala.collection.mutable.ListBuffer
-import scala.util.Random
+import scala.util.{Success, Failure, Try, Random}
 
 /**
   * adamtwo
@@ -41,7 +41,7 @@ class AdamImporter(url: String, user: String, password: String) extends Logging 
 
       val entityname = schemaname + "_" + newtablename
 
-      if(EntityOp.exists(entityname).get){
+      if (EntityOp.exists(entityname).get) {
         log.warn("table " + entityname + " exists already, not importing")
         return
       }
@@ -145,7 +145,7 @@ class AdamImporter(url: String, user: String, password: String) extends Logging 
         log.info("successfully imported data into entity " + entityname + "; in df: " + insertDFcount + ", inserted: " + entitycount)
         assert(insertDFcount == entitycount)
 
-        featureFields.foreach{
+        featureFields.foreach {
           featureField =>
             IndexOp.create(entityname, featureField, "vaf", NormBasedDistance(2))
         }
@@ -159,20 +159,26 @@ class AdamImporter(url: String, user: String, password: String) extends Logging 
 }
 
 object AdamImporter {
-  def apply(host: String, database: String, username: String, password: String)(implicit ac: AdamContext): Unit = {
-    val importer = new AdamImporter("jdbc:postgresql://" + host + "/" + database, username, password)
-    val entityRenamingRules = Seq(("shots" -> "segment"), ("videos" -> "multimediaobject")).toMap
+  def apply(host: String, database: String, username: String, password: String)(implicit ac: AdamContext): Try[Void] = {
+    try {
+      val importer = new AdamImporter("jdbc:postgresql://" + host + "/" + database, username, password)
+      val entityRenamingRules = Seq(("shots" -> "segment"), ("videos" -> "multimediaobject")).toMap
 
 
-    //tables to import
-    val cineast = Seq("representativeframes", "resultcachenames", "shots", "videos")
-    cineast.map(table => importer.importTable("cineast", table, entityRenamingRules.getOrElse(table, table)))
+      //tables to import
+      val cineast = Seq("representativeframes", "resultcachenames", "shots", "videos")
+      cineast.map(table => importer.importTable("cineast", table, entityRenamingRules.getOrElse(table, table)))
 
-    val features = Seq("averagecolor", "averagecolorarp44", "averagecolorarp44normalized", "averagecolorcld", "averagecolorcldnormalized", "averagecolorgrid8", "averagecolorgrid8normalized", "averagecolorraster", "averagefuzzyhist", "averagefuzzyhistnormalized", "chromagrid8", "cld", "cldnormalized", "contrast", "dominantcolors", "dominantedgegrid16", "dominantedgegrid8", "edgearp88", "edgearp88full", "edgegrid16", "edgegrid16full", "ehd", "huevaluevariancegrid8", "mediancolor", "mediancolorarp44", "mediancolorarp44normalized", "mediancolorgrid8", "mediancolorgrid8normalized", "mediancolorraster", "medianfuzzyhist", "medianfuzzyhistnormalized", "motionhistogram", "saturationandchroma", "saturationgrid8", "simpleperceptualhash", "stmp7eh", "subdivaveragefuzzycolor", "subdivmedianfuzzycolor", "subdivmotionhistogram2", "subdivmotionhistogram3", "subdivmotionhistogram4", "subdivmotionhistogram5", "surf", "surffull")
-    features.map(table => importer.importTable("features", table, entityRenamingRules.getOrElse(table, table)))
+      val features = Seq("averagecolor", "averagecolorarp44", "averagecolorarp44normalized", "averagecolorcld", "averagecolorcldnormalized", "averagecolorgrid8", "averagecolorgrid8normalized", "averagecolorraster", "averagefuzzyhist", "averagefuzzyhistnormalized", "chromagrid8", "cld", "cldnormalized", "contrast", "dominantcolors", "dominantedgegrid16", "dominantedgegrid8", "edgearp88", "edgearp88full", "edgegrid16", "edgegrid16full", "ehd", "huevaluevariancegrid8", "mediancolor", "mediancolorarp44", "mediancolorarp44normalized", "mediancolorgrid8", "mediancolorgrid8normalized", "mediancolorraster", "medianfuzzyhist", "medianfuzzyhistnormalized", "motionhistogram", "saturationandchroma", "saturationgrid8", "simpleperceptualhash", "stmp7eh", "subdivaveragefuzzycolor", "subdivmedianfuzzycolor", "subdivmotionhistogram2", "subdivmotionhistogram3", "subdivmotionhistogram4", "subdivmotionhistogram5", "surf", "surffull")
+      features.map(table => importer.importTable("features", table, entityRenamingRules.getOrElse(table, table)))
 
-    val concepts = Seq("captioned")
-    concepts.map(table => importer.importTable("captions", table, entityRenamingRules.getOrElse(table, table)))
+      val concepts = Seq("captioned")
+      concepts.map(table => importer.importTable("captions", table, entityRenamingRules.getOrElse(table, table)))
+
+      Success(null)
+    } catch {
+      case e: Exception => Failure(e)
+    }
   }
 
   def main(args: Array[String]): Unit = {
