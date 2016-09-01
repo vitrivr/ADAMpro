@@ -113,7 +113,7 @@ class PostgresqlEngine(private val url: String, private val user: String, privat
 
     try {
       val df = ac.sqlContext.read.format("jdbc").options(
-        Map("url" -> url, "dbtable" -> tablename.toString(), "user" -> AdamConfig.jdbcUser, "password" -> AdamConfig.jdbcPassword, "driver" -> "org.postgresql.Driver")
+        Map("url" -> url, "dbtable" -> tablename.toString(), "user" -> user, "password" -> password, "driver" -> "org.postgresql.Driver")
       ).load()
       Success(df.repartition(AdamConfig.defaultNumberOfPartitions))
     } catch {
@@ -127,8 +127,8 @@ class PostgresqlEngine(private val url: String, private val user: String, privat
 
     try {
       val props = new Properties()
-      props.put("user", AdamConfig.jdbcUser)
-      props.put("password", AdamConfig.jdbcPassword)
+      props.put("user", user)
+      props.put("password", password)
       props.put("driver", "org.postgresql.Driver")
       props.put("currentSchema", SCHEMA)
       df.write.mode(mode).jdbc(url, tablename, props)
