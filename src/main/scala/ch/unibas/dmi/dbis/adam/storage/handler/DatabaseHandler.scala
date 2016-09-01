@@ -2,6 +2,7 @@ package ch.unibas.dmi.dbis.adam.storage.handler
 
 import ch.unibas.dmi.dbis.adam.catalog.CatalogOperator
 import ch.unibas.dmi.dbis.adam.datatypes.FieldTypes
+import ch.unibas.dmi.dbis.adam.datatypes.FieldTypes.FieldType
 import ch.unibas.dmi.dbis.adam.entity.AttributeDefinition
 import ch.unibas.dmi.dbis.adam.entity.Entity._
 import ch.unibas.dmi.dbis.adam.exception.GeneralAdamException
@@ -10,7 +11,7 @@ import ch.unibas.dmi.dbis.adam.storage.engine.RelationalDatabaseEngine
 import ch.unibas.dmi.dbis.adam.utils.Logging
 import org.apache.spark.sql.{DataFrame, SaveMode}
 
-import scala.util.{Success, Random, Try}
+import scala.util.{Failure, Success, Random, Try}
 
 /**
   * ADAMpro
@@ -20,17 +21,19 @@ import scala.util.{Success, Random, Try}
   */
 class DatabaseHandler(private val engine: RelationalDatabaseEngine) extends StorageHandler with Logging with Serializable {
   override val name = "relational"
-  override def supports = Seq(FieldTypes.AUTOTYPE, FieldTypes.INTTYPE, FieldTypes.LONGTYPE, FieldTypes.FLOATTYPE, FieldTypes.DOUBLETYPE, FieldTypes.STRINGTYPE, FieldTypes.BOOLEANTYPE)
-  override def specializes = Seq(FieldTypes.AUTOTYPE, FieldTypes.INTTYPE, FieldTypes.LONGTYPE, FieldTypes.FLOATTYPE, FieldTypes.DOUBLETYPE, FieldTypes.STRINGTYPE, FieldTypes.BOOLEANTYPE)
 
-  private val ENTITY_OPTION_NAME = "storing-relational-tablename"
+  override def supports: Seq[FieldType] = Seq(FieldTypes.AUTOTYPE, FieldTypes.INTTYPE, FieldTypes.LONGTYPE, FieldTypes.FLOATTYPE, FieldTypes.DOUBLETYPE, FieldTypes.STRINGTYPE, FieldTypes.BOOLEANTYPE)
+
+  override def specializes: Seq[FieldType] = Seq(FieldTypes.AUTOTYPE, FieldTypes.INTTYPE, FieldTypes.LONGTYPE, FieldTypes.FLOATTYPE, FieldTypes.DOUBLETYPE, FieldTypes.STRINGTYPE, FieldTypes.BOOLEANTYPE)
+
+  protected val ENTITY_OPTION_NAME = "storing-relational-tablename"
 
 
   /**
     *
     * @param entityname
     */
-  private def getTablename(entityname: EntityName): String = {
+  protected def getTablename(entityname: EntityName): String = {
     val tablename = CatalogOperator.getEntityOption(entityname, Some(ENTITY_OPTION_NAME)).get.get(ENTITY_OPTION_NAME)
 
     if (tablename.isEmpty) {
@@ -57,10 +60,16 @@ class DatabaseHandler(private val engine: RelationalDatabaseEngine) extends Stor
         tablename = tablename + Random.nextInt(999).toString
       }
 
-      engine.create(tablename, attributes)
+      val res = engine.create(tablename, attributes)
 
-      CatalogOperator.updateEntityOption(entityname, ENTITY_OPTION_NAME, tablename)
-      Success(null)
+      val tmp = ENTITY_OPTION_NAME
+
+      if (res.isSuccess) {
+        CatalogOperator.updateEntityOption(entityname, ENTITY_OPTION_NAME, tablename)
+        Success(null)
+      } else {
+        Failure(res.failed.get)
+      }
     }
   }
 
@@ -89,21 +98,33 @@ class DatabaseHandler(private val engine: RelationalDatabaseEngine) extends Stor
       val tablename = getTablename(entityname)
 
       if (mode == SaveMode.Overwrite) {
+        //overwriting
         var newTablename = ""
         do {
           newTablename = tablename + "-new" + Random.nextInt(999)
         } while (engine.exists(newTablename).get)
 
-        engine.write(newTablename, df)
+        val res = engine.write(newTablename, df)
 
-        CatalogOperator.updateEntityOption(entityname, ENTITY_OPTION_NAME, newTablename)
 
-        engine.drop(tablename)
+        if (res.isSuccess) {
+          //update name
+          CatalogOperator.updateEntityOption(entityname, ENTITY_OPTION_NAME, newTablename)
+          engine.drop(tablename)
+          Success(null)
+        } else {
+          Failure(res.failed.get)
+        }
       } else {
-        engine.write(tablename, df)
-      }
+        //other save modes
+        val res = engine.write(tablename, df)
 
-      Success(null)
+        if (res.isSuccess) {
+          Success(null)
+        } else {
+          Failure(res.failed.get)
+        }
+      }
     }
   }
 
@@ -115,9 +136,14 @@ class DatabaseHandler(private val engine: RelationalDatabaseEngine) extends Stor
     */
   override def drop(entityname: EntityName, params: Map[String, String] = Map())(implicit ac: AdamContext): Try[Void] = {
     execute("drop") {
-      engine.drop(getTablename(entityname))
-      CatalogOperator.deleteEntityOption(entityname, ENTITY_OPTION_NAME)
-      Success(null)
+      val res = engine.drop(getTablename(entityname))
+
+      if (res.isSuccess) {
+        CatalogOperator.deleteEntityOption(entityname, ENTITY_OPTION_NAME)
+        Success(null)
+      } else {
+        Failure(res.failed.get)
+      }
     }
   }
 
