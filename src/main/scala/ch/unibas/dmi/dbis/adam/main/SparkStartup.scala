@@ -64,7 +64,7 @@ object SparkStartup extends Logging {
   }
 
   storageRegistry.register(new SolrHandler(AdamConfig.solrUrl))
-  
+
   val indexStorageHandler = if (AdamConfig.isBaseOnHadoop) {
     log.debug("storing data on Hadoop")
     new IndexFlatFileHandler(new ParquetEngine(AdamConfig.basePath, AdamConfig.indexPath))
