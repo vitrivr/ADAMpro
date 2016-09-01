@@ -56,15 +56,17 @@ service AdamSearch {
 
 enum AttributeType {
   UNKOWNAT = 0;
-  LONG = 1;
-  INT = 2;
-  FLOAT = 3;
-  DOUBLE = 4;
-  STRING = 5;
-  TEXT = 6;
-  BOOLEAN = 7;
-  FEATURE = 8;
-  AUTO = 9;
+  AUTO = 1;
+  LONG = 2;
+  INT = 3;
+  FLOAT = 4;
+  DOUBLE = 5;
+  STRING = 6;
+  TEXT = 7;
+  BOOLEAN = 8;
+  FEATURE = 9;
+  GEOMETRY = 10;
+  GEOGRAPHY = 11;
 }
 
 enum IndexType {

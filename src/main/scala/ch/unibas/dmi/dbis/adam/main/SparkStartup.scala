@@ -3,6 +3,7 @@ package ch.unibas.dmi.dbis.adam.main
 import ch.unibas.dmi.dbis.adam.config.AdamConfig
 import ch.unibas.dmi.dbis.adam.datatypes.bitString.BitStringUDT
 import ch.unibas.dmi.dbis.adam.datatypes.feature.FeatureVectorWrapperUDT
+import ch.unibas.dmi.dbis.adam.datatypes.gis.GeometryWrapperUDT
 import ch.unibas.dmi.dbis.adam.storage.engine.instances.{ParquetEngine, PostgresqlEngine}
 import ch.unibas.dmi.dbis.adam.storage.handler._
 import ch.unibas.dmi.dbis.adam.utils.Logging
@@ -22,7 +23,7 @@ object SparkStartup extends Logging {
     .set("spark.serializer", "org.apache.spark.serializer.KryoSerializer")
     .set("spark.kryoserializer.buffer.max", "2047m")
     .set("spark.kryoserializer.buffer", "2047")
-    .registerKryoClasses(Array(classOf[BitStringUDT], classOf[FeatureVectorWrapperUDT]))
+    .registerKryoClasses(Array(classOf[BitStringUDT], classOf[FeatureVectorWrapperUDT], classOf[GeometryWrapperUDT]))
     .set("spark.scheduler.allocation.file", AdamConfig.schedulerFile)
     .set("spark.driver.allowMultipleContexts", "true")
 
@@ -63,7 +64,7 @@ object SparkStartup extends Logging {
   }
 
   storageRegistry.register(new SolrHandler(AdamConfig.solrUrl))
-
+  
   val indexStorageHandler = if (AdamConfig.isBaseOnHadoop) {
     log.debug("storing data on Hadoop")
     new IndexFlatFileHandler(new ParquetEngine(AdamConfig.basePath, AdamConfig.indexPath))

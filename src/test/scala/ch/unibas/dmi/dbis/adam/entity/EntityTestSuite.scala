@@ -159,7 +159,7 @@ class EntityTestSuite extends AdamTestBase {
         EntityOp.drop(entityname)
 
         Then("the metadata entity is dropped as well")
-        val postResult = getJDBCConnection.createStatement().executeQuery("SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = '" + entityname.toLowerCase() + "'")
+        val postResult = getJDBCConnection.createStatement().executeQuery("SELECT 1 FROM information_schema.tables WHERE table_schema = 'relational' AND table_name = '" + entityname.toLowerCase() + "'")
         while (postResult.next) {
           tableCount -= 1
         }
@@ -201,7 +201,6 @@ class EntityTestSuite extends AdamTestBase {
         val indexes = indexesLb.toList
         assert(indexes.contains("uniquefield"))
         assert(indexes.contains("indexedfield"))
-
       }
     }
   }

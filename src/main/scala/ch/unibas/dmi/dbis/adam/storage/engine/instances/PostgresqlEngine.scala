@@ -5,10 +5,11 @@ import java.util.Properties
 
 import ch.unibas.dmi.dbis.adam.config.AdamConfig
 import ch.unibas.dmi.dbis.adam.entity.AttributeDefinition
+import ch.unibas.dmi.dbis.adam.exception.GeneralAdamException
 import ch.unibas.dmi.dbis.adam.main.AdamContext
 import ch.unibas.dmi.dbis.adam.storage.engine.RelationalDatabaseEngine
 import org.apache.spark.sql.types.{StructField, StructType}
-import org.apache.spark.sql.{SaveMode, DataFrame, Row}
+import org.apache.spark.sql.{DataFrame, Row, SaveMode}
 
 import scala.util.{Failure, Success, Try}
 
@@ -18,22 +19,48 @@ import scala.util.{Failure, Success, Try}
   * Ivan Giangreco
   * June 2016
   */
-class PostgresqlEngine(private val url: String, private val user: String, private val password: String) extends RelationalDatabaseEngine with Serializable  {
+class PostgresqlEngine(private val url: String, private val user: String, private val password: String, protected val schema : String = "public") extends RelationalDatabaseEngine with Serializable  {
+  //TODO: check if changing schema breaks tests!
+
   Class.forName("org.postgresql.Driver")
-
-  private val SCHEMA = "public"
-
+  init()
 
   /**
     * Opens a connection to the PostgreSQL database.
     *
     * @return
     */
-  private def openConnection(): Connection = {
-    val connection = DriverManager.getConnection(url, user, password)
-    connection.setSchema(SCHEMA)
+  protected def openConnection(): Connection = {
+    val connection = DriverManager.getConnection(url, props)
+    connection.setSchema(schema)
     connection
   }
+
+  protected def init() {
+    try {
+      val connection = openConnection()
+
+      val createSchemaStmt = s"""CREATE SCHEMA IF NOT EXISTS $schema;""".stripMargin
+
+      connection.createStatement().executeUpdate(createSchemaStmt)
+    } catch {
+      case e: Exception =>
+        log.error("fatal error when setting up relational engine", e)
+        throw new GeneralAdamException("fatal error when setting up relational engine")
+    }
+  }
+
+  lazy val props = {
+    val props = new Properties()
+    props.put("url", url)
+    props.put("user", user)
+    props.put("password", password)
+    props.put("driver", "org.postgresql.Driver")
+    props.put("currentSchema", schema)
+    props
+  }
+
+  lazy val propsMap = props.keySet().toArray.map(key => key.toString -> props.get(key).toString).toMap
 
   override def create(tablename: String, fields: Seq[AttributeDefinition])(implicit ac: AdamContext): Try[Option[String]] = {
     try {
@@ -75,10 +102,7 @@ class PostgresqlEngine(private val url: String, private val user: String, privat
       }.mkString("; ")
 
       val connection = openConnection()
-
-      connection.createStatement().executeUpdate(uniqueStmt)
-      connection.createStatement().executeUpdate(indexedStmt)
-      connection.createStatement().executeUpdate(pkStmt)
+      connection.createStatement().executeUpdate(uniqueStmt + "; " + indexedStmt + "; " + pkStmt)
 
       Success(Some(tablename))
     } catch {
@@ -112,9 +136,7 @@ class PostgresqlEngine(private val url: String, private val user: String, privat
     log.debug("postgresql read operation")
 
     try {
-      val df = ac.sqlContext.read.format("jdbc").options(
-        Map("url" -> url, "dbtable" -> tablename.toString(), "user" -> user, "password" -> password, "driver" -> "org.postgresql.Driver")
-      ).load()
+      val df = ac.sqlContext.read.format("jdbc").jdbc(url, tablename, props) //TODO: possibly adjust in here for partitioning
       Success(df.repartition(AdamConfig.defaultNumberOfPartitions))
     } catch {
       case e: Exception =>
@@ -126,13 +148,7 @@ class PostgresqlEngine(private val url: String, private val user: String, privat
     log.debug("postgresql write operation")
 
     try {
-      val props = new Properties()
-      props.put("user", user)
-      props.put("password", password)
-      props.put("driver", "org.postgresql.Driver")
-      props.put("currentSchema", SCHEMA)
       df.write.mode(mode).jdbc(url, tablename, props)
-
       Success(null)
     } catch {
       case e: Exception =>

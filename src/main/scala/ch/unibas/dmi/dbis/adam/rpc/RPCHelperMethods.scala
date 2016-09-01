@@ -423,6 +423,8 @@ private[rpc] object RPCHelperMethods {
     case AttributeType.STRING => FieldTypes.STRINGTYPE
     case AttributeType.TEXT => FieldTypes.TEXTTYPE
     case AttributeType.FEATURE => FieldTypes.FEATURETYPE
+    case AttributeType.GEOMETRY => FieldTypes.GEOMETRYTYPE
+    case AttributeType.GEOGRAPHY => FieldTypes.GEOGRAPHYTYPE
     case _ => FieldTypes.UNRECOGNIZEDTYPE
   }
 

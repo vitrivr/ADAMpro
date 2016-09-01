@@ -66,8 +66,7 @@ class AdamTestBase extends FeatureSpec with GivenWhenThen with Eventually with I
     val entityname = getRandomName()
     try {
       testCode(entityname)
-    }
-    finally {
+    } finally {
       EntityOp.drop(entityname, true)
     }
   }

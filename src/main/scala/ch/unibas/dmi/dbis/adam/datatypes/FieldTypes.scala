@@ -1,6 +1,7 @@
 package ch.unibas.dmi.dbis.adam.datatypes
 
 import ch.unibas.dmi.dbis.adam.datatypes.feature.FeatureVectorWrapperUDT
+import ch.unibas.dmi.dbis.adam.datatypes.gis.{GeographyWrapperUDT, GeometryWrapperUDT}
 import org.apache.spark.sql.types
 import org.apache.spark.sql.types.{ArrayType, DataType}
 
@@ -34,9 +35,13 @@ object FieldTypes {
 
   case object FEATURETYPE extends FieldType("feature", false, new FeatureVectorWrapperUDT)
 
+  case object GEOMETRYTYPE extends FieldType("geometry", false, new GeometryWrapperUDT)
+
+  case object GEOGRAPHYTYPE extends FieldType("geography", false, new GeographyWrapperUDT)
+
   case object UNRECOGNIZEDTYPE extends FieldType("", false, types.NullType)
 
-  def values = Seq(INTTYPE, LONGTYPE, FLOATTYPE, DOUBLETYPE, STRINGTYPE, TEXTTYPE, BOOLEANTYPE, FEATURETYPE, AUTOTYPE)
+  def values = Seq(INTTYPE, LONGTYPE, FLOATTYPE, DOUBLETYPE, STRINGTYPE, TEXTTYPE, BOOLEANTYPE, FEATURETYPE, GEOMETRYTYPE, GEOGRAPHYTYPE, AUTOTYPE)
 
   implicit def fromString(s: String): FieldType = values.filter(x => x.name == s).head
 
