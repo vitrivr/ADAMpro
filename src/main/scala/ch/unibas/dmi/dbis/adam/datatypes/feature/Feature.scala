@@ -17,6 +17,8 @@ object Feature {
   type DenseFeatureVector = DenseVector[VectorBase]
   type SparseFeatureVector = SparseVector[VectorBase]
 
+  //TODO: possibly support int feature vectors, too
+
 
   //conversions
   implicit def conv_stored2vector(value: Seq[VectorBase]): DenseFeatureVector = new DenseVector[Float](value.toArray)
