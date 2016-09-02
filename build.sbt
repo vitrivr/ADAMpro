@@ -12,7 +12,6 @@ lazy val commonSettings = Seq(
   scalaVersion := "2.10.6"
 )
 
-
 //projects
 lazy val root = (project in file(".")).
   settings(commonSettings: _*)
@@ -76,14 +75,13 @@ val secondaryLibs = Seq(
   "org.scalanlp" %% "breeze-natives" % "0.11.2",
   "com.typesafe.slick" %% "slick" % "3.1.1",
   "org.apache.derby" % "derby" % "10.12.1.1",
-  "org.postgresql" % "postgresql" % "9.4.1208",
-  "org.apache.commons" % "commons-lang3" % "3.4" force(),
-  "org.apache.commons" % "commons-math3" % "3.4.1" force(),
   "it.unimi.dsi" % "fastutil" % "7.0.12",
+  "org.apache.commons" % "commons-lang3" % "3.4",
+  "org.apache.commons" % "commons-math3" % "3.4.1",
   "com.googlecode.javaewah" % "JavaEWAH" % "1.1.6",
   //Don't update this to 17 unless you are also upgrading Hadoop to 2.7
   /* http://stackoverflow.com/questions/36427291/illegalaccesserror-to-guavas-stopwatch-from-org-apache-hadoop-mapreduce-lib-inp */
-  "com.google.guava" % "guava" % "19.0" force(),
+  "com.google.guava" % "guava" % "19.0",
   "com.google.protobuf" % "protobuf-java" % "3.0.0"
 ).map(
   _.excludeAll(
@@ -94,13 +92,14 @@ val secondaryLibs = Seq(
 
 //log libs
 val logLibs = Seq(
-  "org.slf4j" % "slf4j-api" % "1.7.5" force(),
-  "org.slf4j" % "slf4j-log4j12" % "1.7.5" force()
+  "org.slf4j" % "slf4j-api" % "1.7.10",
+  "org.slf4j" % "slf4j-log4j12" % "1.7.10"
 )
 
 //tertiary libs
 val tertiaryLibs = Seq(
   "com.lucidworks.spark" % "spark-solr" % "2.1.0",
+  "org.postgresql" % "postgresql" % "9.4.1208",
   "net.postgis" % "postgis-jdbc" % "2.2.1"
 ).map(
   _.excludeAll(
