@@ -14,17 +14,15 @@ import ch.unibas.dmi.dbis.adam.query.query.BooleanQuery
   * September 2016
   */
 class PostGisTestSuite extends AdamTestBase {
+  val ntuples = 1000
+
+  val handlerName = Some("gis")
+  val fieldTypes = Seq(FieldTypes.GEOMETRYTYPE)
 
   scenario("create an entity") {
     withEntityName { entityname =>
-      val ntuples = 1000
-
-      val handlerName = Some("gis")
-      val fieldTypes = Seq(FieldTypes.GEOMETRYTYPE)
       val attributes = fieldTypes.map(field => AttributeDefinition(field.name + "field", field, storagehandlername = handlerName)) ++ Seq(AttributeDefinition("id", FieldTypes.AUTOTYPE, true, storagehandlername = handlerName))
-
       EntityOp.create(entityname, attributes)
-
       RandomDataOp.apply(entityname, ntuples, Map())
 
       val data = Entity.load(entityname).get.getData().get.collect()
@@ -40,14 +38,8 @@ class PostGisTestSuite extends AdamTestBase {
 
   scenario("put query to an entity") {
     withEntityName { entityname =>
-      val ntuples = 1000
-
-      val handlerName = Some("gis")
-      val fieldTypes = Seq(FieldTypes.GEOMETRYTYPE)
       val attributes = fieldTypes.map(field => AttributeDefinition(field.name + "field", field, storagehandlername = handlerName)) ++ Seq(AttributeDefinition("id", FieldTypes.AUTOTYPE, true, storagehandlername = handlerName))
-
       EntityOp.create(entityname, attributes)
-
       RandomDataOp.apply(entityname, ntuples, Map())
 
       val query = "(ST_Distance('LINESTRING(-122.33 47.606, 0.0 51.5)'::geography, 'POINT(-21.96 64.15)':: geography))::int"
