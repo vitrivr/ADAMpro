@@ -12,6 +12,7 @@ import ch.unibas.dmi.dbis.adam.exception._
 import ch.unibas.dmi.dbis.adam.index.Index.{IndexName, IndexTypeName}
 import ch.unibas.dmi.dbis.adam.index.structures.IndexTypes
 import ch.unibas.dmi.dbis.adam.utils.Logging
+import org.apache.hadoop.yarn.webapp.hamlet.HamletSpec.SELECT
 import slick.dbio.NoStream
 import slick.driver.PostgresDriver.api._
 import slick.jdbc.meta.MTable
@@ -30,7 +31,7 @@ import scala.util.{Failure, Success, Try}
   */
 object CatalogOperator extends Logging {
   private val MAX_WAITING_TIME: Duration = 100.seconds
-  private val DB = Database.forURL(AdamConfig.jdbcUrl, driver = "org.postgresql.Driver", user = AdamConfig.jdbcUser, password = AdamConfig.jdbcPassword)
+  private val DB = Database.forURL("jdbc:derby:" + AdamConfig.internalsPath + "/ap_catalog" + ";create=true")
 
   private[catalog] val SCHEMA = "adampro"
 
@@ -51,11 +52,17 @@ object CatalogOperator extends Logging {
     */
   private def init() {
     try {
-      val tables = Await.result(DB.run(MTable.getTables), MAX_WAITING_TIME).toSeq.filter(_.name.schema.getOrElse("public").equals(SCHEMA)).map(_.name.name)
-
       val actions = new ListBuffer[DBIOAction[_, NoStream, _]]()
-      //schema might not exist yet
-      actions += sqlu"""CREATE SCHEMA IF NOT exists adampro;"""
+
+      val schemaExists = Await.result(DB.run(sql"""SELECT COUNT(*) FROM SYS.SYSSCHEMAS WHERE SCHEMANAME = '#$SCHEMA'""".as[Int]), MAX_WAITING_TIME).headOption
+
+      if(schemaExists.isEmpty || schemaExists.get == 0){
+        //schema might not exist yet
+        actions += sqlu"""CREATE SCHEMA #$SCHEMA"""
+      }
+
+      val tables = Await.result(DB.run(sql"""SELECT TABLENAME FROM SYS.SYSTABLES NATURAL JOIN SYS.SYSSCHEMAS WHERE SCHEMANAME = '#$SCHEMA'""".as[String]), MAX_WAITING_TIME).toSeq
+
       CATALOGS.foreach { catalog =>
         if (!tables.contains(catalog.baseTableRow.tableName)) {
           actions += catalog.schema.create
@@ -460,7 +467,7 @@ object CatalogOperator extends Logging {
     * Drops index from catalog.
     *
     * @param indexname name of index
-    * @param ifExists   if true: no error if does not exist
+    * @param ifExists  if true: no error if does not exist
     * @return
     */
   def dropIndex(indexname: IndexName, ifExists: Boolean = false): Try[Void] = {
@@ -623,7 +630,7 @@ object CatalogOperator extends Logging {
     * @param key
     * @return
     */
-  def dropMeasurements(key : String): Try[Void] = {
+  def dropMeasurements(key: String): Try[Void] = {
     execute("drop measurements") {
       Await.result(DB.run(_measurements.filter(_.key === key).delete), MAX_WAITING_TIME)
       null

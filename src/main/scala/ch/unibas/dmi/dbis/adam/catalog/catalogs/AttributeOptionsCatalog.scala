@@ -12,13 +12,13 @@ import slick.driver.PostgresDriver.api._
   * June 2016
   */
 private[catalog] class AttributeOptionsCatalog(tag: Tag) extends Table[(String, String, String, String)](tag, Some(CatalogOperator.SCHEMA), "ap_attributeoptions") {
-  def entityname = column[String]("entity")
+  def entityname = column[String]("entity", O.Length(256))
 
-  def attributename = column[String]("attribute")
+  def attributename = column[String]("attribute", O.Length(256))
 
-  def key = column[String]("key")
+  def key = column[String]("key", O.Length(256))
 
-  def value = column[String]("value")
+  def value = column[String]("value", O.Length(256))
 
 
   /**
@@ -28,5 +28,5 @@ private[catalog] class AttributeOptionsCatalog(tag: Tag) extends Table[(String, 
 
   def * = (entityname, attributename, key, value)
 
-  def attribute = foreignKey("attributeoptions_attribute_fk", (entityname, attributename), TableQuery[AttributeCatalog])(t => (t.entityname, t.attributename), onUpdate=ForeignKeyAction.Cascade, onDelete=ForeignKeyAction.Cascade)
+  def attribute = foreignKey("attributeoptions_attribute_fk", (entityname, attributename), TableQuery[AttributeCatalog])(t => (t.entityname, t.attributename), onUpdate=ForeignKeyAction.Restrict, onDelete=ForeignKeyAction.Cascade)
 }

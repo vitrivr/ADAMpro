@@ -12,11 +12,11 @@ import slick.driver.PostgresDriver.api._
   * June 2016
   */
 private[catalog] class AttributeCatalog(tag: Tag) extends Table[(String, String, String, Boolean, Boolean, Boolean, String)](tag, Some(CatalogOperator.SCHEMA), "ap_attribute") {
-  def entityname = column[String]("entity")
+  def entityname = column[String]("entity", O.Length(256))
 
-  def attributename = column[String]("attribute")
+  def attributename = column[String]("attribute", O.Length(256))
 
-  def fieldtype = column[String]("fieldtype")
+  def fieldtype = column[String]("fieldtype", O.Length(256))
 
   def isPK = column[Boolean]("ispk")
 
@@ -24,7 +24,7 @@ private[catalog] class AttributeCatalog(tag: Tag) extends Table[(String, String,
 
   def isIndexed = column[Boolean]("isindexed")
 
-  def handlername = column[String]("handler")
+  def handlername = column[String]("handler", O.Length(256))
 
   /**
     * Special fields
@@ -35,5 +35,5 @@ private[catalog] class AttributeCatalog(tag: Tag) extends Table[(String, String,
 
   def idx = index("idx_attribute_entityname", entityname)
 
-  def entity = foreignKey("attribute_entity_fk", entityname, TableQuery[EntityCatalog])(_.entityname, onUpdate=ForeignKeyAction.Cascade, onDelete=ForeignKeyAction.Cascade)
+  def entity = foreignKey("attribute_entity_fk", entityname, TableQuery[EntityCatalog])(_.entityname, onUpdate=ForeignKeyAction.Restrict, onDelete=ForeignKeyAction.Cascade)
 }

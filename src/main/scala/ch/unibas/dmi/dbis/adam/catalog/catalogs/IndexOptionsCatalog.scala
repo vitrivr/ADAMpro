@@ -12,11 +12,11 @@ import slick.driver.PostgresDriver.api._
   * July 2016
   */
 private[catalog] class IndexOptionsCatalog(tag: Tag) extends Table[(String, String, String)](tag, Some(CatalogOperator.SCHEMA), "ap_indexoptions") {
-  def indexname = column[String]("index")
+  def indexname = column[String]("index", O.Length(256))
 
-  def key = column[String]("key")
+  def key = column[String]("key", O.Length(256))
 
-  def value = column[String]("value")
+  def value = column[String]("value", O.Length(256))
 
 
   /**
@@ -26,6 +26,6 @@ private[catalog] class IndexOptionsCatalog(tag: Tag) extends Table[(String, Stri
 
   def * = (indexname, key, value)
 
-  def index = foreignKey("indexoptions_index_fk", indexname, TableQuery[IndexCatalog])(_.indexname, onUpdate=ForeignKeyAction.Cascade, onDelete=ForeignKeyAction.Cascade)
+  def index = foreignKey("indexoptions_index_fk", indexname, TableQuery[IndexCatalog])(_.indexname, onUpdate=ForeignKeyAction.Restrict, onDelete=ForeignKeyAction.Cascade)
 }
 

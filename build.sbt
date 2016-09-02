@@ -74,8 +74,8 @@ val coreLibs = Seq(
 val secondaryLibs = Seq(
   "org.scalanlp" %% "breeze" % "0.11.2",
   "org.scalanlp" %% "breeze-natives" % "0.11.2",
-  "com.typesafe.slick" %% "slick" % "3.1.0",
-  "com.h2database" % "h2" % "1.4.188" excludeAll ExclusionRule("org.mortbay.jetty"),
+  "com.typesafe.slick" %% "slick" % "3.1.1",
+  "org.apache.derby" % "derby" % "10.12.1.1",
   "org.postgresql" % "postgresql" % "9.4.1208",
   "org.apache.commons" % "commons-lang3" % "3.4" force(),
   "org.apache.commons" % "commons-math3" % "3.4.1" force(),
