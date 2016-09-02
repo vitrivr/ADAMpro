@@ -7,7 +7,6 @@ import ch.unibas.dmi.dbis.adam.utils.Logging
   *
   * Created by silvan on 20.06.16.
   */
-trait ADAMPartitioner extends Logging{
-
+trait CustomPartitioner extends Logging {
   def partitionerName: PartitionerChoice.Value
 }
