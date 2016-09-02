@@ -77,6 +77,15 @@ object StorageHandlerRegistry extends Logging {
   /**
     *
     * @param name
+    * @param handler
+    */
+  def register(name : String, handler: StorageHandler): Unit = {
+    handlers += name -> handler
+  }
+
+  /**
+    *
+    * @param name
     */
   def unregister(name: String): Unit = {
     handlers -= name
