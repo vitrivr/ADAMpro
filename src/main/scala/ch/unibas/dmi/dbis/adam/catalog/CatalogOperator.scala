@@ -12,7 +12,7 @@ import ch.unibas.dmi.dbis.adam.index.Index.{IndexName, IndexTypeName}
 import ch.unibas.dmi.dbis.adam.index.structures.IndexTypes
 import ch.unibas.dmi.dbis.adam.utils.Logging
 import slick.dbio.NoStream
-import slick.driver.H2Driver.api._ //TODO: this is wrong, but Slick will do weird things if Derby driver is used
+import slick.driver.DerbyDriver.api._
 
 import scala.collection.mutable.ListBuffer
 import scala.concurrent.Await

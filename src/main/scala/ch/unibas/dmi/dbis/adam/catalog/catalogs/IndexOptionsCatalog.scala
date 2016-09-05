@@ -1,7 +1,7 @@
 package ch.unibas.dmi.dbis.adam.catalog.catalogs
 
 import ch.unibas.dmi.dbis.adam.catalog.CatalogOperator
-import slick.driver.PostgresDriver.api._
+import slick.driver.DerbyDriver.api._
 
 /**
   * ADAMpro
@@ -12,11 +12,11 @@ import slick.driver.PostgresDriver.api._
   * July 2016
   */
 private[catalog] class IndexOptionsCatalog(tag: Tag) extends Table[(String, String, String)](tag, Some(CatalogOperator.SCHEMA), "ap_indexoptions") {
-  def indexname = column[String]("index", O.Length(256))
+  def indexname = column[String]("index")
 
-  def key = column[String]("key", O.Length(256))
+  def key = column[String]("key")
 
-  def value = column[String]("value", O.Length(256))
+  def value = column[String]("value")
 
 
   /**

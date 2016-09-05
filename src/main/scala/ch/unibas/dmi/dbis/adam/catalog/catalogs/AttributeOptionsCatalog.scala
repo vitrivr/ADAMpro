@@ -1,7 +1,7 @@
 package ch.unibas.dmi.dbis.adam.catalog.catalogs
 
 import ch.unibas.dmi.dbis.adam.catalog.CatalogOperator
-import slick.driver.PostgresDriver.api._
+import slick.driver.DerbyDriver.api._
 
 /**
   * ADAMpro
@@ -12,13 +12,13 @@ import slick.driver.PostgresDriver.api._
   * June 2016
   */
 private[catalog] class AttributeOptionsCatalog(tag: Tag) extends Table[(String, String, String, String)](tag, Some(CatalogOperator.SCHEMA), "ap_attributeoptions") {
-  def entityname = column[String]("entity", O.Length(256))
+  def entityname = column[String]("entity")
 
-  def attributename = column[String]("attribute", O.Length(256))
+  def attributename = column[String]("attribute")
 
-  def key = column[String]("key", O.Length(256))
+  def key = column[String]("key")
 
-  def value = column[String]("value", O.Length(256))
+  def value = column[String]("value")
 
 
   /**

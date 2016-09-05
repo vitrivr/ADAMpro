@@ -1,7 +1,7 @@
 package ch.unibas.dmi.dbis.adam.catalog.catalogs
 
 import ch.unibas.dmi.dbis.adam.catalog.CatalogOperator
-import slick.driver.PostgresDriver.api._
+import slick.driver.DerbyDriver.api._
 
 /**
   * ADAMpro
@@ -12,15 +12,15 @@ import slick.driver.PostgresDriver.api._
   * June 2016
   */
 private[catalog] class IndexCatalog(tag: Tag) extends Table[(String, String, String, String, Array[Byte], Boolean)](tag, Some(CatalogOperator.SCHEMA), "ap_index") {
-  def indexname = column[String]("index", O.PrimaryKey, O.Length(256))
+  def indexname = column[String]("index", O.PrimaryKey)
 
-  def entityname = column[String]("entity", O.Length(256))
+  def entityname = column[String]("entity")
 
-  def attributename = column[String]("attribute", O.Length(256))
+  def attributename = column[String]("attribute")
 
-  def indextypename = column[String]("indextype", O.Length(256))
+  def indextypename = column[String]("indextype")
 
-  def meta = column[Array[Byte]]("meta", O.SqlType("BLOB"))
+  def meta = column[Array[Byte]]("meta")
 
   def isUpToDate = column[Boolean]("uptodate")
 
