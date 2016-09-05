@@ -2,7 +2,7 @@ package ch.unibas.dmi.dbis.adam.evaluation.utils
 
 import java.io._
 import java.nio.channels.FileChannel
-import java.nio.{ByteBuffer, ByteOrder, FloatBuffer}
+import java.nio.{ByteBuffer, ByteOrder}
 
 import com.google.common.util.concurrent.SettableFuture
 import io.grpc.stub.StreamObserver
@@ -21,16 +21,16 @@ object VecImporter extends Logging {
 
   def genEntity(definer: AdamDefinitionStub): Unit = {
     val eName = "sift_realdata"
-    val preview = Await.result(definer.getEntityProperties(EntityNameMessage("sift_realdata")), Duration(10, "s"))
+    val preview = Await.result(definer.getEntityProperties(EntityNameMessage("sift_realdata")), Duration(100, "s"))
     System.out.println(preview)
 
-    //Await.result(definer.dropEntity(EntityNameMessage("sift_realdata")), Duration(10, "s"))
-    val exists = Await.result(definer.listEntities(EmptyMessage()), Duration(10, "s")).entities.find(_.equals(eName))
+    //Await.result(definer.dropEntity(EntityNameMessage("sift_realdata")), Duration(100, "s"))
+    val exists = Await.result(definer.listEntities(EmptyMessage()), Duration(100, "s")).entities.find(_.equals(eName))
     if (exists.isEmpty) {
       log.info("Generating new Entity: " + eName)
       definer.createEntity(CreateEntityMessage(eName, Seq(AttributeDefinitionMessage.apply("pk", AttributeType.LONG, pk = true, unique = true, indexed = true),
         AttributeDefinitionMessage("feature", AttributeType.FEATURE, pk = false, unique = false, indexed = true))))
-      val options = Map("fv-dimensions" -> 128, "fv-min" -> 0, "fv-sparse" -> false).mapValues(_.toString)
+      val options = Map("fv-dimensions" -> 128, "fv-min" -> 0, "fv-max" -> 1, "fv-sparse" -> false).mapValues(_.toString)
     } else log.info("Using existing entity: " + eName)
   }
 
@@ -53,10 +53,8 @@ object VecImporter extends Logging {
     var insertObserver: StreamObserver[InsertMessage] = definer.insert(new LastAckStreamObserver(future))
 
     val tic = System.currentTimeMillis()
-    var floatBuf: FloatBuffer = null
-    val data = new Array[Float](128)
-
     while (readbytes != (-1) && readbytes == 4 + 128 * 4) {
+      val data = new Array[Float](128)
       //buffer is at position 516 after reading, we skip dimensionality-info
       buf.position(4)
       //val data = new Array[Float](128)
@@ -65,7 +63,7 @@ object VecImporter extends Logging {
       var i = 0
       while(i<128){
         buf.position(4*i+4)
-        data(i) = buf.getFloat
+        data(i) = buf.getFloat/512f
         i+=1
       }
       tuples+=TupleInsertMessage().withData(Map("pk" -> DataMessage().withLongData(id), "feature" -> DataMessage().withFeatureData(FeatureVectorMessage().withDenseVector(DenseVectorMessage().withVector(data)))))
@@ -86,6 +84,11 @@ object VecImporter extends Logging {
         tuples.clear()
         val toc = System.currentTimeMillis()
         log.info("Completed in {} ms, current id: {}", toc-tic, id)
+        if(id==120000){
+          insertObserver.onCompleted()
+          future.get()
+          System.exit(1)
+        }
       }
       //reset buffer
       buf.clear()
