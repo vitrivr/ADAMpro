@@ -14,7 +14,13 @@ docker run --net=adampronw -p 5432:5432 -e POSTGRES_PASSWORD=adampro -e POSTGRES
 # creates a solr container
 docker run --net=adampronw -p 8983:8983 -h solr --name solr --net-alias solr -d solr:6.1
 
-# creates Spark container
+# create a postgis container
+docker run --net=adampronw -p 5433:5432 -e POSTGRES_PASSWORD=adampro -e POSTGRES_DB=adampro -e POSTGRES_USER=adampro  -h postgis --name postgis --net-alias postgis -d mdillon/postgis
+
+# create a cassandra container
+docker run --net=adampronw -p 9042:9042 -h cassandra --name cassandra --net-alias cassandra -d cassandra:3.7
+
+# creates spark container
 mkdir -p $ADAMPRODIR/target # note that we mount the target folder to the docker VM
 
 if [[ "$(docker images -q spark:j1.8-s1.6.1-h2.6> /dev/null)" == "" ]]; then
