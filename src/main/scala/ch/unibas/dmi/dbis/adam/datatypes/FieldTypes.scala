@@ -41,6 +41,8 @@ object FieldTypes {
 
   case object UNRECOGNIZEDTYPE extends FieldType("", false, types.NullType)
 
+
+  //TODO: only add to values if handler is available
   def values = Seq(INTTYPE, LONGTYPE, FLOATTYPE, DOUBLETYPE, STRINGTYPE, TEXTTYPE, BOOLEANTYPE, FEATURETYPE, GEOMETRYTYPE, GEOGRAPHYTYPE, AUTOTYPE)
 
   implicit def fromString(s: String): FieldType = values.filter(x => x.name == s).head
