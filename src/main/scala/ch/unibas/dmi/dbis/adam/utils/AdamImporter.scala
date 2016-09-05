@@ -7,14 +7,14 @@ import ch.unibas.dmi.dbis.adam.datatypes.FieldTypes
 import ch.unibas.dmi.dbis.adam.datatypes.FieldTypes.FEATURETYPE
 import ch.unibas.dmi.dbis.adam.datatypes.feature.FeatureVectorWrapper
 import ch.unibas.dmi.dbis.adam.entity.AttributeDefinition
-import ch.unibas.dmi.dbis.adam.main.{AdamContext, SparkStartup}
+import ch.unibas.dmi.dbis.adam.main.AdamContext
 import ch.unibas.dmi.dbis.adam.query.distance.NormBasedDistance
 import org.apache.spark.annotation.Experimental
 import org.apache.spark.sql.jdbc.AdamDialectRegistrar
 import org.apache.spark.sql.types.DataTypes
 
 import scala.collection.mutable.ListBuffer
-import scala.util.{Success, Failure, Try, Random}
+import scala.util.{Failure, Random, Success, Try}
 
 /**
   * adamtwo
@@ -36,7 +36,7 @@ class AdamImporter(url: String, user: String, password: String) extends Logging 
     try {
       log.info("importing table " + tablename)
 
-      val attributeRenamingRules = Seq(("shotid" -> "id"), ("video" -> "multimediaobject"), ("startframe" -> "segmentstart"), ("endframe" -> "segmentend"), ("frames" -> "framecount"), ("seconds" -> "duration"))
+      val attributeRenamingRules = Seq(("shotid" -> "id"), ("video" -> "multimediaobject"), ("startframe" -> "segmentstart"), ("endframe" -> "segmentend"), ("frames" -> "framecount"), ("seconds" -> "duration"), ("number" -> "sequencenumber"))
       val attributeCasting = Seq(("id" -> DataTypes.StringType), ("multimediaobject" -> DataTypes.StringType))
 
       val entityname = schemaname + "_" + newtablename
@@ -162,8 +162,8 @@ object AdamImporter {
   def apply(host: String, database: String, username: String, password: String)(implicit ac: AdamContext): Try[Void] = {
     try {
       val importer = new AdamImporter("jdbc:postgresql://" + host + "/" + database, username, password)
-      val entityRenamingRules = Seq(("shots" -> "segment"), ("videos" -> "multimediaobject")).toMap
 
+      val entityRenamingRules = Seq(("shots" -> "segment"), ("videos" -> "multimediaobject")).toMap
 
       //tables to import
       val cineast = Seq("representativeframes", "resultcachenames", "shots", "videos")
@@ -179,16 +179,5 @@ object AdamImporter {
     } catch {
       case e: Exception => Failure(e)
     }
-  }
-
-  def main(args: Array[String]): Unit = {
-    //for experimental reasons only
-    val ac = SparkStartup.mainContext
-
-    if (args.length != 4) {
-      exit(1)
-    }
-
-    apply(args(0), args(1), args(2), args(3))(ac)
   }
 }
