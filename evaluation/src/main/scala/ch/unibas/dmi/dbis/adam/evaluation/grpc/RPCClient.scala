@@ -34,10 +34,11 @@ class RPCClient(channel: ManagedChannel, definer: AdamDefinitionBlockingStub, se
   val indexOnly = true
   val numQ = 10
   val tupleSizes = Seq(1e6.toInt)
-  val dimensions = Seq(20, 64, 128)
-  val partitions = Seq(1, 2, 4, 6, 8, 10, 12)
+  val dimensions = Seq(128)
+  val partitions = Seq(1, 2, 4, 6, 8, 10, 12, 20, 50)
   val indices = Seq(IndexType.vaf)
   val indicesToGenerate = Seq(IndexType.vaf, IndexType.sh, IndexType.ecp)
+  //TODO Test Current
   val partitioners = Seq(RepartitionMessage.Partitioner.ECP, RepartitionMessage.Partitioner.SPARK, RepartitionMessage.Partitioner.SH)
 
   var dropPartitions = Seq(0.0)
@@ -158,6 +159,9 @@ class RPCClient(channel: ManagedChannel, definer: AdamDefinitionBlockingStub, se
 
   /** Checks if an Entity with the given Tuple size and dimensions exists */
   def getOrGenEntity(tuples: Int, dim: Int): String = {
+    if(tuples == 1e6.toInt && dim == 128){
+      return "sift_realdata"
+    }
     val eName = "sil_" + tuples + "_" + dim + "_" + host.replace(".", "")
     val exists = definer.listEntities(EmptyMessage()).entities.find(_.equals(eName))
     if (exists.isEmpty) {
