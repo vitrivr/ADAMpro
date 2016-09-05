@@ -84,7 +84,7 @@ object VecImporter extends Logging {
         tuples.clear()
         val toc = System.currentTimeMillis()
         log.info("Completed in {} ms, current id: {}", toc-tic, id)
-        if(id==120000){
+        if(id==1e6.toInt){
           insertObserver.onCompleted()
           future.get()
           System.exit(1)
