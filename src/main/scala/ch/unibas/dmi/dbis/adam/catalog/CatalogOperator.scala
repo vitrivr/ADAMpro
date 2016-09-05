@@ -2,7 +2,6 @@ package ch.unibas.dmi.dbis.adam.catalog
 
 import java.io._
 
-import breeze.linalg.unique
 import ch.unibas.dmi.dbis.adam.catalog.catalogs._
 import ch.unibas.dmi.dbis.adam.config.AdamConfig
 import ch.unibas.dmi.dbis.adam.datatypes.FieldTypes
@@ -12,10 +11,8 @@ import ch.unibas.dmi.dbis.adam.exception._
 import ch.unibas.dmi.dbis.adam.index.Index.{IndexName, IndexTypeName}
 import ch.unibas.dmi.dbis.adam.index.structures.IndexTypes
 import ch.unibas.dmi.dbis.adam.utils.Logging
-import org.apache.hadoop.yarn.webapp.hamlet.HamletSpec.SELECT
 import slick.dbio.NoStream
-import slick.driver.PostgresDriver.api._
-import slick.jdbc.meta.MTable
+import slick.driver.H2Driver.api._ //TODO: this is wrong, but Slick will do weird things if Derby driver is used
 
 import scala.collection.mutable.ListBuffer
 import scala.concurrent.Await
