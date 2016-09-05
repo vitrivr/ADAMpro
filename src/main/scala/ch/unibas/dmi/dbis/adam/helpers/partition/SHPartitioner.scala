@@ -60,12 +60,15 @@ object SHPartitioner extends ADAMPartitioner with Logging with Serializable {
 
     var leaders = ListBuffer[BitString[_]](BitString(Seq.tabulate(noBits)( el => if(Random.nextBoolean()) el else 0).filter(_!=0)))
     log.debug("Random leader: "+leaders)
-    def getMinDistance(c: BitString[_]) : Int = leaders.sortBy(_.hammingDistance(c)).last.hammingDistance(c)
+    def getMinDistance(c: BitString[_]) : Int = {
+      leaders.sortBy(_.hammingDistance(c)).head.hammingDistance(c)
+    }
 
     while(leaders.size<nPart){
       var trainData: Array[BitString[_]] = joinDF.sample(false, fraction).collect().map(_.getAs[BitString[_]](FieldNames.partitionKey))
       if(trainData.length<100) trainData = trainData ++ joinDF.take(100).map(el => el.getAs[BitString[_]](FieldNames.partitionKey))
-      leaders+=trainData.sortBy(r => getMinDistance(r)).last
+      val sorted = trainData.sortBy(r => getMinDistance(r))
+      leaders+=sorted.last
       if(leaders.size%20==0) log.debug(leaders.size.toString)
     }
     leaders.toIndexedSeq
@@ -91,12 +94,27 @@ object SHPartitioner extends ADAMPartitioner with Logging with Serializable {
     val joinDF = index.getData.withColumnRenamed(FieldNames.featureIndexColumnName, FieldNames.partitionKey)
     val joinedDF = data.join(joinDF, index.pk.name)
 
-    val clusters = trainClusters(joinDF, nPartitions, noBits)
-    val meta = new SHPartitionerMetaData(nPartitions, noBits, clusters)
+    //train double the amount of necessary clusters
+    val trainedClusters = trainClusters(joinDF, nPartitions*2, noBits)
+    val trainMeta = new SHPartitionerMetaData(nPartitions*2, noBits, trainedClusters)
 
-    //drop old partitioner, create new
-    CatalogOperator.dropPartitioner(indexName.get).get
-    CatalogOperator.createPartitioner(indexName.get, nPartitions, meta, SHPartitioner)
+    //test clusters
+    val trainPartitioner = new SHPartitioner(trainMeta)
+    val trainRepartitioned: RDD[(Any, Row)] = joinedDF.map(r => (r.getAs[Any](FieldNames.partitionKey), r)).partitionBy(trainPartitioner)
+    val trainReparRDD = trainRepartitioned.mapPartitions((it) => {
+      it.map(f => f._2)
+    }, preservesPartitioning = true)
+
+    //Drop Best & Worst
+    val partInfo= trainReparRDD.mapPartitionsWithIndex((idx, it) => Iterator((it.size, idx)), preservesPartitioning = true).collect()
+    var sorted = partInfo.sortBy(_._1)
+    sorted = sorted.drop(nPartitions/2)
+    sorted = sorted.dropRight(nPartitions/5)
+    while(sorted.length>nPartitions) {
+      sorted = sorted.drop(1)
+    }
+    val clusters = sorted.map(el => trainedClusters(el._2))
+    val meta = new SHPartitionerMetaData(nPartitions, noBits, clusters)
 
     //repartition
     val partitioner = new SHPartitioner(meta)
@@ -104,6 +122,10 @@ object SHPartitioner extends ADAMPartitioner with Logging with Serializable {
     val reparRDD = repartitioned.mapPartitions((it) => {
       it.map(f => f._2)
     }, preservesPartitioning = true)
+
+    //drop old partitioner, create new
+    CatalogOperator.dropPartitioner(indexName.get).get
+    CatalogOperator.createPartitioner(indexName.get, nPartitions, meta, SHPartitioner)
 
     ac.sqlContext.createDataFrame(reparRDD, joinedDF.schema)
   }
