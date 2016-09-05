@@ -86,6 +86,7 @@ class RPCTestSuite extends AdamTestBase with ScalaFutures {
 
         Then("the tuples should eventually be available")
         eventually {
+          Thread.sleep(500)
           assert(definition.count(EntityNameMessage(entityname)).message.toInt == ntuples)
         }
       }
@@ -130,6 +131,7 @@ class RPCTestSuite extends AdamTestBase with ScalaFutures {
 
         Then("the tuples should eventually be available")
         eventually {
+          Thread.sleep(500)
           val response = definition.count(EntityNameMessage(entityname))
           assert(response.code == AckMessage.Code.OK)
           assert(response.message.toInt == ntuples)
@@ -174,6 +176,7 @@ class RPCTestSuite extends AdamTestBase with ScalaFutures {
 
         Then("the tuples should eventually be available")
         eventually {
+          Thread.sleep(500)
           val inserted = definition.count(EntityNameMessage(entityname)).message.toInt == ntuples
           assert(inserted)
 
