@@ -4,6 +4,7 @@ import java.util.concurrent.TimeUnit
 
 import ch.unibas.dmi.dbis.adam.rpc.datastructures.{RPCAttributeDefinition, RPCQueryObject, RPCQueryResults}
 import ch.unibas.dmi.dbis.adam.utils.Logging
+import io.grpc.internal.DnsNameResolverProvider
 import io.grpc.okhttp.OkHttpChannelBuilder
 import io.grpc.stub.StreamObserver
 import io.grpc.{ManagedChannel, ManagedChannelBuilder}
@@ -494,7 +495,10 @@ class RPCClient(channel: ManagedChannel, definer: AdamDefinitionBlockingStub, se
 
 object RPCClient {
   def apply(host: String, port: Int): RPCClient = {
-    val channel = OkHttpChannelBuilder.forAddress(host, port).usePlaintext(true).asInstanceOf[ManagedChannelBuilder[_]].build()
+    val channel = OkHttpChannelBuilder.forAddress(host, port)
+      .nameResolverFactory(new DnsNameResolverProvider())
+      .usePlaintext(true)
+      .asInstanceOf[ManagedChannelBuilder[_]].build()
 
     new RPCClient(
       channel,
