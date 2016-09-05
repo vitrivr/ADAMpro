@@ -74,7 +74,7 @@ val secondaryLibs = Seq(
   "org.scalanlp" %% "breeze" % "0.11.2",
   "org.scalanlp" %% "breeze-natives" % "0.11.2",
   "com.typesafe.slick" %% "slick" % "3.1.1",
-  "org.apache.derby" % "derby" % "10.12.1.1",
+  "org.apache.derby" % "derby" % "10.10.2.0",
   "it.unimi.dsi" % "fastutil" % "7.0.12",
   "org.apache.commons" % "commons-lang3" % "3.4",
   "org.apache.commons" % "commons-math3" % "3.4.1",
