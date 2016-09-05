@@ -38,7 +38,7 @@ class AdamTestBase extends FeatureSpec with GivenWhenThen with Eventually with I
     *
     * @return
     */
-  def getJDBCConnection = {
+  def getMetadataConnection = {
     Class.forName("org.postgresql.Driver").newInstance
     DriverManager.getConnection(AdamConfig.jdbcUrl, AdamConfig.jdbcUser, AdamConfig.jdbcPassword)
   }
