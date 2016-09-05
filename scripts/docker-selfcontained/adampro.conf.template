@@ -1,17 +1,42 @@
 adampro {
+  loglevel = "INFO"
+
   hadoopUrl =  "hdfs://HOSTNAME:9000"
   basePath = ${adampro.hadoopUrl}"/adampro/"
+  localPath = "/adampro/"
 
-  internalsPath = ${adampro.basePath}"/internals"
+  internalsPath = ${adampro.localPath}"/internals"
+
   indexPath = ${adampro.basePath}"/index"
   dataPath = ${adampro.basePath}"/data"
   evaluationPath = ${adampro.basePath}"/evaluation"
 
+  grpc {
+    port = "5890"
+  }
+}
+
+storage {
   jdbc {
     url = "jdbc:postgresql://HOSTNAME:5432/adampro"
+    user = "adampro"
+    password = "adampro"
   }
 
   solr {
     url = "http://HOSTNAME:8983/solr"
+  }
+
+  postgis {
+    url = "jdbc:postgresql://HOSTNAME:5433/adampro"
+    user = "adampro"
+    password = "adampro"
+  }
+
+  cassandra {
+    host = "HOSTNAME"
+    port = "9042"
+    username = "cassandra"
+    password = "cassandra"
   }
 }

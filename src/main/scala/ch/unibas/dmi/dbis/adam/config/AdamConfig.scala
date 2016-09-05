@@ -15,7 +15,7 @@ object AdamConfig extends Serializable with Logging {
   val config = {
     val externalConfig = getExternalConfigFile().map(_.resolve())
 
-    val internalConfig =  if (!ConfigFactory.load().hasPath("adampro")) {
+    val internalConfig = if (!ConfigFactory.load().hasPath("adampro")) {
       //this is somewhat a hack to have different configurations depending on whether we have an assembly-jar or we
       //run the application "locally"
       log.info("using assembly.conf")
@@ -25,7 +25,7 @@ object AdamConfig extends Serializable with Logging {
     }.resolve()
 
     //merge with internal
-    val merged = if(externalConfig.isDefined){
+    val merged = if (externalConfig.isDefined) {
       externalConfig.get.withFallback(internalConfig)
     } else {
       internalConfig
@@ -45,12 +45,6 @@ object AdamConfig extends Serializable with Logging {
 
   val internalsPath = cleanPath(config.getString("adampro.internalsPath"))
   val schedulerFile = internalsPath + "/" + "scheduler.xml"
-
-  val jdbcUrl = config.getString("adampro.jdbc.url")
-  val jdbcUser = config.getString("adampro.jdbc.user")
-  val jdbcPassword = config.getString("adampro.jdbc.password")
-
-  val solrUrl = config.getString("adampro.solr.url")
 
   val grpcPort = config.getInt("adampro.grpc.port")
 
@@ -86,6 +80,12 @@ object AdamConfig extends Serializable with Logging {
 
   val logQueryExecutionTime = true
 
+  /**
+    *
+    * @param path
+    * @return
+    */
+  def getString(path: String) = config.getString(path)
 
   /**
     * Reads external config file.
@@ -100,7 +100,7 @@ object AdamConfig extends Serializable with Logging {
 
     val file = new File(path, name)
 
-    if(file.exists()){
+    if (file.exists()) {
       Some(ConfigFactory.parseFile(file))
     } else {
       None

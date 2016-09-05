@@ -53,7 +53,7 @@ object SparkStartup extends Logging {
 
   //TODO: add dynamically based on config
   val storageRegistry = StorageHandlerRegistry
-  storageRegistry.register(new DatabaseHandler(new PostgresqlEngine(AdamConfig.jdbcUrl, AdamConfig.jdbcUser, AdamConfig.jdbcPassword)))
+  storageRegistry.register(new DatabaseHandler(new PostgresqlEngine(AdamConfig.getString("storage.jdbc.url"), AdamConfig.getString("storage.jdbc.user"), AdamConfig.getString("storage.jdbc.password"))))
 
   if (AdamConfig.isBaseOnHadoop) {
     log.debug("storing data on Hadoop")
@@ -63,7 +63,7 @@ object SparkStartup extends Logging {
     storageRegistry.register(new FlatFileHandler(new ParquetEngine(AdamConfig.dataPath)))
   }
 
-  storageRegistry.register(new SolrHandler(AdamConfig.solrUrl))
+  storageRegistry.register(new SolrHandler(AdamConfig.getString("storage.solr.url")))
 
   val indexStorageHandler = if (AdamConfig.isBaseOnHadoop) {
     log.debug("storing data on Hadoop")
