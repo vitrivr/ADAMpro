@@ -37,8 +37,14 @@ class ECPIndexer(centroidBasedLeaders: Boolean, distance: DistanceFunction, trai
     val n = entity.count
     val fraction = Sampling.computeFractionForSampleSize(math.max(trainingSize.getOrElse(math.sqrt(n).toInt), IndexGenerator.MINIMUM_NUMBER_OF_TUPLE), n, withReplacement = false)
     var trainData = data.sample(false, fraction).collect()
-    if (trainData.length < IndexGenerator.MINIMUM_NUMBER_OF_TUPLE) {
-      trainData = data.take(IndexGenerator.MINIMUM_NUMBER_OF_TUPLE)
+    var before = trainData.length
+    trainData = trainData.filter(el => trainData.count(i => distance.apply(i.feature, el.feature) == 0)<=1)
+    log.info("Discarded "+(before-trainData.length)+" Tuples")
+    while (trainData.length < math.sqrt(n)) {
+      trainData = trainData.++:(data.sample(false, fraction).collect())
+      before = trainData.length
+      trainData = trainData.filter(el => trainData.count(i => distance.apply(i.feature, el.feature) == 0)<=1)
+      log.info("Discarded "+(before-trainData.length)+" Tuples")
     }
 
     val bcleaders = ac.sc.broadcast(trainData.zipWithIndex.map { case (idt, idx) => IndexingTaskTuple(idx, idt.feature) }) //use own ids, not id of data
@@ -47,9 +53,8 @@ class ECPIndexer(centroidBasedLeaders: Boolean, distance: DistanceFunction, trai
     log.debug("eCP indexing...")
 
     val indexdata = data.map(datum => {
-      val minTID = bcleaders.value.map({ l =>
-        (l.id, distance.apply(datum.feature, l.feature))
-      }).minBy(_._2)._1
+      val minTID = bcleaders.value.map(l =>
+        (l.id, distance.apply(datum.feature, l.feature))).minBy(_._2)._1
 
       (datum.id, minTID, datum.feature)
     })
@@ -73,7 +78,9 @@ class ECPIndexer(centroidBasedLeaders: Boolean, distance: DistanceFunction, trai
     } else {
       //use feature vector chosen in beginning as leader
       val counts = indexdata.map(x => x._2 -> 1).countByKey
-      bcleaders.value.map(x => ECPLeader(x.id, x.feature, counts(x.id))).toSeq
+      bcleaders.value.map(x => ECPLeader(x.id, x.feature, {
+        counts.getOrElse(x.id, 0)
+      })).toSeq
     }
 
     new ECPIndex(indexname, entityname, df, ECPIndexMetaData(leaders, distance))
