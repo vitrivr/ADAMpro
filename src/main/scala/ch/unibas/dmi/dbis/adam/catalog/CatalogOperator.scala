@@ -71,6 +71,7 @@ object CatalogOperator extends Logging {
     } catch {
       case e: Exception =>
         log.error("fatal error when creating catalogs", e)
+        System.exit(1)
         throw new GeneralAdamException("fatal error when creating catalogs")
     }
   }
