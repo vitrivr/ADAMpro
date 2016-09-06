@@ -47,6 +47,13 @@ COPY solr /etc/init.d/solr
 RUN chmod 777 /etc/init.d/solr
 RUN chkconfig --add solr
 
+# adding data
+# RUN mkdir -p /adampro
+# COPY adampro.tar.gz /adampro/adampro.tar.gz
+# RUN tar -xvf /adampro/adampro.tar.gz -C /adampro
+# RUN $BOOTSTRAP && $HADOOP_PREFIX/bin/hadoop dfsadmin -safemode leave && $HADOOP_PREFIX/bin/hdfs dfs -mkdir /adampro && $HADOOP_PREFIX/bin/hdfs dfs -copyFromLocal /adampro/data /adampro && $HADOOP_PREFIX/bin/hdfs dfs -copyFromLocal /adampro/index /adampro
+# RUN rm -r $PGDATA && cp -R /adampro/postgres $PGDATA && chown -R postgres:postgres $PGDATA/.. && chmod -R 700 $PGDATA
+
 #port for postgresql
 EXPOSE 5432
 # port for spark UI
