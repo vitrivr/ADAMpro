@@ -36,12 +36,18 @@ class ECPIndexer(centroidBasedLeaders: Boolean, distance: DistanceFunction, trai
     //randomly choose leaders
     val n = entity.count
     val fraction = Sampling.computeFractionForSampleSize(math.max(trainingSize.getOrElse(math.sqrt(n).toInt), IndexGenerator.MINIMUM_NUMBER_OF_TUPLE), n, withReplacement = false)
-    var trainData = data.sample(false, fraction).collect()
+    var trainData = data.sample(false, fraction).collect().map(_.feature).distinct //take distinct data
+
     if (trainData.length < IndexGenerator.MINIMUM_NUMBER_OF_TUPLE) {
-      trainData = data.take(IndexGenerator.MINIMUM_NUMBER_OF_TUPLE)
+      trainData = data.take(IndexGenerator.MINIMUM_NUMBER_OF_TUPLE).map(_.feature).distinct //take distinct data
     }
 
-    val bcleaders = ac.sc.broadcast(trainData.zipWithIndex.map { case (idt, idx) => IndexingTaskTuple(idx, idt.feature) }) //use own ids, not id of data
+    if (trainData.length < IndexGenerator.MINIMUM_NUMBER_OF_TUPLE) {
+      log.warn("not enough distinct data found in eCP indexing, possibly retry?")
+    }
+
+
+      val bcleaders = ac.sc.broadcast(trainData.zipWithIndex.map { case (feature, idx) => IndexingTaskTuple(idx, feature) }) //use own ids, not id of data
     log.trace("eCP index chosen " + trainData.length + " leaders")
 
     log.debug("eCP indexing...")
