@@ -5,7 +5,6 @@ import java.util.Properties
 
 import ch.unibas.dmi.dbis.adam.config.AdamConfig
 import ch.unibas.dmi.dbis.adam.entity.AttributeDefinition
-import ch.unibas.dmi.dbis.adam.exception.GeneralAdamException
 import ch.unibas.dmi.dbis.adam.main.AdamContext
 import ch.unibas.dmi.dbis.adam.storage.engine.RelationalDatabaseEngine
 import org.apache.spark.sql.types.{StructField, StructType}
@@ -46,7 +45,6 @@ class PostgresqlEngine(private val url: String, private val user: String, privat
     } catch {
       case e: Exception =>
         log.error("fatal error when setting up relational engine", e)
-        throw new GeneralAdamException("fatal error when setting up relational engine")
     }
   }
 
