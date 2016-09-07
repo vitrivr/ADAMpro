@@ -45,7 +45,7 @@ object ProjectionExpression extends Logging {
 
   case class FieldNameProjection(names: Seq[String])(implicit ac: AdamContext) extends ProjectionField {
     override def f(df: DataFrame): DataFrame = {
-      if (names.nonEmpty) {
+      if (names.nonEmpty && names.head != "*") {
         import org.apache.spark.sql.functions.col
         df.select(names.map(col): _*)
       } else {
