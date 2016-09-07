@@ -1,6 +1,7 @@
 package ch.unibas.dmi.dbis.adam.evaluation.grpc
 
 import java.io.File
+import java.util.Scanner
 
 import ch.unibas.dmi.dbis.adam.evaluation.io.SeqIO
 import ch.unibas.dmi.dbis.adam.evaluation.utils.{AdamParEvalUtils, EvaluationResultLogger, Logging, PartitionResultLogger}
@@ -239,6 +240,13 @@ class RPCClient(channel: ManagedChannel, definer: AdamDefinitionBlockingStub, se
 
   /** Drops all entities. Careful when using this operation */
   def dropAllEntities() = {
+
+    log.warn("You have requested to drop all entities on host: "+host+". Please confirm by entering the number 42.")
+    val keyboard = new Scanner(System.in);
+    val myint = keyboard.nextInt();
+    if(myint!=42){
+      System.exit(1)
+    }
     val entityList = definer.listEntities(EmptyMessage())
 
     for (entity <- entityList.entities) {
