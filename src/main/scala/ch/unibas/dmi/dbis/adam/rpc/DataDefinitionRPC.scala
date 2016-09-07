@@ -323,7 +323,11 @@ class DataDefinitionRPC extends AdamDefinitionGrpc.AdamDefinition with Logging {
     val res = {
       if(EntityOp.exists(request.entity).get){
         EntityOp.properties(request.entity)
-      } else IndexOp.properties(request.entity)
+      } else {
+        if(IndexOp.exists(request.entity).get){
+          IndexOp.properties(request.entity)
+        } else EntityOp.properties(request.entity)
+      }
     }
 
     if (res.isSuccess) {

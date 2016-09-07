@@ -98,7 +98,6 @@ object SHHashingPartitioner extends ADAMPartitioner with Logging with Serializab
   }
 
   override def apply(data: DataFrame, cols: Option[Seq[String]], indexName: Option[EntityNameHolder], nPartitions: Int, options:Map[String, String] = Map[String, String]())(implicit ac: AdamContext): DataFrame = {
-    return data
     //TODO Train is broken atm
     if (indexName.isEmpty) {
       throw new GeneralAdamException("Indexname was not specified")
