@@ -2,6 +2,7 @@ package ch.unibas.dmi.dbis.adam.rpc
 
 import ch.unibas.dmi.dbis.adam.api.{EntityOp, IndexOp, QueryOp}
 import ch.unibas.dmi.dbis.adam.datatypes.feature.{FeatureVectorWrapper, FeatureVectorWrapperUDT}
+import ch.unibas.dmi.dbis.adam.datatypes.gis.{GeometryWrapperUDT, GeometryWrapper, GeographyWrapper, GeographyWrapperUDT}
 import ch.unibas.dmi.dbis.adam.exception.{GeneralAdamException, QueryNotCachedException}
 import ch.unibas.dmi.dbis.adam.main.{SparkStartup, AdamContext}
 import ch.unibas.dmi.dbis.adam.query.QueryLRUCache
@@ -236,7 +237,9 @@ class SearchRPC extends AdamSearchGrpc.AdamSearch with Logging {
                 case IntegerType => DataMessage().withIntData(row.getAs[Integer](col.name))
                 case LongType => DataMessage().withLongData(row.getAs[Long](col.name))
                 case StringType => DataMessage().withStringData(row.getAs[String](col.name))
-                case _: FeatureVectorWrapperUDT => DataMessage().withFeatureData(FeatureVectorMessage().withDenseVector(DenseVectorMessage(row.getAs[FeatureVectorWrapper](col.name).toSeq)))
+                case _ : FeatureVectorWrapperUDT => DataMessage().withFeatureData(FeatureVectorMessage().withDenseVector(DenseVectorMessage(row.getAs[FeatureVectorWrapper](col.name).toSeq)))
+                case _ : GeographyWrapperUDT => DataMessage().withStringData(row.getAs[GeographyWrapper](col.name).getValue)
+                case _ : GeometryWrapperUDT => DataMessage().withStringData(row.getAs[GeometryWrapper](col.name).getValue)
                 case _ => DataMessage().withStringData("")
               }
             }
