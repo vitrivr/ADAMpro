@@ -130,7 +130,11 @@ case class Entity(val entityname: EntityName)(@transient implicit val ac: AdamCo
       status
     }.filter(_.isSuccess).map(_.get.cache())
 
-    getData().map(_.cache())
+    getData()
+
+    if(_data.isDefined){
+      _data = Some(_data.get.cache())
+    }
   }
 
 

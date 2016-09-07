@@ -54,7 +54,7 @@ object EntityOp extends GenericOp {
   }
 
   /**
-    * Checks if index exists
+    * Checks if entity exists
     *
     * @param entityname name of entity
     * @return
@@ -62,6 +62,20 @@ object EntityOp extends GenericOp {
   def exists(entityname: EntityName)(implicit ac: AdamContext): Try[Boolean] = {
     execute("check entity " + entityname + " exists operation") {
       Success(Entity.exists(entityname))
+    }
+  }
+
+
+  /**
+    * Caches entity.
+    *
+    * @param entityname name of entity
+    * @return
+    */
+  def cache(entityname: EntityName)(implicit ac: AdamContext): Try[Void] = {
+    execute("cache entity " + entityname + " operation") {
+      Entity.load(entityname).get.cache()
+      Success(null)
     }
   }
 
