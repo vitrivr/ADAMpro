@@ -81,7 +81,7 @@ class DatabaseHandler(private val engine: RelationalDatabaseEngine) extends Stor
     */
   override def read(entityname: EntityName, params: Map[String, String] = Map())(implicit ac: AdamContext): Try[DataFrame] = {
     execute("read") {
-      engine.read(getTablename(entityname))
+      engine.read(getTablename(entityname), params.get("predicate").map(Seq(_)))
     }
   }
 

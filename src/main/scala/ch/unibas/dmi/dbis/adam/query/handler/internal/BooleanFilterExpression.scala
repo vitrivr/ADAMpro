@@ -4,7 +4,7 @@ import ch.unibas.dmi.dbis.adam.config.FieldNames
 import ch.unibas.dmi.dbis.adam.entity.Entity
 import ch.unibas.dmi.dbis.adam.entity.Entity._
 import ch.unibas.dmi.dbis.adam.main.AdamContext
-import ch.unibas.dmi.dbis.adam.query.handler.generic.{QueryEvaluationOptions, ExpressionDetails, QueryExpression}
+import ch.unibas.dmi.dbis.adam.query.handler.generic.{ExpressionDetails, QueryEvaluationOptions, QueryExpression}
 import ch.unibas.dmi.dbis.adam.query.query.BooleanQuery
 import ch.unibas.dmi.dbis.adam.utils.Logging
 import org.apache.spark.sql.DataFrame
@@ -38,7 +38,11 @@ object BooleanFilterExpression extends Logging {
 
       ac.sc.setJobGroup(id.getOrElse(""), "boolean filter scan", interruptOnCancel = true)
 
-      var df = entity.getData()
+      var df =  if(bq.where.isDefined){
+        entity.getData(predicates = Map(entity.pk.name -> bq.buildWhereClause()))
+      } else {
+        entity.getData()
+      }
 
       var ids = mutable.Set[Any]()
 

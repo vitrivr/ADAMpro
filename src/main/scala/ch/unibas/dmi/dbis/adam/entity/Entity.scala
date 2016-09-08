@@ -7,12 +7,12 @@ import ch.unibas.dmi.dbis.adam.datatypes.FieldTypes._
 import ch.unibas.dmi.dbis.adam.entity.Entity.EntityName
 import ch.unibas.dmi.dbis.adam.exception.{EntityExistingException, EntityNotExistingException, EntityNotProperlyDefinedException, GeneralAdamException}
 import ch.unibas.dmi.dbis.adam.index.Index
-import ch.unibas.dmi.dbis.adam.main.{SparkStartup, AdamContext}
+import ch.unibas.dmi.dbis.adam.main.{AdamContext, SparkStartup}
 import ch.unibas.dmi.dbis.adam.storage.handler.StorageHandler
 import ch.unibas.dmi.dbis.adam.utils.Logging
 import org.apache.spark.sql.functions.col
 import org.apache.spark.sql.types.{StructField, StructType}
-import org.apache.spark.sql.{SaveMode, DataFrame, Row}
+import org.apache.spark.sql.{DataFrame, Row, SaveMode}
 
 import scala.collection.mutable.ListBuffer
 import scala.util.{Failure, Success, Try}
@@ -65,10 +65,13 @@ case class Entity(val entityname: EntityName)(@transient implicit val ac: AdamCo
     * @param nameFilter    filters for names
     * @param typeFilter    filters for field types
     * @param handlerFilter filters for storage handler
+    * @param predicates    attributename -> predicate (will only be applied if supported by handler)
     * @return
     */
-  def getData(nameFilter: Option[Seq[String]] = None, typeFilter: Option[Seq[FieldType]] = None, handlerFilter: Option[StorageHandler] = None): Option[DataFrame] = {
+  def getData(nameFilter: Option[Seq[String]] = None, typeFilter: Option[Seq[FieldType]] = None, handlerFilter: Option[StorageHandler] = None, predicates: Map[String, String] = Map()): Option[DataFrame] = {
     //cache data join
+    var data = _data
+
     if (_data.isEmpty) {
       val handlerData = schema().filterNot(_.pk).filter(_.storagehandler.isDefined).groupBy(_.storagehandler.get).map { case (handler, attributes) =>
         val status = handler.read(entityname)
@@ -85,10 +88,33 @@ case class Entity(val entityname: EntityName)(@transient implicit val ac: AdamCo
       } else {
         _data = None
       }
+
+      if (_data.isDefined) {
+        _data = Some(_data.get.cache())
+      }
+
+      data = _data
+    }
+
+    if(predicates.nonEmpty){
+      val handlerData = schema().filterNot(_.pk).filter(_.storagehandler.isDefined).groupBy(_.storagehandler.get).map { case (handler, attributes) =>
+        val predicate = (attributes ++ Seq(pk)).map(a => predicates.get(a.name)).filter(_.isDefined).map(p => "predicate" -> p.mkString(" AND ")).toMap
+        val status = handler.read(entityname, predicate)
+
+        if (status.isFailure) {
+          log.error("failure when reading data", status.failed.get)
+        }
+
+        status
+      }.filter(_.isSuccess).map(_.get)
+
+      if (handlerData.nonEmpty) {
+        data = Some(handlerData.reduce(_.join(_, pk.name)).coalesce(AdamConfig.defaultNumberOfPartitions))
+      }
     }
 
     //possibly filter for current call
-    var filteredData = _data
+    var filteredData = data
 
     if (handlerFilter.isDefined) {
       //filter by handler, name and type
@@ -130,9 +156,11 @@ case class Entity(val entityname: EntityName)(@transient implicit val ac: AdamCo
       status
     }.filter(_.isSuccess).map(_.get.cache())
 
-    getData()
+    if (_data.isEmpty) {
+      getData()
+    }
 
-    if(_data.isDefined){
+    if (_data.isDefined) {
       _data = Some(_data.get.cache())
     }
   }
@@ -399,12 +427,12 @@ object Entity extends Logging {
     } catch {
       case e: Exception =>
         //drop everything created in handlers
-        SparkStartup.storageRegistry.handlers.values.foreach{
+        SparkStartup.storageRegistry.handlers.values.foreach {
           handler =>
             try {
               handler.drop(entityname)
             } catch {
-              case e : Exception => //careful: if entity has not been created yet in handler then we may get an exception
+              case e: Exception => //careful: if entity has not been created yet in handler then we may get an exception
             }
         }
 
@@ -429,10 +457,6 @@ object Entity extends Logging {
     * @return
     */
   def load(entityname: EntityName, cache: Boolean = false)(implicit ac: AdamContext): Try[Entity] = {
-    if (!exists(entityname)) {
-      return Failure(EntityNotExistingException("Entity " + entityname + " is not existing."))
-    }
-
     val entity = EntityLRUCache.get(entityname)
 
     if (cache) {
@@ -470,21 +494,21 @@ object Entity extends Logging {
     * @return
     */
   def drop(entityname: EntityName, ifExists: Boolean = false)(implicit ac: AdamContext): Try[Void] = {
-    try{
-    if (!exists(entityname)) {
-      if (!ifExists) {
-        return Failure(EntityNotExistingException())
-      } else {
-        return Success(null)
+    try {
+      if (!exists(entityname)) {
+        if (!ifExists) {
+          return Failure(EntityNotExistingException())
+        } else {
+          return Success(null)
+        }
       }
-    }
 
-    Entity.load(entityname).get.drop()
-    EntityLRUCache.invalidate(entityname)
+      Entity.load(entityname).get.drop()
+      EntityLRUCache.invalidate(entityname)
 
-    Success(null)
+      Success(null)
     } catch {
-      case e : Exception => Failure(e)
+      case e: Exception => Failure(e)
     }
   }
 }

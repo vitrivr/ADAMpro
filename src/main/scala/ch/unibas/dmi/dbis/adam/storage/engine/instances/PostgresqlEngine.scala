@@ -1,12 +1,12 @@
 package ch.unibas.dmi.dbis.adam.storage.engine.instances
 
-import java.sql.{Connection, DriverManager}
+import java.sql.Connection
 import java.util.Properties
 
-import ch.unibas.dmi.dbis.adam.config.AdamConfig
 import ch.unibas.dmi.dbis.adam.entity.AttributeDefinition
 import ch.unibas.dmi.dbis.adam.main.AdamContext
 import ch.unibas.dmi.dbis.adam.storage.engine.RelationalDatabaseEngine
+import com.mchange.v2.c3p0.ComboPooledDataSource
 import org.apache.spark.sql.types.{StructField, StructType}
 import org.apache.spark.sql.{DataFrame, Row, SaveMode}
 
@@ -21,7 +21,11 @@ import scala.util.{Failure, Success, Try}
 class PostgresqlEngine(private val url: String, private val user: String, private val password: String, protected val schema : String = "public") extends RelationalDatabaseEngine with Serializable  {
   //TODO: check if changing schema breaks tests!
 
-  Class.forName("org.postgresql.Driver")
+  private val ds = new ComboPooledDataSource
+  ds.setDriverClass("org.postgresql.Driver")
+  ds.setJdbcUrl(url)
+  ds.setProperties(props)
+
   init()
 
   /**
@@ -30,9 +34,7 @@ class PostgresqlEngine(private val url: String, private val user: String, privat
     * @return
     */
   protected def openConnection(): Connection = {
-    val connection = DriverManager.getConnection(url, props)
-    connection.setSchema(schema)
-    connection
+    ds.getConnection
   }
 
   protected def init() {
@@ -130,12 +132,17 @@ class PostgresqlEngine(private val url: String, private val user: String, privat
   }
 
 
-  override def read(tablename: String)(implicit ac: AdamContext): Try[DataFrame] = {
+  override def read(tablename: String, predicate : Option[Seq[String]] = None)(implicit ac: AdamContext): Try[DataFrame] = {
     log.debug("postgresql read operation")
 
     try {
-      val df = ac.sqlContext.read.format("jdbc").jdbc(url, tablename, props) //TODO: possibly adjust in here for partitioning
-      Success(df.repartition(AdamConfig.defaultNumberOfPartitions))
+      //TODO: possibly adjust in here for partitioning
+      val df = if(predicate.isDefined) {
+       ac.sqlContext.read.jdbc(url, tablename, predicate.get.toArray, props)
+      } else {
+        ac.sqlContext.read.jdbc(url, tablename, props)
+      }
+      Success(df)
     } catch {
       case e: Exception =>
         Failure(e)

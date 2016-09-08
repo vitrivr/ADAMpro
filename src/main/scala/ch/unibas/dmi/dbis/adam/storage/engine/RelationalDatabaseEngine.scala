@@ -35,7 +35,7 @@ trait RelationalDatabaseEngine extends Serializable with Logging {
     * @param tablename name of table
     * @return
     */
-  def read(tablename: String)(implicit ac: AdamContext): Try[DataFrame]
+  def read(tablename: String, where : Option[Seq[String]] = None)(implicit ac: AdamContext): Try[DataFrame]
 
   /**
     * Write data to database storage.

@@ -37,7 +37,7 @@ class GisHandler(private val engine: GisDatabaseEngine) extends DatabaseHandler(
       val limit = params.getOrElse("limit", "ALL")
       val tablename = getTablename(entityname)
       val table = s"(SELECT $query FROM $tablename LIMIT $limit) AS $tablename"
-      engine.read(table)
+      engine.read(table, params.get("predicate").map(Seq(_)))
     }
   }
 }
