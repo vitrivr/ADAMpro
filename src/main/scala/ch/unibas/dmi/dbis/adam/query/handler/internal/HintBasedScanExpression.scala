@@ -126,12 +126,10 @@ object HintBasedScanExpression extends Logging {
           case iqh: IndexQueryHint =>
             log.trace("index execution plan hint")
             //index scan
-            val indexes = CatalogOperator.listIndexes(Some(entityname)).get.map(Index.load(_)).filter(_.isSuccess).map(_.get).groupBy(_.indextypename).mapValues(_.map(_.indexname))
-            val indexChoice = indexes.get(iqh.structureType)
+            val indexChoice = CatalogOperator.listIndexes(Some(entityname), Some(iqh.structureType)).get.map(Index.load(_)).filter(_.isSuccess).map(_.get)
 
-            if (indexChoice.isDefined) {
-              val sortedIndexChoice = indexChoice.get
-                .map(indexname => Index.load(indexname, false).get)
+            if (indexChoice.nonEmpty) {
+              val sortedIndexChoice = indexChoice
                 .filter(nnq.get.isConform(_)) //choose only indexes that are conform to query
                 .filterNot(_.isStale) //don't use stale indexes
                 .sortBy(index => -ScanWeightInspector(index)) //order by weight (highest weight first)
