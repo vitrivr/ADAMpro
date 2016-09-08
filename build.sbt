@@ -74,13 +74,12 @@ val secondaryLibs = Seq(
   "org.scalanlp" %% "breeze" % "0.11.2",
   "org.scalanlp" %% "breeze-natives" % "0.11.2",
   "com.typesafe.slick" %% "slick" % "3.1.1",
+  "c3p0" % "c3p0" % "0.9.1.2",
   "org.apache.derby" % "derby" % "10.10.2.0",
   "it.unimi.dsi" % "fastutil" % "7.0.12",
   "org.apache.commons" % "commons-lang3" % "3.4",
   "org.apache.commons" % "commons-math3" % "3.4.1",
   "com.googlecode.javaewah" % "JavaEWAH" % "1.1.6",
-  //Don't update this to 17 unless you are also upgrading Hadoop to 2.7
-  /* http://stackoverflow.com/questions/36427291/illegalaccesserror-to-guavas-stopwatch-from-org-apache-hadoop-mapreduce-lib-inp */
   "com.google.guava" % "guava" % "19.0",
   "com.google.protobuf" % "protobuf-java" % "3.0.0"
 ).map(
