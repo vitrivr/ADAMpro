@@ -11,6 +11,7 @@ import ch.unibas.dmi.dbis.adam.exception._
 import ch.unibas.dmi.dbis.adam.index.Index.{IndexName, IndexTypeName}
 import ch.unibas.dmi.dbis.adam.index.structures.IndexTypes
 import ch.unibas.dmi.dbis.adam.utils.Logging
+import com.mchange.v2.c3p0.ComboPooledDataSource
 import slick.dbio.NoStream
 import slick.driver.DerbyDriver.api._
 
@@ -28,7 +29,12 @@ import scala.util.{Failure, Success, Try}
   */
 object CatalogOperator extends Logging {
   private val MAX_WAITING_TIME: Duration = 100.seconds
-  private val DB = Database.forURL("jdbc:derby:" + AdamConfig.internalsPath + "/ap_catalog" + ";create=true")
+
+  private val ds = new ComboPooledDataSource
+  ds.setDriverClass("org.apache.derby.jdbc.EmbeddedDriver")
+  ds.setJdbcUrl("jdbc:derby:" + AdamConfig.internalsPath + "/ap_catalog" + ";create=true")
+
+  private val DB = Database.forDataSource(ds)
 
   private[catalog] val SCHEMA = "adampro"
 
