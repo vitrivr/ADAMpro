@@ -3,7 +3,7 @@ package ch.unibas.dmi.dbis.adam.evaluation.grpc
 import java.io.File
 
 import ch.unibas.dmi.dbis.adam.evaluation.io.SeqIO
-import ch.unibas.dmi.dbis.adam.evaluation.utils.{AdamParEvalUtils, EvaluationResultLogger, Logging, PartitionResultLogger}
+import ch.unibas.dmi.dbis.adam.evaluation.utils._
 import io.grpc.okhttp.OkHttpChannelBuilder
 import io.grpc.{ManagedChannel, ManagedChannelBuilder}
 import org.vitrivr.adam.grpc.grpc.AdamDefinitionGrpc.AdamDefinitionBlockingStub
@@ -23,10 +23,13 @@ import scala.util.Random
   */
 class RPCClient(channel: ManagedChannel, definer: AdamDefinitionBlockingStub, searcherBlocking: AdamSearchBlockingStub, searcher: AdamSearchStub, host: String) extends AdamParEvalUtils with Logging {
 
-  val k = 200
+  val querypath ="evaluation/src/main/resources/sift_query.fvecs"
+  val truthpath = "evaluation/src/main/resources/sift_groundtruth.ivecs"
+
+  val k = 100
   val pr = 10
 
-  val compareK = false
+  val compareK = true
 
   /**
     * Evaluation Params
@@ -88,6 +91,12 @@ class RPCClient(channel: ManagedChannel, definer: AdamDefinitionBlockingStub, se
 
 
   def getOrGenQueries(dim: Int): IndexedSeq[NearestNeighbourQueryMessage] = {
+    if(eName=="sift_realdata"){
+      val queries = SIFTQueries.getQueries(querypath, numQ)
+      return queries.map(vec => {
+        NearestNeighbourQueryMessage("feature", Some(FeatureVectorMessage().withDenseVector(DenseVectorMessage(vec))), None, getDistanceMsg, k, Map[String, String](), indexOnly = indexOnly)
+      })
+    }
     val file = new File("resources/" + eName + "/queries_" + dim + ".qlist")
     if (!file.exists()) {
       log.debug("Generating Queries for " + dim + " Dimensions")
@@ -131,6 +140,10 @@ class RPCClient(channel: ManagedChannel, definer: AdamDefinitionBlockingStub, se
     * Returns the ordered list of correct pks for all queries
     */
   def getOrGenTruth(dim: Int): IndexedSeq[IndexedSeq[Float]] = {
+    if(eName=="sift_realdata"){
+      val truths =  SIFTQueries.getTruths(truthpath,numQ).map(_.map(_.toFloat))
+      return truths
+    }
     val file = new File("resources/" + eName + "/truths_" + dim + ".reslist")
     if (file.exists()) {
       SeqIO.readNestedSeq(file)
