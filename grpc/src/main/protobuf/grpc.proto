@@ -115,6 +115,9 @@ message DataMessage {
      string stringData = 5;
      bool booleanData = 6;
      FeatureVectorMessage featureData = 7;
+     //string textData = 8;
+     string geographyData = 9;
+     string geometryData = 10;
   }
 }
 
