@@ -4,8 +4,7 @@ import ch.unibas.dmi.dbis.adam.config.AdamConfig
 import ch.unibas.dmi.dbis.adam.datatypes.bitString.BitStringUDT
 import ch.unibas.dmi.dbis.adam.datatypes.feature.FeatureVectorWrapperUDT
 import ch.unibas.dmi.dbis.adam.datatypes.gis.GeometryWrapperUDT
-import ch.unibas.dmi.dbis.adam.storage.engine.instances.{ParquetEngine, PostgresqlEngine}
-import ch.unibas.dmi.dbis.adam.storage.handler._
+import ch.unibas.dmi.dbis.adam.storage.StorageHandlerRegistry
 import ch.unibas.dmi.dbis.adam.utils.Logging
 import org.apache.spark.sql.hive.HiveContext
 import org.apache.spark.{SparkConf, SparkContext}
@@ -51,24 +50,7 @@ object SparkStartup extends Logging {
   val mainContext = Implicits.ac
   val contexts = Seq(mainContext)
 
-  //TODO: add dynamically based on config
   val storageRegistry = StorageHandlerRegistry
-  storageRegistry.register(new DatabaseHandler(new PostgresqlEngine(AdamConfig.getString("storage.jdbc.url"), AdamConfig.getString("storage.jdbc.user"), AdamConfig.getString("storage.jdbc.password"))))
-
-  if (AdamConfig.isBaseOnHadoop) {
-    log.debug("storing data on Hadoop")
-    storageRegistry.register(new FlatFileHandler(new ParquetEngine(AdamConfig.basePath, AdamConfig.dataPath)))
-  } else {
-    log.debug("storing data locally")
-    storageRegistry.register(new FlatFileHandler(new ParquetEngine(AdamConfig.dataPath)))
-  }
-
-  storageRegistry.register(new SolrHandler(AdamConfig.getString("storage.solr.url")))
-
-  val indexStorageHandler = if (AdamConfig.isBaseOnHadoop) {
-    log.debug("storing data on Hadoop")
-    new IndexFlatFileHandler(new ParquetEngine(AdamConfig.basePath, AdamConfig.indexPath))
-  } else {
-    new IndexFlatFileHandler(new ParquetEngine(AdamConfig.indexPath))
+  AdamConfig.engines.foreach{ engine => storageRegistry.register(engine)
   }
 }

@@ -1,7 +1,7 @@
 package ch.unibas.dmi.dbis.adam.entity
 
 import ch.unibas.dmi.dbis.adam.datatypes.FieldTypes.FieldType
-import ch.unibas.dmi.dbis.adam.storage.handler.{StorageHandler, StorageHandlerRegistry}
+import ch.unibas.dmi.dbis.adam.storage.{StorageHandler, StorageHandlerRegistry}
 
 /**
   * adamtwo

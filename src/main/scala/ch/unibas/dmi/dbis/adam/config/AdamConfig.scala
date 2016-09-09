@@ -2,8 +2,8 @@ package ch.unibas.dmi.dbis.adam.config
 
 import java.io.File
 
-import com.typesafe.config.{Config, ConfigFactory}
 import ch.unibas.dmi.dbis.adam.utils.Logging
+import com.typesafe.config.{Config, ConfigFactory}
 
 /**
   * adamtwo
@@ -36,15 +36,11 @@ object AdamConfig extends Serializable with Logging {
   log.debug(config.toString)
   config.checkValid(ConfigFactory.defaultReference(), "adampro")
 
-  val basePath = cleanPath(config.getString("adampro.basePath"))
-  val isBaseOnHadoop = basePath.startsWith("hdfs")
-  log.info("storing to hdfs: " + isBaseOnHadoop.toString)
-
-  val dataPath = cleanPath(config.getString("adampro.dataPath"))
-  val indexPath = cleanPath(config.getString("adampro.indexPath"))
-
   val internalsPath = cleanPath(config.getString("adampro.internalsPath"))
   val schedulerFile = internalsPath + "/" + "scheduler.xml"
+
+  import scala.collection.JavaConversions._
+  val engines = config.getStringList("adampro.engines").toIterator.toSeq
 
   val grpcPort = config.getInt("adampro.grpc.port")
 
@@ -86,6 +82,13 @@ object AdamConfig extends Serializable with Logging {
     * @return
     */
   def getString(path: String) = config.getString(path)
+
+  /**
+    *
+    * @param engine
+    * @return
+    */
+  def getStorageProperties(engine : String) = config.getObject("storage." + engine).toMap.mapValues(_.unwrapped().toString)
 
   /**
     * Reads external config file.

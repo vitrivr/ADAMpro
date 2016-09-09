@@ -2,10 +2,9 @@ package ch.unibas.dmi.dbis.adam.query.handler.external
 
 import ch.unibas.dmi.dbis.adam.entity.Entity
 import ch.unibas.dmi.dbis.adam.entity.Entity._
-import ch.unibas.dmi.dbis.adam.exception.GeneralAdamException
 import ch.unibas.dmi.dbis.adam.main.AdamContext
-import ch.unibas.dmi.dbis.adam.query.handler.generic.{QueryEvaluationOptions, ExpressionDetails, QueryExpression}
-import ch.unibas.dmi.dbis.adam.storage.handler.StorageHandlerRegistry
+import ch.unibas.dmi.dbis.adam.query.handler.generic.{ExpressionDetails, QueryEvaluationOptions, QueryExpression}
+import ch.unibas.dmi.dbis.adam.storage.StorageHandlerRegistry
 import org.apache.spark.sql.DataFrame
 
 /**
@@ -14,13 +13,10 @@ import org.apache.spark.sql.DataFrame
   * Ivan Giangreco
   * September 2016
   */
-case class GisScanExpression(entityname: EntityName, params: Map[String, String], id: Option[String] = None)(@transient implicit val ac: AdamContext) extends QueryExpression(id) {
+case class GisScanExpression(entityname: EntityName, handlername : String, params: Map[String, String], id: Option[String] = None)(@transient implicit val ac: AdamContext) extends QueryExpression(id) {
   override val info = ExpressionDetails(None, Some("Gis Scan Expression"), id, None)
 
-  if (StorageHandlerRegistry.apply(Some("gis")).isEmpty) {
-    throw new GeneralAdamException("no gis handler added")
-  }
-  private val handler = StorageHandlerRegistry.apply(Some("gis")).get
+  private val handler = StorageHandlerRegistry.apply(Some(handlername)).get
 
   private val entity = Entity.load(entityname).get
 

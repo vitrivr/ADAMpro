@@ -8,7 +8,7 @@ import ch.unibas.dmi.dbis.adam.entity.Entity.EntityName
 import ch.unibas.dmi.dbis.adam.exception.{EntityExistingException, EntityNotExistingException, EntityNotProperlyDefinedException, GeneralAdamException}
 import ch.unibas.dmi.dbis.adam.index.Index
 import ch.unibas.dmi.dbis.adam.main.{AdamContext, SparkStartup}
-import ch.unibas.dmi.dbis.adam.storage.handler.StorageHandler
+import ch.unibas.dmi.dbis.adam.storage.StorageHandler
 import ch.unibas.dmi.dbis.adam.utils.Logging
 import org.apache.spark.sql.functions.col
 import org.apache.spark.sql.types.{StructField, StructType}
@@ -146,16 +146,6 @@ case class Entity(val entityname: EntityName)(@transient implicit val ac: AdamCo
     * Caches the data.
     */
   def cache(): Unit = {
-    schema().filterNot(_.pk).filter(_.storagehandler.isDefined).groupBy(_.storagehandler.get).map { case (handler, attributes) =>
-      val status = handler.read(entityname)
-
-      if (status.isFailure) {
-        log.error("failure when caching data", status.failed.get)
-      }
-
-      status
-    }.filter(_.isSuccess).map(_.get.cache())
-
     if (_data.isEmpty) {
       getData()
     }

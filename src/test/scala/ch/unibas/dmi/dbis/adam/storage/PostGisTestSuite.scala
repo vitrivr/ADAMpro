@@ -45,7 +45,7 @@ class PostGisTestSuite extends AdamTestBase {
       val query = "(ST_Distance('LINESTRING(-122.33 47.606, 0.0 51.5)'::geography, 'POINT(-21.96 64.15)':: geography))::int"
       val ncollect = 10
 
-      val results = QueryOp.compoundQuery(GisScanExpression(entityname, Map("query" -> query, "limit" -> ncollect.toString))).get.get
+      val results = QueryOp.compoundQuery(GisScanExpression(entityname, "postgis", Map("query" -> query, "limit" -> ncollect.toString))).get.get
 
       val collected = results.collect()
       assert(collected.length == ncollect)

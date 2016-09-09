@@ -1,14 +1,14 @@
-package ch.unibas.dmi.dbis.adam.storage.engine.instances
+package ch.unibas.dmi.dbis.adam.storage.engine
 
 import java.net.InetAddress
 
+import ch.unibas.dmi.dbis.adam.datatypes.FieldTypes
 import ch.unibas.dmi.dbis.adam.datatypes.FieldTypes._
 import ch.unibas.dmi.dbis.adam.datatypes.feature.{FeatureVectorWrapper, FeatureVectorWrapperUDT}
 import ch.unibas.dmi.dbis.adam.entity.AttributeDefinition
 import ch.unibas.dmi.dbis.adam.entity.Entity.EntityName
 import ch.unibas.dmi.dbis.adam.exception.GeneralAdamException
 import ch.unibas.dmi.dbis.adam.main.AdamContext
-import ch.unibas.dmi.dbis.adam.storage.engine.KeyValueEngine
 import ch.unibas.dmi.dbis.adam.utils.Logging
 import com.datastax.driver.core.Session
 import com.datastax.spark.connector.cql.{CassandraConnector, PasswordAuthConf}
@@ -24,9 +24,27 @@ import scala.util.{Failure, Success, Try}
   * Ivan Giangreco
   * September 2016
   */
-class CassandraEngine(private val url: String, private val port: Int, private val user: String, private val password: String, protected val keyspace: String = "public") extends KeyValueEngine with Logging with Serializable {
+class CassandraEngine(private val url: String, private val port: Int, private val user: String, private val password: String, protected val keyspace: String = "public") extends Engine with Logging with Serializable {
   private val conn = CassandraConnector(hosts = Set(InetAddress.getByName(url)), port = port, authConf = PasswordAuthConf(user, password))
 
+  override val name = "cassandra"
+
+  override def supports = Seq(FieldTypes.AUTOTYPE, FieldTypes.INTTYPE, FieldTypes.LONGTYPE, FieldTypes.STRINGTYPE, FieldTypes.FEATURETYPE)
+
+  override def specializes = Seq(FieldTypes.FEATURETYPE)
+
+  /**
+    *
+    * @param props
+    */
+  def this(props: Map[String, String]) {
+    this(props.get("url").get, props.get("port").get.toInt, props.get("user").get, props.get("password").get, props.getOrElse("keyspace", "public"))
+  }
+
+
+  /**
+    *
+    */
   def init(): Unit = {
     val keyspaceRes = conn.withClusterDo(_.getMetadata).getKeyspace(keyspace)
 
@@ -68,14 +86,16 @@ class CassandraEngine(private val url: String, private val port: Int, private va
     session.execute(createKeyspaceCql(name))
   }
 
+
   /**
-    * Create the entity in the key-value store.
+    * Create the entity.
     *
-    * @param bucketname name of bucket to store feature to
-    * @param attributes attributes of the entity
-    * @return true on success
+    * @param storename  adapted entityname to store feature to
+    * @param attributes attributes of the entity (w.r.t. handler)
+    * @param params     creation parameters
+    * @return options to store
     */
-  def create(bucketname: String, attributes: Seq[AttributeDefinition])(implicit ac: AdamContext): Try[Option[String]] = {
+  override def create(storename: String, attributes: Seq[AttributeDefinition], params: Map[String, String])(implicit ac: AdamContext): Try[Map[String, String]] = {
     try {
       val attributeString = attributes.map(attribute => {
         val name = attribute.name
@@ -91,10 +111,10 @@ class CassandraEngine(private val url: String, private val port: Int, private va
 
       conn.withSessionDo { session =>
         session.execute("use " + keyspace)
-        session.execute(createTableCql(bucketname, attributeString))
+        session.execute(createTableCql(storename, attributeString))
       }
 
-      Success(Some(bucketname))
+      Success(Map())
     } catch {
       case e: Exception =>
         log.error("fatal error when creating bucket in cassandra", e)
@@ -120,15 +140,16 @@ class CassandraEngine(private val url: String, private val port: Int, private va
   }
 
   /**
+    * Check if entity exists.
     *
-    * @param bucketname name of bucket to check if bucket exists
+    * @param storename adapted entityname to store feature to
     * @return
     */
-  override def exists(bucketname: String)(implicit ac: AdamContext): Try[Boolean] = {
+  override def exists(storename: String)(implicit ac: AdamContext): Try[Boolean] = {
     try {
       var exists = false
       conn.withSessionDo { session =>
-        val tableMeta = session.getCluster.getMetadata.getKeyspace(keyspace).getTable(bucketname)
+        val tableMeta = session.getCluster.getMetadata.getKeyspace(keyspace).getTable(storename)
 
         if (tableMeta != null) {
           exists = true
@@ -143,12 +164,13 @@ class CassandraEngine(private val url: String, private val port: Int, private va
   }
 
   /**
-    * Read entity from key-value store.
+    * Read entity.
     *
-    * @param bucketname name of bucket to read features from
+    * @param storename  adapted entityname to store feature to
+    * @param params     reading parameters
     * @return
     */
-  override def read(bucketname: String)(implicit ac: AdamContext): Try[DataFrame] = {
+  override def read(storename: String, params: Map[String, String])(implicit ac: AdamContext): Try[DataFrame] = {
     try {
       import org.apache.spark.sql.functions.udf
       val castToFeature = udf((c: Seq[Float]) => {
@@ -157,7 +179,7 @@ class CassandraEngine(private val url: String, private val port: Int, private va
 
       val df = ac.sqlContext.read
         .format("org.apache.spark.sql.cassandra")
-        .options(Map("table" -> bucketname, "keyspace" -> keyspace))
+        .options(Map("table" -> storename, "keyspace" -> keyspace))
         .load()
 
       var data = df
@@ -175,14 +197,15 @@ class CassandraEngine(private val url: String, private val port: Int, private va
   }
 
   /**
-    * Write entity to the key-value store.
+    * Write entity.
     *
-    * @param bucketname name of bucket to write features to
+    * @param storename  adapted entityname to store feature to
     * @param df         data
     * @param mode       save mode (append, overwrite, ...)
-    * @return true on success
+    * @param params     writing parameters
+    * @return new options to store
     */
-  override def write(bucketname: String, df: DataFrame, mode: SaveMode)(implicit ac: AdamContext): Try[Void] = {
+  override def write(storename: String, df: DataFrame, mode: SaveMode = SaveMode.Append, params: Map[String, String])(implicit ac: AdamContext): Try[Map[String, String]] = {
     try {
       if (mode != SaveMode.Append) {
         throw new UnsupportedOperationException("only appending is supported")
@@ -200,10 +223,10 @@ class CassandraEngine(private val url: String, private val port: Int, private va
 
       data.write
         .format("org.apache.spark.sql.cassandra")
-        .options(Map( "table" -> bucketname, "keyspace" -> keyspace))
+        .options(Map("table" -> storename, "keyspace" -> keyspace))
         .save()
 
-      Success(null)
+      Success(Map())
     } catch {
       case e: Exception =>
         log.error("fatal error when writing to cassandra", e)
@@ -212,16 +235,16 @@ class CassandraEngine(private val url: String, private val port: Int, private va
   }
 
   /**
-    * Drop the entity from the key-value store.
+    * Drop the entity.
     *
-    * @param bucketname name of bucket to be dropped
-    * @return true on success
+    * @param storename adapted entityname to store feature to
+    * @return
     */
-  override def drop(bucketname: String)(implicit ac: AdamContext): Try[Void] = {
+  def drop(storename: String)(implicit ac: AdamContext): Try[Void] = {
     try {
       conn.withSessionDo { session =>
         session.execute("use " + keyspace)
-        session.execute(dropTableCql(bucketname))
+        session.execute(dropTableCql(storename))
       }
       Success(null)
     } catch {

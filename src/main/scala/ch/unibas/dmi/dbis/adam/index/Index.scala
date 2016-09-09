@@ -44,7 +44,7 @@ abstract class Index(val indexname: IndexName)(@transient implicit val ac: AdamC
   /**
     * Gets the entityname corresponding to the given index.
     */
-  val entityname = CatalogOperator.getEntityName(indexname).get
+  lazy val entityname = CatalogOperator.getEntityName(indexname).get
 
   /**
     * Gets the indexed attribute.
@@ -83,7 +83,7 @@ abstract class Index(val indexname: IndexName)(@transient implicit val ac: AdamC
   private[index] def getData(): Option[DataFrame] = {
     //cache data
     if (_data.isEmpty) {
-      _data = Index.storage.read(indexname).map(Some(_)).getOrElse(None)
+      _data = Index.storage.get.read(indexname).map(Some(_)).getOrElse(None)
 
       if (_data.isDefined) {
         _data = Some(_data.get.cache())
@@ -143,7 +143,7 @@ abstract class Index(val indexname: IndexName)(@transient implicit val ac: AdamC
     */
   def drop(): Unit = {
     try {
-      Index.storage.drop(indexname)
+      Index.storage.get.drop(indexname)
     } catch {
       case e: Exception =>
         log.error("exception when dropping index " + indexname, e)
@@ -276,10 +276,16 @@ abstract class Index(val indexname: IndexName)(@transient implicit val ac: AdamC
     val current = this
 
     val index = new Index(newName.getOrElse(current.indexname))(current.ac) {
+      override lazy val entityname = current.entityname
+      override lazy val pk = current.pk
+      override lazy val entity = current.entity
+      override lazy val attribute = current.attribute
       def confidence: Float = current.confidence
       def lossy: Boolean = current.lossy
       def indextypename: IndexTypeName = current.indextypename
       def isQueryConform(nnq: NearestNeighbourQuery): Boolean = current.isQueryConform(nnq)
+      override def markStale(): Unit = {}
+      override def isStale = current.isStale
       protected def scan(data: DataFrame, q: FeatureVector, distance: DistanceFunction, options: Map[String, String], k: Int): DataFrame = current.scan(data, q, distance, options, k)
     }
 
@@ -300,7 +306,7 @@ object Index extends Logging {
   type IndexName = EntityName
   type IndexTypeName = IndexTypes.IndexType
 
-  val storage = SparkStartup.indexStorageHandler
+  val storage = SparkStartup.storageRegistry.get("index")
 
   /**
     * Creates an index that is unique and which follows the naming rules of indexes.
@@ -402,8 +408,8 @@ object Index extends Logging {
       val meta = generatorRes._2
 
       CatalogOperator.createIndex(indexname, entity.entityname, attribute, indexgenerator.indextypename, meta)
-      storage.create(indexname, Seq()) //TODO: possibly switch index to be an entity with specific fields?
-      val status = storage.write(indexname, data, SaveMode.ErrorIfExists, Map("allowRepartitioning" -> "true"))
+      storage.get.create(indexname, Seq()) //TODO: possibly switch index to be an entity with specific fields?
+      val status = storage.get.write(indexname, data, SaveMode.ErrorIfExists, Map("allowRepartitioning" -> "true"))
 
       if (status.isFailure) {
         throw status.failed.get

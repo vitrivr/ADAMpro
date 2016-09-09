@@ -5,7 +5,7 @@ import ch.unibas.dmi.dbis.adam.entity.Entity.EntityName
 import ch.unibas.dmi.dbis.adam.exception.GeneralAdamException
 import ch.unibas.dmi.dbis.adam.main.AdamContext
 import ch.unibas.dmi.dbis.adam.query.handler.generic.{QueryEvaluationOptions, ExpressionDetails, QueryExpression}
-import ch.unibas.dmi.dbis.adam.storage.handler.StorageHandlerRegistry
+import ch.unibas.dmi.dbis.adam.storage.StorageHandlerRegistry
 import org.apache.spark.sql.DataFrame
 
 /**
@@ -24,17 +24,20 @@ import org.apache.spark.sql.DataFrame
   * @param id         query id
   *
   */
-case class SolrScanExpression(entityname: EntityName, params: Map[String, String], id: Option[String] = None)(@transient implicit val ac: AdamContext) extends QueryExpression(id) {
+case class SolrScanExpression(entityname: EntityName, handlername : String, params: Map[String, String], id: Option[String] = None)(@transient implicit val ac: AdamContext) extends QueryExpression(id) {
   override val info = ExpressionDetails(None, Some("Solr Scan Expression"), id, None)
 
   if (StorageHandlerRegistry.apply(Some("solr")).isEmpty) {
     throw new GeneralAdamException("no solr handler added")
   }
-  private val handler = StorageHandlerRegistry.apply(Some("solr")).get
+  private val handler = StorageHandlerRegistry.apply(Some(handlername)).get
 
   private val entity = Entity.load(entityname).get
 
   override protected def run(options : Option[QueryEvaluationOptions], filter: Option[DataFrame] = None)(implicit ac: AdamContext): Option[DataFrame] = {
+    entity.schema().filter(_.storagehandler.get.equals(handler)).map(_.name)
+
+
     var status = handler.read(entityname, params)
 
     if (status.isFailure) {

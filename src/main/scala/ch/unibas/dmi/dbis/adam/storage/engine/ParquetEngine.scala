@@ -1,11 +1,12 @@
-package ch.unibas.dmi.dbis.adam.storage.engine.instances
+package ch.unibas.dmi.dbis.adam.storage.engine
 
 import java.io.File
 
 import ch.unibas.dmi.dbis.adam.config.AdamConfig
+import ch.unibas.dmi.dbis.adam.datatypes.FieldTypes
+import ch.unibas.dmi.dbis.adam.entity.AttributeDefinition
 import ch.unibas.dmi.dbis.adam.exception.GeneralAdamException
 import ch.unibas.dmi.dbis.adam.main.AdamContext
-import ch.unibas.dmi.dbis.adam.storage.engine.FileEngine
 import ch.unibas.dmi.dbis.adam.utils.Logging
 import org.apache.commons.io.FileUtils
 import org.apache.hadoop.conf.Configuration
@@ -20,38 +21,113 @@ import scala.util.{Failure, Success, Try}
   * Ivan Giangreco
   * June 2016
   */
-class ParquetEngine(private val subengine: GenericParquetEngine) extends FileEngine with Logging with Serializable {
-  def this(localpath: String) {
-    this(new ParquetLocalEngine(localpath))
+class ParquetEngine extends Engine with Logging with Serializable {
+  override val name = "parquet"
+
+  override def supports = Seq(FieldTypes.AUTOTYPE, FieldTypes.INTTYPE, FieldTypes.LONGTYPE, FieldTypes.FLOATTYPE, FieldTypes.DOUBLETYPE, FieldTypes.STRINGTYPE, FieldTypes.TEXTTYPE, FieldTypes.BOOLEANTYPE, FieldTypes.FEATURETYPE, FieldTypes.GEOGRAPHYTYPE, FieldTypes.GEOMETRYTYPE)
+
+  override def specializes = Seq(FieldTypes.FEATURETYPE)
+
+  var subengine: GenericParquetEngine = _
+
+  /**
+    *
+    * @param basepath
+    * @param datapath
+    * @param hadoop
+    */
+  def this(basepath: String, datapath: String, hadoop: Boolean) {
+    this()
+    if (hadoop) {
+      subengine = new ParquetHadoopStorage(basepath, datapath)
+    } else {
+      subengine = new ParquetLocalEngine(basepath, datapath)
+    }
+
+    subengine = new ParquetHadoopStorage(basepath, datapath)
   }
 
-  def this(basepath: String, datapath: String) {
-    this(new ParquetHadoopStorage(basepath, datapath))
+  /**
+    *
+    * @param props
+    */
+  def this(props: Map[String, String]) {
+    this()
+    if (props.get("hadoop").getOrElse("false").toBoolean) {
+      subengine = new ParquetHadoopStorage(props.get("basepath").get, props.get("datapath").get)
+    } else {
+      subengine = new ParquetLocalEngine(props.get("basepath").get, props.get("datapath").get)
+    }
   }
 
-  def create(filename: String)(implicit ac: AdamContext): Try[Void] = {
+  /**
+    * Create the entity.
+    *
+    * @param storename  adapted entityname to store feature to
+    * @param attributes attributes of the entity (w.r.t. handler)
+    * @param params     creation parameters
+    * @return options to store
+    */
+  override def create(storename: String, attributes: Seq[AttributeDefinition], params: Map[String, String])(implicit ac: AdamContext): Try[Map[String, String]] = {
     log.debug("parquet create operation")
-    Success(null)
+    Success(Map())
   }
 
-  def exists(filename: String)(implicit ac: AdamContext): Try[Boolean] = {
+  /**
+    * Check if entity exists.
+    *
+    * @param storename adapted entityname to store feature to
+    * @return
+    */
+  override def exists(storename: String)(implicit ac: AdamContext): Try[Boolean] = {
     log.debug("parquet exists operation")
-    subengine.exists(filename)
+    subengine.exists(storename)
   }
 
-  def read(filename: String)(implicit ac: AdamContext): Try[DataFrame] = {
+  /**
+    * Read entity.
+    *
+    * @param storename adapted entityname to store feature to
+    * @param params    reading parameters
+    * @return
+    */
+  override def read(storename: String, params: Map[String, String])(implicit ac: AdamContext): Try[DataFrame] = {
     log.debug("parquet read operation")
-    subengine.read(filename)
+    subengine.read(storename)
   }
 
-  def write(filename: String, df: DataFrame, mode: SaveMode = SaveMode.Append, allowRepartitioning: Boolean = false)(implicit ac: AdamContext): Try[Void] = {
+  /**
+    * Write entity.
+    *
+    * @param storename adapted entityname to store feature to
+    * @param df        data
+    * @param mode      save mode (append, overwrite, ...)
+    * @param params    writing parameters
+    * @return new options to store
+    */
+  override def write(storename: String, df: DataFrame, mode: SaveMode = SaveMode.Append, params: Map[String, String])(implicit ac: AdamContext): Try[Map[String, String]] = {
     log.debug("parquet write operation")
-    subengine.write(filename, df, mode, allowRepartitioning)
+    val allowRepartitioning = params.getOrElse("allowRepartitioning", "false").toBoolean
+
+    val res = subengine.write(storename, df, mode, allowRepartitioning)
+
+    if (res.isSuccess) {
+      Success(Map())
+    } else {
+      Failure(res.failed.get)
+    }
+
   }
 
-  def drop(filename: String)(implicit ac: AdamContext): Try[Void] = {
+  /**
+    * Drop the entity.
+    *
+    * @param storename adapted entityname to store feature to
+    * @return
+    */
+  def drop(storename: String)(implicit ac: AdamContext): Try[Void] = {
     log.debug("parquet drop operation")
-    subengine.drop(filename)
+    subengine.drop(storename)
   }
 
   override def equals(other: Any): Boolean =
@@ -64,6 +140,11 @@ class ParquetEngine(private val subengine: GenericParquetEngine) extends FileEng
 }
 
 abstract class GenericParquetEngine(filepath: String) extends Logging with Serializable {
+  /**
+    *
+    * @param filename
+    * @return
+    */
   def read(filename: String)(implicit ac: AdamContext): Try[DataFrame] = {
     try {
       if (!exists(filename).get) {
@@ -76,6 +157,14 @@ abstract class GenericParquetEngine(filepath: String) extends Logging with Seria
     }
   }
 
+  /**
+    *
+    * @param filename
+    * @param df
+    * @param mode
+    * @param allowRepartitioning
+    * @return
+    */
   def write(filename: String, df: DataFrame, mode: SaveMode = SaveMode.Append, allowRepartitioning: Boolean)(implicit ac: AdamContext): Try[Void] = {
     try {
       var data = df
@@ -92,8 +181,18 @@ abstract class GenericParquetEngine(filepath: String) extends Logging with Seria
     }
   }
 
+  /**
+    *
+    * @param path
+    * @return
+    */
   def exists(path: String)(implicit ac: AdamContext): Try[Boolean]
 
+  /**
+    *
+    * @param path
+    * @return
+    */
   def drop(path: String)(implicit ac: AdamContext): Try[Void]
 }
 
@@ -108,6 +207,11 @@ class ParquetHadoopStorage(private val basepath: String, private val filepath: S
     FileSystem.get(new Path("/").toUri, hadoopConf).mkdirs(new Path(filepath))
   }
 
+  /**
+    *
+    * @param filename
+    * @return
+    */
   override def drop(filename: String)(implicit ac: AdamContext): Try[Void] = {
     try {
       val hdfs = FileSystem.get(new Path(filepath).toUri, hadoopConf)
@@ -124,6 +228,11 @@ class ParquetHadoopStorage(private val basepath: String, private val filepath: S
   }
 
 
+  /**
+    *
+    * @param filename
+    * @return
+    */
   override def exists(filename: String)(implicit ac: AdamContext): Try[Boolean] = {
     try {
       val exists = FileSystem.get(hadoopConf).exists(new org.apache.hadoop.fs.Path(filepath + "/" + filename))
@@ -159,7 +268,21 @@ class ParquetLocalEngine(private val filepath: String) extends GenericParquetEng
     dataFolder.mkdirs
   }
 
+  /**
+    *
+    * @param basepath
+    * @param datapath
+    */
+  def this(basepath: String, datapath: String) {
+    this(new File(basepath, datapath).getAbsoluteFile.getAbsolutePath)
+  }
 
+
+  /**
+    *
+    * @param filename
+    * @return
+    */
   override def drop(filename: String)(implicit ac: AdamContext): Try[Void] = {
     try {
       FileUtils.deleteDirectory(new File(filepath, filename))
@@ -169,7 +292,11 @@ class ParquetLocalEngine(private val filepath: String) extends GenericParquetEng
     }
   }
 
-
+  /**
+    *
+    * @param filename
+    * @return
+    */
   override def exists(filename: String)(implicit ac: AdamContext): Try[Boolean] = {
     try {
       Success(new File(filepath, filename).exists())

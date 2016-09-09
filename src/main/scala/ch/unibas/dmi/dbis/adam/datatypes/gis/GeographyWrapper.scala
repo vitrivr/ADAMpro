@@ -10,7 +10,7 @@ import org.postgis.PGgeometry
   * September 2016
   */
 @SQLUserDefinedType(udt = classOf[GeographyWrapperUDT])
-class GeographyWrapper(desc : String) extends PGgeometry(desc) {}
+case class GeographyWrapper(desc : String) extends PGgeometry(desc) {}
 
 
 class GeographyWrapperUDT extends UserDefinedType[GeographyWrapper] {

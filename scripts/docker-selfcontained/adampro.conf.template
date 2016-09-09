@@ -1,42 +1,40 @@
 adampro {
-  loglevel = "INFO"
+  loglevel = "ERROR"
 
-  hadoopUrl =  "hdfs://HOSTNAME:9000"
-  basePath = ${adampro.hadoopUrl}"/adampro/"
-  localPath = "/adampro/"
-
-  internalsPath = ${adampro.localPath}"/internals"
-
-  indexPath = ${adampro.basePath}"/index"
-  dataPath = ${adampro.basePath}"/data"
-  evaluationPath = ${adampro.basePath}"/evaluation"
+  internalsPath = "/adampro/internals"
 
   grpc {
     port = "5890"
   }
+
+  engines = ["parquet", "index", "postgres", "solr"]
 }
 
 storage {
-  jdbc {
+  parquet {
+    engine = "ParquetEngine"
+    hadoop = true
+    basepath = "hdfs://HOSTNAME:9000/adampro/"
+    datapath = "data"
+  }
+
+  index {
+    engine = "ParquetEngine"
+    storagename = "index"
+    hadoop = true
+    basepath = "hdfs://HOSTNAME:9000/adampro/"
+    datapath = "index"
+  }
+
+  postgres {
+    engine = "PostgresqlEngine"
     url = "jdbc:postgresql://HOSTNAME:5432/adampro"
     user = "adampro"
     password = "adampro"
   }
 
   solr {
+    engine = "SolrEngine"
     url = "http://HOSTNAME:8983/solr"
-  }
-
-  postgis {
-    url = "jdbc:postgresql://HOSTNAME:5433/adampro"
-    user = "adampro"
-    password = "adampro"
-  }
-
-  cassandra {
-    host = "HOSTNAME"
-    port = "9042"
-    username = "cassandra"
-    password = "cassandra"
   }
 }

@@ -1,6 +1,8 @@
-package ch.unibas.dmi.dbis.adam.storage.handler
+package ch.unibas.dmi.dbis.adam.storage
 
+import ch.unibas.dmi.dbis.adam.config.AdamConfig
 import ch.unibas.dmi.dbis.adam.datatypes.FieldTypes.FieldType
+import ch.unibas.dmi.dbis.adam.storage.engine.Engine
 import ch.unibas.dmi.dbis.adam.utils.Logging
 
 import scala.collection.mutable
@@ -33,6 +35,28 @@ object StorageHandlerRegistry extends Logging {
     * @return
     */
   def apply(name: String): Option[StorageHandler] = handlers.get(name)
+
+
+  /**
+    *
+    * @param name
+    */
+  def get(name: String): Option[StorageHandler] = {
+    var result: Option[StorageHandler] = None
+
+    if (result.isEmpty) {
+      //use lookup
+      result = apply(name)
+    }
+
+    if (result.isEmpty) {
+      //no handler registered
+      log.error("no suitable storage handler found in registry")
+      throw new Exception("no suitable storage handler found in registry for " + name)
+    } else {
+      result
+    }
+  }
 
   /**
     *
@@ -68,10 +92,36 @@ object StorageHandlerRegistry extends Logging {
 
   /**
     *
+    * @param configname
+    */
+  def register(configname: String): Unit = {
+    try {
+      val props: Map[String, String] = AdamConfig.getStorageProperties(configname).toMap
+
+      val engineName = props.get("engine")
+      if (engineName.isEmpty) {
+        throw new Exception("no suitable engine entry found in config for " + configname)
+      }
+
+      val constructor = Class.forName(classOf[Engine].getPackage.getName + "." + engineName.get).getConstructor(classOf[Map[_, _]])
+
+      val engine = constructor.newInstance(props).asInstanceOf[Engine]
+      val handler = new StorageHandler(engine)
+
+      val name = props.getOrElse("storagename", handler.name)
+
+      register(name, handler)
+    } catch {
+      case e: Exception => log.error("error in registering handler for " + configname, e)
+    }
+  }
+
+  /**
+    *
     * @param handler
     */
   def register(handler: StorageHandler): Unit = {
-    handlers += handler.name -> handler
+    register(handler.name, handler)
   }
 
   /**
@@ -79,8 +129,12 @@ object StorageHandlerRegistry extends Logging {
     * @param name
     * @param handler
     */
-  def register(name : String, handler: StorageHandler): Unit = {
-    handlers += name -> handler
+  def register(name: String, handler: StorageHandler): Unit = {
+    if(handlers.contains(name)){
+      log.error("handler with name " + name + " exists already")
+    } else {
+      handlers += name -> handler
+    }
   }
 
   /**

@@ -32,7 +32,7 @@ object CatalogOperator extends Logging {
 
   private val ds = new ComboPooledDataSource
   ds.setDriverClass("org.apache.derby.jdbc.EmbeddedDriver")
-  ds.setJdbcUrl("jdbc:derby:" + AdamConfig.internalsPath + "/ap_catalog" + ";create=true")
+  ds.setJdbcUrl("jdbc:derby:" + AdamConfig.internalsPath + "/ap_catalog" + "")
 
   private val DB = Database.forDataSource(ds)
 
@@ -45,26 +45,29 @@ object CatalogOperator extends Logging {
   private val _indexes = TableQuery[IndexCatalog]
   private val _indexOptions = TableQuery[IndexOptionsCatalog]
   private val _measurements = TableQuery[MeasurementCatalog]
+  private val _storeengineOptions = TableQuery[StorageEngineOptionsCatalog]
 
   private[catalog] val CATALOGS = Seq(
-    _entitites, _entityOptions, _attributes, _attributeOptions, _indexes, _indexOptions, _measurements
+    _entitites, _entityOptions, _attributes, _attributeOptions, _indexes, _indexOptions, _measurements, _storeengineOptions
   )
 
   /**
     * Initializes the catalog. Method is called at the beginning (see below).
     */
   private def init() {
+    val connection = Database.forURL("jdbc:derby:" + AdamConfig.internalsPath + "/ap_catalog" + ";create=true")
+
     try {
       val actions = new ListBuffer[DBIOAction[_, NoStream, _]]()
 
-      val schemaExists = Await.result(DB.run(sql"""SELECT COUNT(*) FROM SYS.SYSSCHEMAS WHERE SCHEMANAME = '#$SCHEMA'""".as[Int]), MAX_WAITING_TIME).headOption
+      val schemaExists = Await.result(connection.run(sql"""SELECT COUNT(*) FROM SYS.SYSSCHEMAS WHERE SCHEMANAME = '#$SCHEMA'""".as[Int]), MAX_WAITING_TIME).headOption
 
-      if(schemaExists.isEmpty || schemaExists.get == 0){
+      if (schemaExists.isEmpty || schemaExists.get == 0) {
         //schema might not exist yet
         actions += sqlu"""CREATE SCHEMA #$SCHEMA"""
       }
 
-      val tables = Await.result(DB.run(sql"""SELECT TABLENAME FROM SYS.SYSTABLES NATURAL JOIN SYS.SYSSCHEMAS WHERE SCHEMANAME = '#$SCHEMA'""".as[String]), MAX_WAITING_TIME).toSeq
+      val tables = Await.result(connection.run(sql"""SELECT TABLENAME FROM SYS.SYSTABLES NATURAL JOIN SYS.SYSSCHEMAS WHERE SCHEMANAME = '#$SCHEMA'""".as[String]), MAX_WAITING_TIME).toSeq
 
       CATALOGS.foreach { catalog =>
         if (!tables.contains(catalog.baseTableRow.tableName)) {
@@ -73,12 +76,14 @@ object CatalogOperator extends Logging {
         }
       }
 
-      Await.result(DB.run(DBIO.seq(actions.toArray: _*).transactionally), MAX_WAITING_TIME)
+      Await.result(connection.run(DBIO.seq(actions.toArray: _*).transactionally), MAX_WAITING_TIME)
     } catch {
       case e: Exception =>
         log.error("fatal error when creating catalogs", e)
         System.exit(1)
         throw new GeneralAdamException("fatal error when creating catalogs")
+    } finally {
+      connection.close()
     }
   }
 
@@ -462,6 +467,8 @@ object CatalogOperator extends Logging {
 
       actions += _indexes.+=((indexname, entityname, attributename, indextypename.name, meta, true))
 
+      actions += _entitites.+=(indexname) //TODO: clean this
+
       Await.result(DB.run(DBIO.seq(actions.toArray: _*).transactionally), MAX_WAITING_TIME)
       null
     }
@@ -482,8 +489,13 @@ object CatalogOperator extends Logging {
         }
       }
 
-      //on delete cascade...
-      Await.result(DB.run(_indexes.filter(_.indexname === indexname.toString).delete), MAX_WAITING_TIME)
+      val actions = new ListBuffer[DBIOAction[_, NoStream, _]]()
+
+      actions += _indexes.filter(_.indexname === indexname.toString).delete
+
+      actions += _entitites.filter(_.entityname === indexname.toString).delete //TODO: clean this
+
+      Await.result(DB.run(DBIO.seq(actions.toArray: _*).transactionally), MAX_WAITING_TIME)
 
       null
     }
@@ -652,4 +664,71 @@ object CatalogOperator extends Logging {
       null
     }
   }
+
+  /**
+    * Returns the metadata to a storage engine store.
+    *
+    * @param engine    name of storage engine
+    * @param storename name of storename
+    * @param key       name of key
+    * @return
+    */
+  def getStorageEngineOption(engine: String, storename: String, key: Option[String] = None): Try[Map[String, String]] = {
+    execute("get storage engine option") {
+      var query = _storeengineOptions.filter(_.engine === engine).filter(_.storename === storename)
+
+      if (key.isDefined) {
+        query = query.filter(_.key === key.get)
+      }
+
+      val result = Await.result(DB.run(query.map(a => a.key -> a.value).result), MAX_WAITING_TIME)
+      result.toMap
+    }
+  }
+
+
+  /**
+    * Updates or inserts a metadata information to a storage engine store.
+    *
+    * @param engine    name of storage engine
+    * @param storename name of storename
+    * @param key       name of key
+    * @param newValue  new value
+    * @return
+    */
+  def updateStorageEngineOption(engine: String, storename: String, key: String, newValue: String): Try[Void] = {
+    execute("update storage engine option") {
+      val actions = new ListBuffer[DBIOAction[_, NoStream, _]]()
+
+      //upsert
+      actions += _storeengineOptions.filter(_.engine === engine).filter(_.storename === storename).filter(_.key === key).delete
+      actions += _storeengineOptions.+=(engine, storename, key, newValue)
+
+      Await.result(DB.run(DBIO.seq(actions.toArray: _*).transactionally), MAX_WAITING_TIME)
+      null
+    }
+  }
+
+  /**
+    * Deletes the metadata to a storage engine store.
+    *
+    * @param engine    name of storage engine
+    * @param storename name of storename
+    * @param key       name of key
+    * @return
+    */
+  def deleteStorageEngineOption(engine: String, storename: String, key: Option[String]): Try[Void] = {
+    execute("delete storage engine option") {
+      var query = _storeengineOptions.filter(_.engine === engine).filter(_.storename === storename)
+
+
+      if (key.isDefined) {
+        query = query.filter(_.key === key.get)
+      }
+
+      Await.result(DB.run(query.delete), MAX_WAITING_TIME)
+      null
+    }
+  }
+
 }
