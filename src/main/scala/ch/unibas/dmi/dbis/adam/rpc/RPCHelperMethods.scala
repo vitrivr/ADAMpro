@@ -5,6 +5,7 @@ import java.util.concurrent.TimeUnit
 import ch.unibas.dmi.dbis.adam.datatypes.FieldTypes
 import ch.unibas.dmi.dbis.adam.datatypes.feature.Feature._
 import ch.unibas.dmi.dbis.adam.datatypes.feature.{FeatureVectorWrapperUDT, FeatureVectorWrapper}
+import ch.unibas.dmi.dbis.adam.datatypes.gis.{GeometryWrapperUDT, GeographyWrapper, GeographyWrapperUDT}
 import ch.unibas.dmi.dbis.adam.entity.AttributeDefinition
 import ch.unibas.dmi.dbis.adam.exception.GeneralAdamException
 import ch.unibas.dmi.dbis.adam.main.AdamContext
@@ -435,12 +436,15 @@ private[rpc] object RPCHelperMethods {
     */
   def prepareDataTypeConverter(datatype: DataType): (DataMessage) => (Any) = datatype match {
     case types.BooleanType => (x) => x.getBooleanData
-    case types.DoubleType => (x) => x.getBooleanData
+    case types.DoubleType => (x) => x.getDoubleData
     case types.FloatType => (x) => x.getFloatData
     case types.IntegerType => (x) => x.getIntData
     case types.LongType => (x) => x.getLongData
     case types.StringType => (x) => x.getStringData
     case _: FeatureVectorWrapperUDT => (x) => FeatureVectorWrapper(RPCHelperMethods.prepareFeatureVector(x.getFeatureData))
+    case _: GeographyWrapperUDT => (x) => GeographyWrapper(x.getGeographyData)
+    case _: GeometryWrapperUDT => (x) => GeographyWrapper(x.getGeometryData)
+      //TODO: possibly differentiate between string and text
   }
 }
 
