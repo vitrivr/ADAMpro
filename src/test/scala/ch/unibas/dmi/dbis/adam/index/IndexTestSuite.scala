@@ -21,7 +21,7 @@ import scala.util.Random
   */
 class IndexTestSuite extends AdamTestBase {
 
-  val ntuples = IndexGenerator.MINIMUM_NUMBER_OF_TUPLE + Random.nextInt(1000)
+  val ntuples = 1000 + Random.nextInt(1000)
   val ndims = 100
 
   feature("index creation") {

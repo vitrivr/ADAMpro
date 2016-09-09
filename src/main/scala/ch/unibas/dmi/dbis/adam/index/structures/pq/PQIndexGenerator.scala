@@ -11,7 +11,7 @@ import ch.unibas.dmi.dbis.adam.query.distance.DistanceFunction
 import org.apache.spark.mllib.clustering.{KMeans, KMeansModel}
 import org.apache.spark.mllib.linalg.Vectors
 import org.apache.spark.rdd.RDD
-import org.apache.spark.sql.Row
+import org.apache.spark.sql.{DataFrame, Row}
 import org.apache.spark.sql.types.{ArrayType, ByteType, StructField, StructType}
 import org.apache.spark.util.random.Sampling
 
@@ -23,20 +23,20 @@ import scala.collection.immutable.IndexedSeq
   * Ivan Giangreco
   * April 2016
   */
-class PQIndexer(nsq: Int, trainingSize: Int)(@transient implicit val ac: AdamContext) extends IndexGenerator {
+class PQIndexGenerator(nsq: Int, trainingSize: Int)(@transient implicit val ac: AdamContext) extends IndexGenerator {
   override def indextypename: IndexTypeName = IndexTypes.PQINDEX
 
-  override def index(indexname: IndexName, entityname: EntityName, data: RDD[IndexingTaskTuple[_]]): Index = {
+  override def index(indexname: IndexName, entityname: EntityName, data: RDD[IndexingTaskTuple[_]]): (DataFrame, Serializable) = {
     val entity = Entity.load(entityname).get
 
     val n = entity.count
-    val fraction = Sampling.computeFractionForSampleSize(math.max(trainingSize, IndexGenerator.MINIMUM_NUMBER_OF_TUPLE), n, false)
+    val fraction = Sampling.computeFractionForSampleSize(math.max(trainingSize, MINIMUM_NUMBER_OF_TUPLE), n, false)
     var trainData = data.sample(false, fraction).collect()
-    if(trainData.length < IndexGenerator.MINIMUM_NUMBER_OF_TUPLE){
-      trainData = data.take(IndexGenerator.MINIMUM_NUMBER_OF_TUPLE)
+    if(trainData.length < MINIMUM_NUMBER_OF_TUPLE){
+      trainData = data.take(MINIMUM_NUMBER_OF_TUPLE)
     }
 
-    val indexMetaData = train(trainData)
+    val meta = train(trainData)
 
     val d = trainData.head.feature.size
 
@@ -47,7 +47,7 @@ class PQIndexer(nsq: Int, trainingSize: Int)(@transient implicit val ac: AdamCon
         val hash = datum.feature.toArray
           .grouped(math.max(1, d / nsq)).toSeq
           .zipWithIndex
-          .map { case (split, idx) => indexMetaData.models(idx).predict(Vectors.dense(split.map(_.toDouble))).toByte }
+          .map { case (split, idx) => meta.models(idx).predict(Vectors.dense(split.map(_.toDouble))).toByte }
         Row(datum.id, hash)
       })
 
@@ -58,7 +58,8 @@ class PQIndexer(nsq: Int, trainingSize: Int)(@transient implicit val ac: AdamCon
     ))
 
     val df = ac.sqlContext.createDataFrame(indexdata, schema)
-    new PQIndex(indexname, entityname, df, indexMetaData)
+
+    (df, meta)
   }
 
   /**
@@ -98,15 +99,15 @@ class PQIndexer(nsq: Int, trainingSize: Int)(@transient implicit val ac: AdamCon
   }
 }
 
-object PQIndexer {
+class PQIndexGeneratorFactory extends IndexGeneratorFactory {
   /**
     * @param distance   distance function
     * @param properties indexing properties
     */
-  def apply(distance: DistanceFunction, properties: Map[String, String] = Map[String, String]())(implicit ac: AdamContext): IndexGenerator = {
+  def getIndexGenerator(distance: DistanceFunction, properties: Map[String, String] = Map[String, String]())(implicit ac: AdamContext): IndexGenerator = {
     val nsq = properties.getOrElse("nsq", "8").toInt
     val trainingSize = properties.getOrElse("ntraining", "500").toInt
 
-    new PQIndexer(nsq, trainingSize)
+    new PQIndexGenerator(nsq, trainingSize)
   }
 }

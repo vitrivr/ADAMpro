@@ -11,13 +11,12 @@ import ch.unibas.dmi.dbis.adam.index.Index.{IndexName, IndexTypeName}
 import ch.unibas.dmi.dbis.adam.index.structures.IndexTypes
 import ch.unibas.dmi.dbis.adam.index.structures.va.marks.{EquidistantMarksGenerator, EquifrequentMarksGenerator, MarksGenerator}
 import ch.unibas.dmi.dbis.adam.index.structures.va.signature.VariableSignatureGenerator
-import ch.unibas.dmi.dbis.adam.index.{Index, IndexGenerator, IndexingTaskTuple}
+import ch.unibas.dmi.dbis.adam.index.{IndexGenerator, IndexGeneratorFactory, IndexingTaskTuple}
 import ch.unibas.dmi.dbis.adam.main.AdamContext
 import ch.unibas.dmi.dbis.adam.query.distance.{DistanceFunction, MinkowskiDistance}
-import ch.unibas.dmi.dbis.adam.utils.Logging
 import org.apache.spark.rdd.RDD
-import org.apache.spark.sql.Row
 import org.apache.spark.sql.types.{StructField, StructType}
+import org.apache.spark.sql.{DataFrame, Row}
 import org.apache.spark.util.random.Sampling
 
 /**
@@ -29,7 +28,7 @@ import org.apache.spark.util.random.Sampling
   * VAV: this VA-File index will have a training phase in which we learn the number of bits per dimension (new version of VA-File)
   * note that using VAF, we may still use both the equidistant or the equifrequent marks generator
   */
-class VAVIndexer(nbits: Option[Int], marksGenerator: MarksGenerator, trainingSize: Int, distance: MinkowskiDistance)(@transient implicit val ac: AdamContext) extends IndexGenerator {
+class VAVIndexGenerator(nbits: Option[Int], marksGenerator: MarksGenerator, trainingSize: Int, distance: MinkowskiDistance)(@transient implicit val ac: AdamContext) extends IndexGenerator {
   override val indextypename: IndexTypeName = IndexTypes.VAVINDEX
 
   /**
@@ -39,24 +38,24 @@ class VAVIndexer(nbits: Option[Int], marksGenerator: MarksGenerator, trainingSiz
     * @param data data to index
     * @return
     */
-  override def index(indexname: IndexName, entityname: EntityName, data: RDD[IndexingTaskTuple[_]]): Index = {
+  override def index(indexname: IndexName, entityname: EntityName, data: RDD[IndexingTaskTuple[_]]): (DataFrame, Serializable) = {
     val entity = Entity.load(entityname).get
 
     val n = entity.count
-    val fraction = Sampling.computeFractionForSampleSize(math.max(trainingSize, IndexGenerator.MINIMUM_NUMBER_OF_TUPLE), n, false)
+    val fraction = Sampling.computeFractionForSampleSize(math.max(trainingSize, MINIMUM_NUMBER_OF_TUPLE), n, false)
     var trainData = data.sample(false, fraction).collect()
-    if(trainData.length < IndexGenerator.MINIMUM_NUMBER_OF_TUPLE){
-      trainData = data.take(IndexGenerator.MINIMUM_NUMBER_OF_TUPLE)
+    if(trainData.length < MINIMUM_NUMBER_OF_TUPLE){
+      trainData = data.take(MINIMUM_NUMBER_OF_TUPLE)
     }
 
-    val indexMetaData = train(trainData)
+    val meta = train(trainData)
 
     log.debug("VA-File (variable) indexing...")
 
     val indexdata = data.map(
       datum => {
-        val cells = getCells(datum.feature, indexMetaData.marks)
-        val signature = indexMetaData.signatureGenerator.toSignature(cells)
+        val cells = getCells(datum.feature, meta.marks)
+        val signature = meta.signatureGenerator.toSignature(cells)
         Row(datum.id, signature)
       })
 
@@ -67,7 +66,7 @@ class VAVIndexer(nbits: Option[Int], marksGenerator: MarksGenerator, trainingSiz
 
     val df = ac.sqlContext.createDataFrame(indexdata, schema)
 
-    new VAIndex(indexname, entityname, df, indexMetaData)
+    (df, meta)
   }
 
   /**
@@ -115,12 +114,12 @@ class VAVIndexer(nbits: Option[Int], marksGenerator: MarksGenerator, trainingSiz
 }
 
 
-object VAVIndexer extends Logging {
+class VAVIndexGeneratorFactory extends IndexGeneratorFactory {
   /**
     * @param distance   distance function
     * @param properties indexing properties
     */
-  def apply(distance: DistanceFunction, properties: Map[String, String] = Map[String, String]())(implicit ac: AdamContext): IndexGenerator = {
+  def getIndexGenerator(distance: DistanceFunction, properties: Map[String, String] = Map[String, String]())(implicit ac: AdamContext): IndexGenerator = {
     val marksGeneratorDescription = properties.getOrElse("marktype", "equifrequent")
     val marksGenerator = marksGeneratorDescription.toLowerCase match {
       case "equifrequent" => EquifrequentMarksGenerator
@@ -139,6 +138,6 @@ object VAVIndexer extends Logging {
     }
     val trainingSize = properties.getOrElse("ntraining", "1000").toInt
 
-    new VAVIndexer(totalNumBits, marksGenerator, trainingSize, distance.asInstanceOf[MinkowskiDistance])
+    new VAVIndexGenerator(totalNumBits, marksGenerator, trainingSize, distance.asInstanceOf[MinkowskiDistance])
   }
 }

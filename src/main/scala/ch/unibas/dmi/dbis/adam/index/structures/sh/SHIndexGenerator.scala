@@ -14,7 +14,7 @@ import ch.unibas.dmi.dbis.adam.main.{AdamContext, SparkStartup}
 import ch.unibas.dmi.dbis.adam.query.distance.DistanceFunction
 import org.apache.log4j.Logger
 import org.apache.spark.rdd.RDD
-import org.apache.spark.sql.Row
+import org.apache.spark.sql.{DataFrame, Row}
 import org.apache.spark.sql.types.{StructField, StructType}
 import org.apache.spark.util.random.Sampling
 
@@ -25,7 +25,7 @@ import org.apache.spark.util.random.Sampling
   * Ivan Giangreco
   * August 2015
   */
-class SHIndexer(nbits: Option[Int], trainingSize: Int)(@transient implicit val ac: AdamContext) extends IndexGenerator {
+class SHIndexGenerator(nbits: Option[Int], trainingSize: Int)(@transient implicit val ac: AdamContext) extends IndexGenerator {
   override val indextypename: IndexTypeName = IndexTypes.SHINDEX
 
 
@@ -34,23 +34,23 @@ class SHIndexer(nbits: Option[Int], trainingSize: Int)(@transient implicit val a
     * @param data
     * @return
     */
-  override def index(indexname: IndexName, entityname: EntityName, data: RDD[IndexingTaskTuple[_]]): Index = {
+  override def index(indexname: IndexName, entityname: EntityName, data: RDD[IndexingTaskTuple[_]]): (DataFrame, Serializable) = {
     val entity = Entity.load(entityname).get
 
     val n = entity.count
-    val fraction = Sampling.computeFractionForSampleSize(math.max(trainingSize, IndexGenerator.MINIMUM_NUMBER_OF_TUPLE), n, false)
+    val fraction = Sampling.computeFractionForSampleSize(math.max(trainingSize, MINIMUM_NUMBER_OF_TUPLE), n, false)
     var trainData = data.sample(false, fraction).collect()
-    if(trainData.length < IndexGenerator.MINIMUM_NUMBER_OF_TUPLE){
-      trainData = data.take(IndexGenerator.MINIMUM_NUMBER_OF_TUPLE)
+    if(trainData.length < MINIMUM_NUMBER_OF_TUPLE){
+      trainData = data.take(MINIMUM_NUMBER_OF_TUPLE)
     }
 
-    val indexMetaData = train(trainData)
+    val meta = train(trainData)
 
     log.debug("SH indexing...")
 
     val indexdata = data.map(
       datum => {
-        val hash = SHUtils.hashFeature(datum.feature, indexMetaData)
+        val hash = SHUtils.hashFeature(datum.feature, meta)
         Row(datum.id, hash)
       })
 
@@ -60,7 +60,8 @@ class SHIndexer(nbits: Option[Int], trainingSize: Int)(@transient implicit val a
     ))
 
     val df = ac.sqlContext.createDataFrame(indexdata, schema)
-    new SHIndex(indexname, entityname, df, indexMetaData)
+
+    (df, meta)
   }
 
   /**
@@ -178,12 +179,12 @@ class SHIndexer(nbits: Option[Int], trainingSize: Int)(@transient implicit val a
 }
 
 
-object SHIndexer {
+class SHIndexGeneratorFactory extends IndexGeneratorFactory {
   /**
     * @param distance   distance function
     * @param properties indexing properties
     */
-  def apply(distance: DistanceFunction, properties: Map[String, String] = Map[String, String]())(implicit ac: AdamContext): IndexGenerator = {
+  def getIndexGenerator(distance: DistanceFunction, properties: Map[String, String] = Map[String, String]())(implicit ac: AdamContext): IndexGenerator = {
     val nbits = if (properties.get("nbits").isDefined) {
       Some(properties.get("nbits").get.toInt)
     } else {
@@ -191,6 +192,6 @@ object SHIndexer {
     }
     val trainingSize = properties.getOrElse("ntraining", "500").toInt
 
-    new SHIndexer(nbits, trainingSize)
+    new SHIndexGenerator(nbits, trainingSize)
   }
 }

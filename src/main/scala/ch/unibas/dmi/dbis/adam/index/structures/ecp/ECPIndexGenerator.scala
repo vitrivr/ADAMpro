@@ -9,7 +9,7 @@ import ch.unibas.dmi.dbis.adam.index.structures.IndexTypes
 import ch.unibas.dmi.dbis.adam.main.AdamContext
 import ch.unibas.dmi.dbis.adam.query.distance.DistanceFunction
 import org.apache.spark.rdd.RDD
-import org.apache.spark.sql.Row
+import org.apache.spark.sql.{DataFrame, Row}
 import org.apache.spark.sql.types.{IntegerType, StructField, StructType}
 import org.apache.spark.util.random.Sampling
 
@@ -19,7 +19,7 @@ import org.apache.spark.util.random.Sampling
   * Ivan Giangreco
   * October 2015
   */
-class ECPIndexer(centroidBasedLeaders: Boolean, distance: DistanceFunction, trainingSize: Option[Int])(@transient implicit val ac: AdamContext) extends IndexGenerator {
+class ECPIndexGenerator(centroidBasedLeaders: Boolean, distance: DistanceFunction, trainingSize: Option[Int])(@transient implicit val ac: AdamContext) extends IndexGenerator {
   override val indextypename: IndexTypeName = IndexTypes.ECPINDEX
 
   /**
@@ -29,20 +29,20 @@ class ECPIndexer(centroidBasedLeaders: Boolean, distance: DistanceFunction, trai
     * @param data       data to index
     * @return
     */
-  override def index(indexname: IndexName, entityname: EntityName, data: RDD[IndexingTaskTuple[_]]): Index = {
+  override def index(indexname: IndexName, entityname: EntityName, data: RDD[IndexingTaskTuple[_]]): (DataFrame, Serializable) = {
     val entity = Entity.load(entityname).get
 
 
     //randomly choose leaders
     val n = entity.count
-    val fraction = Sampling.computeFractionForSampleSize(math.max(trainingSize.getOrElse(math.sqrt(n).toInt), IndexGenerator.MINIMUM_NUMBER_OF_TUPLE), n, withReplacement = false)
+    val fraction = Sampling.computeFractionForSampleSize(math.max(trainingSize.getOrElse(math.sqrt(n).toInt), MINIMUM_NUMBER_OF_TUPLE), n, withReplacement = false)
     var trainData = data.sample(false, fraction).collect().map(_.feature).distinct //take distinct data
 
-    if (trainData.length < IndexGenerator.MINIMUM_NUMBER_OF_TUPLE) {
-      trainData = data.take(IndexGenerator.MINIMUM_NUMBER_OF_TUPLE).map(_.feature).distinct //take distinct data
+    if (trainData.length < MINIMUM_NUMBER_OF_TUPLE) {
+      trainData = data.take(MINIMUM_NUMBER_OF_TUPLE).map(_.feature).distinct //take distinct data
     }
 
-    if (trainData.length < IndexGenerator.MINIMUM_NUMBER_OF_TUPLE) {
+    if (trainData.length < MINIMUM_NUMBER_OF_TUPLE) {
       log.warn("not enough distinct data found in eCP indexing, possibly retry?")
     }
 
@@ -82,18 +82,18 @@ class ECPIndexer(centroidBasedLeaders: Boolean, distance: DistanceFunction, trai
       bcleaders.value.map(x => ECPLeader(x.id, x.feature, counts(x.id))).toSeq
     }
 
-    new ECPIndex(indexname, entityname, df, ECPIndexMetaData(leaders, distance))
+    val meta = ECPIndexMetaData(leaders, distance)
+
+    (df, meta)
   }
 }
 
-object ECPIndexer {
+class ECPIndexGeneratorFactory extends IndexGeneratorFactory {
   /**
-    *
     * @param distance   distance function
     * @param properties indexing properties
-    * @return
     */
-  def apply(distance: DistanceFunction, properties: Map[String, String] = Map[String, String]())(implicit ac: AdamContext): IndexGenerator = {
+  def getIndexGenerator(distance: DistanceFunction, properties: Map[String, String] = Map[String, String]())(implicit ac: AdamContext): IndexGenerator = {
     val trainingSize = properties.get("ntraining").map(_.toInt)
 
     val leaderTypeDescription = properties.getOrElse("leadertype", "simple")
@@ -103,6 +103,6 @@ object ECPIndexer {
       case "simple" => false
     }
 
-    new ECPIndexer(leaderType, distance, trainingSize)
+    new ECPIndexGenerator(leaderType, distance, trainingSize)
   }
 }

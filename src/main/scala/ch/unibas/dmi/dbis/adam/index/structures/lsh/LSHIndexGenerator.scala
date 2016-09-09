@@ -12,12 +12,12 @@ import ch.unibas.dmi.dbis.adam.index.structures.lsh.signature.LSHSignatureGenera
 import ch.unibas.dmi.dbis.adam.main.AdamContext
 import ch.unibas.dmi.dbis.adam.query.distance.{DistanceFunction, EuclideanDistance, ManhattanDistance}
 import org.apache.spark.rdd.RDD
-import org.apache.spark.sql.Row
+import org.apache.spark.sql.{DataFrame, Row}
 import org.apache.spark.sql.types.{StructField, StructType}
 import org.apache.spark.util.random.Sampling
 
 
-class LSHIndexer(numHashTables: Int, numHashes: Int, m : Int, distance: DistanceFunction, trainingSize: Int)(@transient implicit val ac: AdamContext) extends IndexGenerator {
+class LSHIndexGenerator(numHashTables: Int, numHashes: Int, m : Int, distance: DistanceFunction, trainingSize: Int)(@transient implicit val ac: AdamContext) extends IndexGenerator {
   override val indextypename: IndexTypeName = IndexTypes.LSHINDEX
 
   /**
@@ -27,21 +27,21 @@ class LSHIndexer(numHashTables: Int, numHashes: Int, m : Int, distance: Distance
     * @param data       data to index
     * @return
     */
-  override def index(indexname: IndexName, entityname: EntityName, data: RDD[IndexingTaskTuple[_]]): Index = {
+  override def index(indexname: IndexName, entityname: EntityName, data: RDD[IndexingTaskTuple[_]]): (DataFrame, Serializable) = {
     val entity = Entity.load(entityname).get
 
     val n = entity.count
-    val fraction = Sampling.computeFractionForSampleSize(math.max(trainingSize, IndexGenerator.MINIMUM_NUMBER_OF_TUPLE), n, withReplacement = false)
+    val fraction = Sampling.computeFractionForSampleSize(math.max(trainingSize, MINIMUM_NUMBER_OF_TUPLE), n, withReplacement = false)
     var trainData = data.sample(false, fraction).collect()
-    if (trainData.length < IndexGenerator.MINIMUM_NUMBER_OF_TUPLE) {
-      trainData = data.take(IndexGenerator.MINIMUM_NUMBER_OF_TUPLE)
+    if (trainData.length < MINIMUM_NUMBER_OF_TUPLE) {
+      trainData = data.take(MINIMUM_NUMBER_OF_TUPLE)
     }
 
-    val indexMetaData = train(trainData)
+    val meta = train(trainData)
 
     log.debug("LSH indexing...")
 
-    val signatureGenerator = new LSHSignatureGenerator(indexMetaData.hashTables, indexMetaData.m)
+    val signatureGenerator = new LSHSignatureGenerator(meta.hashTables, meta.m)
 
     val indexdata = data.map(
       datum => {
@@ -56,7 +56,8 @@ class LSHIndexer(numHashTables: Int, numHashes: Int, m : Int, distance: Distance
     ))
 
     val df = ac.sqlContext.createDataFrame(indexdata, schema)
-    new LSHIndex(indexname, entityname, df, indexMetaData)
+
+    (df, meta)
   }
 
   /**
@@ -92,12 +93,12 @@ class LSHIndexer(numHashTables: Int, numHashes: Int, m : Int, distance: Distance
 }
 
 
-object LSHIndexer {
+class LSHIndexGeneratorFactory extends IndexGeneratorFactory {
   /**
     * @param distance   distance function
     * @param properties indexing properties
     */
-  def apply(distance: DistanceFunction, properties: Map[String, String] = Map[String, String]())(implicit ac: AdamContext): IndexGenerator = {
+  def getIndexGenerator(distance: DistanceFunction, properties: Map[String, String] = Map[String, String]())(implicit ac: AdamContext): IndexGenerator = {
     val numHashTables = properties.getOrElse("nhashtables", "64").toInt
     val numHashes = properties.getOrElse("nhashes", "64").toInt
     val maxBuckets = properties.getOrElse("nbuckets", "256").toInt
@@ -106,6 +107,6 @@ object LSHIndexer {
 
     val trainingSize = properties.getOrElse("ntraining", "500").toInt
 
-    new LSHIndexer(numHashTables, numHashes, maxBuckets, distance, trainingSize)
+    new LSHIndexGenerator(numHashTables, numHashes, maxBuckets, distance, trainingSize)
   }
 }

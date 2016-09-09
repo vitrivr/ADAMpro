@@ -7,26 +7,20 @@ import ch.unibas.dmi.dbis.adam.datatypes.feature.Feature._
 import ch.unibas.dmi.dbis.adam.datatypes.feature.FeatureVectorWrapper
 import ch.unibas.dmi.dbis.adam.entity.Entity
 import ch.unibas.dmi.dbis.adam.entity.Entity._
-import ch.unibas.dmi.dbis.adam.exception.{EntityNotExistingException, GeneralAdamException, IndexNotExistingException, IndexNotProperlyDefinedException}
+import ch.unibas.dmi.dbis.adam.exception.{EntityNotExistingException, IndexNotExistingException, IndexNotProperlyDefinedException}
 import ch.unibas.dmi.dbis.adam.helpers.partition.Partitioning.PartitionID
-import ch.unibas.dmi.dbis.adam.helpers.partition.{PartitionMode, PartitionerChoice, RandomPartitioner, SparkPartitioner}
 import ch.unibas.dmi.dbis.adam.index.Index.{IndexName, IndexTypeName}
 import ch.unibas.dmi.dbis.adam.index.structures.IndexTypes
-import ch.unibas.dmi.dbis.adam.main.{SparkStartup, AdamContext}
+import ch.unibas.dmi.dbis.adam.main.{AdamContext, SparkStartup}
 import ch.unibas.dmi.dbis.adam.query.distance.DistanceFunction
 import ch.unibas.dmi.dbis.adam.query.query.NearestNeighbourQuery
-import ch.unibas.dmi.dbis.adam.storage.engine.instances.ParquetEngine
-import ch.unibas.dmi.dbis.adam.storage.handler.IndexFlatFileHandler
 import ch.unibas.dmi.dbis.adam.utils.Logging
-import org.apache.spark.HashPartitioner
 import org.apache.spark.rdd.RDD
-import org.apache.spark.sql.types._
-import org.apache.spark.sql.{Row, SaveMode, DataFrame}
-import org.scalatest.path
+import org.apache.spark.sql.{DataFrame, SaveMode}
 
 import scala.collection.mutable
 import scala.collection.mutable.ListBuffer
-import scala.util.{Failure, Random, Success, Try}
+import scala.util.{Failure, Success, Try}
 
 /**
   * adamtwo
@@ -35,14 +29,10 @@ import scala.util.{Failure, Random, Success, Try}
   * August 2015
   */
 //TODO: make indexes singleton? lock on index?
-//TODO: adjust architecture, move logic of loading data to here
-abstract class Index(@transient implicit val ac: AdamContext) extends Serializable with Logging {
-  val indexname: IndexName
-  val indextypename: IndexTypeName
+abstract class Index(val indexname: IndexName)(@transient implicit val ac: AdamContext) extends Serializable with Logging {
 
   /**
     *
-    * @return
     */
   lazy val pk = CatalogOperator.getPrimaryKey(entityname).get
 
@@ -54,7 +44,7 @@ abstract class Index(@transient implicit val ac: AdamContext) extends Serializab
   /**
     * Gets the entityname corresponding to the given index.
     */
-  val entityname: EntityName
+  val entityname = CatalogOperator.getEntityName(indexname).get
 
   /**
     * Gets the indexed attribute.
@@ -77,26 +67,64 @@ abstract class Index(@transient implicit val ac: AdamContext) extends Serializab
   def lossy: Boolean
 
   /**
-    *
+    * Denotes the type of the index.
     */
-  lazy val storage = SparkStartup.indexStorageHandler
+  def indextypename: IndexTypeName
+
 
   /**
     *
     */
-  private[index] var data: DataFrame
+  private var _data: Option[DataFrame] = None
+
+  /**
+    *
+    */
+  private[index] def getData(): Option[DataFrame] = {
+    //cache data
+    if (_data.isEmpty) {
+      _data = Index.storage.read(indexname).map(Some(_)).getOrElse(None)
+
+      if (_data.isDefined) {
+        _data = Some(_data.get.cache())
+      }
+    }
+
+    _data
+  }
+
+  /**
+    *
+    * @param df
+    */
+  private[index] def setData(df: DataFrame): Unit = {
+    _data = Some(df)
+  }
+
+  /**
+    * Caches the data.
+    */
+  def cache(): Unit = {
+    if (_data.isEmpty) {
+      getData()
+    }
+
+    if (_data.isDefined) {
+      _data = Some(_data.get.cache())
+    }
+  }
 
   /**
     * Gets the metadata attached to the index.
     */
-  private[index] def metadata: Serializable
+  private[index] def metadata: Try[Serializable] = CatalogOperator.getIndexMeta(indexname).map(_.asInstanceOf[Serializable])
 
   /**
     * Counts the number of elements in the index.
     *
     * @return
     */
-  def count = data.count()
+  def count: Long = getData().map(_.count()).getOrElse(-1)
 
   /**
     * Marks the data stale (e.g., if new data has been inserted to entity).
@@ -108,19 +136,14 @@ abstract class Index(@transient implicit val ac: AdamContext) extends Serializab
   /**
     * Is the index data stale.
     */
-  def isStale = !isUptodate
-
-  /**
-    * Is the index up to date.
-    */
-  def isUptodate = CatalogOperator.isIndexUptodate(indexname).get
+  def isStale = !CatalogOperator.isIndexUptodate(indexname).get
 
   /**
     *
     */
   def drop(): Unit = {
     try {
-      storage.drop(indexname)
+      Index.storage.drop(indexname)
     } catch {
       case e: Exception =>
         log.error("exception when dropping index " + indexname, e)
@@ -172,7 +195,7 @@ abstract class Index(@transient implicit val ac: AdamContext) extends Serializab
       log.warn("index is stale but still used, please re-create " + indexname)
     }
 
-    var df = data
+    var df = getData().get
 
     //apply pre-filter
     var ids = mutable.Set[Any]()
@@ -188,7 +211,7 @@ abstract class Index(@transient implicit val ac: AdamContext) extends Serializab
 
     //choose specific partition
     if (partitions.isDefined) {
-      val rdd = data.rdd.mapPartitionsWithIndex((idx, iter) => if (partitions.get.contains(idx)) iter else Iterator(), preservesPartitioning = true)
+      val rdd = getData().get.rdd.mapPartitionsWithIndex((idx, iter) => if (partitions.get.contains(idx)) iter else Iterator(), preservesPartitioning = true)
       df = ac.sqlContext.createDataFrame(rdd, df.schema)
     }
 
@@ -196,7 +219,7 @@ abstract class Index(@transient implicit val ac: AdamContext) extends Serializab
 
     val t2 = System.currentTimeMillis
 
-    log.debug(indexname + " returning tuples in " + (t2 - t1) + " msecs")
+    log.trace(indexname + " returning tuples in " + (t2 - t1) + " msecs")
 
     results
   }
@@ -231,10 +254,10 @@ abstract class Index(@transient implicit val ac: AdamContext) extends Serializab
     lb.append("confidence" -> confidence.toString)
     lb.append("attribute" -> attribute)
     lb.append("stale" -> isStale.toString)
-    lb.append("partitions" -> data.rdd.getNumPartitions.toString)
+    lb.append("partitions" -> getData().get.rdd.getNumPartitions.toString)
 
     //TODO: possibly add flag for displaying or not
-    val partitionInfo = data.rdd.mapPartitionsWithIndex((idx, f) => {
+    val partitionInfo = getData().get.rdd.mapPartitionsWithIndex((idx, f) => {
       Iterator((idx, f.length))
     })
     lb.append("tuplesPerPartition" -> partitionInfo.collect().map { case (id, length) => "(" + id + "," + length + ")" }.mkString)
@@ -249,27 +272,15 @@ abstract class Index(@transient implicit val ac: AdamContext) extends Serializab
     * @param newName possibly new name for index
     * @return
     */
-  private[index] def copy(newName: Option[IndexName] = None): Index = {
+  private[index] def shallowCopy(newName: Option[IndexName] = None): Index = {
     val current = this
 
-    val index = new Index {
-      val indexname: IndexName = newName.getOrElse(current.indexname)
-      val indextypename: IndexTypeName = current.indextypename
-      lazy val entityname: EntityName = current.entityname
-
+    val index = new Index(newName.getOrElse(current.indexname))(current.ac) {
       def confidence: Float = current.confidence
-
       def lossy: Boolean = current.lossy
-
-      override def isStale = current.isStale
-
-      private[index] def metadata: Serializable = current.metadata
-
+      def indextypename: IndexTypeName = current.indextypename
       def isQueryConform(nnq: NearestNeighbourQuery): Boolean = current.isQueryConform(nnq)
-
-      protected def scan(data: DataFrame, q: FeatureVector, distance: DistanceFunction, options: Map[String, String], k: Int) = current.scan(data, q, distance, options, k)
-
-      private[index] var data: DataFrame = current.data
+      protected def scan(data: DataFrame, q: FeatureVector, distance: DistanceFunction, options: Map[String, String], k: Int): DataFrame = current.scan(data, q, distance, options, k)
     }
 
     index
@@ -317,6 +328,29 @@ object Index extends Logging {
   /**
     * Creates an index. Performs preparatory tasks and checks.
     *
+    * @param entity
+    * @param attribute
+    * @param indextypename
+    * @param distance
+    * @param properties
+    * @param ac
+    * @return
+    */
+  def createIndex(entity: Entity, attribute: String, indextypename: IndexTypeName, distance: DistanceFunction, properties: Map[String, String] = Map())(implicit ac: AdamContext): Try[Index] = {
+    try {
+      val indexGenerator = indextypename.indexGeneratorFactoryClass.newInstance().getIndexGenerator(distance, properties)
+      createIndex(entity, attribute, indexGenerator)
+    } catch {
+      case e: Exception => {
+        Failure(e)
+      }
+    }
+  }
+
+
+  /**
+    * Creates an index. Performs preparatory tasks and checks.
+    *
     * @param entity         entity
     * @param attribute      the attribute to index
     * @param indexgenerator generator to create index
@@ -334,8 +368,8 @@ object Index extends Logging {
       }
 
       val count = entity.count
-      if (count < IndexGenerator.MINIMUM_NUMBER_OF_TUPLE) {
-        return Failure(new IndexNotProperlyDefinedException("not enough tuples for creating index, needs at least " + IndexGenerator.MINIMUM_NUMBER_OF_TUPLE + " but has only " + count))
+      if (count < indexgenerator.MINIMUM_NUMBER_OF_TUPLE) {
+        return Failure(new IndexNotProperlyDefinedException("not enough tuples for creating index, needs at least " + indexgenerator.MINIMUM_NUMBER_OF_TUPLE + " but has only " + count))
       }
 
       val indexname = createIndexName(entity.entityname, attribute, indexgenerator.indextypename)
@@ -361,15 +395,15 @@ object Index extends Logging {
     try {
       val rdd: RDD[IndexingTaskTuple[_]] = entity.getAttributeData(attribute).get.map { x => IndexingTaskTuple(x.getAs[Any](entity.pk.name), x.getAs[FeatureVectorWrapper](attribute).vector) }
 
-      val index = indexgenerator.index(indexname, entity.entityname, rdd)
-      index.data = index
-        .data
+      val generatorRes = indexgenerator.index(indexname, entity.entityname, rdd)
+      val data = generatorRes._1
         .withColumnRenamed("id", entity.pk.name)
         .withColumnRenamed("value", FieldNames.featureIndexColumnName)
+      val meta = generatorRes._2
 
-      CatalogOperator.createIndex(indexname, entity.entityname, attribute, indexgenerator.indextypename, index.metadata)
+      CatalogOperator.createIndex(indexname, entity.entityname, attribute, indexgenerator.indextypename, meta)
       storage.create(indexname, Seq()) //TODO: possibly switch index to be an entity with specific fields?
-      val status = storage.write(indexname, index.data, SaveMode.ErrorIfExists, Map("allowRepartitioning" -> "true"))
+      val status = storage.write(indexname, data, SaveMode.ErrorIfExists, Map("allowRepartitioning" -> "true"))
 
       if (status.isFailure) {
         throw status.failed.get
@@ -420,22 +454,13 @@ object Index extends Logging {
     * @return
     */
   def load(indexname: IndexName, cache: Boolean = false)(implicit ac: AdamContext): Try[Index] = {
-    try {
+    val index = IndexLRUCache.get(indexname)
 
-      if (!IndexLRUCache.contains(indexname) && !exists(indexname)) {
-        return Failure(new IndexNotExistingException())
-      }
-
-      val index = IndexLRUCache.get(indexname)
-
-      if (cache) {
-        index.get.data.rdd.setName(indexname).cache()
-      }
-
-      index
-    } catch {
-      case e: Exception => Failure(e)
+    if (cache) {
+      index.map(_.cache())
     }
+
+    index
   }
 
   /**
@@ -450,21 +475,10 @@ object Index extends Logging {
     }
 
     try {
-      val df = storage.read(indexname)
-      if (df.isFailure) {
-        return Failure(df.failed.get)
-      }
-
-      val entityname = CatalogOperator.getEntityName(indexname).get
-      val meta = CatalogOperator.getIndexMeta(indexname)
-
-      if (meta.isFailure) {
-        return Failure(meta.failed.get)
-      }
-
       val indextypename = CatalogOperator.getIndexTypeName(indexname).get
 
-      val index = indextypename.index(indexname, entityname, df.get, meta.get, ac)
+      val constructor = indextypename.indexClass.getConstructors()(0)
+      val index = constructor.newInstance(Array(indexname, ac): _*).asInstanceOf[Index]
 
       Success(index)
     } catch {

@@ -4,13 +4,13 @@ import ch.unibas.dmi.dbis.adam.entity.Entity
 import ch.unibas.dmi.dbis.adam.entity.Entity._
 import ch.unibas.dmi.dbis.adam.index.Index._
 import ch.unibas.dmi.dbis.adam.index.structures.IndexTypes
-import ch.unibas.dmi.dbis.adam.index.{Index, IndexGenerator, IndexingTaskTuple}
+import ch.unibas.dmi.dbis.adam.index.{IndexGeneratorFactory, IndexGenerator, IndexingTaskTuple}
 import ch.unibas.dmi.dbis.adam.main.AdamContext
 import ch.unibas.dmi.dbis.adam.query.distance.DistanceFunction
 import org.apache.spark.annotation.Experimental
 import org.apache.spark.rdd.RDD
-import org.apache.spark.sql.Row
 import org.apache.spark.sql.types._
+import org.apache.spark.sql.{DataFrame, Row}
 import org.apache.spark.util.random.Sampling
 
 /**
@@ -19,7 +19,7 @@ import org.apache.spark.util.random.Sampling
   * Ivan Giangreco
   * June 2016
   */
-@Experimental class MIIndexer(p_ki: Option[Int], p_ks: Option[Int], distance: DistanceFunction, nrefs: Option[Int])(@transient implicit val ac: AdamContext) extends IndexGenerator {
+@Experimental class MIIndexGenerator(p_ki: Option[Int], p_ks: Option[Int], distance: DistanceFunction, nrefs: Option[Int])(@transient implicit val ac: AdamContext) extends IndexGenerator {
   override val indextypename: IndexTypeName = IndexTypes.MIINDEX
 
   /**
@@ -29,14 +29,14 @@ import org.apache.spark.util.random.Sampling
     * @param data       data to index
     * @return
     */
-  override def index(indexname: IndexName, entityname: EntityName, data: RDD[IndexingTaskTuple[_]]): Index = {
+  override def index(indexname: IndexName, entityname: EntityName, data: RDD[IndexingTaskTuple[_]]): (DataFrame, Serializable) = {
     val entity = Entity.load(entityname).get
 
     val n = entity.count
-    val fraction = Sampling.computeFractionForSampleSize(math.max(nrefs.getOrElse(math.ceil(2 * math.sqrt(n)).toInt), IndexGenerator.MINIMUM_NUMBER_OF_TUPLE), n, withReplacement = false)
+    val fraction = Sampling.computeFractionForSampleSize(math.max(nrefs.getOrElse(math.ceil(2 * math.sqrt(n)).toInt), MINIMUM_NUMBER_OF_TUPLE), n, withReplacement = false)
     var trainData = data.sample(false, fraction).collect()
-    if (trainData.length < IndexGenerator.MINIMUM_NUMBER_OF_TUPLE) {
-      trainData = data.take(IndexGenerator.MINIMUM_NUMBER_OF_TUPLE)
+    if (trainData.length < MINIMUM_NUMBER_OF_TUPLE) {
+      trainData = data.take(MINIMUM_NUMBER_OF_TUPLE)
     }
     assert(trainData.length >= math.ceil(2 * math.sqrt(n)).toInt) //as discussed in the paper
 
@@ -75,28 +75,30 @@ import org.apache.spark.util.random.Sampling
 
 
     val schema = StructType(Seq(
-      StructField(MIIndexer.REFERENCE_OBJ_NAME, IntegerType, nullable = false),
-      StructField(MIIndexer.POSTING_LIST_NAME, new ArrayType(entity.pk.fieldtype.datatype, false), nullable = false),
-      StructField(MIIndexer.SCORE_LIST_NAME, new ArrayType(IntegerType, false), nullable = false)
+      StructField(MIIndex.REFERENCE_OBJ_NAME, IntegerType, nullable = false),
+      StructField(MIIndex.POSTING_LIST_NAME, new ArrayType(entity.pk.fieldtype.datatype, false), nullable = false),
+      StructField(MIIndex.SCORE_LIST_NAME, new ArrayType(IntegerType, false), nullable = false)
     ))
 
     val df = ac.sqlContext.createDataFrame(indexdata, schema)
+    val meta = MIIndexMetaData(ki, ks, refs.value)
 
-    MIIndex(indexname, entityname, df, MIIndexMetaData(ki, ks, refs.value))
+    (df, meta)
   }
 }
 
-object MIIndexer {
-  def apply(distance: DistanceFunction, properties: Map[String, String] = Map[String, String]())(implicit ac: AdamContext): IndexGenerator = {
+
+
+class MIIndexGeneratorFactory extends IndexGeneratorFactory {
+  /**
+    * @param distance   distance function
+    * @param properties indexing properties
+    */
+  def getIndexGenerator(distance: DistanceFunction, properties: Map[String, String] = Map[String, String]())(implicit ac: AdamContext): IndexGenerator = {
     val ki = properties.get("ki").map(_.toInt)
     val ks = properties.get("ks").map(_.toInt)
     val trainingSize = properties.get("nrefs").map(_.toInt)
 
-    new MIIndexer(ki, ks, distance, trainingSize)
+    new MIIndexGenerator(ki, ks, distance, trainingSize)
   }
-
-  //names of fields to store data of index
-  private[mi] val REFERENCE_OBJ_NAME = "ref"
-  private[mi] val POSTING_LIST_NAME = "postings"
-  private[mi] val SCORE_LIST_NAME = "scores"
 }
