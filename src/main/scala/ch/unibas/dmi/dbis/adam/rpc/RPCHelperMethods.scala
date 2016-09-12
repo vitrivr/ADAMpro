@@ -3,6 +3,7 @@ package ch.unibas.dmi.dbis.adam.rpc
 import java.util.concurrent.TimeUnit
 
 import ch.unibas.dmi.dbis.adam.datatypes.FieldTypes
+import ch.unibas.dmi.dbis.adam.datatypes.FieldTypes.FieldType
 import ch.unibas.dmi.dbis.adam.datatypes.feature.Feature._
 import ch.unibas.dmi.dbis.adam.datatypes.feature.{FeatureVectorWrapperUDT, FeatureVectorWrapper}
 import ch.unibas.dmi.dbis.adam.datatypes.gis.{GeometryWrapperUDT, GeographyWrapper, GeographyWrapperUDT}
@@ -406,28 +407,30 @@ private[rpc] object RPCHelperMethods {
         case _ => None
       }
 
-      AttributeDefinition(attribute.name, matchFields(attribute.attributetype), attribute.pk, attribute.unique, attribute.indexed, handler)
+      AttributeDefinition(attribute.name, getFieldType(attribute.attributetype), attribute.pk, attribute.unique, attribute.indexed, handler)
     })
   }
 
+
+  val attributetypemapping = Map(AttributeType.BOOLEAN -> FieldTypes.BOOLEANTYPE, AttributeType.DOUBLE -> FieldTypes.DOUBLETYPE, AttributeType.FLOAT -> FieldTypes.FLOATTYPE,
+    AttributeType.INT -> FieldTypes.INTTYPE, AttributeType.LONG -> FieldTypes.LONGTYPE, AttributeType.STRING -> FieldTypes.STRINGTYPE, AttributeType.TEXT -> FieldTypes.TEXTTYPE,
+    AttributeType.FEATURE -> FieldTypes.FEATURETYPE, AttributeType.GEOMETRY -> FieldTypes.GEOMETRYTYPE, AttributeType.GEOGRAPHY -> FieldTypes.GEOGRAPHYTYPE)
+
+  val fieldtypemapping: Map[FieldType, AttributeType] = attributetypemapping.map(_.swap)
+
   /**
     *
-    * @param ft
+    * @param a
     * @return
     */
-  private def matchFields(ft: AttributeType) = ft match {
-    case AttributeType.BOOLEAN => FieldTypes.BOOLEANTYPE
-    case AttributeType.DOUBLE => FieldTypes.DOUBLETYPE
-    case AttributeType.FLOAT => FieldTypes.FLOATTYPE
-    case AttributeType.INT => FieldTypes.INTTYPE
-    case AttributeType.LONG => FieldTypes.LONGTYPE
-    case AttributeType.STRING => FieldTypes.STRINGTYPE
-    case AttributeType.TEXT => FieldTypes.TEXTTYPE
-    case AttributeType.FEATURE => FieldTypes.FEATURETYPE
-    case AttributeType.GEOMETRY => FieldTypes.GEOMETRYTYPE
-    case AttributeType.GEOGRAPHY => FieldTypes.GEOGRAPHYTYPE
-    case _ => FieldTypes.UNRECOGNIZEDTYPE
-  }
+  private def getFieldType(a: AttributeType) = attributetypemapping.getOrElse(a, FieldTypes.UNRECOGNIZEDTYPE)
+
+  /**
+    *
+    * @param f
+    * @return
+    */
+  private def getAttributeType(f : FieldType) = fieldtypemapping.getOrElse(f, AttributeType.UNKOWNAT)
 
   /**
     *

@@ -11,6 +11,7 @@ option java_outer_classname = "AdamGrpc";
 
 service AdamDefinition {
   rpc CreateEntity(CreateEntityMessage) returns (AckMessage) {}
+  rpc AvailableAttributeTypes(EmptyMessage) returns (AvailableAttributeTypesMessage) {}
   rpc Count(EntityNameMessage) returns (AckMessage) {}
   rpc DropEntity(EntityNameMessage) returns (AckMessage) {}
   rpc ExistsEntity(EntityNameMessage) returns (ExistsMessage) {}
@@ -440,6 +441,11 @@ enum Code {
 message EntitiesMessage {
   AckMessage ack = 1;
   repeated string entities = 2;
+}
+
+message AvailableAttributeTypesMessage {
+  AckMessage ack = 1;
+  repeated AttributeType attributetypes = 2;
 }
 
 message ExistsMessage {

@@ -54,7 +54,7 @@ class RPCClient(channel: ManagedChannel, definer: AdamDefinitionBlockingStub, se
   def entityCreate(entityname: String, attributes: Seq[RPCAttributeDefinition]): Try[String] = {
     execute("create entity operation") {
       val attributeMessages = attributes.map { attribute =>
-        val adm = AttributeDefinitionMessage(attribute.name, getFieldType(attribute.datatype), attribute.pk, unique = attribute.unique, indexed = attribute.indexed)
+        val adm = AttributeDefinitionMessage(attribute.name, getAttributeType(attribute.datatype), attribute.pk, unique = attribute.unique, indexed = attribute.indexed)
 
         //add handler information if available
         if (attribute.storagehandlername.isDefined) {
@@ -323,7 +323,7 @@ class RPCClient(channel: ManagedChannel, definer: AdamDefinitionBlockingStub, se
     * @param entityname name of entity
     * @return (indexname, attribute, indextypename)
     */
-  def indexList(entityname : String): Try[Seq[(String, String, IndexType)]] = {
+  def indexList(entityname: String): Try[Seq[(String, String, IndexType)]] = {
     execute("list indexes operation") {
       Success(definer.listIndexes(EntityNameMessage(entityname)).indexes.map(i => (i.index, i.attribute, i.indextype)))
     }
@@ -333,8 +333,8 @@ class RPCClient(channel: ManagedChannel, definer: AdamDefinitionBlockingStub, se
     * Check if index exists.
     *
     * @param entityname name of entity
-    * @param attribute nmae of attribute
-    * @param indextype type of index
+    * @param attribute  nmae of attribute
+    * @param indextype  type of index
     * @return
     */
   def indexExists(entityname: String, attribute: String, indextype: String): Try[Boolean] = {
@@ -474,24 +474,21 @@ class RPCClient(channel: ManagedChannel, definer: AdamDefinitionBlockingStub, se
   }
 
 
+  val fieldtypemapping = Map("feature" -> AttributeType.FEATURE, "long" -> AttributeType.LONG, "int" -> AttributeType.INT, "float" -> AttributeType.FLOAT,
+    "double" -> AttributeType.DOUBLE, "string" -> AttributeType.STRING, "text" -> AttributeType.TEXT, "boolean" -> AttributeType.BOOLEAN, "geography" -> AttributeType.GEOGRAPHY,
+    "geometry" -> AttributeType.GEOMETRY)
+
+  val attributetypemapping = fieldtypemapping.map(_.swap)
+
   /**
     *
     * @param s string of field type name
     * @return
     */
-  private def getFieldType(s: String): AttributeType = s match {
-    case "feature" => AttributeType.FEATURE
-    case "long" => AttributeType.LONG
-    case "int" => AttributeType.INT
-    case "float" => AttributeType.FLOAT
-    case "double" => AttributeType.DOUBLE
-    case "string" => AttributeType.STRING
-    case "text" => AttributeType.TEXT
-    case "boolean" => AttributeType.BOOLEAN
-    case _ => null
-  }
-}
+  private def getAttributeType(s: String): AttributeType = fieldtypemapping.get(s).orNull
 
+  private def getFieldTypeName(a : AttributeType) : String = attributetypemapping.get(a).orNull
+}
 
 object RPCClient {
   def apply(host: String, port: Int): RPCClient = {

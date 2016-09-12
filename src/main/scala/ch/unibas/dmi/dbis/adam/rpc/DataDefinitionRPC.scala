@@ -47,6 +47,16 @@ class DataDefinitionRPC extends AdamDefinitionGrpc.AdamDefinition with Logging {
     }
   }
 
+  /**
+    *
+    * @param request
+    * @return
+    */
+  override def availableAttributeTypes(request: EmptyMessage): Future[AvailableAttributeTypesMessage] = {
+    //TODO: implement
+    Future.successful(AvailableAttributeTypesMessage(Some(AckMessage(code = AckMessage.Code.OK)), AttributeType.values))
+  }
+
 
   /**
     *
@@ -472,10 +482,10 @@ class DataDefinitionRPC extends AdamDefinitionGrpc.AdamDefinition with Logging {
 
     //create entity if necessary
     val entityname = if (request.destination.isCreateEntity || request.destination.isDefinitionfile) {
-      val createEntityMessage =  if (request.destination.isCreateEntity) {
+      val createEntityMessage = if (request.destination.isCreateEntity) {
         request.getCreateEntity
       } else {
-       CreateEntityMessage.parseFrom(request.getDefinitionfile.toByteArray)
+        CreateEntityMessage.parseFrom(request.getDefinitionfile.toByteArray)
       }
 
       val res = Await.result(createEntity(createEntityMessage), 100.seconds)
