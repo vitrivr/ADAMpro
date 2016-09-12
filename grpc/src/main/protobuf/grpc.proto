@@ -45,6 +45,8 @@ service AdamSearch {
   //performs a query on an entity with hints on which search method to use
   //(if no hint is specified a fallback is used)
   rpc DoQuery(QueryMessage) returns (QueryResultsMessage) {}
+  rpc DoStreamingQuery(stream QueryMessage) returns (stream QueryResultsMessage) {}
+  rpc DoBatchQuery(BatchedQueryMessage) returns (BatchedQueryResultsMessage){}
   rpc DoProgressiveQuery(QueryMessage) returns (stream QueryResultsMessage) {}
   //return cached results
   rpc GetCachedResults(CachedResultsMessage) returns (QueryResultsMessage) {}
@@ -424,7 +426,9 @@ message CachedResultsMessage {
   string queryid = 1;
 }
 
-
+message BatchedQueryMessage {
+  repeated QueryMessage queries = 1;
+}
 
 
 
@@ -499,4 +503,8 @@ message ExportDataFileMessage {
   AckMessage ack = 1;
   bytes definitionfile = 2;
   bytes datafile = 3;
+}
+
+message BatchedQueryResultsMessage {
+  repeated QueryResultsMessage results = 1;
 }

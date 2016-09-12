@@ -93,14 +93,12 @@ class SearchRPC extends AdamSearchGrpc.AdamSearch with Logging {
     }
   }
 
-
   /**
     *
     * @param request
-    * @return
     */
-  override def doQuery(request: QueryMessage): Future[QueryResultsMessage] = {
-    time("rpc call for query operation") {
+  private def executeQuery(request: QueryMessage): QueryResultsMessage ={
+    time("query operation") {
       val expression = RPCHelperMethods.toExpression(request)
       val evaluationOptions = RPCHelperMethods.prepareEvaluationOptions(request)
       val informationLevel = RPCHelperMethods.prepareInformationLevel(request.information)
@@ -118,14 +116,56 @@ class SearchRPC extends AdamSearchGrpc.AdamSearch with Logging {
           prepareResults(res.id.getOrElse(""), res.confidence.getOrElse(0), res.time.toMillis, res.source.getOrElse(""), Map(), res.results)
         )
 
-        Future.successful(QueryResultsMessage(
+        QueryResultsMessage(
           Some(AckMessage(AckMessage.Code.OK)),
           results
-        ))
+        )
       } else {
         log.error(res.failed.get.getMessage, res.failed.get)
-        Future.successful(QueryResultsMessage(Some(AckMessage(code = AckMessage.Code.ERROR, message = res.failed.get.getMessage))))
+        QueryResultsMessage(Some(AckMessage(code = AckMessage.Code.ERROR, message = res.failed.get.getMessage)))
       }
+    }
+  }
+
+
+  /**
+    *
+    * @param request
+    * @return
+    */
+  override def doQuery(request: QueryMessage): Future[QueryResultsMessage] = {
+    time("rpc call for query operation") {
+      Future.successful(executeQuery(request))
+    }
+  }
+
+  /**
+    *
+    * @param responseObserver
+    * @return
+    */
+  override def doStreamingQuery(responseObserver: StreamObserver[QueryResultsMessage]): StreamObserver[QueryMessage] = {
+    return new StreamObserver[QueryMessage]() {
+      override def onError(throwable: Throwable): Unit = {
+        responseObserver.onNext(QueryResultsMessage(Some(AckMessage(code = AckMessage.Code.ERROR, message = throwable.getMessage))))
+      }
+
+      override def onCompleted(): Unit = {}
+
+      override def onNext(request: QueryMessage): Unit = {
+        responseObserver.onNext(executeQuery(request))
+      }
+    }
+  }
+
+  /**
+    *
+    * @param request
+    * @return
+    */
+  override def doBatchQuery(request: BatchedQueryMessage): Future[BatchedQueryResultsMessage] = {
+    time("rpc call for batched query operation") {
+      Future.successful(BatchedQueryResultsMessage(request.queries.map(executeQuery(_))))
     }
   }
 
@@ -237,9 +277,9 @@ class SearchRPC extends AdamSearchGrpc.AdamSearch with Logging {
                 case IntegerType => DataMessage().withIntData(row.getAs[Integer](col.name))
                 case LongType => DataMessage().withLongData(row.getAs[Long](col.name))
                 case StringType => DataMessage().withStringData(row.getAs[String](col.name))
-                case _ : FeatureVectorWrapperUDT => DataMessage().withFeatureData(FeatureVectorMessage().withDenseVector(DenseVectorMessage(row.getAs[FeatureVectorWrapper](col.name).toSeq)))
-                case _ : GeographyWrapperUDT => DataMessage().withStringData(row.getAs[GeographyWrapper](col.name).getValue)
-                case _ : GeometryWrapperUDT => DataMessage().withStringData(row.getAs[GeometryWrapper](col.name).getValue)
+                case _: FeatureVectorWrapperUDT => DataMessage().withFeatureData(FeatureVectorMessage().withDenseVector(DenseVectorMessage(row.getAs[FeatureVectorWrapper](col.name).toSeq)))
+                case _: GeographyWrapperUDT => DataMessage().withStringData(row.getAs[GeographyWrapper](col.name).getValue)
+                case _: GeometryWrapperUDT => DataMessage().withStringData(row.getAs[GeometryWrapper](col.name).getValue)
                 case _ => DataMessage().withStringData("")
               }
             }
