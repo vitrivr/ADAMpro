@@ -1,8 +1,7 @@
 package ch.unibas.dmi.dbis.adam.web.main
 
-import ch.unibas.dmi.dbis.adam.web.AdamController
-import ch.unibas.dmi.dbis.adam.web.WebServer
 import ch.unibas.dmi.dbis.adam.rpc.RPCClient
+import ch.unibas.dmi.dbis.adam.web.controller.{WebServer, AdamController}
 
 /**
   * adamtwo

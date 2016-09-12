@@ -1,4 +1,4 @@
-package ch.unibas.dmi.dbis.adam.web
+package ch.unibas.dmi.dbis.adam.web.controller
 
 import ch.unibas.dmi.dbis.adam.rpc.RPCClient
 import ch.unibas.dmi.dbis.adam.rpc.datastructures.{RPCAttributeDefinition, RPCQueryResults}
