@@ -104,7 +104,7 @@ class SearchRPC extends AdamSearchGrpc.AdamSearch with Logging {
       val informationLevel = RPCHelperMethods.prepareInformationLevel(request.information)
 
       if (expression.isFailure) {
-        Future.successful(QueryResultsMessage(Some(AckMessage(code = AckMessage.Code.ERROR, message = expression.failed.get.getMessage))))
+        return QueryResultsMessage(Some(AckMessage(code = AckMessage.Code.ERROR, message = expression.failed.get.getMessage)))
       }
 
       val res = QueryOp(expression.get, evaluationOptions)
