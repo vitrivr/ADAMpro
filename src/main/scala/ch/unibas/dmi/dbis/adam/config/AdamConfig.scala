@@ -40,6 +40,7 @@ object AdamConfig extends Serializable with Logging {
   val schedulerFile = internalsPath + "/" + "scheduler.xml"
 
   import scala.collection.JavaConversions._
+
   val engines = config.getStringList("adampro.engines").toIterator.toSeq
 
   val grpcPort = config.getInt("adampro.grpc.port")
@@ -88,7 +89,7 @@ object AdamConfig extends Serializable with Logging {
     * @param engine
     * @return
     */
-  def getStorageProperties(engine : String) = config.getObject("storage." + engine).toMap.mapValues(_.unwrapped().toString)
+  def getStorageProperties(engine: String) = config.getObject("storage." + engine).toMap.mapValues(_.unwrapped().toString)
 
   /**
     * Reads external config file.
@@ -117,7 +118,7 @@ object AdamConfig extends Serializable with Logging {
     * @param s
     * @return
     */
-  private def cleanPath(s: String): String = {
+  def cleanPath(s: String): String = {
     var newString = s
 
     if (newString.startsWith("~" + File.separator)) {

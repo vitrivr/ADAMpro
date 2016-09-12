@@ -54,9 +54,9 @@ class ParquetEngine extends Engine with Logging with Serializable {
   def this(props: Map[String, String]) {
     this()
     if (props.get("hadoop").getOrElse("false").toBoolean) {
-      subengine = new ParquetHadoopStorage(props.get("basepath").get, props.get("datapath").get)
+      subengine = new ParquetHadoopStorage(AdamConfig.cleanPath(props.get("basepath").get), props.get("datapath").get)
     } else {
-      subengine = new ParquetLocalEngine(props.get("basepath").get, props.get("datapath").get)
+      subengine = new ParquetLocalEngine(AdamConfig.cleanPath(props.get("basepath").get), props.get("datapath").get)
     }
   }
 
