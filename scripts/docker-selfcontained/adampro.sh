@@ -29,6 +29,9 @@ su --login - postgres --command "/usr/pgsql-9.4/bin/pg_ctl -w start -D $PGDATA"
 # run ADAMpro
 sleep 10 #sleep until HDFS is started
 
+sed s/INFO/WARN/ $SPARK_HOME/conf/log4j.properties.template > $SPARK_HOME/conf/log4j.properties
+echo 'log4j.logger.ch=DEBUG' >> $SPARK_HOME/conf/log4j.properties
+
 hdfs dfsadmin -safemode leave
 $SPARK_HOME/bin/spark-submit --master "local[4]" --deploy-mode client --class ch.unibas.dmi.dbis.adam.main.Startup $ADAM_HOME/ADAMpro-assembly-0.1.0.jar &
 
