@@ -300,6 +300,7 @@ message ExpressionQueryMessage {
       UNION = 1;
       INTERSECT = 2;
       EXCEPT = 3;
+      JOIN = 4;
     }
 
    enum OperationOrder {
