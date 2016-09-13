@@ -209,7 +209,7 @@ class RPCClient(channel: ManagedChannel, definer: AdamDefinitionBlockingStub, se
     */
   def entityRead(entityname: String): Try[Seq[RPCQueryResults]] = {
     execute("get entity data operation") {
-      val res = searcherBlocking.preview(EntityNameMessage(entityname))
+      val res = searcherBlocking.preview(PreviewMessage(entityname))
       Success(res.responses.map(new RPCQueryResults(_)))
     }
   }

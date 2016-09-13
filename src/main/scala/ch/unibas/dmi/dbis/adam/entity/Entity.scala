@@ -184,7 +184,7 @@ case class Entity(val entityname: EntityName)(@transient implicit val ac: AdamCo
     * @param k number of elements to show in preview
     * @return
     */
-  def show(k: Int = 100): Option[DataFrame] = getData().map(_.limit(k))
+  def show(k: Int): Option[DataFrame] = getData().map(_.limit(k))
 
 
   /**

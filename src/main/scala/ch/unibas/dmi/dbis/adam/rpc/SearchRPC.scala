@@ -80,9 +80,13 @@ class SearchRPC extends AdamSearchGrpc.AdamSearch with Logging {
     * @param request
     * @return
     */
-  override def preview(request: EntityNameMessage): Future[QueryResultsMessage] = {
+  override def preview(request: PreviewMessage): Future[QueryResultsMessage] = {
     time("rpc call to preview entity") {
-      val res = EntityOp.preview(request.entity, 100)
+      val res = if (request.n > 0) {
+        EntityOp.preview(request.entity, request.n)
+      } else {
+        EntityOp.preview(request.entity)
+      }
 
       if (res.isSuccess) {
         Future.successful(QueryResultsMessage(Some(AckMessage(AckMessage.Code.OK)), Seq((prepareResults("", 1.toFloat, 0, "sequential scan", Map(), Some(res.get))))))
@@ -97,7 +101,7 @@ class SearchRPC extends AdamSearchGrpc.AdamSearch with Logging {
     *
     * @param request
     */
-  private def executeQuery(request: QueryMessage): QueryResultsMessage ={
+  private def executeQuery(request: QueryMessage): QueryResultsMessage = {
     time("query operation") {
       val expression = RPCHelperMethods.toExpression(request)
       val evaluationOptions = RPCHelperMethods.prepareEvaluationOptions(request)

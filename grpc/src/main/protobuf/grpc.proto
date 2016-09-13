@@ -41,7 +41,7 @@ service AdamSearch {
   //caches an index explicitly (before performing a query to speed up retrieval time)
   rpc CacheIndex (IndexNameMessage) returns (AckMessage) {}
   rpc CacheEntity (EntityNameMessage) returns (AckMessage) {}
-  rpc Preview(EntityNameMessage) returns (QueryResultsMessage) {}
+  rpc Preview(PreviewMessage) returns (QueryResultsMessage) {}
   //performs a query on an entity with hints on which search method to use
   //(if no hint is specified a fallback is used)
   rpc DoQuery(QueryMessage) returns (QueryResultsMessage) {}
@@ -429,6 +429,11 @@ message CachedResultsMessage {
 
 message BatchedQueryMessage {
   repeated QueryMessage queries = 1;
+}
+
+message PreviewMessage {
+  string entity = 1;
+  int32 n = 2;
 }
 
 
