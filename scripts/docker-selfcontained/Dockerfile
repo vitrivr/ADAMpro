@@ -54,6 +54,10 @@ RUN chkconfig --add solr
 # RUN $BOOTSTRAP && $HADOOP_PREFIX/bin/hadoop dfsadmin -safemode leave && $HADOOP_PREFIX/bin/hdfs dfs -mkdir /adampro && $HADOOP_PREFIX/bin/hdfs dfs -copyFromLocal /adampro/data /adampro && $HADOOP_PREFIX/bin/hdfs dfs -copyFromLocal /adampro/index /adampro
 # RUN rm -r $PGDATA && cp -R /adampro/postgres $PGDATA && chown -R postgres:postgres $PGDATA/.. && chmod -R 700 $PGDATA
 
+# adjust logging
+RUN sed s/INFO/WARN/ $SPARK_HOME/conf/log4j.properties.template > $SPARK_HOME/conf/log4j.properties
+RUN echo 'log4j.logger.ch=DEBUG' >> $SPARK_HOME/conf/log4j.properties
+
 #port for postgresql
 EXPOSE 5432
 # port for spark UI
