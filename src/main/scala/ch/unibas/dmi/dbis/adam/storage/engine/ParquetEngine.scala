@@ -109,7 +109,22 @@ class ParquetEngine extends Engine with Logging with Serializable {
     log.debug("parquet write operation")
     val allowRepartitioning = params.getOrElse("allowRepartitioning", "false").toBoolean
 
-    val res = subengine.write(storename, df, mode, allowRepartitioning)
+    import org.apache.spark.sql.functions._
+
+    var data = df
+
+    if (allowRepartitioning) {
+      val partitioningKey = params.get("partitioningKey")
+
+      if (partitioningKey.isDefined) {
+        data = data.repartition(AdamConfig.defaultNumberOfPartitions, col(partitioningKey.get))
+      } else {
+        data = data.repartition(AdamConfig.defaultNumberOfPartitions)
+      }
+    }
+
+    val res = subengine.write(storename, data, mode)
+
 
     if (res.isSuccess) {
       Success(Map())
@@ -162,19 +177,11 @@ abstract class GenericParquetEngine(filepath: String) extends Logging with Seria
     * @param filename
     * @param df
     * @param mode
-    * @param allowRepartitioning
     * @return
     */
-  def write(filename: String, df: DataFrame, mode: SaveMode = SaveMode.Append, allowRepartitioning: Boolean)(implicit ac: AdamContext): Try[Void] = {
+  def write(filename: String, df: DataFrame, mode: SaveMode = SaveMode.Append)(implicit ac: AdamContext): Try[Void] = {
     try {
-      var data = df
-
-      if (allowRepartitioning) {
-        data = data.repartition(AdamConfig.defaultNumberOfPartitions)
-      }
-
-      data.write.mode(mode).parquet(filepath + "/" + filename)
-
+      df.write.mode(mode).parquet(filepath + "/" + filename)
       Success(null)
     } catch {
       case e: Exception => Failure(e)

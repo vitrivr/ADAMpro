@@ -227,7 +227,7 @@ case class Entity(val entityname: EntityName)(@transient implicit val ac: AdamCo
         }
 
         val df = insertion.select(fields.map(attribute => col(attribute.name)): _*)
-        val status = handler.write(entityname, df, SaveMode.Append, Map("allowRepartitioning" -> "true"))
+        val status = handler.write(entityname, df, SaveMode.Append, Map("allowRepartitioning" -> "true", "partitioningKey" -> pk.name))
 
         if (status.isFailure) {
           throw status.failed.get
