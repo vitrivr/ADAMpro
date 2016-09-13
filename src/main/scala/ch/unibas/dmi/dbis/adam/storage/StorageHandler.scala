@@ -24,6 +24,7 @@ class StorageHandler(val engine: Engine) extends Serializable with Logging {
 
   def specializes = engine.specializes
 
+  //TODO: remove space
   protected val ENTITY_OPTION_NAME = "storing-" + engine.name + " -tablename"
 
   /**
