@@ -81,6 +81,7 @@ enum IndexType {
   sh = 5;
   vaf = 6;
   vav = 7;
+  vap = 8;
 }
 
 message EmptyMessage {
