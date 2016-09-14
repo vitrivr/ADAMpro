@@ -28,11 +28,11 @@ import org.apache.spark.util.random.Sampling
   * VAF: this VA-File index will use for every dimension the same number of bits (original implementation)
   * note that using VAF, we may still use both the equidistant or the equifrequent marks generator
   */
-class VAFIndexer(maxMarks: Int = 64, marksGenerator: MarksGenerator, bitsPerDimension: Int, trainingSize: Int, distance: MinkowskiDistance)(@transient implicit val ac: AdamContext) extends IndexGenerator {
+class VAFIndexGenerator(maxMarks: Int = 64, marksGenerator: MarksGenerator, bitsPerDimension: Int, trainingSize: Int, distance: MinkowskiDistance)(@transient implicit val ac: AdamContext) extends IndexGenerator {
   override val indextypename: IndexTypeName = IndexTypes.VAFINDEX
 
   /**
-    * 
+    *
     * @param indexname name of index
     * @param entityname name of entity
     * @param data data to index
@@ -122,6 +122,6 @@ class VAFIndexGeneratorFactory extends IndexGeneratorFactory {
     val fixedNumBitsPerDimension = properties.getOrElse("signature-nbits-dim", math.ceil(scala.math.log(maxMarks) / scala.math.log(2)).toInt.toString).toInt
     val trainingSize = properties.getOrElse("ntraining", "5000").toInt
 
-    new VAFIndexer(maxMarks, marksGenerator, fixedNumBitsPerDimension, trainingSize, distance.asInstanceOf[MinkowskiDistance])
+    new VAFIndexGenerator(maxMarks, marksGenerator, fixedNumBitsPerDimension, trainingSize, distance.asInstanceOf[MinkowskiDistance])
   }
 }
