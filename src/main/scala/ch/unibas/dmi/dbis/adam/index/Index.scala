@@ -219,7 +219,7 @@ abstract class Index(val indexname: IndexName)(@transient implicit val ac: AdamC
 
     val t2 = System.currentTimeMillis
 
-    log.debug(indexname + " returning" + results.count() + " tuples" + " in " + (t2 - t1) + " msecs")
+    log.trace(indexname + " returning tuples in " + (t2 - t1) + " msecs")
 
     results
   }
