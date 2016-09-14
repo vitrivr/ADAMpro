@@ -16,6 +16,11 @@ abstract class GenericOp extends Logging {
       log.debug("starting " + desc)
       val t1 = System.currentTimeMillis
       val result = op
+
+      if(op.isFailure){
+        throw op.failed.get
+      }
+
       val t2 = System.currentTimeMillis
       log.debug("performed " + desc + " in " + (t2 - t1) + " msecs")
       result
