@@ -83,11 +83,11 @@ class QueryTestSuite extends AdamTestBase with ScalaFutures {
         }
       } else {
         Then("we should have a match at least in the first element")
-        
-        assert(results.head._2 == es.nnResults.head._2)
-        assert(math.abs(results.head._1 - es.nnResults.head._1) < EPSILON)
 
         log.info("score: " + getScore(es.nnResults.map(_._2), results.map(_._2)))
+
+        assert(results.head._2 == es.nnResults.head._2)
+        assert(math.abs(results.head._1 - es.nnResults.head._1) < EPSILON)
       }
     }
 
