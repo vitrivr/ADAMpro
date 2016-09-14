@@ -4,7 +4,7 @@ import breeze.linalg.{max, min}
 import ch.unibas.dmi.dbis.adam.datatypes.feature.Feature._
 import ch.unibas.dmi.dbis.adam.index.IndexingTaskTuple
 import ch.unibas.dmi.dbis.adam.index.structures.va.VAIndex.Marks
-import org.apache.log4j.Logger
+import ch.unibas.dmi.dbis.adam.utils.Logging
 
 /**
   * adamtwo
@@ -15,8 +15,7 @@ import org.apache.log4j.Logger
   * equidistant marks generator: all marks have the same distance from each other; for this the minimum and the maximum value per dimension
   * is considered and the space along each dimension is split over this range in equi-distant cells
   */
-private[va] object EquidistantMarksGenerator extends MarksGenerator with Serializable {
-  @transient lazy val log = Logger.getLogger(getClass.getName)
+private[va] object EquidistantMarksGenerator extends MarksGenerator with Serializable with Logging {
 
   /**
     *
