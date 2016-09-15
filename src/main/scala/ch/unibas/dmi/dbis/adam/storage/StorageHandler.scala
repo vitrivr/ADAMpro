@@ -37,7 +37,8 @@ class StorageHandler(val engine: Engine) extends Serializable with Logging {
   protected def execute[T](desc: String)(op: => Try[T]): Try[T] = {
     try {
       log.trace("performed storage handler (" + name + ") operation: " + desc)
-      op
+      val res = op
+      res
     } catch {
       case e: Exception =>
         log.error("error in storage handler (" + name + ") operation: " + desc, e)

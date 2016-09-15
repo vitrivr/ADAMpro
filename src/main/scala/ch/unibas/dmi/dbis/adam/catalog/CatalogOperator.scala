@@ -99,7 +99,8 @@ object CatalogOperator extends Logging {
   private def execute[T](desc: String)(op: => T): Try[T] = {
     try {
       log.trace("performed catalog operation: " + desc)
-      Success(op)
+      val res = op
+      Success(res)
     } catch {
       case e: Exception =>
         log.error("error in catalog operation: " + desc, e)
