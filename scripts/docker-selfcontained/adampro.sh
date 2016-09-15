@@ -16,7 +16,7 @@ sed s/HOSTNAME/$HOSTNAME/ /usr/local/hadoop/etc/hadoop/core-site.xml.template > 
 sed s/HOSTNAME/$HOSTNAME/ $ADAM_HOME/adampro.conf.template > $ADAM_HOME/adampro.conf
 
 # setting spark defaults
-echo spark.yarn.jar hdfs:///localhost/spark-assembly-1.6.0-hadoop2.6.0.jar > $SPARK_HOME/conf/spark-defaults.conf
+echo spark.yarn.jar hdfs:///localhost/spark-assembly-1.6.2-hadoop2.6.0.jar > $SPARK_HOME/conf/spark-defaults.conf
 cp $SPARK_HOME/conf/metrics.properties.template $SPARK_HOME/conf/metrics.properties
 
 service sshd start
