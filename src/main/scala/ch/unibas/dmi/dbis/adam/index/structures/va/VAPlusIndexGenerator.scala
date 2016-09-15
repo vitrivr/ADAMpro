@@ -47,7 +47,9 @@ class VAPlusIndexGenerator(nbits: Option[Int], trainingSize: Int, distance: Mink
 
     val sparkVecData = data.map(x => Vectors.dense(x.feature.toArray.map(_.toDouble)))
 
-    val pca: PCAModel = new PCA(dims).fit(sparkVecData)
+    //TODO: rather than keeping all dimensions, reduce (make sure that index is then marked as approximate!)
+    val pcadims = dims
+    val pca: PCAModel = new PCA(pcadims).fit(sparkVecData)
     val indexingdata = data
       .map(tuple => {
         val feature: FeatureVector = tuple.feature

@@ -26,7 +26,9 @@ private[va] object VAPlusMarksGenerator extends MarksGenerator with Serializable
       var delta = Float.PositiveInfinity
       var deltaBar = Float.PositiveInfinity
 
+      //TODO: rather than K-means, use DBScan
       do {
+        //K-means
         delta = deltaBar
 
         val points = samples.map(_.feature.apply(dim))
