@@ -237,7 +237,7 @@ class RPCClient(channel: ManagedChannel, definer: AdamDefinitionBlockingStub, se
   def precision(truth: IndexedSeq[Float], guess: Seq[QueryResultTupleMessage], k: Int): Float = {
     val guessPKs = guess.map(_.data("pk").getLongData.toFloat)
     val ag = truth.take(k).intersect(guessPKs).length
-    ag.toFloat / Math.max(1, Math.min(k, guess.size))
+    ag.toFloat / Math.max(1, guess.size)
   }
 
 
