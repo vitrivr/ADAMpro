@@ -11,14 +11,14 @@ import scala.util.{Failure, Try}
   * May 2016
   */
 abstract class GenericOp extends Logging {
-  def execute[T](desc: String)(op: => Try[T]): Try[T] = {
+  def execute[T](desc: String)(op: () => Try[T]): Try[T] = {
     try {
       log.debug("starting " + desc)
       val t1 = System.currentTimeMillis
-      val result = op
+      val result = op()
 
-      if(op.isFailure){
-        throw op.failed.get
+      if(result.isFailure){
+        throw result.failed.get
       }
 
       val t2 = System.currentTimeMillis
