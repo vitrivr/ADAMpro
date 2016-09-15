@@ -163,10 +163,10 @@ abstract class GenericParquetEngine(protected val basepath: String, protected va
   def read(filename: String)(implicit ac: AdamContext): Try[DataFrame] = {
     try {
       if (!exists(filename).get) {
-        throw new GeneralAdamException("no file found at " + filename)
+        throw new GeneralAdamException("no file found at " + basepath + (if(basepath.endsWith("/")){""} else {"/"}) + datapath + (if(datapath.endsWith("/")){""} else {"/"}) + filename)
       }
 
-      Success(ac.sqlContext.read.parquet(basepath + "/" + datapath + "/" + filename))
+      Success(ac.sqlContext.read.parquet(basepath + (if(basepath.endsWith("/")){""} else {"/"}) + datapath + (if(datapath.endsWith("/")){""} else {"/"}) + filename))
     } catch {
       case e: Exception => Failure(e)
     }
@@ -181,7 +181,7 @@ abstract class GenericParquetEngine(protected val basepath: String, protected va
     */
   def write(filename: String, df: DataFrame, mode: SaveMode = SaveMode.Append)(implicit ac: AdamContext): Try[Void] = {
     try {
-      df.write.mode(mode).parquet(basepath + "/" + datapath + "/" + filename)
+      df.write.mode(mode).parquet(basepath + (if(basepath.endsWith("/")){""} else {"/"}) + datapath + (if(datapath.endsWith("/")){""} else {"/"}) + filename)
       Success(null)
     } catch {
       case e: Exception => Failure(e)
@@ -221,7 +221,7 @@ class ParquetHadoopStorage(override protected val basepath: String, override pro
     */
   override def drop(filename: String)(implicit ac: AdamContext): Try[Void] = {
     try {
-      val hdfs = FileSystem.get(new Path(basepath + "/" + datapath).toUri, hadoopConf)
+      val hdfs = FileSystem.get(new Path(basepath + (if(basepath.endsWith("/")){""} else {"/"}) + datapath).toUri, hadoopConf)
       val drop = hdfs.delete(new org.apache.hadoop.fs.Path(filename), true)
 
       if (drop) {
@@ -242,7 +242,7 @@ class ParquetHadoopStorage(override protected val basepath: String, override pro
     */
   override def exists(filename: String)(implicit ac: AdamContext): Try[Boolean] = {
     try {
-      val exists = FileSystem.get(hadoopConf).exists(new org.apache.hadoop.fs.Path(datapath + "/" + filename))
+      val exists = FileSystem.get(hadoopConf).exists(new org.apache.hadoop.fs.Path(datapath + (if(datapath.endsWith("/")){""} else {"/"}) + filename))
 
       Success(exists)
     } catch {
