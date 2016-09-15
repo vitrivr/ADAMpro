@@ -32,7 +32,8 @@ class PostGisTestSuite extends AdamTestBase {
           val geometryfield = datum.getAs[String]("geometryfield")
       }
 
-      assert(data.size == ntuples)
+      val count = data.size
+      assert(count == ntuples)
     }
   }
 
@@ -48,7 +49,8 @@ class PostGisTestSuite extends AdamTestBase {
       val results = QueryOp.compoundQuery(GisScanExpression(entityname, "postgis", Map("query" -> query, "limit" -> ncollect.toString))).get.get
 
       val collected = results.collect()
-      assert(collected.length == ncollect)
+      val count = collected.length
+      assert(count == ncollect)
 
       assert(collected.map(_.getInt(0)).forall(_ == 122235))
     }
