@@ -61,7 +61,6 @@ object SIFTQueries extends App{
     buf.order(ByteOrder.LITTLE_ENDIAN)
     var readbytes = -1
     readbytes = inChannel.read(buf)
-    readbytes = inChannel.read(buf)
 
     val resBuffer = ListBuffer[IndexedSeq[Int]]()
     var idx = 0
@@ -83,7 +82,6 @@ object SIFTQueries extends App{
       buf.clear()
       readbytes = inChannel.read(buf)
     }
-
     resBuffer.toIndexedSeq
   }
 }
