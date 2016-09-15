@@ -36,7 +36,7 @@ object IndexTypes {
 
   case object VAVINDEX extends IndexType("vav", grpc.IndexType.vav, classOf[VAIndex], classOf[VAVIndexGeneratorFactory])
 
-  case object VAPLUSINDEX extends IndexType("vap", grpc.IndexType.vav, classOf[VAPlusIndex], classOf[VAPlusIndexGeneratorFactory])
+  case object VAPLUSINDEX extends IndexType("vap", grpc.IndexType.vap, classOf[VAPlusIndex], classOf[VAPlusIndexGeneratorFactory])
 
 
   /**
