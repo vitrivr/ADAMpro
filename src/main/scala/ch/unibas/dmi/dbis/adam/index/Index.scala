@@ -306,7 +306,7 @@ object Index extends Logging {
   type IndexName = EntityName
   type IndexTypeName = IndexTypes.IndexType
 
-  val storage = SparkStartup.storageRegistry.get("index")
+  val storage = SparkStartup.storageRegistry.get("parquetindex")
 
   /**
     * Creates an index that is unique and which follows the naming rules of indexes.

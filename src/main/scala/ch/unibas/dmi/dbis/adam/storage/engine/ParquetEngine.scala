@@ -32,23 +32,6 @@ class ParquetEngine extends Engine with Logging with Serializable {
 
   /**
     *
-    * @param basepath
-    * @param datapath
-    * @param hadoop
-    */
-  def this(basepath: String, datapath: String, hadoop: Boolean) {
-    this()
-    if (hadoop) {
-      subengine = new ParquetHadoopStorage(basepath, datapath)
-    } else {
-      subengine = new ParquetLocalEngine(basepath, datapath)
-    }
-
-    subengine = new ParquetHadoopStorage(basepath, datapath)
-  }
-
-  /**
-    *
     * @param props
     */
   def this(props: Map[String, String]) {
@@ -56,7 +39,7 @@ class ParquetEngine extends Engine with Logging with Serializable {
     if (props.get("hadoop").getOrElse("false").toBoolean) {
       subengine = new ParquetHadoopStorage(AdamConfig.cleanPath(props.get("basepath").get), props.get("datapath").get)
     } else {
-      subengine = new ParquetLocalEngine(AdamConfig.cleanPath(props.get("basepath").get), props.get("datapath").get)
+      subengine = new ParquetLocalEngine(AdamConfig.cleanPath(props.get("path").get))
     }
   }
 
@@ -154,7 +137,38 @@ class ParquetEngine extends Engine with Logging with Serializable {
   override def hashCode: Int = subengine.hashCode
 }
 
-abstract class GenericParquetEngine(protected val basepath: String, protected val datapath : String) extends Logging with Serializable {
+/**
+  *
+  */
+trait GenericParquetEngine extends Logging with Serializable {
+  def read(filename: String)(implicit ac: AdamContext): Try[DataFrame]
+
+  def write(filename: String, df: DataFrame, mode: SaveMode = SaveMode.Append)(implicit ac: AdamContext): Try[Void]
+
+  def exists(path: String)(implicit ac: AdamContext): Try[Boolean]
+
+  def drop(path: String)(implicit ac: AdamContext): Try[Void]
+}
+
+
+/**
+  *
+  */
+class ParquetHadoopStorage(private val basepath: String, private val datapath: String) extends GenericParquetEngine with Logging with Serializable {
+  @transient private val hadoopConf = new Configuration()
+  hadoopConf.set("fs.defaultFS", basepath)
+  private val hdfs = FileSystem.get(new Path(datapath).toUri, hadoopConf)
+
+  if (!FileSystem.get(new Path("/").toUri, hadoopConf).exists(new Path(datapath))) {
+    FileSystem.get(new Path("/").toUri, hadoopConf).mkdirs(new Path(datapath))
+  }
+
+  //we assume:
+  // basepath (hdfs://...) ends on "/"
+  // datapath (/.../.../) is given absolutely and starts with "/" and ends with "/"
+  private val fullHadoopPath = basepath + datapath.substring(1)
+
+
   /**
     *
     * @param filename
@@ -163,10 +177,10 @@ abstract class GenericParquetEngine(protected val basepath: String, protected va
   def read(filename: String)(implicit ac: AdamContext): Try[DataFrame] = {
     try {
       if (!exists(filename).get) {
-        throw new GeneralAdamException("no file found at " + basepath + (if(basepath.endsWith("/")){""} else {"/"}) + datapath + (if(datapath.endsWith("/")){""} else {"/"}) + filename)
+        throw new GeneralAdamException("no file found at " + fullHadoopPath)
       }
 
-      Success(ac.sqlContext.read.parquet(basepath + (if(basepath.endsWith("/")){""} else {"/"}) + datapath + (if(datapath.endsWith("/")){""} else {"/"}) + filename))
+      Success(ac.sqlContext.read.parquet(fullHadoopPath + filename))
     } catch {
       case e: Exception => Failure(e)
     }
@@ -181,38 +195,13 @@ abstract class GenericParquetEngine(protected val basepath: String, protected va
     */
   def write(filename: String, df: DataFrame, mode: SaveMode = SaveMode.Append)(implicit ac: AdamContext): Try[Void] = {
     try {
-      df.write.mode(mode).parquet(basepath + (if(basepath.endsWith("/")){""} else {"/"}) + datapath + (if(datapath.endsWith("/")){""} else {"/"}) + filename)
+      df.write.mode(mode).parquet(fullHadoopPath + filename)
       Success(null)
     } catch {
       case e: Exception => Failure(e)
     }
   }
 
-  /**
-    *
-    * @param path
-    * @return
-    */
-  def exists(path: String)(implicit ac: AdamContext): Try[Boolean]
-
-  /**
-    *
-    * @param path
-    * @return
-    */
-  def drop(path: String)(implicit ac: AdamContext): Try[Void]
-}
-
-/**
-  *
-  */
-class ParquetHadoopStorage(override protected val basepath: String, override protected val datapath: String) extends GenericParquetEngine(basepath, datapath) with Logging with Serializable {
-  @transient private val hadoopConf = new Configuration()
-  hadoopConf.set("fs.defaultFS", basepath)
-
-  if (!FileSystem.get(new Path("/").toUri, hadoopConf).exists(new Path(datapath))) {
-    FileSystem.get(new Path("/").toUri, hadoopConf).mkdirs(new Path(datapath))
-  }
 
   /**
     *
@@ -221,13 +210,12 @@ class ParquetHadoopStorage(override protected val basepath: String, override pro
     */
   override def drop(filename: String)(implicit ac: AdamContext): Try[Void] = {
     try {
-      val hdfs = FileSystem.get(new Path(basepath + (if(basepath.endsWith("/")){""} else {"/"}) + datapath).toUri, hadoopConf)
-      val drop = hdfs.delete(new org.apache.hadoop.fs.Path(filename), true)
+      val drop = hdfs.delete(new Path(datapath, filename), true)
 
       if (drop) {
         Success(null)
       } else {
-        Failure(new Exception("unknown error in dropping"))
+        Failure(new Exception("unknown error in dropping file " + filename))
       }
     } catch {
       case e: Exception => Failure(e)
@@ -242,8 +230,7 @@ class ParquetHadoopStorage(override protected val basepath: String, override pro
     */
   override def exists(filename: String)(implicit ac: AdamContext): Try[Boolean] = {
     try {
-      val exists = FileSystem.get(hadoopConf).exists(new org.apache.hadoop.fs.Path(datapath + (if(datapath.endsWith("/")){""} else {"/"}) + filename))
-
+      val exists = hdfs.exists(new Path(datapath, filename))
       Success(exists)
     } catch {
       case e: Exception => Failure(e)
@@ -268,12 +255,47 @@ class ParquetHadoopStorage(override protected val basepath: String, override pro
 /**
   *
   */
-class ParquetLocalEngine(override protected val basepath : String, override protected val datapath : String) extends GenericParquetEngine(basepath, datapath) with Logging with Serializable {
-  val datafolder = new File(basepath, datapath)
+class ParquetLocalEngine(private val path: String) extends GenericParquetEngine with Logging with Serializable {
+  val datafolder = new File(path)
 
   if (!datafolder.exists()) {
     datafolder.mkdirs
   }
+
+
+  /**
+    *
+    * @param filename
+    * @return
+    */
+  def read(filename: String)(implicit ac: AdamContext): Try[DataFrame] = {
+    try {
+      if (!exists(filename).get) {
+        throw new GeneralAdamException("no file found at " + path + filename)
+      }
+
+      Success(ac.sqlContext.read.parquet(path + filename))
+    } catch {
+      case e: Exception => Failure(e)
+    }
+  }
+
+  /**
+    *
+    * @param filename
+    * @param df
+    * @param mode
+    * @return
+    */
+  def write(filename: String, df: DataFrame, mode: SaveMode = SaveMode.Append)(implicit ac: AdamContext): Try[Void] = {
+    try {
+      df.write.mode(mode).parquet(path + filename)
+      Success(null)
+    } catch {
+      case e: Exception => Failure(e)
+    }
+  }
+
 
   /**
     *
@@ -282,7 +304,7 @@ class ParquetLocalEngine(override protected val basepath : String, override prot
     */
   override def drop(filename: String)(implicit ac: AdamContext): Try[Void] = {
     try {
-      FileUtils.deleteDirectory(new File(new File(basepath, datapath), filename))
+      FileUtils.deleteDirectory(new File(path, filename))
       Success(null)
     } catch {
       case e: Exception => Failure(e)
@@ -296,7 +318,7 @@ class ParquetLocalEngine(override protected val basepath : String, override prot
     */
   override def exists(filename: String)(implicit ac: AdamContext): Try[Boolean] = {
     try {
-      Success(new File(new File(basepath, datapath), filename).exists())
+      Success(new File(path, filename).exists())
     } catch {
       case e: Exception => Failure(e)
     }
@@ -304,15 +326,9 @@ class ParquetLocalEngine(override protected val basepath : String, override prot
 
   override def equals(other: Any): Boolean =
     other match {
-      case that: ParquetLocalEngine => this.basepath.equals(that.basepath) && this.datapath.equals(that.datapath)
+      case that: ParquetLocalEngine => this.path.equals(that.path)
       case _ => false
     }
 
-  override def hashCode(): Int = {
-    val prime = 31
-    var result = 1
-    result = prime * result + basepath.hashCode
-    result = prime * result + datapath.hashCode
-    result
-  }
+  override def hashCode(): Int = path.hashCode
 }

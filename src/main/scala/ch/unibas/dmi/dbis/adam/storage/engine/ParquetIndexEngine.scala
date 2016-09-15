@@ -9,28 +9,11 @@ import ch.unibas.dmi.dbis.adam.config.AdamConfig
   * September 2016
   */
 class ParquetIndexEngine extends ParquetEngine {
-  override val name = "index"
+  override val name = "parquetindex"
 
   override def supports = Seq()
 
   override def specializes = Seq()
-
-  /**
-    *
-    * @param basepath
-    * @param datapath
-    * @param hadoop
-    */
-  def this(basepath: String, datapath: String, hadoop: Boolean) {
-    this()
-    if (hadoop) {
-      subengine = new ParquetHadoopStorage(basepath, datapath)
-    } else {
-      subengine = new ParquetLocalEngine(basepath, datapath)
-    }
-
-    subengine = new ParquetHadoopStorage(basepath, datapath)
-  }
 
   /**
     *
@@ -41,7 +24,7 @@ class ParquetIndexEngine extends ParquetEngine {
     if (props.get("hadoop").getOrElse("false").toBoolean) {
       subengine = new ParquetHadoopStorage(AdamConfig.cleanPath(props.get("basepath").get), props.get("datapath").get)
     } else {
-      subengine = new ParquetLocalEngine(AdamConfig.cleanPath(props.get("basepath").get), props.get("datapath").get)
+      subengine = new ParquetLocalEngine(AdamConfig.cleanPath(props.get("path").get))
     }
   }
 }
