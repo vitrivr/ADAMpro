@@ -1,5 +1,6 @@
 target
 .idea
+.idea_modules
 metastore_db
 derby.log
 /data
@@ -7,5 +8,4 @@ derby.log
 adamtwo.iml
 build
 src/generated
-
 *.csv
