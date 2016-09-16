@@ -1,8 +1,10 @@
 FROM sequenceiq/spark:v1.6.0onHadoop2.6.0
 
+# spark
+ENV SPARK_HOME /usr/local/spark
 RUN curl http://d3kbcqa49mib13.cloudfront.net/spark-1.6.2-bin-hadoop2.6.tgz | tar -xz -C /usr/local/
 RUN cd /usr/local && ln -s spark-1.6.2-bin-hadoop2.6 spark
-RUN $BOOTSTRAP && $HADOOP_PREFIX/bin/hadoop dfsadmin -safemode leave && $HADOOP_PREFIX/bin/hdfs dfs -put $SPARK_HOME-1.6.2-bin-hadoop2.6/lib /spark
+RUN $BOOTSTRAP && $HADOOP_PREFIX/bin/hadoop dfsadmin -safemode leave && $HADOOP_PREFIX/bin/hdfs dfs -put $SPARK_HOME/lib /spark
 
 ADD mapred-site.xml $HADOOP_PREFIX/etc/hadoop/mapred-site.xml
 ADD yarn-site.xml $HADOOP_PREFIX/etc/hadoop/yarn-site.xml
@@ -11,17 +13,6 @@ ADD yarn-site.xml $HADOOP_PREFIX/etc/hadoop/yarn-site.xml
 RUN curl -LO 'http://download.oracle.com/otn-pub/java/jdk/8u77-b03/jdk-8u77-linux-x64.rpm' -H 'Cookie: oraclelicense=accept-securebackup-cookie'
 RUN rpm -i jdk-8u77-linux-x64.rpm
 RUN rm jdk-8u77-linux-x64.rpm
-
-# adampro
-ENV SPARK_HOME /usr/local/spark
-ENV ADAM_HOME /usr/local/adam
-
-# adding jar files
-RUN mkdir -p $ADAM_HOME
-RUN chmod 777 $ADAM_HOME
-COPY ADAMpro-assembly-0.1.0.jar $ADAM_HOME/ADAMpro-assembly-0.1.0.jar
-COPY ADAMpro-web-assembly-0.1.0.jar $ADAM_HOME/ADAMpro-web-assembly-0.1.0.jar
-COPY adampro.conf.template $ADAM_HOME/adampro.conf.template
 
 # postgresql
 ENV PGDATA /var/lib/pgsql/data
@@ -46,6 +37,16 @@ RUN yum -y install lsof
 COPY solr /etc/init.d/solr
 RUN chmod 777 /etc/init.d/solr
 RUN chkconfig --add solr
+
+# adampro
+ENV ADAM_HOME /usr/local/adam
+
+# adding jar files
+RUN mkdir -p $ADAM_HOME
+RUN chmod 777 $ADAM_HOME
+COPY ADAMpro-assembly-0.1.0.jar $ADAM_HOME/ADAMpro-assembly-0.1.0.jar
+COPY ADAMpro-web-assembly-0.1.0.jar $ADAM_HOME/ADAMpro-web-assembly-0.1.0.jar
+COPY adampro.conf.template $ADAM_HOME/adampro.conf.template
 
 # adding data
 # RUN mkdir -p /adampro
