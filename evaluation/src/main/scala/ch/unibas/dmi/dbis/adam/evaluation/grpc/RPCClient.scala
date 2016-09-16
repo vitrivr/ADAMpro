@@ -28,7 +28,7 @@ class RPCClient(channel: ManagedChannel, definer: AdamDefinitionBlockingStub, se
   val truthpath = "evaluation/src/main/resources/sift_groundtruth.ivecs"
 
   val k = 100
-  val pr = 10
+  val pr = 20
 
   val compareK = true
 
@@ -39,13 +39,13 @@ class RPCClient(channel: ManagedChannel, definer: AdamDefinitionBlockingStub, se
   val numQ = 10
   val tupleSizes = Seq(1e6.toInt)
   val dimensions = Seq(128)
-  val partitions = Seq(1, 2, 4, 6, 8, 10, 12, 20, 50)
-  val indices = Seq(IndexType.vaf)
+  val partitions = Seq(6, 10, 20, 50)
+  val indices = Seq(IndexType.vaf, IndexType.sh, IndexType.ecp)
   val indicesToGenerate = Seq(IndexType.vaf, IndexType.sh, IndexType.ecp)
   //TODO Test Current
   val partitioners = Seq(RepartitionMessage.Partitioner.ECP, RepartitionMessage.Partitioner.SPARK, RepartitionMessage.Partitioner.SH)
 
-  var dropPartitions = Seq(0.0)
+  var dropPartitions = Seq(0.0, 0.1, 0.2, 0.3, 0.4, 0.5)
   var eName = ""
   val information = collection.mutable.Map[String, Any]()
   information.put("k", k)
@@ -72,7 +72,16 @@ class RPCClient(channel: ManagedChannel, definer: AdamDefinitionBlockingStub, se
           information.put("partitions", part)
           for (partitioner <- partitioners) {
             information.put("partitioner", partitioner)
-            name = definer.repartitionIndexData(RepartitionMessage(name, numberOfPartitions = part, option = RepartitionMessage.PartitionOptions.REPLACE_EXISTING, partitioner = partitioner)).message
+            val repartition = definer.repartitionIndexData(RepartitionMessage(name, numberOfPartitions = part, option = RepartitionMessage.PartitionOptions.REPLACE_EXISTING, partitioner = partitioner))
+            if(repartition.code!=AckMessage.Code.OK){
+                log.error("Failed repartitioning {} for {} partitions with {}", index.name, part.toString, partitioner.name)
+                Thread.sleep(2000)
+                while(definer.count(EntityNameMessage(eName)).code!=AckMessage.Code.OK){
+                  log.error("Connection failed... Reconnecting")
+                  Thread.sleep(10000)
+                }
+            }
+            name = repartition.message
             val props = definer.getEntityProperties(EntityNameMessage(name))
             PartitionResultLogger.write(information + ("distribution" -> props.properties("tuplesPerPartition")) toMap)
             //Free query to cache index
@@ -219,7 +228,7 @@ class RPCClient(channel: ManagedChannel, definer: AdamDefinitionBlockingStub, se
       val noskipRecall = topKRes(queryCounter)
       val skipRecall = recall(gtruth, dropRes, k)
 
-      val prValues = IndexedSeq.tabulate(pr)(el => (recall(gtruth, dropRes, el), precision(gtruth, dropRes, el)))
+      val prValues = IndexedSeq.tabulate(pr)(el => (precision(gtruth, dropRes, el), recall(gtruth, dropRes, el)))
       val res = information ++ Map("time" -> (stop - start), "nores" -> dropRes.size, "skip_recall" -> skipRecall, "noskip_recall" -> noskipRecall, "skipPercentage" -> dropPerc)
       EvaluationResultLogger.writePR(res toMap, prValues)
       queryCounter += 1
