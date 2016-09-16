@@ -157,7 +157,6 @@ trait GenericParquetEngine extends Logging with Serializable {
 class ParquetHadoopStorage(private val basepath: String, private val datapath: String) extends GenericParquetEngine with Logging with Serializable {
   @transient private val hadoopConf = new Configuration()
   hadoopConf.set("fs.defaultFS", basepath)
-  private val hdfs = FileSystem.get(new Path(datapath).toUri, hadoopConf)
 
   if (!FileSystem.get(new Path("/").toUri, hadoopConf).exists(new Path(datapath))) {
     FileSystem.get(new Path("/").toUri, hadoopConf).mkdirs(new Path(datapath))
@@ -210,6 +209,7 @@ class ParquetHadoopStorage(private val basepath: String, private val datapath: S
     */
   override def drop(filename: String)(implicit ac: AdamContext): Try[Void] = {
     try {
+      val hdfs = FileSystem.get(new Path(datapath).toUri, hadoopConf)
       val drop = hdfs.delete(new Path(datapath, filename), true)
 
       if (drop) {
@@ -230,6 +230,7 @@ class ParquetHadoopStorage(private val basepath: String, private val datapath: S
     */
   override def exists(filename: String)(implicit ac: AdamContext): Try[Boolean] = {
     try {
+      val hdfs = FileSystem.get(new Path(datapath).toUri, hadoopConf)
       val exists = hdfs.exists(new Path(datapath, filename))
       Success(exists)
     } catch {
