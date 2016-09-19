@@ -10,4 +10,4 @@ import org.apache.spark.mllib.feature.PCAModel
   * Ivan Giangreco
   * September 2016
   */
-private[va] class VAPlusIndexMetaData(override val marks: Marks, override val signatureGenerator: SignatureGenerator, val pca: PCAModel) extends VAIndexMetaData(marks, signatureGenerator) with Serializable {}
+private[va] class VAPlusIndexMetaData(override val marks: Marks, override val signatureGenerator: SignatureGenerator, val pca: PCAModel, val approximate : Boolean) extends VAIndexMetaData(marks, signatureGenerator) with Serializable {}

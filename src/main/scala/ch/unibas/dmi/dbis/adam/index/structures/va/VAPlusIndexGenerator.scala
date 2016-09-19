@@ -30,7 +30,7 @@ import org.apache.spark.util.random.Sampling
   *
   * see H. Ferhatosmanoglu, E. Tuncel, D. Agrawal, A. El Abbadi (2006): High dimensional nearest neighbor searching. Information Systems.
   */
-class VAPlusIndexGenerator(nbits: Option[Int], trainingSize: Int, distance: MinkowskiDistance)(@transient implicit val ac: AdamContext) extends IndexGenerator {
+class VAPlusIndexGenerator(nbits: Option[Int], ndims : Option[Int], trainingSize: Int, distance: MinkowskiDistance)(@transient implicit val ac: AdamContext) extends IndexGenerator {
   override val indextypename: IndexTypeName = IndexTypes.VAPLUSINDEX
 
   /**
@@ -43,13 +43,11 @@ class VAPlusIndexGenerator(nbits: Option[Int], trainingSize: Int, distance: Mink
   override def index(indexname: IndexName, entityname: EntityName, data: RDD[IndexingTaskTuple[_]]): (DataFrame, Serializable) = {
     val entity = Entity.load(entityname).get
 
-    val dims = data.first().feature.size
+    val dims = ndims.getOrElse(data.first().feature.size)
 
     val sparkVecData = data.map(x => Vectors.dense(x.feature.toArray.map(_.toDouble)))
 
-    //TODO: rather than keeping all dimensions, reduce (make sure that index is then marked as approximate!)
-    val pcadims = dims
-    val pca: PCAModel = new PCA(pcadims).fit(sparkVecData)
+    val pca = new PCA(dims).fit(sparkVecData)
     val indexingdata = data
       .map(tuple => {
         val feature: FeatureVector = tuple.feature
@@ -68,7 +66,7 @@ class VAPlusIndexGenerator(nbits: Option[Int], trainingSize: Int, distance: Mink
     if (trainData.length < MINIMUM_NUMBER_OF_TUPLE) {
       trainData = indexingdata.take(MINIMUM_NUMBER_OF_TUPLE)
     }
-    val meta = train(trainData.map(_.asInstanceOf[IndexingTaskTuple[_]]), pca)
+    val meta = train(trainData.map(_.asInstanceOf[IndexingTaskTuple[_]]), pca, dims)
 
     log.debug("VA-File (plus) indexing...")
 
@@ -112,7 +110,7 @@ class VAPlusIndexGenerator(nbits: Option[Int], trainingSize: Int, distance: Mink
     * @param trainData training data
     * @return
     */
-  private def train(trainData: Array[IndexingTaskTuple[_]], pca: PCAModel): VAPlusIndexMetaData = {
+  private def train(trainData: Array[IndexingTaskTuple[_]], pca: PCAModel, ndims : Int): VAPlusIndexMetaData = {
     log.trace("VA-File (variable) started training")
 
     //data
@@ -120,15 +118,13 @@ class VAPlusIndexGenerator(nbits: Option[Int], trainingSize: Int, distance: Mink
 
     val dataMatrix = DenseMatrix(dTrainData.toList: _*)
 
-    val nfeatures = dTrainData.head.length
-
     // pca
     val variance = diag(cov(dataMatrix, center = true)).toArray
 
     var k = 0
-    var modes = Seq.fill(nfeatures)(0).toArray
+    var modes = Seq.fill(ndims)(0).toArray
 
-    while (k < nbits.getOrElse(nfeatures * 8)) {
+    while (k < nbits.getOrElse(ndims * 8)) {
       val j = getMaxIndex(variance)
       modes(j) += 1
       variance(j) = variance(j) / 4.0
@@ -140,7 +136,7 @@ class VAPlusIndexGenerator(nbits: Option[Int], trainingSize: Int, distance: Mink
 
     log.trace("VA-File (variable) finished training")
 
-    new VAPlusIndexMetaData(marks, signatureGenerator, pca)
+    new VAPlusIndexMetaData(marks, signatureGenerator, pca, ndims > pca.k)
   }
 
 
@@ -168,13 +164,16 @@ class VAPlusIndexGeneratorFactory extends IndexGeneratorFactory {
       throw new QueryNotConformException()
     }
 
-    val totalNumBits = if (properties.get("signature-nbits").isDefined) {
+    val nbits = if (properties.get("signature-nbits").isDefined) {
       Some(properties.get("signature-nbits").get.toInt)
     } else {
       None
     }
     val trainingSize = properties.getOrElse("ntraining", "1000").toInt
 
-    new VAPlusIndexGenerator(totalNumBits, trainingSize, distance.asInstanceOf[MinkowskiDistance])
+    val ndims = properties.get("ndims").map(_.toInt)
+
+
+    new VAPlusIndexGenerator(nbits, ndims, trainingSize, distance.asInstanceOf[MinkowskiDistance])
   }
 }

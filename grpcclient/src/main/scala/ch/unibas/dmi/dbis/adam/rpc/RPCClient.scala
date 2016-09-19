@@ -378,7 +378,8 @@ class RPCClient(channel: ManagedChannel, definer: AdamDefinitionBlockingStub, se
     case "sh" => IndexType.sh
     case "vaf" => IndexType.vaf
     case "vav" => IndexType.vav
-    case _ => null
+    case "vap" => IndexType.vap
+    case _ => throw new Exception("no indextype of name " + s + " known")
   }
 
 

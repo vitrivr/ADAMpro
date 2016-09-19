@@ -69,6 +69,7 @@
                 <option value="sh">SH Index</option>
                 <option value="vaf">VAF Index</option>
                 <option value="vav">VAV Index</option>
+                <option value="vap">VA+ Index</option>
             </select>
             <label>index type</label>
         </div>
@@ -172,6 +173,21 @@
         <div class="input-field col s4">
             <input id="vav-ntraining" name="ntraining" type="text" placeholder="1000">
             <label for="vav-ntraining">training size</label>
+        </div>
+    </div>
+    <div id="vap-info" class="row indexinfo" style="display:none;">
+        <div class="input-field col s4">
+            <input id="vap-signature-nbits" name="signature-nbits" type="text" placeholder="dims * 8">
+            <label for="vap-signature-nbits">number of bits in total</label>
+        </div>
+        <div class="col s8 offset-s8"></div>
+        <div class="input-field col s4">
+            <input id="vap-ndims" name="signature-nbits" type="text" placeholder="dims">
+            <label for="vap-ndims">number of dimensions to keep</label>
+        </div>
+        <div class="input-field col s4">
+            <input id="vap-ntraining" name="ntraining" type="text" placeholder="1000">
+            <label for="vap-ntraining">training size</label>
         </div>
     </div>
     <div class="row" style="padding-top: 40px;">

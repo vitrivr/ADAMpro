@@ -20,6 +20,10 @@ import org.apache.spark.sql.DataFrame
 class VAPlusIndex(override val indexname: IndexName)(@transient override implicit val ac: AdamContext) extends VAIndex(indexname) {
   override lazy val indextypename: IndexTypeName = IndexTypes.VAPLUSINDEX
 
+  override lazy val lossy: Boolean = meta.asInstanceOf[VAPlusIndexMetaData].approximate
+  override lazy val confidence : Float = if(meta.asInstanceOf[VAPlusIndexMetaData].approximate){0.9} else {1.0}
+  override lazy val score : Float= if(meta.asInstanceOf[VAPlusIndexMetaData].approximate){0.9} else {1.0}
+
   override def scan(data: DataFrame, q: FeatureVector, distance: DistanceFunction, options: Map[String, String], k: Int): DataFrame = {
     val adjustedQuery = new FeatureVectorWrapper(meta.asInstanceOf[VAPlusIndexMetaData].pca.transform(Vectors.dense(q.toArray.map(_.toDouble))).toArray.map(_.toFloat))
     super.scan(data, adjustedQuery.vector, distance, options, k)
