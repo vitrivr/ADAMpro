@@ -489,6 +489,8 @@ class RPCClient(channel: ManagedChannel, definer: AdamDefinitionBlockingStub, se
   private def getAttributeType(s: String): AttributeType = fieldtypemapping.get(s).orNull
 
   private def getFieldTypeName(a : AttributeType) : String = attributetypemapping.get(a).orNull
+
+  //TODO: add get attributes-method for an entity, to retrieve attributes to display
 }
 
 object RPCClient {
