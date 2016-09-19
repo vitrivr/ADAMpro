@@ -46,6 +46,8 @@ class EvaluationJob(job: ChronosJob) extends ChronosJob(job) {
   val data_metadata_text: Int = getAttribute(data, "metadata_text").toInt
   val data_metadata_boolean: Int = getAttribute(data, "metadata_boolean").toInt
 
+  //TODO: add handler!
+
   //query parameters
   val query_k: Seq[Int] = getAttribute(query, "k").split(",").map(_.toInt)
   val query_dense_n: Int = getAttribute(query, "dense_n").toInt
