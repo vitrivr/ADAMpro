@@ -149,7 +149,7 @@ import scala.util.{Failure, Random, Success, Try}
           case _ => HandlerType.UNKNOWNHT
         }
 
-        AttributeDefinitionMessage(attribute.name, matchFields(attribute.fieldtype), attribute.pk, attribute.unique, attribute.indexed, handler)
+        AttributeDefinitionMessage(attribute.name, matchFields(attribute.fieldtype), attribute.pk, handler, attribute.params)
       })
 
       val createEntity = new CreateEntityMessage(entityname, attributes)

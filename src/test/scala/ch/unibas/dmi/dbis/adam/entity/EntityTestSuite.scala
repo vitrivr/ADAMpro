@@ -177,8 +177,8 @@ class EntityTestSuite extends AdamTestBase {
         Given("an entity with metadata")
         val fields = Seq[AttributeDefinition](
           AttributeDefinition("pkfield", FieldTypes.LONGTYPE, true),
-          AttributeDefinition("uniquefield", FieldTypes.INTTYPE, false, true),
-          AttributeDefinition("indexedfield", FieldTypes.INTTYPE, false, false, true),
+          AttributeDefinition("uniquefield", FieldTypes.INTTYPE, false, params = Map("unique" -> "true")),
+          AttributeDefinition("indexedfield", FieldTypes.INTTYPE, false, params = Map("indexed" -> "true")),
           AttributeDefinition("feature", FieldTypes.FEATURETYPE)
         )
 
@@ -212,7 +212,7 @@ class EntityTestSuite extends AdamTestBase {
       */
     scenario("insert data in an entity with auto-increment metadata") {
       withEntityName { entityname =>
-        Entity.create(entityname, Seq(AttributeDefinition("idfield", FieldTypes.AUTOTYPE, true), AttributeDefinition("featurefield", FieldTypes.FEATURETYPE, false, false, false)))
+        Entity.create(entityname, Seq(AttributeDefinition("idfield", FieldTypes.AUTOTYPE, true), AttributeDefinition("featurefield", FieldTypes.FEATURETYPE, false)))
 
         val ntuples = Random.nextInt(1000)
         val ndims = 100
@@ -261,7 +261,7 @@ class EntityTestSuite extends AdamTestBase {
     scenario("insert data in an entity without metadata") {
       withEntityName { entityname =>
         Given("an entity without metadata")
-        Entity.create(entityname, Seq(AttributeDefinition("idfield", FieldTypes.LONGTYPE, true), AttributeDefinition("featurefield", FieldTypes.FEATURETYPE, false, false, false)))
+        Entity.create(entityname, Seq(AttributeDefinition("idfield", FieldTypes.LONGTYPE, true), AttributeDefinition("featurefield", FieldTypes.FEATURETYPE, false)))
 
         val ntuples = Random.nextInt(1000)
         val ndims = 100

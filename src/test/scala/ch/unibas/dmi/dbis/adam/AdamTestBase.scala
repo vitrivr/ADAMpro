@@ -85,7 +85,7 @@ class AdamTestBase extends FeatureSpec with GivenWhenThen with Eventually with I
       Entity.create(entityname,
         Seq(
           AttributeDefinition("tid", FieldTypes.LONGTYPE, true),
-          AttributeDefinition("feature", FieldTypes.FEATURETYPE, false, false, false)
+          AttributeDefinition("feature", FieldTypes.FEATURETYPE, false)
         ))
 
       val schema = StructType(Seq(

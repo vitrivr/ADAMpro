@@ -126,7 +126,7 @@ object CatalogOperator extends Logging {
       actions += _entitites.+=(entityname)
 
       attributes.foreach { attribute =>
-        actions += _attributes.+=(entityname, attribute.name, attribute.fieldtype.name, attribute.pk, attribute.unique, attribute.indexed, attribute.storagehandler.map(_.name).getOrElse(""))
+        actions += _attributes.+=(entityname, attribute.name, attribute.fieldtype.name, attribute.pk, attribute.storagehandler.map(_.name).getOrElse(""))
 
         attribute.params.foreach { case (key, value) =>
           actions += _attributeOptions.+=(entityname, attribute.name, key, value)
@@ -382,16 +382,14 @@ object CatalogOperator extends Logging {
         val name = x._2
         val fieldtype = FieldTypes.fromString(x._3)
         val pk = x._4
-        val unique = x._5
-        val indexed = x._6
-        val handlerName = x._7
+        val handlerName = x._5
 
         val attributeOptionsQuery = _attributeOptions.filter(_.entityname === entityname.toString()).filter(_.attributename === name).result
         val options = Await.result(DB.run(attributeOptionsQuery), MAX_WAITING_TIME).groupBy(_._2).mapValues(_.map(x => x._3 -> x._4).toMap)
 
         val params = options.getOrElse(name, Map())
 
-        AttributeDefinition(name, fieldtype, pk, unique, indexed, Some(handlerName), params)
+        AttributeDefinition(name, fieldtype, pk, Some(handlerName), params)
       })
 
       attributeDefinitions

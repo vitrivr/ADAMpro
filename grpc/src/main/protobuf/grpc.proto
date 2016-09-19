@@ -35,6 +35,8 @@ service AdamDefinition {
   rpc ImportData(ImportMessage) returns (AckMessage) {}
   rpc ImportDataFile(ImportDataFileMessage) returns (AckMessage) {}
   rpc ExportDataFile(EntityNameMessage) returns (ExportDataFileMessage) {}
+  rpc ListStorageHandlers(EmptyMessage) returns (StorageHandlersMessage) {}
+  //TODO: register storage handlers
 }
 
 service AdamSearch {
@@ -144,9 +146,8 @@ message AttributeDefinitionMessage {
   string name = 1;
   AttributeType attributetype = 2;
   bool pk = 3;
-  bool unique = 4;
-  bool indexed = 5;
   HandlerType handler = 6;
+  map<string, string> params = 7;
 }
 
 message EntityNameMessage {
@@ -242,6 +243,15 @@ message ImportDataFileMessage {
 
   FileType filetype = 4;
   bytes datafile = 5;
+}
+
+message StorageHandlersMessage {
+  repeated StorageHandlerMessage handlers = 1;
+}
+
+message StorageHandlerMessage {
+  string name = 1;
+  repeated AttributeType attributetypes = 2;
 }
 
 

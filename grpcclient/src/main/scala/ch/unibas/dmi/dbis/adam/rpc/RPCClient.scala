@@ -54,7 +54,7 @@ class RPCClient(channel: ManagedChannel, definer: AdamDefinitionBlockingStub, se
   def entityCreate(entityname: String, attributes: Seq[RPCAttributeDefinition]): Try[String] = {
     execute("create entity operation") {
       val attributeMessages = attributes.map { attribute =>
-        val adm = AttributeDefinitionMessage(attribute.name, getAttributeType(attribute.datatype), attribute.pk, unique = attribute.unique, indexed = attribute.indexed)
+        val adm = AttributeDefinitionMessage(attribute.name, getAttributeType(attribute.datatype), attribute.pk, params = attribute.params)
 
         //add handler information if available
         if (attribute.storagehandlername.isDefined) {
@@ -468,6 +468,17 @@ class RPCClient(channel: ManagedChannel, definer: AdamDefinitionBlockingStub, se
   }
 
   /**
+    * Returns registered storage handlers.
+    *
+    * @return
+    */
+  def storageHandlerList(): Try[Map[String, Seq[String]]] = {
+    execute("get storage handlers operation") {
+      Success(definer.listStorageHandlers(EmptyMessage()).handlers.map(handler => handler.name -> handler.attributetypes.map(_.toString)).toMap)
+    }
+  }
+
+  /**
     * Shutdown connection.
     */
   def shutdown(): Unit = {
@@ -488,7 +499,7 @@ class RPCClient(channel: ManagedChannel, definer: AdamDefinitionBlockingStub, se
     */
   private def getAttributeType(s: String): AttributeType = fieldtypemapping.get(s).orNull
 
-  private def getFieldTypeName(a : AttributeType) : String = attributetypemapping.get(a).orNull
+  private def getFieldTypeName(a: AttributeType): String = attributetypemapping.get(a).orNull
 
   //TODO: add get attributes-method for an entity, to retrieve attributes to display
 }

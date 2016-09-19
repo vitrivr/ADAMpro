@@ -11,7 +11,7 @@ import slick.driver.DerbyDriver.api._
   * Ivan Giangreco
   * June 2016
   */
-private[catalog] class AttributeCatalog(tag: Tag) extends Table[(String, String, String, Boolean, Boolean, Boolean, String)](tag, Some(CatalogOperator.SCHEMA), "ap_attribute") {
+private[catalog] class AttributeCatalog(tag: Tag) extends Table[(String, String, String, Boolean, String)](tag, Some(CatalogOperator.SCHEMA), "ap_attribute") {
   def entityname = column[String]("entity")
 
   def attributename = column[String]("attribute")
@@ -20,10 +20,6 @@ private[catalog] class AttributeCatalog(tag: Tag) extends Table[(String, String,
 
   def isPK = column[Boolean]("ispk")
 
-  def isUnique = column[Boolean]("isunique")
-
-  def isIndexed = column[Boolean]("isindexed")
-
   def handlername = column[String]("handler")
 
   /**
@@ -31,7 +27,7 @@ private[catalog] class AttributeCatalog(tag: Tag) extends Table[(String, String,
     */
   def pk = primaryKey("attribute_pk", (entityname, attributename))
 
-  def * = (entityname, attributename, fieldtype, isPK, isUnique, isIndexed, handlername)
+  def * = (entityname, attributename, fieldtype, isPK, handlername)
 
   def idx = index("idx_attribute_entityname", entityname)
 

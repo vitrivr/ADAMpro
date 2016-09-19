@@ -161,7 +161,7 @@ class AdamController(rpcClient: RPCClient) extends Controller {
     *
     */
   post("/entity/add") { request: EntityCreateRequest =>
-    val res = rpcClient.entityCreate(request.entityname, request.attributes.map(a => RPCAttributeDefinition(a.name, a.datatype, a.pk, false, a.indexed, None)))
+    val res = rpcClient.entityCreate(request.entityname, request.attributes.map(a => RPCAttributeDefinition(a.name, a.datatype, a.pk, params = a.params)))
 
     if (res.isSuccess) {
       response.ok.json(GeneralResponse(200, res.get))
@@ -326,6 +326,21 @@ class AdamController(rpcClient: RPCClient) extends Controller {
       }
     }
   }
+
+
+  /**
+    *
+    */
+  get("/storagehandlers/list") { request: Request =>
+    val handlers = rpcClient.storageHandlerList()
+
+    if (handlers.isSuccess) {
+      response.ok.json(StorageHandlerResponse(200, handlers.get))
+    } else {
+      response.ok.json(StorageHandlerResponse(500, Map()))
+    }
+  }
+
 
 
 }

@@ -408,14 +408,14 @@ private[rpc] object RPCHelperMethods {
         case _ => None
       }
 
-      AttributeDefinition(attribute.name, getFieldType(attribute.attributetype), attribute.pk, attribute.unique, attribute.indexed, handler)
+      AttributeDefinition(attribute.name, getFieldType(attribute.attributetype), attribute.pk, handler, attribute.params)
     })
   }
 
 
   val attributetypemapping = Map(AttributeType.BOOLEAN -> FieldTypes.BOOLEANTYPE, AttributeType.DOUBLE -> FieldTypes.DOUBLETYPE, AttributeType.FLOAT -> FieldTypes.FLOATTYPE,
     AttributeType.INT -> FieldTypes.INTTYPE, AttributeType.LONG -> FieldTypes.LONGTYPE, AttributeType.STRING -> FieldTypes.STRINGTYPE, AttributeType.TEXT -> FieldTypes.TEXTTYPE,
-    AttributeType.FEATURE -> FieldTypes.FEATURETYPE, AttributeType.GEOMETRY -> FieldTypes.GEOMETRYTYPE, AttributeType.GEOGRAPHY -> FieldTypes.GEOGRAPHYTYPE)
+    AttributeType.FEATURE -> FieldTypes.FEATURETYPE, AttributeType.GEOMETRY -> FieldTypes.GEOMETRYTYPE, AttributeType.GEOGRAPHY -> FieldTypes.GEOGRAPHYTYPE, AttributeType.AUTO -> FieldTypes.AUTOTYPE)
 
   val fieldtypemapping: Map[FieldType, AttributeType] = attributetypemapping.map(_.swap)
 
@@ -424,14 +424,14 @@ private[rpc] object RPCHelperMethods {
     * @param a
     * @return
     */
-  private def getFieldType(a: AttributeType) = attributetypemapping.getOrElse(a, FieldTypes.UNRECOGNIZEDTYPE)
+  private[rpc] def getFieldType(a: AttributeType) = attributetypemapping.getOrElse(a, FieldTypes.UNRECOGNIZEDTYPE)
 
   /**
     *
     * @param f
     * @return
     */
-  private def getAttributeType(f : FieldType) = fieldtypemapping.getOrElse(f, AttributeType.UNKOWNAT)
+  private[rpc] def getAttributeType(f : FieldType) = fieldtypemapping.getOrElse(f, AttributeType.UNKOWNAT)
 
   /**
     *

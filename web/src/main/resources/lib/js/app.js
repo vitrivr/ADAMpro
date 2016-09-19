@@ -589,3 +589,26 @@ function searchProgressive(id, params, successHandler, updateHandler, errorHandl
         }
     });
 }
+
+
+
+function storageHandlerList(handler){
+    startTask();
+
+    $.ajax(ADAM_CLIENT_HOST + "/storagehandlers/list", {
+        contentType: 'application/json',
+        type: 'GET',
+        success: function (data) {
+            if (data.code === 200) {
+                handler(data);
+            } else {
+                raiseError(data.message);
+            }
+            stopTask();
+        },
+        error: function () {
+            raiseError();
+            stopTask();
+        }
+    });
+}
