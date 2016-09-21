@@ -18,6 +18,8 @@ import org.apache.spark.sql.DataFrame
 trait IndexGenerator extends Serializable with Logging {
   private[index] val MINIMUM_NUMBER_OF_TUPLE = 1000
 
+  //TODO: have index generator support pre-processing steps, e.g., PCA, etc. (but only if accepted by the index)
+
   /**
     *
     * @return
