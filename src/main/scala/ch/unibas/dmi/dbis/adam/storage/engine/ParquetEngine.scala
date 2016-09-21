@@ -7,6 +7,7 @@ import ch.unibas.dmi.dbis.adam.datatypes.FieldTypes
 import ch.unibas.dmi.dbis.adam.entity.AttributeDefinition
 import ch.unibas.dmi.dbis.adam.exception.GeneralAdamException
 import ch.unibas.dmi.dbis.adam.main.AdamContext
+import ch.unibas.dmi.dbis.adam.query.query.Predicate
 import ch.unibas.dmi.dbis.adam.utils.Logging
 import org.apache.commons.io.FileUtils
 import org.apache.hadoop.conf.Configuration
@@ -70,11 +71,13 @@ class ParquetEngine extends Engine with Logging with Serializable {
   /**
     * Read entity.
     *
-    * @param storename adapted entityname to store feature to
-    * @param params    reading parameters
+    * @param storename  adapted entityname to store feature to
+    * @param attributes the attributes to read
+    * @param predicates filtering predicates (only applied if possible)
+    * @param params     reading parameters
     * @return
     */
-  override def read(storename: String, params: Map[String, String])(implicit ac: AdamContext): Try[DataFrame] = {
+  override def read(storename: String, attributes: Seq[AttributeDefinition], predicates: Seq[Predicate], params: Map[String, String])(implicit ac: AdamContext): Try[DataFrame] = {
     log.debug("parquet read operation")
     subengine.read(storename)
   }
@@ -82,13 +85,14 @@ class ParquetEngine extends Engine with Logging with Serializable {
   /**
     * Write entity.
     *
-    * @param storename adapted entityname to store feature to
-    * @param df        data
-    * @param mode      save mode (append, overwrite, ...)
-    * @param params    writing parameters
+    * @param storename  adapted entityname to store feature to
+    * @param df         data
+    * @param attributes attributes to store
+    * @param mode       save mode (append, overwrite, ...)
+    * @param params     writing parameters
     * @return new options to store
     */
-  override def write(storename: String, df: DataFrame, mode: SaveMode = SaveMode.Append, params: Map[String, String])(implicit ac: AdamContext): Try[Map[String, String]] = {
+  override def write(storename: String, df: DataFrame, attributes: Seq[AttributeDefinition], mode: SaveMode = SaveMode.Append, params: Map[String, String])(implicit ac: AdamContext): Try[Map[String, String]] = {
     log.debug("parquet write operation")
     val allowRepartitioning = params.getOrElse("allowRepartitioning", "false").toBoolean
 

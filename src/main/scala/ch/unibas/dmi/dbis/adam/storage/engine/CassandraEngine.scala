@@ -9,6 +9,7 @@ import ch.unibas.dmi.dbis.adam.entity.AttributeDefinition
 import ch.unibas.dmi.dbis.adam.entity.Entity.EntityName
 import ch.unibas.dmi.dbis.adam.exception.GeneralAdamException
 import ch.unibas.dmi.dbis.adam.main.AdamContext
+import ch.unibas.dmi.dbis.adam.query.query.Predicate
 import ch.unibas.dmi.dbis.adam.utils.Logging
 import com.datastax.driver.core.Session
 import com.datastax.spark.connector.cql.{CassandraConnector, PasswordAuthConf}
@@ -167,10 +168,12 @@ class CassandraEngine(private val url: String, private val port: Int, private va
     * Read entity.
     *
     * @param storename  adapted entityname to store feature to
+    * @param attributes the attributes to read
+    * @param predicates filtering predicates (only applied if possible)
     * @param params     reading parameters
     * @return
     */
-  override def read(storename: String, params: Map[String, String])(implicit ac: AdamContext): Try[DataFrame] = {
+  override def read(storename: String, attributes: Seq[AttributeDefinition], predicates: Seq[Predicate], params: Map[String, String])(implicit ac: AdamContext): Try[DataFrame] = {
     try {
       import org.apache.spark.sql.functions.udf
       val castToFeature = udf((c: Seq[Float]) => {
@@ -181,6 +184,7 @@ class CassandraEngine(private val url: String, private val port: Int, private va
         .format("org.apache.spark.sql.cassandra")
         .options(Map("table" -> storename, "keyspace" -> keyspace))
         .load()
+      //TODO: possibly use predicate
 
       var data = df
 
@@ -201,11 +205,12 @@ class CassandraEngine(private val url: String, private val port: Int, private va
     *
     * @param storename  adapted entityname to store feature to
     * @param df         data
+    * @param attributes attributes to store
     * @param mode       save mode (append, overwrite, ...)
     * @param params     writing parameters
     * @return new options to store
     */
-  override def write(storename: String, df: DataFrame, mode: SaveMode = SaveMode.Append, params: Map[String, String])(implicit ac: AdamContext): Try[Map[String, String]] = {
+  override def write(storename: String, df: DataFrame, attributes: Seq[AttributeDefinition], mode: SaveMode = SaveMode.Append, params: Map[String, String])(implicit ac: AdamContext): Try[Map[String, String]] = {
     try {
       if (mode != SaveMode.Append) {
         throw new UnsupportedOperationException("only appending is supported")

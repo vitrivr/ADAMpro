@@ -26,34 +26,9 @@ abstract class QueryObject(queryID: Option[String] = Some(java.util.UUID.randomU
   *              operator is used in the query, otherwise a '=' is added in between; AND-ing is assumed
   */
 case class BooleanQuery(
-                         where: Option[Seq[(String, String)]] = None,
+                         where: Seq[Predicate],
                          queryID: Option[String] = Some(java.util.UUID.randomUUID().toString))
   extends QueryObject(queryID) {
-  /**
-    * List of SQL operators to keep in query (otherwise a '=' is added)
-    */
-  val sqlOperators = Seq("!=", "IN")
-
-
-  /**
-    * Builds a where clause.
-    *
-    * @return
-    */
-  def buildWhereClause(): String = {
-    val regex =
-      s"""^(${sqlOperators.mkString("|")}){0,1}(.*)""".r
-
-    where.get.map { case (field, value) =>
-      val regex(prefix, suffix) = value
-
-      //if a sqlOperator was found in the value field then keep the SQL operator, otherwise add a '='
-      (prefix, suffix) match {
-        case (null, s) => field + " = " + " '" + value + "'"
-        case _ => field + " " + value
-      }
-    }.mkString("(", ") AND (", ")")
-  }
 
   override def equals(that: Any): Boolean = {
     that match {
@@ -69,6 +44,23 @@ case class BooleanQuery(
     var result = 1
     result = prime * result + where.hashCode()
     result
+  }
+}
+
+case class Predicate(attribute : String, operator : Option[String], values : Seq[Any]){
+  /**
+    * List of SQL operators to keep in query (otherwise a '=' is added)
+    */
+  lazy val sqlString = {
+    if(values.length > 1 && operator.getOrElse("=").equals("=")){
+      "(" + attribute + " IN " + values.mkString("(", ",", ")") + ")"
+    } else if (values.length > 1 && operator.getOrElse("=").equals("!=")){
+      "(" + attribute + " NOT IN " + values.mkString("(", ",", ")") + ")"
+    } else if(values.length == 1){
+      "(" + attribute + " " + operator.getOrElse(" = ") + " '" + values.head + "')"
+    } else {
+      ""
+    }
   }
 }
 

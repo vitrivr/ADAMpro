@@ -2,6 +2,7 @@ package ch.unibas.dmi.dbis.adam.storage
 
 import ch.unibas.dmi.dbis.adam.config.AdamConfig
 import ch.unibas.dmi.dbis.adam.datatypes.FieldTypes.FieldType
+import ch.unibas.dmi.dbis.adam.exception.GeneralAdamException
 import ch.unibas.dmi.dbis.adam.storage.engine.Engine
 import ch.unibas.dmi.dbis.adam.utils.Logging
 
@@ -84,7 +85,7 @@ object StorageHandlerRegistry extends Logging {
     if (result.isEmpty) {
       //no handler registered
       log.error("no suitable storage handler found in registry")
-      throw new Exception("no suitable storage handler found in registry for " + fieldtype.name)
+      throw new GeneralAdamException("no suitable storage handler found in registry for " + fieldtype.name)
     } else {
       result
     }

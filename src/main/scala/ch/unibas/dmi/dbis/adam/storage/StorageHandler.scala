@@ -5,6 +5,7 @@ import ch.unibas.dmi.dbis.adam.entity.AttributeDefinition
 import ch.unibas.dmi.dbis.adam.entity.Entity._
 import ch.unibas.dmi.dbis.adam.exception.GeneralAdamException
 import ch.unibas.dmi.dbis.adam.main.AdamContext
+import ch.unibas.dmi.dbis.adam.query.query.Predicate
 import ch.unibas.dmi.dbis.adam.storage.engine.Engine
 import ch.unibas.dmi.dbis.adam.utils.Logging
 import org.apache.spark.sql.{DataFrame, SaveMode}
@@ -98,11 +99,11 @@ class StorageHandler(val engine: Engine) extends Serializable with Logging {
     * @param params
     * @return
     */
-  def read(entityname: EntityName, params: Map[String, String] = Map())(implicit ac: AdamContext): Try[DataFrame] = {
+  def read(entityname: EntityName, attributes: Seq[AttributeDefinition], predicates: Seq[Predicate] = Seq(), params: Map[String, String] = Map())(implicit ac: AdamContext): Try[DataFrame] = {
     execute("read") {
       val storename = getStorename(entityname)
       val options = CatalogOperator.getStorageEngineOption(name, storename).get
-      engine.read(storename, options ++ params)
+      engine.read(storename, attributes, predicates, options ++ params)
     }
   }
 
@@ -110,11 +111,12 @@ class StorageHandler(val engine: Engine) extends Serializable with Logging {
     *
     * @param entityname
     * @param df
+    * @param attributes
     * @param mode
     * @param params
     * @return
     */
-  def write(entityname: EntityName, df: DataFrame, mode: SaveMode = SaveMode.Append, params: Map[String, String] = Map())(implicit ac: AdamContext): Try[Void] = {
+  def write(entityname: EntityName, df: DataFrame, attributes: Seq[AttributeDefinition], mode: SaveMode = SaveMode.Append, params: Map[String, String] = Map())(implicit ac: AdamContext): Try[Void] = {
     execute("write") {
       val storename = getStorename(entityname)
       val options = CatalogOperator.getStorageEngineOption(name, storename).get
@@ -126,7 +128,7 @@ class StorageHandler(val engine: Engine) extends Serializable with Logging {
           newStorename = storename + "-new" + Random.nextInt(999)
         } while (engine.exists(newStorename).get)
 
-        val res = engine.write(newStorename, df, mode, params ++ options)
+        val res = engine.write(newStorename, df, attributes, mode, params ++ options)
 
         if (res.isSuccess) {
           //update name
@@ -147,7 +149,7 @@ class StorageHandler(val engine: Engine) extends Serializable with Logging {
         }
       } else {
         //other save modes
-        val res = engine.write(storename, df, mode, params ++ options)
+        val res = engine.write(storename, df, attributes, mode, params ++ options)
 
         if (res.isSuccess) {
           Success(null)

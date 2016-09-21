@@ -12,7 +12,7 @@ import ch.unibas.dmi.dbis.adam.main.SparkStartup
 import ch.unibas.dmi.dbis.adam.query.handler.internal.AggregationExpression.{ExpressionEvaluationOrder, IntersectExpression}
 import ch.unibas.dmi.dbis.adam.query.handler.internal.{StochasticIndexQueryExpression, CompoundQueryExpression, IndexScanExpression}
 import ch.unibas.dmi.dbis.adam.query.progressive.{AllProgressivePathChooser, ProgressiveObservation}
-import ch.unibas.dmi.dbis.adam.query.query.{BooleanQuery, NearestNeighbourQuery}
+import ch.unibas.dmi.dbis.adam.query.query.{Predicate, BooleanQuery, NearestNeighbourQuery}
 import org.scalatest.concurrent.ScalaFutures
 
 import scala.concurrent.duration.Duration
@@ -210,11 +210,11 @@ class QueryTestSuite extends AdamTestBase with ScalaFutures {
         val df = es.fullData
 
         When("performing a boolean query on the joined metadata")
-        val inStmt = "IN " + es.nnbqResults.map {
+        val tids = es.nnbqResults.map {
           case (distance, tid) =>
             (tid).toString
-        }.mkString("(", ", ", ")")
-        val whereStmt = Option(Seq("tid" -> inStmt))
+        }
+        val whereStmt = Seq(new Predicate("tid", Some("="), tids))
 
         val bq = BooleanQuery(whereStmt)
 

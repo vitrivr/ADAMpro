@@ -21,7 +21,7 @@ import ch.unibas.dmi.dbis.adam.query.handler.internal._
 import ch.unibas.dmi.dbis.adam.query.information.InformationLevels
 import ch.unibas.dmi.dbis.adam.query.information.InformationLevels.{InformationLevel, LAST_STEP_ONLY}
 import ch.unibas.dmi.dbis.adam.query.progressive.{QueryHintsProgressivePathChooser, SimpleProgressivePathChooser}
-import ch.unibas.dmi.dbis.adam.query.query.{BooleanQuery, NearestNeighbourQuery}
+import ch.unibas.dmi.dbis.adam.query.query.{Predicate, BooleanQuery, NearestNeighbourQuery}
 import org.apache.spark.sql.types
 import org.apache.spark.sql.types.DataType
 import org.vitrivr.adam.grpc.grpc.DistanceMessage.DistanceType
@@ -330,9 +330,29 @@ private[rpc] object RPCHelperMethods {
   def prepareBQ(bq: BooleanQueryMessage): Try[BooleanQuery] = {
     try {
       val where = if (!bq.where.isEmpty) {
-        Some(bq.where.map(bqm => (bqm.attribute, bqm.value)))
+        bq.where.map(bqm => {
+          val attribute = bqm.attribute
+          val op = if (bqm.op.isEmpty) {
+            None
+          } else {
+            Some(bqm.op)
+          }
+          val values = bqm.values.map(value => value.datatype.number match {
+            case DataMessage.BOOLEANDATA_FIELD_NUMBER => value.getBooleanData
+            case DataMessage.DOUBLEDATA_FIELD_NUMBER => value.getBooleanData
+            case DataMessage.FLOATDATA_FIELD_NUMBER => value.getBooleanData
+            case DataMessage.GEOGRAPHYDATA_FIELD_NUMBER => value.getGeographyData
+            case DataMessage.GEOMETRYDATA_FIELD_NUMBER => value.getGeometryData
+            case DataMessage.INTDATA_FIELD_NUMBER => value.getIntData
+            case DataMessage.LONGDATA_FIELD_NUMBER => value.getLongData
+            case DataMessage.STRINGDATA_FIELD_NUMBER => value.getStringData
+            case _ => throw new GeneralAdamException("search predicates can not be of any type")
+          })
+
+          new Predicate(bqm.attribute, op, values)
+        })
       } else {
-        None
+        throw new GeneralAdamException("empty boolean query message given")
       }
       Success(BooleanQuery(where))
     } catch {
@@ -431,7 +451,7 @@ private[rpc] object RPCHelperMethods {
     * @param f
     * @return
     */
-  private[rpc] def getAttributeType(f : FieldType) = fieldtypemapping.getOrElse(f, AttributeType.UNKOWNAT)
+  private[rpc] def getAttributeType(f: FieldType) = fieldtypemapping.getOrElse(f, AttributeType.UNKOWNAT)
 
   /**
     *
@@ -448,7 +468,7 @@ private[rpc] object RPCHelperMethods {
     case _: FeatureVectorWrapperUDT => (x) => FeatureVectorWrapper(RPCHelperMethods.prepareFeatureVector(x.getFeatureData))
     case _: GeographyWrapperUDT => (x) => GeographyWrapper(x.getGeographyData)
     case _: GeometryWrapperUDT => (x) => GeographyWrapper(x.getGeometryData)
-      //TODO: possibly differentiate between string and text
+    //TODO: possibly differentiate between string and text
   }
 }
 

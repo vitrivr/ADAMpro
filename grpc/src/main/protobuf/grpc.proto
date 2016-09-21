@@ -416,9 +416,8 @@ message BooleanQueryMessage {
 
   message WhereMessage {
     string attribute = 1;
-    //if value starts on certain operators (e.g., != or IN), then the operation used in query is adapted, otherwise equality is used
-    //TODO: possibly adjust to DataMessage, but in that case make sure that using where only non-feature attributes can be queried using WHERE
-    string value = 2;
+    repeated DataMessage values = 2;
+    string op = 3;
   }
 
   message JoinMessage {

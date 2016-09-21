@@ -7,6 +7,7 @@ import ch.unibas.dmi.dbis.adam.datatypes.FieldTypes
 import ch.unibas.dmi.dbis.adam.datatypes.FieldTypes.FieldType
 import ch.unibas.dmi.dbis.adam.entity.AttributeDefinition
 import ch.unibas.dmi.dbis.adam.main.AdamContext
+import ch.unibas.dmi.dbis.adam.query.query.Predicate
 import com.mchange.v2.c3p0.ComboPooledDataSource
 import org.apache.spark.sql.types.{StructField, StructType}
 import org.apache.spark.sql.{DataFrame, Row, SaveMode}
@@ -84,7 +85,7 @@ class PostgresqlEngine(private val url: String, private val user: String, privat
     *
     * @param storename  adapted entityname to store feature to
     * @param attributes attributes of the entity (w.r.t. handler)
-    * @param params      creation parameters
+    * @param params     creation parameters
     * @return options to store
     */
   override def create(storename: String, attributes: Seq[AttributeDefinition], params: Map[String, String])(implicit ac: AdamContext): Try[Map[String, String]] = {
@@ -98,7 +99,7 @@ class PostgresqlEngine(private val url: String, private val user: String, privat
 
       val df = ac.sqlContext.createDataFrame(ac.sc.emptyRDD[Row], StructType(structFields))
 
-      val tableStmt = write(storename, df, SaveMode.ErrorIfExists, params)
+      val tableStmt = write(storename, df, attributes, SaveMode.ErrorIfExists, params)
 
       if (tableStmt.isFailure) {
         return Failure(tableStmt.failed.get)
@@ -142,7 +143,7 @@ class PostgresqlEngine(private val url: String, private val user: String, privat
   /**
     * Check if entity exists.
     *
-    * @param storename  adapted entityname to store feature to
+    * @param storename adapted entityname to store feature to
     * @return
     */
   override def exists(storename: String)(implicit ac: AdamContext): Try[Boolean] = {
@@ -166,21 +167,27 @@ class PostgresqlEngine(private val url: String, private val user: String, privat
     * Read entity.
     *
     * @param storename  adapted entityname to store feature to
-    * @param params      reading parameters
+    * @param attributes the attributes to read
+    * @param predicates filtering predicates (only applied if possible)
+    * @param params     reading parameters
     * @return
     */
-  override def read(storename: String, params: Map[String, String])(implicit ac: AdamContext): Try[DataFrame] = {
+  override def read(storename: String, attributes: Seq[AttributeDefinition], predicates: Seq[Predicate], params: Map[String, String])(implicit ac: AdamContext): Try[DataFrame] = {
     log.debug("postgresql read operation")
 
     try {
-      val predicate = params.get("predicate").map(Seq(_))
-
       //TODO: possibly adjust in here for partitioning
-      val df = if (predicate.isDefined) {
-        ac.sqlContext.read.jdbc(url, storename, predicate.get.toArray, props)
+      var df = if (predicates.nonEmpty) {
+        //TODO: remove equality in predicates?
+        ac.sqlContext.read.jdbc(url, storename, predicates.map(_.sqlString).toArray, props)
       } else {
         ac.sqlContext.read.jdbc(url, storename, props)
       }
+
+      attributes.foreach { attribute =>
+        df = df.withColumn(attribute.name, df.col(attribute.name).cast(attribute.fieldtype.datatype))
+      }
+
       Success(df)
     } catch {
       case e: Exception =>
@@ -193,11 +200,12 @@ class PostgresqlEngine(private val url: String, private val user: String, privat
     *
     * @param storename  adapted entityname to store feature to
     * @param df         data
+    * @param attributes attributes to store
     * @param mode       save mode (append, overwrite, ...)
-    * @param params      writing parameters
+    * @param params     writing parameters
     * @return new options to store
     */
-  override def write(storename: String, df: DataFrame, mode: SaveMode = SaveMode.Append, params: Map[String, String])(implicit ac: AdamContext): Try[Map[String, String]] = {
+  override def write(storename: String, df: DataFrame, attributes: Seq[AttributeDefinition], mode: SaveMode = SaveMode.Append, params: Map[String, String])(implicit ac: AdamContext): Try[Map[String, String]] = {
     log.debug("postgresql write operation")
 
     try {
@@ -212,7 +220,7 @@ class PostgresqlEngine(private val url: String, private val user: String, privat
   /**
     * Drop the entity.
     *
-    * @param storename  adapted entityname to store feature to
+    * @param storename adapted entityname to store feature to
     * @return
     */
   override def drop(storename: String)(implicit ac: AdamContext): Try[Void] = {

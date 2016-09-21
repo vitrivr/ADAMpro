@@ -76,7 +76,7 @@ object EntityPartitioner {
 
     mode match {
       case PartitionMode.REPLACE_EXISTING =>
-        val status = handler.write(entity.entityname, data, SaveMode.Overwrite)
+        val status = handler.write(entity.entityname, data, attributes, SaveMode.Overwrite)
 
         if (status.isFailure) {
           throw status.failed.get

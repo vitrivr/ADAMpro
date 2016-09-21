@@ -248,5 +248,5 @@ case class RPCQueryObject(var id: String, var operation: String, var options: Ma
 
   private def ehqm(): ExternalHandlerQueryMessage = ExternalHandlerQueryMessage(id, entity, subtype, options)
 
-  private def sbqm(): QueryMessage = QueryMessage(queryid = id, from = Some(FromMessage().withEntity(entity)), bq = Some(BooleanQueryMessage(Seq(WhereMessage(options.get("field").get, options.get("value").get)))))
+  private def sbqm(): QueryMessage = QueryMessage(queryid = id, from = Some(FromMessage().withEntity(entity)), bq = Some(BooleanQueryMessage(Seq(WhereMessage(options.get("field").get, Seq(DataMessage().withStringData(options.get("value").get)))))))
 }

@@ -181,7 +181,7 @@ class RPCTestSuite extends AdamTestBase with ScalaFutures {
           assert(inserted)
 
           if (inserted) {
-            val results = search.doQuery(QueryMessage(queryid = "", from = Some(FromMessage().withEntity(entityname)), bq = Some(BooleanQueryMessage(Seq(WhereMessage("tid", tuples.head("tid").getLongData.toString))))))
+            val results = search.doQuery(QueryMessage(queryid = "", from = Some(FromMessage().withEntity(entityname)), bq = Some(BooleanQueryMessage(Seq(WhereMessage("tid", Seq(DataMessage().withLongData(tuples.head("tid").getLongData))))))))
             assert(results.ack.get.code == AckMessage.Code.OK)
           }
         }

@@ -4,6 +4,7 @@ import ch.unibas.dmi.dbis.adam.datatypes.FieldTypes
 import ch.unibas.dmi.dbis.adam.datatypes.FieldTypes.FieldType
 import ch.unibas.dmi.dbis.adam.entity.AttributeDefinition
 import ch.unibas.dmi.dbis.adam.main.AdamContext
+import ch.unibas.dmi.dbis.adam.query.query.Predicate
 import ch.unibas.dmi.dbis.adam.utils.Logging
 import org.apache.solr.client.solrj.SolrQuery
 import org.apache.solr.client.solrj.impl.HttpSolrClient
@@ -12,7 +13,6 @@ import org.apache.solr.common.SolrInputDocument
 import org.apache.spark.sql.types.{StructField, StructType}
 import org.apache.spark.sql.{DataFrame, Row, SaveMode}
 
-import scala.collection.mutable.ListBuffer
 import scala.util.{Failure, Success, Try}
 
 /**
@@ -58,11 +58,7 @@ class SolrEngine(private val url: String) extends Engine with Logging with Seria
       createReq.setConfigSet("basic_configs")
       createReq.process(client)
 
-      val lb = new ListBuffer[(String, String)]
-      lb += "pk" -> attributes.filter(_.pk).head.name
-      lb += "fields" -> attributes.map(attribute => attribute.name + getSuffix(attribute.fieldtype)).mkString(",")
-
-      Success(lb.toMap)
+      Success(Map())
     } catch {
       case e: Exception =>
         Failure(e)
@@ -125,14 +121,16 @@ class SolrEngine(private val url: String) extends Engine with Logging with Seria
   /**
     * Read entity.
     *
-    * @param storename adapted entityname to store feature to
-    * @param params    reading parameters
+    * @param storename  adapted entityname to store feature to
+    * @param attributes the attributes to read
+    * @param predicates filtering predicates (only applied if possible)
+    * @param params     reading parameters
     * @return
     */
-  override def read(storename: String, params: Map[String, String])(implicit ac: AdamContext): Try[DataFrame] = {
+  override def read(storename: String, attributes: Seq[AttributeDefinition], predicates: Seq[Predicate], params: Map[String, String])(implicit ac: AdamContext): Try[DataFrame] = {
     try {
       val client = new HttpSolrClient(url + "/" + storename)
-      val nameDicAttributenameToSolrname = params.get("fields").get.split(",").map(field => field.substring(0, field.indexOf("_")) -> field).toMap
+      val nameDicAttributenameToSolrname = attributes.map(attribute => attribute.name -> (attribute.name + getSuffix(attribute.fieldtype))).toMap
       val nameDicSolrnameToAttributename = nameDicAttributenameToSolrname.map(_.swap)
 
       //set query for retrieving data
@@ -221,34 +219,27 @@ class SolrEngine(private val url: String) extends Engine with Logging with Seria
   /**
     * Write entity.
     *
-    * @param storename adapted entityname to store feature to
-    * @param df        data
-    * @param mode      save mode (append, overwrite, ...)
-    * @param params    writing parameters
-    * @return
+    * @param storename  adapted entityname to store feature to
+    * @param df         data
+    * @param attributes attributes to store
+    * @param mode       save mode (append, overwrite, ...)
+    * @param params     writing parameters
+    * @return new options to store
     */
-  override def write(storename: String, df: DataFrame, mode: SaveMode = SaveMode.Append, params: Map[String, String])(implicit ac: AdamContext): Try[Map[String, String]] = {
-    val schema = df.schema
-
-    val nameDicAttributenameToSolrname = params.get("fields").get.split(",").map(field => field.substring(0, field.indexOf("_")) -> field).toMap
+  override def write(storename: String, df: DataFrame, attributes: Seq[AttributeDefinition], mode: SaveMode = SaveMode.Append, params: Map[String, String])(implicit ac: AdamContext): Try[Map[String, String]] = {
+    val pk = attributes.filter(_.pk).head
 
     df.foreachPartition { it =>
       val partClient = new HttpSolrClient(url + "/" + storename)
 
       it.foreach { row =>
         val doc = new SolrInputDocument()
-        doc.addField("id", row.getAs[Any](params.get("pk").get))
+        doc.addField("id", row.getAs[Any](pk.name))
 
-        schema.foreach {
+        attributes.foreach {
           attribute =>
-            val solrname = nameDicAttributenameToSolrname.get(attribute.name)
-
-            if (solrname.isDefined) {
-              doc.addField(solrname.get, row.getAs[Any](attribute.name).toString)
-            } else {
-              //possibly store as string and update catalog here rather than throwing error
-              log.error("solr name not found; field not created?")
-            }
+            val solrname = attribute.name + getSuffix(attribute.fieldtype)
+            doc.addField(solrname, row.getAs[Any](attribute.name).toString)
         }
 
         partClient.add(doc)

@@ -12,6 +12,8 @@ import slick.driver.DerbyDriver.api._
   * June 2016
   */
 private[catalog] class AttributeCatalog(tag: Tag) extends Table[(String, String, String, Boolean, String)](tag, Some(CatalogOperator.SCHEMA), "ap_attribute") {
+  //TODO: possibly store order of attribute
+
   def entityname = column[String]("entity")
 
   def attributename = column[String]("attribute")

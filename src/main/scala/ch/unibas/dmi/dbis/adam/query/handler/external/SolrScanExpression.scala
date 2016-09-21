@@ -30,15 +30,18 @@ case class SolrScanExpression(entityname: EntityName, handlername : String, para
   if (StorageHandlerRegistry.apply(Some("solr")).isEmpty) {
     throw new GeneralAdamException("no solr handler added")
   }
-  private val handler = StorageHandlerRegistry.apply(Some(handlername)).get
+  private val handler = {
+    assert(StorageHandlerRegistry.apply(Some(handlername)).isDefined)
+    StorageHandlerRegistry.apply(Some(handlername)).get
+  }
 
   private val entity = Entity.load(entityname).get
 
   override protected def run(options : Option[QueryEvaluationOptions], filter: Option[DataFrame] = None)(implicit ac: AdamContext): Option[DataFrame] = {
     entity.schema().filter(_.storagehandler.get.equals(handler)).map(_.name)
 
-
-    var status = handler.read(entityname, params)
+    val attributes = entity.schema().filter(a => a.storagehandler.isDefined && a.storagehandler.get.equals(handler))
+    var status = handler.read(entityname, attributes, params = params)
 
     if (status.isFailure) {
       throw status.failed.get

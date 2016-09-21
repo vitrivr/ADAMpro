@@ -8,6 +8,7 @@ import ch.unibas.dmi.dbis.adam.entity.Entity.EntityName
 import ch.unibas.dmi.dbis.adam.exception.{EntityExistingException, EntityNotExistingException, EntityNotProperlyDefinedException, GeneralAdamException}
 import ch.unibas.dmi.dbis.adam.index.Index
 import ch.unibas.dmi.dbis.adam.main.{AdamContext, SparkStartup}
+import ch.unibas.dmi.dbis.adam.query.query.Predicate
 import ch.unibas.dmi.dbis.adam.storage.StorageHandler
 import ch.unibas.dmi.dbis.adam.utils.Logging
 import org.apache.spark.sql.functions.col
@@ -68,13 +69,13 @@ case class Entity(val entityname: EntityName)(@transient implicit val ac: AdamCo
     * @param predicates    attributename -> predicate (will only be applied if supported by handler)
     * @return
     */
-  def getData(nameFilter: Option[Seq[String]] = None, typeFilter: Option[Seq[FieldType]] = None, handlerFilter: Option[StorageHandler] = None, predicates: Map[String, String] = Map()): Option[DataFrame] = {
+  def getData(nameFilter: Option[Seq[String]] = None, typeFilter: Option[Seq[FieldType]] = None, handlerFilter: Option[StorageHandler] = None, predicates: Seq[Predicate] = Seq()): Option[DataFrame] = {
     //cache data join
     var data = _data
 
     if (_data.isEmpty) {
       val handlerData = schema().filterNot(_.pk).filter(_.storagehandler.isDefined).groupBy(_.storagehandler.get).map { case (handler, attributes) =>
-        val status = handler.read(entityname)
+        val status = handler.read(entityname, attributes.+:(pk))
 
         if (status.isFailure) {
           log.error("failure when reading data", status.failed.get)
@@ -98,8 +99,8 @@ case class Entity(val entityname: EntityName)(@transient implicit val ac: AdamCo
 
     if(predicates.nonEmpty){
       val handlerData = schema().filterNot(_.pk).filter(_.storagehandler.isDefined).groupBy(_.storagehandler.get).map { case (handler, attributes) =>
-        val predicate = (attributes ++ Seq(pk)).map(a => predicates.get(a.name)).filter(_.isDefined).map(p => "predicate" -> p.mkString(" AND ")).toMap
-        val status = handler.read(entityname, predicate)
+        val predicate = predicates.filter(p => attributes.map(_.name).contains(p))
+        val status = handler.read(entityname, attributes, predicate)
 
         if (status.isFailure) {
           log.error("failure when reading data", status.failed.get)
@@ -227,7 +228,7 @@ case class Entity(val entityname: EntityName)(@transient implicit val ac: AdamCo
         }
 
         val df = insertion.select(fields.map(attribute => col(attribute.name)): _*)
-        val status = handler.write(entityname, df, SaveMode.Append, Map("allowRepartitioning" -> "true", "partitioningKey" -> pk.name))
+        val status = handler.write(entityname, df, fields, SaveMode.Append, Map("allowRepartitioning" -> "true", "partitioningKey" -> pk.name))
 
         if (status.isFailure) {
           throw status.failed.get

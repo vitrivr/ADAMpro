@@ -38,11 +38,7 @@ object BooleanFilterExpression extends Logging {
 
       ac.sc.setJobGroup(id.getOrElse(""), "boolean filter scan", interruptOnCancel = true)
 
-      var df =  if(bq.where.isDefined){
-        entity.getData(predicates = Map(entity.pk.name -> bq.buildWhereClause()))
-      } else {
-        entity.getData()
-      }
+      var df =  entity.getData(predicates = bq.where)
 
       var ids = mutable.Set[Any]()
 
@@ -133,11 +129,9 @@ object BooleanFilterExpression extends Logging {
     log.debug("filter using boolean query filter")
     var data = df
 
-    if (bq.where.isDefined) {
-      val where = bq.buildWhereClause()
-      log.debug("query metadata using where clause: " + where)
-      data = data.filter(where)
-    }
+    val sqlString = bq.where.map(_.sqlString).mkString(" AND ")
+    log.debug("query metadata using where clause: " + sqlString)
+    data = data.filter(sqlString)
 
     data
   }

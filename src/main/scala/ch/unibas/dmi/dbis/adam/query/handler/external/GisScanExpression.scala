@@ -16,12 +16,16 @@ import org.apache.spark.sql.DataFrame
 case class GisScanExpression(entityname: EntityName, handlername : String, params: Map[String, String], id: Option[String] = None)(@transient implicit val ac: AdamContext) extends QueryExpression(id) {
   override val info = ExpressionDetails(None, Some("Gis Scan Expression"), id, None)
 
-  private val handler = StorageHandlerRegistry.apply(Some(handlername)).get
+  private val handler = {
+    assert(StorageHandlerRegistry.apply(Some(handlername)).isDefined)
+    StorageHandlerRegistry.apply(Some(handlername)).get
+  }
 
   private val entity = Entity.load(entityname).get
 
   override protected def run(options : Option[QueryEvaluationOptions], filter: Option[DataFrame] = None)(implicit ac: AdamContext): Option[DataFrame] = {
-    var status = handler.read(entityname, params)
+    val attributes = entity.schema().filter(a => a.storagehandler.isDefined && a.storagehandler.get.equals(handler))
+    var status = handler.read(entityname, attributes, params = params)
 
     if (status.isFailure) {
       throw status.failed.get

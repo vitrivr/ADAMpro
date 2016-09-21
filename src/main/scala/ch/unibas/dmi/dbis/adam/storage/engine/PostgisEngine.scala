@@ -4,7 +4,9 @@ import java.sql.{Connection, DriverManager}
 
 import ch.unibas.dmi.dbis.adam.datatypes.FieldTypes
 import ch.unibas.dmi.dbis.adam.datatypes.FieldTypes.FieldType
+import ch.unibas.dmi.dbis.adam.entity.AttributeDefinition
 import ch.unibas.dmi.dbis.adam.main.AdamContext
+import ch.unibas.dmi.dbis.adam.query.query.Predicate
 import org.apache.spark.sql.{DataFrame, SaveMode}
 
 import scala.util.{Failure, Success, Try}
@@ -48,10 +50,12 @@ class PostgisEngine(private val url: String, private val user: String, private v
     * Read entity.
     *
     * @param storename  adapted entityname to store feature to
-    * @param params      reading parameters
+    * @param attributes the attributes to read
+    * @param predicates filtering predicates (only applied if possible)
+    * @param params     reading parameters
     * @return
     */
-  override def read(storename: String, params: Map[String, String])(implicit ac: AdamContext): Try[DataFrame] = {
+  override def read(storename: String, attributes: Seq[AttributeDefinition], predicates: Seq[Predicate], params: Map[String, String])(implicit ac: AdamContext): Try[DataFrame] = {
     log.debug("postgresql read operation")
 
     val query = params.getOrElse("query", "*")
@@ -80,11 +84,12 @@ class PostgisEngine(private val url: String, private val user: String, private v
     *
     * @param storename  adapted entityname to store feature to
     * @param df         data
+    * @param attributes attributes to store
     * @param mode       save mode (append, overwrite, ...)
     * @param params     writing parameters
     * @return new options to store
     */
-  override def write(storename: String, df: DataFrame, mode: SaveMode = SaveMode.Append, params: Map[String, String])(implicit ac: AdamContext): Try[Map[String, String]] = {
+  override def write(storename: String, df: DataFrame, attributes: Seq[AttributeDefinition], mode: SaveMode = SaveMode.Append, params: Map[String, String])(implicit ac: AdamContext): Try[Map[String, String]] = {
     log.debug("postgresql write operation")
 
     try {
