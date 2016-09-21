@@ -2,7 +2,7 @@ package ch.unibas.dmi.dbis.adam.query.handler.generic
 
 import java.util.concurrent.TimeUnit
 
-import ch.unibas.dmi.dbis.adam.catalog.CatalogOperator
+import ch.unibas.dmi.dbis.adam.catalog.MeasurementCatalogOperator
 import ch.unibas.dmi.dbis.adam.config.{AdamConfig, FieldNames}
 import ch.unibas.dmi.dbis.adam.main.AdamContext
 import ch.unibas.dmi.dbis.adam.query.information.InformationLevels._
@@ -68,7 +68,7 @@ abstract class QueryExpression(id: Option[String]) extends Serializable with Log
     val time = t2 - t1
 
     if(AdamConfig.logQueryExecutionTime && info.source.isDefined){
-      CatalogOperator.addMeasurement(info.source.get, time)
+      MeasurementCatalogOperator.addMeasurement(info.source.get, this, time)
     }
 
     info.time = Duration(time, TimeUnit.MILLISECONDS)

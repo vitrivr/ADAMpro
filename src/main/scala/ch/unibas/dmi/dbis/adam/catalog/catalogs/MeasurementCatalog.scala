@@ -11,15 +11,17 @@ import slick.driver.DerbyDriver.api._
   * Ivan Giangreco
   * August 2016
   */
-private[catalog] class MeasurementCatalog(tag: Tag) extends Table[(String, Long)](tag, Some(CatalogOperator.SCHEMA), "ap_measurement") {
+private[catalog] class MeasurementCatalog(tag: Tag) extends Table[(String, Array[Byte], Long)](tag, Some(CatalogOperator.SCHEMA), "ap_measurement") {
   def key = column[String]("key")
+
+  def query = column[Array[Byte]]("query")
 
   def measurement = column[Long]("measurement")
 
   /**
     * Special fields
     */
-  def * = (key, measurement)
+  def * = (key, query, measurement)
 
   def idx = index("idx_measurement_key", (key))
 }

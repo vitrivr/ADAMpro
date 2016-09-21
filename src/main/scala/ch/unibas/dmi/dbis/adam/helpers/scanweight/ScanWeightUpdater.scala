@@ -1,6 +1,6 @@
 package ch.unibas.dmi.dbis.adam.helpers.scanweight
 
-import ch.unibas.dmi.dbis.adam.catalog.CatalogOperator
+import ch.unibas.dmi.dbis.adam.catalog.{MeasurementCatalogOperator, CatalogOperator}
 import ch.unibas.dmi.dbis.adam.datatypes.FieldTypes
 import ch.unibas.dmi.dbis.adam.datatypes.feature.FeatureVectorWrapper
 import ch.unibas.dmi.dbis.adam.entity.Entity
@@ -70,10 +70,10 @@ private class ScanWeightUpdater(entityname: EntityName, attribute: String, optio
     val measurements = mutable.Map[String, Seq[Long]]()
 
     val seqExpr = SequentialScanExpression(entity)(_: NearestNeighbourQuery)()
-    val seqCost = cost(CatalogOperator.getMeasurements(entityname).get)
+    val seqCost = cost(MeasurementCatalogOperator.getMeasurements(entityname).get.map(_._2))
 
     val indBenchmarks = indexes.filter(_.isSuccess).map(_.get).map { index =>
-      val indScore = cost(CatalogOperator.getMeasurements(index.indexname).get)
+      val indScore = cost(MeasurementCatalogOperator.getMeasurements(index.indexname).get.map(_._2))
       (index, indScore)
     }
 

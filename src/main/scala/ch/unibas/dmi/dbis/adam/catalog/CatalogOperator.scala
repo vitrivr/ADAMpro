@@ -10,6 +10,7 @@ import ch.unibas.dmi.dbis.adam.entity.{AttributeDefinition, EntityNameHolder}
 import ch.unibas.dmi.dbis.adam.exception._
 import ch.unibas.dmi.dbis.adam.index.Index.{IndexName, IndexTypeName}
 import ch.unibas.dmi.dbis.adam.index.structures.IndexTypes
+import ch.unibas.dmi.dbis.adam.query.handler.generic.QueryExpression
 import ch.unibas.dmi.dbis.adam.utils.Logging
 import com.mchange.v2.c3p0.ComboPooledDataSource
 import slick.dbio.NoStream
@@ -44,11 +45,10 @@ object CatalogOperator extends Logging {
   private val _attributeOptions = TableQuery[AttributeOptionsCatalog]
   private val _indexes = TableQuery[IndexCatalog]
   private val _indexOptions = TableQuery[IndexOptionsCatalog]
-  private val _measurements = TableQuery[MeasurementCatalog]
   private val _storeengineOptions = TableQuery[StorageEngineOptionsCatalog]
 
   private[catalog] val CATALOGS = Seq(
-    _entitites, _entityOptions, _attributes, _attributeOptions, _indexes, _indexOptions, _measurements, _storeengineOptions
+    _entitites, _entityOptions, _attributes, _attributeOptions, _indexes, _indexOptions, _storeengineOptions
   )
 
   /**
@@ -608,59 +608,6 @@ object CatalogOperator extends Logging {
       val query = _indexes.filter(_.indexname === indexname.toString).map(_.entityname).result.head
       val name = Await.result(DB.run(query), MAX_WAITING_TIME)
       EntityNameHolder(name)
-    }
-  }
-
-  /**
-    * Adds a measurement to the catalog
-    *
-    * @param key
-    * @param value
-    * @return
-    */
-  def addMeasurement(key: String, value: Long): Try[Void] = {
-    execute("add measurement") {
-      val query = _measurements.+=(key, value)
-      DB.run(query)
-      null
-    }
-  }
-
-  /**
-    * Gets measurements for given key.
-    *
-    * @param key
-    * @return
-    */
-  def getMeasurements(key: String): Try[Seq[Long]] = {
-    execute("get measurement") {
-      val query = _measurements.filter(_.key === key).map(_.measurement).result
-      Await.result(DB.run(query), MAX_WAITING_TIME)
-    }
-  }
-
-  /**
-    * Drops measurements for given key.
-    *
-    * @param key
-    * @return
-    */
-  def dropMeasurements(key: String): Try[Void] = {
-    execute("drop measurements") {
-      Await.result(DB.run(_measurements.filter(_.key === key).delete), MAX_WAITING_TIME)
-      null
-    }
-  }
-
-  /**
-    * Drops measurements for given key.
-    *
-    * @return
-    */
-  def dropAllMeasurements(): Try[Void] = {
-    execute("drop all measurements") {
-      Await.result(DB.run(_measurements.delete), MAX_WAITING_TIME)
-      null
     }
   }
 
