@@ -10,7 +10,7 @@ import java.util.Calendar
 object EvaluationResultLogger {
 
   /** Everything that gets logged */
-  private val names = Seq("tuples", "dimensions", "index", "partitioner", "partitions", "k", "skipPercentage", "time", "nores", "skip_recall", "noskip_recall")
+  private val names = Seq("tuples", "dimensions", "index", "partitioner", "partitions", "k", "skipPercentage", "time", "nores", "skip_recall", "noskip_recall", "quality", "errorApprox")
 
   /** Precision/Recall @k */
   def init(k: Int): Unit = {

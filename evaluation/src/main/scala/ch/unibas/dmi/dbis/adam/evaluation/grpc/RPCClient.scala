@@ -24,7 +24,7 @@ import scala.util.Random
   */
 class RPCClient(channel: ManagedChannel, definer: AdamDefinitionBlockingStub, searcherBlocking: AdamSearchBlockingStub, searcher: AdamSearchStub, host: String) extends AdamParEvalUtils with Logging {
 
-  val querypath ="evaluation/src/main/resources/sift_query.fvecs"
+  val querypath = "evaluation/src/main/resources/sift_query.fvecs"
   val truthpath = "evaluation/src/main/resources/sift_groundtruth.ivecs"
 
   val k = 100
@@ -35,13 +35,13 @@ class RPCClient(channel: ManagedChannel, definer: AdamDefinitionBlockingStub, se
   /**
     * Evaluation Params
     */
-  val indexOnly = true
+  val indexOnly = false
   val numQ = 10
   val tupleSizes = Seq(1e6.toInt)
   val dimensions = Seq(128)
-  val partitions = Seq(6, 10, 20, 50)
-  val indices = Seq(IndexType.vaf, IndexType.sh, IndexType.ecp)
-  val indicesToGenerate = Seq(IndexType.vaf, IndexType.sh, IndexType.ecp)
+  val partitions = Seq(3, 6, 9, 10, 12, 20, 50)
+  val indices = Seq(IndexType.vaf, IndexType.sh, IndexType.ecp, IndexType.lsh)
+  val indicesToGenerate = Seq(IndexType.vaf, IndexType.sh, IndexType.ecp, IndexType.lsh)
   //TODO Test Current
   val partitioners = Seq(RepartitionMessage.Partitioner.ECP, RepartitionMessage.Partitioner.SPARK, RepartitionMessage.Partitioner.SH)
 
@@ -53,6 +53,7 @@ class RPCClient(channel: ManagedChannel, definer: AdamDefinitionBlockingStub, se
   EvaluationResultLogger.init(pr)
   //dropAllEntities()
   //definer.dropEntity(EntityNameMessage("sil_" + 1e6.toInt + "_" + 128 + "_" + host.replace(".", "")))
+  //definer.dropIndex(IndexNameMessage(getOrGenIndex(IndexType.ecp, "sift_realdata")))
 
   for (tuples <- tupleSizes) {
     information.put("tuples", tuples)
@@ -72,36 +73,41 @@ class RPCClient(channel: ManagedChannel, definer: AdamDefinitionBlockingStub, se
           information.put("partitions", part)
           for (partitioner <- partitioners) {
             information.put("partitioner", partitioner)
-            val repartition = definer.repartitionIndexData(RepartitionMessage(name, numberOfPartitions = part, option = RepartitionMessage.PartitionOptions.REPLACE_EXISTING, partitioner = partitioner))
-            if(repartition.code!=AckMessage.Code.OK){
-                log.error("Failed repartitioning {} for {} partitions with {}", index.name, part.toString, partitioner.name)
-                Thread.sleep(2000)
-                while(definer.count(EntityNameMessage(eName)).code!=AckMessage.Code.OK){
-                  log.error("Connection failed... Reconnecting")
-                  Thread.sleep(10000)
-                }
+            var repartition = definer.repartitionIndexData(RepartitionMessage(name, numberOfPartitions = part, option = RepartitionMessage.PartitionOptions.REPLACE_EXISTING, partitioner = partitioner))
+            if (repartition.code != AckMessage.Code.OK) {
+              log.error("Failed repartitioning {} for {} partitions with {}", index.name, part.toString, partitioner.name)
+              Thread.sleep(2000)
+              while (definer.count(EntityNameMessage(eName)).code != AckMessage.Code.OK) {
+                log.error("Connection failed... Reconnecting")
+                Thread.sleep(10000)
+              }
+              log.debug("Reconnected")
+              repartition = definer.repartitionIndexData(RepartitionMessage(name, numberOfPartitions = part, option = RepartitionMessage.PartitionOptions.REPLACE_EXISTING, partitioner = partitioner))
             }
-            name = repartition.message
-            val props = definer.getEntityProperties(EntityNameMessage(name))
-            PartitionResultLogger.write(information + ("distribution" -> props.properties("tuplesPerPartition")) toMap)
-            //Free query to cache index
-            val nnq = Some(randomQueryMessage(dim, 0.0))
-            searcherBlocking.doQuery(QueryMessage(nnq = nnq, from = Some(FromMessage(FromMessage.Source.Index(name)))))
+            if (repartition.code == AckMessage.Code.OK) {
+              name = repartition.message
 
-            log.debug("Timing queries")
-            for (dropPerc <- dropPartitions) {
-              timeQuery(name, dropPerc)
+              val props = definer.getEntityProperties(EntityNameMessage(name))
+              PartitionResultLogger.write(information + ("distribution" -> props.properties("tuplesPerPartition")) toMap)
+              //Free query to cache index
+              val nnq = Some(randomQueryMessage(dim, 0.0))
+              searcherBlocking.doQuery(QueryMessage(nnq = nnq, from = Some(FromMessage(FromMessage.Source.Index(name)))))
+
+              log.debug("Timing queries")
+              for (dropPerc <- dropPartitions) {
+                timeQuery(name, dropPerc)
+              }
             }
           }
         }
       }
     }
   }
-  log.debug("I'm done")
+  log.info("I'm done")
 
 
   def getOrGenQueries(dim: Int): IndexedSeq[NearestNeighbourQueryMessage] = {
-    if(eName=="sift_realdata"){
+    if (eName == "sift_realdata") {
       val queries = SIFTQueries.getQueries(querypath, numQ)
       return queries.map(vec => {
         NearestNeighbourQueryMessage("feature", Some(FeatureVectorMessage().withDenseVector(DenseVectorMessage(vec))), None, getDistanceMsg, k, Map[String, String](), indexOnly = indexOnly)
@@ -150,10 +156,12 @@ class RPCClient(channel: ManagedChannel, definer: AdamDefinitionBlockingStub, se
     * Returns the ordered list of correct pks for all queries
     */
   def getOrGenTruth(dim: Int): IndexedSeq[IndexedSeq[Float]] = {
-    if(eName=="sift_realdata"){
-      val truths =  SIFTQueries.getTruths(truthpath,numQ).map(_.map(_.toFloat))
+    val distances = new File("resources/" + eName + "/truths_" + dim + ".apdists")
+    if (eName == "sift_realdata" && distances.exists()) {
+      val truths = SIFTQueries.getTruths(truthpath, numQ).map(_.map(_.toFloat))
       return truths
     }
+
     val file = new File("resources/" + eName + "/truths_" + dim + ".reslist")
     if (file.exists()) {
       SeqIO.readNestedSeq(file)
@@ -163,6 +171,7 @@ class RPCClient(channel: ManagedChannel, definer: AdamDefinitionBlockingStub, se
 
       var qCounter = 0
       val pks = ListBuffer[IndexedSeq[Float]]()
+      val dists = ListBuffer[IndexedSeq[Float]]()
       while (qCounter < numQ) {
         val t1 = System.currentTimeMillis()
         val qres = searcherBlocking.doQuery(QueryMessage(from = Some(FromMessage(FromMessage.Source.Index(getOrGenIndex(IndexType.vaf, eName))))
@@ -170,19 +179,27 @@ class RPCClient(channel: ManagedChannel, definer: AdamDefinitionBlockingStub, se
           .responses.head.results
         val t2 = System.currentTimeMillis()
         pks += qres.map(t => (t.data("ap_distance").getFloatData, t.data("pk").getLongData.toFloat)).sortBy(_._1).take(k).map(_._2).toIndexedSeq
+        dists+=qres.map(t => t.data("ap_distance").getFloatData).sortBy(el => el).take(k).toIndexedSeq
         qCounter += 1
         log.debug(qCounter + "/" + numQ + ", time: " + (t2 - t1))
       }
       val topk = pks.toIndexedSeq
-
+      SeqIO.storeNestedSeq(distances, dists.toIndexedSeq)
       SeqIO.storeNestedSeq(file, topk)
       topk
     }
   }
 
+  //List of Ap_distances
+  def getOrGenFullTruth(dim: Int) : IndexedSeq[IndexedSeq[Float]] = {
+    val file = new File("resources/" + eName + "/truths_" + dim + ".apdists")
+    getOrGenTruth(dim)
+    SeqIO.readNestedSeq(file)
+  }
+
   /** Checks if an Entity with the given Tuple size and dimensions exists */
   def getOrGenEntity(tuples: Int, dim: Int): String = {
-    if(tuples == 1e6.toInt && dim == 128){
+    if (tuples == 1e6.toInt && dim == 128) {
       return "sift_realdata"
     }
     val eName = "sil_" + tuples + "_" + dim + "_" + host.replace(".", "")
@@ -204,6 +221,7 @@ class RPCClient(channel: ManagedChannel, definer: AdamDefinitionBlockingStub, se
     val part = information("partitions").toString.toInt
     val queries = getOrGenQueries(dim)
     val truths = getOrGenTruth(dim)
+    val distances = getOrGenFullTruth(dim)
     val topKRes = getOrGenNoSkip(dim, index, part, information("partitioner").asInstanceOf[Partitioner])
 
     val queryCount = numQ
@@ -227,19 +245,36 @@ class RPCClient(channel: ManagedChannel, definer: AdamDefinitionBlockingStub, se
       val gtruth = truths(queryCounter)
       val noskipRecall = topKRes(queryCounter)
       val skipRecall = recall(gtruth, dropRes, k)
+      //TODO Inefficient
+      val quality : Float = qualityError(distances(queryCounter), dropRes.toIndexedSeq)
+      val approx = approxError(distances(queryCounter),dropRes)
 
       val prValues = IndexedSeq.tabulate(pr)(el => (precision(gtruth, dropRes, el), recall(gtruth, dropRes, el)))
-      val res = information ++ Map("time" -> (stop - start), "nores" -> dropRes.size, "skip_recall" -> skipRecall, "noskip_recall" -> noskipRecall, "skipPercentage" -> dropPerc)
+      val res = information ++ Map("time" -> (stop - start), "nores" -> dropRes.size, "skip_recall" -> skipRecall, "noskip_recall" -> noskipRecall, "skipPercentage" -> dropPerc, "quality"->quality, "errorApprox" -> approx)
       EvaluationResultLogger.writePR(res toMap, prValues)
       queryCounter += 1
     }
+  }
+
+
+  def qualityError(truth: IndexedSeq[Float], guess: IndexedSeq[QueryResultTupleMessage]): Float = {
+    truth.take(k).zipWithIndex.map(el => truth(el._2)/guess(el._2).data("ap_distance").getFloatData).sum / Math.max(1, Math.min(k, truth.size))
+  }
+
+  def approxError(truth: IndexedSeq[Float], guess: Seq[QueryResultTupleMessage]): Float = {
+    truth.take(k).sum / guess.take(k).map(_.data("ap_distance").getFloatData).sum
+  }
+
+  def minkowski2(one: IndexedSeq[Float], two: IndexedSeq[Float]): Float = {
+    val dists = one.zipWithIndex.map(el => Math.pow(el._1 - two(el._2), 2))
+    dists.sum.toFloat
   }
 
   /** Recall @ k */
   def recall(truth: IndexedSeq[Float], guess: Seq[QueryResultTupleMessage], k: Int): Float = {
     val guessPKs = guess.map(_.data("pk").getLongData.toFloat)
     val ag = truth.take(k).intersect(guessPKs).length
-    ag.toFloat / Math.max(1, Math.min(k, truth.size)) //sanity-check for division and if k > truth.size
+    ag.toFloat / Math.max(1, truth.size) //sanity-check for division and if k > truth.size
   }
 
   /** Precision @ k */
@@ -263,10 +298,10 @@ class RPCClient(channel: ManagedChannel, definer: AdamDefinitionBlockingStub, se
   /** Drops all entities. Careful when using this operation */
   def dropAllEntities() = {
 
-    log.warn("You have requested to drop all entities on host: "+host+". Please confirm by entering the number 42.")
-    val keyboard = new Scanner(System.in);
-    val myint = keyboard.nextInt();
-    if(myint!=42){
+    log.warn("You have requested to drop all entities on host: " + host + ". Please confirm by entering the number 42.")
+    val keyboard = new Scanner(System.in)
+    val myint = keyboard.nextInt()
+    if (myint != 42) {
       System.exit(1)
     }
     val entityList = definer.listEntities(EmptyMessage())
