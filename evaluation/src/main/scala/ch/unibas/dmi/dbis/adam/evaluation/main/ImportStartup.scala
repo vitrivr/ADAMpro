@@ -11,7 +11,7 @@ import org.vitrivr.adam.grpc.grpc.AdamDefinitionGrpc
 object ImportStartup {
 
   var grpcHost = "10.34.58.136"
-  grpcHost = "localhost"
+  //grpcHost = "localhost"
   val grpcPort = 5890
 
   def main(args: Array[String]): Unit = {

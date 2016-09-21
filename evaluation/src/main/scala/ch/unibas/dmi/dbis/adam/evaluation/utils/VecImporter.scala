@@ -24,7 +24,7 @@ object VecImporter extends Logging {
     val preview = Await.result(definer.getEntityProperties(EntityNameMessage("sift_realdata")), Duration(100, "s"))
     System.out.println(preview)
 
-    //Await.result(definer.dropEntity(EntityNameMessage("sift_realdata")), Duration(100, "s"))
+    Await.result(definer.dropEntity(EntityNameMessage("sift_realdata")), Duration(100, "s"))
     val exists = Await.result(definer.listEntities(EmptyMessage()), Duration(100, "s")).entities.find(_.equals(eName))
     if (exists.isEmpty) {
       log.info("Generating new Entity: " + eName)

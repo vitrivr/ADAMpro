@@ -41,7 +41,8 @@ object IndexPartitioner extends Logging {
       data = data.join(join.get, index.pk.name)
     }
 
-    //repartition
+    try{
+      //repartition
     data = partitioner match {
       case PartitionerChoice.SPARK => SparkPartitioner(data, cols, Some(index.indexname), nPartitions)
       case PartitionerChoice.RANDOM => RandomPartitioner(data, cols, Some(index.indexname), nPartitions)
@@ -55,7 +56,9 @@ object IndexPartitioner extends Logging {
     data = data.select(index.pk.name, FieldNames.featureIndexColumnName)
     log.debug("New Data Schema: "+data.schema.treeString)
     //log.debug("Sampled Row: "+data.head.toString() + "| "+data.head.getAs[BitString[_]](FieldNames.featureIndexColumnName).getBitIndexes.mkString(", "))
-
+    }catch{
+      case e: Exception => return Failure(e)
+    }
     mode match {
       case PartitionMode.CREATE_NEW =>
         val newName = Index.createIndexName(index.entityname, index.attribute, index.indextypename)
