@@ -11,7 +11,7 @@ import ch.unibas.dmi.dbis.adam.index.Index.{IndexName, IndexTypeName}
 import ch.unibas.dmi.dbis.adam.index.structures.IndexTypes
 import ch.unibas.dmi.dbis.adam.index.structures.va.marks.{EquidistantMarksGenerator, EquifrequentMarksGenerator, MarksGenerator}
 import ch.unibas.dmi.dbis.adam.index.structures.va.signature.VariableSignatureGenerator
-import ch.unibas.dmi.dbis.adam.index.{IndexGenerator, IndexGeneratorFactory, IndexingTaskTuple}
+import ch.unibas.dmi.dbis.adam.index.{ParameterInfo, IndexGenerator, IndexGeneratorFactory, IndexingTaskTuple}
 import ch.unibas.dmi.dbis.adam.main.AdamContext
 import ch.unibas.dmi.dbis.adam.query.distance.{DistanceFunction, MinkowskiDistance}
 import org.apache.spark.rdd.RDD
@@ -140,4 +140,15 @@ class VAVIndexGeneratorFactory extends IndexGeneratorFactory {
 
     new VAVIndexGenerator(totalNumBits, marksGenerator, trainingSize, distance.asInstanceOf[MinkowskiDistance])
   }
+
+
+  /**
+    *
+    * @return
+    */
+  override def parametersInfo: Seq[ParameterInfo] = Seq(
+    new ParameterInfo("ntraining", "number of training tuples", Seq[String]()),
+    new ParameterInfo("signature-nbits", "number of bits for the complete signature", Seq(32, 64, 128, 256, 1024)),
+    new ParameterInfo("marktype", "distribution of marks", Seq("equidistant", "equifrequent"))
+  )
 }

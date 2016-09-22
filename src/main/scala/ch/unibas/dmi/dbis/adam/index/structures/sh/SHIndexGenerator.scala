@@ -190,8 +190,17 @@ class SHIndexGeneratorFactory extends IndexGeneratorFactory {
     } else {
       None
     }
-    val trainingSize = properties.getOrElse("ntraining", "500").toInt
+    val trainingSize = properties.getOrElse("ntraining", "1000").toInt
 
     new SHIndexGenerator(nbits, trainingSize)
   }
+
+  /**
+    *
+    * @return
+    */
+  override def parametersInfo: Seq[ParameterInfo] = Seq(
+    new ParameterInfo("ntraining", "number of training tuples", Seq[String]()),
+    new ParameterInfo("nbits", "number of bits for hash", Seq(64, 128, 256, 512, 1024))
+  )
 }

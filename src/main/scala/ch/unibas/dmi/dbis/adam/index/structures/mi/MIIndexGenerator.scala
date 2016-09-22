@@ -4,7 +4,7 @@ import ch.unibas.dmi.dbis.adam.entity.Entity
 import ch.unibas.dmi.dbis.adam.entity.Entity._
 import ch.unibas.dmi.dbis.adam.index.Index._
 import ch.unibas.dmi.dbis.adam.index.structures.IndexTypes
-import ch.unibas.dmi.dbis.adam.index.{IndexGeneratorFactory, IndexGenerator, IndexingTaskTuple}
+import ch.unibas.dmi.dbis.adam.index.{ParameterInfo, IndexGeneratorFactory, IndexGenerator, IndexingTaskTuple}
 import ch.unibas.dmi.dbis.adam.main.AdamContext
 import ch.unibas.dmi.dbis.adam.query.distance.DistanceFunction
 import org.apache.spark.annotation.Experimental
@@ -97,8 +97,19 @@ class MIIndexGeneratorFactory extends IndexGeneratorFactory {
   def getIndexGenerator(distance: DistanceFunction, properties: Map[String, String] = Map[String, String]())(implicit ac: AdamContext): IndexGenerator = {
     val ki = properties.get("ki").map(_.toInt)
     val ks = properties.get("ks").map(_.toInt)
-    val trainingSize = properties.get("nrefs").map(_.toInt)
 
-    new MIIndexGenerator(ki, ks, distance, trainingSize)
+    val nrefs = properties.get("nrefs").map(_.toInt)
+
+    new MIIndexGenerator(ki, ks, distance, nrefs)
   }
+
+  /**
+    *
+    * @return
+    */
+  override def parametersInfo: Seq[ParameterInfo] = Seq(
+    new ParameterInfo("nrefs", "number of reference objects", Seq(64, 128, 256, 512)),
+    new ParameterInfo("ki", "number of reference objects used for indexing", Seq(64, 128, 256, 512)),
+    new ParameterInfo("ks", "number of reference objects used for searching (ks <= ki)", Seq(64, 128, 256, 512))
+  )
 }

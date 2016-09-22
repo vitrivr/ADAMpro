@@ -32,20 +32,22 @@ class PQIndexGenerator(nsq: Int, trainingSize: Int)(@transient implicit val ac: 
     val n = entity.count
     val fraction = Sampling.computeFractionForSampleSize(math.max(trainingSize, MINIMUM_NUMBER_OF_TUPLE), n, false)
     var trainData = data.sample(false, fraction).collect()
-    if(trainData.length < MINIMUM_NUMBER_OF_TUPLE){
+    if (trainData.length < MINIMUM_NUMBER_OF_TUPLE) {
       trainData = data.take(MINIMUM_NUMBER_OF_TUPLE)
     }
 
     val meta = train(trainData)
 
-    val d = trainData.head.feature.size
+    val dim = trainData.head.feature.size
+
+    assert(dim >= nsq)
 
     log.debug("PQ indexing...")
 
     val indexdata = data.map(
       datum => {
         val hash = datum.feature.toArray
-          .grouped(math.max(1, d / nsq)).toSeq
+          .grouped(math.max(1, dim / nsq)).toSeq
           .zipWithIndex
           .map { case (split, idx) => meta.models(idx).predict(Vectors.dense(split.map(_.toDouble))).toByte }
         Row(datum.id, hash)
@@ -106,8 +108,17 @@ class PQIndexGeneratorFactory extends IndexGeneratorFactory {
     */
   def getIndexGenerator(distance: DistanceFunction, properties: Map[String, String] = Map[String, String]())(implicit ac: AdamContext): IndexGenerator = {
     val nsq = properties.getOrElse("nsq", "8").toInt
-    val trainingSize = properties.getOrElse("ntraining", "500").toInt
+    val trainingSize = properties.getOrElse("ntraining", "1000").toInt
 
     new PQIndexGenerator(nsq, trainingSize)
   }
+
+  /**
+    *
+    * @return
+    */
+  override def parametersInfo: Seq[ParameterInfo] = Seq(
+    new ParameterInfo("ntraining", "number of training tuples", Seq[String]()),
+    new ParameterInfo("nsq", "number of sub-vectors", Seq(4, 8, 16, 32, 64, 128, 256, 512, 1024))
+  )
 }

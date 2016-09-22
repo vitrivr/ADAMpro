@@ -17,7 +17,7 @@ import org.apache.spark.sql.types.{StructField, StructType}
 import org.apache.spark.util.random.Sampling
 
 
-class LSHIndexGenerator(numHashTables: Int, numHashes: Int, m : Int, distance: DistanceFunction, trainingSize: Int)(@transient implicit val ac: AdamContext) extends IndexGenerator {
+class LSHIndexGenerator(numHashTables: Int, numHashes: Int, m: Int, distance: DistanceFunction, trainingSize: Int)(@transient implicit val ac: AdamContext) extends IndexGenerator {
   override val indextypename: IndexTypeName = IndexTypes.LSHINDEX
 
   /**
@@ -109,4 +109,16 @@ class LSHIndexGeneratorFactory extends IndexGeneratorFactory {
 
     new LSHIndexGenerator(numHashTables, numHashes, maxBuckets, distance, trainingSize)
   }
+
+  /**
+    *
+    * @return
+    */
+  override def parametersInfo: Seq[ParameterInfo] = Seq(
+    new ParameterInfo("ntraining", "number of training tuples", Seq[String]()),
+    new ParameterInfo("nhashtables", "number of hash tables (are OR-ed)", Seq(16, 32, 64, 128, 256)),
+    new ParameterInfo("nhashes", "number of hashes (are AND-ed)", Seq(16, 32, 64, 128, 256)),
+    new ParameterInfo("nbuckets", "maximum number of buckets per hash table", Seq(16, 32, 64, 128, 256)),
+    new ParameterInfo("norm", "norm to use (defines hash function)", Seq[String]())
+  )
 }

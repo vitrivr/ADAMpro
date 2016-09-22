@@ -11,7 +11,7 @@ import ch.unibas.dmi.dbis.adam.exception.QueryNotConformException
 import ch.unibas.dmi.dbis.adam.index.Index._
 import ch.unibas.dmi.dbis.adam.index.structures.va.marks.VAPlusMarksGenerator
 import ch.unibas.dmi.dbis.adam.index.structures.va.signature.VariableSignatureGenerator
-import ch.unibas.dmi.dbis.adam.index.{IndexGeneratorFactory, IndexingTaskTuple, IndexGenerator}
+import ch.unibas.dmi.dbis.adam.index.{ParameterInfo, IndexGeneratorFactory, IndexingTaskTuple, IndexGenerator}
 import ch.unibas.dmi.dbis.adam.index.structures.IndexTypes
 import ch.unibas.dmi.dbis.adam.main.AdamContext
 import ch.unibas.dmi.dbis.adam.query.distance.{DistanceFunction, MinkowskiDistance}
@@ -176,4 +176,14 @@ class VAPlusIndexGeneratorFactory extends IndexGeneratorFactory {
 
     new VAPlusIndexGenerator(nbits, ndims, trainingSize, distance.asInstanceOf[MinkowskiDistance])
   }
+
+  /**
+    *
+    * @return
+    */
+  override def parametersInfo: Seq[ParameterInfo] = Seq(
+    new ParameterInfo("ntraining", "number of training tuples", Seq[String]()),
+    new ParameterInfo("signature-nbits", "number of bits for the complete signature", Seq(32, 64, 128, 256, 1024)),
+    new ParameterInfo("ndims", "distribution of marks", Seq(64, 128, 256, 512, 1024)) //TODO: this should rather be a function based on the ndims
+  )
 }

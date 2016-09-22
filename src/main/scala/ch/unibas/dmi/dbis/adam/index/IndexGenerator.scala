@@ -39,4 +39,14 @@ trait IndexGenerator extends Serializable with Logging {
 
 trait IndexGeneratorFactory extends Serializable with Logging {
   def getIndexGenerator(distance: DistanceFunction, properties: Map[String, String] = Map[String, String]())(implicit ac: AdamContext): IndexGenerator
+
+  def parametersInfo : Seq[ParameterInfo]
+}
+
+case class ParameterInfo(name : String, description : String, suggestedValues : Seq[String]){
+  def this(name : String, description : String, suggestedValues : Seq[Int]){
+    this(name, description, suggestedValues.map(_.toString))
+  }
+
+
 }

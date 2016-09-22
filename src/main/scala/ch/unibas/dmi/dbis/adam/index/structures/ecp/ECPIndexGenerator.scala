@@ -105,4 +105,13 @@ class ECPIndexGeneratorFactory extends IndexGeneratorFactory {
 
     new ECPIndexGenerator(leaderType, distance, trainingSize)
   }
+
+  /**
+    *
+    * @return
+    */
+  override def parametersInfo: Seq[ParameterInfo] = Seq(
+    new ParameterInfo("ntraining", "number of training tuples", Seq[String]()),
+    new ParameterInfo("leadertype", "choosing existing leader or recomputing centroid of cluster", Seq("simple", "centroid"))
+  )
 }
