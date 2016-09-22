@@ -314,6 +314,7 @@ object Index extends Logging {
   type IndexTypeName = IndexTypes.IndexType
 
   val storage = SparkStartup.storageRegistry.get("parquetindex")
+  assert(storage.isDefined)
 
   /**
     * Creates an index that is unique and which follows the naming rules of indexes.
