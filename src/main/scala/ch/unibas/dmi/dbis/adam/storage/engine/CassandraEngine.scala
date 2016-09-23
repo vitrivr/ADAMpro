@@ -216,7 +216,6 @@ class CassandraEngine(private val url: String, private val port: Int, private va
         throw new UnsupportedOperationException("only appending is supported")
       }
 
-
       var data = df
       import org.apache.spark.sql.functions.{col, udf}
       val castToSeq = udf((c: FeatureVectorWrapper) => {

@@ -97,7 +97,7 @@ case class Entity(val entityname: EntityName)(@transient implicit val ac: AdamCo
       data = _data
     }
 
-    if(predicates.nonEmpty){
+    if (predicates.nonEmpty) {
       val handlerData = schema().filterNot(_.pk).filter(_.storagehandler.isDefined).groupBy(_.storagehandler.get).map { case (handler, attributes) =>
         val predicate = predicates.filter(p => attributes.map(_.name).contains(p))
         val status = handler.read(entityname, attributes, predicate)
@@ -243,6 +243,41 @@ case class Entity(val entityname: EntityName)(@transient implicit val ac: AdamCo
     }
   }
 
+
+  /**
+    *
+    * @param predicates
+    */
+  def delete(predicates: Seq[Predicate]): Unit = {
+    var newData = getData().get
+
+    predicates.foreach { predicate =>
+      newData = newData.filter("NOT " + predicate.sqlString)
+    }
+
+    val handlers = newData.schema.fields
+      .map(field => schema(Some(Seq(field.name)))).filterNot(_.isEmpty).map(_.head)
+      .filterNot(_.pk)
+      .filter(_.storagehandler.isDefined).groupBy(_.storagehandler.get)
+
+    handlers.foreach { case (handler, attributes) =>
+      val fields = if (!attributes.exists(_.name == pk.name)) {
+        attributes.+:(pk)
+      } else {
+        attributes
+      }
+
+      val df = newData.select(fields.map(attribute => col(attribute.name)): _*)
+      val status = handler.write(entityname, df, fields, SaveMode.Overwrite, Map("allowRepartitioning" -> "true", "partitioningKey" -> pk.name))
+
+      if (status.isFailure) {
+        throw status.failed.get
+      }
+    }
+
+    markStale
+  }
+
   /**
     * Returns all available indexes for the entity.
     *
@@ -263,10 +298,6 @@ case class Entity(val entityname: EntityName)(@transient implicit val ac: AdamCo
     indexes.map(_.map(_.markStale()))
   }
 
-  /**
-    * Deletes tuples from the entity
-    */
-  def delete(conditionExpr: String): Unit = ???
 
   /**
     * Drops the data of the entity.

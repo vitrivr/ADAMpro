@@ -52,12 +52,20 @@ case class Predicate(attribute : String, operator : Option[String], values : Seq
     * List of SQL operators to keep in query (otherwise a '=' is added)
     */
   lazy val sqlString = {
-    if(values.length > 1 && operator.getOrElse("=").equals("=")){
-      "(" + attribute + " IN " + values.mkString("(", ",", ")") + ")"
-    } else if (values.length > 1 && operator.getOrElse("=").equals("!=")){
-      "(" + attribute + " NOT IN " + values.mkString("(", ",", ")") + ")"
-    } else if(values.length == 1){
-      "(" + attribute + " " + operator.getOrElse(" = ") + " '" + values.head + "')"
+    val adjustedValues = values.map(value => {
+      if(value.isInstanceOf[String]){
+       "'" + value + "'"
+      } else {
+        value
+      }
+    })
+
+    if(adjustedValues.length > 1 && operator.getOrElse("=").equals("=")){
+      "(" + attribute + " IN " + adjustedValues.mkString("(", ",", ")") + ")"
+    } else if (adjustedValues.length > 1 && operator.getOrElse("=").equals("!=")){
+      "(" + attribute + " NOT IN " + adjustedValues.mkString("(", ",", ")") + ")"
+    } else if(adjustedValues.length == 1){
+      "(" + attribute + " " + operator.getOrElse(" = ") + " " + adjustedValues.head + ")"
     } else {
       ""
     }

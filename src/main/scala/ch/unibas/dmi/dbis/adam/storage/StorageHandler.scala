@@ -122,13 +122,15 @@ class StorageHandler(val engine: Engine) extends Serializable with Logging {
       val options = CatalogOperator.getStorageEngineOption(name, storename).get
 
       if (mode == SaveMode.Overwrite) {
+        //TODO: on overwrite take over index structures, uniqueness, etc. (possibly call create()!)
+
         //overwriting
         var newStorename = ""
         do {
-          newStorename = storename + "-new" + Random.nextInt(999)
+          newStorename = storename + "_new" + Random.nextInt(999)
         } while (engine.exists(newStorename).get)
 
-        val res = engine.write(newStorename, df, attributes, mode, params ++ options)
+        val res = engine.write(newStorename, df, attributes, SaveMode.ErrorIfExists, params ++ options)
 
         if (res.isSuccess) {
           //update name

@@ -4,6 +4,7 @@ import ch.unibas.dmi.dbis.adam.AdamTestBase
 import ch.unibas.dmi.dbis.adam.api.EntityOp
 import ch.unibas.dmi.dbis.adam.datatypes.FieldTypes
 import ch.unibas.dmi.dbis.adam.datatypes.feature.{FeatureVectorWrapper, FeatureVectorWrapperUDT}
+import ch.unibas.dmi.dbis.adam.query.query.Predicate
 import org.apache.spark.sql.Row
 import org.apache.spark.sql.types._
 import org.scalatest.Matchers._
@@ -125,7 +126,7 @@ class EntityTestSuite extends AdamTestBase {
         }
 
         val dbNames = lb.toList.toMap //fields from relational database
-        val templateNames = fieldTemplate.filter(_.sqlType.length > 0).map(ft => ft.name -> ft.sqlType).toMap //fields that should be stored in relational database
+      val templateNames = fieldTemplate.filter(_.sqlType.length > 0).map(ft => ft.name -> ft.sqlType).toMap //fields that should be stored in relational database
 
 
         assert(dbNames.size == templateNames.size)
@@ -399,6 +400,21 @@ class EntityTestSuite extends AdamTestBase {
         assert(randomRowResult.getInt("intfieldunfilled") == 0)
         assert(randomRowResult.getLong("longfieldunfilled") == 0)
         assert(randomRowResult.getBoolean("booleanfieldunfilled") == false)
+      }
+    }
+
+
+    /**
+      *
+      */
+    scenario("delete data from an entity with metadata") {
+      withQueryEvaluationSet { es =>
+        val entity = es.entity
+        import org.apache.spark.sql.functions._
+        val newCount = es.fullData.filter(col("booleanfield") === true).count()
+        entity.delete(Seq(Predicate("booleanfield", None, Seq(false))))
+        val count = entity.count
+        assert(newCount === count)
       }
     }
   }
