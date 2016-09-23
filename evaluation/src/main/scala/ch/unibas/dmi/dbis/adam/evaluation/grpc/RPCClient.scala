@@ -28,7 +28,7 @@ class RPCClient(channel: ManagedChannel, definer: AdamDefinitionBlockingStub, se
   val truthpath = "evaluation/src/main/resources/sift_groundtruth.ivecs"
 
   val k = 100
-  val pr = 20
+  val pr = 101
 
   val compareK = true
 
@@ -39,14 +39,14 @@ class RPCClient(channel: ManagedChannel, definer: AdamDefinitionBlockingStub, se
   val numQ = 10
   val tupleSizes = Seq(1e6.toInt)
   val dimensions = Seq(128)
-  val partitions = Seq(3, 6, 9, 10, 12, 20, 50)
+  val partitions = Seq(10, 20, 50)
   val indices = Seq(IndexType.vaf, IndexType.sh, IndexType.ecp, IndexType.lsh)
   val indicesToGenerate = Seq(IndexType.vaf, IndexType.sh, IndexType.ecp, IndexType.lsh)
-  //TODO Test Current
+
   val partitioners = Seq(RepartitionMessage.Partitioner.ECP, RepartitionMessage.Partitioner.SPARK, RepartitionMessage.Partitioner.SH)
 
   var dropPartitions = Seq(0.0, 0.1, 0.2, 0.3, 0.4, 0.5)
-  var eName = ""
+  var eName = "sift_realdata"
   val information = collection.mutable.Map[String, Any]()
   information.put("k", k)
   PartitionResultLogger.init
@@ -107,7 +107,7 @@ class RPCClient(channel: ManagedChannel, definer: AdamDefinitionBlockingStub, se
 
 
   def getOrGenQueries(dim: Int): IndexedSeq[NearestNeighbourQueryMessage] = {
-    if (eName == "sift_realdata") {
+    if (eName.equals("sift_realdata")) {
       val queries = SIFTQueries.getQueries(querypath, numQ)
       return queries.map(vec => {
         NearestNeighbourQueryMessage("feature", Some(FeatureVectorMessage().withDenseVector(DenseVectorMessage(vec))), None, getDistanceMsg, k, Map[String, String](), indexOnly = indexOnly)
@@ -157,7 +157,7 @@ class RPCClient(channel: ManagedChannel, definer: AdamDefinitionBlockingStub, se
     */
   def getOrGenTruth(dim: Int): IndexedSeq[IndexedSeq[Float]] = {
     val distances = new File("resources/" + eName + "/truths_" + dim + ".apdists")
-    if (eName == "sift_realdata" && distances.exists()) {
+    if (eName.equals("sift_realdata") && distances.exists()) {
       val truths = SIFTQueries.getTruths(truthpath, numQ).map(_.map(_.toFloat))
       return truths
     }
@@ -179,14 +179,18 @@ class RPCClient(channel: ManagedChannel, definer: AdamDefinitionBlockingStub, se
           .responses.head.results
         val t2 = System.currentTimeMillis()
         pks += qres.map(t => (t.data("ap_distance").getFloatData, t.data("pk").getLongData.toFloat)).sortBy(_._1).take(k).map(_._2).toIndexedSeq
-        dists+=qres.map(t => t.data("ap_distance").getFloatData).sortBy(el => el).take(k).toIndexedSeq
+        dists += qres.map(t => t.data("ap_distance").getFloatData).sortBy(el => el).take(k).toIndexedSeq
         qCounter += 1
         log.debug(qCounter + "/" + numQ + ", time: " + (t2 - t1))
       }
       val topk = pks.toIndexedSeq
       SeqIO.storeNestedSeq(distances, dists.toIndexedSeq)
       SeqIO.storeNestedSeq(file, topk)
-      topk
+      if(eName.equals("sift_realdata")){
+        SIFTQueries.getTruths(truthpath, numQ).map(_.map(_.toFloat))
+      }else{
+        topk
+      }
     }
   }
 
@@ -258,30 +262,39 @@ class RPCClient(channel: ManagedChannel, definer: AdamDefinitionBlockingStub, se
 
 
   def qualityError(truth: IndexedSeq[Float], guess: IndexedSeq[QueryResultTupleMessage]): Float = {
-    truth.take(k).zipWithIndex.map(el => truth(el._2)/guess(el._2).data("ap_distance").getFloatData).sum / Math.max(1, Math.min(k, truth.size))
+    if(guess.size<k){
+      log.error(guess.size+"guess size too small. Information:  "+EvaluationResultLogger.getLast.mkString(":"))
+      return -1
+    }
+    val sorted = guess.sortBy(_.data("ap_distance").getFloatData)
+    truth.take(k).zipWithIndex.map(el => sorted(el._2).data("ap_distance").getFloatData/truth(el._2)).sum / Math.max(1, Math.min(k, truth.size))
   }
 
   def approxError(truth: IndexedSeq[Float], guess: Seq[QueryResultTupleMessage]): Float = {
-    truth.take(k).sum / guess.take(k).map(_.data("ap_distance").getFloatData).sum
-  }
+    val sorted = guess.sortBy(_.data("ap_distance").getFloatData)
 
-  def minkowski2(one: IndexedSeq[Float], two: IndexedSeq[Float]): Float = {
-    val dists = one.zipWithIndex.map(el => Math.pow(el._1 - two(el._2), 2))
-    dists.sum.toFloat
+    val _res= {
+      val el = sorted.take(k).map(_.data("ap_distance").getFloatData).sum
+      if(el==0){
+        1
+      }else el
+    }/
+    truth.take(k).sum
+    _res
   }
 
   /** Recall @ k */
   def recall(truth: IndexedSeq[Float], guess: Seq[QueryResultTupleMessage], k: Int): Float = {
-    val guessPKs = guess.map(_.data("pk").getLongData.toFloat)
-    val ag = truth.take(k).intersect(guessPKs).length
+    val guessPKs = guess.sortBy(el => el.data("ap_distance").getFloatData).map(_.data("pk").getLongData.toFloat)
+    val ag = truth.take(k).intersect(guessPKs.take(k)).length
     ag.toFloat / Math.max(1, truth.size) //sanity-check for division and if k > truth.size
   }
 
   /** Precision @ k */
   def precision(truth: IndexedSeq[Float], guess: Seq[QueryResultTupleMessage], k: Int): Float = {
-    val guessPKs = guess.map(_.data("pk").getLongData.toFloat)
-    val ag = truth.take(k).intersect(guessPKs).length
-    ag.toFloat / Math.max(1, guess.size)
+    val guessPKs = guess.sortBy(el => el.data("ap_distance").getFloatData).map(_.data("pk").getLongData.toFloat)
+    val ag = truth.take(k).intersect(guessPKs.take(k)).length
+    ag.toFloat / k
   }
 
 
