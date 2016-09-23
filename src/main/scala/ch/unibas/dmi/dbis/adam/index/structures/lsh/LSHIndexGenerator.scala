@@ -116,9 +116,9 @@ class LSHIndexGeneratorFactory extends IndexGeneratorFactory {
     */
   override def parametersInfo: Seq[ParameterInfo] = Seq(
     new ParameterInfo("ntraining", "number of training tuples", Seq[String]()),
-    new ParameterInfo("nhashtables", "number of hash tables (are OR-ed)", Seq(16, 32, 64, 128, 256)),
-    new ParameterInfo("nhashes", "number of hashes (are AND-ed)", Seq(16, 32, 64, 128, 256)),
-    new ParameterInfo("nbuckets", "maximum number of buckets per hash table", Seq(16, 32, 64, 128, 256)),
+    new ParameterInfo("nhashtables", "number of hash tables (are OR-ed)", Seq(16, 32, 64, 128, 256).map(_.toString)),
+    new ParameterInfo("nhashes", "number of hashes (are AND-ed)", Seq(16, 32, 64, 128, 256).map(_.toString)),
+    new ParameterInfo("nbuckets", "maximum number of buckets per hash table", Seq(16, 32, 64, 128, 256).map(_.toString)),
     new ParameterInfo("norm", "norm to use (defines hash function)", Seq[String]())
   )
 }

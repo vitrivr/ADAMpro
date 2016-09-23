@@ -1,13 +1,14 @@
 package ch.unibas.dmi.dbis.adam.query.progressive
 
 import ch.unibas.dmi.dbis.adam.entity.Entity.EntityName
-import ch.unibas.dmi.dbis.adam.helpers.scanweight.ScanWeightInspector
+import ch.unibas.dmi.dbis.adam.helpers.benchmark.ScanWeightInspector
 import ch.unibas.dmi.dbis.adam.index.Index
 import ch.unibas.dmi.dbis.adam.index.Index._
 import ch.unibas.dmi.dbis.adam.index.structures.IndexTypes
 import ch.unibas.dmi.dbis.adam.main.AdamContext
+import ch.unibas.dmi.dbis.adam.query.QueryHints
 import ch.unibas.dmi.dbis.adam.query.handler.generic.QueryExpression
-import ch.unibas.dmi.dbis.adam.query.handler.internal.QueryHints.QueryHint
+import QueryHints.QueryHint
 import ch.unibas.dmi.dbis.adam.query.handler.internal.{HintBasedScanExpression, IndexScanExpression, SequentialScanExpression}
 import ch.unibas.dmi.dbis.adam.query.query.NearestNeighbourQuery
 import org.apache.log4j.Logger

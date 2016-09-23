@@ -15,7 +15,7 @@ import org.apache.spark.sql.{DataFrame, Row}
   */
 case class ProjectionExpression(private val projection: ProjectionField, private val expr: QueryExpression, id: Option[String] = None)(@transient implicit val ac: AdamContext) extends QueryExpression(id) {
   override val info = ExpressionDetails(None, Some("Projection Expression"), id, None)
-  children ++= Seq(expr)
+  _children ++= Seq(expr)
 
   override protected def run(options : Option[QueryEvaluationOptions], filter: Option[DataFrame] = None)(implicit ac: AdamContext): Option[DataFrame] = {
     log.debug("performing projection on data")

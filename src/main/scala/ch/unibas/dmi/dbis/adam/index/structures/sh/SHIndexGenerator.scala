@@ -201,6 +201,6 @@ class SHIndexGeneratorFactory extends IndexGeneratorFactory {
     */
   override def parametersInfo: Seq[ParameterInfo] = Seq(
     new ParameterInfo("ntraining", "number of training tuples", Seq[String]()),
-    new ParameterInfo("nbits", "number of bits for hash", Seq(64, 128, 256, 512, 1024))
+    new ParameterInfo("nbits", "number of bits for hash", Seq(64, 128, 256, 512, 1024).map(_.toString))
   )
 }

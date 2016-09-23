@@ -5,8 +5,7 @@ import ch.unibas.dmi.dbis.adam.datatypes.feature.{FeatureVectorWrapper, FeatureV
 import ch.unibas.dmi.dbis.adam.datatypes.gis.{GeometryWrapperUDT, GeometryWrapper, GeographyWrapper, GeographyWrapperUDT}
 import ch.unibas.dmi.dbis.adam.exception.{GeneralAdamException, QueryNotCachedException}
 import ch.unibas.dmi.dbis.adam.main.{SparkStartup, AdamContext}
-import ch.unibas.dmi.dbis.adam.query.QueryLRUCache
-import ch.unibas.dmi.dbis.adam.query.handler.internal.QueryHints
+import ch.unibas.dmi.dbis.adam.query.{QueryHints, QueryLRUCache}
 import ch.unibas.dmi.dbis.adam.query.progressive.{ProgressiveObservation, QueryHintsProgressivePathChooser, SimpleProgressivePathChooser}
 import io.grpc.stub.StreamObserver
 import ch.unibas.dmi.dbis.adam.utils.Logging

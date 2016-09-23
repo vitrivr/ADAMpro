@@ -1,4 +1,4 @@
-package ch.unibas.dmi.dbis.adam.helpers.scanweight
+package ch.unibas.dmi.dbis.adam.helpers.benchmark
 
 import ch.unibas.dmi.dbis.adam.catalog.CatalogOperator
 import ch.unibas.dmi.dbis.adam.entity.Entity

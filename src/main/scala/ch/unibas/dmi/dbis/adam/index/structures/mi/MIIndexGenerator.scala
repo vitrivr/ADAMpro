@@ -108,8 +108,8 @@ class MIIndexGeneratorFactory extends IndexGeneratorFactory {
     * @return
     */
   override def parametersInfo: Seq[ParameterInfo] = Seq(
-    new ParameterInfo("nrefs", "number of reference objects", Seq(64, 128, 256, 512)),
-    new ParameterInfo("ki", "number of reference objects used for indexing", Seq(64, 128, 256, 512)),
-    new ParameterInfo("ks", "number of reference objects used for searching (ks <= ki)", Seq(64, 128, 256, 512))
+    new ParameterInfo("nrefs", "number of reference objects", Seq(64, 128, 256, 512).map(_.toString)),
+    new ParameterInfo("ki", "number of reference objects used for indexing", Seq(64, 128, 256, 512).map(_.toString)),
+    new ParameterInfo("ks", "number of reference objects used for searching (ks <= ki)", Seq(64, 128, 256, 512).map(_.toString))
   )
 }

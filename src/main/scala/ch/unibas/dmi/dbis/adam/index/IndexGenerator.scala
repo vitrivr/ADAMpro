@@ -43,10 +43,4 @@ trait IndexGeneratorFactory extends Serializable with Logging {
   def parametersInfo : Seq[ParameterInfo]
 }
 
-case class ParameterInfo(name : String, description : String, suggestedValues : Seq[String]){
-  def this(name : String, description : String, suggestedValues : Seq[Int]){
-    this(name, description, suggestedValues.map(_.toString))
-  }
-
-
-}
+case class ParameterInfo(name : String, description : String, suggestedValues : Seq[String]){}

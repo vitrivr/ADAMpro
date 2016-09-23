@@ -4,7 +4,7 @@ import ch.unibas.dmi.dbis.adam.config.FieldNames
 import ch.unibas.dmi.dbis.adam.entity.Entity
 import ch.unibas.dmi.dbis.adam.entity.Entity._
 import ch.unibas.dmi.dbis.adam.exception.QueryNotConformException
-import ch.unibas.dmi.dbis.adam.helpers.scanweight.ScanWeightInspector
+import ch.unibas.dmi.dbis.adam.helpers.benchmark.ScanWeightInspector
 import ch.unibas.dmi.dbis.adam.index.Index
 import ch.unibas.dmi.dbis.adam.index.Index._
 import ch.unibas.dmi.dbis.adam.main.AdamContext
@@ -20,7 +20,7 @@ import org.apache.spark.sql.functions._
   * Ivan Giangreco
   * May 2016
   */
-case class IndexScanExpression(private[handler] val index: Index)(private val nnq: NearestNeighbourQuery, id: Option[String] = None)(filterExpr: Option[QueryExpression] = None)(@transient implicit val ac: AdamContext) extends QueryExpression(id) {
+case class IndexScanExpression(val index: Index)(val nnq: NearestNeighbourQuery, id: Option[String] = None)(filterExpr: Option[QueryExpression] = None)(@transient implicit val ac: AdamContext) extends QueryExpression(id) {
   override val info = ExpressionDetails(Some(index.indexname), Some("Index Scan Expression"), id, Some(index.confidence), Map("indextype" -> index.indextypename.name))
   val sourceDescription = {
     if (filterExpr.isDefined) {
@@ -30,7 +30,7 @@ case class IndexScanExpression(private[handler] val index: Index)(private val nn
     }
   }
 
-  children ++= filterExpr.map(Seq(_)).getOrElse(Seq())
+  _children ++= filterExpr.map(Seq(_)).getOrElse(Seq())
 
   def this(indexname: IndexName)(nnq: NearestNeighbourQuery, id: Option[String] = None)(filterExpr: Option[QueryExpression] = None)(implicit ac: AdamContext) {
     this(Index.load(indexname).get)(nnq, id)(filterExpr)

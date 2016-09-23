@@ -148,7 +148,7 @@ class VAVIndexGeneratorFactory extends IndexGeneratorFactory {
     */
   override def parametersInfo: Seq[ParameterInfo] = Seq(
     new ParameterInfo("ntraining", "number of training tuples", Seq[String]()),
-    new ParameterInfo("signature-nbits", "number of bits for the complete signature", Seq(32, 64, 128, 256, 1024)),
+    new ParameterInfo("signature-nbits", "number of bits for the complete signature", Seq(32, 64, 128, 256, 1024).map(_.toString)),
     new ParameterInfo("marktype", "distribution of marks", Seq("equidistant", "equifrequent"))
   )
 }

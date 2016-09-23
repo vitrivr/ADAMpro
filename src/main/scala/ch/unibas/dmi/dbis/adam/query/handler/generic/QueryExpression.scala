@@ -2,7 +2,7 @@ package ch.unibas.dmi.dbis.adam.query.handler.generic
 
 import java.util.concurrent.TimeUnit
 
-import ch.unibas.dmi.dbis.adam.catalog.MeasurementCatalogOperator
+import ch.unibas.dmi.dbis.adam.catalog.LogOperator
 import ch.unibas.dmi.dbis.adam.config.{AdamConfig, FieldNames}
 import ch.unibas.dmi.dbis.adam.main.AdamContext
 import ch.unibas.dmi.dbis.adam.query.information.InformationLevels._
@@ -27,7 +27,13 @@ abstract class QueryExpression(id: Option[String]) extends Serializable with Log
 
   private var results: Option[DataFrame] = None
   val info = ExpressionDetails(None, None, id, None, Map())
-  protected var children: Seq[QueryExpression] = Seq()
+  protected var _children: Seq[QueryExpression] = Seq()
+
+  /**
+    *
+    * @return
+    */
+  def children = _children
 
   /**
     * The filter can be set to speed up queries
@@ -41,10 +47,10 @@ abstract class QueryExpression(id: Option[String]) extends Serializable with Log
   def prepareTree(): QueryExpression = {
     if (!prepared) {
       prepared = true
-      children = children.map(_.prepareTree())
+      _children = _children.map(_.prepareTree())
     } else {
       log.warn("expression was already prepared, still preparing children")
-      children = children.map(_.prepareTree())
+      _children = _children.map(_.prepareTree())
     }
 
     this
@@ -68,7 +74,7 @@ abstract class QueryExpression(id: Option[String]) extends Serializable with Log
     val time = t2 - t1
 
     if(AdamConfig.logQueryExecutionTime && info.source.isDefined){
-      MeasurementCatalogOperator.addMeasurement(info.source.get, this, time)
+      LogOperator.addQuery(this)
     }
 
     info.time = Duration(time, TimeUnit.MILLISECONDS)
@@ -146,7 +152,7 @@ abstract class QueryExpression(id: Option[String]) extends Serializable with Log
       return lb
     }
 
-    children.foreach {
+    _children.foreach {
       child => child.information(currentDepth + 1, maxDepth, levels, withResults, lb)
     }
 
@@ -163,7 +169,7 @@ abstract class QueryExpression(id: Option[String]) extends Serializable with Log
     val sb = new StringBuffer()
     sb.append(info.mkString(indentation))
 
-    children.foreach {
+    _children.foreach {
       child =>
         sb.append(child.mkString(indentation + 4))
     }

@@ -131,7 +131,7 @@ class VAFIndexGeneratorFactory extends IndexGeneratorFactory {
     */
   override def parametersInfo: Seq[ParameterInfo] = Seq(
     new ParameterInfo("ntraining", "number of training tuples", Seq[String]()),
-    new ParameterInfo("nmarks", "number of marks per dimension", Seq(32, 64, 128, 256, 1024)),
+    new ParameterInfo("nmarks", "number of marks per dimension", Seq(32, 64, 128, 256, 1024).map(_.toString)),
     new ParameterInfo("marktype", "distribution of marks", Seq("equidistant", "equifrequent"))
   )
 }

@@ -27,7 +27,7 @@ object BooleanFilterExpression extends Logging {
     */
   case class BooleanFilterScanExpression(private val entity: Entity)(private val bq: BooleanQuery, id: Option[String] = None)(filterExpr: Option[QueryExpression] = None)(@transient implicit val ac: AdamContext) extends QueryExpression(id) {
     override val info = ExpressionDetails(Some(entity.entityname), Some("Table Boolean-Scan Expression"), id, None)
-    children ++= filterExpr.map(Seq(_)).getOrElse(Seq())
+    _children ++= filterExpr.map(Seq(_)).getOrElse(Seq())
 
     def this(entityname: EntityName)(bq: BooleanQuery, id: Option[String] = None)(filterExpr: Option[QueryExpression] = None)(implicit ac: AdamContext) {
       this(Entity.load(entityname).get)(bq, id)(filterExpr)(ac)
@@ -83,7 +83,7 @@ object BooleanFilterExpression extends Logging {
     */
   case class BooleanFilterAdHocExpression(expr: QueryExpression, bq: BooleanQuery, id: Option[String] = None)(implicit ac: AdamContext) extends QueryExpression(id) {
     override val info = ExpressionDetails(None, Some("Ad-Hoc Boolean-Scan Expression"), id, None)
-    children ++= Seq(expr)
+    _children ++= Seq(expr)
 
     override protected def run(options : Option[QueryEvaluationOptions], filter: Option[DataFrame] = None)(implicit ac: AdamContext): Option[DataFrame] = {
       log.debug("run boolean filter operation on data")

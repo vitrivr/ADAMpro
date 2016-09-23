@@ -29,7 +29,7 @@ case class SequentialScanExpression(private val entity: Entity)(private val nnq:
     }
   }
 
-  children ++= filterExpr.map(Seq(_)).getOrElse(Seq())
+  _children ++= filterExpr.map(Seq(_)).getOrElse(Seq())
 
   def this(entityname: EntityName)(nnq: NearestNeighbourQuery, id: Option[String] = None)(filterExpr: Option[QueryExpression] = None)(implicit ac: AdamContext) {
     this(Entity.load(entityname).get)(nnq, id)(filterExpr)

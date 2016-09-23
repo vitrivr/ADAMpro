@@ -19,7 +19,7 @@ import org.apache.spark.sql.functions._
 @Experimental
 case class StochasticIndexQueryExpression(private val exprs: Seq[IndexScanExpression])(nnq: NearestNeighbourQuery, id: Option[String] = None)(filterExpr: Option[QueryExpression] = None)(@transient implicit val ac: AdamContext) extends QueryExpression(id) {
   override val info = ExpressionDetails(None, Some("Compound Query Index Scan Expression"), id, None)
-  children ++= filterExpr.map(Seq(_)).getOrElse(Seq())
+  _children ++= filterExpr.map(Seq(_)).getOrElse(Seq())
   //expres is not added to children as they would be "prepared" for querying, resulting possibly in a sequential scan
   var confidence: Option[Float] = None
 

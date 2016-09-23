@@ -2,10 +2,11 @@ package ch.unibas.dmi.dbis.adam.api
 
 import ch.unibas.dmi.dbis.adam.entity.Entity._
 import ch.unibas.dmi.dbis.adam.entity.{EntityPartitioner, AttributeDefinition, Entity}
+import ch.unibas.dmi.dbis.adam.exception.GeneralAdamException
 import ch.unibas.dmi.dbis.adam.helpers.partition.PartitionMode
 import ch.unibas.dmi.dbis.adam.helpers.sparsify.SparsifyHelper
 import ch.unibas.dmi.dbis.adam.main.AdamContext
-import ch.unibas.dmi.dbis.adam.helpers.scanweight.{ScanWeightInspector, ScanWeightUpdater}
+import ch.unibas.dmi.dbis.adam.helpers.benchmark.{ScanWeightInspector}
 import org.apache.spark.sql.DataFrame
 
 import scala.util.{Success, Try}
@@ -167,7 +168,7 @@ object EntityOp extends GenericOp {
     */
   def adjustScanWeights(entityname: EntityName, attribute: String, benchmark : Boolean, options : Map[String, String] = Map())(implicit ac: AdamContext): Try[Void] = {
     execute("benchmark entity and indexes of " + entityname + "(" + attribute + ")" + "and adjust weights operation") {
-      ScanWeightUpdater(entityname, attribute, benchmark, options)
+      throw new GeneralAdamException("not implemented yet")
       Success(null)
     }
   }
@@ -194,7 +195,7 @@ object EntityOp extends GenericOp {
     */
   def resetScanWeights(entityname: EntityName)(implicit ac: AdamContext): Try[Void] = {
     execute("reset weights of entity and indexes of " + entityname) {
-      ScanWeightUpdater.resetWeights(entityname)
+      throw new GeneralAdamException("not implemented yet")
       Success(null)
     }
   }

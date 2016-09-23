@@ -4,8 +4,11 @@ import java.io.{ObjectInputStream, ByteArrayInputStream, ObjectOutputStream, Byt
 
 import ch.unibas.dmi.dbis.adam.catalog.catalogs._
 import ch.unibas.dmi.dbis.adam.config.AdamConfig
+import ch.unibas.dmi.dbis.adam.entity.Entity.EntityName
 import ch.unibas.dmi.dbis.adam.exception.GeneralAdamException
 import ch.unibas.dmi.dbis.adam.query.handler.generic.QueryExpression
+import ch.unibas.dmi.dbis.adam.query.handler.internal.IndexScanExpression
+import ch.unibas.dmi.dbis.adam.query.query.NearestNeighbourQuery
 import ch.unibas.dmi.dbis.adam.utils.Logging
 import com.mchange.v2.c3p0.ComboPooledDataSource
 import slick.dbio.NoStream
@@ -22,19 +25,21 @@ import scala.util.{Failure, Success, Try}
   * Ivan Giangreco
   * September 2016
   */
-object MeasurementCatalogOperator extends Logging {
+object LogOperator extends Logging {
   private val MAX_WAITING_TIME: Duration = 100.seconds
 
   private val ds = new ComboPooledDataSource
   ds.setDriverClass("org.apache.derby.jdbc.EmbeddedDriver")
-  ds.setJdbcUrl("jdbc:derby:" + AdamConfig.internalsPath + "/ap_measurements" + "")
+  ds.setJdbcUrl("jdbc:derby:" + AdamConfig.internalsPath + "/ap_logs" + "")
 
   private val DB = Database.forDataSource(ds)
 
   private[catalog] val SCHEMA = "adampro"
-  private val _measurements = TableQuery[MeasurementCatalog]
-  private[catalog] val CATALOGS = Seq(
-    _measurements
+  private val _measurements = TableQuery[MeasurementLog]
+  private val _queries = TableQuery[QueryLog]
+
+  private[catalog] val LOGS = Seq(
+    _measurements, _queries
   )
 
 
@@ -42,7 +47,7 @@ object MeasurementCatalogOperator extends Logging {
     * Initializes the catalog. Method is called at the beginning (see below).
     */
   private def init() {
-    val connection = Database.forURL("jdbc:derby:" + AdamConfig.internalsPath + "/ap_measurements" + ";create=true")
+    val connection = Database.forURL("jdbc:derby:" + AdamConfig.internalsPath + "/ap_logs" + ";create=true")
 
     try {
       val actions = new ListBuffer[DBIOAction[_, NoStream, _]]()
@@ -56,7 +61,7 @@ object MeasurementCatalogOperator extends Logging {
 
       val tables = Await.result(connection.run(sql"""SELECT TABLENAME FROM SYS.SYSTABLES NATURAL JOIN SYS.SYSSCHEMAS WHERE SCHEMANAME = '#$SCHEMA'""".as[String]), MAX_WAITING_TIME).toSeq
 
-      CATALOGS.foreach { catalog =>
+      LOGS.foreach { catalog =>
         if (!tables.contains(catalog.baseTableRow.tableName)) {
           actions += catalog.schema.create
         } else {
@@ -96,19 +101,59 @@ object MeasurementCatalogOperator extends Logging {
   }
 
   /**
-    * Adds a measurement to the catalog
     *
-    * @param key
     * @param qexpr
-    * @param value
     * @return
     */
-  def addMeasurement(key: String, qexpr: QueryExpression, value: Long): Try[Void] = {
-    execute("add measurement") {
-      val serQuery = serialize(qexpr)
-      val query = _measurements.+=(key, serQuery, value)
-      DB.run(query)
+  def addQuery(qexpr: QueryExpression): Try[Void] = {
+    execute("add query") {
+      if (qexpr.children.nonEmpty) {
+        qexpr.children.foreach { child =>
+          addQuery(child)
+        }
+      }
+
+      if (qexpr.isInstanceOf[IndexScanExpression]) {
+        val ise = qexpr.asInstanceOf[IndexScanExpression]
+        val entityname = ise.index.entityname
+        val nnq = ise.nnq
+
+        addQuery(entityname, nnq)
+      }
+
       null
+    }
+  }
+
+  /**
+    *
+    * @param entityname
+    * @param nnq
+    * @return
+    */
+  def addQuery(entityname: EntityName, nnq: NearestNeighbourQuery): Try[String] = {
+    execute("add query") {
+      val key = java.util.UUID.randomUUID.toString
+      val sernnq = serialize(nnq)
+
+      val query = _queries.+=(key, entityname.toString, sernnq)
+      DB.run(query)
+
+      key
+    }
+  }
+
+
+  /**
+    * Gets measurements for given key.
+    *
+    * @param entityname
+    * @return
+    */
+  def getQueries(entityname: EntityName): Try[Seq[NearestNeighbourQuery]] = {
+    execute("get measurement") {
+      val query = _queries.filter(_.entityname === entityname.toString).map(_.query).result
+      Await.result(DB.run(query), MAX_WAITING_TIME).map(deserialize[NearestNeighbourQuery](_))
     }
   }
 
@@ -138,16 +183,23 @@ object MeasurementCatalogOperator extends Logging {
     ois.readObject.asInstanceOf[T]
   }
 
+
   /**
-    * Gets measurements for given key.
+    * Adds a measurement to the catalog
     *
     * @param key
+    * @param source
+    * @param nresults
+    * @param time
     * @return
     */
-  def getMeasurements(key: String): Try[Seq[(QueryExpression, Long)]] = {
-    execute("get measurement") {
-      val query = _measurements.filter(_.key === key).map(x => (x.query, x.measurement)).result
-      Await.result(DB.run(query), MAX_WAITING_TIME).map(x => (deserialize[QueryExpression](x._1), x._2))
+  def addMeasurement(key: String, source: String, nresults: Long, time: Long): Try[Void] = {
+    //TODO: permanently log query times (useful?)
+    execute("add measurement") {
+      val query = _measurements.+=(key, source, nresults, time)
+      DB.run(query)
+
+      null
     }
   }
 

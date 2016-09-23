@@ -10,7 +10,7 @@ import ch.unibas.dmi.dbis.adam.datatypes.gis.{GeometryWrapperUDT, GeographyWrapp
 import ch.unibas.dmi.dbis.adam.entity.AttributeDefinition
 import ch.unibas.dmi.dbis.adam.exception.GeneralAdamException
 import ch.unibas.dmi.dbis.adam.main.AdamContext
-import ch.unibas.dmi.dbis.adam.query.QueryCacheOptions
+import ch.unibas.dmi.dbis.adam.query.{QueryHints, QueryCacheOptions}
 import ch.unibas.dmi.dbis.adam.query.distance._
 import ch.unibas.dmi.dbis.adam.query.handler.external.ExternalScanExpressions
 import ch.unibas.dmi.dbis.adam.query.handler.generic.{QueryEvaluationOptions, QueryExpression}

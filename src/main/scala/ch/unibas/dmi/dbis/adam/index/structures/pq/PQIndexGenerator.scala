@@ -119,6 +119,6 @@ class PQIndexGeneratorFactory extends IndexGeneratorFactory {
     */
   override def parametersInfo: Seq[ParameterInfo] = Seq(
     new ParameterInfo("ntraining", "number of training tuples", Seq[String]()),
-    new ParameterInfo("nsq", "number of sub-vectors", Seq(4, 8, 16, 32, 64, 128, 256, 512, 1024))
+    new ParameterInfo("nsq", "number of sub-vectors", Seq(4, 8, 16, 32, 64, 128, 256, 512, 1024).map(_.toString))
   )
 }

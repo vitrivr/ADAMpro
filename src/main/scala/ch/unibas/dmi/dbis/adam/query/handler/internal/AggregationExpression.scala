@@ -23,7 +23,7 @@ import scala.concurrent.{Await, Future}
   * April 2016
   */
 abstract class AggregationExpression(private val left: QueryExpression, private val right: QueryExpression, order: ExpressionEvaluationOrder.Order = ExpressionEvaluationOrder.Parallel, options: Map[String, String] = Map(), id: Option[String] = None)(@transient implicit val ac: AdamContext) extends QueryExpression(id) {
-  children ++= Seq(left, right)
+  _children ++= Seq(left, right)
 
   override val info = ExpressionDetails(None, Some("Aggregation Expression (" + aggregationName + ", " + order.toString + ")"), id, None)
 
