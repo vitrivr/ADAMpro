@@ -28,14 +28,15 @@ import org.apache.spark.util.random.Sampling
   * VAF: this VA-File index will use for every dimension the same number of bits (original implementation)
   * note that using VAF, we may still use both the equidistant or the equifrequent marks generator
   */
-class VAFIndexGenerator(maxMarks: Int, marksGenerator: MarksGenerator, bitsPerDimension: Int, trainingSize: Int, distance: MinkowskiDistance)(@transient implicit val ac: AdamContext) extends IndexGenerator {
+class VAFIndexGenerator(fixedNumBitsPerDimension: Option[Int], marksGenerator: MarksGenerator, trainingSize: Int, distance: MinkowskiDistance)(@transient implicit val ac: AdamContext) extends IndexGenerator {
   override val indextypename: IndexTypeName = IndexTypes.VAFINDEX
+
 
   /**
     *
-    * @param indexname name of index
+    * @param indexname  name of index
     * @param entityname name of entity
-    * @param data data to index
+    * @param data       data to index
     * @return
     */
   override def index(indexname: IndexName, entityname: EntityName, data: RDD[IndexingTaskTuple[_]]): (DataFrame, Serializable) = {
@@ -44,7 +45,7 @@ class VAFIndexGenerator(maxMarks: Int, marksGenerator: MarksGenerator, bitsPerDi
     val n = entity.count
     val fraction = Sampling.computeFractionForSampleSize(math.max(trainingSize, MINIMUM_NUMBER_OF_TUPLE), n, withReplacement = false)
     var trainData = data.sample(false, fraction).collect()
-    if(trainData.length < MINIMUM_NUMBER_OF_TUPLE){
+    if (trainData.length < MINIMUM_NUMBER_OF_TUPLE) {
       trainData = data.take(MINIMUM_NUMBER_OF_TUPLE)
     }
 
@@ -79,8 +80,12 @@ class VAFIndexGenerator(maxMarks: Int, marksGenerator: MarksGenerator, bitsPerDi
 
     val dim = trainData.head.feature.length
 
-    val signatureGenerator = new FixedSignatureGenerator(dim, bitsPerDimension)
-    val marks = marksGenerator.getMarks(trainData, maxMarks)
+    //formula based on results from Weber/Böhm (2000): Trading Qaulity for Time with Nearest Neighbor Search
+    val nbits = fixedNumBitsPerDimension.getOrElse(math.ceil(5 + 0.5 * math.log(dim / 10) / math.log(2)).toInt)
+    val nMarks = 1 << nbits
+
+    val signatureGenerator = new FixedSignatureGenerator(dim, nbits)
+    val marks = marksGenerator.getMarks(trainData, nMarks)
 
     log.trace("VA-File (fixed) finished training")
 
@@ -106,7 +111,7 @@ class VAFIndexGeneratorFactory extends IndexGeneratorFactory {
     * @param properties indexing properties
     */
   def getIndexGenerator(distance: DistanceFunction, properties: Map[String, String] = Map[String, String]())(implicit ac: AdamContext): IndexGenerator = {
-    val maxMarks = properties.getOrElse("nmarks", "64").toInt
+    val maxMarks = properties.get("nmarks").map(_.toInt)
 
     if (!distance.isInstanceOf[MinkowskiDistance]) {
       log.error("only Minkowski distances allowed for VAF Indexer")
@@ -119,10 +124,9 @@ class VAFIndexGeneratorFactory extends IndexGeneratorFactory {
       case "equidistant" => EquidistantMarksGenerator
     }
 
-    val fixedNumBitsPerDimension = math.ceil(scala.math.log(maxMarks) / scala.math.log(2)).toInt
     val trainingSize = properties.getOrElse("ntraining", "5000").toInt
 
-    new VAFIndexGenerator(maxMarks, marksGenerator, fixedNumBitsPerDimension, trainingSize, distance.asInstanceOf[MinkowskiDistance])
+    new VAFIndexGenerator(maxMarks, marksGenerator, trainingSize, distance.asInstanceOf[MinkowskiDistance])
   }
 
   /**
@@ -131,7 +135,7 @@ class VAFIndexGeneratorFactory extends IndexGeneratorFactory {
     */
   override def parametersInfo: Seq[ParameterInfo] = Seq(
     new ParameterInfo("ntraining", "number of training tuples", Seq[String]()),
-    new ParameterInfo("nmarks", "number of marks per dimension", Seq(32, 64, 128, 256, 1024).map(_.toString)),
+    new ParameterInfo("nmarks", "number of marks per dimension", Seq(16, 32, 64, 128, 256, 1024).map(_.toString)),
     new ParameterInfo("marktype", "distribution of marks", Seq("equidistant", "equifrequent"))
   )
 }

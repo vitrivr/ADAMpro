@@ -28,8 +28,10 @@ import org.apache.spark.util.random.Sampling
   * VAV: this VA-File index will have a training phase in which we learn the number of bits per dimension (new version of VA-File)
   * note that using VAF, we may still use both the equidistant or the equifrequent marks generator
   */
-class VAVIndexGenerator(nbits: Option[Int], marksGenerator: MarksGenerator, trainingSize: Int, distance: MinkowskiDistance)(@transient implicit val ac: AdamContext) extends IndexGenerator {
+class VAVIndexGenerator(nbits_total: Option[Int], nbits_dim : Option[Int], marksGenerator: MarksGenerator, trainingSize: Int, distance: MinkowskiDistance)(@transient implicit val ac: AdamContext) extends IndexGenerator {
   override val indextypename: IndexTypeName = IndexTypes.VAVINDEX
+
+  assert(!(nbits_total.isDefined && nbits_dim.isDefined))
 
   /**
     *
@@ -83,14 +85,14 @@ class VAVIndexGenerator(nbits: Option[Int], marksGenerator: MarksGenerator, trai
     val dataMatrix = DenseMatrix(dTrainData.toList: _*)
 
     val nfeatures = dTrainData.head.length
-    val numComponents = math.min(nfeatures, nbits.getOrElse(nfeatures * 8))
+    val numComponents = math.min(nfeatures, nbits_total.getOrElse(nfeatures * nbits_dim.getOrElse(8)))
 
     // pca
     val variance = diag(cov(dataMatrix, center = true)).toArray
     val sumVariance = variance.sum
 
     // compute shares of bits
-    val modes = variance.map(variance => (variance / sumVariance * nbits.getOrElse(nfeatures * 8)).toInt)
+    val modes = variance.map(variance => (variance / sumVariance * nbits_total.getOrElse(nfeatures * nbits_dim.getOrElse(8))).toInt)
 
     val signatureGenerator = new VariableSignatureGenerator(modes)
     val marks = marksGenerator.getMarks(trainData, modes.map(x => 2 << (x - 1)))
@@ -136,9 +138,16 @@ class VAVIndexGeneratorFactory extends IndexGeneratorFactory {
     } else {
       None
     }
+
+    val bitsPerDim = if (properties.get("signature-nbits-dim").isDefined) {
+      Some(properties.get("signature-nbits-dim").get.toInt)
+    } else {
+      None
+    }
+
     val trainingSize = properties.getOrElse("ntraining", "1000").toInt
 
-    new VAVIndexGenerator(totalNumBits, marksGenerator, trainingSize, distance.asInstanceOf[MinkowskiDistance])
+    new VAVIndexGenerator(totalNumBits, bitsPerDim, marksGenerator, trainingSize, distance.asInstanceOf[MinkowskiDistance])
   }
 
 
@@ -148,7 +157,8 @@ class VAVIndexGeneratorFactory extends IndexGeneratorFactory {
     */
   override def parametersInfo: Seq[ParameterInfo] = Seq(
     new ParameterInfo("ntraining", "number of training tuples", Seq[String]()),
-    new ParameterInfo("signature-nbits", "number of bits for the complete signature", Seq(32, 64, 128, 256, 1024).map(_.toString)),
+    new ParameterInfo("signature-nbits", "number of bits for the complete signature", Seq()),
+    new ParameterInfo("signature-nbits-dim", "number of bits for signature, given per dim", Seq(5, 8, 10, 12).map(_.toString)),
     new ParameterInfo("marktype", "distribution of marks", Seq("equidistant", "equifrequent"))
   )
 }
