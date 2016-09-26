@@ -16,6 +16,7 @@ service AdamDefinition {
   rpc DropEntity(EntityNameMessage) returns (AckMessage) {}
   rpc ExistsEntity(EntityNameMessage) returns (ExistsMessage) {}
   rpc Insert(stream InsertMessage) returns (AckMessage) {}
+  rpc Delete(DeleteMessage) returns (AckMessage) {}
   //creates an index on the data
   rpc Index(IndexMessage) returns (AckMessage) {}
   rpc GenerateAllIndexes(IndexMessage) returns (AckMessage) {}
@@ -171,6 +172,20 @@ message InsertMessage {
   message TupleInsertMessage {
     map<string, DataMessage> data = 1;
   }
+}
+
+
+message DeleteMessage {
+  string entity = 1;
+
+  message PredicateMessage {
+    string attribute = 1;
+    repeated DataMessage values = 2;
+    string op = 3;
+  }
+
+
+  repeated PredicateMessage predicates = 2;
 }
 
 message IndexMessage {

@@ -7,6 +7,7 @@ import ch.unibas.dmi.dbis.adam.exception.GeneralAdamException
 import ch.unibas.dmi.dbis.adam.helpers.partition.{PartitionMode, PartitionerChoice}
 import ch.unibas.dmi.dbis.adam.index.structures.IndexTypes
 import ch.unibas.dmi.dbis.adam.main.{AdamContext, SparkStartup}
+import ch.unibas.dmi.dbis.adam.query.query.Predicate
 import ch.unibas.dmi.dbis.adam.utils.{AdamImporter, Logging}
 import com.google.protobuf.ByteString
 import io.grpc.stub.StreamObserver
@@ -162,6 +163,47 @@ class DataDefinitionRPC extends AdamDefinitionGrpc.AdamDefinition with Logging {
       }
     }
   }
+
+  /**
+    *
+    * @param request
+    * @return
+    */
+  override def delete(request: DeleteMessage): Future[AckMessage] = {
+    log.debug("rpc call for delete operation")
+
+    val predicates = request.predicates.map(bqm => {
+      val attribute = bqm.attribute
+      val op = if (bqm.op.isEmpty) {
+        None
+      } else {
+        Some(bqm.op)
+      }
+      val values = bqm.values.map(value => value.datatype.number match {
+        case DataMessage.BOOLEANDATA_FIELD_NUMBER => value.getBooleanData
+        case DataMessage.DOUBLEDATA_FIELD_NUMBER => value.getBooleanData
+        case DataMessage.FLOATDATA_FIELD_NUMBER => value.getBooleanData
+        case DataMessage.GEOGRAPHYDATA_FIELD_NUMBER => value.getGeographyData
+        case DataMessage.GEOMETRYDATA_FIELD_NUMBER => value.getGeometryData
+        case DataMessage.INTDATA_FIELD_NUMBER => value.getIntData
+        case DataMessage.LONGDATA_FIELD_NUMBER => value.getLongData
+        case DataMessage.STRINGDATA_FIELD_NUMBER => value.getStringData
+        case _ => throw new GeneralAdamException("search predicates can not be of any type")
+      })
+
+      new Predicate(bqm.attribute, op, values)
+    })
+
+    val res = EntityOp.delete(request.entity, predicates)
+
+    if (res.isSuccess) {
+      Future.successful(AckMessage(code = AckMessage.Code.OK))
+    } else {
+      log.error(res.failed.get.getMessage, res.failed.get)
+      Future.successful(AckMessage(code = AckMessage.Code.ERROR, message = res.failed.get.getMessage))
+    }
+  }
+
 
   /**
     *

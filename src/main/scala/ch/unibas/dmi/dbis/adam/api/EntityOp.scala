@@ -7,6 +7,7 @@ import ch.unibas.dmi.dbis.adam.helpers.partition.PartitionMode
 import ch.unibas.dmi.dbis.adam.helpers.sparsify.SparsifyHelper
 import ch.unibas.dmi.dbis.adam.main.AdamContext
 import ch.unibas.dmi.dbis.adam.helpers.benchmark.{ScanWeightInspector}
+import ch.unibas.dmi.dbis.adam.query.query.Predicate
 import org.apache.spark.sql.DataFrame
 
 import scala.util.{Success, Try}
@@ -114,6 +115,20 @@ object EntityOp extends GenericOp {
   def insert(entityname: EntityName, df: DataFrame)(implicit ac: AdamContext): Try[Void] = {
     execute("insert data into entity " + entityname + " operation") {
       Entity.load(entityname).get.insert(df)
+    }
+  }
+
+  /**
+    * Deletes data from the entity.
+    *
+    * @param entityname name of entity
+    * @param predicates list of predicates
+    *
+    */
+  def delete(entityname: EntityName, predicates : Seq[Predicate])(implicit ac: AdamContext): Try[Void] = {
+    execute("delete data from " + entityname + " operation") {
+      Entity.load(entityname).get.delete(predicates)
+      null
     }
   }
 
