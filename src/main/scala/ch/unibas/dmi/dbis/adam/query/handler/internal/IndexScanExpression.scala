@@ -4,7 +4,7 @@ import ch.unibas.dmi.dbis.adam.config.FieldNames
 import ch.unibas.dmi.dbis.adam.entity.Entity
 import ch.unibas.dmi.dbis.adam.entity.Entity._
 import ch.unibas.dmi.dbis.adam.exception.QueryNotConformException
-import ch.unibas.dmi.dbis.adam.helpers.benchmark.ScanWeightInspector
+import ch.unibas.dmi.dbis.adam.helpers.benchmark.ScanWeightCatalogOperator
 import ch.unibas.dmi.dbis.adam.index.Index
 import ch.unibas.dmi.dbis.adam.index.Index._
 import ch.unibas.dmi.dbis.adam.main.AdamContext
@@ -42,7 +42,7 @@ case class IndexScanExpression(val index: Index)(val nnq: NearestNeighbourQuery,
         .filter(_.isSuccess)
         .map(_.get)
         .filter(nnq.isConform(_)) //choose only indexes that are conform to query
-        .sortBy(index => -ScanWeightInspector(index))
+        .sortBy(index => -ScanWeightCatalogOperator(index))
         .head
     )(nnq, id)(filterExpr)
   }

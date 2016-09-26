@@ -29,9 +29,9 @@ service AdamDefinition {
   rpc GetEntityProperties(EntityNameMessage) returns (EntityPropertiesMessage) {}
   rpc RepartitionEntityData(RepartitionMessage) returns (AckMessage) {}
   rpc RepartitionIndexData(RepartitionMessage) returns (AckMessage) {}
-  rpc AdjustScanWeights(UpdateWeightsMessage) returns (AckMessage) {}
   rpc ResetScanWeights(EntityNameMessage) returns (AckMessage) {}
   rpc SetScanWeight(WeightMessage) returns (AckMessage) {}
+  rpc AdaptScanMethods(AdaptScanMethodsMessage) returns (AckMessage) {}
   rpc SparsifyEntity(SparsifyEntityMessage) returns (AckMessage) {}
   rpc ImportData(ImportMessage) returns (AckMessage) {}
   rpc ImportDataFile(ImportDataFileMessage) returns (AckMessage) {}
@@ -218,16 +218,29 @@ message RepartitionMessage {
   map<string, string> options = 6;
 }
 
-message UpdateWeightsMessage {
-  string entity = 1;
-  string attribute = 2;
-  bool benchmark = 3;
-}
-
 message WeightMessage {
   string entity = 1; //entity or index
   string attribute = 2;
   float weight = 3;
+}
+
+message AdaptScanMethodsMessage {
+  string entity = 1;
+  string attribute = 2;
+
+  enum IndexCollection {
+    EXISTING_INDEXES = 0;
+    NEW_INDEXES = 1;
+  }
+  IndexCollection ic = 3;
+
+  enum QueryCollection {
+    LOGGED_QUERIES = 0;
+    RANDOM_QUERIES = 1;
+  }
+  QueryCollection qc = 4;
+
+  map<string, string> options = 5;
 }
 
 message SparsifyEntityMessage {

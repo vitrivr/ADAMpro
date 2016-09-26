@@ -136,7 +136,7 @@ object LogOperator extends Logging {
       val key = java.util.UUID.randomUUID.toString
       val sernnq = serialize(nnq)
 
-      val query = _queries.+=(key, entityname.toString, sernnq)
+      val query = _queries.+=(key, entityname.toString, nnq.attribute, sernnq)
       DB.run(query)
 
       key
@@ -148,11 +148,12 @@ object LogOperator extends Logging {
     * Gets measurements for given key.
     *
     * @param entityname
+    * @param attribute
     * @return
     */
-  def getQueries(entityname: EntityName): Try[Seq[NearestNeighbourQuery]] = {
+  def getQueries(entityname: EntityName, attribute: String): Try[Seq[NearestNeighbourQuery]] = {
     execute("get measurement") {
-      val query = _queries.filter(_.entityname === entityname.toString).map(_.query).result
+      val query = _queries.filter(_.entityname === entityname.toString).filter(_.attribute === attribute).map(_.query).result
       Await.result(DB.run(query), MAX_WAITING_TIME).map(deserialize[NearestNeighbourQuery](_))
     }
   }

@@ -1,12 +1,12 @@
 package ch.unibas.dmi.dbis.adam.api
 
 import ch.unibas.dmi.dbis.adam.entity.Entity._
-import ch.unibas.dmi.dbis.adam.entity.{EntityPartitioner, AttributeDefinition, Entity}
+import ch.unibas.dmi.dbis.adam.entity.{AttributeDefinition, Entity, EntityPartitioner}
 import ch.unibas.dmi.dbis.adam.exception.GeneralAdamException
+import ch.unibas.dmi.dbis.adam.helpers.benchmark.ScanWeightCatalogOperator
 import ch.unibas.dmi.dbis.adam.helpers.partition.PartitionMode
 import ch.unibas.dmi.dbis.adam.helpers.sparsify.SparsifyHelper
 import ch.unibas.dmi.dbis.adam.main.AdamContext
-import ch.unibas.dmi.dbis.adam.helpers.benchmark.{ScanWeightInspector}
 import ch.unibas.dmi.dbis.adam.query.query.Predicate
 import org.apache.spark.sql.DataFrame
 
@@ -175,20 +175,6 @@ object EntityOp extends GenericOp {
   }
 
   /**
-    * Benchmarks entity and indexes corresponding to entity and adjusts scan weights.
-    *
-    * @param entityname name of entity
-    * @param attribute     name of attribute
-    * @return
-    */
-  def adjustScanWeights(entityname: EntityName, attribute: String, benchmark : Boolean, options : Map[String, String] = Map())(implicit ac: AdamContext): Try[Void] = {
-    execute("benchmark entity and indexes of " + entityname + "(" + attribute + ")" + "and adjust weights operation") {
-      throw new GeneralAdamException("not implemented yet")
-      Success(null)
-    }
-  }
-
-  /**
     * Sets the weight of the entity to make it more important in the search
     *
     * @param entityname name of entity
@@ -198,7 +184,7 @@ object EntityOp extends GenericOp {
     */
   def setScanWeight(entityname: EntityName, attribute: String, weight: Float)(implicit ac: AdamContext): Try[Void] = {
     execute("set entity weight for " + entityname + "(" + attribute + ")" + " operation") {
-      ScanWeightInspector.set(Entity.load(entityname).get, attribute, weight)
+      ScanWeightCatalogOperator.set(Entity.load(entityname).get, attribute, weight)
       Success(null)
     }
   }

@@ -1,8 +1,9 @@
 package ch.unibas.dmi.dbis.adam.helpers.benchmark
 
 import ch.unibas.dmi.dbis.adam.api.QueryOp
+import ch.unibas.dmi.dbis.adam.entity.Entity
+import ch.unibas.dmi.dbis.adam.helpers.benchmark.ScanWeightCatalogOperator.{ScanWeightable, ScanWeightedEntity, ScanWeightedIndex}
 import ch.unibas.dmi.dbis.adam.index.Index
-import ch.unibas.dmi.dbis.adam.index.Index.IndexName
 import ch.unibas.dmi.dbis.adam.main.AdamContext
 import ch.unibas.dmi.dbis.adam.query.query.NearestNeighbourQuery
 import ch.unibas.dmi.dbis.adam.utils.Logging
@@ -13,15 +14,17 @@ import ch.unibas.dmi.dbis.adam.utils.Logging
   * Ivan Giangreco
   * September 2016
   */
-class BenchmarkMeasurer(indexes: Seq[Index], queries: Seq[NearestNeighbourQuery])(@transient implicit val ac: AdamContext) extends Serializable with Logging {
-  assert(indexes.map(_.entityname).distinct.length == 1)
+private[benchmark] class Benchmarker(indexes: Seq[Index], queries: Seq[NearestNeighbourQuery])(@transient implicit val ac: AdamContext) extends Serializable with Logging {
   //only one entity
+  assert(indexes.map(_.entityname).distinct.length == 1)
 
   private val NRUNS = 100
 
   case class Measurement(precision: Float, recall: Float, time: Long)
 
-  //TODO: consider entity scan too
+  if(queries.length < 10){
+    log.warn("only " + queries.length + " used for benchmarking; benchmarking results may not be significant")
+  }
 
 
   /**
@@ -35,7 +38,7 @@ class BenchmarkMeasurer(indexes: Seq[Index], queries: Seq[NearestNeighbourQuery]
     *
     * @return
     */
-  private def performMeasurement(): Map[IndexName, Float] = {
+  private def performMeasurement(): Map[ScanWeightable, Float] = {
     queries.flatMap {
       query => performMeasurement(query)
     }.groupBy(_._1).mapValues { x => x.map(_._2) }.mapValues { queryScores =>
@@ -49,18 +52,40 @@ class BenchmarkMeasurer(indexes: Seq[Index], queries: Seq[NearestNeighbourQuery]
     * @param nnq
     * @return
     */
-  private def performMeasurement(nnq: NearestNeighbourQuery): Map[IndexName, Float] = {
+  private def performMeasurement(nnq: NearestNeighbourQuery): Map[ScanWeightable, Float] = {
     val entity = indexes.head.entity.get
     val rel = QueryOp.sequential(entity.entityname, nnq, None).get.get.select(entity.pk.name).collect().map(_.getAs[Any](0)).toSet
 
-    indexes.map { index =>
-      index.indexname -> performMeasurement(index, nnq, rel)
-    }.toMap.mapValues { measurements =>
-      totalScore(measurements)
-    }
+    val indexScores = indexes.map { index => ScanWeightedIndex(index) -> totalScore(performMeasurement(index, nnq, rel)) }
+    val entityScore = Seq(ScanWeightedEntity(entity, nnq.attribute) -> totalScore(performMeasurement(entity, nnq)))
+
+    (indexScores ++ entityScore).toMap
   }
 
   /**
+    *
+    * @param entity
+    * @param nnq
+    * @return
+    */
+  private def performMeasurement(entity: Entity, nnq: NearestNeighbourQuery): Seq[Measurement] = {
+    val entityNNQ = NearestNeighbourQuery(nnq.attribute, nnq.q, nnq.weights, nnq.distance, nnq.k, false, nnq.options, None)
+
+    (0 until NRUNS).map { i =>
+      val t1 = System.currentTimeMillis
+      val res = QueryOp.sequential(entity.entityname, entityNNQ, None).get.get.select(entity.pk.name).collect()
+      val t2 = System.currentTimeMillis
+
+      val recall = 1.toFloat
+      val precision = 1.toFloat
+      val time = t2 - t1
+
+      Measurement(precision, recall, time)
+    }
+  }
+
+
+    /**
     *
     * @param index
     * @param nnq
@@ -89,6 +114,7 @@ class BenchmarkMeasurer(indexes: Seq[Index], queries: Seq[NearestNeighbourQuery]
   }
 
   /**
+    * Computes a score per scan method. The higher the score the better the scan method.
     *
     * @param measurements
     * @return
@@ -116,8 +142,14 @@ class BenchmarkMeasurer(indexes: Seq[Index], queries: Seq[NearestNeighbourQuery]
     //remove measurements > or < 3 * stdev
     val filteredMeasurements = measurements.filterNot(m => m > mean + 3 * stdev).filterNot(m => m < mean - 3 * stdev)
 
+    //scoring function
+    val maxTime = 10
+    val score = (x : Float) => 1 / (1 + maxTime * math.exp(-0.5 * x)) //TODO: normalize by other measurements too?
+
+    val scores = filteredMeasurements.map(x => score(x.toFloat))
+
     //average
-    filteredMeasurements.sum.toFloat / filteredMeasurements.length.toFloat
+    scores.sum.toFloat / scores.length.toFloat
   }
 
 
@@ -134,7 +166,7 @@ class BenchmarkMeasurer(indexes: Seq[Index], queries: Seq[NearestNeighbourQuery]
     val filteredMeasurements = measurements.filterNot(m => m > mean + 3 * stdev).filterNot(m => m < mean - 3 * stdev)
 
     //average
-    filteredMeasurements.sum.toFloat / filteredMeasurements.length.toFloat
+    filteredMeasurements.sum / filteredMeasurements.length.toFloat
   }
 
   /**
@@ -150,6 +182,6 @@ class BenchmarkMeasurer(indexes: Seq[Index], queries: Seq[NearestNeighbourQuery]
     val filteredMeasurements = measurements.filterNot(m => m > mean + 3 * stdev).filterNot(m => m < mean - 3 * stdev)
 
     //average
-    filteredMeasurements.sum.toFloat / filteredMeasurements.length.toFloat
+    filteredMeasurements.sum / filteredMeasurements.length.toFloat
   }
 }

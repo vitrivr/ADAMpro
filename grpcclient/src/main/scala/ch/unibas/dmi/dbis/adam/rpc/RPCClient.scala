@@ -10,6 +10,8 @@ import io.grpc.stub.StreamObserver
 import io.grpc.{ManagedChannel, ManagedChannelBuilder}
 import org.vitrivr.adam.grpc.grpc.AdamDefinitionGrpc.AdamDefinitionBlockingStub
 import org.vitrivr.adam.grpc.grpc.AdamSearchGrpc.{AdamSearchStub, AdamSearchBlockingStub}
+import org.vitrivr.adam.grpc.grpc.AdaptScanMethodsMessage.IndexCollection.NEW_INDEXES
+import org.vitrivr.adam.grpc.grpc.AdaptScanMethodsMessage.QueryCollection.RANDOM_QUERIES
 import org.vitrivr.adam.grpc.grpc.DistanceMessage.DistanceType
 import org.vitrivr.adam.grpc.grpc.RepartitionMessage.PartitionOptions
 import org.vitrivr.adam.grpc.grpc._
@@ -240,7 +242,7 @@ class RPCClient(channel: ManagedChannel, definer: AdamDefinitionBlockingStub, se
     */
   def entityBenchmarkAndUpdateScanWeights(entityname: String, attribute: String): Try[Void] = {
     execute("benchmark entity scans and reset weights operation") {
-      definer.adjustScanWeights(UpdateWeightsMessage(entityname, attribute))
+      definer.adaptScanMethods(AdaptScanMethodsMessage(entityname, attribute, NEW_INDEXES, RANDOM_QUERIES))
       Success(null)
     }
   }

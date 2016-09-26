@@ -3,7 +3,7 @@ package ch.unibas.dmi.dbis.adam.api
 import ch.unibas.dmi.dbis.adam.entity.Entity
 import ch.unibas.dmi.dbis.adam.entity.Entity._
 import ch.unibas.dmi.dbis.adam.exception.GeneralAdamException
-import ch.unibas.dmi.dbis.adam.helpers.benchmark.ScanWeightInspector
+import ch.unibas.dmi.dbis.adam.helpers.benchmark.ScanWeightCatalogOperator
 import ch.unibas.dmi.dbis.adam.index.{IndexPartitioner, Index}
 import ch.unibas.dmi.dbis.adam.index.Index._
 import ch.unibas.dmi.dbis.adam.helpers.partition.{PartitionMode, PartitionerChoice}
@@ -135,7 +135,7 @@ object IndexOp extends GenericOp {
     */
   def setScanWeight(indexname: IndexName, weight: Float)(implicit ac: AdamContext): Try[Void] = {
     execute("set index weight for " + indexname + " operation") {
-      ScanWeightInspector.set(Index.load(indexname).get, weight)
+      ScanWeightCatalogOperator.set(Index.load(indexname).get, weight)
       Success(null)
     }
   }

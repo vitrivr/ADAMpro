@@ -1,7 +1,7 @@
 package ch.unibas.dmi.dbis.adam.query.progressive
 
 import ch.unibas.dmi.dbis.adam.entity.Entity.EntityName
-import ch.unibas.dmi.dbis.adam.helpers.benchmark.ScanWeightInspector
+import ch.unibas.dmi.dbis.adam.helpers.benchmark.ScanWeightCatalogOperator
 import ch.unibas.dmi.dbis.adam.index.Index
 import ch.unibas.dmi.dbis.adam.index.Index._
 import ch.unibas.dmi.dbis.adam.index.structures.IndexTypes
@@ -37,7 +37,7 @@ class SimpleProgressivePathChooser()(implicit ac: AdamContext) extends Progressi
     IndexTypes.values
       .map(indextypename => Index.list(Some(entityname), Some(indextypename)).filter(_.isSuccess).map(_.get)
         .filter(nnq.isConform(_))
-        .sortBy(index => -ScanWeightInspector(index)))
+        .sortBy(index => -ScanWeightCatalogOperator(index)))
       .filterNot(_.isEmpty)
       .map(_.head)
       .map(index => {
@@ -67,7 +67,7 @@ class IndexTypeProgressivePathChooser(indextypenames: Seq[IndexTypeName])(implic
     indextypenames
       .map(indextypename => Index.list(Some(entityname), Some(indextypename)).filter(_.isSuccess).map(_.get)
         .filter(nnq.isConform(_))
-        .sortBy(index => -ScanWeightInspector(index)).head)
+        .sortBy(index => -ScanWeightCatalogOperator(index)).head)
       .map(index => IndexScanExpression(index)(nnq)())
   }
 }

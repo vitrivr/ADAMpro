@@ -13,7 +13,7 @@ import ch.unibas.dmi.dbis.adam.query.handler.internal.AggregationExpression.Empt
 import ch.unibas.dmi.dbis.adam.query.handler.internal.BooleanFilterExpression.BooleanFilterScanExpression
 import QueryHints._
 import ch.unibas.dmi.dbis.adam.query.query.{BooleanQuery, NearestNeighbourQuery}
-import ch.unibas.dmi.dbis.adam.helpers.benchmark.ScanWeightInspector
+import ch.unibas.dmi.dbis.adam.helpers.benchmark.ScanWeightCatalogOperator
 import ch.unibas.dmi.dbis.adam.utils.Logging
 import org.apache.spark.sql.DataFrame
 
@@ -113,11 +113,11 @@ object HintBasedScanExpression extends Logging {
             val indexes = CatalogOperator.listIndexes(Some(entityname)).get.map(Index.load(_)).filter(_.isSuccess).map(_.get).groupBy(_.indextypename).mapValues(_.map(_.indexname))
             val index = indexes.values.toSeq.flatten
               .map(indexname => Index.load(indexname, false).get)
-              .sortBy(index => -ScanWeightInspector(index)).head
+              .sortBy(index => -ScanWeightCatalogOperator(index)).head
 
             val entity = Entity.load(entityname).get
 
-            if (ScanWeightInspector(index) > ScanWeightInspector(entity, nnq.get.attribute)) {
+            if (ScanWeightCatalogOperator(index) > ScanWeightCatalogOperator(entity, nnq.get.attribute)) {
               scan = Some(IndexScanExpression(index)(nnq.get)(scan))
             } else {
               scan = Some(SequentialScanExpression(entity)(nnq.get)(scan))
@@ -133,7 +133,7 @@ object HintBasedScanExpression extends Logging {
               val sortedIndexChoice = indexChoice
                 .filter(nnq.get.isConform(_)) //choose only indexes that are conform to query
                 .filterNot(_.isStale) //don't use stale indexes
-                .sortBy(index => -ScanWeightInspector(index)) //order by weight (highest weight first)
+                .sortBy(index => -ScanWeightCatalogOperator(index)) //order by weight (highest weight first)
 
               if (sortedIndexChoice.isEmpty) {
                 return None

@@ -4,6 +4,9 @@ import ch.unibas.dmi.dbis.adam.api._
 import ch.unibas.dmi.dbis.adam.catalog.CatalogOperator
 import ch.unibas.dmi.dbis.adam.entity.Entity
 import ch.unibas.dmi.dbis.adam.exception.GeneralAdamException
+import ch.unibas.dmi.dbis.adam.helpers.benchmark.IndexCollectionFactory.{NewIndexCollectionOption, ExistingIndexCollectionOption}
+import ch.unibas.dmi.dbis.adam.helpers.benchmark.QueryCollectionFactory.{RandomQueryCollectionOption, LoggedQueryCollectionOption}
+import ch.unibas.dmi.dbis.adam.helpers.benchmark._
 import ch.unibas.dmi.dbis.adam.helpers.partition.{PartitionMode, PartitionerChoice}
 import ch.unibas.dmi.dbis.adam.index.structures.IndexTypes
 import ch.unibas.dmi.dbis.adam.main.{AdamContext, SparkStartup}
@@ -14,6 +17,7 @@ import io.grpc.stub.StreamObserver
 import org.apache.spark.annotation.Experimental
 import org.apache.spark.sql.Row
 import org.apache.spark.sql.types.{StructField, StructType}
+import org.vitrivr.adam.grpc.grpc.AdaptScanMethodsMessage.{QueryCollection, IndexCollection}
 import org.vitrivr.adam.grpc.grpc._
 
 import scala.concurrent.duration._
@@ -443,15 +447,14 @@ class DataDefinitionRPC extends AdamDefinitionGrpc.AdamDefinition with Logging {
     }
   }
 
-
   /**
     *
     * @param request
     * @return
     */
-  override def adjustScanWeights(request: UpdateWeightsMessage): Future[AckMessage] = {
-    log.debug("rpc call for benchmarking entity and index")
-    val res = EntityOp.adjustScanWeights(request.entity, request.attribute, request.benchmark)
+  override def resetScanWeights(request: EntityNameMessage): Future[AckMessage] = {
+    log.debug("rpc call for resetting entity and index scan weights")
+    val res = EntityOp.resetScanWeights(request.entity)
 
     if (res.isSuccess) {
       Future.successful(AckMessage(AckMessage.Code.OK, request.entity))
@@ -466,9 +469,26 @@ class DataDefinitionRPC extends AdamDefinitionGrpc.AdamDefinition with Logging {
     * @param request
     * @return
     */
-  override def resetScanWeights(request: EntityNameMessage): Future[AckMessage] = {
-    log.debug("rpc call for resetting entity and index scan weights")
-    val res = EntityOp.resetScanWeights(request.entity)
+  override def adaptScanMethods(request: AdaptScanMethodsMessage): Future[AckMessage] = {
+    log.debug("rpc call for benchmarking entity and index")
+
+    val ico = request.ic match {
+      case IndexCollection.EXISTING_INDEXES => ExistingIndexCollectionOption
+      case IndexCollection.NEW_INDEXES => NewIndexCollectionOption
+      case _ => null
+    }
+    val ic = IndexCollectionFactory(request.entity, request.attribute, ico, request.options)
+
+
+    val qco = request.qc match {
+      case QueryCollection.LOGGED_QUERIES => LoggedQueryCollectionOption
+      case QueryCollection.RANDOM_QUERIES => RandomQueryCollectionOption
+      case _ => null
+    }
+    val qc = QueryCollectionFactory(request.entity, request.attribute, qco, request.options)
+
+
+    val res = BenchmarkOp.benchmarkAndUpdateWeight(ic, qc)
 
     if (res.isSuccess) {
       Future.successful(AckMessage(AckMessage.Code.OK, request.entity))
