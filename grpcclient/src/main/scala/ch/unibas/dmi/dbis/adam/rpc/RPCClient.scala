@@ -165,8 +165,13 @@ class RPCClient(channel: ManagedChannel, definer: AdamDefinitionBlockingStub, se
   def entityDetails(entityname: String): Try[Map[String, String]] = {
     execute("get details of entity operation") {
       val count = definer.count(EntityNameMessage(entityname))
-      val properties = definer.getEntityProperties(EntityNameMessage(entityname)).properties
-      Success(properties.+("count" -> definer.count(EntityNameMessage(entityname)).message))
+      var properties = definer.getEntityProperties(EntityNameMessage(entityname)).properties
+
+      if(count.code == AckMessage.Code.OK){
+        properties = properties.+("count" -> count.message)
+      }
+
+      Success(properties)
     }
   }
 
