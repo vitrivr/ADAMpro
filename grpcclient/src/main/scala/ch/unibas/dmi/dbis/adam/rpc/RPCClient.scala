@@ -373,6 +373,18 @@ class RPCClient(channel: ManagedChannel, definer: AdamDefinitionBlockingStub, se
   }
 
   /**
+    * Drop index.
+    *
+    * @param indexname name of index
+    */
+  def indexDrop(indexname: String): Try[Void] = {
+    execute("drop index operation") {
+      definer.dropIndex(IndexNameMessage(indexname))
+      Success(null)
+    }
+  }
+
+  /**
     *
     * @param s
     * @return
