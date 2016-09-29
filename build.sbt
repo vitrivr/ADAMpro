@@ -81,7 +81,8 @@ val secondaryLibs = Seq(
   "org.apache.commons" % "commons-math3" % "3.4.1",
   "com.googlecode.javaewah" % "JavaEWAH" % "1.1.6",
   "com.google.guava" % "guava" % "19.0",
-  "com.google.protobuf" % "protobuf-java" % "3.0.0"
+  "com.google.protobuf" % "protobuf-java" % "3.0.0",
+  "org.jgrapht" % "jgrapht-core" % "1.0.0"
 ).map(
   _.excludeAll(
     ExclusionRule("org.scala-lang"),
