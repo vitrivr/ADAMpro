@@ -12,7 +12,7 @@ import slick.driver.DerbyDriver.api._
   * August 2016
   */
 private[catalog] class QueryLog(tag: Tag) extends Table[(String, String, String, Array[Byte])](tag, Some(CatalogOperator.SCHEMA), "ap_querylog") {
-  def key = column[String]("key")
+  def key = column[String]("key", O.PrimaryKey)
 
   def entityname = column[String]("entity")
 
@@ -24,6 +24,4 @@ private[catalog] class QueryLog(tag: Tag) extends Table[(String, String, String,
     * Special fields
     */
   def * = (key, entityname, attribute, query)
-
-  def idx = index("idx_querylog_key", (key))
 }

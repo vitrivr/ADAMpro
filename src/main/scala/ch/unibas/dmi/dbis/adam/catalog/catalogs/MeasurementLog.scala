@@ -27,6 +27,4 @@ private[catalog] class MeasurementLog(tag: Tag) extends Table[(String, String, L
   def * = (key, source, nresults, time)
 
   def entity = foreignKey("measurementlog_querylog_fk", key, TableQuery[QueryLog])(_.key, onUpdate=ForeignKeyAction.Restrict, onDelete=ForeignKeyAction.Cascade)
-
-  def idx = index("idx_measurementlog_key", (key))
 }

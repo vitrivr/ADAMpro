@@ -39,7 +39,7 @@ object LogOperator extends Logging {
   private val _queries = TableQuery[QueryLog]
 
   private[catalog] val LOGS = Seq(
-    _measurements, _queries
+    _queries, _measurements
   )
 
 
