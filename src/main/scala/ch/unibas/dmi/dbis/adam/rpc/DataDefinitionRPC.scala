@@ -201,7 +201,7 @@ class DataDefinitionRPC extends AdamDefinitionGrpc.AdamDefinition with Logging {
     val res = EntityOp.delete(request.entity, predicates)
 
     if (res.isSuccess) {
-      Future.successful(AckMessage(code = AckMessage.Code.OK))
+      Future.successful(AckMessage(code = AckMessage.Code.OK, message = res.get.toString))
     } else {
       log.error(res.failed.get.getMessage, res.failed.get)
       Future.successful(AckMessage(code = AckMessage.Code.ERROR, message = res.failed.get.getMessage))

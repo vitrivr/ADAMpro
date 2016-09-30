@@ -248,7 +248,7 @@ case class Entity(val entityname: EntityName)(@transient implicit val ac: AdamCo
     *
     * @param predicates
     */
-  def delete(predicates: Seq[Predicate]): Unit = {
+  def delete(predicates: Seq[Predicate]): Int = {
     var newData = getData().get
 
     predicates.foreach { predicate =>
@@ -275,7 +275,13 @@ case class Entity(val entityname: EntityName)(@transient implicit val ac: AdamCo
       }
     }
 
+    val oldCount = count
+
     markStale
+
+    val newCount = count
+
+    (oldCount - newCount).toInt
   }
 
   /**

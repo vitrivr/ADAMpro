@@ -125,10 +125,9 @@ object EntityOp extends GenericOp {
     * @param predicates list of predicates
     *
     */
-  def delete(entityname: EntityName, predicates : Seq[Predicate])(implicit ac: AdamContext): Try[Void] = {
+  def delete(entityname: EntityName, predicates : Seq[Predicate])(implicit ac: AdamContext): Try[Int] = {
     execute("delete data from " + entityname + " operation") {
-      Entity.load(entityname).get.delete(predicates)
-      null
+      Success(Entity.load(entityname).get.delete(predicates))
     }
   }
 
