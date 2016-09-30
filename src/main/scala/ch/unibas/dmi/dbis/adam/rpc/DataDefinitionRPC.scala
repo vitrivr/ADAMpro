@@ -2,10 +2,11 @@ package ch.unibas.dmi.dbis.adam.rpc
 
 import ch.unibas.dmi.dbis.adam.api._
 import ch.unibas.dmi.dbis.adam.catalog.CatalogOperator
+import ch.unibas.dmi.dbis.adam.datatypes.FieldTypes.SERIALTYPE
 import ch.unibas.dmi.dbis.adam.entity.Entity
 import ch.unibas.dmi.dbis.adam.exception.GeneralAdamException
-import ch.unibas.dmi.dbis.adam.helpers.benchmark.IndexCollectionFactory.{NewIndexCollectionOption, ExistingIndexCollectionOption}
-import ch.unibas.dmi.dbis.adam.helpers.benchmark.QueryCollectionFactory.{RandomQueryCollectionOption, LoggedQueryCollectionOption}
+import ch.unibas.dmi.dbis.adam.helpers.benchmark.IndexCollectionFactory.{ExistingIndexCollectionOption, NewIndexCollectionOption}
+import ch.unibas.dmi.dbis.adam.helpers.benchmark.QueryCollectionFactory.{LoggedQueryCollectionOption, RandomQueryCollectionOption}
 import ch.unibas.dmi.dbis.adam.helpers.benchmark._
 import ch.unibas.dmi.dbis.adam.helpers.partition.{PartitionMode, PartitionerChoice}
 import ch.unibas.dmi.dbis.adam.index.structures.IndexTypes
@@ -17,7 +18,7 @@ import io.grpc.stub.StreamObserver
 import org.apache.spark.annotation.Experimental
 import org.apache.spark.sql.Row
 import org.apache.spark.sql.types.{StructField, StructType}
-import org.vitrivr.adam.grpc.grpc.AdaptScanMethodsMessage.{QueryCollection, IndexCollection}
+import org.vitrivr.adam.grpc.grpc.AdaptScanMethodsMessage.{IndexCollection, QueryCollection}
 import org.vitrivr.adam.grpc.grpc._
 
 import scala.concurrent.duration._
@@ -167,6 +168,36 @@ class DataDefinitionRPC extends AdamDefinitionGrpc.AdamDefinition with Logging {
       }
     }
   }
+
+  /**
+    *
+    * @param request
+    * @return
+    */
+  override def getNextPkValue(request: EntityNameMessage): Future[AckMessage] = {
+    log.debug("rpc call for next pk value operation")
+
+    //TODO: hacky...
+
+    try{
+      val entity = Entity.load(request.entity)
+
+      if(entity.isFailure){
+        throw entity.failed.get
+      }
+
+      val pk = entity.get.pk
+
+      if(pk.fieldtype == SERIALTYPE){
+        Future.successful(AckMessage(code = AckMessage.Code.OK, message = SERIALTYPE.getNext(request.entity, pk.name).toString))
+      } else {
+        Future.successful(AckMessage(code = AckMessage.Code.ERROR, message = "method only valid for serial fields"))
+      }
+    } catch {
+      case e : Exception => Future.successful(AckMessage(code = AckMessage.Code.ERROR, message = e.getMessage))
+    }
+  }
+
 
   /**
     *

@@ -16,6 +16,7 @@ service AdamDefinition {
   rpc DropEntity(EntityNameMessage) returns (AckMessage) {}
   rpc ExistsEntity(EntityNameMessage) returns (ExistsMessage) {}
   rpc Insert(stream InsertMessage) returns (AckMessage) {}
+  rpc GetNextPkValue(EntityNameMessage) returns (AckMessage) {}
   rpc Delete(DeleteMessage) returns (AckMessage) {}
   //creates an index on the data
   rpc Index(IndexMessage) returns (AckMessage) {}
@@ -73,6 +74,7 @@ enum AttributeType {
   FEATURE = 9;
   GEOMETRY = 10;
   GEOGRAPHY = 11;
+  SERIAL = 12;
 }
 
 enum IndexType {

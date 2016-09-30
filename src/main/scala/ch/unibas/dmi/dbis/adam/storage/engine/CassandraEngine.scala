@@ -30,7 +30,7 @@ class CassandraEngine(private val url: String, private val port: Int, private va
 
   override val name = "cassandra"
 
-  override def supports = Seq(FieldTypes.AUTOTYPE, FieldTypes.INTTYPE, FieldTypes.LONGTYPE, FieldTypes.STRINGTYPE, FieldTypes.FEATURETYPE)
+  override def supports = Seq(FieldTypes.AUTOTYPE, FieldTypes.SERIALTYPE, FieldTypes.INTTYPE, FieldTypes.LONGTYPE, FieldTypes.STRINGTYPE, FieldTypes.FEATURETYPE)
 
   override def specializes = Seq(FieldTypes.FEATURETYPE)
 

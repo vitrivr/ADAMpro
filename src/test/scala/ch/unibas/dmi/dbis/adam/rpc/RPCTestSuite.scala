@@ -188,6 +188,30 @@ class RPCTestSuite extends AdamTestBase with ScalaFutures {
 
       }
     }
+
+
+
+
+    /**
+      *
+      */
+    scenario("insert data with serial pk") {
+      withEntityName { entityname =>
+        Given("an entity with a serial pk")
+        val res = Entity.create(entityname, Seq(AttributeDefinition("idfield", FieldTypes.SERIALTYPE, true), AttributeDefinition("featurefield", FieldTypes.FEATURETYPE, false)))
+
+        if(res.isFailure){
+          throw res.failed.get
+        }
+
+
+        (0 to Random.nextInt(100)).foreach{ i =>
+          val nextPkValue = definition.getNextPkValue(EntityNameMessage(entityname)).message.toLong
+
+          assert(nextPkValue == i.toLong)
+        }
+      }
+    }
   }
 
   feature("data import") {

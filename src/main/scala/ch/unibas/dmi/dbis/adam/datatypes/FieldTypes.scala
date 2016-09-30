@@ -1,7 +1,9 @@
 package ch.unibas.dmi.dbis.adam.datatypes
 
+import ch.unibas.dmi.dbis.adam.catalog.CatalogOperator
 import ch.unibas.dmi.dbis.adam.datatypes.feature.FeatureVectorWrapperUDT
 import ch.unibas.dmi.dbis.adam.datatypes.gis.{GeographyWrapperUDT, GeometryWrapperUDT}
+import ch.unibas.dmi.dbis.adam.entity.Entity.EntityName
 import org.apache.spark.sql.types
 import org.apache.spark.sql.types.{ArrayType, DataType}
 
@@ -13,11 +15,24 @@ import org.apache.spark.sql.types.{ArrayType, DataType}
   */
 object FieldTypes {
 
-  sealed abstract class FieldType(val name: String, val pk : Boolean, val datatype: DataType) extends Serializable {
+  sealed abstract class FieldType(val name: String, val pk: Boolean, val datatype: DataType) extends Serializable {
     def equals(other: FieldType): Boolean = other.name.equals(name)
   }
 
   case object AUTOTYPE extends FieldType("auto", true, types.LongType)
+
+  case object SERIALTYPE extends FieldType("serial", true, types.LongType) {
+    /**
+      *
+      * @param entityname name of entity
+      * @param attribute  attribute
+      * @return
+      */
+    def getNext(entityname: EntityName, attribute: String): Long = {
+      CatalogOperator.getAndUpdateAttributeOption(entityname, attribute, attribute + "-serial", "0", (s: String) => ((s.toLong + 1).toString))
+        .get.get(attribute + "-serial").get.toLong
+    }
+  }
 
   case object INTTYPE extends FieldType("integer", true, types.IntegerType)
 
@@ -43,13 +58,13 @@ object FieldTypes {
 
 
   //TODO: only add to values if handler is available
-  def values = Seq(INTTYPE, LONGTYPE, FLOATTYPE, DOUBLETYPE, STRINGTYPE, TEXTTYPE, BOOLEANTYPE, FEATURETYPE, GEOMETRYTYPE, GEOGRAPHYTYPE, AUTOTYPE)
+  def values = Seq(INTTYPE, LONGTYPE, FLOATTYPE, DOUBLETYPE, STRINGTYPE, TEXTTYPE, BOOLEANTYPE, FEATURETYPE, GEOMETRYTYPE, GEOGRAPHYTYPE, AUTOTYPE, SERIALTYPE)
 
   implicit def fromString(s: String): FieldType = values.filter(x => x.name == s).head
 
   implicit def fromDataType(d: DataType): FieldType = {
     val suggestion = values.filter(x => d == x.datatype)
-    if (d .isInstanceOf[ArrayType]) {
+    if (d.isInstanceOf[ArrayType]) {
       FEATURETYPE
     } else {
       suggestion.head

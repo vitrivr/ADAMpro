@@ -218,6 +218,43 @@ object CatalogOperator extends Logging {
     }
   }
 
+  /**
+    * Gets the metadata to an attribute of an entity.
+    *
+    * @param entityname name of entity
+    * @param attribute  name of attribute
+    * @param key        name of key
+    * @param z          zero/start value
+    * @param op         update method
+    * @return
+    */
+  def getAndUpdateAttributeOption(entityname: EntityName, attribute: String, key: String, z: String, op: (String) => (String)): Try[Map[String, String]] = {
+    execute("get attribute option") {
+      _attributeOptions.synchronized({
+        val query = _attributeOptions.filter(_.entityname === entityname.toString).filter(_.attributename === attribute).filter(_.key === key).map(_.value).result
+        val results = Await.result(DB.run(query), MAX_WAITING_TIME)
+
+        val actions = new ListBuffer[DBIOAction[_, NoStream, _]]()
+
+        if (results.isEmpty) {
+          actions += _attributeOptions.+=(entityname, attribute, key, z)
+        } else {
+          results.foreach { result =>
+            //upsert
+            actions += _attributeOptions.filter(_.entityname === entityname.toString).filter(_.attributename === attribute).filter(_.key === key).delete
+            actions += _attributeOptions.+=(entityname, attribute, key, op(result))
+          }
+        }
+
+        Await.result(DB.run(DBIO.seq(actions.toArray: _*).transactionally), MAX_WAITING_TIME)
+
+        Success(Await.result(DB.run(query), MAX_WAITING_TIME))
+      })
+    }
+
+    getAttributeOption(entityname, attribute, Some(key))
+  }
+
 
   /**
     * Updates or inserts a metadata information to an attribute.
