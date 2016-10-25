@@ -3,7 +3,7 @@ package ch.unibas.dmi.dbis.adam.rpc
 import ch.unibas.dmi.dbis.adam.AdamTestBase
 import ch.unibas.dmi.dbis.adam.config.AdamConfig
 import ch.unibas.dmi.dbis.adam.datatypes.FieldTypes
-import ch.unibas.dmi.dbis.adam.entity.{Entity, AttributeDefinition}
+import ch.unibas.dmi.dbis.adam.entity.{AttributeDefinition, Entity}
 import ch.unibas.dmi.dbis.adam.main.RPCStartup
 import io.grpc.ManagedChannelBuilder
 import io.grpc.stub.StreamObserver
@@ -86,6 +86,7 @@ class RPCTestSuite extends AdamTestBase with ScalaFutures {
 
         Then("the tuples should eventually be available")
         eventually {
+          Thread.sleep(500)
           assert(definition.count(EntityNameMessage(entityname)).message.toInt == ntuples)
         }
       }
@@ -130,6 +131,7 @@ class RPCTestSuite extends AdamTestBase with ScalaFutures {
 
         Then("the tuples should eventually be available")
         eventually {
+          Thread.sleep(500)
           val response = definition.count(EntityNameMessage(entityname))
           assert(response.code == AckMessage.Code.OK)
           assert(response.message.toInt == ntuples)
@@ -174,15 +176,69 @@ class RPCTestSuite extends AdamTestBase with ScalaFutures {
 
         Then("the tuples should eventually be available")
         eventually {
+          Thread.sleep(500)
           val inserted = definition.count(EntityNameMessage(entityname)).message.toInt == ntuples
           assert(inserted)
 
-          if(inserted){
-            val results = search.doQuery(QueryMessage(queryid = "", from = Some(FromMessage().withEntity(entityname)), bq = Some(BooleanQueryMessage(Seq(WhereMessage("tid", tuples.head("tid").getLongData.toString)))), useFallback = true))
+          if (inserted) {
+            val results = search.doQuery(QueryMessage(queryid = "", from = Some(FromMessage().withEntity(entityname)), bq = Some(BooleanQueryMessage(Seq(WhereMessage("tid", Seq(DataMessage().withLongData(tuples.head("tid").getLongData))))))))
             assert(results.ack.get.code == AckMessage.Code.OK)
           }
         }
 
+      }
+    }
+
+
+
+
+    /**
+      *
+      */
+    scenario("insert data with serial pk") {
+      withEntityName { entityname =>
+        Given("an entity with a serial pk")
+        val res = Entity.create(entityname, Seq(AttributeDefinition("idfield", FieldTypes.SERIALTYPE, true), AttributeDefinition("featurefield", FieldTypes.FEATURETYPE, false)))
+
+        if(res.isFailure){
+          throw res.failed.get
+        }
+
+
+        (0 to Random.nextInt(100)).foreach{ i =>
+          val nextPkValue = definition.getNextPkValue(EntityNameMessage(entityname)).message.toLong
+
+          assert(nextPkValue == i.toLong)
+        }
+      }
+    }
+  }
+
+  feature("data import") {
+    /**
+      *
+      */
+    scenario("export and import proto-based file") {
+      withEntityName { entityname =>
+        val NTUPLES = 1000
+
+        definition.createEntity(CreateEntityMessage(entityname, Seq(AttributeDefinitionMessage("id", AttributeType.LONG, true), AttributeDefinitionMessage("feature", AttributeType.FEATURE))))
+        definition.generateRandomData(GenerateRandomDataMessage(entityname, NTUPLES, Map("fv-dimensions" -> 100.toString)))
+
+        val count = definition.count(EntityNameMessage(entityname)).message.toInt
+        assert(count == NTUPLES)
+
+        val exported = definition.exportDataFile(EntityNameMessage(entityname))
+
+        definition.dropEntity(EntityNameMessage(entityname))
+
+        definition.importDataFile(ImportDataFileMessage().withDefinitionfile(exported.definitionfile).withDatafile(exported.datafile))
+
+        val countAfterImport = definition.count(EntityNameMessage(entityname)).message.toInt
+
+        log.info("found " + countAfterImport + " tuples")
+
+        assert(countAfterImport == NTUPLES)
       }
     }
 

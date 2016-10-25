@@ -2,20 +2,27 @@ package ch.unibas.dmi.dbis.adam.rpc
 
 import ch.unibas.dmi.dbis.adam.api._
 import ch.unibas.dmi.dbis.adam.catalog.CatalogOperator
-import ch.unibas.dmi.dbis.adam.datatypes.FieldTypes
-import ch.unibas.dmi.dbis.adam.datatypes.feature.{FeatureVectorWrapper, FeatureVectorWrapperUDT}
-import ch.unibas.dmi.dbis.adam.entity.{AttributeDefinition, Entity}
+import ch.unibas.dmi.dbis.adam.datatypes.FieldTypes.SERIALTYPE
+import ch.unibas.dmi.dbis.adam.entity.Entity
 import ch.unibas.dmi.dbis.adam.exception.GeneralAdamException
+import ch.unibas.dmi.dbis.adam.helpers.benchmark.IndexCollectionFactory.{ExistingIndexCollectionOption, NewIndexCollectionOption}
+import ch.unibas.dmi.dbis.adam.helpers.benchmark.QueryCollectionFactory.{LoggedQueryCollectionOption, RandomQueryCollectionOption}
+import ch.unibas.dmi.dbis.adam.helpers.benchmark._
 import ch.unibas.dmi.dbis.adam.helpers.partition.{PartitionMode, PartitionerChoice}
 import ch.unibas.dmi.dbis.adam.index.structures.IndexTypes
 import ch.unibas.dmi.dbis.adam.main.{AdamContext, SparkStartup}
+import ch.unibas.dmi.dbis.adam.query.query.Predicate
 import ch.unibas.dmi.dbis.adam.utils.{AdamImporter, Logging}
+import com.google.protobuf.ByteString
 import io.grpc.stub.StreamObserver
-import org.apache.spark.sql.types.{DataType, StructField, StructType}
-import org.apache.spark.sql.{Row, types}
+import org.apache.spark.annotation.Experimental
+import org.apache.spark.sql.Row
+import org.apache.spark.sql.types.{StructField, StructType}
+import org.vitrivr.adam.grpc.grpc.AdaptScanMethodsMessage.{IndexCollection, QueryCollection}
 import org.vitrivr.adam.grpc.grpc._
 
-import scala.concurrent.Future
+import scala.concurrent.duration._
+import scala.concurrent.{Await, Future}
 
 /**
   * adamtwo
@@ -34,10 +41,9 @@ class DataDefinitionRPC extends AdamDefinitionGrpc.AdamDefinition with Logging {
   override def createEntity(request: CreateEntityMessage): Future[AckMessage] = {
     log.debug("rpc call for create entity operation")
     val entityname = request.entity
-    val fields = request.attributes.map(attribute => {
-      AttributeDefinition(attribute.name, matchFields(attribute.attributetype), attribute.pk, attribute.unique, attribute.indexed) //TODO: add handler type
-    })
-    val res = EntityOp(entityname, fields)
+
+    val attributes = RPCHelperMethods.prepareAttributes(request.attributes)
+    val res = EntityOp(entityname, attributes)
 
     if (res.isSuccess) {
       Future.successful(AckMessage(code = AckMessage.Code.OK, res.get.entityname))
@@ -49,35 +55,14 @@ class DataDefinitionRPC extends AdamDefinitionGrpc.AdamDefinition with Logging {
 
   /**
     *
-    * @param ft
+    * @param request
     * @return
     */
-  private def matchFields(ft: AttributeType) = ft match {
-    case AttributeType.BOOLEAN => FieldTypes.BOOLEANTYPE
-    case AttributeType.DOUBLE => FieldTypes.DOUBLETYPE
-    case AttributeType.FLOAT => FieldTypes.FLOATTYPE
-    case AttributeType.INT => FieldTypes.INTTYPE
-    case AttributeType.LONG => FieldTypes.LONGTYPE
-    case AttributeType.STRING => FieldTypes.STRINGTYPE
-    case AttributeType.TEXT => FieldTypes.TEXTTYPE
-    case AttributeType.FEATURE => FieldTypes.FEATURETYPE
-    case _ => FieldTypes.UNRECOGNIZEDTYPE
+  override def availableAttributeTypes(request: EmptyMessage): Future[AvailableAttributeTypesMessage] = {
+    //TODO: implement
+    Future.successful(AvailableAttributeTypesMessage(Some(AckMessage(code = AckMessage.Code.OK)), AttributeType.values))
   }
 
-  /**
-    *
-    * @param datatype
-    * @return
-    */
-  private def converter(datatype: DataType): (DataMessage) => (Any) = datatype match {
-    case types.BooleanType => (x) => x.getBooleanData
-    case types.DoubleType => (x) => x.getBooleanData
-    case types.FloatType => (x) => x.getFloatData
-    case types.IntegerType => (x) => x.getIntData
-    case types.LongType => (x) => x.getLongData
-    case types.StringType => (x) => x.getStringData
-    case _: FeatureVectorWrapperUDT => (x) => FeatureVectorWrapper(RPCHelperMethods.prepareFeatureVector(x.getFeatureData))
-  }
 
   /**
     *
@@ -153,7 +138,7 @@ class DataDefinitionRPC extends AdamDefinitionGrpc.AdamDefinition with Logging {
           val data = schema.map(field => {
             val datum = tuple.data.get(field.name).getOrElse(null)
             if (datum != null) {
-              converter(field.fieldtype.datatype)(datum)
+              RPCHelperMethods.prepareDataTypeConverter(field.fieldtype.datatype)(datum)
             } else {
               null
             }
@@ -183,6 +168,77 @@ class DataDefinitionRPC extends AdamDefinitionGrpc.AdamDefinition with Logging {
       }
     }
   }
+
+  /**
+    *
+    * @param request
+    * @return
+    */
+  override def getNextPkValue(request: EntityNameMessage): Future[AckMessage] = {
+    log.debug("rpc call for next pk value operation")
+
+    //TODO: hacky...
+
+    try{
+      val entity = Entity.load(request.entity)
+
+      if(entity.isFailure){
+        throw entity.failed.get
+      }
+
+      val pk = entity.get.pk
+
+      if(pk.fieldtype == SERIALTYPE){
+        Future.successful(AckMessage(code = AckMessage.Code.OK, message = SERIALTYPE.getNext(request.entity, pk.name).toString))
+      } else {
+        Future.successful(AckMessage(code = AckMessage.Code.ERROR, message = "method only valid for serial fields"))
+      }
+    } catch {
+      case e : Exception => Future.successful(AckMessage(code = AckMessage.Code.ERROR, message = e.getMessage))
+    }
+  }
+
+
+  /**
+    *
+    * @param request
+    * @return
+    */
+  override def delete(request: DeleteMessage): Future[AckMessage] = {
+    log.debug("rpc call for delete operation")
+
+    val predicates = request.predicates.map(bqm => {
+      val attribute = bqm.attribute
+      val op = if (bqm.op.isEmpty) {
+        None
+      } else {
+        Some(bqm.op)
+      }
+      val values = bqm.values.map(value => value.datatype.number match {
+        case DataMessage.BOOLEANDATA_FIELD_NUMBER => value.getBooleanData
+        case DataMessage.DOUBLEDATA_FIELD_NUMBER => value.getBooleanData
+        case DataMessage.FLOATDATA_FIELD_NUMBER => value.getBooleanData
+        case DataMessage.GEOGRAPHYDATA_FIELD_NUMBER => value.getGeographyData
+        case DataMessage.GEOMETRYDATA_FIELD_NUMBER => value.getGeometryData
+        case DataMessage.INTDATA_FIELD_NUMBER => value.getIntData
+        case DataMessage.LONGDATA_FIELD_NUMBER => value.getLongData
+        case DataMessage.STRINGDATA_FIELD_NUMBER => value.getStringData
+        case _ => throw new GeneralAdamException("search predicates can not be of any type")
+      })
+
+      new Predicate(bqm.attribute, op, values)
+    })
+
+    val res = EntityOp.delete(request.entity, predicates)
+
+    if (res.isSuccess) {
+      Future.successful(AckMessage(code = AckMessage.Code.OK, message = res.get.toString))
+    } else {
+      log.error(res.failed.get.getMessage, res.failed.get)
+      Future.successful(AckMessage(code = AckMessage.Code.ERROR, message = res.failed.get.getMessage))
+    }
+  }
+
 
   /**
     *
@@ -433,15 +489,14 @@ class DataDefinitionRPC extends AdamDefinitionGrpc.AdamDefinition with Logging {
     }
   }
 
-
   /**
     *
     * @param request
     * @return
     */
-  override def adjustScanWeights(request: UpdateWeightsMessage): Future[AckMessage] = {
-    log.debug("rpc call for benchmarking entity and index")
-    val res = EntityOp.adjustScanWeights(request.entity, request.attribute, request.benchmark)
+  override def resetScanWeights(request: EntityNameMessage): Future[AckMessage] = {
+    log.debug("rpc call for resetting entity and index scan weights")
+    val res = EntityOp.resetScanWeights(request.entity)
 
     if (res.isSuccess) {
       Future.successful(AckMessage(AckMessage.Code.OK, request.entity))
@@ -456,9 +511,26 @@ class DataDefinitionRPC extends AdamDefinitionGrpc.AdamDefinition with Logging {
     * @param request
     * @return
     */
-  override def resetScanWeights(request: EntityNameMessage): Future[AckMessage] = {
-    log.debug("rpc call for resetting entity and index scan weights")
-    val res = EntityOp.resetScanWeights(request.entity)
+  override def adaptScanMethods(request: AdaptScanMethodsMessage): Future[AckMessage] = {
+    log.debug("rpc call for benchmarking entity and index")
+
+    val ico = request.ic match {
+      case IndexCollection.EXISTING_INDEXES => ExistingIndexCollectionOption
+      case IndexCollection.NEW_INDEXES => NewIndexCollectionOption
+      case _ => null
+    }
+    val ic = IndexCollectionFactory(request.entity, request.attribute, ico, request.options)
+
+
+    val qco = request.qc match {
+      case QueryCollection.LOGGED_QUERIES => LoggedQueryCollectionOption
+      case QueryCollection.RANDOM_QUERIES => RandomQueryCollectionOption
+      case _ => null
+    }
+    val qc = QueryCollectionFactory(request.entity, request.attribute, qco, request.options)
+
+
+    val res = BenchmarkOp.benchmarkAndUpdateWeight(ic, qc)
 
     if (res.isSuccess) {
       Future.successful(AckMessage(AckMessage.Code.OK, request.entity))
@@ -483,7 +555,7 @@ class DataDefinitionRPC extends AdamDefinitionGrpc.AdamDefinition with Logging {
       Future.successful(AckMessage(AckMessage.Code.OK, res.get.mkString(",")))
     } else {
       log.error(res.failed.get.getMessage, res.failed.get)
-      Future.successful(AckMessage(AckMessage.Code.ERROR))
+      Future.successful(AckMessage(code = AckMessage.Code.ERROR, message = res.failed.get.getMessage))
     }
   }
 
@@ -492,8 +564,88 @@ class DataDefinitionRPC extends AdamDefinitionGrpc.AdamDefinition with Logging {
     * @param request
     * @return
     */
-  override def importData(request: ImportMessage): Future[AckMessage] = {
-    AdamImporter(request.host, request.database, request.username, request.password)
-    Future.successful(AckMessage(AckMessage.Code.OK))
+  @Experimental override def importData(request: ImportMessage): Future[AckMessage] = {
+    log.debug("rpc call for importing data from old ADAM")
+
+    val res = AdamImporter(request.host, request.database, request.username, request.password)
+    if (res.isSuccess) {
+      Future.successful(AckMessage(AckMessage.Code.OK))
+    } else {
+      log.error(res.failed.get.getMessage, res.failed.get)
+      Future.successful(AckMessage(code = AckMessage.Code.ERROR, message = res.failed.get.getMessage))
+    }
+  }
+
+  /**
+    *
+    * @param request
+    * @return
+    */
+  @Experimental override def importDataFile(request: ImportDataFileMessage): Future[AckMessage] = {
+    log.debug("rpc call for importing entity from file")
+
+    //create entity if necessary
+    val entityname = if (request.destination.isCreateEntity || request.destination.isDefinitionfile) {
+      val createEntityMessage = if (request.destination.isCreateEntity) {
+        request.getCreateEntity
+      } else {
+        CreateEntityMessage.parseFrom(request.getDefinitionfile.toByteArray)
+      }
+
+      val res = Await.result(createEntity(createEntityMessage), 100.seconds)
+
+      if (res.code.isError) {
+        return Future.successful(res)
+      }
+
+      createEntityMessage.entity
+    } else {
+      request.getEntity
+    }
+
+
+    val filetype = request.filetype //not used at the moment
+    val data = request.datafile.toByteArray
+
+    val protoie = new ProtoImporterExporter(entityname)
+    val res = protoie.importData(data)
+
+    if (res.isSuccess) {
+      Future.successful(AckMessage(AckMessage.Code.OK))
+    } else {
+      log.error(res.failed.get.getMessage, res.failed.get)
+      Future.successful(AckMessage(code = AckMessage.Code.ERROR, message = res.failed.get.getMessage))
+    }
+  }
+
+  /**
+    *
+    * @param request
+    * @return
+    */
+  @Experimental override def exportDataFile(request: EntityNameMessage): Future[ExportDataFileMessage] = {
+    log.debug("rpc call for exporting entity to file")
+    val protoie = new ProtoImporterExporter(request.entity)
+    val res = protoie.exportData()
+
+    if (res.isSuccess) {
+      Future.successful(ExportDataFileMessage(Some(AckMessage(code = AckMessage.Code.OK)), ByteString.copyFrom(res.get._1), ByteString.copyFrom(res.get._2)))
+    } else {
+      log.error(res.failed.get.getMessage, res.failed.get)
+      Future.successful(ExportDataFileMessage(Some(AckMessage(code = AckMessage.Code.ERROR, message = res.failed.get.getMessage))))
+    }
+  }
+
+  /**
+    *
+    * @param request
+    * @return
+    */
+  override def listStorageHandlers(request: EmptyMessage): Future[StorageHandlersMessage] = {
+    log.debug("rpc call for listing storage handlers")
+
+    val handlers = SparkStartup.storageRegistry.handlers.filterNot(_._2.supports.isEmpty).map(handler => handler._1 -> handler._2.supports.map(RPCHelperMethods.getAttributeType(_)))
+
+    Future.successful(StorageHandlersMessage(handlers.map(handler => StorageHandlerMessage(handler._1, handler._2)).toSeq))
   }
 }

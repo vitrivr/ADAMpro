@@ -1,8 +1,6 @@
 package ch.unibas.dmi.dbis.adam.index.structures.mi
 
-import ch.unibas.dmi.dbis.adam.config.FieldNames
 import ch.unibas.dmi.dbis.adam.datatypes.feature.Feature._
-import ch.unibas.dmi.dbis.adam.entity.Entity._
 import ch.unibas.dmi.dbis.adam.index.Index
 import ch.unibas.dmi.dbis.adam.index.Index._
 import ch.unibas.dmi.dbis.adam.index.structures.IndexTypes
@@ -11,7 +9,7 @@ import ch.unibas.dmi.dbis.adam.query.Result
 import ch.unibas.dmi.dbis.adam.query.distance.DistanceFunction
 import ch.unibas.dmi.dbis.adam.query.query.NearestNeighbourQuery
 import org.apache.spark.annotation.Experimental
-import org.apache.spark.sql.{Row, DataFrame}
+import org.apache.spark.sql.{DataFrame, Row}
 
 /**
   * ADAMpro
@@ -19,28 +17,29 @@ import org.apache.spark.sql.{Row, DataFrame}
   * Ivan Giangreco
   * June 2016
   */
-@Experimental class MIIndex(val indexname: IndexName, val entityname: EntityName, override private[index] var data: DataFrame, private[index] val metadata: MIIndexMetaData)(@transient override implicit val ac: AdamContext)
-  extends Index {
+@Experimental class MIIndex(override val indexname: IndexName)(@transient override implicit val ac: AdamContext)
+  extends Index(indexname) {
 
   override val indextypename: IndexTypeName = IndexTypes.MIINDEX
-
   override val lossy: Boolean = true
   override val confidence = 0.5.toFloat
+
+  val meta = metadata.get.asInstanceOf[MIIndexMetaData]
 
 
   override def scan(data: DataFrame, q: FeatureVector, distance: DistanceFunction, options: Map[String, String], k: Int): DataFrame = {
     log.debug("scanning MI index " + indexname)
 
-    val ki = metadata.ki
+    val ki = meta.ki
     //ks is the number of closest reference points to consider
-    val ks = options.mapValues(_.toInt).getOrElse("ks", metadata.ks)
+    val ks = options.mapValues(_.toInt).getOrElse("ks", meta.ks)
     assert(ks <= ki)
 
     //maximum position difference, MPD, access just pairs whose position difference is below a threshold
     val max_pos_diff = options.mapValues(_.toInt).getOrElse("max_pos_diff", ki)
 
     //take closest ks reference points
-    val q_knp = metadata.refs.sortBy(ref => distance(ref.feature, q)).take(ks)
+    val q_knp = meta.refs.sortBy(ref => distance(ref.feature, q)).take(ks)
 
     log.trace("reference points prepared")
 
@@ -79,10 +78,10 @@ import org.apache.spark.sql.{Row, DataFrame}
     * @return
     */
   private def getPostingList(data: DataFrame, piv: Int, low_inv_file_pos: Int, high_inv_file_pos: Int): Seq[(Any, Int)] = {
-    val entries = data.filter(data(MIIndexer.REFERENCE_OBJ_NAME) === piv).select(MIIndexer.POSTING_LIST_NAME, MIIndexer.SCORE_LIST_NAME).collect()
+    val entries = data.filter(data(MIIndex.REFERENCE_OBJ_NAME) === piv).select(MIIndex.POSTING_LIST_NAME, MIIndex.SCORE_LIST_NAME).collect()
 
-    val postings = entries.map(_.getAs[Seq[Any]](MIIndexer.POSTING_LIST_NAME)).head
-    val scores = entries.map(_.getAs[Seq[Int]](MIIndexer.SCORE_LIST_NAME)).head
+    val postings = entries.map(_.getAs[Seq[Any]](MIIndex.POSTING_LIST_NAME)).head
+    val scores = entries.map(_.getAs[Seq[Int]](MIIndex.SCORE_LIST_NAME)).head
 
     val low = math.min(0, low_inv_file_pos)
     val high = math.max(entries.length, high_inv_file_pos)
@@ -93,10 +92,9 @@ import org.apache.spark.sql.{Row, DataFrame}
   override def isQueryConform(nnq: NearestNeighbourQuery): Boolean = true
 }
 
-
 object MIIndex {
-  def apply(indexname: IndexName, entityname: EntityName, data: DataFrame, meta: Any)(implicit ac: AdamContext): MIIndex = {
-    val indexMetaData = meta.asInstanceOf[MIIndexMetaData]
-    new MIIndex(indexname, entityname, data, indexMetaData)
-  }
+  //names of fields to store data of index
+  private[mi] val REFERENCE_OBJ_NAME = "ref"
+  private[mi] val POSTING_LIST_NAME = "postings"
+  private[mi] val SCORE_LIST_NAME = "scores"
 }

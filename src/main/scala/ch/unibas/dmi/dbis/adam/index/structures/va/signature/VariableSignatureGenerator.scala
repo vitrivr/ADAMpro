@@ -13,7 +13,6 @@ import scala.collection.mutable.ListBuffer
  * September 2015
  */
 class VariableSignatureGenerator (numberOfBitsPerDimension: Array[Int]) extends SignatureGenerator with Serializable {
-  var parNumberOfBitsPerDimension = numberOfBitsPerDimension.par //allows huge speedup!
   val numberOfDimensions: Int = numberOfBitsPerDimension.length
 
 
@@ -23,7 +22,7 @@ class VariableSignatureGenerator (numberOfBitsPerDimension: Array[Int]) extends 
    * @return
    */
   def toSignature(cells: Seq[Int]): BitString[_] = {
-    val lengths = parNumberOfBitsPerDimension
+    val lengths = numberOfBitsPerDimension
     val setBits = ListBuffer[Int]()
 
     var bitSum = 0
@@ -60,7 +59,7 @@ class VariableSignatureGenerator (numberOfBitsPerDimension: Array[Int]) extends 
    * @return
    */
   @inline def toCells(signature: BitString[_]): Seq[Int] = {
-    val lengths = parNumberOfBitsPerDimension
+    val lengths = numberOfBitsPerDimension
     assert(lengths.count(_ > 32) < 1)
 
     val it = signature.iterator

@@ -24,20 +24,23 @@ object NormBasedDistance {
   * @param n
   */
 class MinkowskiDistance(val n: Double) extends ElementwiseSummedDistanceFunction with Serializable {
-  override def element(v1: VectorBase, v2: VectorBase, w: VectorBase): Distance = w * Math.pow(math.abs(v1 - v2), n).toFloat
+  @inline override def element(v1: VectorBase, v2: VectorBase, w: VectorBase): Distance = w * Math.pow(math.abs(v1 - v2), n).toFloat
 
-  override def normalize(cumSum: Distance): Distance = Math.pow(cumSum, 1 / n).toFloat
+  @inline override def normalize(cumSum: Distance): Distance = Math.pow(cumSum, 1 / n).toFloat
 }
 
 /**
   * from Julia: sum(abs(x - y) .* w)
   */
-object ManhattanDistance extends MinkowskiDistance(1) with Serializable {}
+object ManhattanDistance extends MinkowskiDistance(1) with Serializable {
+  @inline override def element(v1: VectorBase, v2: VectorBase, w: VectorBase): Distance = w * math.abs(v1 - v2)
+}
 
 /**
   * from Julia: sqrt(sum((x - y).^2 .* w))
   */
 object EuclideanDistance extends MinkowskiDistance(2) with Serializable {
+  @inline override def element(v1: VectorBase, v2: VectorBase, w: VectorBase): Distance = w * (v1 - v2) * (v1 - v2)
 
   override def equals(that: Any): Boolean = (this.getClass == that.getClass || that.getClass == SquaredEuclideanDistance.getClass)
   override def hashCode(): Int = 0
@@ -47,7 +50,8 @@ object EuclideanDistance extends MinkowskiDistance(2) with Serializable {
   * from Julia: sum((x - y).^2)
   */
 object SquaredEuclideanDistance extends MinkowskiDistance(2) with Serializable {
-  override def normalize(cumSum: Distance): Distance = cumSum
+  @inline override def element(v1: VectorBase, v2: VectorBase, w: VectorBase): Distance = w * (v1 - v2) * (v1 - v2)
+  @inline override def normalize(cumSum: Distance): Distance = cumSum
 
   override def equals(that: Any): Boolean = (this.getClass == that.getClass || that.getClass == EuclideanDistance.getClass)
   override def hashCode(): Int = 0

@@ -11,6 +11,6 @@ import ch.unibas.dmi.dbis.adam.query.distance.DistanceFunction
  * October 2015
  */
 @SerialVersionUID(100L)
-case class ECPIndexMetaData(leaders : Seq[ECPLeader], distance : DistanceFunction) extends Serializable {}
+case class ECPIndexMetaData(leaders : Seq[ECPLeader], distance : DistanceFunction) extends Serializable
 
 case class ECPLeader(id: Int, feature: FeatureVector, count : Long) extends Serializable

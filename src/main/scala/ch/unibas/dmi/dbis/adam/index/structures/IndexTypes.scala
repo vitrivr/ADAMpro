@@ -2,18 +2,13 @@ package ch.unibas.dmi.dbis.adam.index.structures
 
 import java.io.Serializable
 
-import ch.unibas.dmi.dbis.adam.entity.Entity._
-import ch.unibas.dmi.dbis.adam.index.Index._
-import ch.unibas.dmi.dbis.adam.index.structures.ecp.{ECPIndex, ECPIndexer}
-import ch.unibas.dmi.dbis.adam.index.structures.lsh.{LSHIndex, LSHIndexer}
-import ch.unibas.dmi.dbis.adam.index.structures.mi.{MIIndex, MIIndexer}
-import ch.unibas.dmi.dbis.adam.index.structures.pq.{PQIndex, PQIndexer}
-import ch.unibas.dmi.dbis.adam.index.structures.sh.{SHIndex, SHIndexer}
-import ch.unibas.dmi.dbis.adam.index.structures.va.{VAIndex, VAFIndexer, VAVIndexer}
-import ch.unibas.dmi.dbis.adam.index.{Index, IndexGenerator}
-import ch.unibas.dmi.dbis.adam.main.AdamContext
-import ch.unibas.dmi.dbis.adam.query.distance.DistanceFunction
-import org.apache.spark.sql.DataFrame
+import ch.unibas.dmi.dbis.adam.index.structures.ecp.{ECPIndex, ECPIndexGeneratorFactory}
+import ch.unibas.dmi.dbis.adam.index.structures.lsh.{LSHIndex, LSHIndexGeneratorFactory}
+import ch.unibas.dmi.dbis.adam.index.structures.mi.{MIIndex, MIIndexGeneratorFactory}
+import ch.unibas.dmi.dbis.adam.index.structures.pq.{PQIndex, PQIndexGeneratorFactory}
+import ch.unibas.dmi.dbis.adam.index.structures.sh.{SHIndex, SHIndexGeneratorFactory}
+import ch.unibas.dmi.dbis.adam.index.structures.va._
+import ch.unibas.dmi.dbis.adam.index.{Index, IndexGeneratorFactory}
 import org.vitrivr.adam.grpc._
 
 /**
@@ -24,43 +19,30 @@ import org.vitrivr.adam.grpc._
   */
 object IndexTypes {
 
-  sealed abstract class IndexType(val name: String, val indextype: grpc.IndexType,
-                                  val index: (IndexName, EntityName, DataFrame, Any, AdamContext) => Index,
-                                  val indexer: (DistanceFunction, Map[String, String], AdamContext) => IndexGenerator
-                                 ) extends Serializable
+  sealed abstract class IndexType(val name: String, val indextype: grpc.IndexType, val indexClass: Class[_ <: Index], val indexGeneratorFactoryClass: Class[_ <: IndexGeneratorFactory]) extends Serializable
 
-  case object ECPINDEX extends IndexType("ecp", grpc.IndexType.ecp,
-    (indexname, entityname, df, meta, ac) => ECPIndex.apply(indexname, entityname, df, meta)(ac),
-    (df, options, ac) => ECPIndexer.apply(df, options)(ac))
 
-  case object LSHINDEX extends IndexType("lsh", grpc.IndexType.lsh,
-    (indexname, entityname, df, meta, ac) => LSHIndex.apply(indexname, entityname, df, meta)(ac),
-    (df, options, ac) => LSHIndexer.apply(df, options)(ac))
+  case object ECPINDEX extends IndexType("ecp", grpc.IndexType.ecp, classOf[ECPIndex], classOf[ECPIndexGeneratorFactory])
 
-  case object MIINDEX extends IndexType("mi", grpc.IndexType.mi,
-    (indexname, entityname, df, meta, ac) => MIIndex.apply(indexname, entityname, df, meta)(ac),
-    (df, options, ac) => MIIndexer.apply(df, options)(ac))
+  case object LSHINDEX extends IndexType("lsh", grpc.IndexType.lsh, classOf[LSHIndex], classOf[LSHIndexGeneratorFactory])
 
-  case object PQINDEX extends IndexType("pq", grpc.IndexType.pq,
-    (indexname, entityname, df, meta, ac) => PQIndex.apply(indexname, entityname, df, meta)(ac),
-    (df, options, ac) => PQIndexer.apply(df, options)(ac))
+  case object MIINDEX extends IndexType("mi", grpc.IndexType.mi, classOf[MIIndex], classOf[MIIndexGeneratorFactory])
 
-  case object SHINDEX extends IndexType("sh", grpc.IndexType.sh,
-    (indexname, entityname, df, meta, ac) => SHIndex.apply(indexname, entityname, df, meta)(ac),
-    (df, options, ac) => SHIndexer.apply(df, options)(ac))
+  case object PQINDEX extends IndexType("pq", grpc.IndexType.pq, classOf[PQIndex], classOf[PQIndexGeneratorFactory])
 
-  case object VAFINDEX extends IndexType("vaf", grpc.IndexType.vaf,
-    (indexname, entityname, df, meta, ac) => VAIndex.apply(indexname, entityname, df, meta)(ac),
-    (df, options, ac) => VAFIndexer.apply(df, options)(ac))
+  case object SHINDEX extends IndexType("sh", grpc.IndexType.sh, classOf[SHIndex], classOf[SHIndexGeneratorFactory])
 
-  case object VAVINDEX extends IndexType("vav", grpc.IndexType.vav,
-    (indexname, entityname, df, meta, ac) => VAIndex.apply(indexname, entityname, df, meta)(ac),
-    (df, options, ac) => VAVIndexer.apply(df, options)(ac))
+  case object VAFINDEX extends IndexType("vaf", grpc.IndexType.vaf, classOf[VAIndex], classOf[VAFIndexGeneratorFactory])
+
+  case object VAVINDEX extends IndexType("vav", grpc.IndexType.vav, classOf[VAIndex], classOf[VAVIndexGeneratorFactory])
+
+  case object VAPLUSINDEX extends IndexType("vap", grpc.IndexType.vap, classOf[VAPlusIndex], classOf[VAPlusIndexGeneratorFactory])
+
 
   /**
     *
     */
-  val values = Seq(ECPINDEX, LSHINDEX, MIINDEX, PQINDEX, SHINDEX, VAFINDEX, VAVINDEX)
+  val values = Seq(ECPINDEX, LSHINDEX, MIINDEX, PQINDEX, SHINDEX, VAFINDEX, VAVINDEX, VAPLUSINDEX)
 
   /**
     *

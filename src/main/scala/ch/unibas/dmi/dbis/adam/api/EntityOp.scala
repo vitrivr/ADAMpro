@@ -1,11 +1,13 @@
 package ch.unibas.dmi.dbis.adam.api
 
 import ch.unibas.dmi.dbis.adam.entity.Entity._
-import ch.unibas.dmi.dbis.adam.entity.{EntityPartitioner, AttributeDefinition, Entity}
+import ch.unibas.dmi.dbis.adam.entity.{AttributeDefinition, Entity, EntityPartitioner}
+import ch.unibas.dmi.dbis.adam.exception.GeneralAdamException
+import ch.unibas.dmi.dbis.adam.helpers.benchmark.ScanWeightCatalogOperator
 import ch.unibas.dmi.dbis.adam.helpers.partition.PartitionMode
 import ch.unibas.dmi.dbis.adam.helpers.sparsify.SparsifyHelper
 import ch.unibas.dmi.dbis.adam.main.AdamContext
-import ch.unibas.dmi.dbis.adam.helpers.scanweight.{ScanWeightInspector, ScanWeightUpdater}
+import ch.unibas.dmi.dbis.adam.query.query.Predicate
 import org.apache.spark.sql.DataFrame
 
 import scala.util.{Success, Try}
@@ -54,7 +56,7 @@ object EntityOp extends GenericOp {
   }
 
   /**
-    * Checks if index exists
+    * Checks if entity exists
     *
     * @param entityname name of entity
     * @return
@@ -62,6 +64,20 @@ object EntityOp extends GenericOp {
   def exists(entityname: EntityName)(implicit ac: AdamContext): Try[Boolean] = {
     execute("check entity " + entityname + " exists operation") {
       Success(Entity.exists(entityname))
+    }
+  }
+
+
+  /**
+    * Caches entity.
+    *
+    * @param entityname name of entity
+    * @return
+    */
+  def cache(entityname: EntityName)(implicit ac: AdamContext): Try[Void] = {
+    execute("cache entity " + entityname + " operation") {
+      Entity.load(entityname).get.cache()
+      Success(null)
     }
   }
 
@@ -99,6 +115,19 @@ object EntityOp extends GenericOp {
   def insert(entityname: EntityName, df: DataFrame)(implicit ac: AdamContext): Try[Void] = {
     execute("insert data into entity " + entityname + " operation") {
       Entity.load(entityname).get.insert(df)
+    }
+  }
+
+  /**
+    * Deletes data from the entity.
+    *
+    * @param entityname name of entity
+    * @param predicates list of predicates
+    *
+    */
+  def delete(entityname: EntityName, predicates : Seq[Predicate])(implicit ac: AdamContext): Try[Int] = {
+    execute("delete data from " + entityname + " operation") {
+      Success(Entity.load(entityname).get.delete(predicates))
     }
   }
 
@@ -145,20 +174,6 @@ object EntityOp extends GenericOp {
   }
 
   /**
-    * Benchmarks entity and indexes corresponding to entity and adjusts scan weights.
-    *
-    * @param entityname name of entity
-    * @param attribute     name of attribute
-    * @return
-    */
-  def adjustScanWeights(entityname: EntityName, attribute: String, benchmark : Boolean, options : Map[String, String] = Map())(implicit ac: AdamContext): Try[Void] = {
-    execute("benchmark entity and indexes of " + entityname + "(" + attribute + ")" + "and adjust weights operation") {
-      ScanWeightUpdater(entityname, attribute, benchmark, options)
-      Success(null)
-    }
-  }
-
-  /**
     * Sets the weight of the entity to make it more important in the search
     *
     * @param entityname name of entity
@@ -168,7 +183,7 @@ object EntityOp extends GenericOp {
     */
   def setScanWeight(entityname: EntityName, attribute: String, weight: Float)(implicit ac: AdamContext): Try[Void] = {
     execute("set entity weight for " + entityname + "(" + attribute + ")" + " operation") {
-      ScanWeightInspector.set(Entity.load(entityname).get, attribute, weight)
+      ScanWeightCatalogOperator.set(Entity.load(entityname).get, attribute, weight)
       Success(null)
     }
   }
@@ -180,7 +195,7 @@ object EntityOp extends GenericOp {
     */
   def resetScanWeights(entityname: EntityName)(implicit ac: AdamContext): Try[Void] = {
     execute("reset weights of entity and indexes of " + entityname) {
-      ScanWeightUpdater.resetWeights(entityname)
+      throw new GeneralAdamException("not implemented yet")
       Success(null)
     }
   }

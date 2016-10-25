@@ -1,7 +1,7 @@
 package ch.unibas.dmi.dbis.adam.web.datastructures
 
 import ch.unibas.dmi.dbis.adam.rpc.datastructures.{RPCQueryObject, RPCQueryResults}
-import ch.unibas.dmi.dbis.adam.web.ProgressiveQueryStatus
+import ch.unibas.dmi.dbis.adam.web.controller.ProgressiveQueryStatus
 
 /**
   * ADAMpro

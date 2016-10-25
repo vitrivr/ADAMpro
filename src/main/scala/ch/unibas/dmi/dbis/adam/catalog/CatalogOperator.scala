@@ -11,10 +11,11 @@ import ch.unibas.dmi.dbis.adam.exception._
 import ch.unibas.dmi.dbis.adam.helpers.partition.ADAMPartitioner
 import ch.unibas.dmi.dbis.adam.index.Index.{IndexName, IndexTypeName}
 import ch.unibas.dmi.dbis.adam.index.structures.IndexTypes
+import ch.unibas.dmi.dbis.adam.query.handler.generic.QueryExpression
 import ch.unibas.dmi.dbis.adam.utils.Logging
+import com.mchange.v2.c3p0.ComboPooledDataSource
 import slick.dbio.NoStream
-import slick.driver.PostgresDriver.api._
-import slick.jdbc.meta.MTable
+import slick.driver.DerbyDriver.api._
 
 import scala.collection.mutable.ListBuffer
 import scala.concurrent.Await
@@ -30,7 +31,12 @@ import scala.util.{Failure, Success, Try}
   */
 object CatalogOperator extends Logging {
   private val MAX_WAITING_TIME: Duration = 100.seconds
-  private val DB = Database.forURL(AdamConfig.jdbcUrl, driver = "org.postgresql.Driver", user = AdamConfig.jdbcUser, password = AdamConfig.jdbcPassword)
+
+  private val ds = new ComboPooledDataSource
+  ds.setDriverClass("org.apache.derby.jdbc.EmbeddedDriver")
+  ds.setJdbcUrl("jdbc:derby:" + AdamConfig.internalsPath + "/ap_catalog" + "")
+
+  private val DB = Database.forDataSource(ds)
 
   private[catalog] val SCHEMA = "adampro"
 
@@ -40,23 +46,31 @@ object CatalogOperator extends Logging {
   private val _attributeOptions = TableQuery[AttributeOptionsCatalog]
   private val _indexes = TableQuery[IndexCatalog]
   private val _indexOptions = TableQuery[IndexOptionsCatalog]
-  private val _measurements = TableQuery[MeasurementCatalog]
+  private val _storeengineOptions = TableQuery[StorageEngineOptionsCatalog]
   private val _partitioners = TableQuery[PartitionerCatalog]
 
   private[catalog] val CATALOGS = Seq(
-    _entitites, _entityOptions, _attributes, _attributeOptions, _indexes, _indexOptions, _partitioners, _measurements
+    _entitites, _entityOptions, _attributes, _attributeOptions, _indexes, _indexOptions, _storeengineOptions, _partitioners
   )
 
   /**
     * Initializes the catalog. Method is called at the beginning (see below).
     */
   private def init() {
-    try {
-      val tables = Await.result(DB.run(MTable.getTables), MAX_WAITING_TIME).toSeq.filter(_.name.schema.getOrElse("public").equals(SCHEMA)).map(_.name.name)
+    val connection = Database.forURL("jdbc:derby:" + AdamConfig.internalsPath + "/ap_catalog" + ";create=true")
 
+    try {
       val actions = new ListBuffer[DBIOAction[_, NoStream, _]]()
-      //schema might not exist yet
-      actions += sqlu"""CREATE SCHEMA IF NOT exists adampro;"""
+
+      val schemaExists = Await.result(connection.run(sql"""SELECT COUNT(*) FROM SYS.SYSSCHEMAS WHERE SCHEMANAME = '#$SCHEMA'""".as[Int]), MAX_WAITING_TIME).headOption
+
+      if (schemaExists.isEmpty || schemaExists.get == 0) {
+        //schema might not exist yet
+        actions += sqlu"""CREATE SCHEMA #$SCHEMA"""
+      }
+
+      val tables = Await.result(connection.run(sql"""SELECT TABLENAME FROM SYS.SYSTABLES NATURAL JOIN SYS.SYSSCHEMAS WHERE SCHEMANAME = '#$SCHEMA'""".as[String]), MAX_WAITING_TIME).toSeq
+
       CATALOGS.foreach { catalog =>
         if (!tables.contains(catalog.baseTableRow.tableName)) {
           actions += catalog.schema.create
@@ -64,11 +78,14 @@ object CatalogOperator extends Logging {
         }
       }
 
-      Await.result(DB.run(DBIO.seq(actions.toArray: _*).transactionally), MAX_WAITING_TIME)
+      Await.result(connection.run(DBIO.seq(actions.toArray: _*).transactionally), MAX_WAITING_TIME)
     } catch {
       case e: Exception =>
         log.error("fatal error when creating catalogs", e)
+        System.exit(1)
         throw new GeneralAdamException("fatal error when creating catalogs")
+    } finally {
+      connection.close()
     }
   }
 
@@ -84,7 +101,8 @@ object CatalogOperator extends Logging {
   private def execute[T](desc: String)(op: => T): Try[T] = {
     try {
       log.trace("performed catalog operation: " + desc)
-      Success(op)
+      val res = op
+      Success(res)
     } catch {
       case e: Exception =>
         log.error("error in catalog operation: " + desc, e)
@@ -110,7 +128,7 @@ object CatalogOperator extends Logging {
       actions += _entitites.+=(entityname)
 
       attributes.foreach { attribute =>
-        actions += _attributes.+=(entityname, attribute.name, attribute.fieldtype.name, attribute.pk, attribute.unique, attribute.indexed, attribute.storagehandler.map(_.name).getOrElse(""))
+        actions += _attributes.+=(entityname, attribute.name, attribute.fieldtype.name, attribute.pk, attribute.storagehandler.map(_.name).getOrElse(""))
 
         attribute.params.foreach { case (key, value) =>
           actions += _attributeOptions.+=(entityname, attribute.name, key, value)
@@ -200,6 +218,43 @@ object CatalogOperator extends Logging {
       val result = Await.result(DB.run(query.map(a => a.key -> a.value).result), MAX_WAITING_TIME)
       result.toMap
     }
+  }
+
+  /**
+    * Gets the metadata to an attribute of an entity.
+    *
+    * @param entityname name of entity
+    * @param attribute  name of attribute
+    * @param key        name of key
+    * @param z          zero/start value
+    * @param op         update method
+    * @return
+    */
+  def getAndUpdateAttributeOption(entityname: EntityName, attribute: String, key: String, z: String, op: (String) => (String)): Try[Map[String, String]] = {
+    execute("get attribute option") {
+      _attributeOptions.synchronized({
+        val query = _attributeOptions.filter(_.entityname === entityname.toString).filter(_.attributename === attribute).filter(_.key === key).map(_.value).result
+        val results = Await.result(DB.run(query), MAX_WAITING_TIME)
+
+        val actions = new ListBuffer[DBIOAction[_, NoStream, _]]()
+
+        if (results.isEmpty) {
+          actions += _attributeOptions.+=(entityname, attribute, key, z)
+        } else {
+          results.foreach { result =>
+            //upsert
+            actions += _attributeOptions.filter(_.entityname === entityname.toString).filter(_.attributename === attribute).filter(_.key === key).delete
+            actions += _attributeOptions.+=(entityname, attribute, key, op(result))
+          }
+        }
+
+        Await.result(DB.run(DBIO.seq(actions.toArray: _*).transactionally), MAX_WAITING_TIME)
+
+        Success(Await.result(DB.run(query), MAX_WAITING_TIME))
+      })
+    }
+
+    getAttributeOption(entityname, attribute, Some(key))
   }
 
 
@@ -366,16 +421,14 @@ object CatalogOperator extends Logging {
         val name = x._2
         val fieldtype = FieldTypes.fromString(x._3)
         val pk = x._4
-        val unique = x._5
-        val indexed = x._6
-        val handlerName = x._7
+        val handlerName = x._5
 
         val attributeOptionsQuery = _attributeOptions.filter(_.entityname === entityname.toString()).filter(_.attributename === name).result
         val options = Await.result(DB.run(attributeOptionsQuery), MAX_WAITING_TIME).groupBy(_._2).mapValues(_.map(x => x._3 -> x._4).toMap)
 
         val params = options.getOrElse(name, Map())
 
-        AttributeDefinition(name, fieldtype, pk, unique, indexed, Some(handlerName), params)
+        AttributeDefinition(name, fieldtype, pk, Some(handlerName), params)
       })
 
       attributeDefinitions
@@ -452,6 +505,8 @@ object CatalogOperator extends Logging {
 
       actions += _indexes.+=((indexname, entityname, attributename, indextypename.name, meta, true))
 
+      actions += _entitites.+=(indexname) //TODO: clean this
+
       Await.result(DB.run(DBIO.seq(actions.toArray: _*).transactionally), MAX_WAITING_TIME)
       null
     }
@@ -461,7 +516,7 @@ object CatalogOperator extends Logging {
     * Drops index from catalog.
     *
     * @param indexname name of index
-    * @param ifExists   if true: no error if does not exist
+    * @param ifExists  if true: no error if does not exist
     * @return
     */
   def dropIndex(indexname: IndexName, ifExists: Boolean = false): Try[Void] = {
@@ -472,8 +527,13 @@ object CatalogOperator extends Logging {
         }
       }
 
-      //on delete cascade...
-      Await.result(DB.run(_indexes.filter(_.indexname === indexname.toString).delete), MAX_WAITING_TIME)
+      val actions = new ListBuffer[DBIOAction[_, NoStream, _]]()
+
+      actions += _indexes.filter(_.indexname === indexname.toString).delete
+
+      actions += _entitites.filter(_.entityname === indexname.toString).delete //TODO: clean this
+
+      Await.result(DB.run(DBIO.seq(actions.toArray: _*).transactionally), MAX_WAITING_TIME)
 
       null
     }
@@ -665,55 +725,69 @@ object CatalogOperator extends Logging {
   }
 
   /**
-    * Adds a measurement to the catalog
+    * Returns the metadata to a storage engine store.
     *
-    * @param key
-    * @param value
+    * @param engine    name of storage engine
+    * @param storename name of storename
+    * @param key       name of key
     * @return
     */
-  def addMeasurement(key: String, value: Long): Try[Void] = {
-    execute("add measurement") {
-      val query = _measurements.+=(key, value)
-      DB.run(query)
+  def getStorageEngineOption(engine: String, storename: String, key: Option[String] = None): Try[Map[String, String]] = {
+    execute("get storage engine option") {
+      var query = _storeengineOptions.filter(_.engine === engine).filter(_.storename === storename)
+
+      if (key.isDefined) {
+        query = query.filter(_.key === key.get)
+      }
+
+      val result = Await.result(DB.run(query.map(a => a.key -> a.value).result), MAX_WAITING_TIME)
+      result.toMap
+    }
+  }
+
+
+  /**
+    * Updates or inserts a metadata information to a storage engine store.
+    *
+    * @param engine    name of storage engine
+    * @param storename name of storename
+    * @param key       name of key
+    * @param newValue  new value
+    * @return
+    */
+  def updateStorageEngineOption(engine: String, storename: String, key: String, newValue: String): Try[Void] = {
+    execute("update storage engine option") {
+      val actions = new ListBuffer[DBIOAction[_, NoStream, _]]()
+
+      //upsert
+      actions += _storeengineOptions.filter(_.engine === engine).filter(_.storename === storename).filter(_.key === key).delete
+      actions += _storeengineOptions.+=(engine, storename, key, newValue)
+
+      Await.result(DB.run(DBIO.seq(actions.toArray: _*).transactionally), MAX_WAITING_TIME)
       null
     }
   }
 
   /**
-    * Gets measurements for given key.
+    * Deletes the metadata to a storage engine store.
     *
-    * @param key
+    * @param engine    name of storage engine
+    * @param storename name of storename
+    * @param key       name of key
     * @return
     */
-  def getMeasurements(key: String): Try[Seq[Long]] = {
-    execute("get measurement") {
-      val query = _measurements.filter(_.key === key).map(_.measurement).result
-      Await.result(DB.run(query), MAX_WAITING_TIME)
-    }
-  }
+  def deleteStorageEngineOption(engine: String, storename: String, key: Option[String]): Try[Void] = {
+    execute("delete storage engine option") {
+      var query = _storeengineOptions.filter(_.engine === engine).filter(_.storename === storename)
 
-  /**
-    * Drops measurements for given key.
-    *
-    * @param key
-    * @return
-    */
-  def dropMeasurements(key : String): Try[Void] = {
-    execute("drop measurements") {
-      Await.result(DB.run(_measurements.filter(_.key === key).delete), MAX_WAITING_TIME)
+
+      if (key.isDefined) {
+        query = query.filter(_.key === key.get)
+      }
+
+      Await.result(DB.run(query.delete), MAX_WAITING_TIME)
       null
     }
   }
 
-  /**
-    * Drops measurements for given key.
-    *
-    * @return
-    */
-  def dropAllMeasurements(): Try[Void] = {
-    execute("drop all measurements") {
-      Await.result(DB.run(_measurements.delete), MAX_WAITING_TIME)
-      null
-    }
-  }
 }

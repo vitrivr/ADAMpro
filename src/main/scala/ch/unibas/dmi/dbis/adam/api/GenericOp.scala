@@ -15,10 +15,15 @@ abstract class GenericOp extends Logging {
     try {
       log.debug("starting " + desc)
       val t1 = System.currentTimeMillis
-      val result = op
+      val res = op
+
+      if(res.isFailure){
+        throw res.failed.get
+      }
+
       val t2 = System.currentTimeMillis
       log.debug("performed " + desc + " in " + (t2 - t1) + " msecs")
-      result
+      res
     } catch {
       case e: Exception =>
         log.error("error in " + desc, e)

@@ -12,7 +12,7 @@ import ch.unibas.dmi.dbis.adam.main.SparkStartup
 import ch.unibas.dmi.dbis.adam.query.handler.internal.AggregationExpression.{ExpressionEvaluationOrder, IntersectExpression}
 import ch.unibas.dmi.dbis.adam.query.handler.internal.{StochasticIndexQueryExpression, CompoundQueryExpression, IndexScanExpression}
 import ch.unibas.dmi.dbis.adam.query.progressive.{AllProgressivePathChooser, ProgressiveObservation}
-import ch.unibas.dmi.dbis.adam.query.query.{BooleanQuery, NearestNeighbourQuery}
+import ch.unibas.dmi.dbis.adam.query.query.{Predicate, BooleanQuery, NearestNeighbourQuery}
 import org.scalatest.concurrent.ScalaFutures
 
 import scala.concurrent.duration.Duration
@@ -83,12 +83,11 @@ class QueryTestSuite extends AdamTestBase with ScalaFutures {
         }
       } else {
         Then("we should have a match at least in the first element")
-        Seq(results.zip(es.nnResults).head).map {
-          case (res, gt) =>
-            assert(res._2 == gt._2)
-            assert(math.abs(res._1 - gt._1) < EPSILON)
-        }
+
         log.info("score: " + getScore(es.nnResults.map(_._2), results.map(_._2)))
+
+        assert(results.head._2 == es.nnResults.head._2)
+        assert(math.abs(results.head._1 - es.nnResults.head._1) < EPSILON)
       }
     }
 
@@ -169,6 +168,12 @@ class QueryTestSuite extends AdamTestBase with ScalaFutures {
       withQueryEvaluationSet { es => indexQuery(es, IndexTypes.VAVINDEX, false) }
     }
 
+    /**
+      *
+      */
+    scenario("perform a vap index query") {
+      withQueryEvaluationSet { es => indexQuery(es, IndexTypes.VAPLUSINDEX, false) }
+    }
 
     /**
       *
@@ -205,11 +210,11 @@ class QueryTestSuite extends AdamTestBase with ScalaFutures {
         val df = es.fullData
 
         When("performing a boolean query on the joined metadata")
-        val inStmt = "IN " + es.nnbqResults.map {
+        val tids = es.nnbqResults.map {
           case (distance, tid) =>
             (tid).toString
-        }.mkString("(", ", ", ")")
-        val whereStmt = Option(Seq("tid" -> inStmt))
+        }
+        val whereStmt = Seq(new Predicate("tid", Some("="), tids))
 
         val bq = BooleanQuery(whereStmt)
 

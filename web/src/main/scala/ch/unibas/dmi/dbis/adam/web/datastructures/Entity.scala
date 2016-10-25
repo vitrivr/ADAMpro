@@ -14,7 +14,7 @@ private[web] case class EntityDetailResponse(code: Int, entityname: String, deta
 
 private[web] case class EntityCreateRequest(entityname: String, attributes: Seq[EntityField])
 
-private[web] case class EntityField(name: String, datatype: String, indexed: Boolean, pk: Boolean)
+private[web] case class EntityField(name: String, datatype: String, pk: Boolean, storagehandler : String, params : Map[String, String])
 
 private[web] case class EntityFillRequest(entityname: String, ntuples: Int, ndims: Int)
 
@@ -23,4 +23,7 @@ private[web] case class EntityImportRequest(host: String, database: String, user
 private[web] case class EntityReadResponse(code: Int, entityname: String, details: Seq[Map[String, String]])
 
 private[web] case class EntityPartitionRequest(entityname: String, npartitions: Int, materialize: Boolean, replace: Boolean, attributes: Seq[String])
+
+private[web] case class StorageHandlerResponse(code: Int, handlers : Map[String, Seq[String]])
+
 

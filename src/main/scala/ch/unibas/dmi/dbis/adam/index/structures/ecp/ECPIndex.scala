@@ -2,14 +2,12 @@ package ch.unibas.dmi.dbis.adam.index.structures.ecp
 
 import ch.unibas.dmi.dbis.adam.config.FieldNames
 import ch.unibas.dmi.dbis.adam.datatypes.feature.Feature.FeatureVector
-import ch.unibas.dmi.dbis.adam.entity.Entity.EntityName
 import ch.unibas.dmi.dbis.adam.index.Index.{IndexName, IndexTypeName}
 import ch.unibas.dmi.dbis.adam.index._
 import ch.unibas.dmi.dbis.adam.index.structures.IndexTypes
 import ch.unibas.dmi.dbis.adam.main.AdamContext
 import ch.unibas.dmi.dbis.adam.query.distance.DistanceFunction
 import ch.unibas.dmi.dbis.adam.query.query.NearestNeighbourQuery
-import org.apache.spark.broadcast.Broadcast
 import org.apache.spark.sql.DataFrame
 import org.apache.spark.sql.functions._
 import org.apache.spark.sql.types.DataTypes
@@ -21,13 +19,14 @@ import org.apache.spark.sql.types.DataTypes
   * Ivan Giangreco
   * October 2015
   */
-class ECPIndex(val indexname: IndexName, val entityname: EntityName, override private[index] var data: DataFrame, private[index] val metadata: ECPIndexMetaData)(@transient override implicit val ac: AdamContext)
-  extends Index {
+class ECPIndex(override val indexname: IndexName)(@transient override implicit val ac: AdamContext)
+  extends Index(indexname) {
 
   override val indextypename: IndexTypeName = IndexTypes.ECPINDEX
-
   override val lossy: Boolean = true
   override val confidence = 0.5.toFloat
+
+  val meta = metadata.get.asInstanceOf[ECPIndexMetaData]
 
   /**
     *
@@ -42,8 +41,8 @@ class ECPIndex(val indexname: IndexName, val entityname: EntityName, override pr
     log.debug("scanning eCP index " + indexname)
 
     //for every leader, check its distance to the query-vector, then sort by distance.
-    val centroids = metadata.leaders.map(l => {
-      (l, metadata.distance(q, l.feature))
+    val centroids = meta.leaders.map(l => {
+      (l, meta.distance(q, l.feature))
     }).sortBy(_._2)
 
     //take so many centroids up to the moment where the result-length is over k (therefore + 1)
@@ -65,11 +64,4 @@ class ECPIndex(val indexname: IndexName, val entityname: EntityName, override pr
   }
 
   override def isQueryConform(nnq: NearestNeighbourQuery): Boolean = true
-}
-
-object ECPIndex {
-  def apply(indexname: IndexName, tablename: EntityName, data: DataFrame, meta: Any)(implicit ac: AdamContext): ECPIndex = {
-    val indexMetaData = meta.asInstanceOf[ECPIndexMetaData]
-    new ECPIndex(indexname, tablename, data, indexMetaData)
-  }
 }

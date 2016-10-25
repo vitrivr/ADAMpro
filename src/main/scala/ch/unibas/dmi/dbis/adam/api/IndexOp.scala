@@ -3,6 +3,8 @@ package ch.unibas.dmi.dbis.adam.api
 import ch.unibas.dmi.dbis.adam.entity.{Entity, EntityNameHolder}
 import ch.unibas.dmi.dbis.adam.entity.Entity._
 import ch.unibas.dmi.dbis.adam.exception.GeneralAdamException
+import ch.unibas.dmi.dbis.adam.helpers.benchmark.ScanWeightCatalogOperator
+import ch.unibas.dmi.dbis.adam.index.{IndexPartitioner, Index}
 import ch.unibas.dmi.dbis.adam.helpers.scanweight.ScanWeightInspector
 import ch.unibas.dmi.dbis.adam.index.{Index, IndexPartitioner}
 import ch.unibas.dmi.dbis.adam.index.Index._
@@ -64,7 +66,7 @@ object IndexOp extends GenericOp {
     */
   def create(entityname: EntityName, attribute: String, indextypename: IndexTypeName, distance: DistanceFunction, properties: Map[String, String] = Map())(implicit ac: AdamContext): Try[Index] = {
     execute("create index for " + entityname) {
-      Index.createIndex(Entity.load(entityname).get, attribute, indextypename.indexer(distance, properties, ac))
+      Index.createIndex(Entity.load(entityname).get, attribute, indextypename, distance, properties)
     }
   }
 
@@ -140,7 +142,7 @@ object IndexOp extends GenericOp {
     */
   def setScanWeight(indexname: IndexName, weight: Float)(implicit ac: AdamContext): Try[Void] = {
     execute("set index weight for " + indexname + " operation") {
-      ScanWeightInspector.set(Index.load(indexname).get, weight)
+      ScanWeightCatalogOperator.set(Index.load(indexname).get, weight)
       Success(null)
     }
   }

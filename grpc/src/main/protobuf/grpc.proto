@@ -11,10 +11,13 @@ option java_outer_classname = "AdamGrpc";
 
 service AdamDefinition {
   rpc CreateEntity(CreateEntityMessage) returns (AckMessage) {}
+  rpc AvailableAttributeTypes(EmptyMessage) returns (AvailableAttributeTypesMessage) {}
   rpc Count(EntityNameMessage) returns (AckMessage) {}
   rpc DropEntity(EntityNameMessage) returns (AckMessage) {}
   rpc ExistsEntity(EntityNameMessage) returns (ExistsMessage) {}
   rpc Insert(stream InsertMessage) returns (AckMessage) {}
+  rpc GetNextPkValue(EntityNameMessage) returns (AckMessage) {}
+  rpc Delete(DeleteMessage) returns (AckMessage) {}
   //creates an index on the data
   rpc Index(IndexMessage) returns (AckMessage) {}
   rpc GenerateAllIndexes(IndexMessage) returns (AckMessage) {}
@@ -27,21 +30,27 @@ service AdamDefinition {
   rpc GetEntityProperties(EntityNameMessage) returns (EntityPropertiesMessage) {}
   rpc RepartitionEntityData(RepartitionMessage) returns (AckMessage) {}
   rpc RepartitionIndexData(RepartitionMessage) returns (AckMessage) {}
-  rpc AdjustScanWeights(UpdateWeightsMessage) returns (AckMessage) {}
   rpc ResetScanWeights(EntityNameMessage) returns (AckMessage) {}
   rpc SetScanWeight(WeightMessage) returns (AckMessage) {}
+  rpc AdaptScanMethods(AdaptScanMethodsMessage) returns (AckMessage) {}
   rpc SparsifyEntity(SparsifyEntityMessage) returns (AckMessage) {}
   rpc ImportData(ImportMessage) returns (AckMessage) {}
+  rpc ImportDataFile(ImportDataFileMessage) returns (AckMessage) {}
+  rpc ExportDataFile(EntityNameMessage) returns (ExportDataFileMessage) {}
+  rpc ListStorageHandlers(EmptyMessage) returns (StorageHandlersMessage) {}
+  //TODO: register storage handlers
 }
 
 service AdamSearch {
   //caches an index explicitly (before performing a query to speed up retrieval time)
   rpc CacheIndex (IndexNameMessage) returns (AckMessage) {}
   rpc CacheEntity (EntityNameMessage) returns (AckMessage) {}
-  rpc Preview(EntityNameMessage) returns (QueryResultsMessage) {}
+  rpc Preview(PreviewMessage) returns (QueryResultsMessage) {}
   //performs a query on an entity with hints on which search method to use
   //(if no hint is specified a fallback is used)
   rpc DoQuery(QueryMessage) returns (QueryResultsMessage) {}
+  rpc DoStreamingQuery(stream QueryMessage) returns (stream QueryResultsMessage) {}
+  rpc DoBatchQuery(BatchedQueryMessage) returns (BatchedQueryResultsMessage){}
   rpc DoProgressiveQuery(QueryMessage) returns (stream QueryResultsMessage) {}
   //return cached results
   rpc GetCachedResults(CachedResultsMessage) returns (QueryResultsMessage) {}
@@ -53,25 +62,31 @@ service AdamSearch {
 //****  GLOBALS ****//
 
 enum AttributeType {
-  LONG = 0;
-  INT = 1;
-  FLOAT = 2;
-  DOUBLE = 3;
-  STRING = 4;
-  TEXT = 5;
-  BOOLEAN = 6;
-  FEATURE = 7;
-  AUTO = 8;
+  UNKOWNAT = 0;
+  AUTO = 1;
+  LONG = 2;
+  INT = 3;
+  FLOAT = 4;
+  DOUBLE = 5;
+  STRING = 6;
+  TEXT = 7;
+  BOOLEAN = 8;
+  FEATURE = 9;
+  GEOMETRY = 10;
+  GEOGRAPHY = 11;
+  SERIAL = 12;
 }
 
 enum IndexType {
-  ecp = 0;
-  lsh = 1;
-  mi = 2;
-  pq = 3;
-  sh = 4;
-  vaf = 5;
-  vav = 6;
+  UNKNOWNIT = 0;
+  ecp = 1;
+  lsh = 2;
+  mi = 3;
+  pq = 4;
+  sh = 5;
+  vaf = 6;
+  vav = 7;
+  vap = 8;
 }
 
 message EmptyMessage {
@@ -109,13 +124,17 @@ message DataMessage {
      string stringData = 5;
      bool booleanData = 6;
      FeatureVectorMessage featureData = 7;
+     //string textData = 8;
+     string geographyData = 9;
+     string geometryData = 10;
   }
 }
 
 enum HandlerType {
-  relational = 0;
-  feature = 1;
-  solr = 2;
+  UNKNOWNHT = 0;
+  RELATIONAL = 1;
+  FILE = 2;
+  SOLR = 3;
 }
 
 
@@ -130,9 +149,8 @@ message AttributeDefinitionMessage {
   string name = 1;
   AttributeType attributetype = 2;
   bool pk = 3;
-  bool unique = 4;
-  bool indexed = 5;
   HandlerType handler = 6;
+  map<string, string> params = 7;
 }
 
 message EntityNameMessage {
@@ -156,6 +174,20 @@ message InsertMessage {
   message TupleInsertMessage {
     map<string, DataMessage> data = 1;
   }
+}
+
+
+message DeleteMessage {
+  string entity = 1;
+
+  message PredicateMessage {
+    string attribute = 1;
+    repeated DataMessage values = 2;
+    string op = 3;
+  }
+
+
+  repeated PredicateMessage predicates = 2;
 }
 
 message IndexMessage {
@@ -191,16 +223,29 @@ message RepartitionMessage {
   map<string, string> options = 6;
 }
 
-message UpdateWeightsMessage {
-  string entity = 1;
-  string attribute = 2;
-  bool benchmark = 3;
-}
-
 message WeightMessage {
   string entity = 1; //entity or index
   string attribute = 2;
   float weight = 3;
+}
+
+message AdaptScanMethodsMessage {
+  string entity = 1;
+  string attribute = 2;
+
+  enum IndexCollection {
+    EXISTING_INDEXES = 0;
+    NEW_INDEXES = 1;
+  }
+  IndexCollection ic = 3;
+
+  enum QueryCollection {
+    LOGGED_QUERIES = 0;
+    RANDOM_QUERIES = 1;
+  }
+  QueryCollection qc = 4;
+
+  map<string, string> options = 5;
 }
 
 message SparsifyEntityMessage {
@@ -209,15 +254,38 @@ message SparsifyEntityMessage {
 }
 
 message ImportMessage {
-//EXPERIMENTAL!
   string host = 1;
   string database = 2;
   string username = 3;
   string password = 4;
 }
 
+message ImportDataFileMessage {
+  oneof destination {
+    //the destination for the data is an existing
+    string entity = 1;
+    //or should be created
+    CreateEntityMessage createEntity = 2;
+    //or comes from a data definition file (created at export)
+    bytes definitionfile = 3;
+  }
 
+  enum FileType {
+    UNKOWN = 0;
+  }
 
+  FileType filetype = 4;
+  bytes datafile = 5;
+}
+
+message StorageHandlersMessage {
+  repeated StorageHandlerMessage handlers = 1;
+}
+
+message StorageHandlerMessage {
+  string name = 1;
+  repeated AttributeType attributetypes = 2;
+}
 
 
 
@@ -239,7 +307,9 @@ message QueryMessage {
   //include "index", "inexact", "ecp", "lsh", "mi", ""pq", "sh", "exact", "va", "vaf", "vav", "sequential", "predictive"
   //hints are used to chooose whether an index scan or a sequential scan, etc. should be used
   repeated string hints = 8;
-  bool useFallback = 9;
+
+  //if set to true, no fallback is being used
+  bool noFallback = 9;
 
   //maximum duration of query in ms
   int64 time = 10;
@@ -270,15 +340,18 @@ message QueryMessage {
 message ExpressionQueryMessage {
   string queryid = 1;
   enum Operation {
-      UNION = 0;
-      INTERSECT = 1;
-      EXCEPT = 2;
+      UNKNOWNEXPOP = 0;
+      UNION = 1;
+      INTERSECT = 2;
+      EXCEPT = 3;
+      JOIN = 4;
     }
 
    enum OperationOrder {
-      LEFTFIRST = 0;
-      RIGHTFIRST = 1;
-      PARALLEL = 2;
+      UNKNOWNOO = 0;
+      LEFTFIRST = 1;
+      RIGHTFIRST = 2;
+      PARALLEL = 3;
     }
 
    SubExpressionQueryMessage left = 2;
@@ -298,18 +371,17 @@ message SubExpressionQueryMessage {
 
 message ProjectionMessage {
   enum Operation {
-    COUNT = 0;
-    EXISTS = 1;
+    UNKNOWNPROJOP = 0;
+    COUNT = 1;
+    EXISTS = 2;
+    DISTINCT = 3;
   }
   message AttributeNameMessage {
     repeated string attribute = 1;
   }
-  oneof submessage {
-    //either attributes are specified...
-    AttributeNameMessage attributes = 1;
-    //...or an operation
-    Operation op = 2;
-  }
+
+  AttributeNameMessage attributes = 1;
+  Operation op = 2;
 }
 
 message FromMessage {
@@ -353,18 +425,19 @@ message NearestNeighbourQueryMessage {
 
 message DistanceMessage {
   enum DistanceType {
-    chisquared = 0;
-    correlation = 1;
-    cosine = 2;
-    hamming = 3;
-    jaccard = 4;
-    kullbackleibler = 5;
-    chebyshev = 6;
-    euclidean = 7;
-    squaredeuclidean = 8;
-    manhattan = 9;
-    minkowski = 10; //add option 'norm'
-    spannorm = 11;
+    UNKNOWND = 0;
+    chisquared = 1;
+    correlation = 2;
+    cosine = 3;
+    hamming = 4;
+    jaccard = 5;
+    kullbackleibler = 6;
+    chebyshev = 7;
+    euclidean = 8;
+    squaredeuclidean = 9;
+    manhattan = 10;
+    minkowski = 11; //add option 'norm'
+    spannorm = 12;
   }
   DistanceType distancetype = 1;
   map<string, string> options = 2;
@@ -376,9 +449,8 @@ message BooleanQueryMessage {
 
   message WhereMessage {
     string attribute = 1;
-    //if value starts on certain operators (e.g., != or IN), then the operation used in query is adapted, otherwise equality is used
-    //TODO: possibly adjust to DataMessage, but in that case make sure that using where only non-feature attributes can be queried using WHERE
-    string value = 2;
+    repeated DataMessage values = 2;
+    string op = 3;
   }
 
   message JoinMessage {
@@ -398,15 +470,22 @@ message CachedResultsMessage {
   string queryid = 1;
 }
 
+message BatchedQueryMessage {
+  repeated QueryMessage queries = 1;
+}
 
+message PreviewMessage {
+  string entity = 1;
+  int32 n = 2;
+}
 
 
 
 //****  RESPONSES ****//
 message AckMessage {
 enum Code {
-  OK = 0;
-  ERROR = 1;
+  ERROR = 0;
+  OK = 1;
 }
   Code code = 1;
   string message = 2;
@@ -415,6 +494,11 @@ enum Code {
 message EntitiesMessage {
   AckMessage ack = 1;
   repeated string entities = 2;
+}
+
+message AvailableAttributeTypesMessage {
+  AckMessage ack = 1;
+  repeated AttributeType attributetypes = 2;
 }
 
 message ExistsMessage {
@@ -462,4 +546,14 @@ message QueryResultInfoMessage {
 
 message QueryResultTupleMessage {
   map<string, DataMessage> data = 1;
+}
+
+message ExportDataFileMessage {
+  AckMessage ack = 1;
+  bytes definitionfile = 2;
+  bytes datafile = 3;
+}
+
+message BatchedQueryResultsMessage {
+  repeated QueryResultsMessage results = 1;
 }

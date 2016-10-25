@@ -13,7 +13,7 @@ import org.apache.spark.sql.DataFrame
   */
 case class CacheExpression(private val expr: QueryExpression, private val cache: QueryCacheOptions = QueryCacheOptions(), id: Option[String])(@transient implicit val ac: AdamContext) extends QueryExpression(id) {
   override val info = ExpressionDetails(None, Some("Cache Expression"), id, None)
-  children ++= Seq(expr)
+  _children ++= Seq(expr)
 
   override protected def run(options : Option[QueryEvaluationOptions], filter: Option[DataFrame] = None)(implicit ac: AdamContext): Option[DataFrame] = {
     log.debug("run cache operation")

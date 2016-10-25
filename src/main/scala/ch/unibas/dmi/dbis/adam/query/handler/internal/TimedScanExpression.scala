@@ -17,7 +17,7 @@ import scala.concurrent.duration.Duration
   */
 case class TimedScanExpression(private val exprs: Seq[QueryExpression], private val timelimit: Duration, id: Option[String] = None)(filterExpr: Option[QueryExpression] = None)(@transient implicit val ac: AdamContext) extends QueryExpression(id) {
   override val info = ExpressionDetails(None, Some("Timed Scan Expression"), id, confidence)
-  children ++= exprs ++ filterExpr.map(Seq(_)).getOrElse(Seq())
+  _children ++= exprs ++ filterExpr.map(Seq(_)).getOrElse(Seq())
   var confidence : Option[Float] = None
 
   def this(entityname: EntityName, nnq: NearestNeighbourQuery, pathChooser: ProgressivePathChooser, timelimit: Duration, id: Option[String] = None)(filterExpr: Option[QueryExpression] = None)(implicit ac: AdamContext) = {

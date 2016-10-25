@@ -4,7 +4,7 @@ import ch.unibas.dmi.dbis.adam.config.FieldNames
 import ch.unibas.dmi.dbis.adam.entity.Entity
 import ch.unibas.dmi.dbis.adam.entity.Entity._
 import ch.unibas.dmi.dbis.adam.main.AdamContext
-import ch.unibas.dmi.dbis.adam.query.handler.generic.{QueryEvaluationOptions, ExpressionDetails, QueryExpression}
+import ch.unibas.dmi.dbis.adam.query.handler.generic.{ExpressionDetails, QueryEvaluationOptions, QueryExpression}
 import ch.unibas.dmi.dbis.adam.query.query.BooleanQuery
 import ch.unibas.dmi.dbis.adam.utils.Logging
 import org.apache.spark.sql.DataFrame
@@ -27,7 +27,7 @@ object BooleanFilterExpression extends Logging {
     */
   case class BooleanFilterScanExpression(private val entity: Entity)(private val bq: BooleanQuery, id: Option[String] = None)(filterExpr: Option[QueryExpression] = None)(@transient implicit val ac: AdamContext) extends QueryExpression(id) {
     override val info = ExpressionDetails(Some(entity.entityname), Some("Table Boolean-Scan Expression"), id, None)
-    children ++= filterExpr.map(Seq(_)).getOrElse(Seq())
+    _children ++= filterExpr.map(Seq(_)).getOrElse(Seq())
 
     def this(entityname: EntityName)(bq: BooleanQuery, id: Option[String] = None)(filterExpr: Option[QueryExpression] = None)(implicit ac: AdamContext) {
       this(Entity.load(entityname).get)(bq, id)(filterExpr)(ac)
@@ -38,7 +38,7 @@ object BooleanFilterExpression extends Logging {
 
       ac.sc.setJobGroup(id.getOrElse(""), "boolean filter scan", interruptOnCancel = true)
 
-      var df = entity.getData()
+      var df =  entity.getData(predicates = bq.where)
 
       var ids = mutable.Set[Any]()
 
@@ -83,7 +83,7 @@ object BooleanFilterExpression extends Logging {
     */
   case class BooleanFilterAdHocExpression(expr: QueryExpression, bq: BooleanQuery, id: Option[String] = None)(implicit ac: AdamContext) extends QueryExpression(id) {
     override val info = ExpressionDetails(None, Some("Ad-Hoc Boolean-Scan Expression"), id, None)
-    children ++= Seq(expr)
+    _children ++= Seq(expr)
 
     override protected def run(options : Option[QueryEvaluationOptions], filter: Option[DataFrame] = None)(implicit ac: AdamContext): Option[DataFrame] = {
       log.debug("run boolean filter operation on data")
@@ -129,11 +129,9 @@ object BooleanFilterExpression extends Logging {
     log.debug("filter using boolean query filter")
     var data = df
 
-    if (bq.where.isDefined) {
-      val where = bq.buildWhereClause()
-      log.debug("query metadata using where clause: " + where)
-      data = data.filter(where)
-    }
+    val sqlString = bq.where.map(_.sqlString).mkString(" AND ")
+    log.debug("query metadata using where clause: " + sqlString)
+    data = data.filter(sqlString)
 
     data
   }

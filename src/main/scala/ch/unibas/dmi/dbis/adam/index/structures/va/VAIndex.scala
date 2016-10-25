@@ -3,7 +3,6 @@ package ch.unibas.dmi.dbis.adam.index.structures.va
 import ch.unibas.dmi.dbis.adam.config.FieldNames
 import ch.unibas.dmi.dbis.adam.datatypes.bitString.BitString
 import ch.unibas.dmi.dbis.adam.datatypes.feature.Feature._
-import ch.unibas.dmi.dbis.adam.entity.Entity._
 import ch.unibas.dmi.dbis.adam.index.Index
 import ch.unibas.dmi.dbis.adam.index.Index.{IndexName, IndexTypeName}
 import ch.unibas.dmi.dbis.adam.index.structures.IndexTypes
@@ -15,7 +14,7 @@ import ch.unibas.dmi.dbis.adam.query.distance.Distance._
 import ch.unibas.dmi.dbis.adam.query.distance.{DistanceFunction, MinkowskiDistance}
 import ch.unibas.dmi.dbis.adam.query.query.NearestNeighbourQuery
 import org.apache.spark.broadcast.Broadcast
-import org.apache.spark.sql.{Row, DataFrame}
+import org.apache.spark.sql.{DataFrame, Row}
 
 /**
   * adamtwo
@@ -23,22 +22,24 @@ import org.apache.spark.sql.{Row, DataFrame}
   * Ivan Giangreco
   * August 2015
   */
-class VAIndex(val indexname: IndexName, val entityname: EntityName, override private[index] var data: DataFrame, private[index] val metadata: VAIndexMetaData)(@transient override implicit val ac: AdamContext)
-  extends Index {
+class VAIndex(override val indexname: IndexName)(@transient override implicit val ac: AdamContext)
+  extends Index(indexname) {
 
-  override val indextypename: IndexTypeName = metadata.signatureGenerator match {
+  lazy val meta = metadata.get.asInstanceOf[VAIndexMetaData]
+
+  override lazy val indextypename: IndexTypeName = meta.signatureGenerator match {
     case fsg: FixedSignatureGenerator => IndexTypes.VAFINDEX
     case vsg: VariableSignatureGenerator => IndexTypes.VAVINDEX
   }
 
-  override val lossy: Boolean = false
-  override val confidence = 1.toFloat
-
-  override val score : Float = if(indextypename.equals(IndexTypes.VAFINDEX)){
+  override lazy val lossy: Boolean = false
+  override lazy val confidence = 1.toFloat
+  override lazy val score : Float = if(indextypename.equals(IndexTypes.VAFINDEX)){
     0.9.toFloat //slightly less weight if fixed variable
   } else {
     1.toFloat
   }
+
 
   /**
     *
@@ -52,9 +53,9 @@ class VAIndex(val indexname: IndexName, val entityname: EntityName, override pri
   override def scan(data: DataFrame, q: FeatureVector, distance: DistanceFunction, options: Map[String, String], k: Int): DataFrame = {
     log.debug("scanning VA-File index " + indexname)
 
-    val signatureGenerator = ac.sc.broadcast(metadata.signatureGenerator)
+    val signatureGenerator = ac.sc.broadcast(meta.signatureGenerator)
 
-    val bounds = computeBounds(q, metadata.marks, distance.asInstanceOf[MinkowskiDistance])
+    val bounds = computeBounds(q, meta.marks, distance.asInstanceOf[MinkowskiDistance])
     val lbounds = ac.sc.broadcast(bounds._1)
     val ubounds = ac.sc.broadcast(bounds._2)
 
@@ -157,9 +158,4 @@ class VAIndex(val indexname: IndexName, val entityname: EntityName, override pri
 object VAIndex {
   type Marks = Seq[Seq[VectorBase]]
   type Bounds = Array[Array[Distance]]
-
-  def apply(indexname: IndexName, entityname: EntityName, data: DataFrame, meta: Any)(implicit ac: AdamContext): VAIndex = {
-    val indexMetaData = meta.asInstanceOf[VAIndexMetaData]
-    new VAIndex(indexname, entityname, data, indexMetaData)
-  }
 }

@@ -1,7 +1,7 @@
 package ch.unibas.dmi.dbis.adam.catalog.catalogs
 
 import ch.unibas.dmi.dbis.adam.catalog.CatalogOperator
-import slick.driver.PostgresDriver.api._
+import slick.driver.DerbyDriver.api._
 
 /**
   * ADAMpro

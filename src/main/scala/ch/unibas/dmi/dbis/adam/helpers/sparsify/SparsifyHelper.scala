@@ -81,7 +81,7 @@ object SparsifyHelper {
       val attributes = entity.schema().filterNot(_.pk).filter(_.storagehandler.get == handler).+:(entity.pk)
       data = data.select(attributes.map(attribute => col(attribute.name)).toArray: _*)
 
-      val status = handler.write(entity.entityname, data, SaveMode.Overwrite)
+      val status = handler.write(entity.entityname, data, attributes, SaveMode.Overwrite)
       if (status.isFailure) {
         throw status.failed.get
       }

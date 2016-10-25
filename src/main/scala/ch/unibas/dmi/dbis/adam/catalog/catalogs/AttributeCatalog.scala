@@ -1,7 +1,7 @@
 package ch.unibas.dmi.dbis.adam.catalog.catalogs
 
 import ch.unibas.dmi.dbis.adam.catalog.CatalogOperator
-import slick.driver.PostgresDriver.api._
+import slick.driver.DerbyDriver.api._
 
 /**
   * ADAMpro
@@ -11,7 +11,9 @@ import slick.driver.PostgresDriver.api._
   * Ivan Giangreco
   * June 2016
   */
-private[catalog] class AttributeCatalog(tag: Tag) extends Table[(String, String, String, Boolean, Boolean, Boolean, String)](tag, Some(CatalogOperator.SCHEMA), "ap_attribute") {
+private[catalog] class AttributeCatalog(tag: Tag) extends Table[(String, String, String, Boolean, String)](tag, Some(CatalogOperator.SCHEMA), "ap_attribute") {
+  //TODO: possibly store order of attribute
+
   def entityname = column[String]("entity")
 
   def attributename = column[String]("attribute")
@@ -20,10 +22,6 @@ private[catalog] class AttributeCatalog(tag: Tag) extends Table[(String, String,
 
   def isPK = column[Boolean]("ispk")
 
-  def isUnique = column[Boolean]("isunique")
-
-  def isIndexed = column[Boolean]("isindexed")
-
   def handlername = column[String]("handler")
 
   /**
@@ -31,9 +29,9 @@ private[catalog] class AttributeCatalog(tag: Tag) extends Table[(String, String,
     */
   def pk = primaryKey("attribute_pk", (entityname, attributename))
 
-  def * = (entityname, attributename, fieldtype, isPK, isUnique, isIndexed, handlername)
+  def * = (entityname, attributename, fieldtype, isPK, handlername)
 
   def idx = index("idx_attribute_entityname", entityname)
 
-  def entity = foreignKey("attribute_entity_fk", entityname, TableQuery[EntityCatalog])(_.entityname, onUpdate=ForeignKeyAction.Cascade, onDelete=ForeignKeyAction.Cascade)
+  def entity = foreignKey("attribute_entity_fk", entityname, TableQuery[EntityCatalog])(_.entityname, onUpdate=ForeignKeyAction.Restrict, onDelete=ForeignKeyAction.Cascade)
 }

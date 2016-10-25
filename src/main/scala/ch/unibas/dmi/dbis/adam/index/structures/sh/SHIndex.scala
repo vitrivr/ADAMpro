@@ -4,7 +4,6 @@ import ch.unibas.dmi.dbis.adam.config.FieldNames
 import ch.unibas.dmi.dbis.adam.datatypes.bitString.BitString
 import ch.unibas.dmi.dbis.adam.datatypes.feature.Feature._
 import ch.unibas.dmi.dbis.adam.datatypes.feature.MovableFeature
-import ch.unibas.dmi.dbis.adam.entity.Entity._
 import ch.unibas.dmi.dbis.adam.index.Index
 import ch.unibas.dmi.dbis.adam.index.Index.{IndexName, IndexTypeName}
 import ch.unibas.dmi.dbis.adam.index.structures.IndexTypes
@@ -12,7 +11,7 @@ import ch.unibas.dmi.dbis.adam.main.AdamContext
 import ch.unibas.dmi.dbis.adam.query.Result
 import ch.unibas.dmi.dbis.adam.query.distance.{DistanceFunction, MinkowskiDistance}
 import ch.unibas.dmi.dbis.adam.query.query.NearestNeighbourQuery
-import org.apache.spark.sql.{Row, DataFrame}
+import org.apache.spark.sql.{DataFrame, Row}
 
 
 /**
@@ -21,13 +20,14 @@ import org.apache.spark.sql.{Row, DataFrame}
  * Ivan Giangreco
  * August 2015
  */
-class SHIndex(val indexname: IndexName, val entityname: EntityName, override private[index] var data : DataFrame, private[index] val metadata: SHIndexMetaData)(@transient override implicit val ac : AdamContext)
-  extends Index {
+class SHIndex(override val indexname: IndexName)(@transient override implicit val ac : AdamContext)
+  extends Index(indexname) {
 
   override val indextypename: IndexTypeName = IndexTypes.SHINDEX
-
   override val lossy: Boolean = true
   override val confidence = 0.5.toFloat
+
+  val meta = metadata.get.asInstanceOf[SHIndexMetaData]
 
   /**
     *
@@ -44,10 +44,10 @@ class SHIndex(val indexname: IndexName, val entityname: EntityName, override pri
     val numOfQueries = options.getOrElse("numOfQ", "3").toInt
 
     import MovableFeature.conv_feature2MovableFeature
-    val originalQuery = SHUtils.hashFeature(q, metadata)
+    val originalQuery = SHUtils.hashFeature(q, meta)
     //move the query around by the precomuted radius
     //TODO: possibly adjust weight of computed queries vs. true query
-    val queries = ac.sc.broadcast(List.fill(numOfQueries)((1.0, SHUtils.hashFeature(q.move(metadata.radius), metadata))) ::: List((1.0, originalQuery)))
+    val queries = ac.sc.broadcast(List.fill(numOfQueries)((1.0, SHUtils.hashFeature(q.move(meta.radius), meta))) ::: List((1.0, originalQuery)))
 
     import org.apache.spark.sql.functions.udf
     val distUDF = udf((c: BitString[_]) => {
@@ -87,13 +87,5 @@ class SHIndex(val indexname: IndexName, val entityname: EntityName, override pri
     }
 
     false
-  }
-}
-
-
-object SHIndex {
-  def apply(indexname: IndexName, tablename: EntityName, data: DataFrame, meta: Any)(implicit ac : AdamContext): SHIndex = {
-    val indexMetaData = meta.asInstanceOf[SHIndexMetaData]
-    new SHIndex(indexname, tablename, data, indexMetaData)
   }
 }

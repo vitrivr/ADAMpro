@@ -17,9 +17,9 @@ class SolrHandlerTestSuite extends AdamTestBase {
     withEntityName { entityname =>
       val ntuples = 1000
 
-      val handlerName = Some("storing-solr")
+      val handlerName = Some("solr")
       val fieldTypes = Seq(FieldTypes.INTTYPE, FieldTypes.LONGTYPE, FieldTypes.FLOATTYPE, FieldTypes.DOUBLETYPE, FieldTypes.STRINGTYPE, FieldTypes.TEXTTYPE, FieldTypes.BOOLEANTYPE)
-      val attributes = fieldTypes.map(field => AttributeDefinition(field.name + "field", field, storagehandlername = handlerName)) ++ Seq(AttributeDefinition("pkfield", FieldTypes.AUTOTYPE, true, storagehandlername = handlerName))
+      val attributes = fieldTypes.map(field => AttributeDefinition(field.name + "field", field, storagehandlername = handlerName)) ++ Seq(AttributeDefinition("id", FieldTypes.AUTOTYPE, true, storagehandlername = handlerName))
 
       EntityOp.create(entityname, attributes)
 

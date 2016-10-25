@@ -7,12 +7,13 @@ import ch.unibas.dmi.dbis.adam.exception.GeneralAdamException
 import ch.unibas.dmi.dbis.adam.index.Index
 import ch.unibas.dmi.dbis.adam.index.Index._
 import ch.unibas.dmi.dbis.adam.main.AdamContext
+import ch.unibas.dmi.dbis.adam.query.QueryHints
 import ch.unibas.dmi.dbis.adam.query.handler.generic.{QueryEvaluationOptions, ExpressionDetails, QueryExpression}
 import ch.unibas.dmi.dbis.adam.query.handler.internal.AggregationExpression.EmptyExpression
 import ch.unibas.dmi.dbis.adam.query.handler.internal.BooleanFilterExpression.BooleanFilterScanExpression
-import ch.unibas.dmi.dbis.adam.query.handler.internal.QueryHints._
+import QueryHints._
 import ch.unibas.dmi.dbis.adam.query.query.{BooleanQuery, NearestNeighbourQuery}
-import ch.unibas.dmi.dbis.adam.helpers.scanweight.ScanWeightInspector
+import ch.unibas.dmi.dbis.adam.helpers.benchmark.ScanWeightCatalogOperator
 import ch.unibas.dmi.dbis.adam.utils.Logging
 import org.apache.spark.sql.DataFrame
 
@@ -25,7 +26,7 @@ import org.apache.spark.sql.DataFrame
 case class HintBasedScanExpression(private val entityname: EntityName, private val nnq: Option[NearestNeighbourQuery], private val bq: Option[BooleanQuery], private val hints: Seq[QueryHint], private val withFallback: Boolean = true, id: Option[String] = None)(filterExpr: Option[QueryExpression] = None)(@transient implicit val ac: AdamContext) extends QueryExpression(id) {
   val expr = HintBasedScanExpression.startPlanSearch(entityname, nnq, bq, hints, withFallback)(filterExpr)
   override val info = ExpressionDetails(expr.info.source, Some("Hint-Based Expression: " + expr.info.scantype), id, expr.info.confidence)
-  children ++= Seq(expr) ++ filterExpr.map(Seq(_)).getOrElse(Seq())
+  _children ++= Seq(expr) ++ filterExpr.map(Seq(_)).getOrElse(Seq())
 
   override protected def run(options : Option[QueryEvaluationOptions], filter: Option[DataFrame] = None)(implicit ac: AdamContext): Option[DataFrame] = {
     log.debug("evaluate hint-based expression, scanning " + expr.info.scantype)
@@ -58,13 +59,12 @@ case class HintBasedScanExpression(private val entityname: EntityName, private v
 object HintBasedScanExpression extends Logging {
 
   def startPlanSearch(entityname: EntityName, nnq: Option[NearestNeighbourQuery], bq: Option[BooleanQuery], hints: Seq[QueryHint], withFallback: Boolean = true)(expr: Option[QueryExpression] = None)(implicit ac: AdamContext): QueryExpression = {
-    val indexes: Map[IndexTypeName, Seq[IndexName]] = CatalogOperator.listIndexes(Some(entityname)).get.map(Index.load(_)).filter(_.isSuccess).map(_.get).groupBy(_.indextypename).mapValues(_.map(_.indexname))
-    var plan = getPlan(entityname, indexes, nnq, bq, hints)(expr)
+    var plan = getPlan(entityname, nnq, bq, hints)(expr)
 
     if (plan.isEmpty) {
       if (withFallback) {
         log.warn("no query plan chosen, go to fallback")
-        plan = getPlan(entityname, indexes, nnq, bq, Seq(QueryHints.FALLBACK_HINTS))(expr)
+        plan = getPlan(entityname, nnq, bq, Seq(QueryHints.FALLBACK_HINTS))(expr)
       } else {
         throw new GeneralAdamException("using hints no execution plan could be found, using empty plan")
       }
@@ -80,14 +80,13 @@ object HintBasedScanExpression extends Logging {
     * Chooses the query plan to use based on the given hint, the available indexes, etc.
     *
     * @param entityname name of entity
-    * @param indexes    possible indexes
     * @param nnq        nearest neighbour query
     * @param bq         boolean query
     * @param hints      query hints
     * @param expr       filter expression
     * @return
     */
-  private def getPlan(entityname: EntityName, indexes: Map[IndexTypeName, Seq[IndexName]], nnq: Option[NearestNeighbourQuery], bq: Option[BooleanQuery], hints: Seq[QueryHint])(expr: Option[QueryExpression] = None)(implicit ac: AdamContext): Option[QueryExpression] = {
+  private def getPlan(entityname: EntityName, nnq: Option[NearestNeighbourQuery], bq: Option[BooleanQuery], hints: Seq[QueryHint])(expr: Option[QueryExpression] = None)(implicit ac: AdamContext): Option[QueryExpression] = {
     if (hints.isEmpty) {
       log.trace("no execution plan hint")
       return None
@@ -111,13 +110,14 @@ object HintBasedScanExpression extends Logging {
         hints(j) match {
           case PREDICTIVE =>
             log.trace("measurement-based execution plan hint")
+            val indexes = CatalogOperator.listIndexes(Some(entityname)).get.map(Index.load(_)).filter(_.isSuccess).map(_.get).groupBy(_.indextypename).mapValues(_.map(_.indexname))
             val index = indexes.values.toSeq.flatten
               .map(indexname => Index.load(indexname, false).get)
-              .sortBy(index => -ScanWeightInspector(index)).head
+              .sortBy(index => -ScanWeightCatalogOperator(index)).head
 
             val entity = Entity.load(entityname).get
 
-            if (ScanWeightInspector(index) > ScanWeightInspector(entity, nnq.get.attribute)) {
+            if (ScanWeightCatalogOperator(index) > ScanWeightCatalogOperator(entity, nnq.get.attribute)) {
               scan = Some(IndexScanExpression(index)(nnq.get)(scan))
             } else {
               scan = Some(SequentialScanExpression(entity)(nnq.get)(scan))
@@ -127,20 +127,19 @@ object HintBasedScanExpression extends Logging {
           case iqh: IndexQueryHint =>
             log.trace("index execution plan hint")
             //index scan
-            val indexChoice = indexes.get(iqh.structureType)
+            val indexChoice = CatalogOperator.listIndexes(Some(entityname), Some(iqh.structureType)).get.map(Index.load(_)).filter(_.isSuccess).map(_.get)
 
-            if (indexChoice.isDefined) {
-              val indexes = indexChoice.get
-                .map(indexname => Index.load(indexname, false).get)
+            if (indexChoice.nonEmpty) {
+              val sortedIndexChoice = indexChoice
                 .filter(nnq.get.isConform(_)) //choose only indexes that are conform to query
                 .filterNot(_.isStale) //don't use stale indexes
-                .sortBy(index => -ScanWeightInspector(index)) //order by weight (highest weight first)
+                .sortBy(index => -ScanWeightCatalogOperator(index)) //order by weight (highest weight first)
 
-              if (indexes.isEmpty) {
+              if (sortedIndexChoice.isEmpty) {
                 return None
               }
 
-              scan = Some(IndexScanExpression(indexes.head)(nnq.get)(scan))
+              scan = Some(IndexScanExpression(sortedIndexChoice.head)(nnq.get)(scan))
               return scan
             } else {
               return scan
@@ -159,7 +158,7 @@ object HintBasedScanExpression extends Logging {
             var i = 0
 
             while (i < chint.length) {
-              val plan = getPlan(entityname, indexes, nnq, bq, Seq(chint(i)))(expr)
+              val plan = getPlan(entityname, nnq, bq, Seq(chint(i)))(expr)
               if (plan.isDefined) return plan
 
               i += 1

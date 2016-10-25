@@ -15,7 +15,7 @@ import org.apache.spark.sql.{DataFrame, Row}
   */
 case class ProjectionExpression(private val projection: ProjectionField, private val expr: QueryExpression, id: Option[String] = None)(@transient implicit val ac: AdamContext) extends QueryExpression(id) {
   override val info = ExpressionDetails(None, Some("Projection Expression"), id, None)
-  children ++= Seq(expr)
+  _children ++= Seq(expr)
 
   override protected def run(options : Option[QueryEvaluationOptions], filter: Option[DataFrame] = None)(implicit ac: AdamContext): Option[DataFrame] = {
     log.debug("performing projection on data")
@@ -45,7 +45,7 @@ object ProjectionExpression extends Logging {
 
   case class FieldNameProjection(names: Seq[String])(implicit ac: AdamContext) extends ProjectionField {
     override def f(df: DataFrame): DataFrame = {
-      if (names.nonEmpty) {
+      if (names.nonEmpty && names.head != "*") {
         import org.apache.spark.sql.functions.col
         df.select(names.map(col): _*)
       } else {
@@ -90,6 +90,20 @@ object ProjectionExpression extends Logging {
       }
 
     override def hashCode(): Int = 1
+  }
+
+  case class DistinctOperationProjection(implicit ac: AdamContext) extends ProjectionField {
+    override def f(df: DataFrame): DataFrame = {
+      df.distinct()
+    }
+
+    override def equals(that: Any): Boolean =
+      that match {
+        case that: DistinctOperationProjection => true
+        case _ => false
+      }
+
+    override def hashCode(): Int = 0
   }
 
 }

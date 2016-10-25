@@ -2,22 +2,28 @@ package ch.unibas.dmi.dbis.adam.rpc
 
 import java.util.concurrent.TimeUnit
 
+import ch.unibas.dmi.dbis.adam.datatypes.FieldTypes
+import ch.unibas.dmi.dbis.adam.datatypes.FieldTypes.FieldType
 import ch.unibas.dmi.dbis.adam.datatypes.feature.Feature._
-import ch.unibas.dmi.dbis.adam.datatypes.feature.FeatureVectorWrapper
+import ch.unibas.dmi.dbis.adam.datatypes.feature.{FeatureVectorWrapperUDT, FeatureVectorWrapper}
+import ch.unibas.dmi.dbis.adam.datatypes.gis.{GeometryWrapperUDT, GeographyWrapper, GeographyWrapperUDT}
+import ch.unibas.dmi.dbis.adam.entity.AttributeDefinition
 import ch.unibas.dmi.dbis.adam.exception.GeneralAdamException
 import ch.unibas.dmi.dbis.adam.main.AdamContext
-import ch.unibas.dmi.dbis.adam.query.QueryCacheOptions
+import ch.unibas.dmi.dbis.adam.query.{QueryHints, QueryCacheOptions}
 import ch.unibas.dmi.dbis.adam.query.distance._
 import ch.unibas.dmi.dbis.adam.query.handler.external.ExternalScanExpressions
 import ch.unibas.dmi.dbis.adam.query.handler.generic.{QueryEvaluationOptions, QueryExpression}
 import ch.unibas.dmi.dbis.adam.query.handler.internal.AggregationExpression._
 import ch.unibas.dmi.dbis.adam.query.handler.internal.BooleanFilterExpression.BooleanFilterScanExpression
-import ch.unibas.dmi.dbis.adam.query.handler.internal.ProjectionExpression.{CountOperationProjection, ExistsOperationProjection, FieldNameProjection, ProjectionField}
+import ch.unibas.dmi.dbis.adam.query.handler.internal.ProjectionExpression._
 import ch.unibas.dmi.dbis.adam.query.handler.internal._
 import ch.unibas.dmi.dbis.adam.query.information.InformationLevels
 import ch.unibas.dmi.dbis.adam.query.information.InformationLevels.{InformationLevel, LAST_STEP_ONLY}
 import ch.unibas.dmi.dbis.adam.query.progressive.{QueryHintsProgressivePathChooser, SimpleProgressivePathChooser}
-import ch.unibas.dmi.dbis.adam.query.query.{BooleanQuery, NearestNeighbourQuery}
+import ch.unibas.dmi.dbis.adam.query.query.{Predicate, BooleanQuery, NearestNeighbourQuery}
+import org.apache.spark.sql.types
+import org.apache.spark.sql.types.DataType
 import org.vitrivr.adam.grpc.grpc.DistanceMessage.DistanceType
 import org.vitrivr.adam.grpc.grpc._
 
@@ -45,7 +51,7 @@ private[rpc] object RPCHelperMethods {
       val indexname = qm.from.get.source.index
       val subexpression = qm.from.get.source.expression
 
-      val bq = if(qm.bq.isDefined){
+      val bq = if (qm.bq.isDefined) {
         val prepared = prepareBQ(qm.bq.get)
 
         if (prepared.isFailure) {
@@ -86,7 +92,7 @@ private[rpc] object RPCHelperMethods {
       } else if (subexpression.isDefined) {
         new CompoundQueryExpression(toExpression(subexpression).get, queryid)
       } else if (entityname.isDefined) {
-        HintBasedScanExpression(entityname.get, nnq, bq, hints, qm.useFallback, queryid)()
+        HintBasedScanExpression(entityname.get, nnq, bq, hints, !qm.noFallback, queryid)()
       } else if (qm.from.get.source.isIndexes) {
         val indexes = qm.from.get.getIndexes.indexes
         new StochasticIndexQueryExpression(indexes.map(index => new IndexScanExpression(index)(nnq.get, queryid)()))(nnq.get, queryid)()
@@ -171,8 +177,9 @@ private[rpc] object RPCHelperMethods {
 
       eqm.operation match {
         case ExpressionQueryMessage.Operation.UNION => Success(UnionExpression(left.get, right.get, Map(), queryid))
-        case ExpressionQueryMessage.Operation.INTERSECT => Success(IntersectExpression(left.get, right.get, order, Map(),queryid))
-        case ExpressionQueryMessage.Operation.EXCEPT => Success(ExceptExpression(left.get, right.get, order, Map(),queryid))
+        case ExpressionQueryMessage.Operation.INTERSECT => Success(IntersectExpression(left.get, right.get, order, Map(), queryid))
+        case ExpressionQueryMessage.Operation.JOIN => Success(IntersectExpression(left.get, right.get, order, Map(), queryid))
+        case ExpressionQueryMessage.Operation.EXCEPT => Success(ExceptExpression(left.get, right.get, order, Map(), queryid))
         case _ => Failure(new Exception("operation unknown"))
       }
     } catch {
@@ -206,7 +213,7 @@ private[rpc] object RPCHelperMethods {
     *
     * @param qm
     */
-  def prepareEvaluationOptions(qm : QueryMessage): Option[QueryEvaluationOptions] = {
+  def prepareEvaluationOptions(qm: QueryMessage): Option[QueryEvaluationOptions] = {
     //source provenance option
     val storeSourceProvenance = prepareInformationLevel(qm.information).contains(InformationLevels.SOURCE_PROVENANCE)
 
@@ -221,21 +228,24 @@ private[rpc] object RPCHelperMethods {
     */
   def prepareProjectionExpression(pm: ProjectionMessage, qe: QueryExpression, queryid: Option[String])(implicit ac: AdamContext): Try[QueryExpression] = {
     try {
-      if (pm.submessage.isOp) {
-        pm.getOp match {
-          case ProjectionMessage.Operation.COUNT => Success(ProjectionExpression(CountOperationProjection(), qe, queryid))
-          case ProjectionMessage.Operation.EXISTS => Success(ProjectionExpression(ExistsOperationProjection(), qe, queryid))
-          case _ => Success(qe)
-        }
-      } else {
-        val attributes = pm.getAttributes.attribute
+      val attributes = pm.getAttributes.attribute
 
-        if (attributes.isEmpty) {
-          Success(qe)
-        } else {
-          Success(ProjectionExpression(FieldNameProjection(attributes), qe, queryid))
+      var expr = qe
+
+      if (attributes.nonEmpty) {
+        expr = ProjectionExpression(FieldNameProjection(attributes), expr, queryid)
+      }
+
+      if (!pm.op.isUnrecognized) {
+        expr = pm.op match {
+          case ProjectionMessage.Operation.COUNT => ProjectionExpression(CountOperationProjection(), expr, queryid)
+          case ProjectionMessage.Operation.EXISTS => ProjectionExpression(ExistsOperationProjection(), expr, queryid)
+          case ProjectionMessage.Operation.DISTINCT => ProjectionExpression(DistinctOperationProjection(), expr, queryid)
+          case _ => expr
         }
       }
+
+      Success(expr)
     } catch {
       case e: Exception => Failure(e)
     }
@@ -257,7 +267,7 @@ private[rpc] object RPCHelperMethods {
         None
       }
 
-      val fv = if(nnq.query.isDefined){
+      val fv = if (nnq.query.isDefined) {
         prepareFeatureVector(nnq.query.get)
       } else {
         return Failure(new GeneralAdamException("no query specified"))
@@ -289,7 +299,7 @@ private[rpc] object RPCHelperMethods {
     * @return
     */
   def prepareDistance(dm: Option[DistanceMessage]): DistanceFunction = {
-    if(dm.isEmpty){
+    if (dm.isEmpty) {
       return NormBasedDistance(2)
     }
 
@@ -320,9 +330,29 @@ private[rpc] object RPCHelperMethods {
   def prepareBQ(bq: BooleanQueryMessage): Try[BooleanQuery] = {
     try {
       val where = if (!bq.where.isEmpty) {
-        Some(bq.where.map(bqm => (bqm.attribute, bqm.value)))
+        bq.where.map(bqm => {
+          val attribute = bqm.attribute
+          val op = if (bqm.op.isEmpty) {
+            None
+          } else {
+            Some(bqm.op)
+          }
+          val values = bqm.values.map(value => value.datatype.number match {
+            case DataMessage.BOOLEANDATA_FIELD_NUMBER => value.getBooleanData
+            case DataMessage.DOUBLEDATA_FIELD_NUMBER => value.getBooleanData
+            case DataMessage.FLOATDATA_FIELD_NUMBER => value.getBooleanData
+            case DataMessage.GEOGRAPHYDATA_FIELD_NUMBER => value.getGeographyData
+            case DataMessage.GEOMETRYDATA_FIELD_NUMBER => value.getGeometryData
+            case DataMessage.INTDATA_FIELD_NUMBER => value.getIntData
+            case DataMessage.LONGDATA_FIELD_NUMBER => value.getLongData
+            case DataMessage.STRINGDATA_FIELD_NUMBER => value.getStringData
+            case _ => throw new GeneralAdamException("search predicates can not be of any type")
+          })
+
+          new Predicate(bqm.attribute, op, values)
+        })
       } else {
-        None
+        throw new GeneralAdamException("empty boolean query message given")
       }
       Success(BooleanQuery(where))
     } catch {
@@ -384,6 +414,61 @@ private[rpc] object RPCHelperMethods {
     } else {
       levels
     }
+  }
+
+  /**
+    *
+    */
+  def prepareAttributes(attributes: Seq[AttributeDefinitionMessage]): Seq[AttributeDefinition] = {
+    attributes.map(attribute => {
+      val handler = attribute.handler match {
+        case HandlerType.RELATIONAL => Some("relational")
+        case HandlerType.FILE => Some("file")
+        case HandlerType.SOLR => Some("solr")
+        case _ => None
+      }
+
+      AttributeDefinition(attribute.name, getFieldType(attribute.attributetype), attribute.pk, handler, attribute.params)
+    })
+  }
+
+
+  val attributetypemapping = Map(AttributeType.BOOLEAN -> FieldTypes.BOOLEANTYPE, AttributeType.DOUBLE -> FieldTypes.DOUBLETYPE, AttributeType.FLOAT -> FieldTypes.FLOATTYPE,
+    AttributeType.INT -> FieldTypes.INTTYPE, AttributeType.LONG -> FieldTypes.LONGTYPE, AttributeType.STRING -> FieldTypes.STRINGTYPE, AttributeType.TEXT -> FieldTypes.TEXTTYPE,
+    AttributeType.FEATURE -> FieldTypes.FEATURETYPE, AttributeType.GEOMETRY -> FieldTypes.GEOMETRYTYPE, AttributeType.GEOGRAPHY -> FieldTypes.GEOGRAPHYTYPE, AttributeType.AUTO -> FieldTypes.AUTOTYPE)
+
+  val fieldtypemapping: Map[FieldType, AttributeType] = attributetypemapping.map(_.swap)
+
+  /**
+    *
+    * @param a
+    * @return
+    */
+  private[rpc] def getFieldType(a: AttributeType) = attributetypemapping.getOrElse(a, FieldTypes.UNRECOGNIZEDTYPE)
+
+  /**
+    *
+    * @param f
+    * @return
+    */
+  private[rpc] def getAttributeType(f: FieldType) = fieldtypemapping.getOrElse(f, AttributeType.UNKOWNAT)
+
+  /**
+    *
+    * @param datatype
+    * @return
+    */
+  def prepareDataTypeConverter(datatype: DataType): (DataMessage) => (Any) = datatype match {
+    case types.BooleanType => (x) => x.getBooleanData
+    case types.DoubleType => (x) => x.getDoubleData
+    case types.FloatType => (x) => x.getFloatData
+    case types.IntegerType => (x) => x.getIntData
+    case types.LongType => (x) => x.getLongData
+    case types.StringType => (x) => x.getStringData
+    case _: FeatureVectorWrapperUDT => (x) => FeatureVectorWrapper(RPCHelperMethods.prepareFeatureVector(x.getFeatureData))
+    case _: GeographyWrapperUDT => (x) => GeographyWrapper(x.getGeographyData)
+    case _: GeometryWrapperUDT => (x) => GeographyWrapper(x.getGeometryData)
+    //TODO: possibly differentiate between string and text
   }
 }
 

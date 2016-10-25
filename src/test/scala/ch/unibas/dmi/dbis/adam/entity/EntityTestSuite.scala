@@ -4,6 +4,7 @@ import ch.unibas.dmi.dbis.adam.AdamTestBase
 import ch.unibas.dmi.dbis.adam.api.EntityOp
 import ch.unibas.dmi.dbis.adam.datatypes.FieldTypes
 import ch.unibas.dmi.dbis.adam.datatypes.feature.{FeatureVectorWrapper, FeatureVectorWrapperUDT}
+import ch.unibas.dmi.dbis.adam.query.query.Predicate
 import org.apache.spark.sql.Row
 import org.apache.spark.sql.types._
 import org.scalatest.Matchers._
@@ -117,7 +118,7 @@ class EntityTestSuite extends AdamTestBase {
         assert(finalEntities.contains(entityname.toLowerCase()))
 
         And("The metadata table should have been created")
-        val result = getJDBCConnection.createStatement().executeQuery("SELECT column_name, data_type FROM information_schema.columns WHERE table_schema = 'public' AND table_name = '" + entityname.toLowerCase() + "'")
+        val result = getMetadataConnection.createStatement().executeQuery("SELECT column_name, data_type FROM information_schema.columns WHERE table_schema = 'public' AND table_name = '" + entityname.toLowerCase() + "'")
 
         val lb = new ListBuffer[(String, String)]()
         while (result.next) {
@@ -127,13 +128,14 @@ class EntityTestSuite extends AdamTestBase {
         val dbNames = lb.toList.toMap //fields from relational database
       val templateNames = fieldTemplate.filter(_.sqlType.length > 0).map(ft => ft.name -> ft.sqlType).toMap //fields that should be stored in relational database
 
+
         assert(dbNames.size == templateNames.size)
 
         And("the metadata table should contain the same columns (with the corresponding data type)")
         assert(dbNames.keySet.forall({ key => dbNames(key) == templateNames(key) }))
 
         And("the index on the id field is created")
-        val indexesResult = getJDBCConnection.createStatement().executeQuery("SELECT t.relname AS table, i.relname AS index, a.attname AS column FROM pg_class t, pg_class i, pg_index ix, pg_attribute a WHERE t.oid = ix.indrelid AND i.oid = ix.indexrelid AND a.attrelid = t.oid AND a.attnum = ANY(ix.indkey) AND t.relkind = 'r' AND t.relname = '" + entityname.toLowerCase() + "' AND a.attname = '" + "idfield" + "'")
+        val indexesResult = getMetadataConnection.createStatement().executeQuery("SELECT t.relname AS table, i.relname AS index, a.attname AS column FROM pg_class t, pg_class i, pg_index ix, pg_attribute a WHERE t.oid = ix.indrelid AND i.oid = ix.indexrelid AND a.attrelid = t.oid AND a.attnum = ANY(ix.indkey) AND t.relkind = 'r' AND t.relname = '" + entityname.toLowerCase() + "' AND a.attname = '" + "idfield" + "'")
         indexesResult.next()
         assert(indexesResult.getString(3) == "idfield")
       }
@@ -148,7 +150,7 @@ class EntityTestSuite extends AdamTestBase {
         val fields = Seq[AttributeDefinition](AttributeDefinition("idfield", FieldTypes.LONGTYPE, true), AttributeDefinition("feature", FieldTypes.FEATURETYPE), AttributeDefinition("stringfield", FieldTypes.STRINGTYPE))
         EntityOp(entityname, fields)
 
-        val preResult = getJDBCConnection.createStatement().executeQuery("SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = '" + entityname.toLowerCase() + "'")
+        val preResult = getMetadataConnection.createStatement().executeQuery("SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = '" + entityname.toLowerCase() + "'")
         var tableCount = 0
         while (preResult.next) {
           tableCount += 1
@@ -158,7 +160,7 @@ class EntityTestSuite extends AdamTestBase {
         EntityOp.drop(entityname)
 
         Then("the metadata entity is dropped as well")
-        val postResult = getJDBCConnection.createStatement().executeQuery("SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = '" + entityname.toLowerCase() + "'")
+        val postResult = getMetadataConnection.createStatement().executeQuery("SELECT 1 FROM information_schema.tables WHERE table_schema = 'relational' AND table_name = '" + entityname.toLowerCase() + "'")
         while (postResult.next) {
           tableCount -= 1
         }
@@ -176,8 +178,8 @@ class EntityTestSuite extends AdamTestBase {
         Given("an entity with metadata")
         val fields = Seq[AttributeDefinition](
           AttributeDefinition("pkfield", FieldTypes.LONGTYPE, true),
-          AttributeDefinition("uniquefield", FieldTypes.INTTYPE, false, true),
-          AttributeDefinition("indexedfield", FieldTypes.INTTYPE, false, false, true),
+          AttributeDefinition("uniquefield", FieldTypes.INTTYPE, false, params = Map("unique" -> "true")),
+          AttributeDefinition("indexedfield", FieldTypes.INTTYPE, false, params = Map("indexed" -> "true")),
           AttributeDefinition("feature", FieldTypes.FEATURETYPE)
         )
 
@@ -185,14 +187,14 @@ class EntityTestSuite extends AdamTestBase {
         EntityOp(entityname, fields)
 
         Then("the PK should be correctly")
-        val pkResult = getJDBCConnection.createStatement().executeQuery(
+        val pkResult = getMetadataConnection.createStatement().executeQuery(
           "SELECT a.attname FROM pg_index i JOIN   pg_attribute a ON a.attrelid = i.indrelid AND a.attnum = ANY(i.indkey) WHERE  i.indrelid = '" + entityname.toLowerCase() + "'::regclass AND i.indisprimary;")
         pkResult.next()
         val pk = pkResult.getString(1)
         assert(pk == "pkfield")
 
         And("the unique and indexed fields should be set correctly")
-        val indexesResult = getJDBCConnection.createStatement().executeQuery("SELECT t.relname AS table, i.relname AS index, a.attname AS column FROM pg_class t, pg_class i, pg_index ix, pg_attribute a WHERE t.oid = ix.indrelid AND i.oid = ix.indexrelid AND a.attrelid = t.oid AND a.attnum = ANY(ix.indkey) AND t.relkind = 'r' AND t.relname = '" + entityname.toLowerCase() + "'")
+        val indexesResult = getMetadataConnection.createStatement().executeQuery("SELECT t.relname AS table, i.relname AS index, a.attname AS column FROM pg_class t, pg_class i, pg_index ix, pg_attribute a WHERE t.oid = ix.indrelid AND i.oid = ix.indexrelid AND a.attrelid = t.oid AND a.attnum = ANY(ix.indkey) AND t.relkind = 'r' AND t.relname = '" + entityname.toLowerCase() + "'")
         val indexesLb = ListBuffer.empty[String]
         while (indexesResult.next()) {
           indexesLb += indexesResult.getString("column")
@@ -200,7 +202,6 @@ class EntityTestSuite extends AdamTestBase {
         val indexes = indexesLb.toList
         assert(indexes.contains("uniquefield"))
         assert(indexes.contains("indexedfield"))
-
       }
     }
   }
@@ -212,7 +213,7 @@ class EntityTestSuite extends AdamTestBase {
       */
     scenario("insert data in an entity with auto-increment metadata") {
       withEntityName { entityname =>
-        Entity.create(entityname, Seq(AttributeDefinition("idfield", FieldTypes.AUTOTYPE, true), AttributeDefinition("featurefield", FieldTypes.FEATURETYPE, false, false, false)))
+        Entity.create(entityname, Seq(AttributeDefinition("idfield", FieldTypes.AUTOTYPE, true), AttributeDefinition("featurefield", FieldTypes.FEATURETYPE, false)))
 
         val ntuples = Random.nextInt(1000)
         val ndims = 100
@@ -261,7 +262,7 @@ class EntityTestSuite extends AdamTestBase {
     scenario("insert data in an entity without metadata") {
       withEntityName { entityname =>
         Given("an entity without metadata")
-        Entity.create(entityname, Seq(AttributeDefinition("idfield", FieldTypes.LONGTYPE, true), AttributeDefinition("featurefield", FieldTypes.FEATURETYPE, false, false, false)))
+        Entity.create(entityname, Seq(AttributeDefinition("idfield", FieldTypes.LONGTYPE, true), AttributeDefinition("featurefield", FieldTypes.FEATURETYPE, false)))
 
         val ntuples = Random.nextInt(1000)
         val ndims = 100
@@ -376,14 +377,14 @@ class EntityTestSuite extends AdamTestBase {
         assert(EntityOp.count(entityname).get.toInt == ntuples)
 
         And("all tuples are inserted")
-        val countResult = getJDBCConnection.createStatement().executeQuery("SELECT COUNT(*) AS count FROM " + entityname)
+        val countResult = getMetadataConnection.createStatement().executeQuery("SELECT COUNT(*) AS count FROM " + entityname)
         countResult.next() //go to first result
 
         val tableCount = countResult.getInt("count")
         assert(tableCount == ntuples)
 
         And("all filled fields should be filled")
-        val randomRowResult = getJDBCConnection.createStatement().executeQuery("SELECT * FROM " + entityname + " ORDER BY RANDOM() LIMIT 1")
+        val randomRowResult = getMetadataConnection.createStatement().executeQuery("SELECT * FROM " + entityname + " ORDER BY RANDOM() LIMIT 1")
         randomRowResult.next() //go to first result
         assert(randomRowResult.getString("stringfield").length == stringLength)
         assert(randomRowResult.getFloat("floatField") >= 0)
@@ -399,6 +400,21 @@ class EntityTestSuite extends AdamTestBase {
         assert(randomRowResult.getInt("intfieldunfilled") == 0)
         assert(randomRowResult.getLong("longfieldunfilled") == 0)
         assert(randomRowResult.getBoolean("booleanfieldunfilled") == false)
+      }
+    }
+
+
+    /**
+      *
+      */
+    scenario("delete data from an entity with metadata") {
+      withQueryEvaluationSet { es =>
+        val entity = es.entity
+        import org.apache.spark.sql.functions._
+        val newCount = es.fullData.filter(col("booleanfield") === true).count()
+        entity.delete(Seq(Predicate("booleanfield", None, Seq(false))))
+        val count = entity.count
+        assert(newCount === count)
       }
     }
   }

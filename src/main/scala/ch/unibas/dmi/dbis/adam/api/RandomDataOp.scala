@@ -3,6 +3,7 @@ package ch.unibas.dmi.dbis.adam.api
 import ch.unibas.dmi.dbis.adam.datatypes.FieldTypes
 import ch.unibas.dmi.dbis.adam.datatypes.FieldTypes.FieldType
 import ch.unibas.dmi.dbis.adam.datatypes.feature.FeatureVectorWrapper
+import ch.unibas.dmi.dbis.adam.datatypes.gis.{GeographyWrapper, GeometryWrapper}
 import ch.unibas.dmi.dbis.adam.entity.Entity
 import ch.unibas.dmi.dbis.adam.entity.Entity.EntityName
 import ch.unibas.dmi.dbis.adam.exception.GeneralAdamException
@@ -87,6 +88,8 @@ object RandomDataOp extends GenericOp {
       case FieldTypes.TEXTTYPE => () => generateText(params)
       case FieldTypes.BOOLEANTYPE => () => generateBoolean(params)
       case FieldTypes.FEATURETYPE => () => generateFeatureVector(params)
+      case FieldTypes.GEOMETRYTYPE => () => generateGeometry(params)
+      case FieldTypes.GEOGRAPHYTYPE => () => generateGeography(params)
       case _ => log.error("unkown datatype"); null
     }
   }
@@ -297,6 +300,40 @@ object RandomDataOp extends GenericOp {
     */
   private def generateBoolean() = Random.nextBoolean
 
+
+  /**
+    *
+    * @param params
+    * @return
+    */
+  private def generateGeometry(params: Map[String, String]) : GeometryWrapper = {
+    generateGeometry()
+  }
+
+  /**
+    *
+    * @return
+    */
+  private def generateGeometry() = {
+    new GeometryWrapper("POINT(" + generateFloat(-100, 100).toString + " " +  generateFloat(-100, 100).toString + ")")
+  }
+
+  /**
+    *
+    * @param params
+    * @return
+    */
+  private def generateGeography(params: Map[String, String]) : GeographyWrapper = {
+    generateGeography()
+  }
+
+  /**
+    *
+    * @return
+    */
+  private def generateGeography() = {
+    new GeographyWrapper("POINT(" + generateFloat(-100, 100).toString + " " +  generateFloat(-100, 100).toString + ")")
+  }
 }
 
 

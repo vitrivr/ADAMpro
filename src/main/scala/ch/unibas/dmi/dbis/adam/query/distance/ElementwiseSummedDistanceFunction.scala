@@ -105,7 +105,7 @@ trait ElementwiseSummedDistanceFunction extends DistanceFunction with Logging wi
     * @param w  weight
     * @return
     */
-  def element(v1: VectorBase, v2: VectorBase, w: VectorBase = 1.0): Distance
+  @inline def element(v1: VectorBase, v2: VectorBase, w: VectorBase = 1.0): Distance
 
   /**
     * Normalization after summing up the element-wise distances.
@@ -113,5 +113,5 @@ trait ElementwiseSummedDistanceFunction extends DistanceFunction with Logging wi
     * @param sum cumulative sum
     * @return
     */
-  def normalize(sum: Distance): Distance = sum
+  @inline def normalize(sum: Distance): Distance = sum
 }

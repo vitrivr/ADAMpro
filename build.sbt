@@ -12,7 +12,6 @@ lazy val commonSettings = Seq(
   scalaVersion := "2.10.6"
 )
 
-
 //projects
 lazy val root = (project in file(".")).
   settings(commonSettings: _*)
@@ -78,16 +77,16 @@ val coreLibs = Seq(
 val secondaryLibs = Seq(
   "org.scalanlp" %% "breeze" % "0.11.2",
   "org.scalanlp" %% "breeze-natives" % "0.11.2",
-  "com.typesafe.slick" %% "slick" % "3.1.0",
-  "com.h2database" % "h2" % "1.4.188" excludeAll ExclusionRule("org.mortbay.jetty"),
-  "org.postgresql" % "postgresql" % "9.4.1208",
-  "org.apache.commons" % "commons-lang3" % "3.4" force(),
-  "org.apache.commons" % "commons-math3" % "3.4.1" force(),
+  "com.typesafe.slick" %% "slick" % "3.1.1",
+  "c3p0" % "c3p0" % "0.9.1.2",
+  "org.apache.derby" % "derby" % "10.10.2.0",
   "it.unimi.dsi" % "fastutil" % "7.0.12",
-  //Don't update this to 17 unless you are also upgrading Hadoop to 2.7
-  /* http://stackoverflow.com/questions/36427291/illegalaccesserror-to-guavas-stopwatch-from-org-apache-hadoop-mapreduce-lib-inp */
-  "com.google.guava" % "guava" % "19.0" force(),
-  "com.googlecode.javaewah" % "JavaEWAH" % "1.1.6"
+  "org.apache.commons" % "commons-lang3" % "3.4",
+  "org.apache.commons" % "commons-math3" % "3.4.1",
+  "com.googlecode.javaewah" % "JavaEWAH" % "1.1.6",
+  "com.google.guava" % "guava" % "19.0",
+  "com.google.protobuf" % "protobuf-java" % "3.0.0",
+  "org.jgrapht" % "jgrapht-core" % "1.0.0"
 ).map(
   _.excludeAll(
     ExclusionRule("org.scala-lang"),
@@ -97,13 +96,18 @@ val secondaryLibs = Seq(
 
 //log libs
 val logLibs = Seq(
-  "org.slf4j" % "slf4j-api" % "1.7.5" force(),
-  "org.slf4j" % "slf4j-log4j12" % "1.7.5" force()
+  "org.slf4j" % "slf4j-api" % "1.7.10",
+  "org.slf4j" % "slf4j-log4j12" % "1.7.10"
 )
 
 //tertiary libs
 val tertiaryLibs = Seq(
-  "com.lucidworks.spark" % "spark-solr" % "2.0.1"
+  "com.lucidworks.spark" % "spark-solr" % "2.1.0",
+  "org.postgresql" % "postgresql" % "9.4.1208",
+  "com.datastax.spark" %% "spark-cassandra-connector" % "1.6.2",
+  "com.basho.riak" % "spark-riak-connector" % "1.5.1",
+  "net.postgis" % "postgis-jdbc" % "2.2.1",
+  "org.iq80.leveldb" % "leveldb" % "0.9"
 ).map(
   _.excludeAll(
     ExclusionRule("org.scala-lang"),
@@ -113,8 +117,8 @@ val tertiaryLibs = Seq(
 
 //test libs
 val testLibs = Seq(
-  "org.scalatest" % "scalatest_2.10" % "3.0.0-M15",
-  "io.grpc" % "grpc-okhttp" % "0.12.0"
+  "org.scalatest" % "scalatest_2.10" % "3.0.0",
+  "io.grpc" % "grpc-okhttp" % "1.0.0"
 ).map(
   _.excludeAll(
     ExclusionRule("org.scala-lang"),
@@ -145,6 +149,10 @@ assemblyMergeStrategy in assembly := {
   case meta(_) => MergeStrategy.discard
   case x => MergeStrategy.last
 }
+
+assemblyShadeRules in assembly := Seq(
+  ShadeRule.rename("com.google.protobuf.**" -> "adampro.root.shaded.com.google.protobuf.@1").inAll
+)
 
 mainClass in assembly := Some("ch.unibas.dmi.dbis.adam.main.Startup")
 
@@ -179,15 +187,16 @@ stopDocker := {
   "./scripts/docker-stop.sh" !
 }
 
-lazy val runADAM = taskKey[Unit]("Runs ADAMpro in docker container.")
-runADAM := {
+lazy val runDocker = taskKey[Unit]("Runs ADAMpro in docker container.")
+runDocker := {
   //TODO: check that docker is running before running assembly and submitting
   assembly.value
-  "./scripts/docker-runADAM.sh" !
+  "./scripts/docker-run.sh" !
 }
 
-lazy val runCluster = taskKey[Unit]("Runs ADAMpro on a spark master @ specified URL.")
-runCluster := {
+lazy val buildDocker = taskKey[Unit]("Builds the image of a self-contained docker container.")
+buildDocker := {
+  assembly.in(web).value
   assembly.value
-  "./scripts/docker-runCluster.sh" !
+  "./scripts/docker-build.sh" !
 }

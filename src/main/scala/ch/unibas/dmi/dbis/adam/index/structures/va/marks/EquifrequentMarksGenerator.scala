@@ -4,6 +4,7 @@ import breeze.linalg.{max, min}
 import ch.unibas.dmi.dbis.adam.datatypes.feature.Feature._
 import ch.unibas.dmi.dbis.adam.index.IndexingTaskTuple
 import ch.unibas.dmi.dbis.adam.index.structures.va.VAIndex.Marks
+import ch.unibas.dmi.dbis.adam.utils.Logging
 import org.apache.log4j.Logger
 
 import scala.collection.mutable.ListBuffer
@@ -18,8 +19,7 @@ import scala.collection.mutable.ListBuffer
   * and try to fit approximately the same number of points in each cell; the space along each dimension is split into cells with
   * equi-frequent points
   */
-private[va] object EquifrequentMarksGenerator extends MarksGenerator with Serializable {
-  @transient lazy val log = Logger.getLogger(getClass.getName)
+private[va] object EquifrequentMarksGenerator extends MarksGenerator with Serializable with Logging {
 
   val SAMPLING_FREQUENCY = 10000 //number of buckets for the histogram (not the number of marks!)
 

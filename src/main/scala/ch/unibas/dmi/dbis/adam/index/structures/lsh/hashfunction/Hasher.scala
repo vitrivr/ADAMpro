@@ -1,5 +1,7 @@
 package ch.unibas.dmi.dbis.adam.index.structures.lsh.hashfunction
 
+import java.util
+
 import ch.unibas.dmi.dbis.adam.datatypes.feature.Feature.FeatureVector
 
 /**
@@ -27,5 +29,8 @@ class Hasher(private val functions: Array[LSHashFunction]) extends Serializable 
     * @param v feature vector to hash
     * @return
     */
-  def apply(v: FeatureVector, m: Int): Int = functions.map(f => f.hash(v)).hashCode() % m
+  def apply(v: FeatureVector, m: Int): Int = {
+    val hjs = functions.map(f => f.hash(v))
+    util.Arrays.hashCode(hjs) % m //we use hashCode as an hash-combining function
+  }
 }

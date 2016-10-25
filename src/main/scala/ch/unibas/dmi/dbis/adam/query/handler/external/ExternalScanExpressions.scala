@@ -11,8 +11,11 @@ import ch.unibas.dmi.dbis.adam.query.handler.generic.QueryExpression
   * May 2016
   */
 object ExternalScanExpressions {
-  def toQueryExpression(handler : String, entityname : EntityName, params : Map[String, String], id: Option[String] = None)(implicit ac: AdamContext) : QueryExpression = handler match {
-    case "solr" => new SolrScanExpression(entityname, params, id)
-    case _ => null
+  def toQueryExpression(handlername: String, entityname: EntityName, params: Map[String, String], id: Option[String] = None)(implicit ac: AdamContext): QueryExpression = {
+    handlername match {
+      case "solr" => new SolrScanExpression(entityname, handlername, params, id)
+      case "gis" => new GisScanExpression(entityname, handlername, params, id)
+      case _ => null
+    }
   }
 }

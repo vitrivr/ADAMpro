@@ -1,7 +1,7 @@
 package ch.unibas.dmi.dbis.adam.catalog.catalogs
 
 import ch.unibas.dmi.dbis.adam.catalog.CatalogOperator
-import slick.driver.PostgresDriver.api._
+import slick.driver.DerbyDriver.api._
 
 /**
   * ADAMpro
@@ -26,6 +26,6 @@ private[catalog] class EntityOptionsCatalog(tag: Tag) extends Table[(String, Str
 
   def * = (entityname, key, value)
 
-  def entity = foreignKey("entityoptions_entity_fk", entityname, TableQuery[EntityCatalog])(_.entityname, onUpdate=ForeignKeyAction.Cascade, onDelete=ForeignKeyAction.Cascade)
+  def entity = foreignKey("entityoptions_entity_fk", entityname, TableQuery[EntityCatalog])(_.entityname, onUpdate=ForeignKeyAction.Restrict, onDelete=ForeignKeyAction.Cascade)
 }
 

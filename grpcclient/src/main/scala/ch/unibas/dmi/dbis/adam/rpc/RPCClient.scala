@@ -4,11 +4,14 @@ import java.util.concurrent.TimeUnit
 
 import ch.unibas.dmi.dbis.adam.rpc.datastructures.{RPCAttributeDefinition, RPCQueryObject, RPCQueryResults}
 import ch.unibas.dmi.dbis.adam.utils.Logging
+import io.grpc.internal.DnsNameResolverProvider
 import io.grpc.okhttp.OkHttpChannelBuilder
 import io.grpc.stub.StreamObserver
 import io.grpc.{ManagedChannel, ManagedChannelBuilder}
 import org.vitrivr.adam.grpc.grpc.AdamDefinitionGrpc.AdamDefinitionBlockingStub
 import org.vitrivr.adam.grpc.grpc.AdamSearchGrpc.{AdamSearchStub, AdamSearchBlockingStub}
+import org.vitrivr.adam.grpc.grpc.AdaptScanMethodsMessage.IndexCollection.NEW_INDEXES
+import org.vitrivr.adam.grpc.grpc.AdaptScanMethodsMessage.QueryCollection.RANDOM_QUERIES
 import org.vitrivr.adam.grpc.grpc.DistanceMessage.DistanceType
 import org.vitrivr.adam.grpc.grpc.RepartitionMessage.PartitionOptions
 import org.vitrivr.adam.grpc.grpc._
@@ -32,10 +35,10 @@ class RPCClient(channel: ManagedChannel, definer: AdamDefinitionBlockingStub, se
     try {
       log.debug("starting " + desc)
       val t1 = System.currentTimeMillis
-      val result = op
+      val res = op
       val t2 = System.currentTimeMillis
       log.debug("performed " + desc + " in " + (t2 - t1) + " msecs")
-      result
+      res
     } catch {
       case e: Exception =>
         log.error("error in " + desc, e)
@@ -53,16 +56,16 @@ class RPCClient(channel: ManagedChannel, definer: AdamDefinitionBlockingStub, se
   def entityCreate(entityname: String, attributes: Seq[RPCAttributeDefinition]): Try[String] = {
     execute("create entity operation") {
       val attributeMessages = attributes.map { attribute =>
-        val adm = AttributeDefinitionMessage(attribute.name, getFieldType(attribute.datatype), attribute.pk, unique = attribute.unique, indexed = attribute.indexed)
+        val adm = AttributeDefinitionMessage(attribute.name, getAttributeType(attribute.datatype), attribute.pk, params = attribute.params)
 
         //add handler information if available
         if (attribute.storagehandlername.isDefined) {
           val storagehandlername = attribute.storagehandlername.get
 
           val handlertype = storagehandlername match {
-            case "relational" => HandlerType.relational
-            case "feature" => HandlerType.feature
-            case "solr" => HandlerType.solr
+            case "relational" => HandlerType.RELATIONAL
+            case "file" => HandlerType.FILE
+            case "solr" => HandlerType.SOLR
           }
 
           adm.withHandler(handlertype)
@@ -162,8 +165,13 @@ class RPCClient(channel: ManagedChannel, definer: AdamDefinitionBlockingStub, se
   def entityDetails(entityname: String): Try[Map[String, String]] = {
     execute("get details of entity operation") {
       val count = definer.count(EntityNameMessage(entityname))
-      val properties = definer.getEntityProperties(EntityNameMessage(entityname)).properties
-      Success(properties.+("count" -> definer.count(EntityNameMessage(entityname)).message))
+      var properties = definer.getEntityProperties(EntityNameMessage(entityname)).properties
+
+      if(count.code == AckMessage.Code.OK){
+        properties = properties.+("count" -> count.message)
+      }
+
+      Success(properties)
     }
   }
 
@@ -208,7 +216,7 @@ class RPCClient(channel: ManagedChannel, definer: AdamDefinitionBlockingStub, se
     */
   def entityRead(entityname: String): Try[Seq[RPCQueryResults]] = {
     execute("get entity data operation") {
-      val res = searcherBlocking.preview(EntityNameMessage(entityname))
+      val res = searcherBlocking.preview(PreviewMessage(entityname))
       Success(res.responses.map(new RPCQueryResults(_)))
     }
   }
@@ -239,7 +247,7 @@ class RPCClient(channel: ManagedChannel, definer: AdamDefinitionBlockingStub, se
     */
   def entityBenchmarkAndUpdateScanWeights(entityname: String, attribute: String): Try[Void] = {
     execute("benchmark entity scans and reset weights operation") {
-      definer.adjustScanWeights(UpdateWeightsMessage(entityname, attribute))
+      definer.adaptScanMethods(AdaptScanMethodsMessage(entityname, attribute, NEW_INDEXES, RANDOM_QUERIES))
       Success(null)
     }
   }
@@ -322,7 +330,7 @@ class RPCClient(channel: ManagedChannel, definer: AdamDefinitionBlockingStub, se
     * @param entityname name of entity
     * @return (indexname, attribute, indextypename)
     */
-  def indexList(entityname : String): Try[Seq[(String, String, IndexType)]] = {
+  def indexList(entityname: String): Try[Seq[(String, String, IndexType)]] = {
     execute("list indexes operation") {
       Success(definer.listIndexes(EntityNameMessage(entityname)).indexes.map(i => (i.index, i.attribute, i.indextype)))
     }
@@ -332,8 +340,8 @@ class RPCClient(channel: ManagedChannel, definer: AdamDefinitionBlockingStub, se
     * Check if index exists.
     *
     * @param entityname name of entity
-    * @param attribute nmae of attribute
-    * @param indextype type of index
+    * @param attribute  nmae of attribute
+    * @param indextype  type of index
     * @return
     */
   def indexExists(entityname: String, attribute: String, indextype: String): Try[Boolean] = {
@@ -365,6 +373,18 @@ class RPCClient(channel: ManagedChannel, definer: AdamDefinitionBlockingStub, se
   }
 
   /**
+    * Drop index.
+    *
+    * @param indexname name of index
+    */
+  def indexDrop(indexname: String): Try[Void] = {
+    execute("drop index operation") {
+      definer.dropIndex(IndexNameMessage(indexname))
+      Success(null)
+    }
+  }
+
+  /**
     *
     * @param s
     * @return
@@ -377,7 +397,8 @@ class RPCClient(channel: ManagedChannel, definer: AdamDefinitionBlockingStub, se
     case "sh" => IndexType.sh
     case "vaf" => IndexType.vaf
     case "vav" => IndexType.vav
-    case _ => null
+    case "vap" => IndexType.vap
+    case _ => throw new Exception("no indextype of name " + s + " known")
   }
 
 
@@ -466,6 +487,17 @@ class RPCClient(channel: ManagedChannel, definer: AdamDefinitionBlockingStub, se
   }
 
   /**
+    * Returns registered storage handlers.
+    *
+    * @return
+    */
+  def storageHandlerList(): Try[Map[String, Seq[String]]] = {
+    execute("get storage handlers operation") {
+      Success(definer.listStorageHandlers(EmptyMessage()).handlers.map(handler => handler.name -> handler.attributetypes.map(_.toString)).toMap)
+    }
+  }
+
+  /**
     * Shutdown connection.
     */
   def shutdown(): Unit = {
@@ -473,28 +505,30 @@ class RPCClient(channel: ManagedChannel, definer: AdamDefinitionBlockingStub, se
   }
 
 
+  val fieldtypemapping = Map("feature" -> AttributeType.FEATURE, "long" -> AttributeType.LONG, "int" -> AttributeType.INT, "float" -> AttributeType.FLOAT,
+    "double" -> AttributeType.DOUBLE, "string" -> AttributeType.STRING, "text" -> AttributeType.TEXT, "boolean" -> AttributeType.BOOLEAN, "geography" -> AttributeType.GEOGRAPHY,
+    "geometry" -> AttributeType.GEOMETRY)
+
+  val attributetypemapping = fieldtypemapping.map(_.swap)
+
   /**
     *
     * @param s string of field type name
     * @return
     */
-  private def getFieldType(s: String): AttributeType = s match {
-    case "feature" => AttributeType.FEATURE
-    case "long" => AttributeType.LONG
-    case "int" => AttributeType.INT
-    case "float" => AttributeType.FLOAT
-    case "double" => AttributeType.DOUBLE
-    case "string" => AttributeType.STRING
-    case "text" => AttributeType.TEXT
-    case "boolean" => AttributeType.BOOLEAN
-    case _ => null
-  }
-}
+  private def getAttributeType(s: String): AttributeType = fieldtypemapping.get(s).orNull
 
+  private def getFieldTypeName(a: AttributeType): String = attributetypemapping.get(a).orNull
+
+  //TODO: add get attributes-method for an entity, to retrieve attributes to display
+}
 
 object RPCClient {
   def apply(host: String, port: Int): RPCClient = {
-    val channel = OkHttpChannelBuilder.forAddress(host, port).usePlaintext(true).asInstanceOf[ManagedChannelBuilder[_]].build()
+    val channel = OkHttpChannelBuilder.forAddress(host, port)
+      .nameResolverFactory(new DnsNameResolverProvider())
+      .usePlaintext(true)
+      .asInstanceOf[ManagedChannelBuilder[_]].build()
 
     new RPCClient(
       channel,

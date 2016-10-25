@@ -6,7 +6,7 @@ import ch.unibas.dmi.dbis.adam.entity.Entity
 import ch.unibas.dmi.dbis.adam.entity.Entity.EntityName
 import ch.unibas.dmi.dbis.adam.main.AdamContext
 import ch.unibas.dmi.dbis.adam.query.handler.generic.{ExpressionDetails, QueryEvaluationOptions, QueryExpression}
-import ch.unibas.dmi.dbis.adam.query.query.NearestNeighbourQuery
+import ch.unibas.dmi.dbis.adam.query.query.{Predicate, NearestNeighbourQuery}
 import ch.unibas.dmi.dbis.adam.utils.Logging
 import org.apache.spark.sql.DataFrame
 import org.apache.spark.sql.functions._
@@ -22,14 +22,14 @@ import scala.collection.mutable
 case class SequentialScanExpression(private val entity: Entity)(private val nnq: NearestNeighbourQuery, id: Option[String] = None)(filterExpr: Option[QueryExpression] = None)(@transient implicit val ac: AdamContext) extends QueryExpression(id) {
   override val info = ExpressionDetails(Some(entity.entityname), Some("Sequential Scan Expression"), id, None)
   val sourceDescription = {
-    if(filterExpr.isDefined){
+    if (filterExpr.isDefined) {
       filterExpr.get.info.scantype.getOrElse("undefined") + "->" + info.scantype.getOrElse("undefined")
     } else {
       info.scantype.getOrElse("undefined")
     }
   }
 
-  children ++= filterExpr.map(Seq(_)).getOrElse(Seq())
+  _children ++= filterExpr.map(Seq(_)).getOrElse(Seq())
 
   def this(entityname: EntityName)(nnq: NearestNeighbourQuery, id: Option[String] = None)(filterExpr: Option[QueryExpression] = None)(implicit ac: AdamContext) {
     this(Entity.load(entityname).get)(nnq, id)(filterExpr)
@@ -41,8 +41,7 @@ case class SequentialScanExpression(private val entity: Entity)(private val nnq:
     ac.sc.setLocalProperty("spark.scheduler.pool", "sequential")
     ac.sc.setJobGroup(id.getOrElse(""), "sequential scan: " + entity.entityname.toString, interruptOnCancel = true)
 
-    var result = entity.getData()
-    var ids = mutable.Set[Any]()
+    var ids = mutable.HashSet[Any]()
 
     if (filter.isDefined) {
       ids ++= filter.get.select(entity.pk.name).collect().map(_.getAs[Any](entity.pk.name))
@@ -53,12 +52,16 @@ case class SequentialScanExpression(private val entity: Entity)(private val nnq:
       ids ++= filterExpr.get.evaluate(options).get.select(entity.pk.name).collect().map(_.getAs[Any](entity.pk.name))
     }
 
-    if (ids.nonEmpty) {
+    var result = if (ids.nonEmpty) {
+      val data = entity.getData(predicates = Seq(new Predicate(entity.pk.name, None, ids.toSeq)))
       val idsbc = ac.sc.broadcast(ids)
-      result = result.map(d => {
+
+      data.map(d => {
         val rdd = d.rdd.filter(x => idsbc.value.contains(x.getAs[Any](entity.pk.name)))
         ac.sqlContext.createDataFrame(rdd, d.schema)
       })
+    } else {
+      entity.getData()
     }
 
     //TODO: possibly join is faster? possibly the current implmentation is

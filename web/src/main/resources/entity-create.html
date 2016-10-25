@@ -4,14 +4,14 @@
     <meta charset="utf-8">
     <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
     <meta name="viewport" content="width=device-width">
-    
+
     <title>ADAMpro</title>
-    
+
     <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
-    
+
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/materialize/0.97.6/css/materialize.min.css">
     <link rel="stylesheet" href="./lib/css/app.css">
-    
+
     <script src="https://code.jquery.com/jquery-2.1.1.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/materialize/0.97.6/js/materialize.min.js"></script>
     <script src="./lib/js/config.js"></script>
@@ -25,10 +25,13 @@
 
 <nav>
     <div class="nav-wrapper blue-grey darken-3" style="padding: 0px 50px 0px 50px">
-        <a href="#!" class="brand-logo right" style="padding-right: 20px;">ADAMpro <img src="./lib/imgs/logo.png" style="height:40px; padding: 5px; margin-top: 10px;"/></a>
+        <a href="#!" class="brand-logo right" style="padding-right: 20px;">ADAMpro <img src="./lib/imgs/logo.png"
+                                                                                        style="height:40px; padding: 5px; margin-top: 10px;"/></a>
         <ul class="hide-on-med-and-down left">
 
-            <li style="padding-left: 20px; padding-right: 20px; font-weight: bold;"><i class="material-icons left" style="margin-right:5px;">playlist_add</i>ENTITY</li>
+            <li style="padding-left: 20px; padding-right: 20px; font-weight: bold;"><i class="material-icons left"
+                                                                                       style="margin-right:5px;">playlist_add</i>ENTITY
+            </li>
 
             <li><a href="entity-list.html">List</a></li>
             <li><a href="entity-create.html">Create</a></li>
@@ -36,11 +39,15 @@
             <li><a href="entity-read.html">Read</a></li>
             <li><a href="entity-repartition.html">Repartition</a></li>
 
-            <li style="border-left: white 1px solid; padding-left: 20px; padding-right: 20px; font-weight: bold;"><i class="material-icons left" style="margin-right:5px;">filter_list</i>INDEX</li>
+            <li style="border-left: white 1px solid; padding-left: 20px; padding-right: 20px; font-weight: bold;"><i
+                    class="material-icons left" style="margin-right:5px;">filter_list</i>INDEX
+            </li>
             <li><a href="index-create.html">Create</a></li>
             <li><a href="index-repartition.html">Repartition</a></li>
 
-            <li style="border-left: white 1px solid; padding-left: 20px; padding-right: 20px; font-weight: bold;"><i class="material-icons left" style="margin-right:5px;">search</i>SEARCH</li>
+            <li style="border-left: white 1px solid; padding-left: 20px; padding-right: 20px; font-weight: bold;"><i
+                    class="material-icons left" style="margin-right:5px;">search</i>SEARCH
+            </li>
             <li><a href="search-compound.html">Compound</a></li>
             <li><a href="search-progressive.html">Progressive</a></li>
 
@@ -48,137 +55,183 @@
     </div>
 </nav>
 
-<div class='container' style='width:90%'><div class='row'><h1 style='font-size:40pt;'>Create<span style='font-size:20pt; padding-left: 20px'>Entity</span></h1></div>
+<div class='container' style='width:90%'>
+    <div class='row'><h1 style='font-size:40pt;'>Create<span style='font-size:20pt; padding-left: 20px'>Entity</span>
+    </h1></div>
 
-<div class="row">
-<div class="row">
-    <div class="input-field col s4">
-        <input id="entityname" type="text">
-        <label for="entityname">name of entity</label>
-    </div>
-</div>
-<div class="row">
-    <div class="col s8">
-        <label for="fields">schema</label>
-        <select class="browser-default" id="fields" size="10" style="height:8rem;">
-        </select>
-    </div>
-    <div class="col s1">
-        <a class="btn-floating" id="btnRemoveField"><i class="material-icons">remove</i></a>
-    </div>
-</div>
-<div class="row">
-    <div class="col s8">
-        <div class="input-field col s6">
-            <input id="fieldname" type="text">
-            <label for="fieldname">name</label>
+    <div class="row">
+        <div class="row">
+            <div class="input-field col s4">
+                <input id="entityname" type="text">
+                <label for="entityname">name of entity</label>
+            </div>
         </div>
-        <div class="input-field col s4">
-            <select id="datatype">
-                <option value="" defaultSelected></option>
-                <option value="feature">feature</option>
-                <option value="long">long</option>
-                <option value="int">int</option>
-                <option value="float">float</option>
-                <option value="double">double</option>
-                <option value="string">string</option>
-                <option value="text">text</option>
-                <option value="boolean">boolean</option>
-            </select>
-            <label>data type</label>
+        <div class="row">
+            <div class="col s8">
+                <label for="fields">schema</label>
+                <select class="browser-default" id="fields" size="10" style="height:8rem;">
+                </select>
+            </div>
+            <div class="col s1">
+                <a class="btn-floating" id="btnRemoveField"><i class="material-icons">remove</i></a>
+            </div>
         </div>
-        <div class="input-field col s2">
-            <input type="checkbox" id="pk"/>
-            <label for="pk">primary key</label>
-        </div>
-        <div class="input-field col s2">
-            <input type="checkbox" id="indexed"/>
-            <label for="indexed">indexed</label>
+        <div class="row">
+            <div class="col s8">
+                <div class="row">
+                    <div class="input-field col s6">
+                        <input id="fieldname" type="text">
+                        <label for="fieldname">name</label>
+                    </div>
+                    <div class="input-field col s4">
+                        <select id="datatype">
+                            <option value="" selected defaultSelected></option>
+                            <option value="feature">feature</option>
+                            <option value="long">long</option>
+                            <option value="int">int</option>
+                            <option value="float">float</option>
+                            <option value="double">double</option>
+                            <option value="string">string</option>
+                            <option value="text">text</option>
+                            <option value="boolean">boolean</option>
+                            <option value="geometry">geometry</option>
+                            <option value="geography">geography</option>
+                        </select>
+                        <label>data type</label>
+                    </div>
+                    <div class="input-field col s2">
+                        <input type="checkbox" id="pk"/>
+                        <label for="pk">primary key</label>
+                    </div>
+                </div>
+                <div class="row">
+                    <div id="chandler" class="input-field col s4"></div>
+                </div>
+                <div class="row">
+                    <div class="input-field col s2">
+                        <label>further options</label>
+                    </div>
+                    <div class="input-field col s2">
+                        <input type="checkbox" id="indexed"/>
+                        <label for="indexed">indexed</label> <!-- TODO: hide this field depending on chosen option -->
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="input-field col s1 offset-s11">
+                        <a class="btn-floating" id="btnAddField"><i class="material-icons">add</i></a>
+                    </div>
+                </div>
+            </div>
         </div>
     </div>
-    <div class="input-field col s1">
-            <a class="btn-floating" id="btnAddField"><i class="material-icons">add</i></a>
+
+    <div class="row" style="padding-top: 40px;">
+        <button class="btn waves-effect waves-light red" name="action" id="btnSubmit">Create</button>
     </div>
-</div>
 
-<div class="row" style="padding-top: 40px;">
-    <button class="btn waves-effect waves-light red" name="action" id="btnSubmit">Create</button>
-</div>
+    <script>
+        var fieldId = 0;
+        var fields = new Object();
 
-<script>
-var fieldId = 0;
-var fields = new Object();
+        $("#btnAddField").click(function () {
+            fieldId += 1;
 
-$("#btnAddField").click(function () {
-    fieldId += 1;
+            if ($("#fieldname").val().length === 0) {
+                showAlert(" Please specify a name for the field.");
+                return;
+            }
 
-    if ($("#fieldname").val().length === 0) {
-        showAlert(" Please specify a name for the field.");
-        return;
-    }
+            if (!$("#datatype").val() || $("#datatype").val().length === 0) {
+                showAlert(" Please specify a datatype for the field.");
+                return;
+            }
 
-    if (!$("#datatype").val() || $("#datatype").val().length === 0) {
-        showAlert(" Please specify a datatype for the field.");
-        return;
-    }
+            var field = {};
+            field.name = $("#fieldname").val();
+            field.datatype = $("#datatype").val();
 
-    var field = {}
-    field.name = $("#fieldname").val();
-    field.datatype = $("#datatype").val();
-    if ($('#indexed').is(':checked')) {
-        field.indexed = true;
-    } else {
-        field.indexed = false;
-    }
+            if ($('#pk').is(':checked')) {
+                field.pk = true;
+            } else {
+                field.pk = false;
+            }
 
-    if ($('#pk').is(':checked')) {
-        field.pk = true;
-    } else {
-        field.pk = false;
-    }
+            field.storagehandler = $("#storagehandler").val();
 
-    $("#fields").append($('<option></option>').attr("value", fieldId).text(function () {
-        var text = "";
-        text += field.name;
-        text += " (";
-        text += field.datatype;
+            field.params = {};
 
-        if (field.indexed) {
-            text += ", indexed";
+            if ($('#indexed').is(':checked')) {
+                field.params.indexed = true;
+            }
+
+            $("#fields").append($('<option></option>').attr("value", fieldId).text(function () {
+                var text = "";
+                text += field.name;
+                text += " (";
+                text += field.datatype;
+
+                if (field.indexed) {
+                    text += ", indexed";
+                }
+
+                if (field.pk) {
+                    text += ", pk";
+                }
+
+                if(field.storagehandler){
+                    text += "; " + field.storagehandler;
+                }
+
+                text += ")";
+
+                return text;
+            }));
+
+            fields[fieldId] = field;
+
+            $("#fieldname").val("");
+            $("#datatype").val(""); $("#datatype").material_select("destroy"); $("#datatype").material_select();
+            $("#storagehandler").val(""); $("#storagehandler").material_select("destroy"); $("#storagehandler").material_select();
+
+            $('#indexed').prop("checked", false);
+            $('#pk').prop("checked", false);
+        });
+
+        $("#btnRemoveField").click(function () {
+            var fieldIdToRemove = $("#fields").val();
+            $("#fields option:selected").remove();
+            delete fields[fieldIdToRemove];
+        });
+
+        $("#btnSubmit").click(function () {
+            var entityname = $("#entityname").val();
+            entityCreate(entityname, fields);
+        });
+
+
+        function storageHandlerGetSelect(parentid) {
+            storageHandlerList(function (data) {
+                var sel = $(' <select id="storagehandler" data-collapsible="accordion"><option value="" selected defaultSelected></option></select>');
+
+                jQuery.each(data.handlers, function (index, value) {
+                    sel.append($('<option>', {value: index, text: index}));
+                });
+
+                $("#" + parentid).append(sel);
+                $("#" + parentid).append("<label>storage handler</label>");
+                $("#storagehandler").material_select();
+            });
         }
 
-        if (field.pk) {
-            text += ", pk";
-        }
-
-        text += ")";
-
-        return text;
-    }));
-
-    fields[fieldId] = field;
-
-    $("#fieldname").val("");
-    $('#indexed').prop("checked", false);
-    $('#pk').prop("checked", false);
-});
-
-$("#btnRemoveField").click(function () {
-    var fieldIdToRemove = $("#fields").val();
-    $("#fields option:selected").remove();
-    delete fields[fieldIdToRemove];
-});
-
-$("#btnSubmit").click(function () {
-    var entityname = $("#entityname").val();
-    entityCreate(entityname, fields);
-});
-</script>
-<script>
-$(document).ready(function () {
-    $('select').material_select();
-});
-</script>
+        $(document).ready(function () {
+            storageHandlerGetSelect("chandler");
+        });
+    </script>
+    <script>
+        $(document).ready(function () {
+            $('select').material_select();
+        });
+    </script>
 
 </div>
 

@@ -9,4 +9,4 @@ import ch.unibas.dmi.dbis.adam.index.IndexingTaskTuple
   * June 2016
   */
 private[mi]
-case class MIIndexMetaData(ki : Int, ks : Int, refs : Seq[IndexingTaskTuple[_]]) {}
+case class MIIndexMetaData(ki : Int, ks : Int, refs : Seq[IndexingTaskTuple[_]]) extends Serializable

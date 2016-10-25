@@ -1,7 +1,7 @@
 package ch.unibas.dmi.dbis.adam.catalog.catalogs
 
 import ch.unibas.dmi.dbis.adam.catalog.CatalogOperator
-import slick.driver.PostgresDriver.api._
+import slick.driver.DerbyDriver.api._
 
 /**
   * ADAMpro
@@ -31,5 +31,5 @@ private[catalog] class IndexCatalog(tag: Tag) extends Table[(String, String, Str
 
   def idx = index("idx_index_entityname", entityname)
 
-  def attribute = foreignKey("index_attribute_fk", (entityname, attributename), TableQuery[AttributeCatalog])(t => (t.entityname, t.attributename), onUpdate=ForeignKeyAction.Cascade, onDelete=ForeignKeyAction.Cascade)
+  def attribute = foreignKey("index_attribute_fk", (entityname, attributename), TableQuery[AttributeCatalog])(t => (t.entityname, t.attributename), onUpdate=ForeignKeyAction.Restrict, onDelete=ForeignKeyAction.Cascade)
 }

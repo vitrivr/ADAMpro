@@ -3,7 +3,7 @@ package ch.unibas.dmi.dbis.adam.entity
 import ch.unibas.dmi.dbis.adam.exception.GeneralAdamException
 import ch.unibas.dmi.dbis.adam.helpers.partition.PartitionMode
 import ch.unibas.dmi.dbis.adam.main.AdamContext
-import ch.unibas.dmi.dbis.adam.storage.handler.FlatFileHandler
+import ch.unibas.dmi.dbis.adam.storage.engine.ParquetEngine
 import org.apache.spark.sql.functions.col
 import org.apache.spark.sql.{DataFrame, SaveMode}
 
@@ -38,7 +38,7 @@ object EntityPartitioner {
       return Failure(new GeneralAdamException("repartitioning is only possible for defined handlers"))
     }
 
-    if (!partitionAttributes.filterNot(_.pk).forall(_.storagehandler.get.isInstanceOf[FlatFileHandler])) {
+    if (!partitionAttributes.filterNot(_.pk).forall(_.storagehandler.get.engine.isInstanceOf[ParquetEngine])) {
       return Failure(new GeneralAdamException("repartitioning is only possible using the flat file handler"))
     }
 
@@ -67,7 +67,7 @@ object EntityPartitioner {
     }
 
     val handler = partitionAttributes.filterNot(_.pk).headOption
-      .getOrElse(entity.schema().filter(_.storagehandler.isDefined).filter(_.storagehandler.get.isInstanceOf[FlatFileHandler]).head)
+      .getOrElse(entity.schema().filter(_.storagehandler.isDefined).filter(_.storagehandler.get.engine.isInstanceOf[ParquetEngine]).head)
           .storagehandler.get
 
     //select data which is available in the one handler
@@ -76,7 +76,7 @@ object EntityPartitioner {
 
     mode match {
       case PartitionMode.REPLACE_EXISTING =>
-        val status = handler.write(entity.entityname, data, SaveMode.Overwrite)
+        val status = handler.write(entity.entityname, data, attributes, SaveMode.Overwrite)
 
         if (status.isFailure) {
           throw status.failed.get

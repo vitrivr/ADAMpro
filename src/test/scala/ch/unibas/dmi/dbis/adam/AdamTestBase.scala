@@ -9,6 +9,7 @@ import ch.unibas.dmi.dbis.adam.datatypes.feature.{FeatureVectorWrapper, FeatureV
 import ch.unibas.dmi.dbis.adam.entity.{AttributeDefinition, Entity}
 import ch.unibas.dmi.dbis.adam.main.{AdamContext, SparkStartup}
 import ch.unibas.dmi.dbis.adam.query.distance.{ManhattanDistance, MinkowskiDistance}
+import ch.unibas.dmi.dbis.adam.query.query.Predicate
 import ch.unibas.dmi.dbis.adam.utils.Logging
 import org.apache.spark.sql.types.{LongType, StructField, StructType}
 import org.apache.spark.sql.{DataFrame, Row, types}
@@ -38,9 +39,9 @@ class AdamTestBase extends FeatureSpec with GivenWhenThen with Eventually with I
     *
     * @return
     */
-  def getJDBCConnection = {
+  def getMetadataConnection = {
     Class.forName("org.postgresql.Driver").newInstance
-    DriverManager.getConnection(AdamConfig.jdbcUrl, AdamConfig.jdbcUser, AdamConfig.jdbcPassword)
+    DriverManager.getConnection(AdamConfig.getString("storage.postgres.url"), AdamConfig.getString("storage.postgres.user"), AdamConfig.getString("storage.postgres.password"))
   }
 
   /**
@@ -66,8 +67,7 @@ class AdamTestBase extends FeatureSpec with GivenWhenThen with Eventually with I
     val entityname = getRandomName()
     try {
       testCode(entityname)
-    }
-    finally {
+    } finally {
       EntityOp.drop(entityname, true)
     }
   }
@@ -86,7 +86,7 @@ class AdamTestBase extends FeatureSpec with GivenWhenThen with Eventually with I
       Entity.create(entityname,
         Seq(
           AttributeDefinition("tid", FieldTypes.LONGTYPE, true),
-          AttributeDefinition("feature", FieldTypes.FEATURETYPE, false, false, false)
+          AttributeDefinition("feature", FieldTypes.FEATURETYPE, false)
         ))
 
       val schema = StructType(Seq(
@@ -138,7 +138,7 @@ class AdamTestBase extends FeatureSpec with GivenWhenThen with Eventually with I
     */
   case class EvaluationSet(entity: Entity, fullData: DataFrame,
                            feature: FeatureVectorWrapper, distance: MinkowskiDistance, k: Int,
-                           where: Option[Seq[(String, String)]], options: Map[String, String],
+                           where: Seq[Predicate], options: Map[String, String],
                            nnResults: Seq[(Double, Long)], nnbqResults: Seq[(Double, Long)])
 
   /**
@@ -241,7 +241,7 @@ class AdamTestBase extends FeatureSpec with GivenWhenThen with Eventually with I
 
     val where = readResourceFile("groundtruth/bquery.tsv").map(line => {
       val splitted = line.split("\t")
-      splitted(0) -> splitted(1)
+      new Predicate(splitted(0), None, Seq(splitted(1)))
     }).toList
 
 
@@ -255,7 +255,7 @@ class AdamTestBase extends FeatureSpec with GivenWhenThen with Eventually with I
     val options = Map[String, String]()
 
 
-    EvaluationSet(entity.get, data, feature, ManhattanDistance, nnres.length, Option(where), options, nnres, nnbqres)
+    EvaluationSet(entity.get, data, feature, ManhattanDistance, nnres.length, where, options, nnres, nnbqres)
   }
 
 

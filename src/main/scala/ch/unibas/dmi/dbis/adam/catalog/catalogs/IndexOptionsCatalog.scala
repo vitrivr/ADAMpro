@@ -1,7 +1,7 @@
 package ch.unibas.dmi.dbis.adam.catalog.catalogs
 
 import ch.unibas.dmi.dbis.adam.catalog.CatalogOperator
-import slick.driver.PostgresDriver.api._
+import slick.driver.DerbyDriver.api._
 
 /**
   * ADAMpro
@@ -26,6 +26,6 @@ private[catalog] class IndexOptionsCatalog(tag: Tag) extends Table[(String, Stri
 
   def * = (indexname, key, value)
 
-  def index = foreignKey("indexoptions_index_fk", indexname, TableQuery[IndexCatalog])(_.indexname, onUpdate=ForeignKeyAction.Cascade, onDelete=ForeignKeyAction.Cascade)
+  def index = foreignKey("indexoptions_index_fk", indexname, TableQuery[IndexCatalog])(_.indexname, onUpdate=ForeignKeyAction.Restrict, onDelete=ForeignKeyAction.Cascade)
 }
 

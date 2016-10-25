@@ -12,7 +12,7 @@ import org.apache.spark.sql.DataFrame
   */
 case class CompoundQueryExpression(private val expr : QueryExpression, id: Option[String] = None)(@transient implicit val ac: AdamContext) extends QueryExpression(id) {
   override val info = ExpressionDetails(None, Some("Compound Query Expression"), id, None)
-  children ++= Seq(expr)
+  _children ++= Seq(expr)
 
   override protected def run(options : Option[QueryEvaluationOptions], filter : Option[DataFrame] = None)(implicit ac: AdamContext): Option[DataFrame] = {
     log.debug("evaluate compound query")
