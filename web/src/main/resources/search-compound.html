@@ -81,7 +81,7 @@
     </div>
 </div>
 
-<div id="btnadvancedoptions" class="row" style="color: #cccccc; display: block; -webkit-transition: all 0.5s ease-in-out; -moz-transition: all 0.5s ease-in-out; -o-transition: all 0.5s ease-in-out; transition: all 0.5s ease-in-out;">
+<div id="btnadvancedoptions" class="row" style="color: #cccccc; display: block; margin-bottom: 0px; -webkit-transition: all 0.5s ease-in-out; -moz-transition: all 0.5s ease-in-out; -o-transition: all 0.5s ease-in-out; transition: all 0.5s ease-in-out;">
     <i class="material-icons">keyboard_arrow_down</i><span style="font-size: small;">Advanced Options</span>
 </div>
 
@@ -124,6 +124,12 @@
             <option value="spannorm">Span norm distance</option>
         </select>
         <label>distance</label>
+    </div>
+</div>
+
+<div class="row" style="color: #cccccc; display: block; margin-bottom: 0px;">
+    <div id="stopwatch" style="float: right; font-size: 8pt; text-align:right;">
+
     </div>
 </div>
 
@@ -205,6 +211,7 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jsPlumb/2.0.7/jsPlumb.js"></script>
 <script src="http://cdn.datatables.net/1.10.12/js/jquery.dataTables.min.js"></script>
 <script src="./lib/js/materialize-datatable.js"></script>
+<script src="./lib/js/stopwatch.js"></script>
 <script src="./lib/js/search-compound.js"></script>
 <script>
 $(document).ready(function () {
@@ -233,6 +240,11 @@ $("#btnadvancedoptions").click(function () {
     } else {
         $("#btnadvancedoptions").css("color", "#ccc");
     }
+});
+
+$(document).ready(function () {
+    addStopwatch("stopwatch");
+    $('select').material_select();
 });
 </script>
 

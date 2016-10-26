@@ -535,10 +535,12 @@ function searchCompound(params, handler) {
                 raiseError(data.message);
             }
             stopTask();
+            stopStopwatch();
         },
         error: function () {
             raiseError();
             stopTask();
+            stopStopwatch();
         }
     });
 }

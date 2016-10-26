@@ -196,7 +196,8 @@ $("#btnSubmit").click(function () {
         }
     });
     }
-    
+
+    startStopwatch();
     searchCompound(evaluate("box-start"), handler);
 });
 
