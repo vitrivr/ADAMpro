@@ -46,16 +46,9 @@ object IndexPartitioner extends Logging {
     data = partitioner match {
       case PartitionerChoice.SPARK => SparkPartitioner(data, cols, Some(index.indexname), nPartitions)
       case PartitionerChoice.RANDOM => RandomPartitioner(data, cols, Some(index.indexname), nPartitions)
-      case PartitionerChoice.CURRENT => SHHashingPartitioner(data, cols, Some(index.indexname), nPartitions)
-      case PartitionerChoice.SH => SHPartitioner(data, cols, Some(index.indexname), nPartitions)
       case PartitionerChoice.ECP=> ECPPartitioner(data, cols, Some(index.indexname), nPartitions)
-      case PartitionerChoice.RANGE => throw new UnsupportedOperationException
-          //if (cols.isDefined) data.map(r => (r.getAs[Any](cols.get.head), r)) else data.map(r => (r.getAs[Any](index.pk.name), r))
-          //ac.sqlContext.createDataFrame(toPartition.partitionBy(new RangePartitioner[(Any, Row)](nPartitions, toPartition)))
     }
     data = data.select(index.pk.name, FieldNames.featureIndexColumnName)
-    log.debug("New Data Schema: "+data.schema.treeString)
-    //log.debug("Sampled Row: "+data.head.toString() + "| "+data.head.getAs[BitString[_]](FieldNames.featureIndexColumnName).getBitIndexes.mkString(", "))
     }catch{
       case e: Exception => return Failure(e)
     }
@@ -83,13 +76,10 @@ object IndexPartitioner extends Logging {
 
       case PartitionMode.REPLACE_EXISTING =>
         val status = Index.storage.get.write(index.indexname, data, Seq(), SaveMode.Overwrite)
-
         if (status.isFailure) {
           throw status.failed.get
         }
-
         IndexLRUCache.invalidate(index.indexname)
-
         Success(index)
 
       case _ => Failure(new GeneralAdamException("partitioning mode unknown"))

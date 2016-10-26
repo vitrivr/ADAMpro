@@ -209,13 +209,10 @@ message RepartitionMessage {
       CREATE_TEMP = 2;
     }
   PartitionOptions option = 4;
-  //Default will be handled by the API hopefully :)
+  //Default is handled by API
   enum Partitioner {
       SPARK = 0;
       RANDOM = 1;
-      CURRENT = 2;
-      RANGE = 3;
-      SH = 4;
       ECP = 6;
     }
   Partitioner partitioner = 5;

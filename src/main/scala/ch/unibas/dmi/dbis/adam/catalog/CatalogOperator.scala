@@ -8,7 +8,7 @@ import ch.unibas.dmi.dbis.adam.datatypes.FieldTypes
 import ch.unibas.dmi.dbis.adam.entity.Entity.EntityName
 import ch.unibas.dmi.dbis.adam.entity.{AttributeDefinition, EntityNameHolder}
 import ch.unibas.dmi.dbis.adam.exception._
-import ch.unibas.dmi.dbis.adam.helpers.partition.ADAMPartitioner
+import ch.unibas.dmi.dbis.adam.helpers.partition.CustomPartitioner
 import ch.unibas.dmi.dbis.adam.index.Index.{IndexName, IndexTypeName}
 import ch.unibas.dmi.dbis.adam.index.structures.IndexTypes
 import ch.unibas.dmi.dbis.adam.query.handler.generic.QueryExpression
@@ -658,7 +658,7 @@ object CatalogOperator extends Logging {
   /**
     * Creates a new Partitioner
     */
-  def createPartitioner(indexname: EntityNameHolder, noPartitions: Int, partitionerMeta: Serializable, partitioner: ADAMPartitioner) : Try[Void] = {
+  def createPartitioner(indexname: EntityNameHolder, noPartitions: Int, partitionerMeta: Serializable, partitioner: CustomPartitioner) : Try[Void] = {
     execute("create partitioner") {
       if (!existsIndex(indexname).get) {
         throw new IndexNotExistingException()
@@ -707,14 +707,14 @@ object CatalogOperator extends Logging {
     }
   }
 
-  def getPartitioner(indexname: EntityNameHolder) : Try[ADAMPartitioner] = {
+  def getPartitioner(indexname: EntityNameHolder) : Try[CustomPartitioner] = {
     execute("get partitioner") {
       val query = _partitioners.filter(_.indexname === indexname.toString).map(_.partitioner).result.head
       val data = Await.result(DB.run(query), MAX_WAITING_TIME)
       val bis = new ByteArrayInputStream(data)
       val ois = new ObjectInputStream(bis)
       val obj = ois.readObject()
-      obj.asInstanceOf[ADAMPartitioner]
+      obj.asInstanceOf[CustomPartitioner]
     }
   }
 

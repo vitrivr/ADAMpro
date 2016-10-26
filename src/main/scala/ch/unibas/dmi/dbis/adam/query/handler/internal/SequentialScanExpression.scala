@@ -6,7 +6,7 @@ import ch.unibas.dmi.dbis.adam.entity.Entity
 import ch.unibas.dmi.dbis.adam.entity.Entity.EntityName
 import ch.unibas.dmi.dbis.adam.main.AdamContext
 import ch.unibas.dmi.dbis.adam.query.handler.generic.{ExpressionDetails, QueryEvaluationOptions, QueryExpression}
-import ch.unibas.dmi.dbis.adam.query.query.{Predicate, NearestNeighbourQuery}
+import ch.unibas.dmi.dbis.adam.query.query.{NearestNeighbourQuery, Predicate}
 import ch.unibas.dmi.dbis.adam.utils.Logging
 import org.apache.spark.sql.DataFrame
 import org.apache.spark.sql.functions._

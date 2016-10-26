@@ -84,7 +84,7 @@ abstract class Index(val indexname: IndexName)(@transient implicit val ac: AdamC
   /**
     *
     */
-  private[index] def getData(): Option[DataFrame] = {
+  def getData(): Option[DataFrame] = {
     //cache data
     if (_data.isEmpty) {
       _data = Index.storage.get.read(indexname, Seq()).map(Some(_)).getOrElse(None)
@@ -222,7 +222,7 @@ abstract class Index(val indexname: IndexName)(@transient implicit val ac: AdamC
         val partitioner = CatalogOperator.getPartitioner(indexname).get
         val toKeep = partitioner.getPartitions(q,options.get("skipPart").get.toDouble, indexname)
         log.debug("Keeping Partitions: "+toKeep.mkString(", "))
-        val rdd = data.rdd.mapPartitionsWithIndex((idx, iter) => if (toKeep.find(_==idx).isDefined) iter else Iterator(), preservesPartitioning = true)
+        val rdd = getData().get.rdd.mapPartitionsWithIndex((idx, iter) => if (toKeep.find(_==idx).isDefined) iter else Iterator(), preservesPartitioning = true)
         df = ac.sqlContext.createDataFrame(rdd, df.schema)
       }
     }

@@ -377,7 +377,9 @@ class DataDefinitionRPC extends AdamDefinitionGrpc.AdamDefinition with Logging {
   override def getEntityProperties(request: EntityNameMessage): Future[EntityPropertiesMessage] = {
     log.debug("rpc call for returning entity properties")
     val res = {
-      if(EntityOp.exists(request.entity).get){
+      if(CatalogOperator.listEntities().get.exists(el => {
+        el.originalName.equalsIgnoreCase(request.entity)
+      })){
         EntityOp.properties(request.entity)
       } else {
         if(IndexOp.exists(request.entity).get){
@@ -418,10 +420,7 @@ class DataDefinitionRPC extends AdamDefinitionGrpc.AdamDefinition with Logging {
     //Note that default is spark
     val partitioner = request.partitioner match {
       case RepartitionMessage.Partitioner.SPARK => PartitionerChoice.SPARK
-      case RepartitionMessage.Partitioner.CURRENT => PartitionerChoice.CURRENT
       case RepartitionMessage.Partitioner.RANDOM => PartitionerChoice.RANDOM
-      case RepartitionMessage.Partitioner.RANGE => PartitionerChoice.RANGE
-      case RepartitionMessage.Partitioner.SH => PartitionerChoice.SH
       case RepartitionMessage.Partitioner.ECP => PartitionerChoice.ECP
       case _ => PartitionerChoice.SPARK
     }
