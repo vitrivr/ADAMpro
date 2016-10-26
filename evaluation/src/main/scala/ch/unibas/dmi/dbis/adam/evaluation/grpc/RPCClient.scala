@@ -5,6 +5,7 @@ import java.util.Scanner
 
 import ch.unibas.dmi.dbis.adam.evaluation.io.SeqIO
 import ch.unibas.dmi.dbis.adam.evaluation.utils._
+import io.grpc.internal.DnsNameResolverProvider
 import io.grpc.okhttp.OkHttpChannelBuilder
 import io.grpc.{ManagedChannel, ManagedChannelBuilder}
 import org.vitrivr.adam.grpc.grpc.AdamDefinitionGrpc.AdamDefinitionBlockingStub
@@ -37,16 +38,16 @@ class RPCClient(channel: ManagedChannel, definer: AdamDefinitionBlockingStub, se
     */
   val indexOnly = false
   val numQ = 10
-  val tupleSizes = Seq(1e6.toInt)
-  val dimensions = Seq(128)
-  val partitions = Seq(10, 20, 50)
+  val tupleSizes = Seq(1e4.toInt)
+  val dimensions = Seq(20, 128)
+  val partitions = Seq(2, 10, 20)
   val indices = Seq(IndexType.vaf, IndexType.sh, IndexType.ecp, IndexType.lsh)
   val indicesToGenerate = Seq(IndexType.vaf, IndexType.sh, IndexType.ecp, IndexType.lsh)
 
-  val partitioners = Seq(RepartitionMessage.Partitioner.ECP, RepartitionMessage.Partitioner.SPARK, RepartitionMessage.Partitioner.SH)
+  val partitioners = Seq(RepartitionMessage.Partitioner.ECP, RepartitionMessage.Partitioner.SPARK)
 
   var dropPartitions = Seq(0.0, 0.1, 0.2, 0.3, 0.4, 0.5)
-  var eName = "sift_realdata"
+  var eName = ""
   val information = collection.mutable.Map[String, Any]()
   information.put("k", k)
   PartitionResultLogger.init
@@ -210,8 +211,8 @@ class RPCClient(channel: ManagedChannel, definer: AdamDefinitionBlockingStub, se
     val exists = definer.listEntities(EmptyMessage()).entities.find(_.equals(eName))
     if (exists.isEmpty) {
       log.info("Generating new Entity: " + eName)
-      definer.createEntity(CreateEntityMessage(eName, Seq(AttributeDefinitionMessage.apply("pk", AttributeType.LONG, pk = true, unique = true, indexed = true),
-        AttributeDefinitionMessage("feature", AttributeType.FEATURE, pk = false, unique = false, indexed = true))))
+      definer.createEntity(CreateEntityMessage(eName, Seq(AttributeDefinitionMessage.apply("pk", AttributeType.LONG,pk = true),
+        AttributeDefinitionMessage("feature", AttributeType.FEATURE, pk = false))))
       val options = Map("fv-dimensions" -> dim, "fv-min" -> 0, "fv-max" -> 1, "fv-sparse" -> false).mapValues(_.toString)
       definer.generateRandomData(GenerateRandomDataMessage(eName, tuples, options))
     } else log.info("Using existing entity: " + eName)
@@ -262,8 +263,8 @@ class RPCClient(channel: ManagedChannel, definer: AdamDefinitionBlockingStub, se
 
 
   def qualityError(truth: IndexedSeq[Float], guess: IndexedSeq[QueryResultTupleMessage]): Float = {
-    if(guess.size<k){
-      log.error(guess.size+"guess size too small. Information:  "+EvaluationResultLogger.getLast.mkString(":"))
+    if(guess.size<truth.size){
+      log.debug("Guess too small")
       return -1
     }
     val sorted = guess.sortBy(_.data("ap_distance").getFloatData)
@@ -358,7 +359,7 @@ class RPCClient(channel: ManagedChannel, definer: AdamDefinitionBlockingStub, se
 
 object RPCClient {
   def apply(host: String, port: Int): RPCClient = {
-    val channel = OkHttpChannelBuilder.forAddress(host, port).usePlaintext(true).asInstanceOf[ManagedChannelBuilder[_]].build()
+    val channel = OkHttpChannelBuilder.forAddress(host, port).usePlaintext(true).nameResolverFactory(new DnsNameResolverProvider()).asInstanceOf[ManagedChannelBuilder[_]].build()
 
     new RPCClient(
       channel,

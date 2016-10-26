@@ -28,8 +28,8 @@ object VecImporter extends Logging {
     val exists = Await.result(definer.listEntities(EmptyMessage()), Duration(100, "s")).entities.find(_.equals(eName))
     if (exists.isEmpty) {
       log.info("Generating new Entity: " + eName)
-      definer.createEntity(CreateEntityMessage(eName, Seq(AttributeDefinitionMessage.apply("pk", AttributeType.LONG, pk = true, unique = true, indexed = true),
-        AttributeDefinitionMessage("feature", AttributeType.FEATURE, pk = false, unique = false, indexed = true))))
+      definer.createEntity(CreateEntityMessage(eName, Seq(AttributeDefinitionMessage.apply("pk", AttributeType.LONG, pk = true),
+        AttributeDefinitionMessage("feature", AttributeType.FEATURE, pk = false))))
       val options = Map("fv-dimensions" -> 128, "fv-min" -> 0, "fv-max" -> 1, "fv-sparse" -> false).mapValues(_.toString)
     } else log.info("Using existing entity: " + eName)
   }
