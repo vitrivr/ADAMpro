@@ -443,8 +443,13 @@ object CatalogOperator extends Logging {
     */
   def listEntities(): Try[Seq[EntityName]] = {
     execute("list entities") {
-      val query = _entitites.map(_.entityname).result
-      Await.result(DB.run(query), MAX_WAITING_TIME).map(EntityNameHolder(_))
+      val entitiesQuery = _entitites.map(_.entityname).result
+      val entities = Await.result(DB.run(entitiesQuery), MAX_WAITING_TIME)
+
+      val indexesQuery = _indexes.map(_.indexname).result
+      val indexes = Await.result(DB.run(indexesQuery), MAX_WAITING_TIME)
+      
+      (entities diff indexes).map(EntityNameHolder(_))
     }
   }
 
