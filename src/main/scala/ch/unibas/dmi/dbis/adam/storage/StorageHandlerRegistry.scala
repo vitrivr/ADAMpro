@@ -133,6 +133,7 @@ object StorageHandlerRegistry extends Logging {
   def register(name: String, handler: StorageHandler): Unit = {
     if(handlers.contains(name)){
       log.error("handler with name " + name + " exists already")
+      //TODO: insert other name!
     } else {
       handlers += name -> handler
     }
