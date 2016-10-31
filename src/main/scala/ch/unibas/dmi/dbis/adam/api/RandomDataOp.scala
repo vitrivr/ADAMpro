@@ -56,6 +56,7 @@ object RandomDataOp extends GenericOp {
             Row(data: _*)
           })
         )
+        log.trace("Generated rdd")
         val data = ac.sqlContext.createDataFrame(rdd, StructType(schema.filterNot(_.fieldtype == FieldTypes.AUTOTYPE).map(field => StructField(field.name, field.fieldtype.datatype))))
 
         log.trace("inserting generated data")
@@ -241,6 +242,7 @@ object RandomDataOp extends GenericOp {
       var rval = generateFloat(min, max)
       //ensure that we do not have any zeros in vector, sparsify later
       while (math.abs(rval) < 10E-6) {
+        log.trace("Random generated number was too small, repeating generation")
         rval = generateFloat(min, max)
       }
 

@@ -8,6 +8,7 @@ import ch.unibas.dmi.dbis.adam.datatypes.FieldTypes
 import ch.unibas.dmi.dbis.adam.entity.Entity.EntityName
 import ch.unibas.dmi.dbis.adam.entity.{AttributeDefinition, EntityNameHolder}
 import ch.unibas.dmi.dbis.adam.exception._
+import ch.unibas.dmi.dbis.adam.helpers.partition.CustomPartitioner
 import ch.unibas.dmi.dbis.adam.index.Index.{IndexName, IndexTypeName}
 import ch.unibas.dmi.dbis.adam.index.structures.IndexTypes
 import ch.unibas.dmi.dbis.adam.query.handler.generic.QueryExpression
@@ -46,9 +47,10 @@ object CatalogOperator extends Logging {
   private val _indexes = TableQuery[IndexCatalog]
   private val _indexOptions = TableQuery[IndexOptionsCatalog]
   private val _storeengineOptions = TableQuery[StorageEngineOptionsCatalog]
+  private val _partitioners = TableQuery[PartitionerCatalog]
 
   private[catalog] val CATALOGS = Seq(
-    _entitites, _entityOptions, _attributes, _attributeOptions, _indexes, _indexOptions, _storeengineOptions
+    _entitites, _entityOptions, _attributes, _attributeOptions, _indexes, _indexOptions, _storeengineOptions, _partitioners
   )
 
   /**
@@ -650,6 +652,80 @@ object CatalogOperator extends Logging {
       val query = _indexes.filter(_.indexname === indexname.toString).map(_.entityname).result.head
       val name = Await.result(DB.run(query), MAX_WAITING_TIME)
       EntityNameHolder(name)
+    }
+  }
+
+  /**
+    * Creates a new Partitioner
+    */
+  def createPartitioner(indexname: EntityNameHolder, noPartitions: Int, partitionerMeta: Serializable, partitioner: CustomPartitioner) : Try[Void] = {
+    execute("create partitioner") {
+      if (!existsIndex(indexname).get) {
+        throw new IndexNotExistingException()
+      }
+
+      val mbos = new ByteArrayOutputStream()
+      val moos = new ObjectOutputStream(mbos)
+      moos.writeObject(partitionerMeta)
+      val meta = mbos.toByteArray
+      moos.close()
+      mbos.close()
+
+      val pbos = new ByteArrayOutputStream()
+      val poos= new ObjectOutputStream(pbos)
+      poos.writeObject(partitioner)
+      val part = pbos.toByteArray
+      poos.close()
+      poos.close()
+
+      val actions: ListBuffer[DBIOAction[_, NoStream, _]] = new ListBuffer()
+
+      actions += _partitioners.+=((indexname, noPartitions, meta, part))
+
+      Await.result(DB.run(DBIO.seq(actions.toArray: _*).transactionally), MAX_WAITING_TIME)
+      null
+    }
+  }
+
+  /** Returns Partitioner Metadata for the given index */
+  def getPartitionerMeta(indexname: EntityNameHolder) : Try[Any] = {
+    execute("get partitioner meta") {
+      val query = _partitioners.filter(_.indexname === indexname.toString).map(_.meta).result.head
+      val data = Await.result(DB.run(query), MAX_WAITING_TIME)
+
+      val bis = new ByteArrayInputStream(data)
+      val ois = new ObjectInputStream(bis)
+      ois.readObject()
+    }
+  }
+
+  def getNumberOfPartitions(indexname: EntityNameHolder) : Try[Int] = {
+    execute("get number of partitions") {
+      val query = _partitioners.filter(_.indexname === indexname.toString).map(_.noPartitions).result.head
+      val data = Await.result(DB.run(query), MAX_WAITING_TIME)
+      data
+    }
+  }
+
+  def getPartitioner(indexname: EntityNameHolder) : Try[CustomPartitioner] = {
+    execute("get partitioner") {
+      val query = _partitioners.filter(_.indexname === indexname.toString).map(_.partitioner).result.head
+      val data = Await.result(DB.run(query), MAX_WAITING_TIME)
+      val bis = new ByteArrayInputStream(data)
+      val ois = new ObjectInputStream(bis)
+      val obj = ois.readObject()
+      obj.asInstanceOf[CustomPartitioner]
+    }
+  }
+
+  /** Drop Partitioner from the Catalog */
+  def dropPartitioner(indexname: EntityNameHolder) : Try[Void] = {
+    execute("drop partitioner") {
+      if (!existsIndex(indexname).get) {
+        throw new IndexNotExistingException()
+      }
+      Await.result(DB.run(_partitioners.filter(_.indexname === indexname.toString).delete), MAX_WAITING_TIME)
+      null
     }
   }
 

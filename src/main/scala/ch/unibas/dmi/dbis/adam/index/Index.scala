@@ -1,7 +1,7 @@
 package ch.unibas.dmi.dbis.adam.index
 
 import ch.unibas.dmi.dbis.adam.catalog.CatalogOperator
-import ch.unibas.dmi.dbis.adam.config.FieldNames
+import ch.unibas.dmi.dbis.adam.config.{AdamConfig, FieldNames}
 import ch.unibas.dmi.dbis.adam.datatypes.FieldTypes.FEATURETYPE
 import ch.unibas.dmi.dbis.adam.datatypes.feature.Feature._
 import ch.unibas.dmi.dbis.adam.datatypes.feature.FeatureVectorWrapper
@@ -9,6 +9,7 @@ import ch.unibas.dmi.dbis.adam.entity.Entity
 import ch.unibas.dmi.dbis.adam.entity.Entity._
 import ch.unibas.dmi.dbis.adam.exception.{EntityNotExistingException, IndexNotExistingException, IndexNotProperlyDefinedException}
 import ch.unibas.dmi.dbis.adam.helpers.partition.Partitioning.PartitionID
+import ch.unibas.dmi.dbis.adam.helpers.partition._
 import ch.unibas.dmi.dbis.adam.index.Index.{IndexName, IndexTypeName}
 import ch.unibas.dmi.dbis.adam.index.structures.IndexTypes
 import ch.unibas.dmi.dbis.adam.main.{AdamContext, SparkStartup}
@@ -17,6 +18,9 @@ import ch.unibas.dmi.dbis.adam.query.query.NearestNeighbourQuery
 import ch.unibas.dmi.dbis.adam.utils.Logging
 import org.apache.spark.rdd.RDD
 import org.apache.spark.sql.{DataFrame, SaveMode}
+import org.apache.spark.sql.types._
+import org.apache.spark.sql.{DataFrame, Row, SaveMode}
+import org.scalatest.path
 
 import scala.collection.mutable
 import scala.collection.mutable.ListBuffer
@@ -80,7 +84,7 @@ abstract class Index(val indexname: IndexName)(@transient implicit val ac: AdamC
   /**
     *
     */
-  private[index] def getData(): Option[DataFrame] = {
+  def getData(): Option[DataFrame] = {
     //cache data
     if (_data.isEmpty) {
       _data = Index.storage.get.read(indexname, Seq()).map(Some(_)).getOrElse(None)
@@ -213,6 +217,14 @@ abstract class Index(val indexname: IndexName)(@transient implicit val ac: AdamC
     if (partitions.isDefined) {
       val rdd = getData().get.rdd.mapPartitionsWithIndex((idx, iter) => if (partitions.get.contains(idx)) iter else Iterator(), preservesPartitioning = true)
       df = ac.sqlContext.createDataFrame(rdd, df.schema)
+    } else{
+      if(options.get("skipPart").isDefined){
+        val partitioner = CatalogOperator.getPartitioner(indexname).get
+        val toKeep = partitioner.getPartitions(q,options.get("skipPart").get.toDouble, indexname)
+        log.debug("Keeping Partitions: "+toKeep.mkString(", "))
+        val rdd = getData().get.rdd.mapPartitionsWithIndex((idx, iter) => if (toKeep.find(_==idx).isDefined) iter else Iterator(), preservesPartitioning = true)
+        df = ac.sqlContext.createDataFrame(rdd, df.schema)
+      }
     }
 
     var results = scan(df, q, distance, options, k)
@@ -260,7 +272,7 @@ abstract class Index(val indexname: IndexName)(@transient implicit val ac: AdamC
     val partitionInfo = getData().get.rdd.mapPartitionsWithIndex((idx, f) => {
       Iterator((idx, f.length))
     })
-    lb.append("tuplesPerPartition" -> partitionInfo.collect().map { case (id, length) => "(" + id + "," + length + ")" }.mkString)
+    lb.append("tuplesPerPartition" -> partitionInfo.collect().map { case (id, length) => id + "," + length }.mkString(":"))
 
     lb.toMap
   }
@@ -418,6 +430,8 @@ object Index extends Logging {
       CatalogOperator.createIndex(indexname, entity.entityname, attribute, indexgenerator.indextypename, meta)
       storage.get.create(indexname, Seq()) //TODO: possibly switch index to be an entity with specific fields?
       val status = storage.get.write(indexname, data, Seq(), SaveMode.ErrorIfExists, Map("allowRepartitioning" -> "true"))
+      CatalogOperator.createPartitioner(indexname, AdamConfig.defaultNumberOfPartitions ,null,SparkPartitioner)   //TODO Currently allowRepartitioning is set to true above so we use default no of partitions
+
 
       if (status.isFailure) {
         throw status.failed.get

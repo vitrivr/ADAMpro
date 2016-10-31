@@ -9,3 +9,5 @@ adamtwo.iml
 build
 src/generated
 *.csv
+*.tsv
+*.qlist

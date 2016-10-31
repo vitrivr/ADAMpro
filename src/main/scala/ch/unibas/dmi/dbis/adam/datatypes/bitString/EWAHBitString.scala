@@ -55,6 +55,10 @@ object EWAHBitString extends BitStringFactory {
     new EWAHBitString(BitSet.bitmapOf(indexes : _*))
   }
 
+  def apply(bs: BitSet) : EWAHBitString = {
+    new EWAHBitString(bs)
+  }
+
   /**
     *
     * @param data

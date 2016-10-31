@@ -16,6 +16,10 @@ lazy val commonSettings = Seq(
 lazy val root = (project in file(".")).
   settings(commonSettings: _*)
 
+lazy val evaluation = project.
+  settings(commonSettings: _*)
+
+
 lazy val grpc = project.
   settings(commonSettings ++ Seq(assemblyOutputPath in assembly := baseDirectory.value / ".." / "lib" / "grpc-assembly-0.1-SNAPSHOT.jar"): _*)
 

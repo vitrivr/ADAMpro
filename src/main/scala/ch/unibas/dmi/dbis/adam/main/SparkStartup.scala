@@ -30,7 +30,7 @@ object SparkStartup extends Logging {
     sparkConfig.setMaster(AdamConfig.master.get)
   }
 
-  object Implicits extends AdamContext {
+  object Implicits extends AdamContext with Logging{
     implicit lazy val ac = this
 
     @transient implicit lazy val sc = new SparkContext(sparkConfig)

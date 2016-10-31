@@ -1,10 +1,12 @@
 package ch.unibas.dmi.dbis.adam.api
 
-import ch.unibas.dmi.dbis.adam.entity.Entity
+import ch.unibas.dmi.dbis.adam.entity.{Entity, EntityNameHolder}
 import ch.unibas.dmi.dbis.adam.entity.Entity._
 import ch.unibas.dmi.dbis.adam.exception.GeneralAdamException
 import ch.unibas.dmi.dbis.adam.helpers.benchmark.ScanWeightCatalogOperator
 import ch.unibas.dmi.dbis.adam.index.{IndexPartitioner, Index}
+import ch.unibas.dmi.dbis.adam.helpers.scanweight.ScanWeightInspector
+import ch.unibas.dmi.dbis.adam.index.{Index, IndexPartitioner}
 import ch.unibas.dmi.dbis.adam.index.Index._
 import ch.unibas.dmi.dbis.adam.helpers.partition.{PartitionMode, PartitionerChoice}
 import ch.unibas.dmi.dbis.adam.index.structures.IndexTypes
@@ -22,6 +24,11 @@ import scala.util.{Failure, Success, Try}
   * August 2015
   */
 object IndexOp extends GenericOp {
+  def properties(entityname: String)(implicit ac: AdamContext) : Try[Map[String, String]] = {
+    execute("get properties for" + entityname) {
+      Success(Index.load(EntityNameHolder(entityname)).get.propertiesMap)
+    }
+  }
 
 
   /**

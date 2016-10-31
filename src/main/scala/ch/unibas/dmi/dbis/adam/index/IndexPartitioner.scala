@@ -3,10 +3,9 @@ package ch.unibas.dmi.dbis.adam.index
 import ch.unibas.dmi.dbis.adam.catalog.CatalogOperator
 import ch.unibas.dmi.dbis.adam.config.FieldNames
 import ch.unibas.dmi.dbis.adam.exception.GeneralAdamException
-import ch.unibas.dmi.dbis.adam.helpers.partition.{PartitionMode, PartitionerChoice, RandomPartitioner, SparkPartitioner}
+import ch.unibas.dmi.dbis.adam.helpers.partition._
 import ch.unibas.dmi.dbis.adam.main.AdamContext
 import ch.unibas.dmi.dbis.adam.utils.Logging
-import org.apache.spark.HashPartitioner
 import org.apache.spark.sql.{DataFrame, SaveMode}
 
 import scala.util.{Failure, Success, Try}
@@ -42,23 +41,17 @@ object IndexPartitioner extends Logging {
       data = data.join(join.get, index.pk.name)
     }
 
-    //lazy because df.repartition() doesn't need it
-    lazy val toPartition = {
-      if (cols.isDefined) data.map(r => (r.getAs[Any](cols.get.head), r)) else data.map(r => (r.getAs[Any](index.pk.name), r))
-    }
-
+    try{
+      //repartition
     data = partitioner match {
-      case PartitionerChoice.SPARK =>
-        new SparkPartitioner(nPartitions).repartition(data, cols, Some(index))
-      case PartitionerChoice.RANDOM =>
-        ac.sqlContext.createDataFrame(toPartition.partitionBy(new RandomPartitioner(nPartitions)).map(_._2), data.schema)
-      case PartitionerChoice.CURRENT => {
-        ac.sqlContext.createDataFrame(toPartition.partitionBy(new HashPartitioner(nPartitions)).map(_._2), data.schema)
-      }
+      case PartitionerChoice.SPARK => SparkPartitioner(data, cols, Some(index.indexname), nPartitions)
+      case PartitionerChoice.RANDOM => RandomPartitioner(data, cols, Some(index.indexname), nPartitions)
+      case PartitionerChoice.ECP=> ECPPartitioner(data, cols, Some(index.indexname), nPartitions)
     }
-
     data = data.select(index.pk.name, FieldNames.featureIndexColumnName)
-
+    }catch{
+      case e: Exception => return Failure(e)
+    }
     mode match {
       case PartitionMode.CREATE_NEW =>
         val newName = Index.createIndexName(index.entityname, index.attribute, index.indextypename)
@@ -69,9 +62,7 @@ object IndexPartitioner extends Logging {
         if (status.isFailure) {
           throw status.failed.get
         }
-
         IndexLRUCache.invalidate(newName)
-
         Success(Index.load(newName).get)
 
       case PartitionMode.CREATE_TEMP =>
@@ -85,13 +76,10 @@ object IndexPartitioner extends Logging {
 
       case PartitionMode.REPLACE_EXISTING =>
         val status = Index.storage.get.write(index.indexname, data, Seq(), SaveMode.Overwrite)
-
         if (status.isFailure) {
           throw status.failed.get
         }
-
         IndexLRUCache.invalidate(index.indexname)
-
         Success(index)
 
       case _ => Failure(new GeneralAdamException("partitioning mode unknown"))
