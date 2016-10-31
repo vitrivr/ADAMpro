@@ -410,8 +410,8 @@ class DataDefinitionRPC extends AdamDefinitionGrpc.AdamDefinition with Logging {
     //Note that default is spark
     val partitioner = request.partitioner match {
       case RepartitionMessage.Partitioner.SPARK => PartitionerChoice.SPARK
-      case RepartitionMessage.Partitioner.CURRENT => PartitionerChoice.CURRENT
       case RepartitionMessage.Partitioner.RANDOM => PartitionerChoice.RANDOM
+      case RepartitionMessage.Partitioner.ECP => PartitionerChoice.ECP
       case _ => PartitionerChoice.SPARK
     }
 

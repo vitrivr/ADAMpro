@@ -4,10 +4,10 @@ import ch.unibas.dmi.dbis.adam.entity.Entity
 import ch.unibas.dmi.dbis.adam.entity.Entity._
 import ch.unibas.dmi.dbis.adam.exception.GeneralAdamException
 import ch.unibas.dmi.dbis.adam.helpers.benchmark.ScanWeightCatalogOperator
-import ch.unibas.dmi.dbis.adam.index.{IndexPartitioner, Index}
-import ch.unibas.dmi.dbis.adam.index.Index._
 import ch.unibas.dmi.dbis.adam.helpers.partition.{PartitionMode, PartitionerChoice}
+import ch.unibas.dmi.dbis.adam.index.Index._
 import ch.unibas.dmi.dbis.adam.index.structures.IndexTypes
+import ch.unibas.dmi.dbis.adam.index.{Index, IndexPartitioner}
 import ch.unibas.dmi.dbis.adam.main.AdamContext
 import ch.unibas.dmi.dbis.adam.query.distance.DistanceFunction
 import org.apache.spark.sql.DataFrame
@@ -22,8 +22,6 @@ import scala.util.{Failure, Success, Try}
   * August 2015
   */
 object IndexOp extends GenericOp {
-
-
   /**
     * Lists all indexes.
     *
@@ -151,6 +149,19 @@ object IndexOp extends GenericOp {
       Index.load(indexname, cache = true)
     }
   }
+
+  /**
+    * Returns properties of index.
+    *
+    * @param indexname name of index
+    */
+  def properties(indexname: IndexName)(implicit ac: AdamContext) : Try[Map[String, String]] = {
+    execute("get properties for" + indexname) {
+      Success(Index.load(indexname).get.propertiesMap)
+    }
+  }
+
+
 
   /**
     * Repartitions the index.

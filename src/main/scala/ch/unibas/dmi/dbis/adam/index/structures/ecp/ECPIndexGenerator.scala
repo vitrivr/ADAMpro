@@ -79,7 +79,7 @@ class ECPIndexGenerator(centroidBasedLeaders: Boolean, distance: DistanceFunctio
     } else {
       //use feature vector chosen in beginning as leader
       val counts = indexdata.map(x => x._2 -> 1).countByKey
-      bcleaders.value.map(x => ECPLeader(x.id, x.feature, counts(x.id))).toSeq
+      bcleaders.value.map(x => ECPLeader(x.id, x.feature, counts.getOrElse(x.id, 0))).toSeq
     }
 
     val meta = ECPIndexMetaData(leaders, distance)

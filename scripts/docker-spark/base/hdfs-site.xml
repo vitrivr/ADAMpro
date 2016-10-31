@@ -1,0 +1,27 @@
+<?xml version="1.0"?>
+<?xml-stylesheet type="text/xsl" href="configuration.xsl"?>
+
+<configuration>
+    <property>
+        <name>hadoop.tmp.dir</name>
+        <value>/hadoop/hadoop-tmp/${user.name}</value>
+    </property>
+    <property>
+        <name>dfs.namenode.name.dir</name>
+        <value>file:/hadoop/hdfs/namenode</value>
+    </property>
+
+    <property>
+        <name>dfs.datanode.data.dir</name>
+        <value>file:/hadoop/hdfs/datanode</value>
+    </property>
+
+
+    <property>
+        <name>dfs.permissions</name>
+        <value>false</value>
+        <description>
+            If "true", enable permission checking in HDFS.
+        </description>
+    </property>
+</configuration>

@@ -179,14 +179,15 @@ class RPCClient(channel: ManagedChannel, definer: AdamDefinitionBlockingStub, se
   /**
     * Partition entity.
     *
-    * @param entityname  name of entity
-    * @param npartitions number of partitions
-    * @param attributes  attributes
-    * @param materialize materialize partitioning
-    * @param replace     replace partitioning
+    * @param entityname      name of entity
+    * @param npartitions     number of partitions
+    * @param attributes      attributes
+    * @param materialize     materialize partitioning
+    * @param replace         replace partitioning
+    * @param partitionername partitioner
     * @return
     */
-  def entityPartition(entityname: String, npartitions: Int, attributes: Seq[String] = Seq(), materialize: Boolean, replace: Boolean): Try[String] = {
+  def entityPartition(entityname: String, npartitions: Int, attributes: Seq[String] = Seq(), materialize: Boolean, replace: Boolean, partitionername: String = "spark"): Try[String] = {
     execute("repartition entity operation") {
       val option = if (replace) {
         PartitionOptions.REPLACE_EXISTING
@@ -198,7 +199,14 @@ class RPCClient(channel: ManagedChannel, definer: AdamDefinitionBlockingStub, se
         PartitionOptions.CREATE_NEW
       }
 
-      val res = definer.repartitionEntityData(RepartitionMessage(entityname, npartitions, attributes, option))
+      val partitioner = partitionername match {
+        case "random" => RepartitionMessage.Partitioner.RANDOM
+        case "ecp" => RepartitionMessage.Partitioner.ECP
+        case "spark" => RepartitionMessage.Partitioner.SPARK
+        case _ => RepartitionMessage.Partitioner.SPARK
+      }
+
+      val res = definer.repartitionEntityData(RepartitionMessage(entityname, npartitions, attributes, option, partitioner))
 
       if (res.code == AckMessage.Code.OK) {
         Success(res.message)
@@ -410,9 +418,10 @@ class RPCClient(channel: ManagedChannel, definer: AdamDefinitionBlockingStub, se
     * @param attributes  attributes
     * @param materialize materialize partitioning
     * @param replace     replace partitioning
+    * @param partitionername partitioner
     * @return
     */
-  def indexPartition(indexname: String, npartitions: Int, attributes: Seq[String] = Seq(), materialize: Boolean, replace: Boolean): Try[String] = {
+  def indexPartition(indexname: String, npartitions: Int, attributes: Seq[String] = Seq(), materialize: Boolean, replace: Boolean, partitionername: String = "spark"): Try[String] = {
     execute("partition index operation") {
       val option = if (replace) {
         PartitionOptions.REPLACE_EXISTING
@@ -424,7 +433,14 @@ class RPCClient(channel: ManagedChannel, definer: AdamDefinitionBlockingStub, se
         PartitionOptions.CREATE_NEW
       }
 
-      val res = definer.repartitionIndexData(RepartitionMessage(indexname, npartitions, attributes, option))
+      val partitioner = partitionername match {
+        case "random" => RepartitionMessage.Partitioner.RANDOM
+        case "ecp" => RepartitionMessage.Partitioner.ECP
+        case "spark" => RepartitionMessage.Partitioner.SPARK
+        case _ => RepartitionMessage.Partitioner.SPARK
+      }
+
+      val res = definer.repartitionIndexData(RepartitionMessage(indexname, npartitions, attributes, option, partitioner))
 
       if (res.code.isOk) {
         Success(res.message)

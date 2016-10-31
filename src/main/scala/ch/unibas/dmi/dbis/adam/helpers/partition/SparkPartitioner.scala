@@ -1,49 +1,64 @@
 package ch.unibas.dmi.dbis.adam.helpers.partition
 
+import ch.unibas.dmi.dbis.adam.catalog.CatalogOperator
+import ch.unibas.dmi.dbis.adam.datatypes.feature.Feature.FeatureVector
+import ch.unibas.dmi.dbis.adam.entity.EntityNameHolder
 import ch.unibas.dmi.dbis.adam.exception.GeneralAdamException
 import ch.unibas.dmi.dbis.adam.index.Index
+import ch.unibas.dmi.dbis.adam.main.AdamContext
 import ch.unibas.dmi.dbis.adam.utils.Logging
+import org.apache.spark.HashPartitioner
 import org.apache.spark.sql.DataFrame
 import org.apache.spark.sql.functions._
-import org.apache.spark.{HashPartitioner, Partitioner}
 
-import scala.util.Failure
+import scala.util.{Failure, Random}
 
 /**
-  * adampar
+  * ADAMpar.
   *
-  * Created by silvan on 20.06.16.
+  * Uses Spark-Default Partitioning which is based on Hash Partitioning or Round Robin.
+  * Uses Hash Partitioning if you specify a column and round robin if no column is specified
+  *
+  * Silvan Heller
+  * June 2016
   */
-class SparkPartitioner(nPart: Int) extends Partitioner with CustomPartitioner with Logging {
+object SparkPartitioner extends CustomPartitioner with Logging with Serializable{
+
   override def partitionerName = PartitionerChoice.SPARK
 
-
-  val hashPart = new HashPartitioner(nPart)
-
   /**
-    * If no col is specified, partitions by the pk or the first col of the DataFrame
+    * @param data DataFrame you want to partition
+    * @param cols Columns you want to perform the partition on. If none are provided, the index pk is used instead
+    * @param indexName Will be used to store partitioner information in the catalog
+    * @param nPartitions how many partitions shall be created
+    * @return the partitioned DataFrame
     */
-  def repartition(data: DataFrame, cols: Option[Seq[String]] = None, index: Option[Index] = None): DataFrame = {
+  override def apply(data: DataFrame, cols: Option[Seq[String]], indexName: Option[EntityNameHolder], nPartitions: Int, options:Map[String, String] = Map[String, String]())(implicit ac: AdamContext): DataFrame = {
+    CatalogOperator.dropPartitioner(indexName.get)
+    CatalogOperator.createPartitioner(indexName.get,nPartitions,null,SparkPartitioner)
+
     if (cols.isDefined) {
       val entityColNames = data.schema.map(_.name)
       if (!cols.get.forall(name => entityColNames.contains(name))) {
         Failure(throw new GeneralAdamException("one of the columns " + cols.mkString(",") + " does not exist in the data " + entityColNames.mkString("(", ",", ")")))
       }
-
-      data.repartition(nPart, cols.get.map(col): _*)
+      data.repartition(nPartitions, cols.get.map(col): _*)
     } else {
-      if (index.isDefined) {
-        data.repartition(nPart, data(index.get.pk.name))
+      if (indexName.isDefined) {
+        val index = Index.load(indexName.get)
+        data.repartition(nPartitions, data(index.get.pk.name))
       } else {
-        data.repartition(nPart, data(data.schema.head.name))
+        data.repartition(nPartitions, data(data.schema.head.name))
       }
     }
   }
-
-  @Override
-  def getPartition(key: Any): Int = {
-    hashPart.getPartition(key)
+  /**
+    * Drops just random partitions except the one where a hash partitioner would put the FeatureVector
+    */
+  override def getPartitions(q: FeatureVector, dropPercentage: Double, indexName: EntityNameHolder)(implicit ac: AdamContext): Seq[Int] = {
+    val noPart = CatalogOperator.getNumberOfPartitions(indexName).get
+    val part = new HashPartitioner(noPart).getPartition(q)
+    val parts = Random.shuffle(Seq.tabulate(noPart)(el => el)).filter(_!=part)
+    parts.dropRight((noPart*dropPercentage).toInt) ++ Seq(part)
   }
-
-  override def numPartitions: Int = nPart
 }
