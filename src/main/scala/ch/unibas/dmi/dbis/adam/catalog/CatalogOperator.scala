@@ -587,10 +587,10 @@ object CatalogOperator extends Logging {
     */
   def getIndexMeta(indexname: IndexName): Try[Any] = {
     execute("get index meta") {
-      val query = _indexes.filter(_.indexname === indexname.toString).map(_.meta).result.head
+      val query = _indexes.filter(_.indexname === indexname.toString).result.head
       val data = Await.result(DB.run(query), MAX_WAITING_TIME)
 
-      val bis = new ByteArrayInputStream(data)
+      val bis = new ByteArrayInputStream(data._5)
       val ois = new ObjectInputStream(bis)
       ois.readObject()
     }
