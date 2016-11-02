@@ -22,6 +22,7 @@ import ch.unibas.dmi.dbis.adam.query.information.InformationLevels
 import ch.unibas.dmi.dbis.adam.query.information.InformationLevels.{InformationLevel, LAST_STEP_ONLY}
 import ch.unibas.dmi.dbis.adam.query.progressive.{QueryHintsProgressivePathChooser, SimpleProgressivePathChooser}
 import ch.unibas.dmi.dbis.adam.query.query.{Predicate, BooleanQuery, NearestNeighbourQuery}
+import ch.unibas.dmi.dbis.adam.utils.Logging
 import org.apache.spark.sql.types
 import org.apache.spark.sql.types.DataType
 import org.vitrivr.adam.grpc.grpc.DistanceMessage.DistanceType
@@ -36,7 +37,7 @@ import scala.util.{Success, Failure, Try}
   * Ivan Giangreco
   * March 2016
   */
-private[rpc] object RPCHelperMethods {
+private[rpc] object RPCHelperMethods extends Logging {
 
   /**
     *
@@ -318,7 +319,11 @@ private[rpc] object RPCHelperMethods {
         NormBasedDistance(dm.get.options.get("norm").get.toDouble)
       }
       case DistanceType.spannorm => SpanNormDistance
-      case _ => NormBasedDistance(2)
+      case DistanceType.modulo => ModuloDistance
+      case _ => {
+        log.warn("no known distance function given, using Euclidean")
+        NormBasedDistance(2)
+      }
     }
   }
 
