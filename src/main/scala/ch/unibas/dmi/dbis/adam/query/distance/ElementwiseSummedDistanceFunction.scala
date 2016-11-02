@@ -11,26 +11,25 @@ import ch.unibas.dmi.dbis.adam.utils.Logging
   * June 2016
   */
 trait ElementwiseSummedDistanceFunction extends DistanceFunction with Logging with Serializable {
-
-  override def apply(v1: FeatureVector, v2: FeatureVector, weights: Option[FeatureVector]): Distance = {
+  override def apply(v1_q: FeatureVector, v2: FeatureVector, weights: Option[FeatureVector]): Distance = {
     var cumSum = 0.0
 
     //computing sum
     if (weights.isEmpty) {
       //un-weighted
-      if (v1.isInstanceOf[SparseFeatureVector] && v2.isInstanceOf[SparseFeatureVector]) {
+      if (v1_q.isInstanceOf[SparseFeatureVector] && v2.isInstanceOf[SparseFeatureVector]) {
         //sparse vectors
         log.trace("compute distance without weights, sparse vectors")
 
-        val sv1 = v1.asInstanceOf[SparseFeatureVector]
+        val sv1_q = v1_q.asInstanceOf[SparseFeatureVector]
         val sv2 = v2.asInstanceOf[SparseFeatureVector]
         var offset = 0
 
-        while (offset < math.max(sv1.activeSize, sv2.activeSize)) {
-          if (offset < sv1.activeSize && offset < sv2.activeSize) {
-            cumSum += element(sv1.valueAt(offset), sv2.valueAt(offset))
-          } else if (offset < sv1.activeSize) {
-            cumSum += element(sv1.valueAt(offset), 0.0)
+        while (offset < math.max(sv1_q.activeSize, sv2.activeSize)) {
+          if (offset < sv1_q.activeSize && offset < sv2.activeSize) {
+            cumSum += element(sv1_q.valueAt(offset), sv2.valueAt(offset))
+          } else if (offset < sv1_q.activeSize) {
+            cumSum += element(sv1_q.valueAt(offset), 0.0)
           } else if (offset < sv2.activeSize) {
             cumSum += element(0.0, sv2.valueAt(offset))
           }
@@ -41,8 +40,8 @@ trait ElementwiseSummedDistanceFunction extends DistanceFunction with Logging wi
         log.trace("compute distance without weights, dense vectors")
 
         var offset = 0
-        while (offset < math.min(v1.length, v2.length)) {
-          cumSum += element(v1(offset), v2(offset))
+        while (offset < math.min(v1_q.length, v2.length)) {
+          cumSum += element(v1_q(offset), v2(offset))
           offset += 1
         }
       }
@@ -58,24 +57,24 @@ trait ElementwiseSummedDistanceFunction extends DistanceFunction with Logging wi
 
         var offset = 0
         while (offset < sweights.activeSize) {
-          if (offset < v1.length && offset < v2.length) {
-            cumSum += element(v1(offset), v2(offset), sweights.valueAt(offset))
+          if (offset < v1_q.length && offset < v2.length) {
+            cumSum += element(v1_q(offset), v2(offset), sweights.valueAt(offset))
           }
           offset += 1
         }
-      } else if (v1.isInstanceOf[SparseFeatureVector] && v2.isInstanceOf[SparseFeatureVector]) {
+      } else if (v1_q.isInstanceOf[SparseFeatureVector] && v2.isInstanceOf[SparseFeatureVector]) {
         //dense weights, sparse vectors
         log.trace("compute distance with dense weights and sparse vectors")
 
-        val sv1 = v1.asInstanceOf[SparseFeatureVector]
+        val sv1_q = v1_q.asInstanceOf[SparseFeatureVector]
         val sv2 = v2.asInstanceOf[SparseFeatureVector]
 
         var offset = 0
-        while (offset < math.max(sv1.activeSize, sv2.activeSize)) {
-          if (offset < sv1.activeSize && offset < sv2.activeSize) {
-            cumSum += element(sv1.valueAt(offset), sv2.valueAt(offset), weights.get(offset))
-          } else if (offset < sv1.activeSize) {
-            cumSum += element(sv1.valueAt(offset), 0.0, weights.get(offset))
+        while (offset < math.max(sv1_q.activeSize, sv2.activeSize)) {
+          if (offset < sv1_q.activeSize && offset < sv2.activeSize) {
+            cumSum += element(sv1_q.valueAt(offset), sv2.valueAt(offset), weights.get(offset))
+          } else if (offset < sv1_q.activeSize) {
+            cumSum += element(sv1_q.valueAt(offset), 0.0, weights.get(offset))
           } else if (offset < sv2.activeSize) {
             cumSum += element(0.0, sv2.valueAt(offset), weights.get(offset))
           }
@@ -86,8 +85,8 @@ trait ElementwiseSummedDistanceFunction extends DistanceFunction with Logging wi
         log.trace("compute distance with dense weights and dense vectors")
 
         var offset = 0
-        while (offset < v1.length && offset < v1.length && offset < v2.length) {
-          cumSum += element(v1(offset), v2(offset), weights.get(offset))
+        while (offset < v1_q.length && offset < v1_q.length && offset < v2.length) {
+          cumSum += element(v1_q(offset), v2(offset), weights.get(offset))
           offset += 1
         }
       }
@@ -100,12 +99,12 @@ trait ElementwiseSummedDistanceFunction extends DistanceFunction with Logging wi
   /**
     * Element-wise computation.
     *
-    * @param v1 value 1
+    * @param v1_q value 1 (from query vector)
     * @param v2 value 2
     * @param w  weight
     * @return
     */
-  @inline def element(v1: VectorBase, v2: VectorBase, w: VectorBase = 1.0): Distance
+  @inline def element(v1_q: VectorBase, v2: VectorBase, w: VectorBase = 1.0): Distance
 
   /**
     * Normalization after summing up the element-wise distances.

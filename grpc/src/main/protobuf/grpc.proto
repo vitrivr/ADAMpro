@@ -435,6 +435,7 @@ message DistanceMessage {
     manhattan = 10;
     minkowski = 11; //add option 'norm'
     spannorm = 12;
+    modulo = 13;
   }
   DistanceType distancetype = 1;
   map<string, string> options = 2;
