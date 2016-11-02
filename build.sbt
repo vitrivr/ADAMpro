@@ -196,3 +196,9 @@ buildDocker := {
   assembly.value
   "./scripts/docker-build.sh" !
 }
+
+lazy val runLocal = taskKey[Unit]("Runs ADAMpro locally (Apache Spark must be installed).")
+runLocal := {
+  assembly.value
+  "./scripts/runLocal.sh" !
+}
