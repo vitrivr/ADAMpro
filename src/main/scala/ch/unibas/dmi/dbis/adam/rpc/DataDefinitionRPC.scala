@@ -119,14 +119,57 @@ class DataDefinitionRPC extends AdamDefinitionGrpc.AdamDefinition with Logging {
 
   /**
     *
+    * @param request
+    * @return
+    */
+  override def insert(request: InsertMessage): Future[AckMessage] = {
+    log.debug("rpc call for insert operation")
+
+    //TODO: remove code duplication with streamInsert
+    val entity = Entity.load(request.entity)
+
+    if (entity.isFailure) {
+      return  Future.successful(AckMessage(code = AckMessage.Code.ERROR, message = "cannot load entity"))
+    }
+
+    val schema = entity.get.schema()
+
+    val rows = request.tuples.map(tuple => {
+      val data = schema.map(field => {
+        val datum = tuple.data.get(field.name).getOrElse(null)
+        if (datum != null) {
+          RPCHelperMethods.prepareDataTypeConverter(field.fieldtype.datatype)(datum)
+        } else {
+          null
+        }
+      })
+      Row(data: _*)
+    })
+
+    val rdd = ac.sc.parallelize(rows)
+    val df = ac.sqlContext.createDataFrame(rdd, StructType(entity.get.schema().map(field => StructField(field.name, field.fieldtype.datatype))))
+
+    val res = EntityOp.insert(entity.get.entityname, df)
+
+    if (res.isSuccess) {
+      Future.successful(AckMessage(code = AckMessage.Code.OK))
+    } else {
+      Future.successful(AckMessage(code = AckMessage.Code.ERROR, message = res.failed.get.getMessage))
+    }
+  }
+
+
+
+  /**
+    *
     * @param responseObserver
     * @return
     */
-  override def insert(responseObserver: StreamObserver[AckMessage]): StreamObserver[InsertMessage] = {
+  override def streamInsert(responseObserver: StreamObserver[AckMessage]): StreamObserver[InsertMessage] = {
     new StreamObserver[InsertMessage]() {
 
-      def onNext(insert: InsertMessage) {
-        val entity = Entity.load(insert.entity)
+      def onNext(request: InsertMessage) {
+        val entity = Entity.load(request.entity)
 
         if (entity.isFailure) {
           return onError(new GeneralAdamException("cannot load entity"))
@@ -134,7 +177,7 @@ class DataDefinitionRPC extends AdamDefinitionGrpc.AdamDefinition with Logging {
 
         val schema = entity.get.schema()
 
-        val rows = insert.tuples.map(tuple => {
+        val rows = request.tuples.map(tuple => {
           val data = schema.map(field => {
             val datum = tuple.data.get(field.name).getOrElse(null)
             if (datum != null) {

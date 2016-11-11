@@ -8,8 +8,8 @@ import io.grpc.internal.DnsNameResolverProvider
 import io.grpc.okhttp.OkHttpChannelBuilder
 import io.grpc.stub.StreamObserver
 import io.grpc.{ManagedChannel, ManagedChannelBuilder}
-import org.vitrivr.adam.grpc.grpc.AdamDefinitionGrpc.AdamDefinitionBlockingStub
-import org.vitrivr.adam.grpc.grpc.AdamSearchGrpc.{AdamSearchStub, AdamSearchBlockingStub}
+import org.vitrivr.adam.grpc.grpc.AdamDefinitionGrpc.{AdamDefinitionStub, AdamDefinitionBlockingStub}
+import org.vitrivr.adam.grpc.grpc.AdamSearchGrpc.{AdamSearchBlockingStub, AdamSearchStub}
 import org.vitrivr.adam.grpc.grpc.AdaptScanMethodsMessage.IndexCollection.NEW_INDEXES
 import org.vitrivr.adam.grpc.grpc.AdaptScanMethodsMessage.QueryCollection.RANDOM_QUERIES
 import org.vitrivr.adam.grpc.grpc.DistanceMessage.DistanceType
@@ -24,7 +24,11 @@ import scala.util.{Failure, Success, Try}
   * Ivan Giangreco
   * March 2016
   */
-class RPCClient(channel: ManagedChannel, definer: AdamDefinitionBlockingStub, searcherBlocking: AdamSearchBlockingStub, searcher: AdamSearchStub) extends Logging {
+class RPCClient(channel: ManagedChannel,
+                private[adam] val definerBlocking: AdamDefinitionBlockingStub,
+                private[adam] val definer: AdamDefinitionStub,
+                private[adam] val searcherBlocking: AdamSearchBlockingStub,
+                private[adam] val searcher: AdamSearchStub) extends Logging {
   /**
     *
     * @param desc description
@@ -45,6 +49,7 @@ class RPCClient(channel: ManagedChannel, definer: AdamDefinitionBlockingStub, se
         Failure(e)
     }
   }
+
 
   /**
     * Create an entity.
@@ -74,7 +79,7 @@ class RPCClient(channel: ManagedChannel, definer: AdamDefinitionBlockingStub, se
         adm
       }
 
-      val res = definer.createEntity(CreateEntityMessage(entityname, attributeMessages))
+      val res = definerBlocking.createEntity(CreateEntityMessage(entityname, attributeMessages))
       if (res.code == AckMessage.Code.OK) {
         return Success(res.message)
       } else {
@@ -91,7 +96,7 @@ class RPCClient(channel: ManagedChannel, definer: AdamDefinitionBlockingStub, se
     */
   def entityExists(entityname: String): Try[Boolean] = {
     execute("entity exists operation") {
-      val res = definer.existsEntity(EntityNameMessage(entityname))
+      val res = definerBlocking.existsEntity(EntityNameMessage(entityname))
       if (res.ack.get.code == AckMessage.Code.OK) {
         return Success(res.exists)
       } else {
@@ -116,7 +121,7 @@ class RPCClient(channel: ManagedChannel, definer: AdamDefinitionBlockingStub, se
     execute("insert data operation") {
 
       val options = Map("fv-dimensions" -> dimensions, "fv-sparsity" -> sparsity, "fv-min" -> min, "fv-max" -> max, "fv-sparse" -> sparse).mapValues(_.toString)
-      val res = definer.generateRandomData(GenerateRandomDataMessage(entityname, tuples, options))
+      val res = definerBlocking.generateRandomData(GenerateRandomDataMessage(entityname, tuples, options))
 
       if (res.code == AckMessage.Code.OK) {
         return Success(null)
@@ -138,7 +143,7 @@ class RPCClient(channel: ManagedChannel, definer: AdamDefinitionBlockingStub, se
     */
   def entityImport(host: String, database: String, username: String, password: String): Try[Void] = {
     execute("entity import operation") {
-      definer.importData(ImportMessage(host, database, username, password))
+      definerBlocking.importData(ImportMessage(host, database, username, password))
       Success(null)
     }
   }
@@ -151,7 +156,7 @@ class RPCClient(channel: ManagedChannel, definer: AdamDefinitionBlockingStub, se
     */
   def entityList(): Try[Seq[String]] = {
     execute("list entities operation") {
-      Success(definer.listEntities(EmptyMessage()).entities.sorted)
+      Success(definerBlocking.listEntities(EmptyMessage()).entities.sorted)
     }
   }
 
@@ -164,8 +169,8 @@ class RPCClient(channel: ManagedChannel, definer: AdamDefinitionBlockingStub, se
     */
   def entityDetails(entityname: String): Try[Map[String, String]] = {
     execute("get details of entity operation") {
-      val count = definer.count(EntityNameMessage(entityname))
-      var properties = definer.getEntityProperties(EntityNameMessage(entityname)).properties
+      val count = definerBlocking.count(EntityNameMessage(entityname))
+      var properties = definerBlocking.getEntityProperties(EntityNameMessage(entityname)).properties
 
       if(count.code == AckMessage.Code.OK){
         properties = properties.+("count" -> count.message)
@@ -206,7 +211,7 @@ class RPCClient(channel: ManagedChannel, definer: AdamDefinitionBlockingStub, se
         case _ => RepartitionMessage.Partitioner.SPARK
       }
 
-      val res = definer.repartitionEntityData(RepartitionMessage(entityname, npartitions, attributes, option, partitioner))
+      val res = definerBlocking.repartitionEntityData(RepartitionMessage(entityname, npartitions, attributes, option, partitioner))
 
       if (res.code == AckMessage.Code.OK) {
         Success(res.message)
@@ -255,7 +260,7 @@ class RPCClient(channel: ManagedChannel, definer: AdamDefinitionBlockingStub, se
     */
   def entityBenchmarkAndUpdateScanWeights(entityname: String, attribute: String): Try[Void] = {
     execute("benchmark entity scans and reset weights operation") {
-      definer.adaptScanMethods(AdaptScanMethodsMessage(entityname, attribute, NEW_INDEXES, RANDOM_QUERIES))
+      definerBlocking.adaptScanMethods(AdaptScanMethodsMessage(entityname, attribute, NEW_INDEXES, RANDOM_QUERIES))
       Success(null)
     }
   }
@@ -269,7 +274,7 @@ class RPCClient(channel: ManagedChannel, definer: AdamDefinitionBlockingStub, se
     */
   def entitySparsify(entityname: String, attribute: String): Try[Void] = {
     execute("benchmark entity scans and reset weights operation") {
-      definer.sparsifyEntity(SparsifyEntityMessage(entityname, attribute))
+      definerBlocking.sparsifyEntity(SparsifyEntityMessage(entityname, attribute))
       Success(null)
     }
   }
@@ -281,7 +286,7 @@ class RPCClient(channel: ManagedChannel, definer: AdamDefinitionBlockingStub, se
     */
   def entityDrop(entityname: String): Try[Void] = {
     execute("drop entity operation") {
-      definer.dropEntity(EntityNameMessage(entityname))
+      definerBlocking.dropEntity(EntityNameMessage(entityname))
       Success(null)
     }
   }
@@ -296,7 +301,7 @@ class RPCClient(channel: ManagedChannel, definer: AdamDefinitionBlockingStub, se
     */
   def entityCreateAllIndexes(entityname: String, attributes: Seq[String], norm: Int): Try[Seq[String]] = {
     execute("create all indexes operation") {
-      val res = attributes.map { attribute => definer.generateAllIndexes(IndexMessage(entity = entityname, attribute = attribute, distance = Some(DistanceMessage(DistanceType.minkowski, options = Map("norm" -> norm.toString)))))
+      val res = attributes.map { attribute => definerBlocking.generateAllIndexes(IndexMessage(entity = entityname, attribute = attribute, distance = Some(DistanceMessage(DistanceType.minkowski, options = Map("norm" -> norm.toString)))))
       }
 
       if (res.exists(_.code != AckMessage.Code.OK)) {
@@ -322,7 +327,7 @@ class RPCClient(channel: ManagedChannel, definer: AdamDefinitionBlockingStub, se
   def indexCreate(entityname: String, attribute: String, indextype: String, norm: Int, options: Map[String, String]): Try[String] = {
     execute("create index operation") {
       val indexMessage = IndexMessage(entityname, attribute, getIndexType(indextype), Some(DistanceMessage(DistanceType.minkowski, Map("norm" -> norm.toString))), options)
-      val res = definer.index(indexMessage)
+      val res = definerBlocking.index(indexMessage)
 
       if (res.code == AckMessage.Code.OK) {
         return Success(res.message)
@@ -340,7 +345,7 @@ class RPCClient(channel: ManagedChannel, definer: AdamDefinitionBlockingStub, se
     */
   def indexList(entityname: String): Try[Seq[(String, String, IndexType)]] = {
     execute("list indexes operation") {
-      Success(definer.listIndexes(EntityNameMessage(entityname)).indexes.map(i => (i.index, i.attribute, i.indextype)))
+      Success(definerBlocking.listIndexes(EntityNameMessage(entityname)).indexes.map(i => (i.index, i.attribute, i.indextype)))
     }
   }
 
@@ -354,7 +359,7 @@ class RPCClient(channel: ManagedChannel, definer: AdamDefinitionBlockingStub, se
     */
   def indexExists(entityname: String, attribute: String, indextype: String): Try[Boolean] = {
     execute("index exists operation") {
-      val res = definer.existsIndex(IndexMessage(entityname, attribute, getIndexType(indextype)))
+      val res = definerBlocking.existsIndex(IndexMessage(entityname, attribute, getIndexType(indextype)))
       if (res.ack.get.code == AckMessage.Code.OK) {
         return Success(res.exists)
       } else {
@@ -387,7 +392,7 @@ class RPCClient(channel: ManagedChannel, definer: AdamDefinitionBlockingStub, se
     */
   def indexDrop(indexname: String): Try[Void] = {
     execute("drop index operation") {
-      definer.dropIndex(IndexNameMessage(indexname))
+      definerBlocking.dropIndex(IndexNameMessage(indexname))
       Success(null)
     }
   }
@@ -440,7 +445,7 @@ class RPCClient(channel: ManagedChannel, definer: AdamDefinitionBlockingStub, se
         case _ => RepartitionMessage.Partitioner.SPARK
       }
 
-      val res = definer.repartitionIndexData(RepartitionMessage(indexname, npartitions, attributes, option, partitioner))
+      val res = definerBlocking.repartitionIndexData(RepartitionMessage(indexname, npartitions, attributes, option, partitioner))
 
       if (res.code.isOk) {
         Success(res.message)
@@ -509,7 +514,7 @@ class RPCClient(channel: ManagedChannel, definer: AdamDefinitionBlockingStub, se
     */
   def storageHandlerList(): Try[Map[String, Seq[String]]] = {
     execute("get storage handlers operation") {
-      Success(definer.listStorageHandlers(EmptyMessage()).handlers.map(handler => handler.name -> handler.attributetypes.map(_.toString)).toMap)
+      Success(definerBlocking.listStorageHandlers(EmptyMessage()).handlers.map(handler => handler.name -> handler.attributetypes.map(_.toString)).toMap)
     }
   }
 
@@ -549,6 +554,7 @@ object RPCClient {
     new RPCClient(
       channel,
       AdamDefinitionGrpc.blockingStub(channel),
+      AdamDefinitionGrpc.stub(channel),
       AdamSearchGrpc.blockingStub(channel),
       AdamSearchGrpc.stub(channel)
     )
