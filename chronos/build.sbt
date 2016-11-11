@@ -1,8 +1,5 @@
 name := "ADAMpro-chronos"
 
-resolvers ++= Seq(
-)
-
 libraryDependencies ++= Seq(
   "com.google.protobuf" % "protobuf-java" % "3.0.0-beta-4",
   "io.grpc" % "grpc-okhttp" % "0.12.0",
@@ -26,7 +23,5 @@ assemblyMergeStrategy in assembly := {
   case meta(_) => MergeStrategy.discard
   case x => MergeStrategy.last
 }
-
-mainClass in assembly := Some("")
 
 test in assembly := {}
