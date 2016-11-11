@@ -5,9 +5,9 @@ import java.util.Properties
 import java.util.logging.Logger
 
 import ch.unibas.cs.dbis.chronos.agent.ChronosJob
-import org.vitrivr.adam.grpc.grpc.RepartitionMessage
+import org.vitrivr.adampro.grpc.grpc.RepartitionMessage
 import org.vitrivr.adampro.rpc.RPCClient
-import org.vitrivr.adampro.rpc.datastructures.{RPCQueryResults, RPCQueryObject}
+import org.vitrivr.adampro.rpc.datastructures.{RPCAttributeDefinition, RPCQueryResults, RPCQueryObject}
 
 import scala.collection.mutable.ListBuffer
 import scala.util.{Random, Try}

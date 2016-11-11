@@ -1,9 +1,10 @@
 package org.vitrivr.adampro.rpc.datastructures
 
-import org.vitrivr.adam.grpc.grpc.BooleanQueryMessage.WhereMessage
-import org.vitrivr.adam.grpc.grpc.QueryMessage.InformationLevel
-import org.vitrivr.adam.grpc.grpc.QueryMessage.InformationLevel._
-import org.vitrivr.adam.grpc.grpc._
+import org.vitrivr.adampro.grpc.grpc.BooleanQueryMessage.WhereMessage
+import org.vitrivr.adampro.grpc.grpc.QueryMessage.InformationLevel
+import org.vitrivr.adampro.grpc.grpc.QueryMessage.InformationLevel._
+import org.vitrivr.adampro.grpc.grpc._
+import org.vitrivr.adampro.grpc.grpc.QueryMessage
 
 import scala.collection.mutable.ListBuffer
 

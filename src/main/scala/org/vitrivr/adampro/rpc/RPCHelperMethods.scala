@@ -9,6 +9,7 @@ import org.vitrivr.adampro.datatypes.feature.{FeatureVectorWrapperUDT, FeatureVe
 import org.vitrivr.adampro.datatypes.gis.{GeometryWrapperUDT, GeographyWrapper, GeographyWrapperUDT}
 import org.vitrivr.adampro.entity.AttributeDefinition
 import org.vitrivr.adampro.exception.GeneralAdamException
+import org.vitrivr.adampro.grpc.grpc.QueryMessage
 import org.vitrivr.adampro.main.AdamContext
 import org.vitrivr.adampro.query.{QueryHints, QueryCacheOptions}
 import org.vitrivr.adampro.query.distance._
@@ -25,8 +26,8 @@ import org.vitrivr.adampro.query.query.{Predicate, BooleanQuery, NearestNeighbou
 import org.vitrivr.adampro.utils.Logging
 import org.apache.spark.sql.types
 import org.apache.spark.sql.types.DataType
-import org.vitrivr.adam.grpc.grpc.DistanceMessage.DistanceType
-import org.vitrivr.adam.grpc.grpc._
+import org.vitrivr.adampro.grpc.grpc.DistanceMessage.DistanceType
+import org.vitrivr.adampro.grpc.grpc._
 
 import scala.concurrent.duration.Duration
 import scala.util.{Success, Failure, Try}

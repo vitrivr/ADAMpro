@@ -4,13 +4,14 @@ import org.vitrivr.adampro.AdamTestBase
 import org.vitrivr.adampro.config.AdamConfig
 import org.vitrivr.adampro.datatypes.FieldTypes
 import org.vitrivr.adampro.entity.{AttributeDefinition, Entity}
+import org.vitrivr.adampro.grpc.grpc.{AdamSearchGrpc, AdamDefinitionGrpc}
 import org.vitrivr.adampro.main.RPCStartup
 import io.grpc.ManagedChannelBuilder
 import io.grpc.stub.StreamObserver
 import org.scalatest.concurrent.ScalaFutures
-import org.vitrivr.adam.grpc.grpc.BooleanQueryMessage.WhereMessage
-import org.vitrivr.adam.grpc.grpc.InsertMessage.TupleInsertMessage
-import org.vitrivr.adam.grpc.grpc._
+import org.vitrivr.adampro.grpc.grpc.BooleanQueryMessage.WhereMessage
+import org.vitrivr.adampro.grpc.grpc.InsertMessage.TupleInsertMessage
+import org.vitrivr.adampro.grpc.grpc._
 
 import scala.concurrent.duration._
 import scala.util.Random

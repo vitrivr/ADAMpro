@@ -2,19 +2,21 @@ package org.vitrivr.adampro.rpc
 
 import java.util.concurrent.TimeUnit
 
-import org.vitrivr.adam.rpc.datastructures.RPCAttributeDefinition
+import org.vitrivr.adampro.grpc.grpc.AdamDefinitionGrpc.{AdamDefinitionStub, AdamDefinitionBlockingStub}
+import org.vitrivr.adampro.grpc.grpc.AdamSearchGrpc.{AdamSearchStub, AdamSearchBlockingStub}
+import org.vitrivr.adampro.rpc.datastructures.RPCAttributeDefinition
 import org.vitrivr.adampro.utils.Logging
 import io.grpc.internal.DnsNameResolverProvider
 import io.grpc.okhttp.OkHttpChannelBuilder
 import io.grpc.stub.StreamObserver
 import io.grpc.{ManagedChannel, ManagedChannelBuilder}
-import org.vitrivr.adam.grpc.grpc.AdamDefinitionGrpc.{AdamDefinitionStub, AdamDefinitionBlockingStub}
-import org.vitrivr.adam.grpc.grpc.AdamSearchGrpc.{AdamSearchBlockingStub, AdamSearchStub}
-import org.vitrivr.adam.grpc.grpc.AdaptScanMethodsMessage.IndexCollection.NEW_INDEXES
-import org.vitrivr.adam.grpc.grpc.AdaptScanMethodsMessage.QueryCollection.RANDOM_QUERIES
-import org.vitrivr.adam.grpc.grpc.DistanceMessage.DistanceType
-import org.vitrivr.adam.grpc.grpc.RepartitionMessage.PartitionOptions
-import org.vitrivr.adam.grpc.grpc._
+import org.vitrivr.adampro.grpc.grpc.AdamDefinitionGrpc.AdamDefinitionBlockingStub
+import org.vitrivr.adampro.grpc.grpc.AdamSearchGrpc.AdamSearchStub
+import org.vitrivr.adampro.grpc.grpc.AdaptScanMethodsMessage.IndexCollection.NEW_INDEXES
+import org.vitrivr.adampro.grpc.grpc.AdaptScanMethodsMessage.QueryCollection.RANDOM_QUERIES
+import org.vitrivr.adampro.grpc.grpc.DistanceMessage.DistanceType
+import org.vitrivr.adampro.grpc.grpc.RepartitionMessage.PartitionOptions
+import org.vitrivr.adampro.grpc.grpc._
 import org.vitrivr.adampro.rpc.datastructures.{RPCQueryResults, RPCQueryObject}
 
 import scala.util.{Failure, Success, Try}
@@ -26,10 +28,10 @@ import scala.util.{Failure, Success, Try}
   * March 2016
   */
 class RPCClient(channel: ManagedChannel,
-                private[adam] val definerBlocking: AdamDefinitionBlockingStub,
-                private[adam] val definer: AdamDefinitionStub,
-                private[adam] val searcherBlocking: AdamSearchBlockingStub,
-                private[adam] val searcher: AdamSearchStub) extends Logging {
+                private[adampro] val definerBlocking: AdamDefinitionBlockingStub,
+                private[adampro] val definer: AdamDefinitionStub,
+                private[adampro] val searcherBlocking: AdamSearchBlockingStub,
+                private[adampro] val searcher: AdamSearchStub) extends Logging {
   /**
     *
     * @param desc description

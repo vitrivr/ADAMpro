@@ -18,8 +18,8 @@ import io.grpc.stub.StreamObserver
 import org.apache.spark.annotation.Experimental
 import org.apache.spark.sql.Row
 import org.apache.spark.sql.types.{StructField, StructType}
-import org.vitrivr.adam.grpc.grpc.AdaptScanMethodsMessage.{IndexCollection, QueryCollection}
-import org.vitrivr.adam.grpc.grpc._
+import org.vitrivr.adampro.grpc.grpc.AdaptScanMethodsMessage.{IndexCollection, QueryCollection}
+import org.vitrivr.adampro.grpc.grpc._
 
 import scala.concurrent.duration._
 import scala.concurrent.{Await, Future}

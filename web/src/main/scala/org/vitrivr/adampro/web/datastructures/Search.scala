@@ -1,8 +1,7 @@
 package org.vitrivr.adampro.web.datastructures
 
-import org.vitrivr.adam.rpc.datastructures.RPCQueryResults
+import org.vitrivr.adampro.rpc.datastructures.{RPCQueryObject, RPCQueryResults}
 import org.vitrivr.adampro.web.controller.ProgressiveQueryStatus
-import org.vitrivr.adampro.rpc.datastructures.{RPCQueryResults, RPCQueryObject}
 
 /**
   * ADAMpro

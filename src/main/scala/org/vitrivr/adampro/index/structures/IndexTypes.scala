@@ -9,7 +9,7 @@ import org.vitrivr.adampro.index.structures.pq.{PQIndex, PQIndexGeneratorFactory
 import org.vitrivr.adampro.index.structures.sh.{SHIndex, SHIndexGeneratorFactory}
 import org.vitrivr.adampro.index.structures.va._
 import org.vitrivr.adampro.index.{Index, IndexGeneratorFactory}
-import org.vitrivr.adam.grpc._
+import org.vitrivr.adampro.grpc._
 
 /**
   * adamtwo

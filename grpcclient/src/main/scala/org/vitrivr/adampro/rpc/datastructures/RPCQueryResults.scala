@@ -1,7 +1,7 @@
 package org.vitrivr.adampro.rpc.datastructures
 
-import org.vitrivr.adam.grpc.grpc.DataMessage.Datatype
-import org.vitrivr.adam.grpc.grpc.QueryResultInfoMessage
+import org.vitrivr.adampro.grpc.grpc.DataMessage.Datatype
+import org.vitrivr.adampro.grpc.grpc.QueryResultInfoMessage
 
 /**
   * ADAMpro

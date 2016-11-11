@@ -4,6 +4,7 @@ import org.vitrivr.adampro.api.{EntityOp, IndexOp, QueryOp}
 import org.vitrivr.adampro.datatypes.feature.{FeatureVectorWrapper, FeatureVectorWrapperUDT}
 import org.vitrivr.adampro.datatypes.gis.{GeometryWrapperUDT, GeometryWrapper, GeographyWrapper, GeographyWrapperUDT}
 import org.vitrivr.adampro.exception.{GeneralAdamException, QueryNotCachedException}
+import org.vitrivr.adampro.grpc.grpc.AdamSearchGrpc
 import org.vitrivr.adampro.main.{SparkStartup, AdamContext}
 import org.vitrivr.adampro.query.{QueryHints, QueryLRUCache}
 import org.vitrivr.adampro.query.progressive.{ProgressiveObservation, QueryHintsProgressivePathChooser, SimpleProgressivePathChooser}
@@ -11,7 +12,7 @@ import io.grpc.stub.StreamObserver
 import org.vitrivr.adampro.utils.Logging
 import org.apache.spark.sql.DataFrame
 import org.apache.spark.sql.types._
-import org.vitrivr.adam.grpc.grpc._
+import org.vitrivr.adampro.grpc.grpc._
 
 import scala.concurrent.Future
 import scala.util.Try

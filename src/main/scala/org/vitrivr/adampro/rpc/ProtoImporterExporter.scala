@@ -14,8 +14,8 @@ import com.google.protobuf.{CodedInputStream, ByteString}
 import org.apache.spark.annotation.Experimental
 import org.apache.spark.sql.Row
 import org.apache.spark.sql.types._
-import org.vitrivr.adam.grpc.grpc.InsertMessage.TupleInsertMessage
-import org.vitrivr.adam.grpc.grpc._
+import org.vitrivr.adampro.grpc.grpc.InsertMessage.TupleInsertMessage
+import org.vitrivr.adampro.grpc.grpc._
 
 import scala.collection.mutable.ListBuffer
 import scala.util.{Failure, Random, Success, Try}

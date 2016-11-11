@@ -1,6 +1,6 @@
 package org.vitrivr.adampro.web.controller
 
-import org.vitrivr.adam.rpc.datastructures.RPCAttributeDefinition
+import org.vitrivr.adampro.rpc.datastructures.RPCAttributeDefinition
 import org.vitrivr.adampro.web.datastructures._
 import com.twitter.finagle.http.Request
 import com.twitter.finatra.http.Controller
