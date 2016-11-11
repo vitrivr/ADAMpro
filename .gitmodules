@@ -1,6 +1,3 @@
-[submodule "ADAMpro-Protobuf"]
-	path = ADAMpro-Protobuf
-	url = https://github.com/dbisUnibas/ADAMpro-Protobuf.git
 [submodule "grpc"]
 	path = grpc
 	url = https://github.com/dbisUnibas/ADAMpro-Protobuf.git
