@@ -7,7 +7,7 @@ import sbtassembly.AssemblyPlugin.autoImport._
 name := "ADAMpro"
 
 lazy val commonSettings = Seq(
-  organization := "ch.unibas.dmi.dbis",
+  organization := "org.vitrivr",
   version := "0.1.0",
   scalaVersion := "2.10.6"
 )
@@ -36,7 +36,7 @@ lazy val buildSettings = Seq(
   ivyScala := ivyScala.value.map(_.copy(overrideScalaVersion = true))
 )
 
-mainClass in(Compile, run) := Some("ch.unibas.dmi.dbis.adam.main.Startup")
+mainClass in(Compile, run) := Some("org.vitrivr.adampro.main.Startup")
 
 unmanagedResourceDirectories in Compile += baseDirectory.value / "conf"
 scalacOptions ++= Seq("-target:jvm-1.7")
@@ -150,7 +150,7 @@ assemblyShadeRules in assembly := Seq(
   ShadeRule.rename("com.google.protobuf.**" -> "adampro.root.shaded.com.google.protobuf.@1").inAll
 )
 
-mainClass in assembly := Some("ch.unibas.dmi.dbis.adam.main.Startup")
+mainClass in assembly := Some("org.vitrivr.adampro.main.Startup")
 
 test in assembly := {}
 

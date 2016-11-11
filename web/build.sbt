@@ -30,6 +30,6 @@ assemblyMergeStrategy in assembly := {
   case x => MergeStrategy.last
 }
 
-mainClass in assembly := Some("ch.unibas.dmi.dbis.adam.web.main.ClientStartup")
+mainClass in assembly := Some("org.vitrivr.adampro.web.main.ClientStartup")
 
 test in assembly := {}

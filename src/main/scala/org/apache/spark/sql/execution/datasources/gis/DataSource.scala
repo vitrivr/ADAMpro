@@ -10,7 +10,7 @@ package org.apache.spark.sql.execution.datasources.gis
 import java.sql.{Types, SQLException, Connection}
 import java.util.Properties
 
-import ch.unibas.dmi.dbis.adam.datatypes.gis.{GeographyWrapperUDT, GeometryWrapperUDT}
+import org.vitrivr.adampro.datatypes.gis.{GeographyWrapperUDT, GeometryWrapperUDT}
 import org.apache.spark.sql.execution.datasources.jdbc.{JdbcUtils, JDBCPartitioningInfo, JDBCRelation}
 import org.apache.spark.sql.jdbc.{JdbcType, JdbcDialect, JdbcDialects}
 import org.apache.spark.sql.sources._

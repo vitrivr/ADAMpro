@@ -30,7 +30,7 @@ su --login - postgres --command "/usr/pgsql-9.4/bin/pg_ctl -w start -D $PGDATA"
 sleep 10 #sleep until HDFS is started
 
 hdfs dfsadmin -safemode leave
-$SPARK_HOME/bin/spark-submit --master "local[4]" --deploy-mode client --class ch.unibas.dmi.dbis.adam.main.Startup $ADAM_HOME/ADAMpro-assembly-0.1.0.jar &
+$SPARK_HOME/bin/spark-submit --master "local[4]" --deploy-mode client --class org.vitrivr.adampro.main.Startup $ADAM_HOME/ADAMpro-assembly-0.1.0.jar &
 
 sleep 10 #sleep until ADAMpro is started
 

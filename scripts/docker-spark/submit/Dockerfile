@@ -6,7 +6,7 @@ FROM adampar/spark-base:1.6.2-hadoop2.6
 MAINTAINER Silvan Heller <silvan.heller@unibas.ch>
 
 ENV SPARK_APPLICATION_JAR_LOCATION file:///target/scala-2.10/ADAMpro-assembly-0.1.0.jar
-ENV SPARK_APPLICATION_MAIN_CLASS ch.unibas.dmi.dbis.adam.main.Startup
+ENV SPARK_APPLICATION_MAIN_CLASS org.vitrivr.adampro.main.Startup
 ENV SPARK_APPLICATION_ARGS ""
 
 COPY submit.sh /

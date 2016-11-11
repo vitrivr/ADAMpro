@@ -3,7 +3,7 @@ package org.apache.spark.sql.execution.datasources.gis
 import java.sql.{Connection, PreparedStatement}
 import java.util.Properties
 
-import ch.unibas.dmi.dbis.adam.datatypes.gis.{GeographyWrapper, GeographyWrapperUDT, GeometryWrapper, GeometryWrapperUDT}
+import org.vitrivr.adampro.datatypes.gis.{GeographyWrapper, GeographyWrapperUDT, GeometryWrapper, GeometryWrapperUDT}
 import org.apache.spark.sql.execution.datasources.jdbc.{JDBCRelation, JdbcUtils}
 import org.apache.spark.sql.jdbc.{JdbcDialect, JdbcDialects, JdbcType}
 import org.apache.spark.sql.types._
@@ -28,7 +28,7 @@ class PostGisRelation(url: String, table: String, parts: Array[Partition], props
     */
   override def insert(data: DataFrame, overwrite: Boolean): Unit = {
     data.write
-      .format("ch.unibas.dmi.dbis.adam.storage.sources.gis")
+      .format("org.vitrivr.adampro.storage.sources.gis")
       .mode(if (overwrite) SaveMode.Overwrite else SaveMode.Append)
       .option("url", props.getProperty("url"))
       .option("table", props.getProperty("table"))
