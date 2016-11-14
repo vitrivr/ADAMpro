@@ -4,6 +4,8 @@ import org.vitrivr.adampro.datatypes.FieldTypes.FieldType
 import org.vitrivr.adampro.exception.GeneralAdamException
 import org.vitrivr.adampro.storage.{StorageHandler, StorageHandlerRegistry}
 
+import scala.collection.mutable.ListBuffer
+
 /**
   * adamtwo
   *
@@ -28,6 +30,21 @@ case class AttributeDefinition(name: String, fieldtype: FieldType, pk: Boolean =
     }
 
     handler
+  }
+
+
+  /**
+    * Returns a map of properties to the entity. Useful for printing.
+    */
+  def propertiesMap: Map[String, String] = {
+    val lb = ListBuffer[(String, String)]()
+
+    lb.append("fieldtype" -> fieldtype.name)
+    lb.append("pk" -> pk.toString)
+    lb.append("storagehandler" -> storagehandlername.getOrElse("undefined"))
+    lb.append("parameters" -> params.toString())
+
+    lb.toMap
   }
 }
 

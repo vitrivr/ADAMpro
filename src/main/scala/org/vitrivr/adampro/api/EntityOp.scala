@@ -159,6 +159,18 @@ object EntityOp extends GenericOp {
   }
 
   /**
+    * Returns properties of an attribtute of an entity.
+    *
+    * @param entityname name of entity
+    * @return
+    */
+  def properties(entityname: EntityName, attribute : String)(implicit ac: AdamContext): Try[Map[String, String]] = {
+    execute("load properties of entity " + entityname + " operation") {
+      Success(Entity.load(entityname).get.attributePropertiesMap(attribute))
+    }
+  }
+
+  /**
     * Repartitions the entity.
     *
     * @param entityname  name of entity

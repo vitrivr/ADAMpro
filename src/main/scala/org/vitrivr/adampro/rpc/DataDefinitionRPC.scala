@@ -434,6 +434,41 @@ class DataDefinitionRPC extends AdamDefinitionGrpc.AdamDefinition with Logging {
     * @param request
     * @return
     */
+  override def getAttributeProperties(request: AttributeEntityNameMessage): Future[EntityPropertiesMessage] = {
+    log.debug("rpc call for returning attribute properties")
+    val res = EntityOp.properties(request.entity, request.attribute)
+
+    if (res.isSuccess) {
+      Future.successful(EntityPropertiesMessage(Some(AckMessage(AckMessage.Code.OK)), request.entity, res.get))
+    } else {
+      log.error(res.failed.get.getMessage, res.failed.get)
+      Future.successful(EntityPropertiesMessage(Some(AckMessage(AckMessage.Code.ERROR, res.failed.get.getMessage))))
+    }
+  }
+
+
+  /**
+    *
+    * @param request
+    * @return
+    */
+  override def getIndexProperties(request: IndexNameMessage): Future[EntityPropertiesMessage] = {
+    log.debug("rpc call for returning index properties")
+    val res = IndexOp.properties(request.index)
+
+    if (res.isSuccess) {
+      Future.successful(EntityPropertiesMessage(Some(AckMessage(AckMessage.Code.OK)), request.index, res.get))
+    } else {
+      log.error(res.failed.get.getMessage, res.failed.get)
+      Future.successful(EntityPropertiesMessage(Some(AckMessage(AckMessage.Code.ERROR, res.failed.get.getMessage))))
+    }
+  }
+
+  /**
+    *
+    * @param request
+    * @return
+    */
   override def repartitionIndexData(request: RepartitionMessage): Future[AckMessage] = {
     log.debug("rpc call for repartitioning index")
 

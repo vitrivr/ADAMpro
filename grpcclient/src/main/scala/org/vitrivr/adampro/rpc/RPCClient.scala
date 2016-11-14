@@ -2,22 +2,19 @@ package org.vitrivr.adampro.rpc
 
 import java.util.concurrent.TimeUnit
 
-import org.vitrivr.adampro.grpc.grpc.AdamDefinitionGrpc.{AdamDefinitionStub, AdamDefinitionBlockingStub}
-import org.vitrivr.adampro.grpc.grpc.AdamSearchGrpc.{AdamSearchStub, AdamSearchBlockingStub}
-import org.vitrivr.adampro.rpc.datastructures.RPCAttributeDefinition
-import org.vitrivr.adampro.utils.Logging
 import io.grpc.internal.DnsNameResolverProvider
 import io.grpc.okhttp.OkHttpChannelBuilder
 import io.grpc.stub.StreamObserver
 import io.grpc.{ManagedChannel, ManagedChannelBuilder}
-import org.vitrivr.adampro.grpc.grpc.AdamDefinitionGrpc.AdamDefinitionBlockingStub
-import org.vitrivr.adampro.grpc.grpc.AdamSearchGrpc.AdamSearchStub
+import org.vitrivr.adampro.grpc.grpc.AdamDefinitionGrpc.{AdamDefinitionBlockingStub, AdamDefinitionStub}
+import org.vitrivr.adampro.grpc.grpc.AdamSearchGrpc.{AdamSearchBlockingStub, AdamSearchStub}
 import org.vitrivr.adampro.grpc.grpc.AdaptScanMethodsMessage.IndexCollection.NEW_INDEXES
 import org.vitrivr.adampro.grpc.grpc.AdaptScanMethodsMessage.QueryCollection.RANDOM_QUERIES
 import org.vitrivr.adampro.grpc.grpc.DistanceMessage.DistanceType
 import org.vitrivr.adampro.grpc.grpc.RepartitionMessage.PartitionOptions
 import org.vitrivr.adampro.grpc.grpc._
-import org.vitrivr.adampro.rpc.datastructures.{RPCQueryResults, RPCQueryObject}
+import org.vitrivr.adampro.rpc.datastructures.{RPCAttributeDefinition, RPCQueryObject, RPCQueryResults}
+import org.vitrivr.adampro.utils.Logging
 
 import scala.util.{Failure, Success, Try}
 
@@ -172,13 +169,34 @@ class RPCClient(channel: ManagedChannel,
     */
   def entityDetails(entityname: String): Try[Map[String, String]] = {
     execute("get details of entity operation") {
-      val count = definerBlocking.count(EntityNameMessage(entityname))
-      var properties = definerBlocking.getEntityProperties(EntityNameMessage(entityname)).properties
+      val properties = definerBlocking.getEntityProperties(EntityNameMessage(entityname)).properties
+      Success(properties)
+    }
+  }
 
-      if(count.code == AckMessage.Code.OK){
-        properties = properties.+("count" -> count.message)
-      }
+  /**
+    * Get details for attribute.
+    *
+    * @param entityname name of entity
+    * @param attribute  name of attribute
+    * @return
+    */
+  def entityAttributeDetails(entityname: String, attribute: String): Try[Map[String, String]] = {
+    execute("get details of attribute operation") {
+      val properties = definerBlocking.getAttributeProperties(AttributeEntityNameMessage(entityname, attribute)).properties
+      Success(properties)
+    }
+  }
 
+  /**
+    * Get details for index.
+    *
+    * @param indexname name of index
+    * @return
+    */
+  def indexDetails(indexname: String): Try[Map[String, String]] = {
+    execute("get details of index operation") {
+      val properties = definerBlocking.getIndexProperties(IndexNameMessage(indexname)).properties
       Success(properties)
     }
   }
@@ -421,11 +439,11 @@ class RPCClient(channel: ManagedChannel,
   /**
     * Partition index.
     *
-    * @param indexname   name of index
-    * @param npartitions number of partitions
-    * @param attributes  attributes
-    * @param materialize materialize partitioning
-    * @param replace     replace partitioning
+    * @param indexname       name of index
+    * @param npartitions     number of partitions
+    * @param attributes      attributes
+    * @param materialize     materialize partitioning
+    * @param replace         replace partitioning
     * @param partitionername partitioner
     * @return
     */

@@ -343,11 +343,21 @@ case class Entity(val entityname: EntityName)(@transient implicit val ac: AdamCo
     val lb = ListBuffer[(String, String)]()
 
     lb.append("count" -> count.toString)
-    lb.append("schema" -> CatalogOperator.getAttributes(entityname).get.map(field => field.name + "(" + field.fieldtype.name + ")").mkString(","))
-    lb.append("indexes" -> indexes.filter(_.isSuccess).map(_.get.propertiesMap).map(_.mkString(", ")).mkString("; "))
+    lb.append("schema" -> CatalogOperator.getAttributes(entityname).get.map(field => field.name).mkString(","))
+    lb.append("indexes" -> indexes.filter(_.isSuccess).map(_.get.indexname).mkString(","))
     lb.append("partitions" -> getFeatureData.map(_.rdd.getNumPartitions).getOrElse(-1).toString)
 
     lb.toMap
+  }
+
+  /**
+    * Returns a map of properties to a specified attribute. Useful for printing.
+    *
+    * @param attribute name of attribute
+    * @return
+    */
+  def attributePropertiesMap(attribute: String): Map[String, String] = {
+    schema(Some(Seq(attribute))).headOption.map(_.propertiesMap).getOrElse(Map())
   }
 
 
