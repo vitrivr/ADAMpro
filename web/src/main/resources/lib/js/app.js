@@ -452,7 +452,7 @@ function indexCreate(entityname, attribute, norm, indextype, options) {
     params.indextype = indextype;
     params.options = options;
 
-    $.ajax(ADAM_CLIENT_HOST + "/entity/index/add", {
+    $.ajax(ADAM_CLIENT_HOST + "/index/add", {
         data: JSON.stringify(params),
         contentType: 'application/json',
         type: 'POST',
@@ -497,7 +497,7 @@ function indexPartition(indexname, attributes, materialize, replace, npartitions
     params.replace = replace;
     params.npartitions = npartitions;
 
-    $.ajax(ADAM_CLIENT_HOST + "/entity/index/partition", {
+    $.ajax(ADAM_CLIENT_HOST + "/index/partition", {
         data: JSON.stringify(params),
         contentType: 'application/json',
         type: 'POST',

@@ -229,7 +229,7 @@ class AdamController(rpcClient: RPCClient) extends Controller {
   /**
     *
     */
-  post("/entity/index/add") { request: IndexCreateRequest =>
+  post("/index/add") { request: IndexCreateRequest =>
     val res = rpcClient.indexCreate(request.entityname, request.attribute, request.indextype, request.norm, request.options)
 
     if (res.isSuccess) {
@@ -243,7 +243,7 @@ class AdamController(rpcClient: RPCClient) extends Controller {
   /**
     *
     */
-  post("/entity/index/partition") { request: IndexPartitionRequest =>
+  post("/index/partition") { request: IndexPartitionRequest =>
     val res = rpcClient.indexPartition(request.indexname, request.npartitions, request.attributes.filter(_.length > 0), request.materialize, request.replace)
 
     if (res.isSuccess) {
