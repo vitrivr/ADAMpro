@@ -118,7 +118,7 @@ class RPCClient(channel: ManagedChannel,
     * @return
     */
   def entityGenerateRandomData(entityname: String, tuples: Int, dimensions: Int, sparsity: Float, min: Float, max: Float, sparse: Boolean): Try[Void] = {
-    execute("insert data operation") {
+    execute("entity generate random data operation") {
 
       val options = Map("fv-dimensions" -> dimensions, "fv-sparsity" -> sparsity, "fv-min" -> min, "fv-max" -> max, "fv-sparse" -> sparse).mapValues(_.toString)
       val res = definerBlocking.generateRandomData(GenerateRandomDataMessage(entityname, tuples, options))
