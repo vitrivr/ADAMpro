@@ -1,14 +1,19 @@
 package org.vitrivr.adampro.web.controller
 
-import org.vitrivr.adampro.rpc.datastructures.RPCAttributeDefinition
-import org.vitrivr.adampro.web.datastructures._
+import java.nio.file.{Files, Paths}
+
+import com.google.protobuf.CodedInputStream
 import com.twitter.finagle.http.Request
 import com.twitter.finatra.http.Controller
 import org.apache.log4j.Logger
+import org.vitrivr.adampro.grpc.grpc.InsertMessage
+import org.vitrivr.adampro.grpc.grpc.InsertMessage.TupleInsertMessage
 import org.vitrivr.adampro.rpc.RPCClient
-import org.vitrivr.adampro.rpc.datastructures.RPCQueryResults
+import org.vitrivr.adampro.rpc.datastructures.{RPCAttributeDefinition, RPCQueryResults}
+import org.vitrivr.adampro.web.datastructures._
 
 import scala.collection.mutable
+import scala.collection.mutable.ListBuffer
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.duration._
 import scala.concurrent.{Await, Future}
@@ -206,9 +211,43 @@ class AdamController(rpcClient: RPCClient) extends Controller {
   /**
     *
     */
+  get("/import/proto") { request: Request =>
+    val path = request.params.get("path")
+
+    if (path.isEmpty) {
+      response.ok.json(GeneralResponse(500, "path not specified"))
+    }
+
+    val ress = new ListBuffer[Try[Void]]()
+
+    import scala.collection.JavaConversions._
+    val paths = Files.walk(Paths.get(path.get)).iterator().filter(_.toString.endsWith(".bin"))
+
+    paths.foreach(path => {
+      val in = CodedInputStream.newInstance(Files.newInputStream(path))
+      val batch = new ListBuffer[TupleInsertMessage]()
+
+      while (!in.isAtEnd) {
+        val tuple = TupleInsertMessage.parseDelimitedFrom(in).get
+        batch += tuple
+      }
+
+      ress += rpcClient.entityInsert(InsertMessage(path.getFileName.toString.replace(".bin", ""), batch))
+    })
+
+
+    if (ress.forall(_.isSuccess)) {
+      response.ok.json(GeneralResponse(200))
+    } else {
+      response.ok.json(GeneralResponse(500, ress.filter(_.isFailure).map(_.failed.get.getMessage).distinct.mkString("; ")))
+    }
+  }
+
+  /**
+    *
+    */
   post("/entity/indexall") { request: IndexCreateAllRequest =>
     val res = rpcClient.entityCreateAllIndexes(request.entityname, request.attributes.map(_.name), 2)
-
 
     if (res.isSuccess) {
       response.ok.json(GeneralResponse(200))
