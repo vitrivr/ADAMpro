@@ -388,7 +388,7 @@ function entityDrop(entityname) {
  * @returns {string[]}
  */
 function getIndexTypes() {
-    return ['ecp', 'lsh', 'mi', 'pq', 'sh', 'vaf', 'vav'];
+    return ['ecp', 'lsh', 'mi', 'pq', 'sh', 'vaf', 'vap', 'vav'];
 }
 
 /**
