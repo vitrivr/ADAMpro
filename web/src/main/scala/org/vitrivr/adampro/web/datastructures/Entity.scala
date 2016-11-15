@@ -10,7 +10,7 @@ private[web] object Entity {}
 
 private[web] case class EntityListResponse(code: Int, entities: Seq[String])
 
-private[web] case class EntityDetailResponse(code: Int, entityname: String, details: Map[String, String])
+private[web] case class EntityDetailResponse(code: Int, entityname: String, attribute : String, details: Map[String, String])
 
 private[web] case class EntityCreateRequest(entityname: String, attributes: Seq[EntityField])
 

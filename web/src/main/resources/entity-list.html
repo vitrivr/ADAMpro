@@ -99,7 +99,6 @@ $(document).ready(function () {
 
 
 function infoHandler(entityname) {
-    $('#' + entityname + ' > div.details').show();
     entityDetails(entityname, function(data){
         var innerinnerhtml = '';
 
@@ -109,14 +108,66 @@ function infoHandler(entityname) {
             innerinnerhtml += key;
             innerinnerhtml += "</td>";
             innerinnerhtml += "<td style='font-size: 12px; padding: 0px 0px;'>";
-            innerinnerhtml += value;
+
+            var innerinnerinnerhtml = '';
+
+            if(key === "attributes" && value.length > 0){
+                innerinnerinnerhtml += "<ul>";
+
+                value.split(",").forEach(function(element, index, array){
+                    entityAttributeDetails(entityname, element, function(attributeData){
+
+                        innerinnerinnerhtml += "<li>";
+                        innerinnerinnerhtml += element;
+                        innerinnerinnerhtml += " (";
+                        jQuery.each(attributeData.details, function(attributeKey, attributeValue){
+                            innerinnerinnerhtml += attributeKey;
+                            innerinnerinnerhtml += ":";
+                            innerinnerinnerhtml += attributeValue;
+                            innerinnerinnerhtml += "; ";
+                        });
+                        innerinnerinnerhtml += ")";
+                        innerinnerinnerhtml += "</li>";
+
+                    }, false)
+                });
+
+                innerinnerinnerhtml += "</ul>";
+            } else if(key === "indexes" && value.length > 0){
+                innerinnerinnerhtml += "<ul>";
+
+                value.split(",").forEach(function(element, index, array){
+                    indexDetails(entityname, function(attributeData){
+                        innerinnerinnerhtml += "<li>";
+                        innerinnerinnerhtml += element;
+                        innerinnerinnerhtml += " (";
+                        jQuery.each(attributeData.details, function(attributeKey, attributeValue){
+                            innerinnerinnerhtml += attributeKey;
+                            innerinnerinnerhtml += ":";
+                            innerinnerinnerhtml += attributeValue;
+                            innerinnerinnerhtml += "; ";
+                        });
+                        innerinnerinnerhtml += ")";
+                        innerinnerinnerhtml += "</li>";
+
+                    }, false)
+                });
+
+                innerinnerinnerhtml += "</ul>";
+            } else {
+                innerinnerinnerhtml += value;
+            }
+
+            innerinnerhtml += innerinnerinnerhtml;
             innerinnerhtml += "</td>";
             innerinnerhtml += "</tr>";
         });
 
         $('#' + entityname + ' > div > table > tbody').html(innerinnerhtml);
         $('#btn-' + entityname + '-info').unbind("click", infoHandler);
-    })
+    });
+
+    $('#' + entityname + ' > div.details').show();
 }
 
 

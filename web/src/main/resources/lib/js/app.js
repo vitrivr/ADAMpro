@@ -203,8 +203,9 @@ function entityListGetSelect(parentid) {
  *
  * @param entityname name of entity
  * @param handler to handle the incoming data
+ * @param async execute asynchronous
  */
-function entityDetails(entityname, handler) {
+function entityDetails(entityname,  handler, async) {
     if (entityname === null || entityname.length == 0) {
         raiseError("Please specify an entity."); return;
     }
@@ -223,7 +224,43 @@ function entityDetails(entityname, handler) {
         error: function () {
             raiseError();
             stopTask();
-        }
+        },
+        async : typeof async !== 'undefined' ? async : true
+});
+}
+
+/**
+ *
+ * @param entityname name of entity
+ * @param attribute name of attribute
+ * @param handler to handle the incoming data
+ * @param async execute asynchronous
+ */
+function entityAttributeDetails(entityname, attribute, handler, async) {
+    if (entityname === null || entityname.length == 0) {
+        raiseError("Please specify an entity."); return;
+    }
+
+    if (attribute === null || attribute.length == 0) {
+        raiseError("Please specify an attribute."); return;
+    }
+
+    startTask();
+    $.ajax(ADAM_CLIENT_HOST + "/entity/details?entityname=" + entityname + "&attribute=" + attribute, {
+        type: 'GET',
+        success: function (data) {
+            if (data.code === 200) {
+                handler(data)
+            } else {
+                raiseError(data.message);
+            }
+            stopTask();
+        },
+        error: function () {
+            raiseError();
+            stopTask();
+        },
+        async : typeof async !== 'undefined' ? async : true
     });
 }
 
@@ -468,6 +505,36 @@ function indexCreate(entityname, attribute, norm, indextype, options) {
             raiseError();
             stopTask();
         }
+    });
+}
+
+/**
+ *
+ * @param indexname name of index
+ * @param handler to handle the incoming data
+ * @param async execute asynchronous
+ */
+function indexDetails(indexname, handler, async) {
+    if (indexname === null || indexname.length == 0) {
+        raiseError("Please specify an index."); return;
+    }
+
+    startTask();
+    $.ajax(ADAM_CLIENT_HOST + "/index/details?indexname=" + entityname, {
+        type: 'GET',
+        success: function (data) {
+            if (data.code === 200) {
+                handler(data)
+            } else {
+                raiseError(data.message);
+            }
+            stopTask();
+        },
+        error: function () {
+            raiseError();
+            stopTask();
+        },
+        async : typeof async !== 'undefined' ? async : true
     });
 }
 

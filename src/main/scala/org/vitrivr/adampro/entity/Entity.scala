@@ -342,10 +342,10 @@ case class Entity(val entityname: EntityName)(@transient implicit val ac: AdamCo
   def propertiesMap: Map[String, String] = {
     val lb = ListBuffer[(String, String)]()
 
-    lb.append("count" -> count.toString)
-    lb.append("schema" -> CatalogOperator.getAttributes(entityname).get.map(field => field.name).mkString(","))
+    lb.append("attributes" -> CatalogOperator.getAttributes(entityname).get.map(field => field.name).mkString(","))
     lb.append("indexes" -> indexes.filter(_.isSuccess).map(_.get.indexname).mkString(","))
     lb.append("partitions" -> getFeatureData.map(_.rdd.getNumPartitions.toString).getOrElse("none"))
+    lb.append("count" -> count.toString)
 
     lb.toMap
   }

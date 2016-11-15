@@ -36,16 +36,16 @@ class AdamController(rpcClient: RPCClient) extends Controller {
   get("/entity/list") { request: Request =>
     val filter = request.params.get("filter")
 
-    val entities = if (filter.isEmpty) {
+    val res = if (filter.isEmpty) {
       rpcClient.entityList()
     } else {
       Success(Seq(filter.get))
     }
 
-    if (entities.isSuccess) {
-      response.ok.json(EntityListResponse(200, entities.get))
+    if (res.isSuccess) {
+      response.ok.json(EntityListResponse(200, res.get))
     } else {
-      response.ok.json(GeneralResponse(500, entities.failed.get.getMessage))
+      response.ok.json(GeneralResponse(500, res.failed.get.getMessage))
     }
   }
 
@@ -55,17 +55,22 @@ class AdamController(rpcClient: RPCClient) extends Controller {
     */
   get("/entity/details") { request: Request =>
     val entityname = request.params.get("entityname")
+    val attribute = request.params.get("attribute")
 
     if (entityname.isEmpty) {
       response.ok.json(GeneralResponse(500, "entity not specified"))
     }
 
-    val details = rpcClient.entityDetails(entityname.get)
-
-    if (details.isSuccess) {
-      response.ok.json(EntityDetailResponse(200, entityname.get, details.get))
+    val res = if(attribute.isEmpty){
+      rpcClient.entityDetails(entityname.get).map(EntityDetailResponse(200, entityname.get, "", _))
     } else {
-      response.ok.json(GeneralResponse(500, details.failed.get.getMessage))
+      rpcClient.entityAttributeDetails(entityname.get, attribute.get).map(EntityDetailResponse(200, entityname.get, attribute.get, _))
+    }
+
+    if (res.isSuccess) {
+      response.ok.json(res.get)
+    } else {
+      response.ok.json(GeneralResponse(500, res.failed.get.getMessage))
     }
   }
 
@@ -85,12 +90,12 @@ class AdamController(rpcClient: RPCClient) extends Controller {
       response.ok.json(GeneralResponse(500, "attribute not specified"))
     }
 
-    val details = rpcClient.entityBenchmarkAndUpdateScanWeights(entityname.get, attribute.get)
+    val res = rpcClient.entityBenchmarkAndUpdateScanWeights(entityname.get, attribute.get)
 
-    if (details.isSuccess) {
+    if (res.isSuccess) {
       response.ok.json(GeneralResponse(200))
     } else {
-      response.ok.json(GeneralResponse(500, details.failed.get.getMessage))
+      response.ok.json(GeneralResponse(500, res.failed.get.getMessage))
     }
   }
 
@@ -109,12 +114,12 @@ class AdamController(rpcClient: RPCClient) extends Controller {
       response.ok.json(GeneralResponse(500, "attribute not specified"))
     }
 
-    val details = rpcClient.entitySparsify(entityname.get, attribute.get)
+    val res = rpcClient.entitySparsify(entityname.get, attribute.get)
 
-    if (details.isSuccess) {
+    if (res.isSuccess) {
       response.ok.json(GeneralResponse(200))
     } else {
-      response.ok.json(GeneralResponse(500, details.failed.get.getMessage))
+      response.ok.json(GeneralResponse(500, res.failed.get.getMessage))
     }
   }
 
@@ -128,13 +133,13 @@ class AdamController(rpcClient: RPCClient) extends Controller {
       response.ok.json(GeneralResponse(500, "entity/index not specified"))
     }
 
-    val details = rpcClient.entityDrop(entityname.get)
+    val res = rpcClient.entityDrop(entityname.get)
     rpcClient.indexDrop(entityname.get)
 
-    if (details.isSuccess) {
+    if (res.isSuccess) {
       response.ok.json(GeneralResponse(200))
     } else {
-      response.ok.json(GeneralResponse(500, details.failed.get.getMessage))
+      response.ok.json(GeneralResponse(500, res.failed.get.getMessage))
     }
   }
 
@@ -243,6 +248,26 @@ class AdamController(rpcClient: RPCClient) extends Controller {
   /**
     *
     */
+  get("/index/details") { request: Request =>
+    val indexname = request.params.get("indexname")
+
+    if (indexname.isEmpty) {
+      response.ok.json(GeneralResponse(500, "entity not specified"))
+    }
+
+    val details = rpcClient.indexDetails(indexname.get)
+
+    if (details.isSuccess) {
+      response.ok.json(IndexDetailResponse(200, indexname.get, details.get))
+    } else {
+      response.ok.json(GeneralResponse(500, details.failed.get.getMessage))
+    }
+  }
+
+
+  /**
+    *
+    */
   post("/index/partition") { request: IndexPartitionRequest =>
     val res = rpcClient.indexPartition(request.indexname, request.npartitions, request.attributes.filter(_.length > 0), request.materialize, request.replace)
 
@@ -252,6 +277,7 @@ class AdamController(rpcClient: RPCClient) extends Controller {
       response.ok.json(GeneralResponse(500, res.failed.get.getMessage))
     }
   }
+
 
   /**
     *
