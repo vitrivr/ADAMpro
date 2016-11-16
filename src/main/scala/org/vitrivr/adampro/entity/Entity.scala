@@ -329,8 +329,8 @@ case class Entity(val entityname: EntityName)(@transient implicit val ac: AdamCo
   /**
     * Checks if cached data is up to date, i.e. if version of local entity corresponds to global version of entity
     */
-  def checkVersions() : Unit = {
-    if(currentVersion != mostRecentVersion.value){
+  private def checkVersions(): Unit = {
+    if (currentVersion != mostRecentVersion.value) {
       log.trace("no longer most up to date version, marking stale")
       markStale()
     }
