@@ -81,6 +81,8 @@ object EntityPartitioner {
         entity.markStale()
         ac.entityLRUCache.value.invalidate(entity.entityname)
 
+        entity.resetInsertionCounter()
+
         Success(entity)
 
       case _ => Failure(new GeneralAdamException("partitioning mode unknown"))

@@ -9,6 +9,7 @@ import org.vitrivr.adampro.datatypes.FieldTypes
 import org.vitrivr.adampro.datatypes.FieldTypes._
 import org.vitrivr.adampro.entity.Entity.EntityName
 import org.vitrivr.adampro.exception.{EntityExistingException, EntityNotExistingException, EntityNotProperlyDefinedException, GeneralAdamException}
+import org.vitrivr.adampro.helpers.partition.PartitionMode
 import org.vitrivr.adampro.index.Index
 import org.vitrivr.adampro.main.AdamContext
 import org.vitrivr.adampro.query.query.Predicate
@@ -98,7 +99,7 @@ case class Entity(val entityname: EntityName)(@transient implicit val ac: AdamCo
       }.filter(_.isSuccess).map(_.get)
 
       if (handlerData.nonEmpty) {
-        _data = Some(handlerData.reduce(_.join(_, pk.name)).coalesce(AdamConfig.defaultNumberOfPartitions))
+        _data = Some(handlerData.reduce(_.join(_, pk.name))) //.coalesce(AdamConfig.defaultNumberOfPartitions))
       } else {
         _data = None
       }
@@ -123,7 +124,7 @@ case class Entity(val entityname: EntityName)(@transient implicit val ac: AdamCo
       }.filter(_.isSuccess).map(_.get)
 
       if (handlerData.nonEmpty) {
-        data = Some(handlerData.reduce(_.join(_, pk.name)).coalesce(AdamConfig.defaultNumberOfPartitions))
+        data = Some(handlerData.reduce(_.join(_, pk.name)))  //.coalesce(AdamConfig.defaultNumberOfPartitions))
       }
     }
 
@@ -170,7 +171,7 @@ case class Entity(val entityname: EntityName)(@transient implicit val ac: AdamCo
   }
 
 
-  val COUNT_KEY = "ntuples"
+  private val COUNT_KEY = "ntuples"
 
   /**
     * Returns number of elements in the entity.
@@ -203,6 +204,10 @@ case class Entity(val entityname: EntityName)(@transient implicit val ac: AdamCo
   def show(k: Int): Option[DataFrame] = getData().map(_.limit(k))
 
 
+  private val N_INSERTS_VACUUMING = "ninserts"
+  private val MAX_INSERTS_VACUUMING = "maxinserts"
+  private val MAX_INSERTS_BEFORE_REPARTITIONING = CatalogOperator.getEntityOption(entityname, Some(MAX_INSERTS_VACUUMING)).get.get(MAX_INSERTS_VACUUMING).map(_.toInt).getOrElse(50)
+
   /**
     * Inserts data into the entity.
     *
@@ -214,6 +219,8 @@ case class Entity(val entityname: EntityName)(@transient implicit val ac: AdamCo
     log.trace("inserting data into entity")
 
     try {
+      val ninserts = CatalogOperator.getEntityOption(entityname, Some(N_INSERTS_VACUUMING)).get.get(N_INSERTS_VACUUMING).map(_.toInt).getOrElse(0)
+
       val insertion =
         if (pk.fieldtype.equals(FieldTypes.AUTOTYPE)) {
           if (data.schema.fieldNames.contains(pk.name)) {
@@ -252,12 +259,26 @@ case class Entity(val entityname: EntityName)(@transient implicit val ac: AdamCo
         }
       }
 
+      if(ninserts < MAX_INSERTS_BEFORE_REPARTITIONING){
+        CatalogOperator.updateEntityOption(entityname, N_INSERTS_VACUUMING, (ninserts + 1).toString)
+      } else {
+        log.info("number of inserts necessitates now re-partitioning")
+        EntityPartitioner(this, AdamConfig.defaultNumberOfPartitions, None, None, PartitionMode.REPLACE_EXISTING) //this resets insertion counter
+      }
+
       Success(null)
     } catch {
       case e: Exception => Failure(e)
     } finally {
       markStale()
     }
+  }
+
+  /**
+    *
+    */
+  private[entity] def resetInsertionCounter(): Unit ={
+    CatalogOperator.deleteEntityOption(entityname, N_INSERTS_VACUUMING)
   }
 
 
@@ -314,15 +335,17 @@ case class Entity(val entityname: EntityName)(@transient implicit val ac: AdamCo
     * Marks the data stale (e.g., if new data has been inserted to entity).
     */
   def markStale(): Unit = {
-    this.synchronized{
+    this.synchronized {
       mostRecentVersion += 1
-      currentVersion = mostRecentVersion.value
 
       _schema = None
+      _data.map(_.unpersist())
       _data = None
 
       CatalogOperator.deleteEntityOption(entityname, COUNT_KEY)
       indexes.map(_.map(_.markStale()))
+
+      currentVersion = mostRecentVersion.value
     }
   }
 
@@ -330,7 +353,7 @@ case class Entity(val entityname: EntityName)(@transient implicit val ac: AdamCo
     * Checks if cached data is up to date, i.e. if version of local entity corresponds to global version of entity
     */
   private def checkVersions(): Unit = {
-    if (currentVersion != mostRecentVersion.value) {
+    if (currentVersion < mostRecentVersion.value) {
       log.trace("no longer most up to date version, marking stale")
       markStale()
     }
