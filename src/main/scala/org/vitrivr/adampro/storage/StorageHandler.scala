@@ -127,7 +127,11 @@ class StorageHandler(val engine: Engine) extends Serializable with Logging {
         //overwriting
         var newStorename = ""
         do {
-          newStorename = storename + "_new" + Random.nextInt(999)
+          newStorename = if(storename.contains("__ap__")){
+            storename.substring(0, storename.lastIndexOf("__ap__")) + "__ap__" + Random.nextInt(999)
+          } else {
+            storename + "__ap__" + Random.nextInt(999)
+          }
         } while (engine.exists(newStorename).get)
 
         val res = engine.write(newStorename, df, attributes, SaveMode.ErrorIfExists, params ++ options)
