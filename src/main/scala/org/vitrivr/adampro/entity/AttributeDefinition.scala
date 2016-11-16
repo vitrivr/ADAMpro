@@ -41,7 +41,11 @@ case class AttributeDefinition(name: String, fieldtype: FieldType, pk: Boolean =
 
     lb.append("fieldtype" -> fieldtype.name)
     lb.append("pk" -> pk.toString)
-    lb.append("storagehandler" -> storagehandlername.getOrElse("undefined"))
+
+    if(!pk){
+      lb.append("storagehandler" -> storagehandlername.getOrElse("undefined"))
+    }
+
     lb.append("parameters" -> params.toString())
 
     lb.toMap
