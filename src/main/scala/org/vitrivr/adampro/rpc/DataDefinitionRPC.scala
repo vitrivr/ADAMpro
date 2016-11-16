@@ -711,7 +711,7 @@ class DataDefinitionRPC extends AdamDefinitionGrpc.AdamDefinition with Logging {
   override def listStorageHandlers(request: EmptyMessage): Future[StorageHandlersMessage] = {
     log.debug("rpc call for listing storage handlers")
 
-    val handlers = SparkStartup.storageRegistry.handlers.filterNot(_._2.supports.isEmpty).map(handler => handler._1 -> handler._2.supports.map(RPCHelperMethods.getAttributeType(_)))
+    val handlers = SparkStartup.mainContext.storageHandlerRegistry.value.handlers.filterNot(_._2.supports.isEmpty).map(handler => handler._1 -> handler._2.supports.map(RPCHelperMethods.getAttributeType(_)))
 
     Future.successful(StorageHandlersMessage(handlers.map(handler => StorageHandlerMessage(handler._1, handler._2)).toSeq))
   }

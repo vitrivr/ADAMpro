@@ -16,7 +16,7 @@ import scala.util.{Failure, Success, Try}
   * Ivan Giangreco
   * April 2016
   */
-object QueryLRUCache extends Logging {
+class QueryLRUCache extends Logging {
   private val maximumCacheSize = AdamConfig.maximumCacheSizeQueryResults
   private val expireAfterAccess = AdamConfig.expireAfterAccessQueryResults
 

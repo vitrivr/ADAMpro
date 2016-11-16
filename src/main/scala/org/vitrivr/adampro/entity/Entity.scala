@@ -1,5 +1,8 @@
 package org.vitrivr.adampro.entity
 
+import org.apache.spark.sql.functions.col
+import org.apache.spark.sql.types.{StructField, StructType}
+import org.apache.spark.sql.{DataFrame, Row, SaveMode}
 import org.vitrivr.adampro.catalog.CatalogOperator
 import org.vitrivr.adampro.config.{AdamConfig, FieldNames}
 import org.vitrivr.adampro.datatypes.FieldTypes
@@ -7,13 +10,10 @@ import org.vitrivr.adampro.datatypes.FieldTypes._
 import org.vitrivr.adampro.entity.Entity.EntityName
 import org.vitrivr.adampro.exception.{EntityExistingException, EntityNotExistingException, EntityNotProperlyDefinedException, GeneralAdamException}
 import org.vitrivr.adampro.index.Index
-import org.vitrivr.adampro.main.{AdamContext, SparkStartup}
+import org.vitrivr.adampro.main.AdamContext
 import org.vitrivr.adampro.query.query.Predicate
 import org.vitrivr.adampro.storage.StorageHandler
 import org.vitrivr.adampro.utils.Logging
-import org.apache.spark.sql.functions.col
-import org.apache.spark.sql.types.{StructField, StructType}
-import org.apache.spark.sql.{DataFrame, Row, SaveMode}
 
 import scala.collection.mutable.ListBuffer
 import scala.util.{Failure, Success, Try}
@@ -26,6 +26,15 @@ import scala.util.{Failure, Success, Try}
   */
 //TODO: make entities singleton? lock on entity?
 case class Entity(val entityname: EntityName)(@transient implicit val ac: AdamContext) extends Serializable with Logging {
+  val mostRecentVersion = this.synchronized {
+    if(!ac.entityVersion.contains(entityname)){
+      ac.entityVersion.+= (entityname.toString -> ac.sc.accumulator(0L, entityname.toString))
+    }
+
+    ac.entityVersion.get(entityname.toString).get
+  }
+  var currentVersion = mostRecentVersion.value
+
   /**
     * Gets the primary key.
     *
@@ -41,6 +50,8 @@ case class Entity(val entityname: EntityName)(@transient implicit val ac: AdamCo
     * @return
     */
   def schema(nameFilter: Option[Seq[String]] = None, typeFilter: Option[Seq[FieldType]] = None): Seq[AttributeDefinition] = {
+    checkVersions()
+
     if (_schema.isEmpty) {
       _schema = Some(CatalogOperator.getAttributes(entityname).get)
     }
@@ -70,11 +81,13 @@ case class Entity(val entityname: EntityName)(@transient implicit val ac: AdamCo
     * @return
     */
   def getData(nameFilter: Option[Seq[String]] = None, typeFilter: Option[Seq[FieldType]] = None, handlerFilter: Option[StorageHandler] = None, predicates: Seq[Predicate] = Seq()): Option[DataFrame] = {
+    checkVersions()
+
     //cache data join
     var data = _data
 
     if (_data.isEmpty) {
-      val handlerData = schema().filterNot(_.pk).filter(_.storagehandler.isDefined).groupBy(_.storagehandler.get).map { case (handler, attributes) =>
+      val handlerData = schema().filterNot(_.pk).groupBy(_.storagehandler).map { case (handler, attributes) =>
         val status = handler.read(entityname, attributes.+:(pk))
 
         if (status.isFailure) {
@@ -98,7 +111,7 @@ case class Entity(val entityname: EntityName)(@transient implicit val ac: AdamCo
     }
 
     if (predicates.nonEmpty) {
-      val handlerData = schema().filterNot(_.pk).filter(_.storagehandler.isDefined).groupBy(_.storagehandler.get).map { case (handler, attributes) =>
+      val handlerData = schema().filterNot(_.pk).groupBy(_.storagehandler).map { case (handler, attributes) =>
         val predicate = predicates.filter(p => attributes.map(_.name).contains(p))
         val status = handler.read(entityname, attributes, predicate)
 
@@ -119,7 +132,7 @@ case class Entity(val entityname: EntityName)(@transient implicit val ac: AdamCo
 
     if (handlerFilter.isDefined) {
       //filter by handler, name and type
-      filteredData = filteredData.map(_.select(schema(nameFilter, typeFilter).filter(a => a.storagehandler.isDefined && a.storagehandler.get.equals(handlerFilter.get)).map(attribute => col(attribute.name)): _*))
+      filteredData = filteredData.map(_.select(schema(nameFilter, typeFilter).filter(a => a.storagehandler.equals(handlerFilter.get)).map(attribute => col(attribute.name)): _*))
     } else if (nameFilter.isDefined || typeFilter.isDefined) {
       //filter by name and type
       filteredData = filteredData.map(_.select(schema(nameFilter, typeFilter).map(attribute => col(attribute.name)): _*))
@@ -165,6 +178,8 @@ case class Entity(val entityname: EntityName)(@transient implicit val ac: AdamCo
     * @return
     */
   def count: Long = {
+    checkVersions()
+
     var count = CatalogOperator.getEntityOption(entityname, Some(COUNT_KEY)).get.get(COUNT_KEY).map(_.toLong)
 
 
@@ -214,11 +229,12 @@ case class Entity(val entityname: EntityName)(@transient implicit val ac: AdamCo
         }
 
       //TODO: check insertion schema and entity schema before trying to insert
+      //TODO: block on other inserts
 
       val handlers = insertion.schema.fields
         .map(field => schema(Some(Seq(field.name)))).filterNot(_.isEmpty).map(_.head)
         .filterNot(_.pk)
-        .filter(_.storagehandler.isDefined).groupBy(_.storagehandler.get)
+        .groupBy(_.storagehandler)
 
       handlers.foreach { case (handler, attributes) =>
         val fields = if (!attributes.exists(_.name == pk.name)) {
@@ -259,7 +275,7 @@ case class Entity(val entityname: EntityName)(@transient implicit val ac: AdamCo
     val handlers = newData.schema.fields
       .map(field => schema(Some(Seq(field.name)))).filterNot(_.isEmpty).map(_.head)
       .filterNot(_.pk)
-      .filter(_.storagehandler.isDefined).groupBy(_.storagehandler.get)
+      .groupBy(_.storagehandler)
 
     handlers.foreach { case (handler, attributes) =>
       val fields = if (!attributes.exists(_.name == pk.name)) {
@@ -298,11 +314,26 @@ case class Entity(val entityname: EntityName)(@transient implicit val ac: AdamCo
     * Marks the data stale (e.g., if new data has been inserted to entity).
     */
   def markStale(): Unit = {
-    _schema = None
-    _data = None
+    this.synchronized{
+      mostRecentVersion += 1
+      currentVersion = mostRecentVersion.value
 
-    CatalogOperator.deleteEntityOption(entityname, COUNT_KEY)
-    indexes.map(_.map(_.markStale()))
+      _schema = None
+      _data = None
+
+      CatalogOperator.deleteEntityOption(entityname, COUNT_KEY)
+      indexes.map(_.map(_.markStale()))
+    }
+  }
+
+  /**
+    * Checks if cached data is up to date, i.e. if version of local entity corresponds to global version of entity
+    */
+  def checkVersions() : Unit = {
+    if(currentVersion != mostRecentVersion.value){
+      log.trace("no longer most up to date version, marking stale")
+      markStale()
+    }
   }
 
 
@@ -313,7 +344,7 @@ case class Entity(val entityname: EntityName)(@transient implicit val ac: AdamCo
     Index.dropAll(entityname)
 
     try {
-      schema().filterNot(_.pk).filter(_.storagehandler.isDefined).groupBy(_.storagehandler.get)
+      schema().filterNot(_.pk).groupBy(_.storagehandler)
         .foreach { case (handler, attributes) =>
           try {
             handler.drop(entityname)
@@ -445,7 +476,7 @@ object Entity extends Logging {
 
       if (creationAttributes.forall(_.pk)) {
         //only pk attribute is available
-        creationAttributes.filter(_.storagehandler.isDefined).groupBy(_.storagehandler.get).foreach {
+        creationAttributes.groupBy(_.storagehandler).foreach {
           case (handler, attributes) =>
             val status = handler.create(entityname, attributes.++:(pk))
             if (status.isFailure) {
@@ -453,7 +484,7 @@ object Entity extends Logging {
             }
         }
       } else {
-        creationAttributes.filterNot(_.pk).filter(_.storagehandler.isDefined).groupBy(_.storagehandler.get).foreach {
+        creationAttributes.filterNot(_.pk).groupBy(_.storagehandler).foreach {
           case (handler, attributes) =>
             val status = handler.create(entityname, attributes.++:(pk))
             if (status.isFailure) {
@@ -466,7 +497,7 @@ object Entity extends Logging {
     } catch {
       case e: Exception =>
         //drop everything created in handlers
-        SparkStartup.storageRegistry.handlers.values.foreach {
+        ac.storageHandlerRegistry.value.handlers.values.foreach {
           handler =>
             try {
               handler.drop(entityname)
@@ -489,6 +520,7 @@ object Entity extends Logging {
     */
   def list: Seq[EntityName] = CatalogOperator.listEntities().get
 
+
   /**
     * Loads an entity.
     *
@@ -496,7 +528,7 @@ object Entity extends Logging {
     * @return
     */
   def load(entityname: EntityName, cache: Boolean = false)(implicit ac: AdamContext): Try[Entity] = {
-    val entity = EntityLRUCache.get(entityname)
+    val entity = ac.entityLRUCache.value.get(entityname)
 
     if (cache) {
       entity.map(_.cache())
@@ -543,7 +575,7 @@ object Entity extends Logging {
       }
 
       Entity.load(entityname).get.drop()
-      EntityLRUCache.invalidate(entityname)
+      ac.entityLRUCache.value.invalidate(entityname)
 
       Success(null)
     } catch {

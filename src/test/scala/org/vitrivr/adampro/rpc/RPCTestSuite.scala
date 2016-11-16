@@ -60,7 +60,7 @@ class RPCTestSuite extends AdamTestBase with ScalaFutures {
     scenario("insert feature data into entity") {
       withEntityName { entityname =>
         Given("an entity")
-        val entity = Entity.create(entityname, Seq(AttributeDefinition("tid", FieldTypes.LONGTYPE, true), AttributeDefinition("feature", FieldTypes.FEATURETYPE)))
+        val entity = Entity.create(entityname, Seq(new AttributeDefinition("tid", FieldTypes.LONGTYPE, true), new AttributeDefinition("feature", FieldTypes.FEATURETYPE, false)))
         assert(entity.isSuccess)
 
         val requestObserver: StreamObserver[InsertMessage] = definitionNb.streamInsert(new StreamObserver[AckMessage]() {
@@ -101,8 +101,8 @@ class RPCTestSuite extends AdamTestBase with ScalaFutures {
       withEntityName { entityname =>
         Given("an entity")
         val entity = Entity.create(entityname, Seq(
-          AttributeDefinition("tid", FieldTypes.LONGTYPE, true), AttributeDefinition("feature", FieldTypes.FEATURETYPE),
-          AttributeDefinition("stringfield", FieldTypes.STRINGTYPE), AttributeDefinition("intfield", FieldTypes.INTTYPE)
+          new AttributeDefinition("tid", FieldTypes.LONGTYPE, true), new AttributeDefinition("feature", FieldTypes.FEATURETYPE,false),
+          new AttributeDefinition("stringfield", FieldTypes.STRINGTYPE, false), new AttributeDefinition("intfield", FieldTypes.INTTYPE, false)
         ))
 
         assert(entity.isSuccess)
@@ -199,7 +199,7 @@ class RPCTestSuite extends AdamTestBase with ScalaFutures {
     scenario("insert data with serial pk") {
       withEntityName { entityname =>
         Given("an entity with a serial pk")
-        val res = Entity.create(entityname, Seq(AttributeDefinition("idfield", FieldTypes.SERIALTYPE, true), AttributeDefinition("featurefield", FieldTypes.FEATURETYPE, false)))
+        val res = Entity.create(entityname, Seq(new AttributeDefinition("idfield", FieldTypes.SERIALTYPE, true), new AttributeDefinition("featurefield", FieldTypes.FEATURETYPE, false)))
 
         if(res.isFailure){
           throw res.failed.get

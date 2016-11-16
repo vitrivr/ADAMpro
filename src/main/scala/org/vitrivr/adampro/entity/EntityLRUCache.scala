@@ -16,7 +16,7 @@ import scala.util.{Failure, Success, Try}
   * Ivan Giangreco
   * April 2016
   */
-object EntityLRUCache extends Logging {
+class EntityLRUCache extends Logging {
 
   private val maximumCacheSize = AdamConfig.maximumCacheSizeEntity
   private val expireAfterAccess = AdamConfig.expireAfterAccessEntity

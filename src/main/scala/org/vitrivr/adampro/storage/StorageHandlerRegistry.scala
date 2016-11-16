@@ -14,21 +14,8 @@ import scala.collection.mutable
   * Ivan Giangreco
   * June 2016
   */
-object StorageHandlerRegistry extends Logging {
+class StorageHandlerRegistry extends Logging {
   val handlers = mutable.Map[String, StorageHandler]()
-
-  /**
-    *
-    * @param name
-    * @return
-    */
-  def apply(name: Option[String]): Option[StorageHandler] = {
-    if (name.isDefined) {
-      apply(name.get)
-    } else {
-      None
-    }
-  }
 
   /**
     *
@@ -39,7 +26,7 @@ object StorageHandlerRegistry extends Logging {
     val res = handlers.get(name)
 
     if(res.isEmpty){
-      log.error("no suitable storage found in registry named " + name)
+      throw new GeneralAdamException("no suitable storage found in registry named " + name)
     }
 
     res
@@ -69,16 +56,10 @@ object StorageHandlerRegistry extends Logging {
 
   /**
     *
-    * @param name
     * @param fieldtype
     */
-  def getOrElse(name: Option[String], fieldtype: FieldType): Option[StorageHandler] = {
+  def get(fieldtype: FieldType): Option[StorageHandler] = {
     var result: Option[StorageHandler] = None
-
-    if (result.isEmpty) {
-      //use lookup
-      result = apply(name)
-    }
 
     if (result.isEmpty) {
       //try fallback: specializes

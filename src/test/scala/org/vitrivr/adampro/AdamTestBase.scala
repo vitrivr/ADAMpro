@@ -85,8 +85,8 @@ class AdamTestBase extends FeatureSpec with GivenWhenThen with Eventually with I
     try {
       Entity.create(entityname,
         Seq(
-          AttributeDefinition("tid", FieldTypes.LONGTYPE, true),
-          AttributeDefinition("feature", FieldTypes.FEATURETYPE, false)
+          AttributeDefinition("tid", FieldTypes.LONGTYPE, true, ""),
+          AttributeDefinition("feature", FieldTypes.FEATURETYPE, false, "parquet")
         ))
 
       val schema = StructType(Seq(
@@ -232,7 +232,7 @@ class AdamTestBase extends FeatureSpec with GivenWhenThen with Eventually with I
       ("booleanfield", FieldTypes.BOOLEANTYPE, false, "boolean")
     )
 
-    val entity = Entity.create(entityname, fieldTemplate.map(ft => AttributeDefinition(ft._1, ft._2, ft._3)))
+    val entity = Entity.create(entityname, fieldTemplate.map(ft => new AttributeDefinition(ft._1, ft._2, ft._3)))
     assert(entity.isSuccess)
     entity.get.insert(data.drop("gtdistance"))
 

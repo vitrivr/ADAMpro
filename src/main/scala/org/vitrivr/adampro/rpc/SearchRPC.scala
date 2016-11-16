@@ -1,18 +1,17 @@
 package org.vitrivr.adampro.rpc
 
-import org.vitrivr.adampro.api.{EntityOp, IndexOp, QueryOp}
-import org.vitrivr.adampro.datatypes.feature.{FeatureVectorWrapper, FeatureVectorWrapperUDT}
-import org.vitrivr.adampro.datatypes.gis.{GeometryWrapperUDT, GeometryWrapper, GeographyWrapper, GeographyWrapperUDT}
-import org.vitrivr.adampro.exception.{GeneralAdamException, QueryNotCachedException}
-import org.vitrivr.adampro.grpc.grpc.AdamSearchGrpc
-import org.vitrivr.adampro.main.{SparkStartup, AdamContext}
-import org.vitrivr.adampro.query.{QueryHints, QueryLRUCache}
-import org.vitrivr.adampro.query.progressive.{ProgressiveObservation, QueryHintsProgressivePathChooser, SimpleProgressivePathChooser}
 import io.grpc.stub.StreamObserver
-import org.vitrivr.adampro.utils.Logging
 import org.apache.spark.sql.DataFrame
 import org.apache.spark.sql.types._
-import org.vitrivr.adampro.grpc.grpc._
+import org.vitrivr.adampro.api.{EntityOp, IndexOp, QueryOp}
+import org.vitrivr.adampro.datatypes.feature.{FeatureVectorWrapper, FeatureVectorWrapperUDT}
+import org.vitrivr.adampro.datatypes.gis.{GeographyWrapper, GeographyWrapperUDT, GeometryWrapper, GeometryWrapperUDT}
+import org.vitrivr.adampro.exception.{GeneralAdamException, QueryNotCachedException}
+import org.vitrivr.adampro.grpc.grpc.{AdamSearchGrpc, _}
+import org.vitrivr.adampro.main.{AdamContext, SparkStartup}
+import org.vitrivr.adampro.query.QueryHints
+import org.vitrivr.adampro.query.progressive.{ProgressiveObservation, QueryHintsProgressivePathChooser, SimpleProgressivePathChooser}
+import org.vitrivr.adampro.utils.Logging
 
 import scala.concurrent.Future
 import scala.util.Try
@@ -244,7 +243,7 @@ class SearchRPC extends AdamSearchGrpc.AdamSearch with Logging {
     */
   override def getCachedResults(request: CachedResultsMessage): Future[QueryResultsMessage] = {
     time("rpc call for cached query results") {
-      val res = QueryLRUCache.get(request.queryid)
+      val res = ac.queryLRUCache.value.get(request.queryid)
 
       if (res.isSuccess) {
         Future.successful(QueryResultsMessage(Some(AckMessage(code = AckMessage.Code.OK)), Seq(prepareResults(request.queryid, 0, 0, "cache", Map(), Some(res.get)))))

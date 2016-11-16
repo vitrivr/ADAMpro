@@ -425,9 +425,15 @@ private[rpc] object RPCHelperMethods extends Logging {
   /**
     *
     */
-  def prepareAttributes(attributes: Seq[AttributeDefinitionMessage]): Seq[AttributeDefinition] = {
+  def prepareAttributes(attributes: Seq[AttributeDefinitionMessage])(implicit ac: AdamContext): Seq[AttributeDefinition] = {
     attributes.map(attribute => {
-      AttributeDefinition(attribute.name, getFieldType(attribute.attributetype), attribute.pk, Some(attribute.handler), attribute.params)
+      val fieldtype = getFieldType(attribute.attributetype)
+
+      if(attribute.handler != null && attribute.handler != ""){
+        AttributeDefinition(attribute.name, fieldtype, attribute.pk, attribute.handler, attribute.params)
+      } else {
+        new AttributeDefinition(attribute.name, fieldtype, attribute.pk, attribute.params)
+      }
     })
   }
 

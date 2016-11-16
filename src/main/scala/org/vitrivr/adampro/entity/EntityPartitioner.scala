@@ -34,11 +34,7 @@ object EntityPartitioner {
 
     val partitionAttributes = entity.schema(Some(cols.getOrElse(Seq(entity.pk.name))))
 
-    if (!partitionAttributes.filterNot(_.pk).forall(_.storagehandler.isDefined)) {
-      return Failure(new GeneralAdamException("repartitioning is only possible for defined handlers"))
-    }
-
-    if (!partitionAttributes.filterNot(_.pk).forall(_.storagehandler.get.engine.isInstanceOf[ParquetEngine])) {
+    if (!partitionAttributes.filterNot(_.pk).forall(_.storagehandler.engine.isInstanceOf[ParquetEngine])) {
       return Failure(new GeneralAdamException("repartitioning is only possible using the flat file handler"))
     }
 
@@ -67,11 +63,11 @@ object EntityPartitioner {
     }
 
     val handler = partitionAttributes.filterNot(_.pk).headOption
-      .getOrElse(entity.schema().filter(_.storagehandler.isDefined).filter(_.storagehandler.get.engine.isInstanceOf[ParquetEngine]).head)
-          .storagehandler.get
+      .getOrElse(entity.schema().filter(_.storagehandler.engine.isInstanceOf[ParquetEngine]).head)
+          .storagehandler
 
     //select data which is available in the one handler
-    val attributes = entity.schema().filterNot(_.pk).filter(_.storagehandler.get == handler).+:(entity.pk)
+    val attributes = entity.schema().filterNot(_.pk).filter(_.storagehandler == handler).+:(entity.pk)
     data = data.select(attributes.map(attribute => col(attribute.name)).toArray : _*)
 
     mode match {
@@ -83,7 +79,7 @@ object EntityPartitioner {
         }
 
         entity.markStale()
-        EntityLRUCache.invalidate(entity.entityname)
+        ac.entityLRUCache.value.invalidate(entity.entityname)
 
         Success(entity)
 

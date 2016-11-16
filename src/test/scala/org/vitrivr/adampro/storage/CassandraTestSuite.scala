@@ -14,7 +14,7 @@ import org.vitrivr.adampro.entity.{AttributeDefinition, Entity}
 class CassandraTestSuite  extends AdamTestBase {
   val ntuples = 1000
 
-  val handlerName = Some("kv")
+  val handlerName = "cassandra"
   val fieldTypes = Seq(FieldTypes.FEATURETYPE)
 
   scenario("create an entity") {

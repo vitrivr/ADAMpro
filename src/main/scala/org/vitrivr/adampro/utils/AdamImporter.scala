@@ -122,10 +122,10 @@ class AdamImporter(url: String, user: String, password: String) extends Logging 
             field.name
           }
 
-          AttributeDefinition(newName, FEATURETYPE, field.name.equals(pk))
+          new AttributeDefinition(newName, FEATURETYPE, field.name.equals(pk))
         } else {
           val fieldType = FieldTypes.fromDataType(field.dataType)
-          AttributeDefinition(field.name, fieldType, field.name.equals(pk))
+          new AttributeDefinition(field.name, fieldType, field.name.equals(pk))
         }
       })
 

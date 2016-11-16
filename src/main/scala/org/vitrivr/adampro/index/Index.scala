@@ -322,7 +322,7 @@ object Index extends Logging {
   type IndexName = EntityName
   type IndexTypeName = IndexTypes.IndexType
 
-  val storage = SparkStartup.storageRegistry.get("parquetindex")
+  val storage = SparkStartup.mainContext.storageHandlerRegistry.value.get("parquetindex")
   assert(storage.isDefined)
 
   /**
@@ -479,7 +479,7 @@ object Index extends Logging {
     * @return
     */
   def load(indexname: IndexName, cache: Boolean = false)(implicit ac: AdamContext): Try[Index] = {
-    val index = IndexLRUCache.get(indexname)
+    val index = ac.indexLRUCache.value.get(indexname)
 
     if (cache) {
       index.map(_.cache())
@@ -525,7 +525,7 @@ object Index extends Logging {
       }
 
       Index.load(indexname).get.drop()
-      IndexLRUCache.invalidate(indexname)
+      ac.indexLRUCache.value.invalidate(indexname)
 
       Success(null)
     } catch {

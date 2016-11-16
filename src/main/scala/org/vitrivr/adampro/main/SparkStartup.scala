@@ -1,13 +1,12 @@
 package org.vitrivr.adampro.main
 
+import org.apache.spark.sql.hive.HiveContext
+import org.apache.spark.{SparkConf, SparkContext}
 import org.vitrivr.adampro.config.AdamConfig
 import org.vitrivr.adampro.datatypes.bitString.BitStringUDT
 import org.vitrivr.adampro.datatypes.feature.FeatureVectorWrapperUDT
 import org.vitrivr.adampro.datatypes.gis.GeometryWrapperUDT
-import org.vitrivr.adampro.storage.StorageHandlerRegistry
 import org.vitrivr.adampro.utils.Logging
-import org.apache.spark.sql.hive.HiveContext
-import org.apache.spark.{SparkConf, SparkContext}
 
 /**
   * adamtwo
@@ -50,7 +49,6 @@ object SparkStartup extends Logging {
   val mainContext = Implicits.ac
   val contexts = Seq(mainContext)
 
-  val storageRegistry = StorageHandlerRegistry
-  AdamConfig.engines.foreach{ engine => storageRegistry.register(engine)
+  AdamConfig.engines.foreach{ engine => mainContext.storageHandlerRegistry.value.register(engine)
   }
 }

@@ -1,13 +1,13 @@
 package org.vitrivr.adampro.helpers.sparsify
 
 import breeze.linalg.SparseVector
-import org.vitrivr.adampro.datatypes.feature.Feature.{SparseFeatureVector, VectorBase}
-import org.vitrivr.adampro.datatypes.feature.FeatureVectorWrapper
-import org.vitrivr.adampro.entity.{Entity, EntityLRUCache}
-import org.vitrivr.adampro.exception.GeneralAdamException
-import org.vitrivr.adampro.main.AdamContext
 import org.apache.spark.sql.SaveMode
 import org.apache.spark.sql.functions._
+import org.vitrivr.adampro.datatypes.feature.Feature.{SparseFeatureVector, VectorBase}
+import org.vitrivr.adampro.datatypes.feature.FeatureVectorWrapper
+import org.vitrivr.adampro.entity.Entity
+import org.vitrivr.adampro.exception.GeneralAdamException
+import org.vitrivr.adampro.main.AdamContext
 
 import scala.util.{Failure, Success, Try}
 
@@ -75,10 +75,10 @@ object SparsifyHelper {
       data = data.withColumn("conv-" + attributename, convertToSparse(data(attributename)))
       data = data.drop(attributename).withColumnRenamed("conv-" + attributename, attributename)
 
-      val handler = entity.schema(Some(Seq(attributename))).head.storagehandler.get
+      val handler = entity.schema(Some(Seq(attributename))).head.storagehandler
 
       //select data which is available in the one handler
-      val attributes = entity.schema().filterNot(_.pk).filter(_.storagehandler.get == handler).+:(entity.pk)
+      val attributes = entity.schema().filterNot(_.pk).filter(_.storagehandler == handler).+:(entity.pk)
       data = data.select(attributes.map(attribute => col(attribute.name)).toArray: _*)
 
       val status = handler.write(entity.entityname, data, attributes, SaveMode.Overwrite)
@@ -87,7 +87,7 @@ object SparsifyHelper {
       }
 
       entity.markStale()
-      EntityLRUCache.invalidate(entity.entityname)
+      ac.entityLRUCache.value.invalidate(entity.entityname)
 
       Success(entity)
 

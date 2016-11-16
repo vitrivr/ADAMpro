@@ -142,7 +142,7 @@ import scala.util.{Failure, Random, Success, Try}
 
       //catalog
       val attributes = entity.schema().map(attribute => {
-        AttributeDefinitionMessage(attribute.name, matchFields(attribute.fieldtype), attribute.pk, attribute.params, attribute.storagehandler.get.name)
+        AttributeDefinitionMessage(attribute.name, matchFields(attribute.fieldtype), attribute.pk, attribute.params, attribute.storagehandler.name)
       })
 
       val createEntity = new CreateEntityMessage(entityname, attributes)

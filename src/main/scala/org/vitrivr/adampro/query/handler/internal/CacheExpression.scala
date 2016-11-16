@@ -1,9 +1,9 @@
 package org.vitrivr.adampro.query.handler.internal
 
-import org.vitrivr.adampro.main.AdamContext
-import org.vitrivr.adampro.query.{QueryCacheOptions, QueryLRUCache}
-import org.vitrivr.adampro.query.handler.generic.{QueryEvaluationOptions, ExpressionDetails, QueryExpression}
 import org.apache.spark.sql.DataFrame
+import org.vitrivr.adampro.main.AdamContext
+import org.vitrivr.adampro.query.QueryCacheOptions
+import org.vitrivr.adampro.query.handler.generic.{ExpressionDetails, QueryEvaluationOptions, QueryExpression}
 
 /**
   * adamtwo
@@ -22,7 +22,7 @@ case class CacheExpression(private val expr: QueryExpression, private val cache:
     ac.sc.setJobGroup(id.getOrElse(""), "cache", interruptOnCancel = true)
 
     if (cache.useCached && id.isDefined) {
-      val cached = QueryLRUCache.get(id.get)
+      val cached = ac.queryLRUCache.value.get(id.get)
       if (cached.isSuccess) {
         return Some(cached.get)
       }
@@ -30,7 +30,7 @@ case class CacheExpression(private val expr: QueryExpression, private val cache:
 
     val res = expr.evaluate(options)
     if (id.isDefined && cache.putInCache) {
-      QueryLRUCache.put(id.get, res.get)
+      ac.queryLRUCache.value.put(id.get, res.get)
     }
     return res
   }

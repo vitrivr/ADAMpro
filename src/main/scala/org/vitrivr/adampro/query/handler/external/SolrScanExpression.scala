@@ -1,12 +1,11 @@
 package org.vitrivr.adampro.query.handler.external
 
+import org.apache.spark.sql.DataFrame
 import org.vitrivr.adampro.entity.Entity
 import org.vitrivr.adampro.entity.Entity.EntityName
 import org.vitrivr.adampro.exception.GeneralAdamException
 import org.vitrivr.adampro.main.AdamContext
-import org.vitrivr.adampro.query.handler.generic.{QueryEvaluationOptions, ExpressionDetails, QueryExpression}
-import org.vitrivr.adampro.storage.StorageHandlerRegistry
-import org.apache.spark.sql.DataFrame
+import org.vitrivr.adampro.query.handler.generic.{ExpressionDetails, QueryEvaluationOptions, QueryExpression}
 
 /**
   * adampro
@@ -27,20 +26,20 @@ import org.apache.spark.sql.DataFrame
 case class SolrScanExpression(entityname: EntityName, handlername : String, params: Map[String, String], id: Option[String] = None)(@transient implicit val ac: AdamContext) extends QueryExpression(id) {
   override val info = ExpressionDetails(None, Some("Solr Scan Expression"), id, None)
 
-  if (StorageHandlerRegistry.apply(Some("solr")).isEmpty) {
+  if (ac.storageHandlerRegistry.value.get("solr").isEmpty) {
     throw new GeneralAdamException("no solr handler added")
   }
   private val handler = {
-    assert(StorageHandlerRegistry.apply(Some(handlername)).isDefined)
-    StorageHandlerRegistry.apply(Some(handlername)).get
+    assert(ac.storageHandlerRegistry.value.get(handlername).isDefined)
+    ac.storageHandlerRegistry.value.get(handlername).get
   }
 
   private val entity = Entity.load(entityname).get
 
   override protected def run(options : Option[QueryEvaluationOptions], filter: Option[DataFrame] = None)(implicit ac: AdamContext): Option[DataFrame] = {
-    entity.schema().filter(_.storagehandler.get.equals(handler)).map(_.name)
+    entity.schema().filter(_.storagehandler.equals(handler)).map(_.name)
 
-    val attributes = entity.schema().filter(a => a.storagehandler.isDefined && a.storagehandler.get.equals(handler))
+    val attributes = entity.schema().filter(a => a.storagehandler.equals(handler))
     var status = handler.read(entityname, attributes, params = params)
 
     if (status.isFailure) {

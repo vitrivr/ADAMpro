@@ -16,7 +16,7 @@ import scala.util.{Failure, Success, Try}
   * Ivan Giangreco
   * April 2016
   */
-object IndexLRUCache extends Logging {
+class IndexLRUCache extends Logging {
 
   private val maximumCacheSize = AdamConfig.maximumCacheSizeIndex
   private val expireAfterAccess = AdamConfig.expireAfterAccessIndex

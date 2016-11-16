@@ -16,7 +16,7 @@ import org.vitrivr.adampro.query.query.BooleanQuery
 class PostGisTestSuite extends AdamTestBase {
   val ntuples = 1000
 
-  val handlerName = Some("gis")
+  val handlerName = "postgis"
   val fieldTypes = Seq(FieldTypes.GEOMETRYTYPE)
 
   scenario("create an entity") {

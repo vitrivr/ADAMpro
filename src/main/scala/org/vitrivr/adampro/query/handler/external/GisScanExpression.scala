@@ -1,11 +1,10 @@
 package org.vitrivr.adampro.query.handler.external
 
+import org.apache.spark.sql.DataFrame
 import org.vitrivr.adampro.entity.Entity
 import org.vitrivr.adampro.entity.Entity._
 import org.vitrivr.adampro.main.AdamContext
 import org.vitrivr.adampro.query.handler.generic.{ExpressionDetails, QueryEvaluationOptions, QueryExpression}
-import org.vitrivr.adampro.storage.StorageHandlerRegistry
-import org.apache.spark.sql.DataFrame
 
 /**
   * ADAMpro
@@ -17,14 +16,14 @@ case class GisScanExpression(entityname: EntityName, handlername : String, param
   override val info = ExpressionDetails(None, Some("Gis Scan Expression"), id, None)
 
   private val handler = {
-    assert(StorageHandlerRegistry.apply(Some(handlername)).isDefined)
-    StorageHandlerRegistry.apply(Some(handlername)).get
+    assert(ac.storageHandlerRegistry.value.get(handlername).isDefined)
+    ac.storageHandlerRegistry.value.get(handlername).get
   }
 
   private val entity = Entity.load(entityname).get
 
   override protected def run(options : Option[QueryEvaluationOptions], filter: Option[DataFrame] = None)(implicit ac: AdamContext): Option[DataFrame] = {
-    val attributes = entity.schema().filter(a => a.storagehandler.isDefined && a.storagehandler.get.equals(handler))
+    val attributes = entity.schema().filter(a => a.storagehandler.equals(handler))
     var status = handler.read(entityname, attributes, params = params)
 
     if (status.isFailure) {

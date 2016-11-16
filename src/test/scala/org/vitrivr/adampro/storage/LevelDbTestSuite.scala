@@ -18,7 +18,7 @@ class LevelDbTestSuite extends AdamTestBase {
     withEntityName { entityname =>
       val ntuples = 1000
 
-      val handlerName = Some("leveldb")
+      val handlerName = "leveldb"
       val fieldTypes = Seq(FieldTypes.INTTYPE, FieldTypes.LONGTYPE, FieldTypes.FLOATTYPE, FieldTypes.DOUBLETYPE, FieldTypes.STRINGTYPE, FieldTypes.BOOLEANTYPE, FieldTypes.FEATURETYPE)
       val attributes = fieldTypes.map(field => AttributeDefinition(field.name + "field", field, storagehandlername = handlerName)) ++ Seq(AttributeDefinition("id", FieldTypes.AUTOTYPE, true, storagehandlername = handlerName))
 

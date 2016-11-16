@@ -2,7 +2,8 @@ package org.vitrivr.adampro.entity
 
 import org.vitrivr.adampro.datatypes.FieldTypes.FieldType
 import org.vitrivr.adampro.exception.GeneralAdamException
-import org.vitrivr.adampro.storage.{StorageHandler, StorageHandlerRegistry}
+import org.vitrivr.adampro.main.AdamContext
+import org.vitrivr.adampro.storage.StorageHandler
 
 import scala.collection.mutable.ListBuffer
 
@@ -18,18 +19,23 @@ import scala.collection.mutable.ListBuffer
   * @param storagehandlername
   * @param params
   */
-case class AttributeDefinition(name: String, fieldtype: FieldType, pk: Boolean = false, private val storagehandlername: Option[String] = None, params: Map[String, String] = Map()) {
+case class AttributeDefinition(name: String, fieldtype: FieldType, pk: Boolean = false, storagehandlername: String, params: Map[String, String] = Map()) {
+  def this(name: String, fieldtype: FieldType, pk: Boolean, params: Map[String, String] = Map())(implicit ac: AdamContext) {
+    this(name, fieldtype, pk, ac.storageHandlerRegistry.value.get(fieldtype).get.name, params)
+  }
+
+
   /**
     * Returns the storage handler for the given attribute (it possibly uses a fallback, if no storagehandlername is specified by using the fieldtype)
     */
-  lazy val storagehandler: Option[StorageHandler] = {
-    val handler = StorageHandlerRegistry.getOrElse(storagehandlername, fieldtype)
+  def storagehandler()(implicit ac: AdamContext): StorageHandler = {
+    val handler = ac.storageHandlerRegistry.value.get(storagehandlername)
 
-    if(!handler.get.supports.contains(fieldtype)){
-      throw new GeneralAdamException("storage handler " + storagehandlername.getOrElse("<empty>") + " does not support field type " + fieldtype.name)
+    if (handler.isDefined) {
+      handler.get
+    } else {
+      throw new GeneralAdamException("no handler found for " + storagehandlername)
     }
-
-    handler
   }
 
 
@@ -42,8 +48,8 @@ case class AttributeDefinition(name: String, fieldtype: FieldType, pk: Boolean =
     lb.append("fieldtype" -> fieldtype.name)
     lb.append("pk" -> pk.toString)
 
-    if(!pk){
-      lb.append("storagehandler" -> storagehandlername.getOrElse("undefined"))
+    if (!pk) {
+      lb.append("storagehandler" -> storagehandlername)
     }
 
     lb.append("parameters" -> params.toString())

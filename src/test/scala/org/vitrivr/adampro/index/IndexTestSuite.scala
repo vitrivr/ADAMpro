@@ -61,7 +61,7 @@ class IndexTestSuite extends AdamTestBase {
     scenario("create and drop indexes of entity with multiple features") {
       Given("an entity with multiple feature vector fields without metadata")
       withEntityName { entityname =>
-        Entity.create(entityname, Seq(AttributeDefinition("idfield", FieldTypes.LONGTYPE, true), AttributeDefinition("feature1", FieldTypes.FEATURETYPE), AttributeDefinition("feature2", FieldTypes.FEATURETYPE)))
+        Entity.create(entityname, Seq(new AttributeDefinition("idfield", FieldTypes.LONGTYPE, true), new AttributeDefinition("feature1", FieldTypes.FEATURETYPE, false), new AttributeDefinition("feature2", FieldTypes.FEATURETYPE, false)))
 
         val schema = StructType(Seq(
           StructField("idfield", LongType, false),

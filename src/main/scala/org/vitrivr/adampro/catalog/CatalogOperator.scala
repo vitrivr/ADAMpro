@@ -2,6 +2,7 @@ package org.vitrivr.adampro.catalog
 
 import java.io._
 
+import com.mchange.v2.c3p0.ComboPooledDataSource
 import org.vitrivr.adampro.catalog.catalogs._
 import org.vitrivr.adampro.config.AdamConfig
 import org.vitrivr.adampro.datatypes.FieldTypes
@@ -11,9 +12,7 @@ import org.vitrivr.adampro.exception._
 import org.vitrivr.adampro.helpers.partition.CustomPartitioner
 import org.vitrivr.adampro.index.Index.{IndexName, IndexTypeName}
 import org.vitrivr.adampro.index.structures.IndexTypes
-import org.vitrivr.adampro.query.handler.generic.QueryExpression
 import org.vitrivr.adampro.utils.Logging
-import com.mchange.v2.c3p0.ComboPooledDataSource
 import slick.dbio.NoStream
 import slick.driver.DerbyDriver.api._
 
@@ -128,7 +127,7 @@ object CatalogOperator extends Logging {
       actions += _entitites.+=(entityname)
 
       attributes.foreach { attribute =>
-        actions += _attributes.+=(entityname, attribute.name, attribute.fieldtype.name, attribute.pk, attribute.storagehandler.map(_.name).getOrElse(""))
+        actions += _attributes.+=(entityname, attribute.name, attribute.fieldtype.name, attribute.pk, attribute.storagehandlername)
 
         attribute.params.foreach { case (key, value) =>
           actions += _attributeOptions.+=(entityname, attribute.name, key, value)
@@ -428,7 +427,7 @@ object CatalogOperator extends Logging {
 
         val params = options.getOrElse(name, Map())
 
-        AttributeDefinition(name, fieldtype, pk, Some(handlerName), params)
+        AttributeDefinition(name, fieldtype, pk, handlerName, params)
       })
 
       attributeDefinitions

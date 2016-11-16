@@ -4,8 +4,8 @@ import org.vitrivr.adampro.AdamTestBase
 import org.vitrivr.adampro.api.{IndexOp, QueryOp}
 import org.vitrivr.adampro.config.FieldNames
 import org.vitrivr.adampro.helpers.partition.PartitionMode
+import org.vitrivr.adampro.index.Index
 import org.vitrivr.adampro.index.structures.IndexTypes
-import org.vitrivr.adampro.index.{Index, IndexLRUCache}
 import org.vitrivr.adampro.query.distance.EuclideanDistance
 import org.vitrivr.adampro.query.query.NearestNeighbourQuery
 
@@ -63,7 +63,7 @@ class PartitionTestSuite extends AdamTestBase {
         assert(partresults.map(x => x._2 % nPartitions).distinct.length == 1)
 
         When("clearing the cache")
-        IndexLRUCache.empty()
+        ac.indexLRUCache.value.empty()
 
         Then("the index should be gone")
         val loadedIndex = Index.load(partindex.get.indexname)
@@ -83,7 +83,7 @@ class PartitionTestSuite extends AdamTestBase {
         val partindex = IndexOp.partition(index.get.indexname, nPartitions, None, Some(Seq("tid")), PartitionMode.CREATE_NEW)
         val partnnq = NearestNeighbourQuery("featurefield", es.feature.vector, None, es.distance, es.k, false, Map[String, String](), Some(Set(0)))
 
-        IndexLRUCache.empty()
+        ac.indexLRUCache.value.empty()
 
         Then("we should be able to load the index")
         val loadedIndex = Index.load(partindex.get.indexname)
@@ -110,7 +110,7 @@ class PartitionTestSuite extends AdamTestBase {
         val partindex = IndexOp.partition(index.get.indexname, nPartitions, None, Some(Seq("tid")), PartitionMode.CREATE_NEW)
         val partnnq = NearestNeighbourQuery("featurefield", es.feature.vector, None, es.distance, es.k, false, Map[String, String](), Some(Set(0)))
 
-        IndexLRUCache.empty()
+        ac.indexLRUCache.value.empty()
 
         Then("we should be able to load the index")
         val loadedIndex = Index.load(partindex.get.indexname)
