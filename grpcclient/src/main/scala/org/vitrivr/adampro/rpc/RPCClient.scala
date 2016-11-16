@@ -65,15 +65,7 @@ class RPCClient(channel: ManagedChannel,
 
         //add handler information if available
         if (attribute.storagehandlername.isDefined) {
-          val storagehandlername = attribute.storagehandlername.get
-
-          val handlertype = storagehandlername match {
-            case "relational" => HandlerType.RELATIONAL
-            case "file" => HandlerType.FILE
-            case "solr" => HandlerType.SOLR
-          }
-
-          adm.withHandler(handlertype)
+          adm.withHandler(attribute.storagehandlername.get)
         }
 
         adm

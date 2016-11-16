@@ -427,14 +427,7 @@ private[rpc] object RPCHelperMethods extends Logging {
     */
   def prepareAttributes(attributes: Seq[AttributeDefinitionMessage]): Seq[AttributeDefinition] = {
     attributes.map(attribute => {
-      val handler = attribute.handler match {
-        case HandlerType.RELATIONAL => Some("relational")
-        case HandlerType.FILE => Some("file")
-        case HandlerType.SOLR => Some("solr")
-        case _ => None
-      }
-
-      AttributeDefinition(attribute.name, getFieldType(attribute.attributetype), attribute.pk, handler, attribute.params)
+      AttributeDefinition(attribute.name, getFieldType(attribute.attributetype), attribute.pk, Some(attribute.handler), attribute.params)
     })
   }
 

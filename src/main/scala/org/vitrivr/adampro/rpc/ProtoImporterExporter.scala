@@ -142,14 +142,7 @@ import scala.util.{Failure, Random, Success, Try}
 
       //catalog
       val attributes = entity.schema().map(attribute => {
-        val handler = attribute.storagehandler.get.name match {
-          case "relational" => HandlerType.RELATIONAL
-          case "file" => HandlerType.FILE
-          case "solr" => HandlerType.SOLR
-          case _ => HandlerType.UNKNOWNHT
-        }
-
-        AttributeDefinitionMessage(attribute.name, matchFields(attribute.fieldtype), attribute.pk, handler, attribute.params)
+        AttributeDefinitionMessage(attribute.name, matchFields(attribute.fieldtype), attribute.pk, attribute.params, attribute.storagehandler.get.name)
       })
 
       val createEntity = new CreateEntityMessage(entityname, attributes)
