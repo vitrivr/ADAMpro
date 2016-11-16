@@ -35,7 +35,15 @@ object StorageHandlerRegistry extends Logging {
     * @param name
     * @return
     */
-  def apply(name: String): Option[StorageHandler] = handlers.get(name)
+  def apply(name: String): Option[StorageHandler] = {
+    val res = handlers.get(name)
+
+    if(res.isEmpty){
+      log.error("no suitable storage found in registry named " + name)
+    }
+
+    res
+  }
 
 
   /**
