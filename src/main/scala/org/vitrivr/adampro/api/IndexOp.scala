@@ -154,13 +154,13 @@ object IndexOp extends GenericOp {
     * Returns properties of index.
     *
     * @param indexname name of index
+    * @param options possible options for operation
     */
-  def properties(indexname: IndexName)(implicit ac: AdamContext) : Try[Map[String, String]] = {
+  def properties(indexname: IndexName, options: Map[String, String] = Map())(implicit ac: AdamContext): Try[Map[String, String]] = {
     execute("get properties for" + indexname) {
-      Success(Index.load(indexname).get.propertiesMap)
+      Success(Index.load(indexname).get.propertiesMap(options))
     }
   }
-
 
 
   /**

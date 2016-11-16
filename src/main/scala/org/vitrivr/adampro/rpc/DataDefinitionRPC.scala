@@ -417,15 +417,15 @@ class DataDefinitionRPC extends AdamDefinitionGrpc.AdamDefinition with Logging {
     * @param request
     * @return
     */
-  override def getEntityProperties(request: EntityNameMessage): Future[EntityPropertiesMessage] = {
+  override def getEntityProperties(request: EntityPropertiesMessage): Future[PropertiesMessage] = {
     log.debug("rpc call for returning entity properties")
-    val res = EntityOp.properties(request.entity)
+    val res = EntityOp.properties(request.entity, options = request.options)
 
     if (res.isSuccess) {
-      Future.successful(EntityPropertiesMessage(Some(AckMessage(AckMessage.Code.OK)), request.entity, res.get))
+      Future.successful(PropertiesMessage(Some(AckMessage(AckMessage.Code.OK)), request.entity, res.get))
     } else {
       log.error(res.failed.get.getMessage, res.failed.get)
-      Future.successful(EntityPropertiesMessage(Some(AckMessage(AckMessage.Code.ERROR, res.failed.get.getMessage))))
+      Future.successful(PropertiesMessage(Some(AckMessage(AckMessage.Code.ERROR, res.failed.get.getMessage))))
     }
   }
 
@@ -434,15 +434,15 @@ class DataDefinitionRPC extends AdamDefinitionGrpc.AdamDefinition with Logging {
     * @param request
     * @return
     */
-  override def getAttributeProperties(request: AttributeEntityNameMessage): Future[EntityPropertiesMessage] = {
+  override def getAttributeProperties(request: AttributePropertiesMessage): Future[PropertiesMessage] = {
     log.debug("rpc call for returning attribute properties")
-    val res = EntityOp.properties(request.entity, request.attribute)
+    val res = EntityOp.properties(request.entity, Some(request.attribute), options = request.options)
 
     if (res.isSuccess) {
-      Future.successful(EntityPropertiesMessage(Some(AckMessage(AckMessage.Code.OK)), request.entity, res.get))
+      Future.successful(PropertiesMessage(Some(AckMessage(AckMessage.Code.OK)), request.entity, res.get))
     } else {
       log.error(res.failed.get.getMessage, res.failed.get)
-      Future.successful(EntityPropertiesMessage(Some(AckMessage(AckMessage.Code.ERROR, res.failed.get.getMessage))))
+      Future.successful(PropertiesMessage(Some(AckMessage(AckMessage.Code.ERROR, res.failed.get.getMessage))))
     }
   }
 
@@ -452,15 +452,15 @@ class DataDefinitionRPC extends AdamDefinitionGrpc.AdamDefinition with Logging {
     * @param request
     * @return
     */
-  override def getIndexProperties(request: IndexNameMessage): Future[EntityPropertiesMessage] = {
+  override def getIndexProperties(request: IndexPropertiesMessage): Future[PropertiesMessage] = {
     log.debug("rpc call for returning index properties")
-    val res = IndexOp.properties(request.index)
+    val res = IndexOp.properties(request.index, request.options)
 
     if (res.isSuccess) {
-      Future.successful(EntityPropertiesMessage(Some(AckMessage(AckMessage.Code.OK)), request.index, res.get))
+      Future.successful(PropertiesMessage(Some(AckMessage(AckMessage.Code.OK)), request.index, res.get))
     } else {
       log.error(res.failed.get.getMessage, res.failed.get)
-      Future.successful(EntityPropertiesMessage(Some(AckMessage(AckMessage.Code.ERROR, res.failed.get.getMessage))))
+      Future.successful(PropertiesMessage(Some(AckMessage(AckMessage.Code.ERROR, res.failed.get.getMessage))))
     }
   }
 

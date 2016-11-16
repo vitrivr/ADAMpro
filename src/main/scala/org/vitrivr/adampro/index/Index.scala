@@ -254,8 +254,10 @@ abstract class Index(val indexname: IndexName)(@transient implicit val ac: AdamC
 
   /**
     * Returns a map of properties to the index. Useful for printing.
+    *
+    * @param options
     */
-  def propertiesMap: Map[String, String] = {
+  def propertiesMap(options: Map[String, String] = Map()): Map[String, String] = {
     val lb = ListBuffer[(String, String)]()
 
     lb.append("indexname" -> indexname)

@@ -27,8 +27,8 @@ import scala.util.{Failure, Success, Try}
 //TODO: make entities singleton? lock on entity?
 case class Entity(val entityname: EntityName)(@transient implicit val ac: AdamContext) extends Serializable with Logging {
   val mostRecentVersion = this.synchronized {
-    if(!ac.entityVersion.contains(entityname)){
-      ac.entityVersion.+= (entityname.toString -> ac.sc.accumulator(0L, entityname.toString))
+    if (!ac.entityVersion.contains(entityname)) {
+      ac.entityVersion.+=(entityname.toString -> ac.sc.accumulator(0L, entityname.toString))
     }
 
     ac.entityVersion.get(entityname.toString).get
@@ -369,14 +369,19 @@ case class Entity(val entityname: EntityName)(@transient implicit val ac: AdamCo
 
   /**
     * Returns a map of properties to the entity. Useful for printing.
+    *
+    * @param options
     */
-  def propertiesMap: Map[String, String] = {
+  def propertiesMap(options: Map[String, String]  = Map()) = {
     val lb = ListBuffer[(String, String)]()
 
     lb.append("attributes" -> CatalogOperator.getAttributes(entityname).get.map(field => field.name).mkString(","))
     lb.append("indexes" -> indexes.filter(_.isSuccess).map(_.get.indexname).mkString(","))
     lb.append("partitions" -> getFeatureData.map(_.rdd.getNumPartitions.toString).getOrElse("none"))
-    lb.append("count" -> count.toString)
+
+    if(!(options.contains("count") && options("count") == "false")){
+      lb.append("count" -> count.toString)
+    }
 
     lb.toMap
   }
@@ -385,9 +390,10 @@ case class Entity(val entityname: EntityName)(@transient implicit val ac: AdamCo
     * Returns a map of properties to a specified attribute. Useful for printing.
     *
     * @param attribute name of attribute
+    * @param options
     * @return
     */
-  def attributePropertiesMap(attribute: String): Map[String, String] = {
+  def attributePropertiesMap(attribute: String, options: Map[String, String] = Map()): Map[String, String] = {
     schema(Some(Seq(attribute))).headOption.map(_.propertiesMap).getOrElse(Map())
   }
 

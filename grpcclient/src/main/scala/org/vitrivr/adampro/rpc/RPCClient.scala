@@ -129,9 +129,9 @@ class RPCClient(channel: ManagedChannel,
     * @param insertMessage insert message
     * @return
     */
-  def entityInsert(insertMessage : InsertMessage): Try[Void] = {
+  def entityInsert(insertMessage: InsertMessage): Try[Void] = {
     execute("insert operation") {
-      val res =  definerBlocking.insert(insertMessage)
+      val res = definerBlocking.insert(insertMessage)
 
       if (res.code == AckMessage.Code.OK) {
         return Success(null)
@@ -147,7 +147,7 @@ class RPCClient(channel: ManagedChannel,
     * @param insertMessages sequence of insert messages
     * @return
     */
-  def entityStreamInsert(insertMessages : Seq[InsertMessage]) : Try[Void] = {
+  def entityStreamInsert(insertMessages: Seq[InsertMessage]): Try[Void] = {
     val so = new StreamObserver[AckMessage]() {
       override def onError(throwable: Throwable): Unit = {
         log.error("error in insert", throwable)
@@ -207,11 +207,12 @@ class RPCClient(channel: ManagedChannel,
     * Get details for entity.
     *
     * @param entityname name of entity
+    * @param options   options for operation
     * @return
     */
-  def entityDetails(entityname: String): Try[Map[String, String]] = {
+  def entityDetails(entityname: String, options: Map[String, String] = Map()): Try[Map[String, String]] = {
     execute("get details of entity operation") {
-      val properties = definerBlocking.getEntityProperties(EntityNameMessage(entityname)).properties
+      val properties = definerBlocking.getEntityProperties(EntityPropertiesMessage(entityname, options)).properties
       Success(properties)
     }
   }
@@ -221,11 +222,12 @@ class RPCClient(channel: ManagedChannel,
     *
     * @param entityname name of entity
     * @param attribute  name of attribute
+    * @param options   options for operation
     * @return
     */
-  def entityAttributeDetails(entityname: String, attribute: String): Try[Map[String, String]] = {
+  def entityAttributeDetails(entityname: String, attribute: String, options: Map[String, String] = Map()): Try[Map[String, String]] = {
     execute("get details of attribute operation") {
-      val properties = definerBlocking.getAttributeProperties(AttributeEntityNameMessage(entityname, attribute)).properties
+      val properties = definerBlocking.getAttributeProperties(AttributePropertiesMessage(entityname, attribute, options)).properties
       Success(properties)
     }
   }
@@ -234,11 +236,12 @@ class RPCClient(channel: ManagedChannel,
     * Get details for index.
     *
     * @param indexname name of index
+    * @param options   options for operation
     * @return
     */
-  def indexDetails(indexname: String): Try[Map[String, String]] = {
+  def indexDetails(indexname: String, options: Map[String, String] = Map()): Try[Map[String, String]] = {
     execute("get details of index operation") {
-      val properties = definerBlocking.getIndexProperties(IndexNameMessage(indexname)).properties
+      val properties = definerBlocking.getIndexProperties(IndexPropertiesMessage(indexname, options)).properties
       Success(properties)
     }
   }

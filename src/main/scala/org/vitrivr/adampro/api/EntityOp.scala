@@ -125,7 +125,7 @@ object EntityOp extends GenericOp {
     * @param predicates list of predicates
     *
     */
-  def delete(entityname: EntityName, predicates : Seq[Predicate])(implicit ac: AdamContext): Try[Int] = {
+  def delete(entityname: EntityName, predicates: Seq[Predicate])(implicit ac: AdamContext): Try[Int] = {
     execute("delete data from " + entityname + " operation") {
       Success(Entity.load(entityname).get.delete(predicates))
     }
@@ -147,26 +147,20 @@ object EntityOp extends GenericOp {
 
 
   /**
-    * Returns properties of entity.
+    * Returns properties of an entity/attribute in an entity.
     *
     * @param entityname name of entity
+    * @param attribute  name of attribute
+    * @param options    possible options for operation
     * @return
     */
-  def properties(entityname: EntityName)(implicit ac: AdamContext): Try[Map[String, String]] = {
+  def properties(entityname: EntityName, attribute: Option[String] = None, options: Map[String, String] = Map())(implicit ac: AdamContext): Try[Map[String, String]] = {
     execute("load properties of entity " + entityname + " operation") {
-      Success(Entity.load(entityname).get.propertiesMap)
-    }
-  }
-
-  /**
-    * Returns properties of an attribtute of an entity.
-    *
-    * @param entityname name of entity
-    * @return
-    */
-  def properties(entityname: EntityName, attribute : String)(implicit ac: AdamContext): Try[Map[String, String]] = {
-    execute("load properties of entity " + entityname + " operation") {
-      Success(Entity.load(entityname).get.attributePropertiesMap(attribute))
+      if(attribute.isDefined){
+        Success(Entity.load(entityname).get.attributePropertiesMap(attribute.get, options))
+      } else {
+        Success(Entity.load(entityname).get.propertiesMap(options))
+      }
     }
   }
 
@@ -189,7 +183,7 @@ object EntityOp extends GenericOp {
     * Sets the weight of the entity to make it more important in the search
     *
     * @param entityname name of entity
-    * @param attribute     name of attribute
+    * @param attribute  name of attribute
     * @param weight     new weight to set (the higher, the more important the index is)
     * @return
     */
