@@ -16,7 +16,7 @@ RUN rm jdk-8u77-linux-x64.rpm
 
 # postgresql
 ENV PGDATA /var/lib/pgsql/data
-RUN rpm -Uvh http://yum.postgresql.org/9.4/redhat/rhel-6-x86_64/pgdg-redhat94-9.4-1.noarch.rpm
+RUN rpm -Uvh https://download.postgresql.org/pub/repos/yum/9.4/redhat/rhel-7-x86_64/pgdg-centos94-9.4-3.noarch.rpm
 RUN yum -y update postgresql94-server postgresql94
 RUN yum -y install postgresql94-server postgresql94
 RUN service postgresql-9.4 stop
