@@ -57,7 +57,7 @@ COPY adampro.conf.template $ADAM_HOME/adampro.conf.template
 
 # adjust logging
 RUN sed s/INFO/WARN/ $SPARK_HOME/conf/log4j.properties.template > $SPARK_HOME/conf/log4j.properties
-RUN echo 'log4j.logger.ch=DEBUG' >> $SPARK_HOME/conf/log4j.properties
+RUN echo 'log4j.logger.org.vitrivr=DEBUG' >> $SPARK_HOME/conf/log4j.properties
 
 #port for postgresql
 EXPOSE 5432
