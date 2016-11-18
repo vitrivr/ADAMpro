@@ -13,3 +13,4 @@ scripts/docker-selfcontained/ADAMpro-assembly-0.1.0.jar
 scripts/docker-selfcontained/ADAMpro-web-assembly-0.1.0.jar
 scripts/docker-selfcontained/adampro.tar.gz
 lib/grpc-assembly-0.1-SNAPSHOT.jar
+publish.sh
