@@ -24,6 +24,8 @@ object SparkStartup extends Logging {
     .registerKryoClasses(Array(classOf[BitStringUDT], classOf[FeatureVectorWrapperUDT], classOf[GeometryWrapperUDT]))
     .set("spark.scheduler.allocation.file", AdamConfig.schedulerFile)
     .set("spark.driver.allowMultipleContexts", "true")
+    .set("spark.sql.parquet.compression.codec", "snappy")
+
 
   if (AdamConfig.master.isDefined) {
     sparkConfig.setMaster(AdamConfig.master.get)
