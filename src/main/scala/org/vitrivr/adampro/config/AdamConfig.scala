@@ -18,7 +18,6 @@ object AdamConfig extends Serializable with Logging {
     val internalConfig = if (!ConfigFactory.load().hasPath("adampro")) {
       //this is somewhat a hack to have different configurations depending on whether we have an assembly-jar or we
       //run the application "locally"
-      log.info("using assembly.conf")
       ConfigFactory.load("assembly.conf")
     } else {
       ConfigFactory.load()
