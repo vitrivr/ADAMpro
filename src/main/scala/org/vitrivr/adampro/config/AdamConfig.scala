@@ -24,16 +24,13 @@ object AdamConfig extends Serializable with Logging {
       ConfigFactory.load()
     }.resolve()
 
-    //merge with internal
-    val merged = if (externalConfig.isDefined) {
-      externalConfig.get.withFallback(internalConfig)
+    if (externalConfig.isDefined) {
+      externalConfig.get.resolve()
     } else {
       internalConfig
     }
-
-    merged.resolve()
   }
-  log.debug(config.toString)
+  log.trace(config.toString)
   config.checkValid(ConfigFactory.defaultReference(), "adampro")
 
   val internalsPath = cleanPath(config.getString("adampro.internalsPath"))
