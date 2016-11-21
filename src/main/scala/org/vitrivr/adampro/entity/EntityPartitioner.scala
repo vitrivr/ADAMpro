@@ -19,11 +19,11 @@ object EntityPartitioner {
   /**
     * Partitions the entity data.
     *
-    * @param entity entity
+    * @param entity      entity
     * @param nPartitions number of partitions
-    * @param join join with dataframe for partitioning
-    * @param cols columns according to which to partition the data
-    * @param mode mode of partitioning (replacing data, etc.)
+    * @param join        join with dataframe for partitioning
+    * @param cols        columns according to which to partition the data
+    * @param mode        mode of partitioning (replacing data, etc.)
     * @return
     */
   def apply(entity: Entity, nPartitions: Int, join: Option[DataFrame], cols: Option[Seq[String]], mode: PartitionMode.Value)(implicit ac: AdamContext): Try[Entity] = {
@@ -62,13 +62,31 @@ object EntityPartitioner {
       data.repartition(nPartitions, data(entity.pk.name))
     }
 
-    val handler = partitionAttributes.filterNot(_.pk).headOption
-      .getOrElse(entity.schema().filter(_.storagehandler.engine.isInstanceOf[ParquetEngine]).head)
-          .storagehandler
+    val handlerOption = {
+      val partitionAttributeHandler = partitionAttributes.filterNot(_.pk).headOption
+
+      if (partitionAttributeHandler.isDefined) {
+        partitionAttributeHandler.map(_.storagehandler())
+      } else {
+        val fallback = entity.schema().filter(_.storagehandler.engine.isInstanceOf[ParquetEngine]).headOption
+
+        if (fallback.isDefined) {
+          fallback.map(_.storagehandler())
+        } else {
+          None
+        }
+      }
+    }
+
+    if(handlerOption.isEmpty){
+      Failure(throw new GeneralAdamException("there are no partitionable columns in this entity"))
+    }
+
+    val handler = handlerOption.get
 
     //select data which is available in the one handler
     val attributes = entity.schema().filterNot(_.pk).filter(_.storagehandler == handler).+:(entity.pk)
-    data = data.select(attributes.map(attribute => col(attribute.name)).toArray : _*)
+    data = data.select(attributes.map(attribute => col(attribute.name)).toArray: _*)
 
     mode match {
       case PartitionMode.REPLACE_EXISTING =>
@@ -88,4 +106,5 @@ object EntityPartitioner {
       case _ => Failure(new GeneralAdamException("partitioning mode unknown"))
     }
   }
+
 }
