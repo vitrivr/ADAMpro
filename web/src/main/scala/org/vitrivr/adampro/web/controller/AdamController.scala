@@ -66,7 +66,7 @@ class AdamController(rpcClient: RPCClient) extends Controller {
       response.ok.json(GeneralResponse(500, "entity not specified"))
     }
 
-    val res = if(attribute.isEmpty){
+    val res = if (attribute.isEmpty) {
       rpcClient.entityDetails(entityname.get).map(EntityDetailResponse(200, entityname.get, "", _))
     } else {
       rpcClient.entityAttributeDetails(entityname.get, attribute.get).map(EntityDetailResponse(200, entityname.get, attribute.get, _))
@@ -224,12 +224,17 @@ class AdamController(rpcClient: RPCClient) extends Controller {
     val paths = Files.walk(Paths.get(path.get)).iterator().filter(_.toString.endsWith(".bin"))
 
     paths.foreach(path => {
-      val in = CodedInputStream.newInstance(Files.newInputStream(path))
       val batch = new ListBuffer[TupleInsertMessage]()
 
-      while (!in.isAtEnd) {
-        val tuple = TupleInsertMessage.parseDelimitedFrom(in).get
-        batch += tuple
+      try {
+        val in = CodedInputStream.newInstance(Files.newInputStream(path))
+
+        while (!in.isAtEnd) {
+          val tuple = TupleInsertMessage.parseDelimitedFrom(in).get
+          batch += tuple
+        }
+      } catch {
+        case e: Exception => log.error("exception while reading files", e)
       }
 
       ress += rpcClient.entityInsert(InsertMessage(path.getFileName.toString.replace(".bin", ""), batch))
@@ -350,7 +355,7 @@ class AdamController(rpcClient: RPCClient) extends Controller {
   }
 
 
-  private def processProgressiveResults(id : String)(res: Try[RPCQueryResults]): Unit = {
+  private def processProgressiveResults(id: String)(res: Try[RPCQueryResults]): Unit = {
     if (res.isSuccess) {
       val results = res.get
       progTempResults.get(id).get += SearchProgressiveIntermediaryResponse(id, results.confidence, results.info.getOrElse("indextype", ""), results.time, results.results, ProgressiveQueryStatus.RUNNING)
@@ -367,7 +372,7 @@ class AdamController(rpcClient: RPCClient) extends Controller {
     completedProgressiveResults(id, "", ProgressiveQueryStatus.FINISHED)
   }
 
-  private def completedProgressiveResults(id : String, message : String, newStatus : ProgressiveQueryStatus.Value): Unit ={
+  private def completedProgressiveResults(id: String, message: String, newStatus: ProgressiveQueryStatus.Value): Unit = {
     progTempResults.get(id).get += SearchProgressiveIntermediaryResponse(id, 0.0, message, 0, Seq(), newStatus)
     lazy val f = Future {
       Thread.sleep(10000);
@@ -407,7 +412,6 @@ class AdamController(rpcClient: RPCClient) extends Controller {
       response.ok.json(StorageHandlerResponse(500, Map()))
     }
   }
-
 
 
 }
