@@ -502,22 +502,23 @@ object Entity extends Logging {
       CatalogOperator.createEntity(entityname, creationAttributes)
 
       val pk = creationAttributes.filter(_.pk)
+      val attributesWithoutPK = creationAttributes.filterNot(_.pk)
 
-      if (creationAttributes.forall(_.pk)) {
+      if (attributesWithoutPK.isEmpty) {
         //only pk attribute is available
-        creationAttributes.groupBy(_.storagehandler).foreach {
+        pk.groupBy(_.storagehandler).foreach {
           case (handler, attributes) =>
-            val status = handler.create(entityname, attributes.++:(pk))
+            val status = handler.create(entityname, attributes)
             if (status.isFailure) {
-              log.error("failing on handler " + handler.name + ":" + status.failed.get)
+              throw new GeneralAdamException("failing on handler " + handler.name + ":" + status.failed.get)
             }
         }
       } else {
-        creationAttributes.filterNot(_.pk).groupBy(_.storagehandler).foreach {
+        attributesWithoutPK.filterNot(_.pk).groupBy(_.storagehandler).foreach {
           case (handler, attributes) =>
             val status = handler.create(entityname, attributes.++:(pk))
             if (status.isFailure) {
-              log.error("failing on handler " + handler.name + ":" + status.failed.get)
+              throw new GeneralAdamException("failing on handler " + handler.name + ":" + status.failed.get)
             }
         }
       }
