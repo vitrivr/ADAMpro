@@ -129,7 +129,7 @@ class DataDefinitionRPC extends AdamDefinitionGrpc.AdamDefinition with Logging {
     val entity = Entity.load(request.entity)
 
     if (entity.isFailure) {
-      return  Future.successful(AckMessage(code = AckMessage.Code.ERROR, message = "cannot load entity"))
+      return Future.successful(AckMessage(code = AckMessage.Code.ERROR, message = "cannot load entity"))
     }
 
     val schema = entity.get.schema()
@@ -158,6 +158,22 @@ class DataDefinitionRPC extends AdamDefinitionGrpc.AdamDefinition with Logging {
     }
   }
 
+  /**
+    *
+    * @param request
+    * @return
+    */
+  override def batchInsert(request: InsertsMessage): Future[AckMessage] = {
+    log.debug("rpc call for batch insert operation")
+
+    val inserts = request.inserts.groupBy(_.entity).mapValues(_.flatMap(_.tuples))
+
+    inserts.map { case (entityname, tuples) =>
+      insert(InsertMessage(entityname, tuples))
+    }
+
+    Future.successful(AckMessage(code = AckMessage.Code.OK))
+  }
 
 
   /**
@@ -222,22 +238,22 @@ class DataDefinitionRPC extends AdamDefinitionGrpc.AdamDefinition with Logging {
 
     //TODO: hacky...
 
-    try{
+    try {
       val entity = Entity.load(request.entity)
 
-      if(entity.isFailure){
+      if (entity.isFailure) {
         throw entity.failed.get
       }
 
       val pk = entity.get.pk
 
-      if(pk.fieldtype == SERIALTYPE){
+      if (pk.fieldtype == SERIALTYPE) {
         Future.successful(AckMessage(code = AckMessage.Code.OK, message = SERIALTYPE.getNext(request.entity, pk.name).toString))
       } else {
         Future.successful(AckMessage(code = AckMessage.Code.ERROR, message = "method only valid for serial fields"))
       }
     } catch {
-      case e : Exception => Future.successful(AckMessage(code = AckMessage.Code.ERROR, message = e.getMessage))
+      case e: Exception => Future.successful(AckMessage(code = AckMessage.Code.ERROR, message = e.getMessage))
     }
   }
 

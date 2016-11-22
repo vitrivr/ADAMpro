@@ -142,6 +142,24 @@ class RPCClient(channel: ManagedChannel,
   }
 
   /**
+    * Insert data into entity (batch).
+    *
+    * @param insertMessages insert messages
+    * @return
+    */
+  def entityBatchInsert(insertMessages: Seq[InsertMessage]): Try[Void] = {
+    execute("insert operation") {
+      val res = definerBlocking.batchInsert(InsertsMessage(insertMessages))
+
+      if (res.code == AckMessage.Code.OK) {
+        return Success(null)
+      } else {
+        return Failure(new Exception(res.message))
+      }
+    }
+  }
+
+  /**
     * Insert data into entity (streaming).
     *
     * @param insertMessages sequence of insert messages

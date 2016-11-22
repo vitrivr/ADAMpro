@@ -223,21 +223,26 @@ class AdamController(rpcClient: RPCClient) extends Controller {
     import scala.collection.JavaConversions._
     val paths = Files.walk(Paths.get(path.get)).iterator().filter(_.toString.endsWith(".bin"))
 
-    paths.foreach(path => {
-      val batch = new ListBuffer[TupleInsertMessage]()
+    paths.grouped(1000).foreach(groupedPaths => {
+      val batch = new ListBuffer[InsertMessage]()
+
+      groupedPaths.foreach{path =>
 
       try {
         val in = CodedInputStream.newInstance(Files.newInputStream(path))
 
         while (!in.isAtEnd) {
           val tuple = TupleInsertMessage.parseDelimitedFrom(in).get
-          batch += tuple
+          batch += InsertMessage(path.getFileName.toString.replace(".bin", ""), Seq(tuple))
         }
       } catch {
         case e: Exception => log.error("exception while reading files", e)
       }
 
-      ress += rpcClient.entityInsert(InsertMessage(path.getFileName.toString.replace(".bin", ""), batch))
+        ress += rpcClient.entityBatchInsert(batch)
+      }
+
+
     })
 
 
