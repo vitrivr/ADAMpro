@@ -14,6 +14,7 @@ import org.vitrivr.adampro.index.Index
 import org.vitrivr.adampro.main.AdamContext
 import org.vitrivr.adampro.query.query.Predicate
 import org.vitrivr.adampro.storage.StorageHandler
+import org.vitrivr.adampro.storage.engine.ParquetEngine
 import org.vitrivr.adampro.utils.Logging
 
 import scala.collection.mutable.ListBuffer
@@ -206,7 +207,7 @@ case class Entity(val entityname: EntityName)(@transient implicit val ac: AdamCo
 
   private val N_INSERTS_VACUUMING = "ninserts"
   private val MAX_INSERTS_VACUUMING = "maxinserts"
-  private val MAX_INSERTS_BEFORE_REPARTITIONING = CatalogOperator.getEntityOption(entityname, Some(MAX_INSERTS_VACUUMING)).get.get(MAX_INSERTS_VACUUMING).map(_.toInt).getOrElse(50)
+  private val MAX_INSERTS_BEFORE_REPARTITIONING = CatalogOperator.getEntityOption(entityname, Some(MAX_INSERTS_VACUUMING)).get.get(MAX_INSERTS_VACUUMING).map(_.toInt).getOrElse(500)
 
   /**
     * Inserts data into the entity.
@@ -263,7 +264,14 @@ case class Entity(val entityname: EntityName)(@transient implicit val ac: AdamCo
         CatalogOperator.updateEntityOption(entityname, N_INSERTS_VACUUMING, (ninserts + 1).toString)
       } else {
         log.info("number of inserts necessitates now re-partitioning")
-        EntityPartitioner(this, AdamConfig.defaultNumberOfPartitions, None, None, PartitionMode.REPLACE_EXISTING) //this resets insertion counter
+
+        if(schema().filter(_.storagehandler.engine.isInstanceOf[ParquetEngine]).nonEmpty){
+          //entity is partitionable
+          EntityPartitioner(this, AdamConfig.defaultNumberOfPartitions, None, None, PartitionMode.REPLACE_EXISTING) //this resets insertion counter
+        } else {
+          //entity is not partitionable, increase number of partitions to max value
+          CatalogOperator.updateEntityOption(entityname, MAX_INSERTS_VACUUMING, Int.MaxValue.toString)
+        }
       }
 
       Success(null)
