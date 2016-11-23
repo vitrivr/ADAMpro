@@ -17,8 +17,16 @@ object ScanWeightCatalogOperator {
   val SCANWEIGHT_OPTION_NAME = "scanweight"
 
   trait ScanWeightable {
+    /**
+      * Returns scan weight. The higher the weight, the better the structure.
+      * @return
+      */
     def getScanWeight(): Float
 
+    /**
+      * Sets scan weight. The higher the weight, the better the structure.
+      * @return
+      */
     def setScanWeight(weight: Float): Unit
   }
 
