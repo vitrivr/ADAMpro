@@ -21,8 +21,10 @@ import org.apache.spark.sql.types.{StructField, StructType}
 import org.vitrivr.adampro.grpc.grpc.AdaptScanMethodsMessage.{IndexCollection, QueryCollection}
 import org.vitrivr.adampro.grpc.grpc._
 
+import scala.collection.mutable.ListBuffer
 import scala.concurrent.duration._
 import scala.concurrent.{Await, Future}
+import scala.util.{Failure, Try}
 
 /**
   * adamtwo
@@ -168,11 +170,50 @@ class DataDefinitionRPC extends AdamDefinitionGrpc.AdamDefinition with Logging {
 
     val inserts = request.inserts.groupBy(_.entity).mapValues(_.flatMap(_.tuples))
 
-    inserts.map { case (entityname, tuples) =>
-      insert(InsertMessage(entityname, tuples))
+    val lb = new ListBuffer[Try[Void]]()
+    log.debug("inserts: " + inserts.size)
+
+    inserts.foreach { case (entityname, tuples) =>
+      log.debug("for entity: " + entityname)
+
+      val entity = Entity.load(entityname)
+
+
+      if (entity.isFailure) {
+        lb += Failure(entity.failed.get)
+        log.error("error when loading entity " + entityname)
+      } else {
+        log.debug("for entity: " + entityname + " loaded")
+      }
+
+      val schema = entity.get.schema()
+
+      val rows = tuples.map(tuple => {
+        val data = schema.map(field => {
+          val datum = tuple.data.get(field.name).getOrElse(null)
+          if (datum != null) {
+            RPCHelperMethods.prepareDataTypeConverter(field.fieldtype.datatype)(datum)
+          } else {
+            null
+          }
+        })
+        Row(data: _*)
+      })
+
+      val rdd = ac.sc.parallelize(rows)
+      val df = ac.sqlContext.createDataFrame(rdd, StructType(entity.get.schema().map(field => StructField(field.name, field.fieldtype.datatype))))
+      log.debug("for entity: " + entityname + " starting insert")
+
+      lb += EntityOp.insert(entity.get.entityname, df)
     }
 
-    Future.successful(AckMessage(code = AckMessage.Code.OK))
+    if (lb.forall(_.isSuccess)) {
+      log.debug("inserted all data properly")
+      Future.successful(AckMessage(code = AckMessage.Code.OK))
+    } else {
+      log.error("error when inserting into " + lb.count(_.isFailure) + " entities: " + lb.filter(_.isFailure).map(_.failed.get.getMessage))
+      Future.successful(AckMessage(code = AckMessage.Code.ERROR, "error when inserting into " + lb.count(_.isFailure) + " entities: " + lb.filter(_.isFailure).map(_.failed.get.getMessage)))
+    }
   }
 
 
