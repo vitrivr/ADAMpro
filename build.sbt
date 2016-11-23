@@ -103,7 +103,8 @@ val tertiaryLibs = Seq(
   "com.datastax.spark" %% "spark-cassandra-connector" % "1.6.2",
   "com.basho.riak" % "spark-riak-connector" % "1.5.1",
   "net.postgis" % "postgis-jdbc" % "2.2.1",
-  "org.iq80.leveldb" % "leveldb" % "0.9"
+  "org.iq80.leveldb" % "leveldb" % "0.9",
+  "com.databricks" %% "spark-avro" % "2.0.1"
 ).map(
   _.excludeAll(
     ExclusionRule("org.scala-lang"),
