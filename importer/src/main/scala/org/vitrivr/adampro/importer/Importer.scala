@@ -72,7 +72,6 @@ object Importer {
 
             val msg = InsertMessage(entity, Seq(tuple))
             batch += msg
-            println(entity)
           }
 
           this.synchronized {
