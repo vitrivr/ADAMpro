@@ -268,36 +268,7 @@ class DataDefinitionRPC extends AdamDefinitionGrpc.AdamDefinition with Logging {
       }
     }
   }
-
-  /**
-    *
-    * @param request
-    * @return
-    */
-  override def getNextPkValue(request: EntityNameMessage): Future[AckMessage] = {
-    log.debug("rpc call for next pk value operation")
-
-    //TODO: hacky...
-
-    try {
-      val entity = Entity.load(request.entity)
-
-      if (entity.isFailure) {
-        throw entity.failed.get
-      }
-
-      val pk = entity.get.pk
-
-      if (pk.fieldtype == SERIALTYPE) {
-        Future.successful(AckMessage(code = AckMessage.Code.OK, message = SERIALTYPE.getNext(request.entity, pk.name).toString))
-      } else {
-        Future.successful(AckMessage(code = AckMessage.Code.ERROR, message = "method only valid for serial fields"))
-      }
-    } catch {
-      case e: Exception => Future.successful(AckMessage(code = AckMessage.Code.ERROR, message = e.getMessage))
-    }
-  }
-
+  
 
   /**
     *
