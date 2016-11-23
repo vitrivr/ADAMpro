@@ -16,8 +16,8 @@ object BenchmarkOp {
 
   /**
     *
-    * @param ic
-    * @param qc
+    * @param ic collection of indexes
+    * @param qc collection of queries
     */
   def benchmarkAndUpdateWeight(ic: IndexCollection, qc: QueryCollection)(implicit ac: AdamContext): Try[Void] = {
     try {

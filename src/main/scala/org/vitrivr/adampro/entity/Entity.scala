@@ -279,6 +279,7 @@ case class Entity(val entityname: EntityName)(@transient implicit val ac: AdamCo
       case e: Exception => Failure(e)
     } finally {
       markStale()
+      //TODO: possibly partition here if too many partitions are created
     }
   }
 

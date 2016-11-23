@@ -22,6 +22,7 @@ private[benchmark] trait IndexCollection extends Logging with Serializable {
 }
 
 /**
+  * Collects all existing indexes.
   *
   * @param entityname
   */
@@ -34,6 +35,7 @@ private[benchmark] case class ExistingIndexCollection(entityname: EntityName, at
 }
 
 /**
+  * Generates new indexes based on hints.
   *
   * @param entityname
   */

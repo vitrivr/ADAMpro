@@ -22,6 +22,7 @@ private[benchmark] trait QueryCollection extends Logging with Serializable {
 }
 
 /**
+  * Generates random queries
   *
   * @param entityname
   * @param attribute
@@ -48,6 +49,7 @@ private[benchmark] case class RandomQueryCollection(entityname: EntityName, attr
 }
 
 /**
+  * Uses logged queries.
   *
   * @param entityname
   */
