@@ -306,6 +306,7 @@ class AvroHadoopStorage(private val basepath: String, private val datapath: Stri
   *
   */
 class AvroLocalEngine(private val path: String) extends GenericAvroEngine with Logging with Serializable {
+  val sparkPath = "file://" + path
   val datafolder = new File(path)
 
   if (!datafolder.exists()) {
@@ -324,7 +325,7 @@ class AvroLocalEngine(private val path: String) extends GenericAvroEngine with L
         throw new GeneralAdamException("no file found at " + path + filename)
       }
 
-      Success(ac.sqlContext.read.avro(path + filename))
+      Success(ac.sqlContext.read.avro(sparkPath + filename))
     } catch {
       case e: Exception => Failure(e)
     }
@@ -339,7 +340,7 @@ class AvroLocalEngine(private val path: String) extends GenericAvroEngine with L
     */
   def write(filename: String, df: DataFrame, mode: SaveMode = SaveMode.Append)(implicit ac: AdamContext): Try[Void] = {
     try {
-      df.write.mode(mode).avro(path + filename)
+      df.write.mode(mode).avro(sparkPath + filename)
       Success(null)
     } catch {
       case e: Exception => Failure(e)

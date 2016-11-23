@@ -96,7 +96,7 @@ class ParquetEngine extends Engine with Logging with Serializable {
     log.debug("parquet write operation")
     val allowRepartitioning = params.getOrElse("allowRepartitioning", "false").toBoolean
 
-    import org.apache.spark.sql.functions._
+    import org.apache.spark.sql.functions.col
 
     var data = df
 
@@ -261,6 +261,7 @@ class ParquetHadoopStorage(private val basepath: String, private val datapath: S
   *
   */
 class ParquetLocalEngine(private val path: String) extends GenericParquetEngine with Logging with Serializable {
+  val sparkPath = "file://" + path
   val datafolder = new File(path)
 
   if (!datafolder.exists()) {
@@ -279,7 +280,7 @@ class ParquetLocalEngine(private val path: String) extends GenericParquetEngine 
         throw new GeneralAdamException("no file found at " + path + filename)
       }
 
-      Success(ac.sqlContext.read.parquet(path + filename))
+      Success(ac.sqlContext.read.parquet(sparkPath + filename))
     } catch {
       case e: Exception => Failure(e)
     }
@@ -294,7 +295,7 @@ class ParquetLocalEngine(private val path: String) extends GenericParquetEngine 
     */
   def write(filename: String, df: DataFrame, mode: SaveMode = SaveMode.Append)(implicit ac: AdamContext): Try[Void] = {
     try {
-      df.write.mode(mode).parquet(path + filename)
+      df.write.mode(mode).parquet(sparkPath + filename)
       Success(null)
     } catch {
       case e: Exception => Failure(e)

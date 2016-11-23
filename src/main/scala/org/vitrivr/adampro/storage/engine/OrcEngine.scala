@@ -304,6 +304,7 @@ class OrcHadoopStorage(private val basepath: String, private val datapath: Strin
   *
   */
 class OrcLocalEngine(private val path: String) extends GenericOrcEngine with Logging with Serializable {
+  val sparkPath = "file://" + path
   val datafolder = new File(path)
 
   if (!datafolder.exists()) {
@@ -322,7 +323,7 @@ class OrcLocalEngine(private val path: String) extends GenericOrcEngine with Log
         throw new GeneralAdamException("no file found at " + path + filename)
       }
 
-      Success(ac.sqlContext.read.orc(path + filename))
+      Success(ac.sqlContext.read.orc(sparkPath + filename))
     } catch {
       case e: Exception => Failure(e)
     }
@@ -337,7 +338,7 @@ class OrcLocalEngine(private val path: String) extends GenericOrcEngine with Log
     */
   def write(filename: String, df: DataFrame, mode: SaveMode = SaveMode.Append)(implicit ac: AdamContext): Try[Void] = {
     try {
-      df.write.mode(mode).orc(path + filename)
+      df.write.mode(mode).orc(sparkPath + filename)
       Success(null)
     } catch {
       case e: Exception => Failure(e)
