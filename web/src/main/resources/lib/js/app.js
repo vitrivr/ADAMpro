@@ -397,6 +397,33 @@ function entitySparsify(entityname, attribute) {
  *
  * @param entityname
  */
+function entityVacuum(entityname) {
+    if (entityname === null || entityname.length == 0) {
+        raiseError("Please specify an entity."); return;
+    }
+
+    startTask();
+    $.ajax(ADAM_CLIENT_HOST + "/entity/vacuum?entityname=" + entityname, {
+        type: 'GET',
+        success: function (data) {
+            if (data.code === 200) {
+                showAlert("Vacuumed entity " + entityname + ".")
+            } else {
+                raiseError(data.message);
+            }
+            stopTask();
+        },
+        error: function () {
+            raiseError();
+            stopTask();
+        }
+    });
+}
+
+/**
+ *
+ * @param entityname
+ */
 function entityDrop(entityname) {
     if (entityname === null || entityname.length == 0) {
         raiseError("Please specify an entity."); return;

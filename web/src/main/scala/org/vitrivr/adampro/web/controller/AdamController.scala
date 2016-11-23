@@ -125,6 +125,25 @@ class AdamController(rpcClient: RPCClient) extends Controller {
   /**
     *
     */
+  get("/entity/vacuum") { request: Request =>
+    val entityname = request.params.get("entityname")
+
+    if (entityname.isEmpty) {
+      response.ok.json(GeneralResponse(500, "entity/index not specified"))
+    }
+
+    val res = rpcClient.entityVacuum(entityname.get)
+
+    if (res.isSuccess) {
+      response.ok.json(GeneralResponse(200))
+    } else {
+      response.ok.json(GeneralResponse(500, res.failed.get.getMessage))
+    }
+  }
+
+  /**
+    *
+    */
   get("/entity/drop") { request: Request =>
     val entityname = request.params.get("entityname")
 

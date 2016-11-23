@@ -71,6 +71,7 @@ $(document).ready(function () {
             innerhtml += "<a class='btn-floating btn-large red'><i class='material-icons'>menu</i></a>";
             innerhtml += "<ul>";
             innerhtml += "<li id='btn-" + entityname + "-info' ><span class='btn-floating blue tooltipped' data-tooltip='info'><i style='font-style:normal; font-weight:bold'>i</i></span></li>";
+            innerhtml += "<li id='btn-" + entityname + "-vacuum'><span  class='btn-floating yellow darken-1 tooltipped' data-tooltip='vacuum'><i class='material-icons'>pets</i></span></li>";
             //innerhtml += "<li id='btn-" + entityname + "-benchmark'><span  class='btn-floating yellow darken-1 tooltipped' data-tooltip='adjust scanweights'><i style='font-style:normal; font-weight:bold'>B</i></span></li>";
             innerhtml += "<li id='btn-" + entityname + "-sparsify'><span class='btn-floating green tooltipped' data-tooltip='sparsify'><i style='font-style:normal; font-weight:bold'>S</i></span></span></li>";
             innerhtml += "<li id='btn-" + entityname + "-delete'><span class='btn-floating red tooltipped' data-tooltip='drop entity'><i class='material-icons'>delete</i></span></li>";
@@ -89,6 +90,7 @@ $(document).ready(function () {
             $('.tooltipped').tooltip({delay: 50, position: 'bottom'});
 
             $('#btn-' + entityname + '-info').bind("click", function(){infoHandler(entityname)});
+            $('#btn-' + entityname + '-vacuum').bind("click", function(){vacuumHandler(entityname)});
             //$('#btn-' + entityname + '-benchmark').bind("click", function(){benchmarkHandler(entityname, "feature")});
             $('#btn-' + entityname + '-sparsify').bind("click", function(){sparsifyHandler(entityname, "feature")});
             $('#btn-' + entityname + '-delete').bind("click", function(){dropHandler(entityname)});
@@ -170,6 +172,9 @@ function infoHandler(entityname) {
     $('#' + entityname + ' > div.details').show();
 }
 
+function vacuumHandler(entityname){
+    entityVacuum(entityname);
+}
 
 function benchmarkHandler(entityname, attribute){
     entityBenchmark(entityname, attribute);

@@ -26,7 +26,7 @@ object EntityPartitioner {
     * @param mode        mode of partitioning (replacing data, etc.)
     * @return
     */
-  def apply(entity: Entity, nPartitions: Int, join: Option[DataFrame], cols: Option[Seq[String]], mode: PartitionMode.Value)(implicit ac: AdamContext): Try[Entity] = {
+  def apply(entity: Entity, nPartitions: Int, join: Option[DataFrame] = None, cols: Option[Seq[String]] = None, mode: PartitionMode.Value = PartitionMode.REPLACE_EXISTING)(implicit ac: AdamContext): Try[Entity] = {
     //checks
     if (entity.getFeatureData.isEmpty) {
       return Failure(new GeneralAdamException("no feature data available for performing repartitioning"))

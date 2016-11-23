@@ -1,10 +1,16 @@
 package org.vitrivr.adampro.rpc
 
+import com.google.protobuf.ByteString
+import io.grpc.stub.StreamObserver
+import org.apache.spark.annotation.Experimental
+import org.apache.spark.sql.Row
+import org.apache.spark.sql.types.{StructField, StructType}
 import org.vitrivr.adampro.api._
 import org.vitrivr.adampro.catalog.CatalogOperator
-import org.vitrivr.adampro.datatypes.FieldTypes.SERIALTYPE
 import org.vitrivr.adampro.entity.Entity
 import org.vitrivr.adampro.exception.GeneralAdamException
+import org.vitrivr.adampro.grpc.grpc.AdaptScanMethodsMessage.{IndexCollection, QueryCollection}
+import org.vitrivr.adampro.grpc.grpc._
 import org.vitrivr.adampro.helpers.benchmark.IndexCollectionFactory.{ExistingIndexCollectionOption, NewIndexCollectionOption}
 import org.vitrivr.adampro.helpers.benchmark.QueryCollectionFactory.{LoggedQueryCollectionOption, RandomQueryCollectionOption}
 import org.vitrivr.adampro.helpers.benchmark._
@@ -13,13 +19,6 @@ import org.vitrivr.adampro.index.structures.IndexTypes
 import org.vitrivr.adampro.main.{AdamContext, SparkStartup}
 import org.vitrivr.adampro.query.query.Predicate
 import org.vitrivr.adampro.utils.{AdamImporter, Logging}
-import com.google.protobuf.ByteString
-import io.grpc.stub.StreamObserver
-import org.apache.spark.annotation.Experimental
-import org.apache.spark.sql.Row
-import org.apache.spark.sql.types.{StructField, StructType}
-import org.vitrivr.adampro.grpc.grpc.AdaptScanMethodsMessage.{IndexCollection, QueryCollection}
-import org.vitrivr.adampro.grpc.grpc._
 
 import scala.collection.mutable.ListBuffer
 import scala.concurrent.duration._
@@ -268,7 +267,29 @@ class DataDefinitionRPC extends AdamDefinitionGrpc.AdamDefinition with Logging {
       }
     }
   }
-  
+
+
+  /**
+    *
+    * @param request
+    * @return
+    */
+  override def vacuumEntity(request: EntityNameMessage): Future[AckMessage] = {
+    log.debug("rpc call for vacuum operation")
+
+    val entityname = request.entity
+
+    val res = EntityOp.vacuum(entityname)
+
+    if (res.isSuccess) {
+      Future.successful(AckMessage(code = AckMessage.Code.OK, res.get.entityname))
+    } else {
+      log.error(res.failed.get.getMessage, res.failed.get)
+      Future.successful(AckMessage(code = AckMessage.Code.ERROR, message = res.failed.get.getMessage))
+    }
+  }
+
+
 
   /**
     *

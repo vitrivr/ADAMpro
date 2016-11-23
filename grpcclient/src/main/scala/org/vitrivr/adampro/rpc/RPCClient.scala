@@ -364,6 +364,18 @@ class RPCClient(channel: ManagedChannel,
   }
 
   /**
+    * Vacuum entity.
+    *
+    * @param entityname name of entity
+    */
+  def entityVacuum(entityname: String): Try[Void] = {
+    execute("vacuum entity operation") {
+      definerBlocking.vacuumEntity(EntityNameMessage(entityname))
+      Success(null)
+    }
+  }
+
+  /**
     * Drop entity.
     *
     * @param entityname name of entity

@@ -1,5 +1,6 @@
 package org.vitrivr.adampro.api
 
+import org.vitrivr.adampro.config.AdamConfig
 import org.vitrivr.adampro.entity.Entity._
 import org.vitrivr.adampro.entity.{AttributeDefinition, Entity, EntityPartitioner}
 import org.vitrivr.adampro.exception.GeneralAdamException
@@ -128,6 +129,19 @@ object EntityOp extends GenericOp {
   def delete(entityname: EntityName, predicates: Seq[Predicate])(implicit ac: AdamContext): Try[Int] = {
     execute("delete data from " + entityname + " operation") {
       Success(Entity.load(entityname).get.delete(predicates))
+    }
+  }
+
+  /**
+    * Vacuum an entity.
+    *
+    * @param entityname name of entity
+    *
+    */
+  def vacuum(entityname: EntityName)(implicit ac: AdamContext): Try[Entity] = {
+    execute("vacuum entity " + entityname + " operation") {
+      //TODO: make a true vacuum operation, at the moment only repartitioning
+      EntityPartitioner(Entity.load(entityname).get, AdamConfig.defaultNumberOfPartitions)
     }
   }
 
