@@ -28,6 +28,9 @@ lazy val chronos = project.dependsOn(grpcclient).
 lazy val web = project.dependsOn(grpcclient).
   settings(commonSettings: _*)
 
+lazy val importer = project.dependsOn(grpcclient).
+  settings(commonSettings: _*)
+
 
 //build
 lazy val buildSettings = Seq(
