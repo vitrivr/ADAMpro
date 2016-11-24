@@ -2,8 +2,8 @@ package org.vitrivr.adampro.main
 
 import io.grpc.Server
 import io.grpc.netty.NettyServerBuilder
-import org.vitrivr.adampro.grpc.grpc._
 import org.vitrivr.adampro.config.AdamConfig
+import org.vitrivr.adampro.grpc.grpc._
 import org.vitrivr.adampro.rpc.{DataDefinitionRPC, SearchRPC}
 import org.vitrivr.adampro.utils.Logging
 
@@ -17,14 +17,18 @@ import scala.concurrent.ExecutionContext
   */
 class RPCStartup extends Thread with Logging {
   override def run(): Unit = {
-    log.debug("RPC server starting up")
+    try {
+      log.debug("RPC server starting up")
 
-    val server = new RPCServer(scala.concurrent.ExecutionContext.global)
-    server.start()
+      val server = new RPCServer(scala.concurrent.ExecutionContext.global)
+      server.start()
 
-    log.debug("RPC server running")
+      log.debug("RPC server running")
 
-    server.blockUntilShutdown()
+      server.blockUntilShutdown()
+    } catch {
+      case e: Exception => log.error("exception in RPC", e)
+    }
   }
 }
 
