@@ -4,6 +4,7 @@ import org.vitrivr.adampro.api.QueryOp
 import org.vitrivr.adampro.entity.Entity
 import org.vitrivr.adampro.helpers.benchmark.ScanWeightCatalogOperator.{ScanWeightable, ScanWeightedEntity, ScanWeightedIndex}
 import org.vitrivr.adampro.index.Index
+import org.vitrivr.adampro.main.AdamContext
 import org.vitrivr.adampro.query.query.NearestNeighbourQuery
 import org.vitrivr.adampro.utils.Logging
 
@@ -13,13 +14,13 @@ import org.vitrivr.adampro.utils.Logging
   * Ivan Giangreco
   * September 2016
   */
-private[benchmark] abstract class Benchmarker(indexes: Seq[Index], queries: Seq[NearestNeighbourQuery]) extends Serializable with Logging {
+private[benchmark] abstract class Benchmarker(indexes: Seq[Index], queries: Seq[NearestNeighbourQuery])(@transient implicit val ac: AdamContext) extends Serializable with Logging {
   //only one entity
   assert(indexes.map(_.entityname).distinct.length == 1)
 
   private val NRUNS = 100
 
-  case class Measurement(precision: Float, recall: Float, time: Long)
+  case class Measurement(nnq: NearestNeighbourQuery, precision: Float, recall: Float, time: Long)
 
   if (queries.length < 10) {
     log.warn("only " + queries.length + " used for benchmarking; benchmarking results may not be significant")
@@ -78,7 +79,7 @@ private[benchmark] abstract class Benchmarker(indexes: Seq[Index], queries: Seq[
       val precision = 1.toFloat
       val time = t2 - t1
 
-      Measurement(precision, recall, time)
+      Measurement(nnq, precision, recall, time)
     }
   }
 
@@ -107,7 +108,7 @@ private[benchmark] abstract class Benchmarker(indexes: Seq[Index], queries: Seq[
       val time = t2 - t1
 
 
-      Measurement(precision, recall, time)
+      Measurement(nnq, precision, recall, time)
     }
   }
 

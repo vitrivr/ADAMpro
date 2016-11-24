@@ -11,7 +11,7 @@ import org.vitrivr.adampro.query.query.NearestNeighbourQuery
   * Ivan Giangreco
   * November 2016
   */
-private[benchmark] class NaiveBenchmarker(indexes: Seq[Index], queries: Seq[NearestNeighbourQuery])(@transient implicit val ac: AdamContext) extends Benchmarker(indexes, queries) {
+private[benchmark] class NaiveBenchmarker(indexes: Seq[Index], queries: Seq[NearestNeighbourQuery])(@transient implicit override val ac: AdamContext) extends Benchmarker(indexes, queries)(ac) {
 
   /**
     * @param index
