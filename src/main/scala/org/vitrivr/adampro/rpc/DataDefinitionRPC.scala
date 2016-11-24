@@ -201,7 +201,7 @@ class DataDefinitionRPC extends AdamDefinitionGrpc.AdamDefinition with Logging {
     if (lb.forall(_.isSuccess)) {
       Future.successful(AckMessage(code = AckMessage.Code.OK))
     } else {
-      log.error(lb.count(_.isFailure) + "errors when inserting into entities: " + lb.filter(_.isFailure).map(_.failed.get.getMessage))
+      log.error(lb.count(_.isFailure) + " errors when inserting into entities: " + lb.filter(_.isFailure).map(_.failed.get.getMessage))
       Future.successful(AckMessage(code = AckMessage.Code.ERROR, lb.count(_.isFailure) + "errors when inserting into entities: " + lb.filter(_.isFailure).map(_.failed.get.getMessage)))
     }
   }
