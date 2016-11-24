@@ -1,6 +1,6 @@
 package org.vitrivr.adampro.importer
 
-import java.io.{BufferedWriter, File, FileWriter}
+import java.io.{FilenameFilter, BufferedWriter, File, FileWriter}
 import java.nio.file.{Files, Paths}
 
 import com.google.protobuf.CodedInputStream
@@ -8,6 +8,7 @@ import org.apache.log4j.Logger
 import org.vitrivr.adampro.grpc.grpc.InsertMessage.TupleInsertMessage
 import org.vitrivr.adampro.grpc.grpc._
 import org.vitrivr.adampro.rpc.RPCClient
+import org.vitrivr.adampro.rpc.datastructures.RPCAttributeDefinition
 
 import scala.collection.immutable.HashSet
 import scala.collection.mutable.ListBuffer
@@ -136,7 +137,11 @@ object Importer {
     if (Paths.get(logpath).toFile.exists()) {
       logpath = proplogpath + System.currentTimeMillis()
 
-      filter = HashSet().++(Source.fromFile(proplogpath).getLines)
+      //import all logs
+      filter = HashSet() ++
+        Paths.get(proplogpath).getParent.toFile.listFiles(new FilenameFilter {
+        override def accept(dir: File, name: String): Boolean = name.startsWith(Paths.get(proplogpath).getFileName.toString)
+      }).flatMap(Source.fromFile(_).getLines)
     }
 
     val logfile = new File(logpath)
@@ -156,7 +161,11 @@ object Importer {
       val tmpPathLogs = new ListBuffer[String]()
       log.trace("starting new batch")
 
-      groupedPaths.foreach { gpath =>
+      val it = groupedPaths.iterator
+
+      while (it.hasNext) {
+        val gpath = it.next
+
         if (!filter.contains(gpath.toAbsolutePath.toString)) {
           try {
             tmpPathLogs += gpath.toAbsolutePath.toString
