@@ -1,6 +1,6 @@
 package org.vitrivr.adampro.importer
 
-import java.io.{FilenameFilter, BufferedWriter, File, FileWriter}
+import java.io._
 import java.nio.file.{Files, Paths}
 
 import com.google.protobuf.CodedInputStream
@@ -167,11 +167,16 @@ object Importer {
         val gpath = it.next
 
         if (!filter.contains(gpath.toAbsolutePath.toString)) {
+
+          var is: InputStream = null
+
           try {
             tmpPathLogs += gpath.toAbsolutePath.toString
 
             val entity = gpath.getFileName.toString.replace(".bin", "")
-            val in = CodedInputStream.newInstance(Files.newInputStream(gpath))
+
+            is = Files.newInputStream(gpath)
+            val in = CodedInputStream.newInstance(is)
 
             while (!in.isAtEnd) {
               val tuple = TupleInsertMessage.parseDelimitedFrom(in).get
@@ -185,6 +190,8 @@ object Importer {
             }
           } catch {
             case e: Exception => log.error("exception while reading files: " + gpath, e)
+          } finally {
+            is.close()
           }
         }
       }
