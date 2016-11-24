@@ -21,7 +21,7 @@ object BenchmarkOp {
     */
   def benchmarkAndUpdateWeight(ic: IndexCollection, qc: QueryCollection)(implicit ac: AdamContext): Try[Void] = {
     try {
-      val benchmarker = new Benchmarker(ic.getIndexes, qc.getQueries)
+      val benchmarker = new NaiveBenchmarker(ic.getIndexes, qc.getQueries)
       val scores = benchmarker.getScores()
 
       scores.foreach {

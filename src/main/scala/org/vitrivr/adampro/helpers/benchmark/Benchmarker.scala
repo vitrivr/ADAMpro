@@ -4,7 +4,6 @@ import org.vitrivr.adampro.api.QueryOp
 import org.vitrivr.adampro.entity.Entity
 import org.vitrivr.adampro.helpers.benchmark.ScanWeightCatalogOperator.{ScanWeightable, ScanWeightedEntity, ScanWeightedIndex}
 import org.vitrivr.adampro.index.Index
-import org.vitrivr.adampro.main.AdamContext
 import org.vitrivr.adampro.query.query.NearestNeighbourQuery
 import org.vitrivr.adampro.utils.Logging
 
@@ -14,7 +13,7 @@ import org.vitrivr.adampro.utils.Logging
   * Ivan Giangreco
   * September 2016
   */
-private[benchmark] class Benchmarker(indexes: Seq[Index], queries: Seq[NearestNeighbourQuery])(@transient implicit val ac: AdamContext) extends Serializable with Logging {
+private[benchmark] abstract class Benchmarker(indexes: Seq[Index], queries: Seq[NearestNeighbourQuery]) extends Serializable with Logging {
   //only one entity
   assert(indexes.map(_.entityname).distinct.length == 1)
 
@@ -22,10 +21,9 @@ private[benchmark] class Benchmarker(indexes: Seq[Index], queries: Seq[NearestNe
 
   case class Measurement(precision: Float, recall: Float, time: Long)
 
-  if(queries.length < 10){
+  if (queries.length < 10) {
     log.warn("only " + queries.length + " used for benchmarking; benchmarking results may not be significant")
   }
-
 
   /**
     *
@@ -56,8 +54,8 @@ private[benchmark] class Benchmarker(indexes: Seq[Index], queries: Seq[NearestNe
     val entity = indexes.head.entity.get
     val rel = QueryOp.sequential(entity.entityname, nnq, None).get.get.select(entity.pk.name).collect().map(_.getAs[Any](0)).toSet
 
-    val indexScores = indexes.map { index => ScanWeightedIndex(index) -> totalScore(performMeasurement(index, nnq, rel)) }
-    val entityScore = Seq(ScanWeightedEntity(entity, nnq.attribute) -> totalScore(performMeasurement(entity, nnq)))
+    val indexScores = indexes.map { index => ScanWeightedIndex(index) -> totalScore(index, performMeasurement(index, nnq, rel)) }
+    val entityScore = Seq(ScanWeightedEntity(entity, nnq.attribute) -> totalScore(entity, performMeasurement(entity, nnq)))
 
     (indexScores ++ entityScore).toMap
   }
@@ -85,7 +83,7 @@ private[benchmark] class Benchmarker(indexes: Seq[Index], queries: Seq[NearestNe
   }
 
 
-    /**
+  /**
     *
     * @param index
     * @param nnq
@@ -116,72 +114,20 @@ private[benchmark] class Benchmarker(indexes: Seq[Index], queries: Seq[NearestNe
   /**
     * Computes a score per scan method. The higher the score the better the scan method.
     *
+    * @param index
     * @param measurements
     * @return
     */
-  private def totalScore(measurements: Seq[Measurement]): Float = {
-    val _timeScore = timeScore(measurements.map(_.time))
-    val _precisionScore = precisionScore(measurements.map(_.precision))
-    val _recallScore = recallScore(measurements.map(_.recall))
-
-    val scores = Seq(_timeScore, _precisionScore, _recallScore)
-
-
-    scores.sum.toFloat / scores.length.toFloat
-  }
-
-  /**
-    *
-    * @param measurements
-    * @return
-    */
-  private def timeScore(measurements: Seq[Long]): Float = {
-    val mean = measurements.sum / measurements.length.toFloat
-    val stdev = math.sqrt(measurements.map { measure => (measure - mean) * (measure - mean) }.sum / measurements.length.toFloat).toFloat
-
-    //remove measurements > or < 3 * stdev
-    val filteredMeasurements = measurements.filterNot(m => m > mean + 3 * stdev).filterNot(m => m < mean - 3 * stdev)
-
-    //scoring function
-    val maxTime = 10
-    val score = (x : Float) => 1 / (1 + maxTime * math.exp(-0.5 * x)) //TODO: normalize by other measurements too?
-
-    val scores = filteredMeasurements.map(x => score(x.toFloat))
-
-    //average
-    scores.sum.toFloat / scores.length.toFloat
-  }
+  protected def totalScore(index: Index, measurements: Seq[Measurement]): Float
 
 
   /**
+    * Computes a score per scan method. The higher the score the better the scan method.
     *
+    * @param entity
     * @param measurements
     * @return
     */
-  private def precisionScore(measurements: Seq[Float]): Float = {
-    val mean = measurements.sum / measurements.length.toFloat
-    val stdev = math.sqrt(measurements.map { measure => (measure - mean) * (measure - mean) }.sum / measurements.length.toFloat).toFloat
+  protected def totalScore(entity: Entity, measurements: Seq[Measurement]): Float
 
-    //remove measurements > or < 3 * stdev
-    val filteredMeasurements = measurements.filterNot(m => m > mean + 3 * stdev).filterNot(m => m < mean - 3 * stdev)
-
-    //average
-    filteredMeasurements.sum / filteredMeasurements.length.toFloat
-  }
-
-  /**
-    *
-    * @param measurements
-    * @return
-    */
-  private def recallScore(measurements: Seq[Float]): Float = {
-    val mean = measurements.sum / measurements.length.toFloat
-    val stdev = math.sqrt(measurements.map { measure => (measure - mean) * (measure - mean) }.sum / measurements.length.toFloat).toFloat
-
-    //remove measurements > or < 3 * stdev
-    val filteredMeasurements = measurements.filterNot(m => m > mean + 3 * stdev).filterNot(m => m < mean - 3 * stdev)
-
-    //average
-    filteredMeasurements.sum / filteredMeasurements.length.toFloat
-  }
 }
