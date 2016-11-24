@@ -125,7 +125,7 @@ case class Entity(val entityname: EntityName)(@transient implicit val ac: AdamCo
       }.filter(_.isSuccess).map(_.get)
 
       if (handlerData.nonEmpty) {
-        data = Some(handlerData.reduce(_.join(_, pk.name)))  //.coalesce(AdamConfig.defaultNumberOfPartitions))
+        data = Some(handlerData.reduce(_.join(_, pk.name))) //.coalesce(AdamConfig.defaultNumberOfPartitions))
       }
     }
 
@@ -208,6 +208,7 @@ case class Entity(val entityname: EntityName)(@transient implicit val ac: AdamCo
   private val N_INSERTS_VACUUMING = "ninserts"
   private val MAX_INSERTS_VACUUMING = "maxinserts"
   private val MAX_INSERTS_BEFORE_REPARTITIONING = CatalogOperator.getEntityOption(entityname, Some(MAX_INSERTS_VACUUMING)).get.get(MAX_INSERTS_VACUUMING).map(_.toInt).getOrElse(500)
+  private val MAX_PARTITIONS = 100
 
   /**
     * Inserts data into the entity.
@@ -260,12 +261,12 @@ case class Entity(val entityname: EntityName)(@transient implicit val ac: AdamCo
         }
       }
 
-      if(ninserts < MAX_INSERTS_BEFORE_REPARTITIONING){
+      if (ninserts < MAX_INSERTS_BEFORE_REPARTITIONING) {
         CatalogOperator.updateEntityOption(entityname, N_INSERTS_VACUUMING, (ninserts + 1).toString)
       } else {
         log.info("number of inserts necessitates now re-partitioning")
 
-        if(schema().filter(_.storagehandler.engine.isInstanceOf[ParquetEngine]).nonEmpty){
+        if (schema().filter(_.storagehandler.engine.isInstanceOf[ParquetEngine]).nonEmpty) {
           //entity is partitionable
           EntityPartitioner(this, AdamConfig.defaultNumberOfPartitions, None, None, PartitionMode.REPLACE_EXISTING) //this resets insertion counter
         } else {
@@ -278,15 +279,25 @@ case class Entity(val entityname: EntityName)(@transient implicit val ac: AdamCo
     } catch {
       case e: Exception => Failure(e)
     } finally {
+
+      //TODO: possibly clean this
+      if (getFeatureData.isDefined) {
+        val npartitions = getFeatureData.get.rdd.getNumPartitions
+
+        if (npartitions > MAX_PARTITIONS && schema().filter(_.storagehandler.engine.isInstanceOf[ParquetEngine]).nonEmpty) {
+          //entity is partitionable
+          EntityPartitioner(this, AdamConfig.defaultNumberOfPartitions, None, None, PartitionMode.REPLACE_EXISTING) //this resets insertion counter
+        }
+      }
+
       markStale()
-      //TODO: possibly partition here if too many partitions are created
     }
   }
 
   /**
     *
     */
-  private[entity] def resetInsertionCounter(): Unit ={
+  private[entity] def resetInsertionCounter(): Unit = {
     CatalogOperator.deleteEntityOption(entityname, N_INSERTS_VACUUMING)
   }
 
@@ -404,14 +415,14 @@ case class Entity(val entityname: EntityName)(@transient implicit val ac: AdamCo
     *
     * @param options
     */
-  def propertiesMap(options: Map[String, String]  = Map()) = {
+  def propertiesMap(options: Map[String, String] = Map()) = {
     val lb = ListBuffer[(String, String)]()
 
     lb.append("attributes" -> CatalogOperator.getAttributes(entityname).get.map(field => field.name).mkString(","))
     lb.append("indexes" -> indexes.filter(_.isSuccess).map(_.get.indexname).mkString(","))
     lb.append("partitions" -> getFeatureData.map(_.rdd.getNumPartitions.toString).getOrElse("none"))
 
-    if(!(options.contains("count") && options("count") == "false")){
+    if (!(options.contains("count") && options("count") == "false")) {
       lb.append("count" -> count.toString)
     }
 
