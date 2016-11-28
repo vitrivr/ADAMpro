@@ -173,7 +173,7 @@ class Importer(grpc: RPCClient) {
               val tuple = TupleInsertMessage.parseDelimitedFrom(in).get
 
               val msg = InsertMessage(entity, Seq(tuple))
-              runningCounts += entity -> runningCounts.getOrElse(entity, 0)
+              runningCounts += entity -> (runningCounts.getOrElse(entity, 0) + 1)
 
               batch += msg
             }
