@@ -11,6 +11,7 @@ import org.vitrivr.adampro.rpc.RPCClient
 import org.vitrivr.adampro.rpc.datastructures.RPCAttributeDefinition
 
 import scala.collection.immutable.HashSet
+import scala.collection.mutable
 import scala.collection.mutable.ListBuffer
 import scala.io.Source
 
@@ -21,34 +22,15 @@ import scala.io.Source
   * Ivan Giangreco
   * November 2016
   */
-object Importer {
+class Importer(grpc: RPCClient) {
   val log = Logger.getLogger(getClass.getName)
 
-  def main(args: Array[String]) {
-    try {
-      val grpcHost = "localhost"
-      val grpcPort = 5890
-
-      val grpc = RPCClient(grpcHost, grpcPort)
-
-      if (args.length < 2) {
-        log.error("Usage: Importer path logpath")
-        sys.exit(1)
-      }
-
-      createEntities(grpc)
-      importProtoFiles(args(0), args(1), grpc)
-    } catch {
-      case e: Exception => log.error("error while importing", e)
-    }
-  }
-
+  val runningCounts = mutable.Map[String, Int]()
 
   /**
     *
-    * @param grpc
     */
-  def createEntities(grpc: RPCClient): Unit = {
+  def createEntities(): Unit = {
     //TODO: make this more generic, e.g., by importing entity creation messages
 
     //metadata tables
@@ -119,14 +101,23 @@ object Importer {
     }
   }
 
+  /**
+    *
+    * @param path
+    * @return
+    */
+  private def files(path: String) = {
+    import scala.collection.JavaConversions._
+    Files.walk(Paths.get(path)).iterator().filter(_.toString.endsWith(".bin"))
+  }
+
 
   /**
     *
     * @param path
     * @param proplogpath
-    * @param grpc
     */
-  def importProtoFiles(path: String, proplogpath: String, grpc: RPCClient) = {
+  def importProtoFiles(path: String, proplogpath: String) = {
     if (!Paths.get(path).toFile.exists()) {
       throw new Exception("Path does not exist.")
     }
@@ -140,8 +131,8 @@ object Importer {
       //import all logs
       filter = HashSet() ++
         Paths.get(proplogpath).getParent.toFile.listFiles(new FilenameFilter {
-        override def accept(dir: File, name: String): Boolean = name.startsWith(Paths.get(proplogpath).getFileName.toString)
-      }).flatMap(Source.fromFile(_).getLines)
+          override def accept(dir: File, name: String): Boolean = name.startsWith(Paths.get(proplogpath).getFileName.toString)
+        }).flatMap(Source.fromFile(_).getLines)
     }
 
     val logfile = new File(logpath)
@@ -151,7 +142,7 @@ object Importer {
 
     log.trace("counting number of files in path")
 
-    val length = files(path).length
+    val length = paths.length
     var remaining = length
 
     log.info("will process " + remaining + " files")
@@ -182,6 +173,8 @@ object Importer {
               val tuple = TupleInsertMessage.parseDelimitedFrom(in).get
 
               val msg = InsertMessage(entity, Seq(tuple))
+              runningCounts += entity -> runningCounts.getOrElse(entity, 0)
+
               batch += msg
             }
 
@@ -215,13 +208,89 @@ object Importer {
     pathLogger.close()
   }
 
+
   /**
     *
-    * @param path
     * @return
     */
-  def files(path: String) = {
-    import scala.collection.JavaConversions._
-    Files.walk(Paths.get(path)).iterator().filter(_.toString.endsWith(".bin"))
+  private def getEntities(): Seq[String] = {
+    val entities = grpc.entityList()
+
+    if (entities.isSuccess) {
+      entities.get
+    } else {
+      log.error("could not retrieve list of all entities", entities.failed.get)
+      Seq()
+    }
+  }
+
+  /**
+    *
+    */
+  def vacuumEntities(): Unit = {
+    val entities = getEntities()
+
+    val it = entities.iterator
+    while (it.hasNext) {
+      val entity = it.next()
+      try {
+        val res = grpc.entityVacuum(entity)
+
+        if (res.isSuccess) {
+          log.trace("vacuumed entity " + entity)
+        } else {
+          throw res.failed.get
+        }
+      } catch {
+        case e: Exception => log.error("could not vacuum entity " + entity, e)
+      }
+    }
+  }
+
+
+  /**
+    *
+    */
+  def outputCounts(): Unit = {
+    getCounts().foreach{ case(entity, count) =>
+      println(entity + " -> " + count + " (logged: " + runningCounts.getOrElse(entity, "<N/A>") + ")")
+    }
+  }
+
+  /**
+    *
+    */
+  private def getCounts(): Map[String, String] = {
+    getEntities().map(entity => entity -> grpc.entityDetails(entity).map(_.get("count").getOrElse("0")).getOrElse("0")).toMap
+  }
+
+
+}
+
+
+object Importer {
+  val log = Logger.getLogger(getClass.getName)
+
+  def main(args: Array[String]) {
+    try {
+      val grpcHost = "localhost"
+      val grpcPort = 5890
+
+      val grpc = RPCClient(grpcHost, grpcPort)
+
+      if (args.length < 2) {
+        System.err.println("Usage: Importer path logpath")
+        sys.exit(1)
+      }
+
+      val importer = new Importer(grpc)
+
+      importer.createEntities()
+      importer.importProtoFiles(args(0), args(1))
+      importer.vacuumEntities()
+      importer.outputCounts()
+    } catch {
+      case e: Exception => log.error("error while importing", e)
+    }
   }
 }
