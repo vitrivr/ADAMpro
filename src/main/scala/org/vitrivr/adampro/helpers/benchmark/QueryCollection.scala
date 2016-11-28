@@ -17,7 +17,7 @@ import org.apache.spark.util.random.Sampling
   * Ivan Giangreco
   * September 2016
   */
-private[benchmark] trait QueryCollection extends Logging with Serializable {
+private[helpers] trait QueryCollection extends Logging with Serializable {
   def getQueries: Seq[NearestNeighbourQuery]
 }
 

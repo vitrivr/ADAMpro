@@ -20,11 +20,12 @@ private[benchmark] abstract class Benchmarker(indexes: Seq[Index], queries: Seq[
 
   private val NRUNS = 100
 
-  case class Measurement(nnq: NearestNeighbourQuery, precision: Float, recall: Float, time: Long)
+  case class Measurement(precision: Float, recall: Float, time: Long)
 
   if (queries.length < 10) {
     log.warn("only " + queries.length + " used for benchmarking; benchmarking results may not be significant")
   }
+
 
   /**
     *
@@ -79,7 +80,7 @@ private[benchmark] abstract class Benchmarker(indexes: Seq[Index], queries: Seq[
       val precision = 1.toFloat
       val time = t2 - t1
 
-      Measurement(nnq, precision, recall, time)
+      Measurement(precision, recall, time)
     }
   }
 
@@ -108,27 +109,26 @@ private[benchmark] abstract class Benchmarker(indexes: Seq[Index], queries: Seq[
       val time = t2 - t1
 
 
-      Measurement(nnq, precision, recall, time)
+      Measurement(precision, recall, time)
     }
   }
 
   /**
     * Computes a score per scan method. The higher the score the better the scan method.
-    *
+ *
     * @param index
     * @param measurements
     * @return
     */
   protected def totalScore(index: Index, measurements: Seq[Measurement]): Float
 
-
   /**
     * Computes a score per scan method. The higher the score the better the scan method.
-    *
+ *
     * @param entity
     * @param measurements
     * @return
     */
-  protected def totalScore(entity: Entity, measurements: Seq[Measurement]): Float
+  protected def totalScore(entity : Entity, measurements: Seq[Measurement]): Float
 
-}
+  }

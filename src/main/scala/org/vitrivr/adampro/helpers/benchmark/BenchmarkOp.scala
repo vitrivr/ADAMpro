@@ -1,6 +1,7 @@
 package org.vitrivr.adampro.helpers.benchmark
 
-import org.vitrivr.adampro.helpers.benchmark.ScanWeightCatalogOperator.ScanWeightedIndex
+import org.vitrivr.adampro.entity.Entity
+import org.vitrivr.adampro.index.Index
 import org.vitrivr.adampro.main.AdamContext
 
 import scala.util.{Failure, Success, Try}
@@ -12,8 +13,6 @@ import scala.util.{Failure, Success, Try}
   * September 2016
   */
 object BenchmarkOp {
-
-
   /**
     *
     * @param ic collection of indexes
@@ -30,7 +29,7 @@ object BenchmarkOp {
       }
 
       //TODO: improve coding
-      if (ic.isInstanceOf[NewIndexCollection]) {
+      /*if (ic.isInstanceOf[NewIndexCollection]) {
         //drop the too many newly created indexes
         val indexScores = scores.toSeq.filter(_._1.isInstanceOf[ScanWeightedIndex])
           .map(_._1.asInstanceOf[ScanWeightedIndex])
@@ -39,11 +38,30 @@ object BenchmarkOp {
         indexScores.dropRight(math.min(indexScores.size, 3)).foreach { index =>
           index.index.drop()
         }
-      }
+      }*/
 
       Success(null)
     } catch {
       case e: Exception => Failure(e)
     }
+  }
+
+  /**
+    *
+    * @param index
+    * @return
+    */
+  def getScore(index : Index) : Float = {
+    ScanWeightCatalogOperator(index)
+  }
+
+  /**
+    *
+    * @param entity
+    * @param attribute
+    * @return
+    */
+  def getScore(entity : Entity, attribute : String): Float ={
+    ScanWeightCatalogOperator(entity, attribute)
   }
 }

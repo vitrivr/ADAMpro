@@ -17,7 +17,7 @@ import org.vitrivr.adampro.utils.Logging
   * Ivan Giangreco
   * September 2016
   */
-private[benchmark] trait IndexCollection extends Logging with Serializable {
+private[helpers] trait IndexCollection extends Logging with Serializable {
   def getIndexes: Seq[Index]
 }
 

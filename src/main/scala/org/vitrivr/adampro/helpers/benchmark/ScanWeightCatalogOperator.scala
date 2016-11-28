@@ -12,7 +12,7 @@ import org.vitrivr.adampro.index.Index.IndexName
   * Ivan Giangreco
   * June 2016
   */
-object ScanWeightCatalogOperator {
+private[benchmark] object ScanWeightCatalogOperator {
   val DEFAULT_WEIGHT = 100.toFloat
   val SCANWEIGHT_OPTION_NAME = "scanweight"
 
