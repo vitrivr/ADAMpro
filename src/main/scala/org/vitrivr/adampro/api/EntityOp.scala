@@ -138,10 +138,11 @@ object EntityOp extends GenericOp {
     * @param entityname name of entity
     *
     */
-  def vacuum(entityname: EntityName)(implicit ac: AdamContext): Try[Entity] = {
+  def vacuum(entityname: EntityName)(implicit ac: AdamContext): Try[Void] = {
     execute("vacuum entity " + entityname + " operation") {
-      //TODO: make a true vacuum operation, at the moment only repartitioning
-      EntityPartitioner(Entity.load(entityname).get, AdamConfig.defaultNumberOfPartitions)
+      val entity = Entity.load(entityname).get
+      EntityPartitioner(entity, AdamConfig.defaultNumberOfPartitions)
+      entity.markStale()
     }
   }
 
