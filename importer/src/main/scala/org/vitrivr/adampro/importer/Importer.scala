@@ -142,7 +142,7 @@ class Importer(grpc: RPCClient) {
 
     log.trace("counting number of files in path")
 
-    val length = paths.length
+    val length = files(path).length
     var remaining = length
 
     log.info("will process " + remaining + " files")
