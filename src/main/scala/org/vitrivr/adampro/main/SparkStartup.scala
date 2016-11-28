@@ -16,7 +16,8 @@ import org.vitrivr.adampro.utils.Logging
   */
 object SparkStartup extends Logging {
   val sparkConfig = new SparkConf().setAppName("ADAMpro")
-    .set("spark.driver.maxResultSize", "1000m")
+    .set("spark.driver.maxResultSize", "1g")
+    .set("spark.executor.memory", "2g")
     .set("spark.akka.frameSize", "1024")
     .set("spark.serializer", "org.apache.spark.serializer.KryoSerializer")
     .set("spark.kryoserializer.buffer.max", "2047m")
