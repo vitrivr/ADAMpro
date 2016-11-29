@@ -8,6 +8,8 @@ resolvers ++= Seq(
 libraryDependencies ++= Seq(
   "com.google.protobuf" % "protobuf-java" % "3.0.0",
   "io.grpc" % "grpc-netty" % "1.0.1",
+  "io.grpc" % "grpc-protobuf" % "1.0.1",
+  "io.grpc" % "grpc-stub" % "1.0.1",
   "com.twitter.finatra" %% "finatra-http" % "2.1.6",
   "org.slf4j" % "slf4j-simple" % "1.7.21"
 )
