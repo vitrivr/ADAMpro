@@ -26,6 +26,9 @@ object SparkStartup extends Logging {
     .set("spark.scheduler.allocation.file", AdamConfig.schedulerFile)
     .set("spark.driver.allowMultipleContexts", "true")
     .set("spark.sql.parquet.compression.codec", "snappy")
+    .set("spark.sql.hive.convertMetastoreParquet.mergeSchema","false")
+    .set("parquet.enable.summary-metadata","false")
+
 
 
   if (AdamConfig.master.isDefined) {
