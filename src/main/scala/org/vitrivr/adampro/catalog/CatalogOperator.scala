@@ -47,9 +47,11 @@ object CatalogOperator extends Logging {
   private val _indexOptions = TableQuery[IndexOptionsCatalog]
   private val _storeengineOptions = TableQuery[StorageEngineOptionsCatalog]
   private val _partitioners = TableQuery[PartitionerCatalog]
+  private val _optimizerOptions = TableQuery[OptimizerOptionsCatalog]
+  private val _options = TableQuery[OptionsCatalog]
 
   private[catalog] val CATALOGS = Seq(
-    _entitites, _entityOptions, _attributes, _attributeOptions, _indexes, _indexOptions, _storeengineOptions, _partitioners
+    _entitites, _entityOptions, _attributes, _attributeOptions, _indexes, _indexOptions, _storeengineOptions, _partitioners, _options
   )
 
   /**
@@ -447,7 +449,7 @@ object CatalogOperator extends Logging {
 
       val indexesQuery = _indexes.map(_.indexname).result
       val indexes = Await.result(DB.run(indexesQuery), MAX_WAITING_TIME)
-      
+
       (entities diff indexes).map(EntityNameHolder(_))
     }
   }
@@ -730,7 +732,7 @@ object CatalogOperator extends Logging {
     * @param partitioner
     * @return
     */
-  def createPartitioner(indexname: EntityNameHolder, noPartitions: Int, partitionerMeta: Serializable, partitioner: CustomPartitioner) : Try[Void] = {
+  def createPartitioner(indexname: EntityNameHolder, noPartitions: Int, partitionerMeta: Serializable, partitioner: CustomPartitioner): Try[Void] = {
     execute("create partitioner") {
       if (!existsIndex(indexname).get) {
         throw new IndexNotExistingException()
@@ -744,7 +746,7 @@ object CatalogOperator extends Logging {
       mbos.close()
 
       val pbos = new ByteArrayOutputStream()
-      val poos= new ObjectOutputStream(pbos)
+      val poos = new ObjectOutputStream(pbos)
       poos.writeObject(partitioner)
       val part = pbos.toByteArray
       poos.close()
@@ -765,7 +767,7 @@ object CatalogOperator extends Logging {
     * @param indexname
     * @return
     */
-  def getPartitionerMeta(indexname: EntityNameHolder) : Try[Any] = {
+  def getPartitionerMeta(indexname: EntityNameHolder): Try[Any] = {
     execute("get partitioner meta") {
       val query = _partitioners.filter(_.indexname === indexname.toString).map(_.meta).result.head
       val data = Await.result(DB.run(query), MAX_WAITING_TIME)
@@ -781,7 +783,7 @@ object CatalogOperator extends Logging {
     * @param indexname
     * @return
     */
-  def getNumberOfPartitions(indexname: EntityNameHolder) : Try[Int] = {
+  def getNumberOfPartitions(indexname: EntityNameHolder): Try[Int] = {
     execute("get number of partitions") {
       val query = _partitioners.filter(_.indexname === indexname.toString).map(_.noPartitions).result.head
       val data = Await.result(DB.run(query), MAX_WAITING_TIME)
@@ -794,7 +796,7 @@ object CatalogOperator extends Logging {
     * @param indexname
     * @return
     */
-  def getPartitioner(indexname: EntityNameHolder) : Try[CustomPartitioner] = {
+  def getPartitioner(indexname: EntityNameHolder): Try[CustomPartitioner] = {
     execute("get partitioner") {
       val query = _partitioners.filter(_.indexname === indexname.toString).map(_.partitioner).result.head
       val data = Await.result(DB.run(query), MAX_WAITING_TIME)
@@ -811,7 +813,7 @@ object CatalogOperator extends Logging {
     * @param indexname
     * @return
     */
-  def dropPartitioner(indexname: EntityNameHolder) : Try[Void] = {
+  def dropPartitioner(indexname: EntityNameHolder): Try[Void] = {
     execute("drop partitioner") {
       if (!existsIndex(indexname).get) {
         throw new IndexNotExistingException()
@@ -821,4 +823,74 @@ object CatalogOperator extends Logging {
     }
   }
 
+
+  /**
+    * Create options for optimizer
+    *
+    * @param optimizer
+    * @param key
+    * @param optimizermeta
+    */
+  def createOptimizerOption(optimizer: String, key: String, optimizermeta: Serializable): Try[Void] = {
+    execute("create optimizer option") {
+      val bos = new ByteArrayOutputStream()
+      val oos = new ObjectOutputStream(bos)
+      oos.writeObject(optimizermeta)
+      val meta = bos.toByteArray
+      oos.close()
+      bos.close()
+
+      val actions = new ListBuffer[DBIOAction[_, NoStream, _]]()
+
+      actions += _optimizerOptions.+=((optimizer, key, meta))
+
+      Await.result(DB.run(DBIO.seq(actions.toArray: _*).transactionally), MAX_WAITING_TIME)
+      null
+    }
+  }
+
+  /**
+    *
+    * @param optimizer
+    * @param key
+    * @return
+    */
+  def containsOptimizerOptionMeta(optimizer: String, key: String): Try[Boolean] = {
+    execute("get optimizer meta") {
+      val query = _optimizerOptions.filter(_.optimizer === optimizer).filter(_.key === key).map(x => (x.optimizer, x.key)).countDistinct.result
+      val count = Await.result(DB.run(query), MAX_WAITING_TIME)
+
+      count > 0
+    }
+  }
+
+  /**
+    *
+    * @param optimizer
+    * @param key
+    * @return
+    */
+  def getOptimizerOptionMeta(optimizer: String, key: String): Try[Any] = {
+    execute("get optimizer meta") {
+      val query = _optimizerOptions.filter(_.optimizer === optimizer).filter(_.key === key).result.head
+      val data = Await.result(DB.run(query), MAX_WAITING_TIME)
+
+      val bis = new ByteArrayInputStream(data._3)
+      val ois = new ObjectInputStream(bis)
+      ois.readObject()
+    }
+  }
+
+  /**
+    *
+    *
+    * @param indexname
+    * @return
+    */
+  def dropOptimizerOptionMeta(optimizer: String, key: String): Try[Void] = {
+    execute("drop optimizer meta") {
+      Await.result(DB.run(_optimizerOptions.filter(_.optimizer === optimizer).filter(_.key === key).delete), MAX_WAITING_TIME)
+      null
+    }
+  }
 }

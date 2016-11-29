@@ -28,7 +28,7 @@ object QueryHints {
   case object VAF_INDEX_QUERY extends IndexQueryHint(VAFINDEX)
   case object VAV_INDEX_QUERY extends IndexQueryHint(VAVINDEX)
   case object VAP_INDEX_QUERY extends IndexQueryHint(VAPLUSINDEX)
-  case object PREDICTIVE extends SimpleQueryHint
+  case object OPTIMIZED extends SimpleQueryHint
 
   val FALLBACK_HINTS : QueryHint = EXACT_QUERY
 
@@ -54,7 +54,8 @@ object QueryHints {
     case "vaf" => Some(VAF_INDEX_QUERY)
     case "vav" => Some(VAV_INDEX_QUERY)
     case "vap" => Some(VAP_INDEX_QUERY)
-    case "predictive" => Some(PREDICTIVE)
+    case "predictive" => Some(OPTIMIZED)
+    case "optimized" => Some(OPTIMIZED)
     case _ => None
   }
 }

@@ -1,15 +1,13 @@
 package org.vitrivr.adampro.api
 
+import org.apache.spark.sql.DataFrame
 import org.vitrivr.adampro.config.AdamConfig
 import org.vitrivr.adampro.entity.Entity._
 import org.vitrivr.adampro.entity.{AttributeDefinition, Entity, EntityPartitioner}
-import org.vitrivr.adampro.exception.GeneralAdamException
-import org.vitrivr.adampro.helpers.benchmark.ScanWeightCatalogOperator
 import org.vitrivr.adampro.helpers.partition.PartitionMode
 import org.vitrivr.adampro.helpers.sparsify.SparsifyHelper
 import org.vitrivr.adampro.main.AdamContext
 import org.vitrivr.adampro.query.query.Predicate
-import org.apache.spark.sql.DataFrame
 
 import scala.util.{Success, Try}
 
@@ -194,34 +192,6 @@ object EntityOp extends GenericOp {
       EntityPartitioner(Entity.load(entityname).get, nPartitions, joins, cols, mode)
     }
   }
-
-  /**
-    * Sets the weight of the entity to make it more important in the search
-    *
-    * @param entityname name of entity
-    * @param attribute  name of attribute
-    * @param weight     new weight to set (the higher, the more important the index is)
-    * @return
-    */
-  def setScanWeight(entityname: EntityName, attribute: String, weight: Float)(implicit ac: AdamContext): Try[Void] = {
-    execute("set entity weight for " + entityname + "(" + attribute + ")" + " operation") {
-      ScanWeightCatalogOperator.set(Entity.load(entityname).get, attribute, weight)
-      Success(null)
-    }
-  }
-
-  /**
-    * Resets all scan weights entity and indexes corresponding to entity.
-    *
-    * @param entityname name of entity
-    */
-  def resetScanWeights(entityname: EntityName)(implicit ac: AdamContext): Try[Void] = {
-    execute("reset weights of entity and indexes of " + entityname) {
-      throw new GeneralAdamException("not implemented yet")
-      Success(null)
-    }
-  }
-
 
   /**
     * Drops an entity.

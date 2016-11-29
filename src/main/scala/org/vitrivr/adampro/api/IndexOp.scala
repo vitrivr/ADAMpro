@@ -3,7 +3,6 @@ package org.vitrivr.adampro.api
 import org.vitrivr.adampro.entity.Entity
 import org.vitrivr.adampro.entity.Entity._
 import org.vitrivr.adampro.exception.GeneralAdamException
-import org.vitrivr.adampro.helpers.benchmark.ScanWeightCatalogOperator
 import org.vitrivr.adampro.helpers.partition.{PartitionMode, PartitionerChoice}
 import org.vitrivr.adampro.index.Index._
 import org.vitrivr.adampro.index.structures.IndexTypes
@@ -123,20 +122,6 @@ object IndexOp extends GenericOp {
     }
   }
 
-
-  /**
-    * Sets the weight of the index to make it more important in the search
-    *
-    * @param indexname name of index
-    * @param weight    new weight to set (the higher, the more important the index is)
-    * @return
-    */
-  def setScanWeight(indexname: IndexName, weight: Float)(implicit ac: AdamContext): Try[Void] = {
-    execute("set index weight for " + indexname + " operation") {
-      ScanWeightCatalogOperator.set(Index.load(indexname).get, weight)
-      Success(null)
-    }
-  }
 
   /**
     * Loads the index into cache for faster processing.

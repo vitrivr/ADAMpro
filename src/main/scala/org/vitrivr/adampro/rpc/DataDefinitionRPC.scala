@@ -11,9 +11,9 @@ import org.vitrivr.adampro.entity.Entity
 import org.vitrivr.adampro.exception.GeneralAdamException
 import org.vitrivr.adampro.grpc.grpc.AdaptScanMethodsMessage.{IndexCollection, QueryCollection}
 import org.vitrivr.adampro.grpc.grpc._
-import org.vitrivr.adampro.helpers.benchmark.IndexCollectionFactory.{ExistingIndexCollectionOption, NewIndexCollectionOption}
-import org.vitrivr.adampro.helpers.benchmark.QueryCollectionFactory.{LoggedQueryCollectionOption, RandomQueryCollectionOption}
-import org.vitrivr.adampro.helpers.benchmark._
+import org.vitrivr.adampro.helpers.optimizer.IndexCollectionFactory.{ExistingIndexCollectionOption, NewIndexCollectionOption}
+import org.vitrivr.adampro.helpers.optimizer.QueryCollectionFactory.{LoggedQueryCollectionOption, RandomQueryCollectionOption}
+import org.vitrivr.adampro.helpers.optimizer._
 import org.vitrivr.adampro.helpers.partition.{PartitionMode, PartitionerChoice}
 import org.vitrivr.adampro.index.structures.IndexTypes
 import org.vitrivr.adampro.main.{AdamContext, SparkStartup}
@@ -167,7 +167,7 @@ class DataDefinitionRPC extends AdamDefinitionGrpc.AdamDefinition with Logging {
   override def batchInsert(request: InsertsMessage): Future[AckMessage] = {
     log.debug("rpc call for batch insert operation")
 
-    val inserts = request.inserts.groupBy(_.entity).mapValues(_.flatMap(_.tuples))
+    val inserts  = request.inserts.groupBy(_.entity).mapValues(_.flatMap(_.tuples))
 
     val lb = new ListBuffer[Try[Void]]()
 
@@ -573,44 +573,6 @@ class DataDefinitionRPC extends AdamDefinitionGrpc.AdamDefinition with Logging {
     }
   }
 
-  /**
-    *
-    * @param request
-    * @return
-    */
-  override def setScanWeight(request: WeightMessage): Future[AckMessage] = {
-    log.debug("rpc call for changing weight of entity or index")
-
-    val res = if (CatalogOperator.existsEntity(request.entity).get) {
-      EntityOp.setScanWeight(request.entity, request.attribute, request.weight)
-    } else {
-      IndexOp.setScanWeight(request.entity, request.weight)
-    }
-
-    if (res.isSuccess) {
-      Future.successful(AckMessage(AckMessage.Code.OK, request.entity))
-    } else {
-      log.error(res.failed.get.getMessage, res.failed.get)
-      Future.successful(AckMessage(code = AckMessage.Code.ERROR, message = res.failed.get.getMessage))
-    }
-  }
-
-  /**
-    *
-    * @param request
-    * @return
-    */
-  override def resetScanWeights(request: EntityNameMessage): Future[AckMessage] = {
-    log.debug("rpc call for resetting entity and index scan weights")
-    val res = EntityOp.resetScanWeights(request.entity)
-
-    if (res.isSuccess) {
-      Future.successful(AckMessage(AckMessage.Code.OK, request.entity))
-    } else {
-      log.error(res.failed.get.getMessage, res.failed.get)
-      Future.successful(AckMessage(code = AckMessage.Code.ERROR, message = res.failed.get.getMessage))
-    }
-  }
 
   /**
     *
@@ -636,7 +598,7 @@ class DataDefinitionRPC extends AdamDefinitionGrpc.AdamDefinition with Logging {
     val qc = QueryCollectionFactory(request.entity, request.attribute, qco, request.options)
 
 
-    val res = BenchmarkOp.benchmarkAndUpdateWeight(ic, qc)
+    val res = OptimizerOp.train(ic, qc)
 
     if (res.isSuccess) {
       Future.successful(AckMessage(AckMessage.Code.OK, request.entity))

@@ -1,7 +1,7 @@
 package org.vitrivr.adampro.query.progressive
 
 import org.vitrivr.adampro.entity.Entity.EntityName
-import org.vitrivr.adampro.helpers.benchmark.ScanWeightCatalogOperator
+import org.vitrivr.adampro.helpers.optimizer.OptimizerOp
 import org.vitrivr.adampro.index.Index
 import org.vitrivr.adampro.index.Index._
 import org.vitrivr.adampro.index.structures.IndexTypes
@@ -37,7 +37,7 @@ class SimpleProgressivePathChooser()(implicit ac: AdamContext) extends Progressi
     IndexTypes.values
       .map(indextypename => Index.list(Some(entityname), Some(indextypename)).filter(_.isSuccess).map(_.get)
         .filter(nnq.isConform(_))
-        .sortBy(index => -ScanWeightCatalogOperator(index)))
+        .sortBy(index => -OptimizerOp.getScore(index, nnq)))
       .filterNot(_.isEmpty)
       .map(_.head)
       .map(index => {
@@ -67,7 +67,7 @@ class IndexTypeProgressivePathChooser(indextypenames: Seq[IndexTypeName])(implic
     indextypenames
       .map(indextypename => Index.list(Some(entityname), Some(indextypename)).filter(_.isSuccess).map(_.get)
         .filter(nnq.isConform(_))
-        .sortBy(index => -ScanWeightCatalogOperator(index)).head)
+        .sortBy(index => -OptimizerOp.getScore(index, nnq)).head)
       .map(index => IndexScanExpression(index)(nnq)())
   }
 }

@@ -1,4 +1,4 @@
-package org.vitrivr.adampro.helpers.benchmark
+package org.vitrivr.adampro.helpers.optimizer
 
 import org.vitrivr.adampro.api.IndexOp
 import org.vitrivr.adampro.entity.Entity
@@ -26,7 +26,7 @@ private[helpers] trait IndexCollection extends Logging with Serializable {
   *
   * @param entityname
   */
-private[benchmark] case class ExistingIndexCollection(entityname: EntityName, attribute: String)(@transient implicit val ac: AdamContext) extends IndexCollection {
+private[optimizer] case class ExistingIndexCollection(entityname: EntityName, attribute: String)(@transient implicit val ac: AdamContext) extends IndexCollection {
   def this(entityname: EntityName, attribute: String, params: Map[String, String])(implicit ac: AdamContext) {
     this(entityname, attribute)
   }
@@ -39,7 +39,7 @@ private[benchmark] case class ExistingIndexCollection(entityname: EntityName, at
   *
   * @param entityname
   */
-private[benchmark] case class NewIndexCollection(entityname: EntityName, attribute: String, hints: Seq[QueryHint])(@transient implicit val ac: AdamContext) extends IndexCollection {
+private[optimizer] case class NewIndexCollection(entityname: EntityName, attribute: String, hints: Seq[QueryHint])(@transient implicit val ac: AdamContext) extends IndexCollection {
   def this(entityname: EntityName, attribute: String, params: Map[String, String])(implicit ac: AdamContext) {
     this(entityname, attribute, params.get("hints").get.split(",").map(QueryHints.withName(_)).filter(_.isDefined).map(_.get))
   }

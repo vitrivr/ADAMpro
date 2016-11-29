@@ -1,18 +1,18 @@
 package org.vitrivr.adampro.query.handler.internal
 
+import org.apache.spark.sql.DataFrame
+import org.apache.spark.sql.functions._
 import org.vitrivr.adampro.config.FieldNames
 import org.vitrivr.adampro.entity.Entity
 import org.vitrivr.adampro.entity.Entity._
 import org.vitrivr.adampro.exception.QueryNotConformException
-import org.vitrivr.adampro.helpers.benchmark.ScanWeightCatalogOperator
+import org.vitrivr.adampro.helpers.optimizer.OptimizerOp
 import org.vitrivr.adampro.index.Index
 import org.vitrivr.adampro.index.Index._
 import org.vitrivr.adampro.main.AdamContext
-import org.vitrivr.adampro.query.handler.generic.{QueryEvaluationOptions, ExpressionDetails, QueryExpression}
+import org.vitrivr.adampro.query.handler.generic.{ExpressionDetails, QueryEvaluationOptions, QueryExpression}
 import org.vitrivr.adampro.query.query.NearestNeighbourQuery
 import org.vitrivr.adampro.utils.Logging
-import org.apache.spark.sql.DataFrame
-import org.apache.spark.sql.functions._
 
 /**
   * adamtwo
@@ -42,7 +42,7 @@ case class IndexScanExpression(val index: Index)(val nnq: NearestNeighbourQuery,
         .filter(_.isSuccess)
         .map(_.get)
         .filter(nnq.isConform(_)) //choose only indexes that are conform to query
-        .sortBy(index => -ScanWeightCatalogOperator(index))
+        .sortBy(index => - OptimizerOp.getScore(index, nnq))
         .head
     )(nnq, id)(filterExpr)
   }

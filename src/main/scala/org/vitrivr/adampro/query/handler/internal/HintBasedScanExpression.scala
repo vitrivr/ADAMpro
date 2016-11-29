@@ -13,7 +13,7 @@ import org.vitrivr.adampro.query.handler.internal.AggregationExpression.EmptyExp
 import org.vitrivr.adampro.query.handler.internal.BooleanFilterExpression.BooleanFilterScanExpression
 import QueryHints._
 import org.vitrivr.adampro.query.query.{BooleanQuery, NearestNeighbourQuery}
-import org.vitrivr.adampro.helpers.benchmark.ScanWeightCatalogOperator
+import org.vitrivr.adampro.helpers.optimizer.{OptimizerOp}
 import org.vitrivr.adampro.utils.Logging
 import org.apache.spark.sql.DataFrame
 
@@ -108,16 +108,16 @@ object HintBasedScanExpression extends Logging {
       var j = 0
       while (j < hints.length) {
         hints(j) match {
-          case PREDICTIVE =>
+          case OPTIMIZED =>
             log.trace("measurement-based execution plan hint")
             val indexes = CatalogOperator.listIndexes(Some(entityname)).get.map(Index.load(_)).filter(_.isSuccess).map(_.get).groupBy(_.indextypename).mapValues(_.map(_.indexname))
             val index = indexes.values.toSeq.flatten
               .map(indexname => Index.load(indexname, false).get)
-              .sortBy(index => -ScanWeightCatalogOperator(index)).head
+              .sortBy(index => -OptimizerOp.getScore(index, nnq.get)).head
 
             val entity = Entity.load(entityname).get
 
-            if (ScanWeightCatalogOperator(index) > ScanWeightCatalogOperator(entity, nnq.get.attribute)) {
+            if (OptimizerOp.getScore(index, nnq.get) > OptimizerOp.getScore(entity, nnq.get)) {
               scan = Some(IndexScanExpression(index)(nnq.get)(scan))
             } else {
               scan = Some(SequentialScanExpression(entity)(nnq.get)(scan))
@@ -133,7 +133,7 @@ object HintBasedScanExpression extends Logging {
               val sortedIndexChoice = indexChoice
                 .filter(nnq.get.isConform(_)) //choose only indexes that are conform to query
                 .filterNot(_.isStale) //don't use stale indexes
-                .sortBy(index => -ScanWeightCatalogOperator(index)) //order by weight (highest weight first)
+                .sortBy(index => -OptimizerOp.getScore(index, nnq.get)) //order by weight (highest weight first)
 
               if (sortedIndexChoice.isEmpty) {
                 return None

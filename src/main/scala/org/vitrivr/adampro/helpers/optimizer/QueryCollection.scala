@@ -1,4 +1,4 @@
-package org.vitrivr.adampro.helpers.benchmark
+package org.vitrivr.adampro.helpers.optimizer
 
 import org.vitrivr.adampro.catalog.LogOperator
 import org.vitrivr.adampro.datatypes.feature.FeatureVectorWrapper
@@ -28,7 +28,7 @@ private[helpers] trait QueryCollection extends Logging with Serializable {
   * @param attribute
   * @param nqueries
   */
-private[benchmark] case class RandomQueryCollection(entityname: EntityName, attribute: String, nqueries: Int)(@transient implicit val ac: AdamContext) extends QueryCollection {
+private[optimizer] case class RandomQueryCollection(entityname: EntityName, attribute: String, nqueries: Int)(@transient implicit val ac: AdamContext) extends QueryCollection {
   def this(entityname: EntityName, attribute: String, params: Map[String, String])(implicit ac: AdamContext) {
     this(entityname, attribute, params.get("nqueries").get.toInt)
   }
@@ -53,12 +53,12 @@ private[benchmark] case class RandomQueryCollection(entityname: EntityName, attr
   *
   * @param entityname
   */
-private[benchmark] case class LoggedQueryCollection(entityname: EntityName, attribute: String)(@transient implicit val ac: AdamContext) extends QueryCollection {
+private[optimizer] case class LoggedQueryCollection(entityname: EntityName, attribute: String)(@transient implicit val ac: AdamContext) extends QueryCollection {
   def this(entityname: EntityName, attribute: String, params: Map[String, String])(implicit ac: AdamContext) {
     this(entityname, attribute)
   }
 
-  override def getQueries: Seq[NearestNeighbourQuery] = LogOperator.getQueries(entityname, attribute).get
+  override def getQueries: Seq[NearestNeighbourQuery] = LogOperator.getQueries(entityname, attribute).get //TODO: throw away logs after training has been done on data
 }
 
 

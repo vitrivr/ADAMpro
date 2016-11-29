@@ -11,7 +11,7 @@ import org.vitrivr.adampro.datatypes.feature.Feature.FeatureVector
   * August 2015
   */
 @SerialVersionUID(100L)
-class Hasher(private val functions: Array[LSHashFunction]) extends Serializable {
+class Hasher(val functions: Array[LSHashFunction]) extends Serializable {
   //possibly related to http://stackoverflow.com/questions/16386252/scala-deserialization-class-not-found
   //here we have to use an array, rather than a Seq or a List!
 
