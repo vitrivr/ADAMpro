@@ -220,6 +220,8 @@ case class Entity(val entityname: EntityName)(@transient implicit val ac: AdamCo
   def insert(data: DataFrame, ignoreChecks: Boolean = false): Try[Void] = {
     log.trace("inserting data into entity")
 
+
+
     try {
       val ninserts = CatalogOperator.getEntityOption(entityname, Some(N_INSERTS_VACUUMING)).get.get(N_INSERTS_VACUUMING).map(_.toInt).getOrElse(0)
 
@@ -235,7 +237,7 @@ case class Entity(val entityname: EntityName)(@transient implicit val ac: AdamCo
               rdd, StructType(StructField(pk.name, pk.fieldtype.datatype) +: data.schema.fields))
         } else {
           data
-        }
+        }.repartition(AdamConfig.defaultNumberOfPartitions)
 
       //TODO: check insertion schema and entity schema before trying to insert
       //TODO: block on other inserts
