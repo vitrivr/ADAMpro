@@ -2,7 +2,6 @@ package org.vitrivr.adampro.helpers.optimizer
 
 import org.vitrivr.adampro.entity.Entity
 import org.vitrivr.adampro.index.Index
-import org.vitrivr.adampro.main.AdamContext
 import org.vitrivr.adampro.query.query.NearestNeighbourQuery
 
 import scala.util.{Failure, Success, Try}
@@ -14,7 +13,7 @@ import scala.util.{Failure, Success, Try}
   * September 2016
   */
 object OptimizerOp {
-  val benchmarker = new NaiveOptimizerHeuristic()(null)
+  val benchmarker = new NaiveOptimizerHeuristic()(org.vitrivr.adampro.main.SparkStartup.Implicits)
 
 
   /**
@@ -22,7 +21,7 @@ object OptimizerOp {
     * @param ic collection of indexes
     * @param qc collection of queries
     */
-  def train(ic: IndexCollection, qc: QueryCollection)(implicit ac: AdamContext): Try[Void] = {
+  def train(ic: IndexCollection, qc: QueryCollection): Try[Void] = {
     try {
       benchmarker.train(ic.getIndexes, qc.getQueries)
       Success(null)
