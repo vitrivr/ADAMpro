@@ -191,10 +191,14 @@ class Importer(grpc: RPCClient) {
 
       log.trace("inserting batch of length " + batch.length)
 
-      val res = grpc.entityBatchInsert(batch)
-      if (res.isFailure) {
-        log.error("exception while inserting files: " + groupedPaths.mkString(";"), res.failed.get)
-       }
+      val inserts = batch.groupBy(_.entity).mapValues(_.flatMap(_.tuples)).map { case (entity, tuples) => InsertMessage(entity, tuples) }.toSeq
+
+      inserts.foreach { insert =>
+        val res = grpc.entityInsert(insert)
+        if (res.isFailure) {
+          log.error("exception while inserting files: " + groupedPaths.mkString(";"), res.failed.get)
+        }
+      }
 
       tmpPathLogs.foreach { tmpPathLog =>
         pathLogger.write(tmpPathLog)
@@ -252,7 +256,7 @@ class Importer(grpc: RPCClient) {
     *
     */
   def outputCounts(): Unit = {
-    getCounts().foreach{ case(entity, count) =>
+    getCounts().foreach { case (entity, count) =>
       println(entity + " -> " + count + " (logged: " + runningCounts.getOrElse(entity, "<N/A>") + ")")
     }
   }
