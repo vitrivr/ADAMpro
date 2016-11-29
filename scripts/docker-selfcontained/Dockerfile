@@ -2,8 +2,8 @@ FROM sequenceiq/spark:v1.6.0onHadoop2.6.0
 
 # spark
 ENV SPARK_HOME /usr/local/spark
-RUN curl http://d3kbcqa49mib13.cloudfront.net/spark-1.6.2-bin-hadoop2.6.tgz | tar -xz -C /usr/local/
-RUN cd /usr/local && ln -s spark-1.6.2-bin-hadoop2.6 spark
+RUN curl http://d3kbcqa49mib13.cloudfront.net/spark-1.6.3-bin-hadoop2.6.tgz | tar -xz -C /usr/local/
+RUN cd /usr/local && rm spark && ln -s spark-1.6.3-bin-hadoop2.6 spark
 RUN $BOOTSTRAP && $HADOOP_PREFIX/bin/hadoop dfsadmin -safemode leave && $HADOOP_PREFIX/bin/hdfs dfs -put $SPARK_HOME/lib /spark
 
 ADD mapred-site.xml $HADOOP_PREFIX/etc/hadoop/mapred-site.xml
