@@ -143,6 +143,7 @@ object EntityOp extends GenericOp {
       val entity = Entity.load(entityname).get
       EntityPartitioner(entity, AdamConfig.defaultNumberOfPartitions)
       entity.markStale()
+      Success(null)
     }
   }
 
