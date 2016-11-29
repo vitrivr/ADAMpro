@@ -2,9 +2,9 @@ package org.vitrivr.adampro.web.controller
 
 import com.twitter.finagle.http.Request
 import com.twitter.finatra.http.Controller
-import org.apache.log4j.Logger
 import org.vitrivr.adampro.rpc.RPCClient
 import org.vitrivr.adampro.rpc.datastructures.{RPCAttributeDefinition, RPCQueryResults}
+import org.vitrivr.adampro.utils.Logging
 import org.vitrivr.adampro.web.datastructures._
 
 import scala.collection.mutable
@@ -19,9 +19,7 @@ import scala.util.{Success, Try}
   * Ivan Giangreco
   * April 2016
   */
-class AdamController(rpcClient: RPCClient) extends Controller {
-  val log = Logger.getLogger(getClass.getName)
-
+class AdamController(rpcClient: RPCClient) extends Controller with Logging {
   get("/:*") { request: Request =>
     response.ok.fileOrIndex(
       request.params("*"),
@@ -334,7 +332,7 @@ class AdamController(rpcClient: RPCClient) extends Controller {
       val results = res.get
       progTempResults.get(id).get += SearchProgressiveIntermediaryResponse(id, results.confidence, results.info.getOrElse("indextype", ""), results.time, results.results, ProgressiveQueryStatus.RUNNING)
     } else {
-      log.error(res.failed.get)
+      log.error("error in progressive results processing", res.failed.get)
       completedProgressiveResults(id, res.failed.get.getMessage, ProgressiveQueryStatus.ERROR)
     }
   }
