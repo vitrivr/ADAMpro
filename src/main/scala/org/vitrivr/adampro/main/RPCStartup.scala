@@ -39,10 +39,10 @@ class RPCServer(executionContext: ExecutionContext) {
   private val port = AdamConfig.grpcPort
 
   def start(): Unit = {
-    server = NettyServerBuilder.forPort(port).
-      addService(AdamDefinitionGrpc.bindService(new DataDefinitionRPC, executionContext)).
-      addService(AdamSearchGrpc.bindService(new SearchRPC, executionContext)).
-      build.start
+    server = NettyServerBuilder.forPort(port)
+      .addService(AdamDefinitionGrpc.bindService(new DataDefinitionRPC, executionContext))
+      .addService(AdamSearchGrpc.bindService(new SearchRPC, executionContext))
+      .build.start
     Runtime.getRuntime.addShutdownHook(new Thread() {
       override def run(): Unit = {
         self.stop()
