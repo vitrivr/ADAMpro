@@ -1,12 +1,10 @@
 package org.vitrivr.adampro.rpc
 
-import com.google.protobuf.ByteString
 import io.grpc.stub.StreamObserver
 import org.apache.spark.annotation.Experimental
 import org.apache.spark.sql.Row
 import org.apache.spark.sql.types.{StructField, StructType}
 import org.vitrivr.adampro.api._
-import org.vitrivr.adampro.catalog.CatalogOperator
 import org.vitrivr.adampro.entity.Entity
 import org.vitrivr.adampro.exception.GeneralAdamException
 import org.vitrivr.adampro.grpc.grpc.AdaptScanMethodsMessage.{IndexCollection, QueryCollection}
@@ -18,12 +16,9 @@ import org.vitrivr.adampro.helpers.partition.{PartitionMode, PartitionerChoice}
 import org.vitrivr.adampro.index.structures.IndexTypes
 import org.vitrivr.adampro.main.{AdamContext, SparkStartup}
 import org.vitrivr.adampro.query.query.Predicate
-import org.vitrivr.adampro.utils.{AdamImporter, Logging}
+import org.vitrivr.adampro.utils.{AdamImporter, Logging, ProtoImporter}
 
-import scala.collection.mutable.ListBuffer
-import scala.concurrent.duration._
-import scala.concurrent.{Await, Future}
-import scala.util.{Failure, Try}
+import scala.concurrent.Future
 
 /**
   * adamtwo
@@ -156,53 +151,6 @@ class DataDefinitionRPC extends AdamDefinitionGrpc.AdamDefinition with Logging {
       Future.successful(AckMessage(code = AckMessage.Code.OK))
     } else {
       Future.successful(AckMessage(code = AckMessage.Code.ERROR, message = res.failed.get.getMessage))
-    }
-  }
-
-  /**
-    *
-    * @param request
-    * @return
-    */
-  override def batchInsert(request: InsertsMessage): Future[AckMessage] = {
-    log.debug("rpc call for batch insert operation")
-
-    val inserts  = request.inserts.groupBy(_.entity).mapValues(_.flatMap(_.tuples))
-
-    val lb = new ListBuffer[Try[Void]]()
-
-    inserts.foreach { case (entityname, tuples) =>
-      val entity = Entity.load(entityname)
-
-      if (entity.isFailure) {
-        lb += Failure(entity.failed.get)
-      } else {
-        val schema = entity.get.schema()
-
-        val rows = tuples.map(tuple => {
-          val data = schema.map(field => {
-            val datum = tuple.data.get(field.name).getOrElse(null)
-            if (datum != null) {
-              RPCHelperMethods.prepareDataTypeConverter(field.fieldtype.datatype)(datum)
-            } else {
-              null
-            }
-          })
-          Row(data: _*)
-        })
-
-        val rdd = ac.sc.parallelize(rows)
-        val df = ac.sqlContext.createDataFrame(rdd, StructType(entity.get.schema().map(field => StructField(field.name, field.fieldtype.datatype))))
-
-        lb += EntityOp.insert(entity.get.entityname, df)
-      }
-    }
-
-    if (lb.forall(_.isSuccess)) {
-      Future.successful(AckMessage(code = AckMessage.Code.OK))
-    } else {
-      log.error(lb.count(_.isFailure) + " errors when inserting into entities: " + lb.filter(_.isFailure).map(_.failed.get.getMessage))
-      Future.successful(AckMessage(code = AckMessage.Code.ERROR, lb.count(_.isFailure) + "errors when inserting into entities: " + lb.filter(_.isFailure).map(_.failed.get.getMessage)))
     }
   }
 
@@ -649,60 +597,12 @@ class DataDefinitionRPC extends AdamDefinitionGrpc.AdamDefinition with Logging {
     * @param request
     * @return
     */
-  @Experimental override def importDataFile(request: ImportDataFileMessage): Future[AckMessage] = {
-    log.debug("rpc call for importing entity from file")
-
-    //create entity if necessary
-    val entityname = if (request.destination.isCreateEntity || request.destination.isDefinitionfile) {
-      val createEntityMessage = if (request.destination.isCreateEntity) {
-        request.getCreateEntity
-      } else {
-        CreateEntityMessage.parseFrom(request.getDefinitionfile.toByteArray)
-      }
-
-      val res = Await.result(createEntity(createEntityMessage), 100.seconds)
-
-      if (res.code.isError) {
-        return Future.successful(res)
-      }
-
-      createEntityMessage.entity
-    } else {
-      request.getEntity
-    }
-
-
-    val filetype = request.filetype //not used at the moment
-    val data = request.datafile.toByteArray
-
-    val protoie = new ProtoImporterExporter(entityname)
-    val res = protoie.importData(data)
-
-    if (res.isSuccess) {
-      Future.successful(AckMessage(AckMessage.Code.OK))
-    } else {
-      log.error(res.failed.get.getMessage, res.failed.get)
-      Future.successful(AckMessage(code = AckMessage.Code.ERROR, message = res.failed.get.getMessage))
-    }
+  @Experimental  override def protoImportData(request: ProtoImportMessage, responseObserver: StreamObserver[AckMessage]): Unit = {
+    log.debug("rpc call for importing data from proto files")
+    ProtoImporter(request.path, insert, responseObserver)
   }
 
-  /**
-    *
-    * @param request
-    * @return
-    */
-  @Experimental override def exportDataFile(request: EntityNameMessage): Future[ExportDataFileMessage] = {
-    log.debug("rpc call for exporting entity to file")
-    val protoie = new ProtoImporterExporter(request.entity)
-    val res = protoie.exportData()
 
-    if (res.isSuccess) {
-      Future.successful(ExportDataFileMessage(Some(AckMessage(code = AckMessage.Code.OK)), ByteString.copyFrom(res.get._1), ByteString.copyFrom(res.get._2)))
-    } else {
-      log.error(res.failed.get.getMessage, res.failed.get)
-      Future.successful(ExportDataFileMessage(Some(AckMessage(code = AckMessage.Code.ERROR, message = res.failed.get.getMessage))))
-    }
-  }
 
   /**
     *

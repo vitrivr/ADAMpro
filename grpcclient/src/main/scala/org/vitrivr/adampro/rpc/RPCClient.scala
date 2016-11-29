@@ -142,24 +142,6 @@ class RPCClient(channel: ManagedChannel,
   }
 
   /**
-    * Insert data into entity (batch).
-    *
-    * @param insertMessages insert messages
-    * @return
-    */
-  def entityBatchInsert(insertMessages: Seq[InsertMessage]): Try[Void] = {
-    execute("insert operation") {
-      val res = definerBlocking.batchInsert(InsertsMessage(insertMessages))
-
-      if (res.code == AckMessage.Code.OK) {
-        return Success(null)
-      } else {
-        return Failure(new Exception(res.message))
-      }
-    }
-  }
-
-  /**
     * Insert data into entity (streaming).
     *
     * @param insertMessages sequence of insert messages
@@ -191,6 +173,27 @@ class RPCClient(channel: ManagedChannel,
     Success(null)
   }
 
+  /**
+    * Import data to entity.
+    *
+    * @param path path
+    * @param out  stream observer
+    * @return
+    */
+  def entityProtoImport(path: String, out: StreamObserver[(Boolean, String)]): Try[Void] = {
+    execute("entity import operation") {
+      val so = new StreamObserver[AckMessage]() {
+        override def onError(throwable: Throwable): Unit = out.onError(throwable)
+
+        override def onCompleted(): Unit = out.onCompleted()
+
+        override def onNext(ack: AckMessage): Unit = out.onNext((ack.code == AckMessage.Code.OK, ack.message))
+      }
+
+      definer.protoImportData(ProtoImportMessage(path), so)
+      Success(null)
+    }
+  }
 
   /**
     * Import data to entity.

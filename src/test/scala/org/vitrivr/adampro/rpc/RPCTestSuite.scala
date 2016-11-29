@@ -190,34 +190,4 @@ class RPCTestSuite extends AdamTestBase with ScalaFutures {
       }
     }
   }
-
-  feature("data import") {
-    /**
-      *
-      */
-    scenario("export and import proto-based file") {
-      withEntityName { entityname =>
-        val NTUPLES = 1000
-
-        definition.createEntity(CreateEntityMessage(entityname, Seq(AttributeDefinitionMessage("id", AttributeType.LONG, true), AttributeDefinitionMessage("feature", AttributeType.FEATURE))))
-        definition.generateRandomData(GenerateRandomDataMessage(entityname, NTUPLES, Map("fv-dimensions" -> 100.toString)))
-
-        val count = definition.count(EntityNameMessage(entityname)).message.toInt
-        assert(count == NTUPLES)
-
-        val exported = definition.exportDataFile(EntityNameMessage(entityname))
-
-        definition.dropEntity(EntityNameMessage(entityname))
-
-        definition.importDataFile(ImportDataFileMessage().withDefinitionfile(exported.definitionfile).withDatafile(exported.datafile))
-
-        val countAfterImport = definition.count(EntityNameMessage(entityname)).message.toInt
-
-        log.info("found " + countAfterImport + " tuples")
-
-        assert(countAfterImport == NTUPLES)
-      }
-    }
-
-  }
 }
