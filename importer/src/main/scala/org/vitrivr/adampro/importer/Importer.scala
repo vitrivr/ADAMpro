@@ -202,7 +202,7 @@ class Importer(grpc: RPCClient) {
       }
       pathLogger.flush()
 
-      log.debug("status: " + remaining + "/" + length)
+      log.info("status: " + remaining + "/" + length)
     })
 
     pathLogger.close()
