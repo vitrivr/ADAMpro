@@ -3,7 +3,7 @@ package org.vitrivr.adampro.rpc
 import java.util.concurrent.TimeUnit
 
 import io.grpc.internal.DnsNameResolverProvider
-import io.grpc.okhttp.OkHttpChannelBuilder
+import io.grpc.netty.NettyChannelBuilder
 import io.grpc.stub.StreamObserver
 import io.grpc.{ManagedChannel, ManagedChannelBuilder}
 import org.vitrivr.adampro.grpc.grpc.AdamDefinitionGrpc.{AdamDefinitionBlockingStub, AdamDefinitionStub}
@@ -225,7 +225,7 @@ class RPCClient(channel: ManagedChannel,
     * Get details for entity.
     *
     * @param entityname name of entity
-    * @param options   options for operation
+    * @param options    options for operation
     * @return
     */
   def entityDetails(entityname: String, options: Map[String, String] = Map()): Try[Map[String, String]] = {
@@ -240,7 +240,7 @@ class RPCClient(channel: ManagedChannel,
     *
     * @param entityname name of entity
     * @param attribute  name of attribute
-    * @param options   options for operation
+    * @param options    options for operation
     * @return
     */
   def entityAttributeDetails(entityname: String, attribute: String, options: Map[String, String] = Map()): Try[Map[String, String]] = {
@@ -642,9 +642,9 @@ class RPCClient(channel: ManagedChannel,
 
 object RPCClient {
   def apply(host: String, port: Int): RPCClient = {
-    val channel = OkHttpChannelBuilder.forAddress(host, port)
-      .nameResolverFactory(new DnsNameResolverProvider())
+    val channel = NettyChannelBuilder.forAddress(host, port)
       .usePlaintext(true)
+      .nameResolverFactory(new DnsNameResolverProvider())
       .asInstanceOf[ManagedChannelBuilder[_]].build()
 
     new RPCClient(
