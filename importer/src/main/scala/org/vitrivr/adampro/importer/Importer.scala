@@ -4,7 +4,7 @@ import java.io._
 import java.nio.file.{Files, Paths}
 
 import com.google.protobuf.CodedInputStream
-import org.apache.log4j.Logger
+import org.slf4j.LoggerFactory
 import org.vitrivr.adampro.grpc.grpc.InsertMessage.TupleInsertMessage
 import org.vitrivr.adampro.grpc.grpc._
 import org.vitrivr.adampro.rpc.RPCClient
@@ -23,7 +23,7 @@ import scala.io.Source
   * November 2016
   */
 class Importer(grpc: RPCClient) {
-  val log = Logger.getLogger(getClass.getName)
+  val log = LoggerFactory.getLogger(this.getClass.getName.stripSuffix("$"))
 
   val runningCounts = mutable.Map[String, Int]()
 
@@ -273,7 +273,7 @@ class Importer(grpc: RPCClient) {
 
 
 object Importer {
-  val log = Logger.getLogger(getClass.getName)
+  val log = LoggerFactory.getLogger(this.getClass.getName.stripSuffix("$"))
 
   def main(args: Array[String]) {
     try {
