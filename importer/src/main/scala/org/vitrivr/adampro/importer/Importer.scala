@@ -108,7 +108,7 @@ class Importer(grpc: RPCClient) {
     */
   private def files(path: String) = {
     import scala.collection.JavaConversions._
-    Files.walk(Paths.get(path)).iterator().filter(_.toString.endsWith(".bin"))
+    (List() ++ Files.walk(Paths.get(path)).iterator().filter(_.toString.endsWith(".bin"))).sortBy(_.getFileName.toString.reverse).iterator
   }
 
 
@@ -147,7 +147,7 @@ class Importer(grpc: RPCClient) {
 
     log.info("will process " + remaining + " files")
 
-    paths.grouped(10).foreach(groupedPaths => {
+    paths.grouped(50).foreach(groupedPaths => {
       val batch = new ListBuffer[InsertMessage]()
       val tmpPathLogs = new ListBuffer[String]()
       log.trace("starting new batch")
@@ -193,8 +193,8 @@ class Importer(grpc: RPCClient) {
 
       val res = grpc.entityBatchInsert(batch)
       if (res.isFailure) {
-        log.error("exception while inserting files", res.failed.get)
-      }
+        log.error("exception while inserting files: " + groupedPaths.mkString(";"), res.failed.get)
+       }
 
       tmpPathLogs.foreach { tmpPathLog =>
         pathLogger.write(tmpPathLog)
