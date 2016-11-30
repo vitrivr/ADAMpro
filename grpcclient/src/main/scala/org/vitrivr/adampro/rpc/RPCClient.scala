@@ -333,7 +333,7 @@ class RPCClient(channel: ManagedChannel,
     *
     * @param entityname name of entity
     */
-  def entityRead(entityname: String): Try[Seq[RPCQueryResults]] = {
+  def entityPreview(entityname: String): Try[Seq[RPCQueryResults]] = {
     execute("get entity data operation") {
       val res = searcherBlocking.preview(PreviewMessage(entityname))
       Success(res.responses.map(new RPCQueryResults(_)))

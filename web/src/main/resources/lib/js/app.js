@@ -314,7 +314,7 @@ function entityPartition(entityname, attributes, materialize, replace, npartitio
  * @param entityname
  * @param handler to handle the incoming data
  */
-function entityRead(entityname, handler) {
+function entityPreview(entityname, handler) {
     if (entityname === null || entityname.length == 0) {
         raiseError("Please specify an entity."); return;
     }
