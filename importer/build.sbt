@@ -17,7 +17,7 @@ unmanagedBase <<= baseDirectory { base => base / ".." / "lib" }
 
 //assembly
 assemblyOption in assembly :=
-  (assemblyOption in assembly).value.copy(includeScala = true)
+  (assemblyOption in assembly).value.copy(includeScala = false)
 
 val metaMime = """META.INF(.)mime.types""".r
 val meta = """META.INF(.)*""".r
