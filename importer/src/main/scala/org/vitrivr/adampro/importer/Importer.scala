@@ -10,7 +10,6 @@ import org.slf4j.LoggerFactory
 import org.vitrivr.adampro.grpc.grpc.InsertMessage.TupleInsertMessage
 import org.vitrivr.adampro.grpc.grpc._
 import org.vitrivr.adampro.rpc.RPCClient
-import org.vitrivr.adampro.rpc.datastructures.RPCAttributeDefinition
 
 import scala.collection.immutable.HashSet
 import scala.collection.mutable
@@ -31,79 +30,6 @@ class Importer(grpc: RPCClient) {
 
   private val BATCH_SIZE = 1000
 
-  /**
-    *
-    */
-  def createEntities(): Unit = {
-    //TODO: make this more generic, e.g., by importing entity creation messages
-
-    //metadata tables
-    grpc.entityCreate("cineast_multimediaobject",
-      Seq(
-        RPCAttributeDefinition("id", "string", true),
-        RPCAttributeDefinition("type", "int"),
-        RPCAttributeDefinition("name", "string"),
-        RPCAttributeDefinition("path", "string"),
-        RPCAttributeDefinition("width", "int"),
-        RPCAttributeDefinition("height", "int"),
-        RPCAttributeDefinition("framecount", "int"),
-        RPCAttributeDefinition("duration", "float")
-      )
-    )
-
-    grpc.entityCreate("cineast_segment",
-      Seq(
-        RPCAttributeDefinition("id", "string", true),
-        RPCAttributeDefinition("multimediaobject", "string"),
-        RPCAttributeDefinition("sequencenumber", "int"),
-        RPCAttributeDefinition("segmentstart", "int"),
-        RPCAttributeDefinition("segmentend", "int")
-      )
-    )
-
-    //feature tables
-    val features = Seq(
-      "features_AverageColor" -> Seq(("id", "string"), ("feature", "feature")),
-      "features_MedianColor" -> Seq(("id", "string"), ("feature", "feature")),
-      "features_AverageFuzzyHist" -> Seq(("id", "string"), ("feature", "feature")),
-      "features_AverageFuzzyHistNormalized" -> Seq(("id", "string"), ("feature", "feature")),
-      "features_MedianFuzzyHist" -> Seq(("id", "string"), ("feature", "feature")),
-      "features_AverageColorARP44" -> Seq(("id", "string"), ("feature", "feature")),
-      "features_AverageColorARP44Normalized" -> Seq(("id", "string"), ("feature", "feature")),
-      "features_SubDivAverageFuzzyColor" -> Seq(("id", "string"), ("feature", "feature")),
-      "features_SubDivMedianFuzzyColor" -> Seq(("id", "string"), ("feature", "feature")),
-      "features_AverageColorGrid8" -> Seq(("id", "string"), ("feature", "feature")),
-      "features_AverageColorGrid8Normalized" -> Seq(("id", "string"), ("feature", "feature")),
-      "features_AverageColorCLD" -> Seq(("id", "string"), ("feature", "feature")),
-      "features_AverageColorCLDNormalized" -> Seq(("id", "string"), ("feature", "feature")),
-      "features_CLD" -> Seq(("id", "string"), ("feature", "feature")),
-      "features_CLDNormalized" -> Seq(("id", "string"), ("feature", "feature")),
-      "features_MedianColorGrid8" -> Seq(("id", "string"), ("feature", "feature")),
-      "features_AverageColorRaster" -> Seq(("id", "string"), ("hist", "feature"), ("rater", "feature")),
-      "features_EdgeARP88" -> Seq(("id", "string"), ("feature", "feature")),
-      "features_EdgeGrid16" -> Seq(("id", "string"), ("feature", "feature")),
-      "features_EHD" -> Seq(("id", "string"), ("feature", "feature")),
-      "features_DominantEdgeGrid16" -> Seq(("id", "string"), ("feature", "feature")),
-      "features_DominantEdgeGrid8" -> Seq(("id", "string"), ("feature", "feature")),
-      "features_SubDivMotionHistogram3" -> Seq(("id", "string"), ("feature", "feature")),
-      "features_SubDivMotionHistogram5" -> Seq(("id", "string"), ("feature", "feature")),
-      "features_SubDivMotionHistogramBackground3" -> Seq(("id", "string"), ("feature", "feature")),
-      "features_SubDivMotionHistogramBackground5" -> Seq(("id", "string"), ("feature", "feature")),
-      "features_AverageColorGrid8Reduced11" -> Seq(("id", "string"), ("feature", "feature")),
-      "features_AverageColorGrid8Reduced15" -> Seq(("id", "string"), ("feature", "feature")),
-      "features_AverageColorRasterReduced11" -> Seq(("id", "string"), ("hist", "feature"), ("rater", "feature")),
-      "features_AverageColorRasterReduced15" -> Seq(("id", "string"), ("hist", "feature"), ("rater", "feature")),
-      "features_CLDReduced11" -> Seq(("id", "string"), ("feature", "feature")),
-      "features_CLDReduced15" -> Seq(("id", "string"), ("feature", "feature"))
-    )
-
-
-    features.foreach { case (entityname, attributes) =>
-      grpc.entityCreate(entityname,
-        attributes.map { case (name, datatype) => RPCAttributeDefinition(name, datatype, name == "id") }
-      )
-    }
-  }
 
   /**
     * Serving local files to import. Note that due to some errors when using grpc, having too large batches will fail the import.
@@ -276,7 +202,6 @@ class Importer(grpc: RPCClient) {
     }
   }
 
-
   /**
     *
     */
@@ -292,34 +217,5 @@ class Importer(grpc: RPCClient) {
   private def getCounts(): Map[String, String] = {
     getEntities().map(entity => entity -> grpc.entityDetails(entity).map(_.get("count").getOrElse("0")).getOrElse("0")).toMap
   }
-
-
 }
 
-
-object Importer {
-  val log = LoggerFactory.getLogger(this.getClass.getName.stripSuffix("$"))
-
-  def main(args: Array[String]) {
-    try {
-      val grpcHost = "localhost"
-      val grpcPort = 5890
-
-      val grpc = RPCClient(grpcHost, grpcPort)
-
-      if (args.length < 2) {
-        System.err.println("Usage: Importer path logpath")
-        sys.exit(1)
-      }
-
-      val importer = new Importer(grpc)
-
-      importer.createEntities()
-      importer.importProtoFiles(args(0), args(1))
-      importer.vacuumEntities()
-      importer.outputCounts()
-    } catch {
-      case e: Exception => log.error("error while importing", e)
-    }
-  }
-}
