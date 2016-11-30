@@ -159,7 +159,17 @@ class ProtoImporterExporter()(@transient implicit val ac: AdamContext) extends S
       inserts.foreach { insert =>
         val res = Await.result(op(insert), Duration.Inf)
         if (res.code != AckMessage.Code.OK) {
-          log.error("exception while inserting files: " + pathBatch.mkString(";"), res.message)
+          log.error("exception while inserting files: " + pathBatch.mkString(";") + " - retrying", res.message)
+
+          //retry to insert each tuple separately
+          insert.tuples.foreach { tupleinsert =>
+            val subres = InsertMessage(insert.entity, Seq(tupleinsert))
+
+            if (res.code != AckMessage.Code.OK) {
+              log.error("exception while inserting tuple: " + subres.toString(), res.message)
+            }
+          }
+
         }
         observer.onNext(AckMessage(res.code, pathBatch.mkString(";")))
       }
