@@ -127,6 +127,7 @@ class ProtoImporterExporter()(@transient implicit val ac: AdamContext) extends S
 
           try {
             val in = CodedInputStream.newInstance(is)
+            in.setSizeLimit(1024 << 20) //1 GB
 
             while (!in.isAtEnd) {
               val tuple = TupleInsertMessage.parseDelimitedFrom(in).get
