@@ -597,9 +597,9 @@ class DataDefinitionRPC extends AdamDefinitionGrpc.AdamDefinition with Logging {
     * @param request
     * @return
     */
-  @Experimental  override def protoImportData(request: ProtoImportMessage, responseObserver: StreamObserver[AckMessage]): Unit = {
+  @Experimental override def protoImportData(request: ProtoImportMessage, responseObserver: StreamObserver[AckMessage]): Unit = {
     log.debug("rpc call for importing data from proto files")
-    ProtoImporterExporter.importData(request.path, insert, responseObserver)
+    new ProtoImporterExporter().importData(request.path, createEntity, insert, responseObserver)
   }
 
 
@@ -608,7 +608,7 @@ class DataDefinitionRPC extends AdamDefinitionGrpc.AdamDefinition with Logging {
     * @param request
     * @return
     */
-  @Experimental  override def protoExportData(request: ProtoExportMessage): Future[AckMessage] = {
+  @Experimental override def protoExportData(request: ProtoExportMessage): Future[AckMessage] = {
     log.debug("rpc call for importing data from proto files")
 
     val entity = Entity.load(request.entity)
@@ -617,9 +617,14 @@ class DataDefinitionRPC extends AdamDefinitionGrpc.AdamDefinition with Logging {
       return Future.successful(AckMessage(code = AckMessage.Code.ERROR, message = "cannot load entity"))
     }
 
-    ProtoImporterExporter.exportData(request.path, request.entity, entity.get.getData().get)
+    val res = new ProtoImporterExporter().exportData(request.path, entity.get)
 
-    Future.successful(AckMessage(code = AckMessage.Code.OK))
+    if (res.isSuccess) {
+      Future.successful(AckMessage(AckMessage.Code.OK))
+    } else {
+      log.error(res.failed.get.getMessage, res.failed.get)
+      Future.successful(AckMessage(code = AckMessage.Code.ERROR, message = res.failed.get.getMessage))
+    }
   }
 
 
