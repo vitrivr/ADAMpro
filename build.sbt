@@ -134,7 +134,7 @@ unmanagedResourceDirectories in Compile += baseDirectory.value / "conf"
 
 //assembly
 assemblyOption in assembly :=
-  (assemblyOption in assembly).value.copy(includeScala = false)
+  (assemblyOption in assembly).value.copy(includeScala = true)
 
 val meta = """META.INF(.)*""".r
 assemblyMergeStrategy in assembly := {
