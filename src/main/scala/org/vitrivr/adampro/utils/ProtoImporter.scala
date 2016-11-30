@@ -25,34 +25,36 @@ object ProtoImporter extends Serializable with Logging {
 
   /**
     *
+    * @param path
+    * @param insertOp
+    * @param observer
     */
-  def apply(path: String, insertOp : (InsertMessage) => (Future[AckMessage]), observer : StreamObserver[AckMessage]) {
+  def apply(path: String, insertOp: (InsertMessage) => (Future[AckMessage]), observer: StreamObserver[AckMessage]) {
     if (!Paths.get(path).toFile.exists()) {
       throw new GeneralAdamException("path does not exist")
     }
 
-    val paths = files(path)
+    lazy val paths = {
+      import scala.collection.JavaConverters._
+      FileUtils.listFiles(new File(path), Array("bin"), true).asScala.toList.sortBy(_.getAbsolutePath.reverse)
+    }
 
     log.trace("counting number of files in path")
 
-    val length = files(path).length
+    val length = paths.length
     var remaining = length
 
     log.info("will process " + remaining + " files")
 
-    paths.grouped(BATCH_SIZE).foreach(groupedPaths => {
+    paths.grouped(BATCH_SIZE).foreach( pathBatch => {
       val batch = new ListBuffer[InsertMessage]()
       log.trace("starting new batch")
 
-      val it = groupedPaths.iterator
-
-      while (it.hasNext) {
-        val gpath = it.next
-
+      pathBatch.foreach { path =>
         try {
-          val entity = gpath.replace(".bin", "")
+          val entity = path.getName.replace(".bin", "")
 
-          val is = new FileInputStream(gpath)
+          val is = new FileInputStream(path)
 
           try {
             val in = CodedInputStream.newInstance(is)
@@ -65,16 +67,16 @@ object ProtoImporter extends Serializable with Logging {
               batch += msg
             }
           } catch {
-            case e: Exception => log.error("exception while reading files: " + gpath, e)
-          } finally {
-            is.close()
+            case e: Exception => log.error("exception while reading files: " + path, e)
           }
+
+          is.close()
 
           this.synchronized {
             remaining = remaining - 1
           }
         } catch {
-          case e: Exception => log.error("exception while reading files: " + gpath, e)
+          case e: Exception => log.error("exception while reading files: " + path, e)
         }
       }
 
@@ -85,24 +87,14 @@ object ProtoImporter extends Serializable with Logging {
       inserts.foreach { insert =>
         val res = Await.result(insertOp(insert), Duration.Inf)
         if (res.code != AckMessage.Code.OK) {
-          log.error("exception while inserting files: " + groupedPaths.mkString(";"), res.message)
+          log.error("exception while inserting files: " + pathBatch.mkString(";"), res.message)
         }
-        observer.onNext(AckMessage(res.code, groupedPaths.mkString(";")))
+        observer.onNext(AckMessage(res.code, pathBatch.mkString(";")))
       }
 
       log.info("status: " + remaining + "/" + length)
     })
 
     observer.onCompleted()
-  }
-
-  /**
-    *
-    * @param path
-    * @return
-    */
-  private def files(path: String) = {
-    import scala.collection.JavaConversions._
-    FileUtils.listFiles(new File(path), Array(".bin"), true).map(_.getAbsolutePath).toSeq.sortBy(_.reverse).iterator
   }
 }
