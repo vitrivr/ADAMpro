@@ -16,7 +16,7 @@ import org.vitrivr.adampro.helpers.partition.{PartitionMode, PartitionerChoice}
 import org.vitrivr.adampro.index.structures.IndexTypes
 import org.vitrivr.adampro.main.{AdamContext, SparkStartup}
 import org.vitrivr.adampro.query.query.Predicate
-import org.vitrivr.adampro.utils.{AdamImporter, Logging, ProtoImporter}
+import org.vitrivr.adampro.utils.{AdamImporter, Logging, ProtoImporterExporter}
 
 import scala.concurrent.Future
 
@@ -599,9 +599,28 @@ class DataDefinitionRPC extends AdamDefinitionGrpc.AdamDefinition with Logging {
     */
   @Experimental  override def protoImportData(request: ProtoImportMessage, responseObserver: StreamObserver[AckMessage]): Unit = {
     log.debug("rpc call for importing data from proto files")
-    ProtoImporter(request.path, insert, responseObserver)
+    ProtoImporterExporter.importData(request.path, insert, responseObserver)
   }
 
+
+  /**
+    *
+    * @param request
+    * @return
+    */
+  @Experimental  override def protoExportData(request: ProtoExportMessage): Future[AckMessage] = {
+    log.debug("rpc call for importing data from proto files")
+
+    val entity = Entity.load(request.entity)
+
+    if (entity.isFailure) {
+      return Future.successful(AckMessage(code = AckMessage.Code.ERROR, message = "cannot load entity"))
+    }
+
+    ProtoImporterExporter.exportData(request.path, request.entity, entity.get.getData().get)
+
+    Future.successful(AckMessage(code = AckMessage.Code.OK))
+  }
 
 
   /**

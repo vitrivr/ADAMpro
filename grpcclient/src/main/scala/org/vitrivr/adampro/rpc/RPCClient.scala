@@ -196,6 +196,25 @@ class RPCClient(channel: ManagedChannel,
   }
 
   /**
+    * Export data from entity.
+    *
+    * @param path path
+    * @param entity
+    * @return
+    */
+  def entityProtoExport(path: String, entity : String): Try[Void] = {
+    execute("entity import operation") {
+      val res = definerBlocking.protoExportData(ProtoExportMessage(path, entity))
+
+      if (res.code == AckMessage.Code.OK) {
+        return Success(null)
+      } else {
+        return Failure(new Exception(res.message))
+      }
+    }
+  }
+
+  /**
     * Import data to entity.
     *
     * @param host     host
