@@ -42,9 +42,9 @@ object ProtoImporter extends Serializable with Logging {
     log.trace("counting number of files in path")
 
     val length = paths.length
-    var remaining = length
+    var done = 0
 
-    log.info("will process " + remaining + " files")
+    log.info("will process " + length + " files")
 
     paths.grouped(BATCH_SIZE).foreach( pathBatch => {
       val batch = new ListBuffer[InsertMessage]()
@@ -73,7 +73,7 @@ object ProtoImporter extends Serializable with Logging {
           is.close()
 
           this.synchronized {
-            remaining = remaining - 1
+            done += 1
           }
         } catch {
           case e: Exception => log.error("exception while reading files: " + path, e)
@@ -92,7 +92,7 @@ object ProtoImporter extends Serializable with Logging {
         observer.onNext(AckMessage(res.code, pathBatch.mkString(";")))
       }
 
-      log.info("status: " + remaining + "/" + length)
+      log.info("status: " + done + "/" + length)
     })
 
     observer.onCompleted()

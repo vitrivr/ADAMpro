@@ -1,9 +1,11 @@
 package org.vitrivr.adampro.importer
 
 import java.io._
-import java.nio.file.{Files, Paths}
+import java.nio.file.Paths
 
 import com.google.protobuf.CodedInputStream
+import io.grpc.stub.StreamObserver
+import org.apache.commons.io.FileUtils
 import org.slf4j.LoggerFactory
 import org.vitrivr.adampro.grpc.grpc.InsertMessage.TupleInsertMessage
 import org.vitrivr.adampro.grpc.grpc._
@@ -26,6 +28,8 @@ class Importer(grpc: RPCClient) {
   val log = LoggerFactory.getLogger(this.getClass.getName.stripSuffix("$"))
 
   val runningCounts = mutable.Map[String, Int]()
+
+  private val BATCH_SIZE = 1000
 
   /**
     *
@@ -102,24 +106,19 @@ class Importer(grpc: RPCClient) {
   }
 
   /**
-    *
-    * @param path
-    * @return
-    */
-  private def files(path: String) = {
-    import scala.collection.JavaConversions._
-    (List() ++ Files.walk(Paths.get(path)).iterator().filter(_.toString.endsWith(".bin"))).sortBy(_.getFileName.toString.reverse).iterator
-  }
-
-
-  /**
+    * Serving local files to import. Note that due to some errors when using grpc, having too large batches will fail the import.
     *
     * @param path
     * @param proplogpath
     */
-  def importProtoFiles(path: String, proplogpath: String) = {
-    if (!Paths.get(path).toFile.exists()) {
+  def serveLocalProtoFiles(path: String, proplogpath: String) = {
+    if (!new File(path).exists()) {
       throw new Exception("Path does not exist.")
+    }
+
+    val paths = {
+      import scala.collection.JavaConverters._
+      FileUtils.listFiles(new File(path), Array("bin"), true).asScala.toList.sortBy(_.getAbsolutePath.reverse)
     }
 
     var logpath = proplogpath
@@ -138,53 +137,47 @@ class Importer(grpc: RPCClient) {
     val logfile = new File(logpath)
     val pathLogger = new BufferedWriter(new FileWriter(logfile))
 
-    val paths = files(path)
+    log.trace("preparing file list in path")
 
-    log.trace("counting number of files in path")
+    val length = paths.length
+    var done = 0
 
-    val length = files(path).length
-    var remaining = length
+    log.info("will process " + length + " files")
 
-    log.info("will process " + remaining + " files")
-
-    paths.grouped(50).foreach(groupedPaths => {
+    paths.grouped(BATCH_SIZE).foreach(pathBatch => {
       val batch = new ListBuffer[InsertMessage]()
       val tmpPathLogs = new ListBuffer[String]()
-      log.trace("starting new batch")
 
-      val it = groupedPaths.iterator
+      log.trace("starting new batch of length " + pathBatch.length)
 
-      while (it.hasNext) {
-        val gpath = it.next
-
-        if (!filter.contains(gpath.toAbsolutePath.toString)) {
-
-          var is: InputStream = null
-
+      pathBatch.foreach { path =>
+        if (!filter.contains(path.getAbsolutePath)) {
           try {
-            tmpPathLogs += gpath.toAbsolutePath.toString
+            val entity = path.getName.replace(".bin", "")
 
-            val entity = gpath.getFileName.toString.replace(".bin", "")
+            val is = new FileInputStream(path)
 
-            is = Files.newInputStream(gpath)
-            val in = CodedInputStream.newInstance(is)
+            try {
+              val in = CodedInputStream.newInstance(is)
 
-            while (!in.isAtEnd) {
-              val tuple = TupleInsertMessage.parseDelimitedFrom(in).get
+              while (!in.isAtEnd) {
+                val tuple = TupleInsertMessage.parseDelimitedFrom(in).get
 
-              val msg = InsertMessage(entity, Seq(tuple))
-              runningCounts += entity -> (runningCounts.getOrElse(entity, 0) + 1)
+                val msg = InsertMessage(entity, Seq(tuple))
 
-              batch += msg
+                batch += msg
+              }
+            } catch {
+              case e: Exception => log.error("exception while reading files: " + path, e)
             }
+
+            is.close()
 
             this.synchronized {
-              remaining = remaining - 1
+              done += 1
             }
           } catch {
-            case e: Exception => log.error("exception while reading files: " + gpath, e)
-          } finally {
-            is.close()
+            case e: Exception => log.error("exception while reading files: " + path, e)
           }
         }
       }
@@ -196,7 +189,7 @@ class Importer(grpc: RPCClient) {
       inserts.foreach { insert =>
         val res = grpc.entityInsert(insert)
         if (res.isFailure) {
-          log.error("exception while inserting files: " + groupedPaths.mkString(";"), res.failed.get)
+          log.error("exception while inserting files: " + pathBatch.mkString(";"), res.failed.get)
         }
       }
 
@@ -206,10 +199,42 @@ class Importer(grpc: RPCClient) {
       }
       pathLogger.flush()
 
-      log.info("status: " + remaining + "/" + length)
+      log.info("status: " + done + "/" + length)
     })
 
     pathLogger.close()
+  }
+
+  /**
+    *
+    * @param path
+    */
+  def remoteImportProtoFiles(path: String) = {
+    val so = new StreamObserver[(Boolean, String)]() {
+      var finished = false
+
+      override def onError(throwable: Throwable): Unit = {
+        log.error("error while processing import", throwable)
+        finished = true
+      }
+
+      override def onCompleted(): Unit = {
+        log.info("completed")
+        finished = true
+      }
+
+      override def onNext(ack: (Boolean, String)): Unit = {
+        if (!ack._1) {
+          log.error("error while inserting: " + ack._2)
+        }
+      }
+    }
+
+    val res = grpc.entityProtoImport(path, so)
+
+    while (!so.finished) {
+      Thread.sleep(1000)
+    }
   }
 
 
