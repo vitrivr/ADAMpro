@@ -137,8 +137,9 @@ class ProtoImporterExporter()(@transient implicit val ac: AdamContext) extends S
               batch += msg
             }
           } catch {
-            observer.onNext(AckMessage(AckMessage.Code.ERROR, "error while reading files: " + path)))
-            case e: Exception => log.error("exception while reading files: " + path, e)
+            case e: Exception =>
+              log.error("exception while reading files: " + path, e)
+              observer.onNext(AckMessage(AckMessage.Code.ERROR, "error while reading files: " + path))
           }
 
           is.close()
@@ -147,8 +148,9 @@ class ProtoImporterExporter()(@transient implicit val ac: AdamContext) extends S
             done += 1
           }
         } catch {
-          observer.onNext(AckMessage(AckMessage.Code.ERROR, "exception while reading files: " + path)))
-          case e: Exception => log.error("exception while reading files: " + path, e)
+          case e: Exception =>
+            log.error("exception while reading files: " + path, e)
+            observer.onNext(AckMessage(AckMessage.Code.ERROR, "exception while reading files: " + path))
         }
       }
 
