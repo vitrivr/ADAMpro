@@ -34,6 +34,8 @@ class CassandraEngine(private val url: String, private val port: Int, private va
 
   override def specializes = Seq(FieldTypes.FEATURETYPE)
 
+  override val repartitionable = false
+
   /**
     *
     * @param props

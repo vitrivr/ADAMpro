@@ -34,6 +34,8 @@ class OrcEngine extends Engine with Logging with Serializable {
 
   var subengine: GenericOrcEngine = _
 
+  override val repartitionable = true
+
   /**
     *
     * @param props

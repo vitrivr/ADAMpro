@@ -26,6 +26,8 @@ class PostgisEngine(private val url: String, private val user: String, private v
 
   override def specializes: Seq[FieldType] = Seq(FieldTypes.GEOMETRYTYPE, FieldTypes.GEOGRAPHYTYPE)
 
+  override val repartitionable = false
+
   /**
     *
     * @param props

@@ -29,6 +29,8 @@ class PostgresqlEngine(private val url: String, private val user: String, privat
 
   override def specializes: Seq[FieldType] = Seq(FieldTypes.AUTOTYPE, FieldTypes.INTTYPE, FieldTypes.LONGTYPE, FieldTypes.FLOATTYPE, FieldTypes.DOUBLETYPE, FieldTypes.STRINGTYPE, FieldTypes.BOOLEANTYPE)
 
+  override val repartitionable = false
+
   /**
     *
     * @param props

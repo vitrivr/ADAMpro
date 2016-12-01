@@ -28,6 +28,8 @@ class SolrEngine(private val url: String) extends Engine with Logging with Seria
 
   override def specializes: Seq[FieldType] = Seq(FieldTypes.TEXTTYPE)
 
+  override val repartitionable = false
+
   private val SOLR_OPTION_ENTITYNAME = "storing-solr-corename"
   private val SOLR_OPTION_FIELDNAME = "storing-solr-fieldname"
 

@@ -25,6 +25,7 @@ trait Engine extends Serializable with Logging {
   //specializes should be contained in supports
   assert(specializes.forall(supports.contains(_)))
 
+  val repartitionable : Boolean
 
   /**
     * Create the entity.

@@ -35,6 +35,8 @@ class AvroEngine extends Engine with Logging with Serializable {
 
   var subengine: GenericAvroEngine = _
 
+  override val repartitionable = false
+
   /**
     *
     * @param props

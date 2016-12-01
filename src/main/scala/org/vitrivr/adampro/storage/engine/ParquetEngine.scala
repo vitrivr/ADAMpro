@@ -31,6 +31,8 @@ class ParquetEngine extends Engine with Logging with Serializable {
 
   var subengine: GenericParquetEngine = _
 
+  override val repartitionable = true
+
   /**
     *
     * @param props

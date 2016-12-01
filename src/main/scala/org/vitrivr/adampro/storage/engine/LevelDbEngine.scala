@@ -34,6 +34,7 @@ class LevelDbEngine(private val path: String) extends Engine with Logging with S
 
   override def specializes = Seq(FieldTypes.FEATURETYPE)
 
+  override val repartitionable = false
 
   protected case class DBStatus(db: DB, var locks: Int)
 

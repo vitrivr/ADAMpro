@@ -68,7 +68,7 @@ object EntityPartitioner {
       if (partitionAttributeHandler.isDefined) {
         partitionAttributeHandler.map(_.storagehandler())
       } else {
-        val fallback = entity.schema().filter(_.storagehandler.engine.isInstanceOf[ParquetEngine]).headOption
+        val fallback = entity.schema().filter(_.storagehandler.engine.repartitionable).headOption
 
         if (fallback.isDefined) {
           fallback.map(_.storagehandler())
