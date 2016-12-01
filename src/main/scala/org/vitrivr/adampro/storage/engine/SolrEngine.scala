@@ -1,17 +1,18 @@
 package org.vitrivr.adampro.storage.engine
 
+import org.apache.solr.client.solrj.SolrQuery
+import org.apache.solr.client.solrj.impl.HttpSolrClient
+import org.apache.solr.client.solrj.request.CoreAdminRequest
+import org.apache.solr.common.SolrInputDocument
+import org.apache.spark.sql.types.{DoubleType, StructField, StructType}
+import org.apache.spark.sql.{DataFrame, Row, SaveMode}
+import org.vitrivr.adampro.config.FieldNames
 import org.vitrivr.adampro.datatypes.FieldTypes
 import org.vitrivr.adampro.datatypes.FieldTypes.FieldType
 import org.vitrivr.adampro.entity.AttributeDefinition
 import org.vitrivr.adampro.main.AdamContext
 import org.vitrivr.adampro.query.query.Predicate
 import org.vitrivr.adampro.utils.Logging
-import org.apache.solr.client.solrj.SolrQuery
-import org.apache.solr.client.solrj.impl.HttpSolrClient
-import org.apache.solr.client.solrj.request.CoreAdminRequest
-import org.apache.solr.common.SolrInputDocument
-import org.apache.spark.sql.types.{StructField, StructType}
-import org.apache.spark.sql.{DataFrame, Row, SaveMode}
 
 import scala.util.{Failure, Success, Try}
 
@@ -143,6 +144,7 @@ class SolrEngine(private val url: String) extends Engine with Logging with Seria
       if (params.contains("filter")) {
         solrQuery.setFilterQueries(params.get("filter").get.split(",").toSeq: _*)
       }
+      solrQuery.setFields("*", "score")
       solrQuery.setRows(Integer.MAX_VALUE) //retrieve all rows
 
       val results = client.query(solrQuery).getResults
@@ -171,7 +173,9 @@ class SolrEngine(private val url: String) extends Engine with Logging with Seria
       val df = if (!results.isEmpty) {
         val tmpDoc = results.get(0)
         val schema = nameDicSolrnameToAttributename.keys.toSeq.map(solrname => {
-          if (tmpDoc.get(solrname) != null) {
+          if (tmpDoc.get(solrname) == "score") {
+            StructField(FieldNames.scoreColumnName, DoubleType) //untested!
+          } else if (tmpDoc.get(solrname) != null) {
             val name = nameDicSolrnameToAttributename(solrname)
             val fieldtype = getFieldType(solrname.substring(solrname.lastIndexOf("_")))
             StructField(name, fieldtype.datatype)

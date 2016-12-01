@@ -11,6 +11,8 @@ object FieldNames {
   val internalIdColumnName = "ap_id"
 
   val distanceColumnName = "ap_distance"
+  val scoreColumnName = "ap_score"
+
   val featureIndexColumnName = "ap_indexfeature"
 
   val partitionColumnName = "ap_partition"
@@ -18,5 +20,5 @@ object FieldNames {
 
   val partitionKey = "ap_partitionkey"
 
-  val reservedNames = Seq(internalIdColumnName, distanceColumnName, featureIndexColumnName, partitionColumnName, sourceColumnName, partitionKey)
+  val reservedNames = Seq(internalIdColumnName, distanceColumnName, scoreColumnName, featureIndexColumnName, partitionColumnName, sourceColumnName, partitionKey)
 }
