@@ -547,7 +547,7 @@ function indexDetails(indexname, handler, async) {
     }
 
     startTask();
-    $.ajax(ADAM_CLIENT_HOST + "/index/details?indexname=" + entityname, {
+    $.ajax(ADAM_CLIENT_HOST + "/index/details?indexname=" + indexname, {
         type: 'GET',
         success: function (data) {
             if (data.code === 200) {
