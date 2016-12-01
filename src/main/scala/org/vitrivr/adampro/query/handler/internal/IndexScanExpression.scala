@@ -53,8 +53,10 @@ case class IndexScanExpression(val index: Index)(val nnq: NearestNeighbourQuery,
     ac.sc.setLocalProperty("spark.scheduler.pool", "index")
     ac.sc.setJobGroup(id.getOrElse(""), "index scan: " + index.indextypename.name, interruptOnCancel = true)
 
-    if (!(nnq.isConform(index) && nnq.isConform(index.entity.get))) {
-      throw QueryNotConformException()
+    if (!nnq.isConform(index)) {
+      throw QueryNotConformException("query is not conform to index")
+    } else if (!nnq.isConform(index.entity.get)){
+      throw QueryNotConformException("query is not conform to entity")
     }
 
     val prefilter = if (filter.isDefined && filterExpr.isDefined) {
