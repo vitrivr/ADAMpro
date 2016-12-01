@@ -354,7 +354,12 @@ class DataDefinitionRPC extends AdamDefinitionGrpc.AdamDefinition with Logging {
     */
   override def listIndexes(request: EntityNameMessage): Future[IndexesMessage] = {
     log.debug("rpc call for listing indexes")
-    val res = IndexOp.list(request.entity)
+
+    val res = if(request.entity != null && request.entity.nonEmpty){
+      IndexOp.list(request.entity)
+    } else {
+      IndexOp.list()
+    }
 
     if (res.isSuccess) {
       Future.successful(IndexesMessage(Some(AckMessage(AckMessage.Code.OK)), res.get.map(r => IndexesMessage.IndexMessage(r._1, r._2, r._3.indextype))))

@@ -1,5 +1,6 @@
 package org.vitrivr.adampro.api
 
+import org.vitrivr.adampro.catalog.CatalogOperator
 import org.vitrivr.adampro.entity.Entity
 import org.vitrivr.adampro.entity.Entity._
 import org.vitrivr.adampro.exception.GeneralAdamException
@@ -31,6 +32,17 @@ object IndexOp extends GenericOp {
       Success(Entity.load(entityname).get.indexes.filter(_.isSuccess).map(_.get).map(index => (index.indexname, index.attribute, index.indextypename)))
     }
   }
+
+  /**
+    * Lists all indexes.
+    *
+    */
+  def list()(implicit ac: AdamContext) : Try[Seq[IndexName]] = {
+    execute("list all indexes") {
+      CatalogOperator.listIndexes()
+    }
+  }
+
 
   /**
     * Creates an index.
