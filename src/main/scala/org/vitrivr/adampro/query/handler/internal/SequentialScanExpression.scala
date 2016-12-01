@@ -8,8 +8,10 @@ import org.vitrivr.adampro.entity.Entity
 import org.vitrivr.adampro.entity.Entity.EntityName
 import org.vitrivr.adampro.main.AdamContext
 import org.vitrivr.adampro.query.handler.generic.{ExpressionDetails, QueryEvaluationOptions, QueryExpression}
-import org.vitrivr.adampro.query.query.NearestNeighbourQuery
+import org.vitrivr.adampro.query.query.{Predicate, NearestNeighbourQuery}
 import org.vitrivr.adampro.utils.Logging
+
+import scala.collection.mutable
 
 /**
   * adamtwo
@@ -39,7 +41,7 @@ case class SequentialScanExpression(private val entity: Entity)(private val nnq:
     ac.sc.setLocalProperty("spark.scheduler.pool", "sequential")
     ac.sc.setJobGroup(id.getOrElse(""), "sequential scan: " + entity.entityname.toString, interruptOnCancel = true)
 
-    /*var ids = mutable.HashSet[Any]()
+    var ids = mutable.HashSet[Any]()
 
     if (filter.isDefined) {
       ids ++= filter.get.select(entity.pk.name).collect().map(_.getAs[Any](entity.pk.name))
@@ -48,37 +50,17 @@ case class SequentialScanExpression(private val entity: Entity)(private val nnq:
     if (filterExpr.isDefined) {
       filterExpr.get.filter = filter
       ids ++= filterExpr.get.evaluate(options).get.select(entity.pk.name).collect().map(_.getAs[Any](entity.pk.name))
-    }*/
-
-    var ids = if(filter.isDefined && filterExpr.isDefined){
-      Some(filter.get.select(entity.pk.name).unionAll(filterExpr.get.filter.get.select(entity.pk.name)).coalesce(4))
-    } else if(filter.isDefined){
-      Some(filter.get.select(entity.pk.name))
-    } else if(filterExpr.isDefined){
-      Some(filterExpr.get.filter.get.select(entity.pk.name))
-    } else {
-      None
     }
 
 
-    var result = if (ids.isDefined) {
-      /*val data = entity.getData(predicates = Seq(new Predicate(entity.pk.name, None, ids.toSeq)))
+    var result = if (ids.nonEmpty) {
+      val data = entity.getData(predicates = Seq(new Predicate(entity.pk.name, None, ids.toSeq)))
       val idsbc = ac.sc.broadcast(ids)
 
       data.map(d => {
         val rdd = d.rdd.filter(x => idsbc.value.contains(x.getAs[Any](entity.pk.name)))
         ac.sqlContext.createDataFrame(rdd, d.schema)
-      })*/
-
-      val data = entity.getData()
-
-      if(data.isDefined) {
-        Some(ids.get.join(data.get, entity.pk.name))
-      }  else {
-        None
-      }
-
-
+      })
     } else {
       entity.getData()
     }
