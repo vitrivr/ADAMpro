@@ -424,11 +424,12 @@ object Index extends Logging {
       val data = generatorRes._1
         .withColumnRenamed("id", entity.pk.name)
         .withColumnRenamed("value", FieldNames.featureIndexColumnName)
+        .repartition(AdamConfig.defaultNumberOfPartitionsIndex)
       val meta = generatorRes._2
 
       CatalogOperator.createIndex(indexname, entity.entityname, attribute, indexgenerator.indextypename, meta)
       storage.get.create(indexname, Seq()) //TODO: possibly switch index to be an entity with specific fields?
-      val status = storage.get.write(indexname, data, Seq(), SaveMode.ErrorIfExists, Map("allowRepartitioning" -> "true"))
+      val status = storage.get.write(indexname, data, Seq(), SaveMode.ErrorIfExists, Map("allowRepartitioning" -> "false"))
       CatalogOperator.createPartitioner(indexname, AdamConfig.defaultNumberOfPartitions, null, SparkPartitioner) //TODO Currently allowRepartitioning is set to true above so we use default no of partitions
 
 

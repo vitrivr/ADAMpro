@@ -65,6 +65,9 @@ object AdamConfig extends Serializable with Logging {
 
   val defaultNumberOfPartitions = 8
 
+  val defaultNumberOfPartitionsIndex = 4
+
+
   val localNodes = if (config.hasPath("adampro.localNodes")) {
     Option(config.getInt("adampro.localNodes"))
   } else {
