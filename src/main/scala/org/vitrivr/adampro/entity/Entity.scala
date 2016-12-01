@@ -421,7 +421,7 @@ case class Entity(val entityname: EntityName)(@transient implicit val ac: AdamCo
     val lb = ListBuffer[(String, String)]()
 
     lb.append("attributes" -> CatalogOperator.getAttributes(entityname).get.map(field => field.name).mkString(","))
-    lb.append("indexes" -> indexes.filter(_.isSuccess).map(_.get.indexname).mkString(","))
+    lb.append("indexes" -> CatalogOperator.listIndexes(Some(entityname)).get.mkString(","))
     lb.append("partitions" -> getFeatureData.map(_.rdd.getNumPartitions.toString).getOrElse("none"))
 
     if (!(options.contains("count") && options("count") == "false")) {
