@@ -5,7 +5,6 @@ import org.vitrivr.adampro.datatypes.feature.Feature._
 import org.vitrivr.adampro.index.IndexingTaskTuple
 import org.vitrivr.adampro.index.structures.va.VAIndex.Marks
 import org.vitrivr.adampro.utils.Logging
-import org.apache.log4j.Logger
 
 import scala.collection.mutable.ListBuffer
 
@@ -50,26 +49,28 @@ private[va] object EquifrequentMarksGenerator extends MarksGenerator with Serial
     }
 
     (0 until dimensionality).map({ dim =>
-      val hist = dimData(dim).histogram
+      if (maxMarks(dim) > 1) {
+        val hist = dimData(dim).histogram
 
-      var marks = new Array[Float](maxMarks(dim) - 1)
-      var k = 0
-      var sum = 0
-      for (j <- 1 until (maxMarks(dim) - 1)) {
-        var n = (hist.sum - sum) / (maxMarks(dim) - j)
-        
-        while ((j % 2 == 1 && k < hist.length && n > 0) || (j % 2 == 0 && k < hist.length && n > hist(k))) {
-          sum += hist(k)
-          n -= hist(k)
-          k += 1
+        var marks = new Array[Float](maxMarks(dim) - 1)
+        var k = 0
+        var sum = 0
+        for (j <- 1 until (maxMarks(dim) - 1)) {
+          var n = (hist.sum - sum) / (maxMarks(dim) - j)
+
+          while ((j % 2 == 1 && k < hist.length && n > 0) || (j % 2 == 0 && k < hist.length && n > hist(k))) {
+            sum += hist(k)
+            n -= hist(k)
+            k += 1
+          }
+
+          marks(j) = min(dim) + k.toFloat * (max(dim) - min(dim)) / SAMPLING_FREQUENCY.toFloat
         }
 
-        marks(j) = min(dim) + k.toFloat * (max(dim) - min(dim)) / SAMPLING_FREQUENCY.toFloat
+        marks.toSeq
+      } else {
+        Seq()
       }
-
-      marks(0) = min(dim)
-
-      marks.toSeq
     })
   }
 
@@ -116,7 +117,7 @@ private[va] object EquifrequentMarksGenerator extends MarksGenerator with Serial
       *
       * @return
       */
-    def histogram : IndexedSeq[Int] = {
+    def histogram: IndexedSeq[Int] = {
       val counts = data
         .map(x => {
           var j = (((x - min) / (max - min)) * sampling_frequency).floor.toInt
