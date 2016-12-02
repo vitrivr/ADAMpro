@@ -13,6 +13,7 @@ import org.vitrivr.adampro.helpers.optimizer.IndexCollectionFactory.{ExistingInd
 import org.vitrivr.adampro.helpers.optimizer.QueryCollectionFactory.{LoggedQueryCollectionOption, RandomQueryCollectionOption}
 import org.vitrivr.adampro.helpers.optimizer._
 import org.vitrivr.adampro.helpers.partition.{PartitionMode, PartitionerChoice}
+import org.vitrivr.adampro.helpers.storage.Transferer
 import org.vitrivr.adampro.index.structures.IndexTypes
 import org.vitrivr.adampro.main.{AdamContext, SparkStartup}
 import org.vitrivr.adampro.query.query.Predicate
@@ -652,5 +653,29 @@ class DataDefinitionRPC extends AdamDefinitionGrpc.AdamDefinition with Logging {
     val handlers = SparkStartup.mainContext.storageHandlerRegistry.value.handlers.filterNot(_._2.supports.isEmpty).map(handler => handler._1 -> handler._2.supports.map(RPCHelperMethods.getAttributeType(_)))
 
     Future.successful(StorageHandlersMessage(handlers.map(handler => StorageHandlerMessage(handler._1, handler._2)).toSeq))
+  }
+
+  /**
+    *
+    * @param request
+    * @return
+    */
+  override def transferStorageHandler(request: TransferStorageHandlerMessage): Future[AckMessage] = {
+    log.debug("rpc call for transfering storage handler")
+
+    val entity = Entity.load(request.entity)
+
+    if (entity.isFailure) {
+      return Future.successful(AckMessage(code = AckMessage.Code.ERROR, message = "cannot load entity"))
+    }
+
+    val res = Transferer(entity.get, request.attributes, request.handler)
+
+    if (res.isSuccess) {
+      Future.successful(AckMessage(AckMessage.Code.OK))
+    } else {
+      log.error(res.failed.get.getMessage, res.failed.get)
+      Future.successful(AckMessage(code = AckMessage.Code.ERROR, message = res.failed.get.getMessage))
+    }
   }
 }

@@ -199,6 +199,28 @@ object CatalogOperator extends Logging {
     }
   }
 
+  /**
+    *
+    *
+    * @param entityname
+    * @param attributename
+    * @param newHandlerName
+    */
+  def updateAttributeStorageHandler(entityname: EntityName, attributename: String, newHandlerName: String): Try[Void] = {
+    execute("update storage handler") {
+      val query = _attributes.filter(_.entityname === entityname.toString).filter(_.attributename === attributename).result
+      val attribute = Await.result(DB.run(query), MAX_WAITING_TIME).head
+
+      val actions = new ListBuffer[DBIOAction[_, NoStream, _]]()
+
+      //upsert
+      actions += _attributes.filter(_.entityname === entityname.toString).filter(_.attributename === attributename).delete
+      actions += _attributes.+=(entityname, attributename, attribute._3, attribute._4, newHandlerName)
+      Await.result(DB.run(DBIO.seq(actions.toArray: _*).transactionally), MAX_WAITING_TIME)
+      null
+    }
+  }
+
 
   /**
     * Gets the metadata to an attribute of an entity.
