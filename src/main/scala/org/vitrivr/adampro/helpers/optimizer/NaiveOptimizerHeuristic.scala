@@ -13,7 +13,7 @@ import org.vitrivr.adampro.query.query.NearestNeighbourQuery
   * Ivan Giangreco
   * September 2016
   */
-private[optimizer] class NaiveOptimizerHeuristic()(@transient implicit override val ac: AdamContext) extends OptimizerHeurstic("naive") {
+private[optimizer] class NaiveOptimizerHeuristic()(@transient implicit override val ac: AdamContext) extends OptimizerHeuristic("naive") {
   /**
     *
     * @param indexes

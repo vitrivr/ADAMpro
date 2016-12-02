@@ -26,9 +26,8 @@ object SparkStartup extends Logging {
     .set("spark.scheduler.allocation.file", AdamConfig.schedulerFile)
     .set("spark.driver.allowMultipleContexts", "true")
     .set("spark.sql.parquet.compression.codec", "snappy")
-    .set("spark.sql.hive.convertMetastoreParquet.mergeSchema","false")
-    .set("parquet.enable.summary-metadata","false")
-
+    .set("spark.sql.hive.convertMetastoreParquet.mergeSchema", "false")
+    .set("parquet.enable.summary-metadata", "false")
 
 
   if (AdamConfig.master.isDefined) {
@@ -55,6 +54,5 @@ object SparkStartup extends Logging {
   val mainContext = Implicits.ac
   val contexts = Seq(mainContext)
 
-  AdamConfig.engines.foreach{ engine => mainContext.storageHandlerRegistry.value.register(engine)
-  }
+  AdamConfig.engines.foreach { engine => mainContext.storageHandlerRegistry.value.register(engine) }
 }

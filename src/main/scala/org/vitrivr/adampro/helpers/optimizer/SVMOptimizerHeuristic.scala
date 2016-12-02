@@ -25,7 +25,7 @@ import scala.collection.mutable.ListBuffer
   * Ivan Giangreco
   * November 2016
   */
-private[optimizer] class SVMOptimizerHeurstic()(@transient implicit override val ac: AdamContext) extends OptimizerHeurstic("svm") {
+private[optimizer] class SVMOptimizerHeuristic()(@transient implicit override val ac: AdamContext) extends OptimizerHeuristic("svm") {
   /**
     *
     * @param indexes
@@ -99,7 +99,11 @@ private[optimizer] class SVMOptimizerHeurstic()(@transient implicit override val
 
       if (metaOpt.isSuccess) {
         val svm = metaOpt.get.asInstanceOf[PegasosSVM]
-        svm.test(f)
+        val ypred = svm.test(f)
+
+        log.info("SVM optimizer predicted " + ypred)
+
+        1 / ypred // 1 / ypred as score is better the higher, but ypred gets worse the higher the value
       } else {
         0.toDouble
       }

@@ -12,10 +12,7 @@ import scala.util.{Failure, Success, Try}
   * Ivan Giangreco
   * September 2016
   */
-object OptimizerOp {
-  val benchmarker = new NaiveOptimizerHeuristic()(org.vitrivr.adampro.main.SparkStartup.Implicits)
-
-
+class OptimizerOp(benchmarker : OptimizerHeuristic) {
   /**
     *
     * @param ic collection of indexes

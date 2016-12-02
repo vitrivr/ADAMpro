@@ -3,6 +3,7 @@ package org.vitrivr.adampro.main
 import org.apache.spark.sql.SQLContext
 import org.apache.spark.{Accumulator, SparkContext}
 import org.vitrivr.adampro.entity.EntityLRUCache
+import org.vitrivr.adampro.helpers.optimizer.OptimizerRegistry
 import org.vitrivr.adampro.index.IndexLRUCache
 import org.vitrivr.adampro.query.QueryLRUCache
 import org.vitrivr.adampro.storage.StorageHandlerRegistry
@@ -29,4 +30,6 @@ trait AdamContext {
   val indexLRUCache = sc.broadcast(new IndexLRUCache())
 
   val queryLRUCache = sc.broadcast(new QueryLRUCache())
+
+  val optimizerRegistry = sc.broadcast(new OptimizerRegistry())
 }

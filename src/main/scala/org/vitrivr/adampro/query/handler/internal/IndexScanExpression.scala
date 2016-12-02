@@ -6,7 +6,6 @@ import org.vitrivr.adampro.config.FieldNames
 import org.vitrivr.adampro.entity.Entity
 import org.vitrivr.adampro.entity.Entity._
 import org.vitrivr.adampro.exception.QueryNotConformException
-import org.vitrivr.adampro.helpers.optimizer.OptimizerOp
 import org.vitrivr.adampro.index.Index
 import org.vitrivr.adampro.index.Index._
 import org.vitrivr.adampro.main.AdamContext
@@ -42,7 +41,7 @@ case class IndexScanExpression(val index: Index)(val nnq: NearestNeighbourQuery,
         .filter(_.isSuccess)
         .map(_.get)
         .filter(nnq.isConform(_)) //choose only indexes that are conform to query
-        .sortBy(index => - OptimizerOp.getScore(index, nnq))
+        .sortBy(index => - ac.optimizerRegistry.value.apply("naive").get.getScore(index, nnq))
         .head
     )(nnq, id)(filterExpr)
   }

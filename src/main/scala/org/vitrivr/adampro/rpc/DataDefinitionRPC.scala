@@ -551,13 +551,21 @@ class DataDefinitionRPC extends AdamDefinitionGrpc.AdamDefinition with Logging {
     val qc = QueryCollectionFactory(request.entity, request.attribute, qco, request.options)
 
 
-    val res = OptimizerOp.train(ic, qc)
+    val res1 = ac.optimizerRegistry.value.apply("naive").get.train(ic, qc)
+    val res2 = ac.optimizerRegistry.value.apply("svm").get.train(ic, qc)
 
-    if (res.isSuccess) {
+    if (res1.isSuccess && res2.isSuccess) {
       Future.successful(AckMessage(AckMessage.Code.OK, request.entity))
+    } else if(res1.isSuccess) {
+      log.error(res2.failed.get.getMessage, res2.failed.get)
+      Future.successful(AckMessage(code = AckMessage.Code.ERROR, message = res2.failed.get.getMessage))
+    } else if(res2.isSuccess) {
+      log.error(res1.failed.get.getMessage, res1.failed.get)
+      Future.successful(AckMessage(code = AckMessage.Code.ERROR, message = res1.failed.get.getMessage))
     } else {
-      log.error(res.failed.get.getMessage, res.failed.get)
-      Future.successful(AckMessage(code = AckMessage.Code.ERROR, message = res.failed.get.getMessage))
+      log.error(res1.failed.get.getMessage, res1.failed.get)
+      log.error(res2.failed.get.getMessage, res2.failed.get)
+      Future.successful(AckMessage(code = AckMessage.Code.ERROR, message = res1.failed.get.getMessage + " " + res2.failed.get.getMessage))
     }
   }
 

@@ -108,24 +108,52 @@ object HintBasedScanExpression extends Logging {
       var j = 0
       while (j < hints.length) {
         hints(j) match {
-          case OPTIMIZED =>
-            log.trace("measurement-based execution plan hint")
+          case EMPIRICAL =>
+            //TODO: clean code duplication
+            log.trace("measurement-based (empirical) execution plan hint")
+            val optimizer = ac.optimizerRegistry.value.apply("svm").get
+
             val indexes = CatalogOperator.listIndexes(Some(entityname)).get.map(Index.load(_)).filter(_.isSuccess).map(_.get).groupBy(_.indextypename).mapValues(_.map(_.indexname))
             val index = indexes.values.toSeq.flatten
               .map(indexname => Index.load(indexname, false).get)
-              .sortBy(index => -OptimizerOp.getScore(index, nnq.get)).head
+              .sortBy(index => -optimizer.getScore(index, nnq.get)).head
 
             val entity = Entity.load(entityname).get
 
-            if (OptimizerOp.getScore(index, nnq.get) > OptimizerOp.getScore(entity, nnq.get)) {
+            if (optimizer.getScore(index, nnq.get) > optimizer.getScore(entity, nnq.get)) {
               scan = Some(IndexScanExpression(index)(nnq.get)(scan))
             } else {
               scan = Some(SequentialScanExpression(entity)(nnq.get)(scan))
             }
 
+            log.debug("hint-based chose (empirical) " + scan.get.toString)
+
+            return scan
+          case SCORED =>
+            //TODO: clean code duplication
+          log.trace("measurement-based (scored) execution plan hint")
+            val optimizer = ac.optimizerRegistry.value.apply("naive").get
+
+            val indexes = CatalogOperator.listIndexes(Some(entityname)).get.map(Index.load(_)).filter(_.isSuccess).map(_.get).groupBy(_.indextypename).mapValues(_.map(_.indexname))
+            val index = indexes.values.toSeq.flatten
+              .map(indexname => Index.load(indexname, false).get)
+              .sortBy(index => -optimizer.getScore(index, nnq.get)).head
+
+            val entity = Entity.load(entityname).get
+
+            if (optimizer.getScore(index, nnq.get) > optimizer.getScore(entity, nnq.get)) {
+              scan = Some(IndexScanExpression(index)(nnq.get)(scan))
+            } else {
+              scan = Some(SequentialScanExpression(entity)(nnq.get)(scan))
+            }
+
+            log.debug("hint-based (scored) chose " + scan.get.toString)
+
             return scan
           case iqh: IndexQueryHint =>
             log.trace("index execution plan hint")
+            val optimizer = ac.optimizerRegistry.value.apply("scored").get
+
             //index scan
             val indexChoice = CatalogOperator.listIndexes(Some(entityname), Some(iqh.structureType)).get.map(Index.load(_)).filter(_.isSuccess).map(_.get)
 
@@ -133,7 +161,7 @@ object HintBasedScanExpression extends Logging {
               val sortedIndexChoice = indexChoice
                 .filter(nnq.get.isConform(_)) //choose only indexes that are conform to query
                 .filterNot(_.isStale) //don't use stale indexes
-                .sortBy(index => -OptimizerOp.getScore(index, nnq.get)) //order by weight (highest weight first)
+                .sortBy(index => -optimizer.getScore(index, nnq.get)) //order by weight (highest weight first)
 
               if (sortedIndexChoice.isEmpty) {
                 return None
@@ -175,4 +203,5 @@ object HintBasedScanExpression extends Logging {
       scan
     }
   }
+
 }

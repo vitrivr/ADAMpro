@@ -37,7 +37,7 @@ class SimpleProgressivePathChooser()(implicit ac: AdamContext) extends Progressi
     IndexTypes.values
       .map(indextypename => Index.list(Some(entityname), Some(indextypename)).filter(_.isSuccess).map(_.get)
         .filter(nnq.isConform(_))
-        .sortBy(index => -OptimizerOp.getScore(index, nnq)))
+        .sortBy(index => - ac.optimizerRegistry.value.apply("naive").get.getScore(index, nnq)))
       .filterNot(_.isEmpty)
       .map(_.head)
       .map(index => {
@@ -67,7 +67,7 @@ class IndexTypeProgressivePathChooser(indextypenames: Seq[IndexTypeName])(implic
     indextypenames
       .map(indextypename => Index.list(Some(entityname), Some(indextypename)).filter(_.isSuccess).map(_.get)
         .filter(nnq.isConform(_))
-        .sortBy(index => -OptimizerOp.getScore(index, nnq)).head)
+        .sortBy(index => - ac.optimizerRegistry.value.apply("naive").get.getScore(index, nnq)).head)
       .map(index => IndexScanExpression(index)(nnq)())
   }
 }

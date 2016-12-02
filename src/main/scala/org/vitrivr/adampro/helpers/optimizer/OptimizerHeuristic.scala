@@ -13,7 +13,7 @@ import org.vitrivr.adampro.utils.Logging
   * Ivan Giangreco
   * November 2016
   */
-private[optimizer] abstract class OptimizerHeurstic(protected val name : String)(@transient implicit val ac: AdamContext) extends Serializable with Logging {
+private[optimizer] abstract class OptimizerHeuristic(protected val name : String)(@transient implicit val ac: AdamContext) extends Serializable with Logging {
   private val NRUNS = 100
 
   case class Measurement(precision: Double, recall: Double, time: Double)
