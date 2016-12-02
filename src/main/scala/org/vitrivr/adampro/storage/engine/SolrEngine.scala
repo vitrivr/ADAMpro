@@ -145,7 +145,10 @@ class SolrEngine(private val url: String) extends Engine with Logging with Seria
         solrQuery.setFilterQueries(params.get("filter").get.split(",").toSeq: _*)
       }
       solrQuery.setFields("*", "score")
-      solrQuery.setRows(Integer.MAX_VALUE) //retrieve all rows
+      solrQuery.setRows(500) //retrieve all rows
+      solrQuery.setSort("score", SolrQuery.ORDER.asc)
+      solrQuery.set("defType", "edismax")
+
 
       val results = client.query(solrQuery).getResults
       val nresults = results.getNumFound.toInt
