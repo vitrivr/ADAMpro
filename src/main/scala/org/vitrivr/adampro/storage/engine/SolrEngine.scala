@@ -4,8 +4,8 @@ import org.apache.solr.client.solrj.SolrQuery
 import org.apache.solr.client.solrj.impl.HttpSolrClient
 import org.apache.solr.client.solrj.request.CoreAdminRequest
 import org.apache.solr.common.SolrInputDocument
-import org.apache.spark.sql.types.{DoubleType, StructField, StructType}
-import org.apache.spark.sql.{DataFrame, Row, SaveMode}
+import org.apache.spark.sql.types.{FloatType, DoubleType, StructField, StructType}
+import org.apache.spark.sql.{SaveMode, DataFrame, Row}
 import org.vitrivr.adampro.config.FieldNames
 import org.vitrivr.adampro.datatypes.FieldTypes
 import org.vitrivr.adampro.datatypes.FieldTypes.FieldType
@@ -145,17 +145,29 @@ class SolrEngine(private val url: String) extends Engine with Logging with Seria
         solrQuery.setFilterQueries(params.get("filter").get.split(",").toSeq: _*)
       }
       solrQuery.setFields("*", "score")
-      solrQuery.setRows(500) //retrieve all rows
+      solrQuery.setRows(500)
       solrQuery.setSort("score", SolrQuery.ORDER.asc)
       solrQuery.set("defType", "edismax")
 
+      //set all other params
+      (params -("query", "fields")).foreach { case (param, value) =>
+        solrQuery.set(param, value)
+      }
 
       val results = client.query(solrQuery).getResults
       val nresults = results.getNumFound.toInt
 
+      log.trace("solr returns " + nresults + " results")
+
+      if (results.size > 0) {
+        log.trace("solr returns fields " + results.get(0).getFieldNames.toArray.mkString(","))
+      } else {
+        log.trace("solr returns 0 results")
+      }
+
       val rdd = ac.sc.range(0, nresults).mapPartitions(it => {
         it.filter(i => i < results.getNumFound).map(i => results.get(i.toInt)).map(doc => {
-          val data = nameDicSolrnameToAttributename.keys.toSeq.map(solrname => {
+          val data = (nameDicSolrnameToAttributename.keys.toSeq ++ Seq("score")).map(solrname => {
             val fieldData = doc.get(solrname)
 
             if (fieldData != null) {
@@ -175,9 +187,9 @@ class SolrEngine(private val url: String) extends Engine with Logging with Seria
 
       val df = if (!results.isEmpty) {
         val tmpDoc = results.get(0)
-        val schema = nameDicSolrnameToAttributename.keys.toSeq.map(solrname => {
-          if (tmpDoc.get(solrname) == "score") {
-            StructField(FieldNames.scoreColumnName, DoubleType) //untested!
+        val schema = (nameDicSolrnameToAttributename.keys.toSeq ++ Seq("score")).map(solrname => {
+          if (solrname == "score") {
+            StructField(FieldNames.scoreColumnName, FloatType)
           } else if (tmpDoc.get(solrname) != null) {
             val name = nameDicSolrnameToAttributename(solrname)
             val fieldtype = getFieldType(solrname.substring(solrname.lastIndexOf("_")))
@@ -192,7 +204,9 @@ class SolrEngine(private val url: String) extends Engine with Logging with Seria
       }
 
       Success(df)
-    } catch {
+    }
+
+    catch {
       case e: Exception =>
         log.error("fatal error when reading from solr", e)
         Failure(e)
@@ -209,19 +223,20 @@ class SolrEngine(private val url: String) extends Engine with Logging with Seria
   private def adjustAttributeName(originalQuery: String, nameDic: Map[String, String]): String = {
 
     val pattern = "([^:\"']+)|(\"[^\"]*\")|('[^']*')".r
-    pattern.findAllIn(originalQuery).zipWithIndex.map { case (fieldname, idx) =>
-      if (idx % 2 == 0) {
-        val solrname = nameDic.get(fieldname)
+    pattern.findAllIn(originalQuery).zipWithIndex.map {
+      case (fieldname, idx) =>
+        if (idx % 2 == 0) {
+          val solrname = nameDic.get(fieldname)
 
-        if (solrname.isDefined) {
-          solrname.get + ":"
+          if (solrname.isDefined) {
+            solrname.get + ":"
+          } else {
+            log.error("field " + fieldname + " not stored in solr")
+          }
+
         } else {
-          log.error("field " + fieldname + " not stored in solr")
+          fieldname
         }
-
-      } else {
-        fieldname
-      }
     }.mkString
   }
 
@@ -239,23 +254,25 @@ class SolrEngine(private val url: String) extends Engine with Logging with Seria
   override def write(storename: String, df: DataFrame, attributes: Seq[AttributeDefinition], mode: SaveMode = SaveMode.Append, params: Map[String, String])(implicit ac: AdamContext): Try[Map[String, String]] = {
     val pk = attributes.filter(_.pk).head
 
-    df.foreachPartition { it =>
-      val partClient = new HttpSolrClient(url + "/" + storename)
+    df.foreachPartition {
+      it =>
+        val partClient = new HttpSolrClient(url + "/" + storename)
 
-      it.foreach { row =>
-        val doc = new SolrInputDocument()
-        doc.addField("id", row.getAs[Any](pk.name))
+        it.foreach {
+          row =>
+            val doc = new SolrInputDocument()
+            doc.addField("id", row.getAs[Any](pk.name))
 
-        attributes.foreach {
-          attribute =>
-            val solrname = attribute.name + getSuffix(attribute.fieldtype)
-            doc.addField(solrname, row.getAs[Any](attribute.name).toString)
+            attributes.foreach {
+              attribute =>
+                val solrname = attribute.name + getSuffix(attribute.fieldtype)
+                doc.addField(solrname, row.getAs[Any](attribute.name).toString)
+            }
+
+            partClient.add(doc)
         }
 
-        partClient.add(doc)
-      }
-
-      partClient.commit()
+        partClient.commit()
     }
 
     Success(Map())

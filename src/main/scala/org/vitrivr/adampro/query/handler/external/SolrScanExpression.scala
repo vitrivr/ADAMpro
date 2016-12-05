@@ -39,7 +39,7 @@ case class SolrScanExpression(entityname: EntityName, handlername : String, para
   override protected def run(options : Option[QueryEvaluationOptions], filter: Option[DataFrame] = None)(implicit ac: AdamContext): Option[DataFrame] = {
     entity.schema().filter(_.storagehandler.equals(handler)).map(_.name)
 
-    val attributes = entity.schema().filter(a => a.storagehandler.equals(handler))
+    val attributes = entity.schema().filter(a => a.storagehandler.equals(handler)) ++ Seq(entity.pk)
     var status = handler.read(entityname, attributes, params = params)
 
     if (status.isFailure) {
