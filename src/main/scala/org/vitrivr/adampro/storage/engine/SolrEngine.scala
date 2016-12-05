@@ -155,7 +155,7 @@ class SolrEngine(private val url: String) extends Engine with Logging with Seria
       }
 
       val results = client.query(solrQuery).getResults
-      val nresults = results.getNumFound.toInt
+      val nresults = results.size()
 
       log.trace("solr returns " + nresults + " results")
 
