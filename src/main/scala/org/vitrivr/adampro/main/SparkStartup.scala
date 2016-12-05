@@ -6,6 +6,7 @@ import org.vitrivr.adampro.config.AdamConfig
 import org.vitrivr.adampro.datatypes.bitString.BitStringUDT
 import org.vitrivr.adampro.datatypes.feature.FeatureVectorWrapperUDT
 import org.vitrivr.adampro.datatypes.gis.GeometryWrapperUDT
+import org.vitrivr.adampro.helpers.optimizer.OptimizerRegistry
 import org.vitrivr.adampro.utils.Logging
 
 /**
@@ -55,4 +56,6 @@ object SparkStartup extends Logging {
   val contexts = Seq(mainContext)
 
   AdamConfig.engines.foreach { engine => mainContext.storageHandlerRegistry.value.register(engine) }
+  OptimizerRegistry.loadDefault()(mainContext)
+
 }
