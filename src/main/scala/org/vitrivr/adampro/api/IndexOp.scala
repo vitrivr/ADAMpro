@@ -161,7 +161,7 @@ object IndexOp extends GenericOp {
     * @param options possible options for operation
     */
   def properties(indexname: IndexName, options: Map[String, String] = Map())(implicit ac: AdamContext): Try[Map[String, String]] = {
-    execute("get properties for" + indexname) {
+    execute("get properties for " + indexname) {
       Success(Index.load(indexname).get.propertiesMap(options))
     }
   }
