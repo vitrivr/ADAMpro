@@ -27,7 +27,6 @@ object Transferer extends Logging {
   @Experimental def apply(entity: Entity, attributes: Seq[String], newHandlerName: String)(implicit ac: AdamContext): Try[Void] = {
     try {
       val schema = entity.schema()
-
       assert(attributes.forall(schema.map(_.name).contains(_)))
 
       assert(ac.storageHandlerRegistry.value.get(newHandlerName).isDefined)
@@ -36,42 +35,61 @@ object Transferer extends Logging {
       val fieldtypes = schema.filter(x => attributes.contains(x.name)).map(_.fieldtype).distinct
       assert(fieldtypes.forall(storagehandler.supports.contains(_)))
 
+      //TODO: check if only pk is moved (and entity contains only pk)
+      //TODO: don't move if situation stays same
+
+      log.trace("transfering attributes " + attributes.mkString(",") + " to " + newHandlerName)
+
       //data transfer
+      val schemaAttributes = attributes.map(attribute => schema.filter(_.name == attribute).head)
+      val attributesWithoutPK = schemaAttributes.filterNot(_.pk)
+      val attributesWithPK = attributesWithoutPK ++ Seq(entity.pk)
 
-      //all attributes that should be transfered + the ones that are already in place in this storagehandler + pk
-      val dataAttributes = attributes ++ (schema.filter(_.storagehandlername == newHandlerName).map(_.name)).+:(entity.pk.name)
-      val data = entity.getData(Some(dataAttributes.distinct)).get.repartition(AdamConfig.defaultNumberOfPartitions)
+      //all attributes that should be transfered + the ones that are already in place in this storagehandler
+      val attributesForNewHandler = (attributesWithPK.map(_.name) ++ (schema.filter(_.storagehandlername == newHandlerName).map(_.name))).distinct
+      val data = entity.getData(Some(attributesForNewHandler.distinct)).get.repartition(AdamConfig.defaultNumberOfPartitions)
 
-      storagehandler.write(entity.entityname, data, schema.filter(dataAttributes.contains(_)), SaveMode.Overwrite)
+      log.trace("new handler will store attributes " + attributesForNewHandler.mkString(","))
 
-      schema.filterNot(x => dataAttributes.contains(x.name)).groupBy(_.storagehandlername).filterNot(_._1 == newHandlerName).foreach { case (handlername, attributes) =>
-        val fields = if (!attributes.exists(_.name == entity.pk.name)) {
-          attributes.+:(entity.pk)
-        } else {
-          attributes
-        }
+      //create first "file"/"table" in new handler
+      if(schema.filter(_.storagehandlername == newHandlerName).isEmpty){
+        val attributesWithPK = attributesWithoutPK ++ Seq(entity.pk)
+        storagehandler.create(entity.entityname, attributesWithPK)
 
-        val df = entity.getData(Some(attributes.map(_.name))).get
-        //TODO: check here for PK!
-        val handler = ac.storageHandlerRegistry.value.get(newHandlerName).get
-        val status = handler.write(entity.entityname, df, fields, SaveMode.Append, Map("allowRepartitioning" -> "true", "partitioningKey" -> entity.pk.name))
-
-        if (status.isFailure) {
-          throw status.failed.get
-        }
+        log.trace("create file/table with attributes " + attributesWithPK.map(_.name).mkString(",") + " for handler " + newHandlerName)
       }
+      storagehandler.write(entity.entityname, data, attributesWithPK, SaveMode.Overwrite)
 
-      if (schema.filter(_.storagehandlername == newHandlerName).nonEmpty) {
-        //i.e. the old file was overwritten anyways
-      } else {
-        //i.e. the old file has to be deleted or adjusted (if other data is still contained in there)
-        //TODO...
+
+      //what happens with the old data handler
+      schema.filterNot(_.pk).filterNot(_.storagehandlername == newHandlerName).groupBy(_.storagehandlername).foreach{ case(handlername, handlerAttributes) =>
+        val handler = ac.storageHandlerRegistry.value.get(handlername).get
+
+        log.trace("handler " + handlername + " had still attributes " + handlerAttributes.map(_.name).mkString(", "))
+
+        if((handlerAttributes.map(_.name) diff attributes).isEmpty){
+          log.trace("for handler " + handlername + " no more data is available, therefore dropping")
+          handler.drop(entity.entityname)
+        } else {
+          log.trace("for handler " + handlername + " data of attributes " + handlerAttributes.map(_.name).mkString(",") + " is re-written")
+
+          val newHandlerAttributes = handlerAttributes.filterNot(x => attributes.contains(x.name)) ++ Seq(entity.pk)
+          val handlerData = entity.getData(Some(newHandlerAttributes.map(_.name))).get
+
+          val status = handler.write(entity.entityname, handlerData, newHandlerAttributes, SaveMode.Overwrite, Map("allowRepartitioning" -> "true", "partitioningKey" -> entity.pk.name))
+
+          if (status.isFailure) {
+            log.error("failing while transferring: " + status.failed.get.getMessage, status.failed.get)
+          }
+        }
       }
 
       //adjust attribute storage handler
-      attributes.foreach { attribute =>
-        CatalogOperator.updateAttributeStorageHandler(entity.entityname, attribute, newHandlerName)
+      attributesWithoutPK.foreach { attribute =>
+        CatalogOperator.updateAttributeStorageHandler(entity.entityname, attribute.name, newHandlerName)
       }
+
+      entity.markStale()
 
       Success(null)
     } catch {
