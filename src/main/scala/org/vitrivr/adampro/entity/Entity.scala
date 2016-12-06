@@ -277,6 +277,8 @@ case class Entity(val entityname: EntityName)(@transient implicit val ac: AdamCo
         }
       }
 
+      indexes.map(_.map(_.markStale()))
+
       Success(null)
     } catch {
       case e: Exception => Failure(e)
@@ -365,7 +367,6 @@ case class Entity(val entityname: EntityName)(@transient implicit val ac: AdamCo
       _data = None
 
       CatalogOperator.deleteEntityOption(entityname, COUNT_KEY)
-      indexes.map(_.map(_.markStale()))
 
       currentVersion = mostRecentVersion.value
     }
