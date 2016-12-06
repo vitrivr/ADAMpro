@@ -139,7 +139,7 @@ function infoHandler(entityname) {
                 innerinnerinnerhtml += "<ul>";
 
                 value.split(",").forEach(function(element, index, array){
-                    indexDetails(entityname, function(attributeData){
+                    indexDetails(element, function(attributeData){
                         innerinnerinnerhtml += "<li>";
                         innerinnerinnerhtml += element;
                         innerinnerinnerhtml += " (";
