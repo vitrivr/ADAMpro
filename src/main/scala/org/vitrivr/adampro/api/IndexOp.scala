@@ -162,7 +162,13 @@ object IndexOp extends GenericOp {
     */
   def properties(indexname: IndexName, options: Map[String, String] = Map())(implicit ac: AdamContext): Try[Map[String, String]] = {
     execute("get properties for " + indexname) {
-      Success(Index.load(indexname).get.propertiesMap(options))
+      val index = Index.load(indexname)
+
+      if(index.isFailure){
+        return Failure(index.failed.get)
+      }
+
+      Success(index.get.propertiesMap(options))
     }
   }
 

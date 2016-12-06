@@ -9,7 +9,7 @@ import org.vitrivr.adampro.helpers.sparsify.SparsifyHelper
 import org.vitrivr.adampro.main.AdamContext
 import org.vitrivr.adampro.query.query.Predicate
 
-import scala.util.{Success, Try}
+import scala.util.{Failure, Success, Try}
 
 /**
   * adamtwo
@@ -170,10 +170,17 @@ object EntityOp extends GenericOp {
     */
   def properties(entityname: EntityName, attribute: Option[String] = None, options: Map[String, String] = Map())(implicit ac: AdamContext): Try[Map[String, String]] = {
     execute("load properties of entity " + entityname + " operation") {
+      val entity = Entity.load(entityname)
+
+      if(entity.isFailure){
+        return Failure(entity.failed.get)
+      }
+
+
       if(attribute.isDefined){
-        Success(Entity.load(entityname).get.attributePropertiesMap(attribute.get, options))
+        Success(entity.get.attributePropertiesMap(attribute.get, options))
       } else {
-        Success(Entity.load(entityname).get.propertiesMap(options))
+        Success(entity.get.propertiesMap(options))
       }
     }
   }
