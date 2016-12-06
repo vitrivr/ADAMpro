@@ -906,7 +906,8 @@ object CatalogOperator extends Logging {
   /**
     *
     *
-    * @param indexname
+    * @param optimizer
+    * @param key
     * @return
     */
   def dropOptimizerOptionMeta(optimizer: String, key: String): Try[Void] = {
