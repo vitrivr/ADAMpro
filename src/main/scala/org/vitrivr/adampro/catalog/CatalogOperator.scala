@@ -213,9 +213,8 @@ object CatalogOperator extends Logging {
 
       val actions = new ListBuffer[DBIOAction[_, NoStream, _]]()
 
-      //upsert
-      actions += _attributes.filter(_.entityname === entityname.toString).filter(_.attributename === attributename).delete
-      actions += _attributes.+=(entityname, attributename, attribute._3, attribute._4, newHandlerName)
+      //update
+      actions += _attributes.filter(_.entityname === entityname.toString).filter(_.attributename === attributename).map(_.handlername).update(newHandlerName)
       Await.result(DB.run(DBIO.seq(actions.toArray: _*).transactionally), MAX_WAITING_TIME)
       null
     }
