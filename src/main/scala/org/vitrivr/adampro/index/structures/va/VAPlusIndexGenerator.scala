@@ -131,7 +131,11 @@ class VAPlusIndexGenerator(nbits: Option[Int], ndims : Option[Int], trainingSize
       k += 1
     }
 
+    //remove modes with 0 bits
+    modes = modes.filter(_ != 0)
+
     val signatureGenerator = new VariableSignatureGenerator(modes)
+
     val marks = VAPlusMarksGenerator.getMarks(trainData, modes.map(x => 2 << (x - 1)).toSeq)
 
     log.trace("VA-File (variable) finished training")
