@@ -84,7 +84,13 @@ abstract class Index(val indexname: IndexName)(@transient implicit val ac: AdamC
   def getData(): Option[DataFrame] = {
     //cache data
     if (_data.isEmpty) {
-      _data = Index.storage.get.read(indexname, Seq()).map(Some(_)).getOrElse(None)
+      val data = Index.storage.get.read(indexname, Seq())
+
+      if(data.isFailure){
+        log.error("error while reading index data: " + data.failed.get.getMessage, data.failed.get)
+      }
+
+      _data = data.map(Some(_)).getOrElse(None)
 
       if (_data.isDefined) {
         _data = Some(_data.get.cache())

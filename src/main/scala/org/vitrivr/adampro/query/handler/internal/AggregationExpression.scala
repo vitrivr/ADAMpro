@@ -30,7 +30,7 @@ abstract class AggregationExpression(private val left: QueryExpression, private 
   def aggregationName: String
 
   override protected def run(options: Option[QueryEvaluationOptions], filter: Option[DataFrame] = None)(implicit ac: AdamContext): Option[DataFrame] = {
-    log.debug("run aggregation operation")
+    log.debug("run aggregation operation " + aggregationName + " between " +  left.getClass.getName + " and " + right.getClass.getName  + "  ordered " + order.toString)
 
     ac.sc.setJobGroup(id.getOrElse(""), "aggregation", interruptOnCancel = true)
 
