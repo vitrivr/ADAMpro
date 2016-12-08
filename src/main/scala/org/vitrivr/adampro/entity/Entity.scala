@@ -89,7 +89,6 @@ case class Entity(val entityname: EntityName)(@transient implicit val ac: AdamCo
     var data = _data
 
     if (_data.isEmpty && predicates.isEmpty) {
-      log.debug("predicates is empty and data is empty in entity " + entityname)
       val handlerData = schema().filterNot(_.pk).groupBy(_.storagehandler).map { case (handler, attributes) =>
         val status = handler.read(entityname, attributes.+:(pk))
 
