@@ -176,16 +176,8 @@ class LevelDbEngine(private val path: String) extends Engine with Logging with S
 
         ac.sc.parallelize(lb.toSeq)
       } else {
-        val it = db.iterator()
-        it.seekToFirst()
-
-        val lb = new ListBuffer[Row]()
-
-        while (it.hasNext) {
-          lb += deserialize[Row](it.next().getValue)
-        }
-
-        ac.sc.parallelize(lb.toSeq)
+        val nresults = count(storename)
+        ac.sc.range(0, nresults).mapPartitions(it => it.map(i => deserialize[Row](db.get(serialize(i)))))
       }
 
       val schema = StructType(attributes.map(a => StructField(a.name, a.fieldtype.datatype)))
