@@ -510,7 +510,9 @@ object Index extends Logging {
 
       Success(index)
     } catch {
-      case e: Exception => Failure(e)
+      case e: Exception =>
+        log.error("error while loading index " + indexname.toString, e)
+        Failure(e)
     }
   }
 

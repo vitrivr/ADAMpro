@@ -42,7 +42,7 @@ class IndexLRUCache extends Logging {
     */
   def get(indexname: IndexName): Try[Index] = {
     try {
-      log.trace("getting index " + indexname + " from cache")
+      log.debug("getting index " + indexname + " from cache")
       Success(indexCache.get(indexname))
     } catch {
       case e: Exception =>
