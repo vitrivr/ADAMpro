@@ -22,15 +22,7 @@ class StorageHandlerRegistry extends Logging {
     * @param name
     * @return
     */
-  def apply(name: String): Option[StorageHandler] = {
-    val res = handlers.get(name)
-
-    if(res.isEmpty){
-      throw new GeneralAdamException("no suitable storage found in registry named " + name)
-    }
-
-    res
-  }
+  def apply(name: String): Option[StorageHandler] = get(name)
 
 
   /**
@@ -38,16 +30,11 @@ class StorageHandlerRegistry extends Logging {
     * @param name
     */
   def get(name: String): Option[StorageHandler] = {
-    var result: Option[StorageHandler] = None
-
-    if (result.isEmpty) {
-      //use lookup
-      result = apply(name)
-    }
+    var result: Option[StorageHandler] = handlers.get(name)
 
     if (result.isEmpty) {
       //no handler registered
-      log.error("no suitable storage handler found in registry")
+      log.error("no suitable storage handler found in registry for " + name)
       throw new Exception("no suitable storage handler found in registry for " + name)
     } else {
       result
