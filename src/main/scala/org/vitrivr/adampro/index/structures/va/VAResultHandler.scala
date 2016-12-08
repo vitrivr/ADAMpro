@@ -5,6 +5,7 @@ import java.util.Comparator
 import it.unimi.dsi.fastutil.floats.{FloatComparator, FloatComparators, FloatHeapPriorityQueue}
 import it.unimi.dsi.fastutil.objects.ObjectHeapPriorityQueue
 import org.apache.spark.sql.Row
+import org.vitrivr.adampro.utils.Logging
 
 import scala.collection.mutable.ListBuffer
 
@@ -14,7 +15,7 @@ import scala.collection.mutable.ListBuffer
   * Ivan Giangreco, improvements by Silvan Heller
   * August 2015
   */
-private[va] class VAResultHandler[A](k: Int) extends Serializable {
+private[va] class VAResultHandler[A](k: Int) extends Logging with Serializable {
   private var elementsLeft = k
 
   private val upperBoundQueue = new FloatHeapPriorityQueue(2 * k, FloatComparators.OPPOSITE_COMPARATOR)
@@ -39,7 +40,7 @@ private[va] class VAResultHandler[A](k: Int) extends Serializable {
       enqueueAndAddToCandidates(lower, upper, tid)
       return true
     } else {
-      upperBoundQueue.synchronized {
+      this.synchronized {
         //we have already k elements, therefore check if new element is better
         //peek is the upper bound
         val peek = upperBoundQueue.firstFloat()
@@ -73,10 +74,12 @@ private[va] class VAResultHandler[A](k: Int) extends Serializable {
     * @param res
     */
   private def enqueueAndAddToCandidates(res: VAResultElement[A]): Unit = {
-    upperBoundQueue.enqueue(res.upper)
-    lowerBoundResultElementQueue.enqueue(res)
-    while (lowerBoundResultElementQueue.first().lower > upperBoundQueue.firstFloat()) {
-      lowerBoundResultElementQueue.dequeue()
+    this.synchronized {
+      upperBoundQueue.enqueue(res.upper)
+      lowerBoundResultElementQueue.enqueue(res)
+      while (lowerBoundResultElementQueue.first().lower > upperBoundQueue.firstFloat()) {
+        lowerBoundResultElementQueue.dequeue()
+      }
     }
   }
 
@@ -88,8 +91,10 @@ private[va] class VAResultHandler[A](k: Int) extends Serializable {
   def results = {
     val ls = ListBuffer[VAResultElement[A]]()
 
-    while (lowerBoundResultElementQueue.size() > 0) {
-      ls += lowerBoundResultElementQueue.dequeue()
+    this.synchronized {
+      while (lowerBoundResultElementQueue.size() > 0) {
+        ls += lowerBoundResultElementQueue.dequeue()
+      }
     }
 
     ls.toSeq

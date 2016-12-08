@@ -80,12 +80,12 @@ class VAFIndexGenerator(fixedNumBitsPerDimension: Option[Int], marksGenerator: M
 
     val dim = trainData.head.feature.length
 
-    //formula based on results from Weber/Böhm (2000): Trading Qaulity for Time with Nearest Neighbor Search
-    val nbits = fixedNumBitsPerDimension.getOrElse(math.ceil(5 + 0.5 * math.log(dim / 10) / math.log(2)).toInt)
-    val nMarks = 1 << nbits
+    //formula based on results from Weber/Böhm (2000): Trading Quality for Time with Nearest Neighbor Search
+    val nbits = fixedNumBitsPerDimension.getOrElse(math.max(5, math.ceil(5 + 0.5 * math.log(dim / 10) / math.log(2))).toInt)
+    val nmarks = 1 << nbits
 
     val signatureGenerator = new FixedSignatureGenerator(dim, nbits)
-    val marks = marksGenerator.getMarks(trainData, nMarks)
+    val marks = marksGenerator.getMarks(trainData, nmarks)
 
     log.trace("VA-File (fixed) finished training")
 
@@ -135,7 +135,7 @@ class VAFIndexGeneratorFactory extends IndexGeneratorFactory {
     */
   override def parametersInfo: Seq[ParameterInfo] = Seq(
     new ParameterInfo("ntraining", "number of training tuples", Seq[String]()),
-    new ParameterInfo("nmarks", "number of marks per dimension", Seq(16, 32, 64, 128, 256, 1024).map(_.toString)),
+    new ParameterInfo("nbits", "number of marks per dimension", Seq(3, 4, 5, 6, 7, 8, 9).map(_.toString)),
     new ParameterInfo("marktype", "distribution of marks", Seq("equidistant", "equifrequent"))
   )
 }
