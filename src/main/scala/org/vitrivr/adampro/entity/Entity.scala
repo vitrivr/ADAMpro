@@ -88,7 +88,8 @@ case class Entity(val entityname: EntityName)(@transient implicit val ac: AdamCo
     //cache data join
     var data = _data
 
-    if (_data.isEmpty) {
+    if (_data.isEmpty && predicates.isEmpty) {
+      log.debug("predicates is empty and data is empty in entity " + entityname)
       val handlerData = schema().filterNot(_.pk).groupBy(_.storagehandler).map { case (handler, attributes) =>
         val status = handler.read(entityname, attributes.+:(pk))
 
@@ -219,8 +220,6 @@ case class Entity(val entityname: EntityName)(@transient implicit val ac: AdamCo
     */
   def insert(data: DataFrame, ignoreChecks: Boolean = false): Try[Void] = {
     log.trace("inserting data into entity")
-
-
 
     try {
       val ninserts = CatalogOperator.getEntityOption(entityname, Some(N_INSERTS_VACUUMING)).get.get(N_INSERTS_VACUUMING).map(_.toInt).getOrElse(0)
