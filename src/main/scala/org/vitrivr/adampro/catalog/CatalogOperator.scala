@@ -51,7 +51,7 @@ object CatalogOperator extends Logging {
   private val _options = TableQuery[OptionsCatalog]
 
   private[catalog] val CATALOGS = Seq(
-    _entitites, _entityOptions, _attributes, _attributeOptions, _indexes, _indexOptions, _storeengineOptions, _partitioners, _options
+    _entitites, _entityOptions, _attributes, _attributeOptions, _indexes, _indexOptions, _storeengineOptions, _partitioners, _optimizerOptions, _options
   )
 
   /**
