@@ -100,7 +100,7 @@ case class Entity(val entityname: EntityName)(@transient implicit val ac: AdamCo
       }.filter(_.isSuccess).map(_.get)
 
       if (handlerData.nonEmpty) {
-        _data = Some(handlerData.reduce(_.join(_, pk.name))) //.coalesce(AdamConfig.defaultNumberOfPartitions))
+        _data = Some(handlerData.reduce(_.join(_, pk.name)).coalesce(AdamConfig.defaultNumberOfPartitions))
       } else {
         _data = None
       }
@@ -125,7 +125,7 @@ case class Entity(val entityname: EntityName)(@transient implicit val ac: AdamCo
       }.filter(_.isSuccess).map(_.get)
 
       if (handlerData.nonEmpty) {
-        data = Some(handlerData.reduce(_.join(_, pk.name))) //.coalesce(AdamConfig.defaultNumberOfPartitions))
+        data = Some(handlerData.reduce(_.join(_, pk.name)).coalesce(AdamConfig.defaultNumberOfPartitions))
       }
     }
 
