@@ -61,11 +61,11 @@ class RPCClient(channel: ManagedChannel,
   def entityCreate(entityname: String, attributes: Seq[RPCAttributeDefinition]): Try[String] = {
     execute("create entity operation") {
       val attributeMessages = attributes.map { attribute =>
-        val adm = AttributeDefinitionMessage(attribute.name, getAttributeType(attribute.datatype), attribute.pk, params = attribute.params)
+        var adm = AttributeDefinitionMessage(attribute.name, getAttributeType(attribute.datatype), attribute.pk, params = attribute.params)
 
         //add handler information if available
         if (attribute.storagehandlername.isDefined) {
-          adm.withHandler(attribute.storagehandlername.get)
+          adm = adm.withHandler(attribute.storagehandlername.get)
         }
 
         adm
