@@ -27,6 +27,12 @@ import scala.util.{Random, Failure, Success, Try}
   */
 class CassandraEngine(private val url: String, private val port: Int, private val user: String, private val password: String, protected val keyspace: String = "public")(@transient override implicit val ac: AdamContext) extends Engine()(ac) with Logging with Serializable {
   private val conn = CassandraConnector(hosts = Set(InetAddress.getByName(url)), port = port, authConf = PasswordAuthConf(user, password))
+  private val connectionId =  Random.alphanumeric.take(10).mkString
+
+  ac.sqlContext.setConf(connectionId + "/" + "spark.cassandra.connection.host", url)
+  ac.sqlContext.setConf(connectionId + "/" + "spark.cassandra.connection.port", port.toString)
+  ac.sqlContext.setConf(connectionId + "/" + "spark.cassandra.connection.username", user)
+  ac.sqlContext.setConf(connectionId + "/" + "spark.cassandra.connection.password", password)
 
   override val name = "cassandra"
 
@@ -184,7 +190,7 @@ class CassandraEngine(private val url: String, private val port: Int, private va
 
       val df = ac.sqlContext.read
         .format("org.apache.spark.sql.cassandra")
-        .options(Map("table" -> storename, "keyspace" -> keyspace))
+        .options(Map("table" -> storename, "keyspace" -> keyspace, "cluster" -> connectionId))
         .load()
       //TODO: possibly use predicate
 
@@ -229,7 +235,7 @@ class CassandraEngine(private val url: String, private val port: Int, private va
 
       data.write
         .format("org.apache.spark.sql.cassandra")
-        .options(Map("table" -> storename, "keyspace" -> keyspace))
+        .options(Map("table" -> storename, "keyspace" -> keyspace, "cluster" -> connectionId))
         .save()
 
       Success(Map())
