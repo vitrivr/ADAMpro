@@ -114,7 +114,7 @@ case class Entity(val entityname: EntityName)(@transient implicit val ac: AdamCo
 
     if (predicates.nonEmpty) {
       val handlerData = schema().filterNot(_.pk).groupBy(_.storagehandler).map { case (handler, attributes) =>
-        val predicate = predicates.filter(p => attributes.map(_.name).contains(p))
+        val predicate = predicates.filter(p => (p.attribute == pk.name || attributes.map(_.name).contains(p.attribute)))
         val status = handler.read(entityname, attributes, predicate)
 
         if (status.isFailure) {
