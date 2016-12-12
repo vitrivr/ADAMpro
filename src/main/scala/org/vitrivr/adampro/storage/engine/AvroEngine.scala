@@ -26,7 +26,7 @@ import scala.util.{Failure, Success, Try}
   * Ivan Giangreco
   * November 2016
   */
-class AvroEngine extends Engine with Logging with Serializable {
+class AvroEngine(@transient override implicit val ac: AdamContext) extends Engine()(ac) with Logging with Serializable {
   override val name = "avro"
 
   override def supports = Seq(FieldTypes.AUTOTYPE, FieldTypes.SERIALTYPE, FieldTypes.INTTYPE, FieldTypes.LONGTYPE, FieldTypes.FLOATTYPE, FieldTypes.DOUBLETYPE, FieldTypes.STRINGTYPE, FieldTypes.TEXTTYPE, FieldTypes.BOOLEANTYPE, FieldTypes.FEATURETYPE)
@@ -41,8 +41,8 @@ class AvroEngine extends Engine with Logging with Serializable {
     *
     * @param props
     */
-  def this(props: Map[String, String]) {
-    this()
+  def this(props: Map[String, String])(implicit ac: AdamContext){
+    this()(ac)
     if (props.get("hadoop").getOrElse("false").toBoolean) {
       subengine = new AvroHadoopStorage(AdamConfig.cleanPath(props.get("basepath").get), props.get("datapath").get)
     } else {

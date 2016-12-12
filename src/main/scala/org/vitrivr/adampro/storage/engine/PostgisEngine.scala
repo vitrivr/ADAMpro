@@ -17,7 +17,7 @@ import scala.util.{Failure, Success, Try}
   * Ivan Giangreco
   * September 2016
   */
-class PostgisEngine(private val url: String, private val user: String, private val password: String) extends PostgresqlEngine(url, user, password, "public") {
+class PostgisEngine(private val url: String, private val user: String, private val password: String)(@transient override implicit val ac: AdamContext) extends PostgresqlEngine(url, user, password, "public")(ac) {
   //TODO: gis functions only available in the public schema
 
   override val name: String = "postgis"
@@ -32,8 +32,8 @@ class PostgisEngine(private val url: String, private val user: String, private v
     *
     * @param props
     */
-  def this(props: Map[String, String]) {
-    this(props.get("url").get, props.get("user").get, props.get("password").get)
+  def this(props: Map[String, String])(implicit ac: AdamContext) {
+    this(props.get("url").get, props.get("user").get, props.get("password").get)(ac)
   }
 
   /**

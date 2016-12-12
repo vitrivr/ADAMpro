@@ -15,7 +15,7 @@ import scala.util.Try
   * Ivan Giangreco
   * September 2016
   */
-trait Engine extends Serializable with Logging {
+abstract class Engine()(@transient implicit val ac: AdamContext) extends Serializable with Logging {
   val name: String
 
   def supports: Seq[FieldType]

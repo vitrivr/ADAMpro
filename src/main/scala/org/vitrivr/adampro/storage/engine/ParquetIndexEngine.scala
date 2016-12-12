@@ -1,6 +1,7 @@
 package org.vitrivr.adampro.storage.engine
 
 import org.vitrivr.adampro.config.AdamConfig
+import org.vitrivr.adampro.main.AdamContext
 
 /**
   * ADAMpro
@@ -8,7 +9,7 @@ import org.vitrivr.adampro.config.AdamConfig
   * Ivan Giangreco
   * September 2016
   */
-class ParquetIndexEngine extends ParquetEngine {
+class ParquetIndexEngine()(@transient override implicit val ac: AdamContext) extends ParquetEngine()(ac) {
   override val name = "parquetindex"
 
   override def supports = Seq()
@@ -19,8 +20,8 @@ class ParquetIndexEngine extends ParquetEngine {
     *
     * @param props
     */
-  def this(props: Map[String, String]) {
-    this()
+  def this(props: Map[String, String])(implicit ac: AdamContext) {
+    this()(ac)
     if (props.get("hadoop").getOrElse("false").toBoolean) {
       subengine = new ParquetHadoopStorage(AdamConfig.cleanPath(props.get("basepath").get), props.get("datapath").get)
     } else {

@@ -4,8 +4,8 @@ import org.apache.solr.client.solrj.SolrQuery
 import org.apache.solr.client.solrj.impl.HttpSolrClient
 import org.apache.solr.client.solrj.request.CoreAdminRequest
 import org.apache.solr.common.SolrInputDocument
-import org.apache.spark.sql.types.{FloatType, DoubleType, StructField, StructType}
-import org.apache.spark.sql.{SaveMode, DataFrame, Row}
+import org.apache.spark.sql.types.{FloatType, StructField, StructType}
+import org.apache.spark.sql.{DataFrame, Row, SaveMode}
 import org.vitrivr.adampro.config.FieldNames
 import org.vitrivr.adampro.datatypes.FieldTypes
 import org.vitrivr.adampro.datatypes.FieldTypes.FieldType
@@ -22,7 +22,7 @@ import scala.util.{Failure, Success, Try}
   * Ivan Giangreco
   * September 2016
   */
-class SolrEngine(private val url: String) extends Engine with Logging with Serializable {
+class SolrEngine(private val url: String)(@transient override implicit val ac: AdamContext) extends Engine()(ac) with Logging with Serializable {
   override val name: String = "solr"
 
   override def supports = Seq(FieldTypes.AUTOTYPE, FieldTypes.SERIALTYPE, FieldTypes.INTTYPE, FieldTypes.LONGTYPE, FieldTypes.FLOATTYPE, FieldTypes.DOUBLETYPE, FieldTypes.STRINGTYPE, FieldTypes.TEXTTYPE, FieldTypes.BOOLEANTYPE)
@@ -38,8 +38,8 @@ class SolrEngine(private val url: String) extends Engine with Logging with Seria
     *
     * @param props
     */
-  def this(props: Map[String, String]) {
-    this(props.get("url").get)
+  def this(props: Map[String, String])(implicit ac: AdamContext) {
+    this(props.get("url").get)(ac)
   }
 
 

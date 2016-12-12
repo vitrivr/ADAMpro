@@ -17,7 +17,7 @@ import org.apache.spark.sql.functions._
 import org.apache.spark.sql.types.ArrayType
 import org.apache.spark.sql.{DataFrame, SaveMode}
 
-import scala.util.{Failure, Success, Try}
+import scala.util.{Random, Failure, Success, Try}
 
 /**
   * ADAMpro
@@ -25,7 +25,7 @@ import scala.util.{Failure, Success, Try}
   * Ivan Giangreco
   * September 2016
   */
-class CassandraEngine(private val url: String, private val port: Int, private val user: String, private val password: String, protected val keyspace: String = "public") extends Engine with Logging with Serializable {
+class CassandraEngine(private val url: String, private val port: Int, private val user: String, private val password: String, protected val keyspace: String = "public")(@transient override implicit val ac: AdamContext) extends Engine()(ac) with Logging with Serializable {
   private val conn = CassandraConnector(hosts = Set(InetAddress.getByName(url)), port = port, authConf = PasswordAuthConf(user, password))
 
   override val name = "cassandra"
@@ -40,8 +40,8 @@ class CassandraEngine(private val url: String, private val port: Int, private va
     *
     * @param props
     */
-  def this(props: Map[String, String]) {
-    this(props.get("url").get, props.get("port").get.toInt, props.get("user").get, props.get("password").get, props.getOrElse("keyspace", "public"))
+  def this(props: Map[String, String])(implicit ac: AdamContext) {
+    this(props.get("url").get, props.get("port").get.toInt, props.get("user").get, props.get("password").get, props.getOrElse("keyspace", "public"))(ac)
   }
 
 
