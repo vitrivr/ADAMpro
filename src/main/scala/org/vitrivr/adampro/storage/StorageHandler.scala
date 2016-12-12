@@ -134,6 +134,8 @@ class StorageHandler(val engine: Engine) extends Serializable with Logging {
           }
         } while (engine.exists(newStorename).get)
 
+        engine.create(newStorename, attributes, params)
+
         val res = engine.write(newStorename, df, attributes, SaveMode.ErrorIfExists, params ++ options)
 
         if (res.isSuccess) {
