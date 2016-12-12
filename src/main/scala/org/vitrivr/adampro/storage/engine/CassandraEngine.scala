@@ -220,10 +220,10 @@ class CassandraEngine(private val url: String, private val port: Int, private va
     */
   override def write(storename: String, df: DataFrame, attributes: Seq[AttributeDefinition], mode: SaveMode = SaveMode.Append, params: Map[String, String])(implicit ac: AdamContext): Try[Map[String, String]] = {
     try {
-      if (mode != SaveMode.Append) {
+      /*if (mode != SaveMode.Append) {
         throw new UnsupportedOperationException("only appending is supported")
-      }
-
+      }*/
+      
       var data = df
       import org.apache.spark.sql.functions.{col, udf}
       val castToSeq = udf((c: FeatureVectorWrapper) => {
