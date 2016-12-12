@@ -58,6 +58,8 @@ object Transferer extends Logging {
 
         log.trace("create file/table with attributes " + attributesWithPK.map(_.name).mkString(",") + " for handler " + newHandlerName)
       }
+
+      //TODO: check status
       storagehandler.write(entity.entityname, data, attributesWithPK, SaveMode.Overwrite)
 
 
@@ -69,6 +71,7 @@ object Transferer extends Logging {
 
         if((handlerAttributes.map(_.name) diff attributes).isEmpty){
           log.trace("for handler " + handlername + " no more data is available, therefore dropping")
+          //TODO: check status, only then drop
           handler.drop(entity.entityname)
         } else {
           log.trace("for handler " + handlername + " data of attributes " + handlerAttributes.map(_.name).mkString(",") + " is re-written")
@@ -76,6 +79,7 @@ object Transferer extends Logging {
           val newHandlerAttributes = handlerAttributes.filterNot(x => attributes.contains(x.name)) ++ Seq(entity.pk)
           val handlerData = entity.getData(Some(newHandlerAttributes.map(_.name))).get
 
+          //TODO: check status
           val status = handler.write(entity.entityname, handlerData, newHandlerAttributes, SaveMode.Overwrite, Map("allowRepartitioning" -> "true", "partitioningKey" -> entity.pk.name))
 
           if (status.isFailure) {
