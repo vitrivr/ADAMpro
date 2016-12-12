@@ -55,7 +55,7 @@ object SparkStartup extends Logging {
   val mainContext = Implicits.ac
   val contexts = Seq(mainContext)
 
-  AdamConfig.engines.foreach { engine => mainContext.storageHandlerRegistry.value.register(engine) }
+  AdamConfig.engines.foreach { engine => mainContext.storageHandlerRegistry.value.register(engine)(mainContext) }
   OptimizerRegistry.loadDefault()(mainContext)
 
 }
