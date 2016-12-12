@@ -192,9 +192,17 @@ class CassandraEngine(private val url: String, private val port: Int, private va
         .format("org.apache.spark.sql.cassandra")
         .options(Map("table" -> storename, "keyspace" -> keyspace, "cluster" -> connectionId))
         .load()
-      //TODO: possibly use predicate
 
       var data = df
+
+      predicates.foreach{ predicate =>
+        val valueList = predicate.values.map(value => value match {
+          case _ : String => "'" + value + "'"
+          case _ => value.toString
+        })
+
+        data = data.where(predicate.attribute + " " + predicate.operator.getOrElse(" IN ") + " " + valueList.mkString("(", ",", ")"))
+      }
 
       df.schema.fields.filter(_.dataType.isInstanceOf[ArrayType]).foreach { field =>
         data = data.withColumn(field.name, castToFeature(col(field.name)))
