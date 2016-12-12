@@ -77,8 +77,8 @@ val secondaryLibs = Seq(
   "org.scalanlp" %% "breeze" % "0.11.2",
   "org.scalanlp" %% "breeze-natives" % "0.11.2",
   "com.typesafe.slick" %% "slick" % "3.1.1",
-  "c3p0" % "c3p0" % "0.9.1.2",
-  "org.apache.derby" % "derby" % "10.10.2.0",
+  "com.mchange" % "c3p0" % "0.9.5.2",
+  "org.apache.derby" % "derby" % "10.13.1.1",
   "it.unimi.dsi" % "fastutil" % "7.0.12",
   "org.apache.commons" % "commons-lang3" % "3.4",
   "org.apache.commons" % "commons-math3" % "3.4.1",
@@ -106,7 +106,6 @@ val tertiaryLibs = Seq(
   "com.lucidworks.spark" % "spark-solr" % "2.1.0",
   "org.postgresql" % "postgresql" % "9.4.1208",
   "com.datastax.spark" %% "spark-cassandra-connector" % "1.6.2",
-  "com.basho.riak" % "spark-riak-connector" % "1.5.1",
   "net.postgis" % "postgis-jdbc" % "2.2.1",
   "org.iq80.leveldb" % "leveldb" % "0.9",
   "com.databricks" %% "spark-avro" % "2.0.1"
@@ -142,6 +141,7 @@ assemblyMergeStrategy in assembly := {
   case x if x.contains("org.slf4j") => MergeStrategy.first
   case x if x.contains("org.apache.httpcomponents") => MergeStrategy.last
   case x if x.contains("org.apache.commons") => MergeStrategy.last
+  case x if x.contains("org.apache.derby") => MergeStrategy.last
   case PathList("application.conf") => MergeStrategy.discard
   case PathList("javax", "servlet", xs@_*) => MergeStrategy.last
   case PathList(ps@_*) if ps.last endsWith ".html" => MergeStrategy.last
