@@ -25,6 +25,8 @@ object Transferer extends Logging {
     * @param newHandlerName
     */
   @Experimental def apply(entity: Entity, attributes: Seq[String], newHandlerName: String)(implicit ac: AdamContext): Try[Void] = {
+    log.debug("transfering attributes " + attributes.mkString(", ") + " of entity " + entity.entityname + " to " + newHandlerName)
+
     try {
       val schema = entity.schema()
       assert(attributes.forall(schema.map(_.name).contains(_)))
