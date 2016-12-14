@@ -77,7 +77,7 @@ private[va] class VAResultHandler[A](k: Int) extends Logging with Serializable {
     this.synchronized {
       upperBoundQueue.enqueue(res.upper)
       lowerBoundResultElementQueue.enqueue(res)
-      while (lowerBoundResultElementQueue.first().lower > upperBoundQueue.firstFloat()) {
+      while (!lowerBoundResultElementQueue.isEmpty && lowerBoundResultElementQueue.first().lower > upperBoundQueue.firstFloat()) {
         lowerBoundResultElementQueue.dequeue()
       }
     }
