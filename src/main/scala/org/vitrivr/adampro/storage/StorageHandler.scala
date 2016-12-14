@@ -132,6 +132,9 @@ class StorageHandler(val engine: Engine) extends Serializable with Logging {
           } else {
             storename + "__ap__" + Random.nextInt(999)
           }
+
+          //max 40 characters (use last 40)
+          newStorename = newStorename.reverse.substring(0, math.min(newStorename.length, 40)).reverse
         } while (engine.exists(newStorename).get)
 
         engine.create(newStorename, attributes, params)
