@@ -106,7 +106,7 @@ case class Entity(val entityname: EntityName)(@transient implicit val ac: AdamCo
       }
 
       if (_data.isDefined) {
-        _data = Some(_data.get.cache())
+        //_data = Some(_data.get.cache())
       }
 
       data = _data
