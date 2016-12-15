@@ -146,7 +146,7 @@ class SolrEngine(private val url: String)(@transient override implicit val ac: A
       }
       solrQuery.setFields("*", "score")
       solrQuery.setRows(500)
-      solrQuery.setSort("score", SolrQuery.ORDER.asc)
+      solrQuery.setSort("score", SolrQuery.ORDER.desc)
       solrQuery.set("defType", "edismax")
 
       //set all other params
