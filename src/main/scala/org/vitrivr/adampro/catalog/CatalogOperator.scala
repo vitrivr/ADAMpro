@@ -31,6 +31,15 @@ import scala.util.{Failure, Success, Try}
 object CatalogOperator extends Logging {
   private val MAX_WAITING_TIME: Duration = 100.seconds
 
+  try {
+    Class.forName("org.apache.derby.jdbc.EmbeddedDriver").newInstance
+  } catch {
+    case e: Exception => {
+      log.error("driver not available for catalog", e.getMessage)
+      throw e
+    }
+  }
+
   private val ds = new ComboPooledDataSource
   ds.setDriverClass("org.apache.derby.jdbc.EmbeddedDriver")
   ds.setJdbcUrl("jdbc:derby:" + AdamConfig.internalsPath + "/ap_catalog" + "")
