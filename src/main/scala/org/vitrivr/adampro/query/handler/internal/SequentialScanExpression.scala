@@ -12,6 +12,7 @@ import org.vitrivr.adampro.query.query.{Predicate, NearestNeighbourQuery}
 import org.vitrivr.adampro.utils.Logging
 
 import scala.collection.mutable
+import scala.collection.mutable.ListBuffer
 
 /**
   * adamtwo
@@ -54,13 +55,7 @@ case class SequentialScanExpression(private val entity: Entity)(private val nnq:
 
 
     var result = if (ids.nonEmpty) {
-      val data = entity.getData(predicates = Seq(new Predicate(entity.pk.name, None, ids.toSeq)))
-      val idsbc = ac.sc.broadcast(ids)
-
-      data.map(d => {
-        val rdd = d.rdd.filter(x => idsbc.value.contains(x.getAs[Any](entity.pk.name)))
-        ac.sqlContext.createDataFrame(rdd, d.schema)
-      })
+      entity.getData(predicates = Seq(new Predicate(entity.pk.name, None, ids.toSeq)))
     } else {
       entity.getData()
     }
