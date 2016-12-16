@@ -165,8 +165,8 @@ class SolrEngine(private val url: String)(@transient override implicit val ac: A
         log.trace("solr returns 0 results")
       }
 
-      val rdd = ac.sc.range(0, nresults).mapPartitions(it => {
-        it.filter(i => i < results.getNumFound).map(i => results.get(i.toInt)).map(doc => {
+      import collection.JavaConverters._
+      val rdd = ac.sqlContext.sparkContext.parallelize(results.subList(0, nresults).asScala.map(doc => {
           val data = (nameDicSolrnameToAttributename.keys.toSeq ++ Seq("score")).map(solrname => {
             val fieldData = doc.get(solrname)
 
@@ -182,8 +182,7 @@ class SolrEngine(private val url: String)(@transient override implicit val ac: A
             }
           }).filter(_ != null).toSeq
           Row(data: _*)
-        })
-      })
+        }))
 
       val df = if (!results.isEmpty) {
         val tmpDoc = results.get(0)
