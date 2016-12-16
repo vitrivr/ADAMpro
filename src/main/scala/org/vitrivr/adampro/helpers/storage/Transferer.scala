@@ -97,6 +97,8 @@ object Transferer extends Logging {
 
       entity.markStale()
 
+      data.unpersist(true)
+
       Success(null)
     } catch {
       case e: Exception => Failure(e)
