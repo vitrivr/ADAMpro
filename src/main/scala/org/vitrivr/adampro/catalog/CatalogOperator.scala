@@ -593,11 +593,11 @@ object CatalogOperator extends Logging {
       }
 
       if (attribute.isDefined) {
-        filter = _indexes.filter(_.entityname === entityname.get.toString())
+        filter = filter.filter(_.entityname === entityname.get.toString())
       }
 
       if (indextypename.isDefined) {
-        filter = _indexes.filter(_.indextypename === indextypename.get.name)
+        filter = filter.filter(_.indextypename === indextypename.get.name)
       }
 
       val query = filter.map(_.indexname).result
