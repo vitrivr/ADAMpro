@@ -101,7 +101,7 @@ class SearchRPC extends AdamSearchGrpc.AdamSearch with Logging {
     * @param request
     */
   private def executeQuery(request: QueryMessage): QueryResultsMessage = {
-    time("query operation") {
+    time("rpc call for query operation") {
       val expression = RPCHelperMethods.toExpression(request)
       val evaluationOptions = RPCHelperMethods.prepareEvaluationOptions(request)
       val informationLevel = RPCHelperMethods.prepareInformationLevel(request.information)
