@@ -90,7 +90,7 @@ case class Entity(val entityname: EntityName)(@transient implicit val ac: AdamCo
     //cache data join
     var data = _data
 
-    if (_data.isEmpty && predicates.isEmpty) {
+    if (_data.isEmpty) {
       val handlerData = schema().filterNot(_.pk).groupBy(_.storagehandler).map { case (handler, attributes) =>
         val status = handler.read(entityname, attributes.+:(pk))
 
@@ -108,9 +108,23 @@ case class Entity(val entityname: EntityName)(@transient implicit val ac: AdamCo
       }
 
       data = _data
+
+      if (data.isDefined) {
+        import scala.concurrent.ExecutionContext.Implicits.global
+        val future = Future[DataFrame] {
+          data.get.persist(StorageLevel.MEMORY_ONLY)
+        }
+        future.onComplete {
+          case Success(cachedDF) => data = Some(cachedDF)
+          case Failure(e) => log.error("could not cache data", e)
+        }
+      }
     }
 
-    if (predicates.nonEmpty) {
+    //possibly filter for current call
+    var filteredData = data
+
+    if (predicates.nonEmpty && filteredData.isEmpty) {
       val handlerData = schema().filterNot(_.pk).groupBy(_.storagehandler).map { case (handler, attributes) =>
         val predicate = predicates.filter(p => (p.attribute == pk.name || attributes.map(_.name).contains(p.attribute)))
         val status = handler.read(entityname, attributes, predicate)
@@ -123,12 +137,20 @@ case class Entity(val entityname: EntityName)(@transient implicit val ac: AdamCo
       }.filter(_.isSuccess).map(_.get)
 
       if (handlerData.nonEmpty) {
-        data = Some(handlerData.reduce(_.join(_, pk.name)).coalesce(AdamConfig.defaultNumberOfPartitions))
+        filteredData = Some(handlerData.reduce(_.join(_, pk.name)).coalesce(AdamConfig.defaultNumberOfPartitions))
       }
+    } else {
+      predicates.foreach { predicate =>
+        val valueList = predicate.values.map(value => value match {
+          case _: String => "'" + value + "'"
+          case _ => value.toString
+        })
+
+        filteredData = filteredData.map(_.where(predicate.attribute + " " + predicate.operator.getOrElse(" IN ") + " " + valueList.mkString("(", ",", ")")))
+      }
+
     }
 
-    //possibly filter for current call
-    var filteredData = data
 
     if (handlerFilter.isDefined) {
       //filter by handler, name and type
@@ -136,18 +158,6 @@ case class Entity(val entityname: EntityName)(@transient implicit val ac: AdamCo
     } else if (nameFilter.isDefined || typeFilter.isDefined) {
       //filter by name and type
       filteredData = filteredData.map(_.select(schema(nameFilter, typeFilter).map(attribute => col(attribute.name)): _*))
-    }
-
-    if (data.isDefined) {
-      import scala.concurrent.ExecutionContext.Implicits.global
-      val future = Future {
-        try{
-          val cachedDF = data.get.persist(StorageLevel.MEMORY_ONLY)
-          data = Some(cachedDF)
-        } catch {
-          case e : Exception => log.error("could not cache data", e)
-        }
-      }
     }
 
     filteredData
