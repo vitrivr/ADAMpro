@@ -113,7 +113,7 @@ object HintBasedScanExpression extends Logging {
             log.trace("measurement-based (empirical) execution plan hint")
             val optimizer = ac.optimizerRegistry.value.apply("svm").get
 
-            val indexes = CatalogOperator.listIndexes(Some(entityname)).get.map(Index.load(_)).filter(_.isSuccess).map(_.get).groupBy(_.indextypename).mapValues(_.map(_.indexname))
+            val indexes = CatalogOperator.listIndexes(Some(entityname), Some(nnq.get.attribute)).get.map(Index.load(_)).filter(_.isSuccess).map(_.get).groupBy(_.indextypename).mapValues(_.map(_.indexname))
             val index = indexes.values.toSeq.flatten
               .map(indexname => Index.load(indexname, false).get)
               .sortBy(index => -optimizer.getScore(index, nnq.get)).head
@@ -134,7 +134,7 @@ object HintBasedScanExpression extends Logging {
           log.trace("measurement-based (scored) execution plan hint")
             val optimizer = ac.optimizerRegistry.value.apply("naive").get
 
-            val indexes = CatalogOperator.listIndexes(Some(entityname)).get.map(Index.load(_)).filter(_.isSuccess).map(_.get).groupBy(_.indextypename).mapValues(_.map(_.indexname))
+            val indexes = CatalogOperator.listIndexes(Some(entityname), Some(nnq.get.attribute)).get.map(Index.load(_)).filter(_.isSuccess).map(_.get).groupBy(_.indextypename).mapValues(_.map(_.indexname))
             val index = indexes.values.toSeq.flatten
               .map(indexname => Index.load(indexname, false).get)
               .sortBy(index => -optimizer.getScore(index, nnq.get)).head
@@ -155,7 +155,7 @@ object HintBasedScanExpression extends Logging {
             val optimizer = ac.optimizerRegistry.value.apply("scored").get
 
             //index scan
-            val indexChoice = CatalogOperator.listIndexes(Some(entityname), Some(iqh.structureType)).get.map(Index.load(_)).filter(_.isSuccess).map(_.get)
+            val indexChoice = CatalogOperator.listIndexes(Some(entityname), Some(nnq.get.attribute), Some(iqh.structureType)).get.map(Index.load(_)).filter(_.isSuccess).map(_.get)
 
             if (indexChoice.nonEmpty) {
               val sortedIndexChoice = indexChoice

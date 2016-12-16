@@ -1,5 +1,7 @@
 package org.vitrivr.adampro.index
 
+import org.apache.spark.rdd.RDD
+import org.apache.spark.sql.{DataFrame, SaveMode}
 import org.apache.spark.storage.StorageLevel
 import org.vitrivr.adampro.catalog.CatalogOperator
 import org.vitrivr.adampro.config.{AdamConfig, FieldNames}
@@ -17,8 +19,6 @@ import org.vitrivr.adampro.main.{AdamContext, SparkStartup}
 import org.vitrivr.adampro.query.distance.DistanceFunction
 import org.vitrivr.adampro.query.query.NearestNeighbourQuery
 import org.vitrivr.adampro.utils.Logging
-import org.apache.spark.rdd.RDD
-import org.apache.spark.sql.{DataFrame, SaveMode}
 
 import scala.collection.mutable
 import scala.collection.mutable.ListBuffer
@@ -87,7 +87,7 @@ abstract class Index(val indexname: IndexName)(@transient implicit val ac: AdamC
     if (_data.isEmpty) {
       val data = Index.storage.get.read(indexname, Seq())
 
-      if(data.isFailure){
+      if (data.isFailure) {
         log.error("error while reading index data: " + data.failed.get.getMessage, data.failed.get)
       }
 
@@ -343,7 +343,7 @@ object Index extends Logging {
     * @return
     */
   private[index] def createIndexName(entityname: EntityName, attribute: String, indextype: IndexTypeName): String = {
-    val indexes = CatalogOperator.listIndexes(Some(entityname), Some(indextype)).get
+    val indexes = CatalogOperator.listIndexes(Some(entityname), Some(attribute), Some(indextype)).get
 
     var indexname = ""
 
@@ -475,11 +475,12 @@ object Index extends Logging {
     * Lists indexes.
     *
     * @param entityname    name of entity
+    * @param attribute     name of attribute
     * @param indextypename name of index type
     * @return
     */
-  def list(entityname: Option[EntityName] = None, indextypename: Option[IndexTypeName] = None)(implicit ac: AdamContext): Seq[Try[Index]] = {
-    CatalogOperator.listIndexes(entityname, indextypename).get.map(load(_))
+  def list(entityname: Option[EntityName] = None, attribute: Option[String] = None, indextypename: Option[IndexTypeName] = None)(implicit ac: AdamContext): Seq[Try[Index]] = {
+    CatalogOperator.listIndexes(entityname, attribute, indextypename).get.map(load(_))
   }
 
   /**

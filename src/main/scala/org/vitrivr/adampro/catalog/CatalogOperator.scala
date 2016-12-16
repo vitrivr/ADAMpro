@@ -571,19 +571,24 @@ object CatalogOperator extends Logging {
     * Lists all indexes in catalog.
     *
     * @param entityname    filter by entityname, set to null for not using filter
+    * @param attribute     filter by attribute
     * @param indextypename filter by indextypename, set to null for not using filter
     * @return
     */
-  def listIndexes(entityname: Option[EntityName] = None, indextypename: Option[IndexTypeName] = None): Try[Seq[IndexName]] = {
+  def listIndexes(entityname: Option[EntityName] = None, attribute: Option[String] = None, indextypename: Option[IndexTypeName] = None): Try[Seq[IndexName]] = {
     execute("list indexes") {
-      val filter = if (entityname.isDefined && indextypename.isDefined) {
-        _indexes.filter(_.entityname === entityname.get.toString()).filter(_.indextypename === indextypename.get.name)
-      } else if (entityname.isDefined) {
-        _indexes.filter(_.entityname === entityname.get.toString())
-      } else if (indextypename.isDefined) {
-        _indexes.filter(_.indextypename === indextypename.get.name)
-      } else {
-        _indexes
+      var filter: Query[IndexCatalog, (String, String, String, String, Array[Byte], Boolean), Seq] = _indexes
+
+      if (entityname.isDefined) {
+        filter = filter.filter(_.entityname === entityname.get.toString())
+      }
+
+      if (attribute.isDefined) {
+        filter = _indexes.filter(_.entityname === entityname.get.toString())
+      }
+
+      if (indextypename.isDefined) {
+        filter = _indexes.filter(_.indextypename === indextypename.get.name)
       }
 
       val query = filter.map(_.indexname).result
