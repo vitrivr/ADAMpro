@@ -1,5 +1,6 @@
 package org.vitrivr.adampro.index
 
+import org.apache.spark.storage.StorageLevel
 import org.vitrivr.adampro.catalog.CatalogOperator
 import org.vitrivr.adampro.config.{AdamConfig, FieldNames}
 import org.vitrivr.adampro.datatypes.FieldTypes.FEATURETYPE
@@ -93,7 +94,7 @@ abstract class Index(val indexname: IndexName)(@transient implicit val ac: AdamC
       _data = data.map(Some(_)).getOrElse(None)
 
       if (_data.isDefined) {
-        _data = Some(_data.get.cache())
+        _data = Some(_data.get.persist(StorageLevel.MEMORY_ONLY_2))
       }
     }
 
