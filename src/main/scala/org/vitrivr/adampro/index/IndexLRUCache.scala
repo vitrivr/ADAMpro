@@ -2,7 +2,9 @@ package org.vitrivr.adampro.index
 
 import java.util.concurrent.TimeUnit
 
+import org.vitrivr.adampro.catalog.CatalogOperator
 import org.vitrivr.adampro.config.AdamConfig
+import org.vitrivr.adampro.exception.IndexNotExistingException
 import org.vitrivr.adampro.index.Index.IndexName
 import org.vitrivr.adampro.main.SparkStartup
 import com.google.common.cache.{CacheBuilder, CacheLoader}
@@ -43,9 +45,14 @@ class IndexLRUCache extends Logging {
   def get(indexname: IndexName): Try[Index] = {
     try {
       log.debug("getting index " + indexname + " from cache")
-      Success(indexCache.get(indexname))
+      if(CatalogOperator.existsIndex(indexname).get || indexCache.asMap().containsKey(indexname)){
+        Success(indexCache.get(indexname))
+      } else {
+        throw new IndexNotExistingException()
+      }
     } catch {
       case e: Exception =>
+        log.error("index " + indexname + " could not be found in cache and could not be loaded")
         Failure(e)
     }
   }

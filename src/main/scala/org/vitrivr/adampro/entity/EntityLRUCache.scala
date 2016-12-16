@@ -2,10 +2,12 @@ package org.vitrivr.adampro.entity
 
 import java.util.concurrent.TimeUnit
 
+import com.google.common.cache.{CacheBuilder, CacheLoader}
+import org.vitrivr.adampro.catalog.CatalogOperator
 import org.vitrivr.adampro.config.AdamConfig
 import org.vitrivr.adampro.entity.Entity.EntityName
+import org.vitrivr.adampro.exception.EntityNotExistingException
 import org.vitrivr.adampro.main.SparkStartup
-import com.google.common.cache.{CacheBuilder, CacheLoader}
 import org.vitrivr.adampro.utils.Logging
 
 import scala.util.{Failure, Success, Try}
@@ -43,9 +45,14 @@ class EntityLRUCache extends Logging {
   def get(entityname: EntityName): Try[Entity] = {
     try {
       log.trace("getting entity " + entityname + " from cache")
-      Success(entityCache.get(entityname))
+      if(CatalogOperator.existsEntity(entityname).get || entityCache.asMap().containsKey(entityname)){
+        Success(entityCache.get(entityname))
+      } else {
+        throw new EntityNotExistingException()
+      }
     } catch {
       case e: Exception =>
+        log.error("entity " + entityname + " could not be found in cache and could not be loaded")
         Failure(e)
     }
   }
