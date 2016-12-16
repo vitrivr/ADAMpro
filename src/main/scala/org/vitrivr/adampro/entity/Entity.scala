@@ -3,6 +3,7 @@ package org.vitrivr.adampro.entity
 import org.apache.spark.sql.functions.col
 import org.apache.spark.sql.types.{StructField, StructType}
 import org.apache.spark.sql.{DataFrame, Row, SaveMode}
+import org.apache.spark.storage.StorageLevel
 import org.vitrivr.adampro.catalog.CatalogOperator
 import org.vitrivr.adampro.config.{AdamConfig, FieldNames}
 import org.vitrivr.adampro.datatypes.FieldTypes
@@ -18,6 +19,7 @@ import org.vitrivr.adampro.storage.engine.ParquetEngine
 import org.vitrivr.adampro.utils.Logging
 
 import scala.collection.mutable.ListBuffer
+import scala.concurrent.Future
 import scala.util.{Failure, Success, Try}
 
 /**
@@ -105,10 +107,6 @@ case class Entity(val entityname: EntityName)(@transient implicit val ac: AdamCo
         _data = None
       }
 
-      if (_data.isDefined) {
-        //_data = Some(_data.get.cache())
-      }
-
       data = _data
     }
 
@@ -138,6 +136,18 @@ case class Entity(val entityname: EntityName)(@transient implicit val ac: AdamCo
     } else if (nameFilter.isDefined || typeFilter.isDefined) {
       //filter by name and type
       filteredData = filteredData.map(_.select(schema(nameFilter, typeFilter).map(attribute => col(attribute.name)): _*))
+    }
+
+    if (data.isDefined) {
+      import scala.concurrent.ExecutionContext.Implicits.global
+      val future = Future {
+        try{
+          val cachedDF = data.get.persist(StorageLevel.MEMORY_ONLY)
+          data = Some(cachedDF)
+        } catch {
+          case e : Exception => log.error("could not cache data", e)
+        }
+      }
     }
 
     filteredData
