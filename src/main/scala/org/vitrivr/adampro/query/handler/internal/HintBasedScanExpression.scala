@@ -24,7 +24,7 @@ import org.apache.spark.sql.DataFrame
   * May 2016
   */
 case class HintBasedScanExpression(private val entityname: EntityName, private val nnq: Option[NearestNeighbourQuery], private val bq: Option[BooleanQuery], private val hints: Seq[QueryHint], private val withFallback: Boolean = true, id: Option[String] = None)(filterExpr: Option[QueryExpression] = None)(@transient implicit val ac: AdamContext) extends QueryExpression(id) {
-  val expr = HintBasedScanExpression.startPlanSearch(entityname, nnq, bq, hints, withFallback)(filterExpr)
+  var expr = HintBasedScanExpression.startPlanSearch(entityname, nnq, bq, hints, withFallback)(filterExpr)
   override val info = ExpressionDetails(expr.info.source, Some("Hint-Based Expression: " + expr.info.scantype), id, expr.info.confidence)
   _children ++= Seq(expr) ++ filterExpr.map(Seq(_)).getOrElse(Seq())
 
@@ -32,6 +32,12 @@ case class HintBasedScanExpression(private val entityname: EntityName, private v
     log.debug("evaluate hint-based expression, scanning " + expr.info.scantype)
     expr.filter = filter
     expr.evaluate(options)
+  }
+
+  override def prepareTree(): QueryExpression = {
+    super.prepareTree()
+    expr = expr.prepareTree()
+    this
   }
 
   override def equals(that: Any): Boolean =
