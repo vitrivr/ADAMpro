@@ -19,8 +19,6 @@ trait ElementwiseSummedDistanceFunction extends DistanceFunction with Logging wi
       //un-weighted
       if (v1_q.isInstanceOf[SparseFeatureVector] && v2.isInstanceOf[SparseFeatureVector]) {
         //sparse vectors
-        log.trace("compute distance without weights, sparse vectors")
-
         val sv1_q = v1_q.asInstanceOf[SparseFeatureVector]
         val sv2 = v2.asInstanceOf[SparseFeatureVector]
         var offset = 0
@@ -37,8 +35,6 @@ trait ElementwiseSummedDistanceFunction extends DistanceFunction with Logging wi
         }
       } else {
         //dense vectors
-        log.trace("compute distance without weights, dense vectors")
-
         var offset = 0
         while (offset < math.min(v1_q.length, v2.length)) {
           cumSum += element(v1_q(offset), v2(offset))
@@ -47,11 +43,8 @@ trait ElementwiseSummedDistanceFunction extends DistanceFunction with Logging wi
       }
     } else {
       //weighted
-      log.trace("compute distance with weights")
-
       if (weights.get.isInstanceOf[SparseFeatureVector]) {
         //sparse weights
-        log.trace("compute distance with sparse weights")
 
         val sweights = weights.get.asInstanceOf[SparseFeatureVector]
 
@@ -64,8 +57,6 @@ trait ElementwiseSummedDistanceFunction extends DistanceFunction with Logging wi
         }
       } else if (v1_q.isInstanceOf[SparseFeatureVector] && v2.isInstanceOf[SparseFeatureVector]) {
         //dense weights, sparse vectors
-        log.trace("compute distance with dense weights and sparse vectors")
-
         val sv1_q = v1_q.asInstanceOf[SparseFeatureVector]
         val sv2 = v2.asInstanceOf[SparseFeatureVector]
 
@@ -82,8 +73,6 @@ trait ElementwiseSummedDistanceFunction extends DistanceFunction with Logging wi
         }
       } else {
         //dense weights, dense vectors
-        log.trace("compute distance with dense weights and dense vectors")
-
         var offset = 0
         while (offset < v1_q.length && offset < v1_q.length && offset < v2.length) {
           cumSum += element(v1_q(offset), v2(offset), weights.get(offset))
