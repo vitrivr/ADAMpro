@@ -31,7 +31,13 @@ object QueryOp extends GenericOp {
     */
   def apply(q: QueryExpression, options: Option[QueryEvaluationOptions] = None)(implicit ac: AdamContext): Try[Option[DataFrame]] = {
     execute("query execution operation") {
-      Success(q.prepareTree().evaluate(options))
+      log.trace(QUERY_MARKER, "query operation")
+      val prepared = q.prepareTree()
+      log.trace(QUERY_MARKER, "prepared tree")
+      val res = prepared.evaluate(options)
+      log.trace(QUERY_MARKER, "evaluated query")
+
+      Success(res)
     }
   }
 

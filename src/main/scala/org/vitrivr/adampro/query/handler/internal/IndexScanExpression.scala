@@ -52,11 +52,15 @@ case class IndexScanExpression(val index: Index)(val nnq: NearestNeighbourQuery,
     ac.sc.setLocalProperty("spark.scheduler.pool", "index")
     ac.sc.setJobGroup(id.getOrElse(""), "index scan: " + index.indextypename.name, interruptOnCancel = true)
 
+    log.trace(QUERY_MARKER, "checking conformity of index scan")
+
     if (!nnq.isConform(index)) {
       throw QueryNotConformException("query is not conform to index")
     } else if (!nnq.isConform(index.entity.get)){
       throw QueryNotConformException("query is not conform to entity")
     }
+
+    log.trace(QUERY_MARKER, "preparing filtering ids")
 
     val prefilter = if (filter.isDefined && filterExpr.isDefined) {
       val pk = index.entity.get.pk
@@ -69,13 +73,17 @@ case class IndexScanExpression(val index: Index)(val nnq: NearestNeighbourQuery,
       None
     }
 
-    var result = IndexScanExpression.scan(index)(prefilter, nnq, id)
+    log.trace(QUERY_MARKER, "starting index scan")
+
+    var res = IndexScanExpression.scan(index)(prefilter, nnq, id)
+
+    log.trace(QUERY_MARKER, "finished index scan")
 
     if (options.isDefined && options.get.storeSourceProvenance) {
-      result = result.withColumn(FieldNames.sourceColumnName, lit(sourceDescription))
+      res = res.withColumn(FieldNames.sourceColumnName, lit(sourceDescription))
     }
 
-    Some(result)
+    Some(res)
   }
 
   override def prepareTree(): QueryExpression = {

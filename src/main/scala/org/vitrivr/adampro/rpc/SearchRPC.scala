@@ -3,6 +3,7 @@ package org.vitrivr.adampro.rpc
 import io.grpc.stub.StreamObserver
 import org.apache.spark.sql.DataFrame
 import org.apache.spark.sql.types._
+import org.slf4j.Marker
 import org.vitrivr.adampro.api.{EntityOp, IndexOp, QueryOp}
 import org.vitrivr.adampro.datatypes.feature.{FeatureVectorWrapper, FeatureVectorWrapperUDT}
 import org.vitrivr.adampro.datatypes.gis.{GeographyWrapper, GeographyWrapperUDT, GeometryWrapper, GeometryWrapperUDT}
@@ -14,7 +15,7 @@ import org.vitrivr.adampro.query.progressive.{ProgressiveObservation, QueryHints
 import org.vitrivr.adampro.utils.Logging
 
 import scala.concurrent.Future
-import scala.util.Try
+import scala.util.{Random, Try}
 
 /**
   * adamtwo
@@ -102,18 +103,25 @@ class SearchRPC extends AdamSearchGrpc.AdamSearch with Logging {
     */
   private def executeQuery(request: QueryMessage): QueryResultsMessage = {
     time("rpc call for query operation") {
+      val logId = Random.alphanumeric.take(5).mkString
+      log.trace(QUERY_MARKER, "start " + logId)
       val expression = RPCHelperMethods.toExpression(request)
+      log.trace(QUERY_MARKER, "to expression " + logId)
       val evaluationOptions = RPCHelperMethods.prepareEvaluationOptions(request)
+      log.trace(QUERY_MARKER, "evaluation options " + logId)
       val informationLevel = RPCHelperMethods.prepareInformationLevel(request.information)
+      log.trace(QUERY_MARKER, "information level " + logId)
 
       if (expression.isFailure) {
         log.error("error when parsing expression: " + expression.failed.get.getMessage)
         return QueryResultsMessage(Some(AckMessage(code = AckMessage.Code.ERROR, message = expression.failed.get.getMessage)))
       }
 
+      log.trace(QUERY_MARKER, "before query op " + logId)
       val res = QueryOp(expression.get, evaluationOptions)
+      log.trace(QUERY_MARKER, "after query op " + logId)
 
-      log.debug("\n ------------------- \n" + expression.get.mkString(0) + "\n ------------------- \n")
+      log.trace("\n ------------------- \n" + expression.get.mkString(0) + "\n ------------------- \n")
 
       if (res.isSuccess) {
         val results = expression.get.information(informationLevel).map(res =>

@@ -42,7 +42,9 @@ case class SequentialScanExpression(private val entity: Entity)(private val nnq:
     ac.sc.setLocalProperty("spark.scheduler.pool", "sequential")
     ac.sc.setJobGroup(id.getOrElse(""), "sequential scan: " + entity.entityname.toString, interruptOnCancel = true)
 
-    var ids = mutable.HashSet[Any]()
+    var ids = mutable.ListBuffer[Any]()
+
+    log.trace(QUERY_MARKER, "preparing filtering ids")
 
     if (filter.isDefined) {
       ids ++= filter.get.select(entity.pk.name).collect().map(_.getAs[Any](entity.pk.name))
@@ -52,13 +54,17 @@ case class SequentialScanExpression(private val entity: Entity)(private val nnq:
       filterExpr.get.filter = filter
       ids ++= filterExpr.get.evaluate(options).get.select(entity.pk.name).collect().map(_.getAs[Any](entity.pk.name))
     }
+    log.trace(QUERY_MARKER, "after preparing filtering ids")
 
+    log.trace(QUERY_MARKER, "get data")
 
     var result = if (ids.nonEmpty) {
       entity.getData(predicates = Seq(new Predicate(entity.pk.name, None, ids.toSeq)))
     } else {
       entity.getData()
     }
+
+    log.trace(QUERY_MARKER, "after get data")
 
     //TODO: possibly join is faster? possibly the current implmentation is
 
@@ -112,9 +118,15 @@ object SequentialScanExpression extends Logging {
       }
     })
 
-    df.withColumn(FieldNames.distanceColumnName, distUDF(df(nnq.attribute)))
+    log.trace(QUERY_MARKER, "executing distance computation")
+
+    val res = df.withColumn(FieldNames.distanceColumnName, distUDF(df(nnq.attribute)))
       .orderBy(col(FieldNames.distanceColumnName))
       .limit(nnq.k)
+
+    log.trace(QUERY_MARKER, "finished executing distance computation")
+
+    res
   }
 }
 

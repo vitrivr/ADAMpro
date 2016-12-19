@@ -67,7 +67,8 @@ val coreLibs = Seq(
 ).map(
   _.excludeAll(
     ExclusionRule("org.scala-lang"),
-    ExclusionRule("org.slf4j", "slf4j-api")
+    ExclusionRule("org.slf4j"),
+    ExclusionRule("log4j")
   )
 )
 //TODO: add multiple configurations to sbt, one which has coreLibs as provided (as they do not have to be submitted to spark)
@@ -91,14 +92,17 @@ val secondaryLibs = Seq(
 ).map(
   _.excludeAll(
     ExclusionRule("org.scala-lang"),
-    ExclusionRule("org.slf4j", "slf4j-api")
+    ExclusionRule("org.slf4j"),
+    ExclusionRule("log4j")
   )
 )
 
 //log libs
 val logLibs = Seq(
-  "org.slf4j" % "slf4j-api" % "1.7.10",
-  "org.slf4j" % "slf4j-log4j12" % "1.7.10"
+  "org.apache.logging.log4j" % "log4j-api" % "2.7",
+  "org.apache.logging.log4j" % "log4j-core" % "2.7",
+  "org.slf4j" % "slf4j-api" % "1.7.22",
+  "org.apache.logging.log4j" % "log4j-slf4j-impl" % "2.7"
 )
 
 //tertiary libs
@@ -112,7 +116,8 @@ val tertiaryLibs = Seq(
 ).map(
   _.excludeAll(
     ExclusionRule("org.scala-lang"),
-    ExclusionRule("org.slf4j", "slf4j-api")
+    ExclusionRule("org.slf4j"),
+    ExclusionRule("log4j")
   )
 )
 
@@ -122,7 +127,8 @@ val testLibs = Seq(
 ).map(
   _.excludeAll(
     ExclusionRule("org.scala-lang"),
-    ExclusionRule("org.slf4j", "slf4j-api")
+    ExclusionRule("org.slf4j"),
+    ExclusionRule("log4j")
   )
 )
 
@@ -138,7 +144,7 @@ assemblyOption in assembly :=
 val meta = """META.INF(.)*""".r
 assemblyMergeStrategy in assembly := {
   case x if x.contains("slf4j-api") => MergeStrategy.last
-  case x if x.contains("org.slf4j") => MergeStrategy.first
+  case x if x.contains("org.slf4j") => MergeStrategy.last
   case x if x.contains("org.apache.httpcomponents") => MergeStrategy.last
   case x if x.contains("org.apache.commons") => MergeStrategy.last
   case x if x.contains("org.apache.derby") => MergeStrategy.last

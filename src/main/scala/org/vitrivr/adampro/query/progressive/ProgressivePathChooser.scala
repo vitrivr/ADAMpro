@@ -11,7 +11,7 @@ import org.vitrivr.adampro.query.handler.generic.QueryExpression
 import QueryHints.QueryHint
 import org.vitrivr.adampro.query.handler.internal.{HintBasedScanExpression, IndexScanExpression, SequentialScanExpression}
 import org.vitrivr.adampro.query.query.NearestNeighbourQuery
-import org.apache.log4j.Logger
+import org.vitrivr.adampro.utils.Logging
 
 /**
   * adampro
@@ -22,8 +22,7 @@ import org.apache.log4j.Logger
 /**
   * Specifies which query paths to use in progressive querying
   */
-trait ProgressivePathChooser {
-  val log = Logger.getLogger(getClass.getName)
+trait ProgressivePathChooser extends Logging {
 
   def getPaths(entityname: EntityName, nnq: NearestNeighbourQuery): Seq[QueryExpression]
 }

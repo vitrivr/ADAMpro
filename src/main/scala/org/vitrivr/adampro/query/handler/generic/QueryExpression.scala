@@ -67,7 +67,9 @@ abstract class QueryExpression(id: Option[String]) extends Serializable with Log
     }
 
     val t1 = System.currentTimeMillis
+    log.trace(QUERY_MARKER, "before evaluating query")
     results = run(options, filter)
+    log.trace(QUERY_MARKER, "evaluated query")
     run = true
     val t2 = System.currentTimeMillis
 
