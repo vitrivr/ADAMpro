@@ -1,6 +1,4 @@
-import sbt.project
 import sbt._
-import sbt.ExclusionRule
 import sbt.Keys._
 import sbtassembly.AssemblyPlugin.autoImport._
 
@@ -9,7 +7,7 @@ name := "ADAMpro"
 lazy val commonSettings = Seq(
   organization := "org.vitrivr",
   version := "0.1.0",
-  scalaVersion := "2.10.6"
+  scalaVersion := "2.10.5"
 )
 
 //projects
@@ -34,8 +32,8 @@ lazy val importer = project.dependsOn(grpcclient).
 
 //build
 lazy val buildSettings = Seq(
-  scalaVersion := "2.10.6",
-  crossScalaVersions := Seq("2.10.6"),
+  scalaVersion := "2.10.5",
+  crossScalaVersions := Seq("2.10.5"),
   ivyScala := ivyScala.value.map(_.copy(overrideScalaVersion = true))
 )
 
@@ -53,8 +51,8 @@ resolvers += Resolver.sonatypeRepo("snapshots")
 
 //base libs
 val baseLibs = Seq(
-  "org.scala-lang" % "scala-compiler" % "2.10.6",
-  "org.scala-lang" % "scala-reflect" % "2.10.6"
+  "org.scala-lang" % "scala-compiler" % "2.10.5",
+  "org.scala-lang" % "scala-reflect" % "2.10.5"
 )
 
 //adampro core libs
