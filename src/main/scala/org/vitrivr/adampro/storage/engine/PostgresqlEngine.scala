@@ -39,7 +39,7 @@ class PostgresqlEngine(private val url: String, private val user: String, privat
     this(props.get("url").get, props.get("user").get, props.get("password").get, props.getOrElse("schema", "public"))(ac)
   }
 
-  private val ds = new ComboPooledDataSource
+  @transient private val ds = new ComboPooledDataSource
   ds.setDriverClass("org.postgresql.Driver")
   ds.setJdbcUrl(url)
   ds.setProperties(props)
