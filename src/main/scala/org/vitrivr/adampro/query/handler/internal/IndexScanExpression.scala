@@ -56,8 +56,6 @@ case class IndexScanExpression(val index: Index)(val nnq: NearestNeighbourQuery,
 
     if (!nnq.isConform(index)) {
       throw QueryNotConformException("query is not conform to index")
-    } else if (!nnq.isConform(index.entity.get)){
-      throw QueryNotConformException("query is not conform to entity")
     }
 
     log.trace(QUERY_MARKER, "preparing filtering ids")

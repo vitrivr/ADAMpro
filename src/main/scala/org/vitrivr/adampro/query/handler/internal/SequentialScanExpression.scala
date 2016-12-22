@@ -6,6 +6,7 @@ import org.vitrivr.adampro.config.FieldNames
 import org.vitrivr.adampro.datatypes.feature.FeatureVectorWrapper
 import org.vitrivr.adampro.entity.Entity
 import org.vitrivr.adampro.entity.Entity.EntityName
+import org.vitrivr.adampro.exception.QueryNotConformException
 import org.vitrivr.adampro.main.AdamContext
 import org.vitrivr.adampro.query.handler.generic.{ExpressionDetails, QueryEvaluationOptions, QueryExpression}
 import org.vitrivr.adampro.query.query.{Predicate, NearestNeighbourQuery}
@@ -42,6 +43,10 @@ case class SequentialScanExpression(private val entity: Entity)(private val nnq:
     ac.sc.setLocalProperty("spark.scheduler.pool", "sequential")
     ac.sc.setJobGroup(id.getOrElse(""), "sequential scan: " + entity.entityname.toString, interruptOnCancel = true)
 
+    if (!nnq.isConform(entity)){
+      throw QueryNotConformException("query is not conform to entity")
+    }
+
     var ids = mutable.ListBuffer[Any]()
 
     log.trace(QUERY_MARKER, "preparing filtering ids")
@@ -65,8 +70,6 @@ case class SequentialScanExpression(private val entity: Entity)(private val nnq:
     }
 
     log.trace(QUERY_MARKER, "after get data")
-
-    //TODO: possibly join is faster? possibly the current implmentation is
 
     if (result.isDefined && options.isDefined && options.get.storeSourceProvenance) {
       result = Some(result.get.withColumn(FieldNames.sourceColumnName, lit(sourceDescription)))
