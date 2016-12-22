@@ -102,7 +102,11 @@ case class Entity(val entityname: EntityName)(@transient implicit val ac: AdamCo
       }.filter(_.isSuccess).map(_.get)
 
       if (handlerData.nonEmpty) {
-        _data = Some(handlerData.reduce(_.join(_, pk.name)).coalesce(AdamConfig.defaultNumberOfPartitions))
+        if(handlerData.size == 1){
+          _data = Some(handlerData.head)
+        } else {
+          _data = Some(handlerData.reduce(_.join(_, pk.name)).coalesce(AdamConfig.defaultNumberOfPartitions))
+        }
       } else {
         _data = None
       }
@@ -112,7 +116,7 @@ case class Entity(val entityname: EntityName)(@transient implicit val ac: AdamCo
       if (data.isDefined) {
         import scala.concurrent.ExecutionContext.Implicits.global
         val future = Future[DataFrame] {
-          data.get.persist(StorageLevel.MEMORY_ONLY)
+          data.get.persist(StorageLevel.MEMORY_ONLY_SER)
         }
         future.onComplete {
           case Success(cachedDF) => data = Some(cachedDF)
@@ -137,7 +141,11 @@ case class Entity(val entityname: EntityName)(@transient implicit val ac: AdamCo
       }.filter(_.isSuccess).map(_.get)
 
       if (handlerData.nonEmpty) {
-        filteredData = Some(handlerData.reduce(_.join(_, pk.name)).coalesce(AdamConfig.defaultNumberOfPartitions))
+        if(handlerData.size == 1){
+          filteredData = Some(handlerData.head)
+        } else {
+          filteredData = Some(handlerData.reduce(_.join(_, pk.name)).coalesce(AdamConfig.defaultNumberOfPartitions))
+        }
       }
     } else {
       predicates.foreach { predicate =>
@@ -187,7 +195,8 @@ case class Entity(val entityname: EntityName)(@transient implicit val ac: AdamCo
     }
 
     if (_data.isDefined) {
-      _data = Some(_data.get.cache())
+      _data = Some(_data.get.persist(StorageLevel.MEMORY_ONLY))
+      _data.get.count() //counting for caching
     }
   }
 
@@ -599,7 +608,7 @@ object Entity extends Logging {
     * @return
     */
   def load(entityname: EntityName, cache: Boolean = false)(implicit ac: AdamContext): Try[Entity] = {
-    val entity = ac.entityLRUCache.value.get(entityname)
+    val entity = ac.entityLRUCache.get(entityname)
 
     if (cache) {
       entity.map(_.cache())
@@ -646,7 +655,7 @@ object Entity extends Logging {
       }
 
       Entity.load(entityname).get.drop()
-      ac.entityLRUCache.value.invalidate(entityname)
+      ac.entityLRUCache.invalidate(entityname)
 
       Success(null)
     } catch {

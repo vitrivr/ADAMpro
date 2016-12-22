@@ -22,7 +22,7 @@ case class CacheExpression(private val expr: QueryExpression, private val cache:
     ac.sc.setJobGroup(id.getOrElse(""), "cache", interruptOnCancel = true)
 
     if (cache.useCached && id.isDefined) {
-      val cached = ac.queryLRUCache.value.get(id.get)
+      val cached = ac.queryLRUCache.get(id.get)
       if (cached.isSuccess) {
         return Some(cached.get)
       }
@@ -30,7 +30,7 @@ case class CacheExpression(private val expr: QueryExpression, private val cache:
 
     val res = expr.evaluate(options)
     if (id.isDefined && cache.putInCache) {
-      ac.queryLRUCache.value.put(id.get, res.get)
+      ac.queryLRUCache.put(id.get, res.get)
     }
     return res
   }

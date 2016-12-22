@@ -24,12 +24,12 @@ trait AdamContext {
 
   val storageHandlerRegistry = sc.broadcast(new StorageHandlerRegistry())
 
-  val entityLRUCache = sc.broadcast(new EntityLRUCache())
+  val entityLRUCache = new EntityLRUCache()
   val entityVersion = mutable.Map[String, Accumulator[Long]]()
 
-  val indexLRUCache = sc.broadcast(new IndexLRUCache())
+  val indexLRUCache = new IndexLRUCache()
 
-  val queryLRUCache = sc.broadcast(new QueryLRUCache())
+  val queryLRUCache = new QueryLRUCache()
 
   val optimizerRegistry = sc.broadcast(new OptimizerRegistry())
 }

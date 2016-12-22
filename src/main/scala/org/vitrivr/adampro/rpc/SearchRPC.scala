@@ -252,7 +252,7 @@ class SearchRPC extends AdamSearchGrpc.AdamSearch with Logging {
     */
   override def getCachedResults(request: CachedResultsMessage): Future[QueryResultsMessage] = {
     time("rpc call for cached query results") {
-      val res = ac.queryLRUCache.value.get(request.queryid)
+      val res = ac.queryLRUCache.get(request.queryid)
 
       if (res.isSuccess) {
         Future.successful(QueryResultsMessage(Some(AckMessage(code = AckMessage.Code.OK)), Seq(prepareResults(request.queryid, 0, 0, "cache", Map(), Some(res.get)))))

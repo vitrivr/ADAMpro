@@ -87,7 +87,7 @@ object SparsifyHelper {
       }
 
       entity.markStale()
-      ac.entityLRUCache.value.invalidate(entity.entityname)
+      ac.entityLRUCache.invalidate(entity.entityname)
 
       Success(entity)
 

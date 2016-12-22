@@ -22,6 +22,7 @@ import org.vitrivr.adampro.utils.Logging
 
 import scala.collection.mutable
 import scala.collection.mutable.ListBuffer
+import scala.concurrent.Future
 import scala.util.{Failure, Success, Try}
 
 /**
@@ -93,14 +94,28 @@ abstract class Index(val indexname: IndexName)(@transient implicit val ac: AdamC
 
       _data = data.map(Some(_)).getOrElse(None)
 
-      if (_data.isDefined) {
-        _data = Some(_data.get.persist(StorageLevel.MEMORY_ONLY_2))
+
+      //caching index data
+      import scala.concurrent.ExecutionContext.Implicits.global
+      val cachingFut = Future {
+        if (_data.isDefined) {
+          val cachedData = Some(_data.get.persist(StorageLevel.MEMORY_ONLY))
+          cachedData.get.count() //counting for caching
+          cachedData
+        } else {
+          None
+        }
+      }
+      cachingFut.onSuccess{
+        case cachedData => if(cachedData.isDefined){
+          _data = cachedData
+        }
       }
     }
 
     _data
   }
-
+  
   /**
     *
     * @param df
@@ -118,7 +133,8 @@ abstract class Index(val indexname: IndexName)(@transient implicit val ac: AdamC
     }
 
     if (_data.isDefined) {
-      _data = Some(_data.get.cache())
+      _data = Some(_data.get.persist(StorageLevel.MEMORY_ONLY))
+      _data.get.count() //counting for caching
     }
   }
 
@@ -490,7 +506,7 @@ object Index extends Logging {
     * @return
     */
   def load(indexname: IndexName, cache: Boolean = false)(implicit ac: AdamContext): Try[Index] = {
-    val index = ac.indexLRUCache.value.get(indexname)
+    val index = ac.indexLRUCache.get(indexname)
 
     if (cache) {
       index.map(_.cache())
@@ -538,7 +554,7 @@ object Index extends Logging {
       }
 
       Index.load(indexname).get.drop()
-      ac.indexLRUCache.value.invalidate(indexname)
+      ac.indexLRUCache.invalidate(indexname)
 
       Success(null)
     } catch {

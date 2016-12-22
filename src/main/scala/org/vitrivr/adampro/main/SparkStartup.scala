@@ -2,13 +2,14 @@ package org.vitrivr.adampro.main
 
 import org.apache.spark.sql.hive.HiveContext
 import org.apache.spark.{SparkConf, SparkContext}
-import org.vitrivr.adampro.api.EntityOp
+import org.vitrivr.adampro.api.{IndexOp, EntityOp}
 import org.vitrivr.adampro.config.AdamConfig
 import org.vitrivr.adampro.datatypes.bitString.BitStringUDT
 import org.vitrivr.adampro.datatypes.feature.FeatureVectorWrapperUDT
 import org.vitrivr.adampro.datatypes.gis.GeometryWrapperUDT
 import org.vitrivr.adampro.entity.Entity
 import org.vitrivr.adampro.helpers.optimizer.OptimizerRegistry
+import org.vitrivr.adampro.index.Index
 import org.vitrivr.adampro.utils.Logging
 
 /**
@@ -59,7 +60,4 @@ object SparkStartup extends Logging {
 
   AdamConfig.engines.foreach { engine => mainContext.storageHandlerRegistry.value.register(engine)(mainContext) }
   OptimizerRegistry.loadDefault()(mainContext)
-
-  //cache in beginning
-  EntityOp.list().map(_.map(entityname => Entity.load(entityname)(mainContext)))
 }

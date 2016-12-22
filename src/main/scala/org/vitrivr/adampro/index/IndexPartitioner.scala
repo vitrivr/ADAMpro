@@ -63,7 +63,7 @@ object IndexPartitioner extends Logging {
           throw status.failed.get
         }
 
-        ac.indexLRUCache.value.invalidate(newName)
+        ac.indexLRUCache.invalidate(newName)
 
         Success(Index.load(newName).get)
 
@@ -73,7 +73,7 @@ object IndexPartitioner extends Logging {
         val newIndex = index.shallowCopy(Some(newName))
         newIndex.setData(data)
 
-        ac.indexLRUCache.value.put(newName, newIndex)
+        ac.indexLRUCache.put(newName, newIndex)
         Success(newIndex)
 
       case PartitionMode.REPLACE_EXISTING =>
@@ -83,7 +83,7 @@ object IndexPartitioner extends Logging {
           throw status.failed.get
         }
 
-        ac.indexLRUCache.value.invalidate(index.indexname)
+        ac.indexLRUCache.invalidate(index.indexname)
 
         Success(index)
 
