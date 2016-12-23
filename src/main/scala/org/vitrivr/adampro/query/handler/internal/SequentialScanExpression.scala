@@ -1,6 +1,9 @@
 package org.vitrivr.adampro.query.handler.internal
 
-import org.apache.spark.sql.DataFrame
+import com.google.common.base.Charsets
+import com.google.common.hash.{PrimitiveSink, Funnel, BloomFilter}
+import com.twitter.chill.{KryoPool, KryoInstantiator}
+import org.apache.spark.sql.{Row, DataFrame}
 import org.apache.spark.sql.functions._
 import org.vitrivr.adampro.config.FieldNames
 import org.vitrivr.adampro.datatypes.feature.FeatureVectorWrapper
@@ -47,27 +50,36 @@ case class SequentialScanExpression(private val entity: Entity)(private val nnq:
       throw QueryNotConformException("query is not conform to entity")
     }
 
-    var ids = mutable.ListBuffer[Any]()
+    val funnel = new Funnel[Any] {
+      override def funnel(t: Any, primitiveSink: PrimitiveSink): Unit =
+      t match {
+        case s : String => primitiveSink.putUnencodedChars(s)
+        case l : Long => primitiveSink.putLong(l)
+        case i : Int => primitiveSink.putInt(i)
+        case _ => primitiveSink.putUnencodedChars(t.toString)
+      }
+    }
+    val ids = BloomFilter.create[Any](funnel, 1000, 0.05)
 
     log.trace(QUERY_MARKER, "preparing filtering ids")
 
     if (filter.isDefined) {
-      ids ++= filter.get.select(entity.pk.name).collect().map(_.getAs[Any](entity.pk.name))
+      filter.get.select(entity.pk.name).collect().map(_.getAs[Any](entity.pk.name)).toSeq.foreach{ids.put(_)}
     }
 
     if (filterExpr.isDefined) {
       filterExpr.get.filter = filter
-      ids ++= filterExpr.get.evaluate(options).get.select(entity.pk.name).collect().map(_.getAs[Any](entity.pk.name))
+      filterExpr.get.evaluate(options).get.select(entity.pk.name).collect().map(_.getAs[Any](entity.pk.name)).toSeq.foreach{ids.put(_)}
     }
+
     log.trace(QUERY_MARKER, "after preparing filtering ids")
 
     log.trace(QUERY_MARKER, "get data")
 
-    var result = if (ids.nonEmpty) {
-      entity.getData(predicates = Seq(new Predicate(entity.pk.name, None, ids.toSeq)))
-    } else {
-      entity.getData()
-    }
+    val idsBc = ac.sc.broadcast(ids)
+    val filterUdf = udf((arg: Any) => idsBc.value.mightContain(arg))
+
+    var result = Some(entity.getData().get.filter(filterUdf(col(entity.pk.name))))
 
     log.trace(QUERY_MARKER, "after get data")
 
