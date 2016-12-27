@@ -1,6 +1,8 @@
 package org.vitrivr.adampro.index
 
+import com.google.common.hash.{BloomFilter, Funnel, PrimitiveSink}
 import org.apache.spark.rdd.RDD
+import org.apache.spark.sql.functions._
 import org.apache.spark.sql.{DataFrame, SaveMode}
 import org.apache.spark.storage.StorageLevel
 import org.vitrivr.adampro.catalog.CatalogOperator
@@ -20,7 +22,6 @@ import org.vitrivr.adampro.query.distance.DistanceFunction
 import org.vitrivr.adampro.query.query.NearestNeighbourQuery
 import org.vitrivr.adampro.utils.Logging
 
-import scala.collection.mutable
 import scala.collection.mutable.ListBuffer
 import scala.concurrent.Future
 import scala.util.{Failure, Success, Try}
@@ -106,8 +107,8 @@ abstract class Index(val indexname: IndexName)(@transient implicit val ac: AdamC
           None
         }
       }
-      cachingFut.onSuccess{
-        case cachedData => if(cachedData.isDefined){
+      cachingFut.onSuccess {
+        case cachedData => if (cachedData.isDefined) {
           _data = cachedData
         }
       }
@@ -115,7 +116,7 @@ abstract class Index(val indexname: IndexName)(@transient implicit val ac: AdamC
 
     _data
   }
-  
+
   /**
     *
     * @param df
@@ -212,7 +213,6 @@ abstract class Index(val indexname: IndexName)(@transient implicit val ac: AdamC
     * @return a set of candidate tuple ids, possibly together with a tentative score (the number of tuples will be greater than k)
     */
   def scan(q: FeatureVector, distance: DistanceFunction, options: Map[String, String] = Map(), k: Int, filter: Option[DataFrame], partitions: Option[Set[PartitionID]], queryID: Option[String] = None)(implicit ac: AdamContext): DataFrame = {
-    val t1 = System.currentTimeMillis
     log.debug("started scanning index")
 
     if (isStale) {
@@ -222,38 +222,42 @@ abstract class Index(val indexname: IndexName)(@transient implicit val ac: AdamC
     var df = getData().get
 
     //apply pre-filter
-    var ids = mutable.Set[Any]()
+    val funnel = new Funnel[Any] {
+      override def funnel(t: Any, primitiveSink: PrimitiveSink): Unit =
+        t match {
+          case s: String => primitiveSink.putUnencodedChars(s)
+          case l: Long => primitiveSink.putLong(l)
+          case i: Int => primitiveSink.putInt(i)
+          case _ => primitiveSink.putUnencodedChars(t.toString)
+        }
+    }
+    val ids = BloomFilter.create[Any](funnel, 1000, 0.05)
 
     if (filter.isDefined) {
-      ids ++= filter.get.select(pk.name).collect().map(_.getAs[Any](pk.name))
+      filter.get.select(pk.name).collect().map(_.getAs[Any](pk.name)).toSeq.foreach {
+        ids.put(_)
+      }
+
+      val idsBc = ac.sc.broadcast(ids)
+      val filterUdf = udf((arg: Any) => idsBc.value.mightContain(arg))
+
+      df = df.filter(filterUdf(col(pk.name)))
     }
 
-    if (ids.nonEmpty) {
-      val idsbc = ac.sc.broadcast(ids)
-      df = ac.sqlContext.createDataFrame(df.rdd.filter(x => idsbc.value.contains(x.getAs[Any](pk.name))), df.schema)
-    }
 
     //choose specific partition
     if (partitions.isDefined) {
-      val rdd = getData().get.rdd.mapPartitionsWithIndex((idx, iter) => if (partitions.get.contains(idx)) iter else Iterator(), preservesPartitioning = true)
+      val rdd = df.rdd.mapPartitionsWithIndex((idx, iter) => if (partitions.get.contains(idx)) iter else Iterator(), preservesPartitioning = true)
       df = ac.sqlContext.createDataFrame(rdd, df.schema)
-    } else {
-      if (options.get("skipPart").isDefined) {
-        val partitioner = CatalogOperator.getPartitioner(indexname).get
-        val toKeep = partitioner.getPartitions(q, options.get("skipPart").get.toDouble, indexname)
-        log.debug("Keeping Partitions: " + toKeep.mkString(", "))
-        val rdd = getData().get.rdd.mapPartitionsWithIndex((idx, iter) => if (toKeep.find(_ == idx).isDefined) iter else Iterator(), preservesPartitioning = true)
-        df = ac.sqlContext.createDataFrame(rdd, df.schema)
-      }
+    } else if (options.get("skipPart").isDefined) {
+      val partitioner = CatalogOperator.getPartitioner(indexname).get
+      val toKeep = partitioner.getPartitions(q, options.get("skipPart").get.toDouble, indexname)
+      log.trace("keeping partitions: " + toKeep.mkString(", "))
+      val rdd = df.rdd.mapPartitionsWithIndex((idx, iter) => if (toKeep.find(_ == idx).isDefined) iter else Iterator(), preservesPartitioning = true)
+      df = ac.sqlContext.createDataFrame(rdd, df.schema)
     }
 
-    var results = scan(df, q, distance, options, k)
-
-    val t2 = System.currentTimeMillis
-
-    log.trace(indexname + " returning tuples in " + (t2 - t1) + " msecs")
-
-    results
+    scan(df, q, distance, options, k)
   }
 
   /**
