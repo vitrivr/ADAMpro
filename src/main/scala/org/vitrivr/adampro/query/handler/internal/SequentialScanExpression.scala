@@ -1,9 +1,7 @@
 package org.vitrivr.adampro.query.handler.internal
 
-import com.google.common.base.Charsets
-import com.google.common.hash.{PrimitiveSink, Funnel, BloomFilter}
-import com.twitter.chill.{KryoPool, KryoInstantiator}
-import org.apache.spark.sql.{Row, DataFrame}
+import com.google.common.hash.{BloomFilter, Funnel, PrimitiveSink}
+import org.apache.spark.sql.DataFrame
 import org.apache.spark.sql.functions._
 import org.vitrivr.adampro.config.FieldNames
 import org.vitrivr.adampro.datatypes.feature.FeatureVectorWrapper
@@ -12,11 +10,8 @@ import org.vitrivr.adampro.entity.Entity.EntityName
 import org.vitrivr.adampro.exception.QueryNotConformException
 import org.vitrivr.adampro.main.AdamContext
 import org.vitrivr.adampro.query.handler.generic.{ExpressionDetails, QueryEvaluationOptions, QueryExpression}
-import org.vitrivr.adampro.query.query.{Predicate, NearestNeighbourQuery}
+import org.vitrivr.adampro.query.query.NearestNeighbourQuery
 import org.vitrivr.adampro.utils.Logging
-
-import scala.collection.mutable
-import scala.collection.mutable.ListBuffer
 
 /**
   * adamtwo
@@ -46,47 +41,52 @@ case class SequentialScanExpression(private val entity: Entity)(private val nnq:
     ac.sc.setLocalProperty("spark.scheduler.pool", "sequential")
     ac.sc.setJobGroup(id.getOrElse(""), "sequential scan: " + entity.entityname.toString, interruptOnCancel = true)
 
-    if (!nnq.isConform(entity)){
+    //check conformity
+    if (!nnq.isConform(entity)) {
       throw QueryNotConformException("query is not conform to entity")
     }
 
+    val df = entity.getData().get
+
+    //prepare filter
     val funnel = new Funnel[Any] {
       override def funnel(t: Any, primitiveSink: PrimitiveSink): Unit =
-      t match {
-        case s : String => primitiveSink.putUnencodedChars(s)
-        case l : Long => primitiveSink.putLong(l)
-        case i : Int => primitiveSink.putInt(i)
-        case _ => primitiveSink.putUnencodedChars(t.toString)
-      }
+        t match {
+          case s: String => primitiveSink.putUnencodedChars(s)
+          case l: Long => primitiveSink.putLong(l)
+          case i: Int => primitiveSink.putInt(i)
+          case _ => primitiveSink.putUnencodedChars(t.toString)
+        }
     }
     val ids = BloomFilter.create[Any](funnel, 1000, 0.05)
 
-    log.trace(QUERY_MARKER, "preparing filtering ids")
-
     if (filter.isDefined) {
-      filter.get.select(entity.pk.name).collect().map(_.getAs[Any](entity.pk.name)).toSeq.foreach{ids.put(_)}
+      filter.get.select(entity.pk.name).collect().map(_.getAs[Any](entity.pk.name)).toSeq.foreach {
+        ids.put(_)
+      }
     }
 
     if (filterExpr.isDefined) {
       filterExpr.get.filter = filter
-      filterExpr.get.evaluate(options).get.select(entity.pk.name).collect().map(_.getAs[Any](entity.pk.name)).toSeq.foreach{ids.put(_)}
+      filterExpr.get.evaluate(options).get.select(entity.pk.name).collect().map(_.getAs[Any](entity.pk.name)).toSeq.foreach {
+        ids.put(_)
+      }
     }
 
-    log.trace(QUERY_MARKER, "after preparing filtering ids")
+    var result = if (filter.isDefined || filterExpr.isDefined) {
+      val idsBc = ac.sc.broadcast(ids)
+      val filterUdf = udf((arg: Any) => idsBc.value.mightContain(arg))
+      Some(df.filter(filterUdf(col(entity.pk.name))))
+    } else {
+      Some(df)
+    }
 
-    log.trace(QUERY_MARKER, "get data")
-
-    val idsBc = ac.sc.broadcast(ids)
-    val filterUdf = udf((arg: Any) => idsBc.value.mightContain(arg))
-
-    var result = Some(entity.getData().get.filter(filterUdf(col(entity.pk.name))))
-
-    log.trace(QUERY_MARKER, "after get data")
-
+    //adjust output
     if (result.isDefined && options.isDefined && options.get.storeSourceProvenance) {
       result = Some(result.get.withColumn(FieldNames.sourceColumnName, lit(sourceDescription)))
     }
 
+    //distance computation
     result.map(SequentialScanExpression.scan(_, nnq))
   }
 
@@ -122,7 +122,7 @@ object SequentialScanExpression extends Logging {
     val distUDF = udf((c: FeatureVectorWrapper) => {
       try {
         if (c != null) {
-          nnq.distance(q.value, c.vector, w.value).toFloat
+          nnq.distance(q.value, c.vector, w.value)
         } else {
           Float.MaxValue
         }
@@ -133,15 +133,9 @@ object SequentialScanExpression extends Logging {
       }
     })
 
-    log.trace(QUERY_MARKER, "executing distance computation")
-
-    val res = df.withColumn(FieldNames.distanceColumnName, distUDF(df(nnq.attribute)))
+    df.withColumn(FieldNames.distanceColumnName, distUDF(df(nnq.attribute)))
       .orderBy(col(FieldNames.distanceColumnName))
       .limit(nnq.k)
-
-    log.trace(QUERY_MARKER, "finished executing distance computation")
-
-    res
   }
 }
 
