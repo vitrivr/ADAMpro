@@ -45,7 +45,7 @@ class EntityLRUCache extends Logging {
   def get(entityname: EntityName): Try[Entity] = {
     try {
       log.trace("getting entity " + entityname + " from cache")
-      if(CatalogOperator.existsEntity(entityname).get || entityCache.asMap().containsKey(entityname)){
+      if(entityCache.asMap().containsKey(entityname) || CatalogOperator.existsEntity(entityname).get){
         Success(entityCache.get(entityname))
       } else {
         throw new EntityNotExistingException()

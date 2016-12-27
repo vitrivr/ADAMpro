@@ -45,7 +45,7 @@ class IndexLRUCache extends Logging {
   def get(indexname: IndexName): Try[Index] = {
     try {
       log.debug("getting index " + indexname + " from cache")
-      if(CatalogOperator.existsIndex(indexname).get || indexCache.asMap().containsKey(indexname)){
+      if(indexCache.asMap().containsKey(indexname) || CatalogOperator.existsIndex(indexname).get){
         Success(indexCache.get(indexname))
       } else {
         throw new IndexNotExistingException()
