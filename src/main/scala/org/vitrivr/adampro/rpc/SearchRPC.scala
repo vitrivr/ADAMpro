@@ -117,11 +117,11 @@ class SearchRPC extends AdamSearchGrpc.AdamSearch with Logging {
         return QueryResultsMessage(Some(AckMessage(code = AckMessage.Code.ERROR, message = expression.failed.get.getMessage)))
       }
 
+      log.trace("\n ------------------- \n" + expression.get.mkString(0) + "\n ------------------- \n")
+
       log.trace(QUERY_MARKER, "before query op " + logId)
       val res = QueryOp(expression.get, evaluationOptions)
       log.trace(QUERY_MARKER, "after query op " + logId)
-
-      log.trace("\n ------------------- \n" + expression.get.mkString(0) + "\n ------------------- \n")
 
       if (res.isSuccess) {
         val results = expression.get.information(informationLevel).map(res =>
