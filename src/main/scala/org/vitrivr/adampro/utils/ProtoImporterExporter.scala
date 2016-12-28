@@ -29,7 +29,7 @@ import scala.util.{Failure, Success, Try}
   * November 2016
   */
 class ProtoImporterExporter()(@transient implicit val ac: AdamContext) extends Serializable with Logging {
-  private val BATCH_SIZE = 1000
+  private val BATCH_SIZE = 10000
 
   /**
     *
@@ -92,10 +92,10 @@ class ProtoImporterExporter()(@transient implicit val ac: AdamContext) extends S
 
     log.trace("perform creation of entities")
     batch.foreach { message =>
-      try{
-      op(message)
+      try {
+        op(message)
       } catch {
-        case e : Exception => log.error("exception while creating entity " + message.entity, e)
+        case e: Exception => log.error("exception while creating entity " + message.entity, e)
       }
     }
   }
@@ -115,45 +115,59 @@ class ProtoImporterExporter()(@transient implicit val ac: AdamContext) extends S
 
     log.info("will process " + length + " files")
 
-    datafiles.grouped(BATCH_SIZE).foreach(pathBatch => {
-      log.trace("starting new batch")
-      val batch = new ListBuffer[InsertMessage]()
+    datafiles.foreach { path =>
+      try {
+        val entity = path.getName.replace(".bin", "")
 
-      pathBatch.foreach { path =>
+        val is = new FileInputStream(path)
+        val batch = new ListBuffer[InsertMessage]()
+        var batchCntr = 0
+
         try {
-          val entity = path.getName.replace(".bin", "")
+          val in = CodedInputStream.newInstance(is)
+          in.setSizeLimit(1024 << 20) //1 GB
 
-          val is = new FileInputStream(path)
+          while (!in.isAtEnd) {
+            val tuple = TupleInsertMessage.parseDelimitedFrom(in).get
 
-          try {
-            val in = CodedInputStream.newInstance(is)
-            in.setSizeLimit(1024 << 20) //1 GB
+            val msg = InsertMessage(entity, Seq(tuple))
 
-            while (!in.isAtEnd) {
-              val tuple = TupleInsertMessage.parseDelimitedFrom(in).get
+            batch += msg
+            batchCntr += 1
 
-              val msg = InsertMessage(entity, Seq(tuple))
-
-              batch += msg
+            if (batchCntr > BATCH_SIZE) {
+              insertBatch(batch)
+              batch.clear()
+              batchCntr = 0
             }
-          } catch {
-            case e: Exception =>
-              log.error("exception while reading files: " + path, e)
-              observer.onNext(AckMessage(AckMessage.Code.ERROR, "error while reading files: " + path))
           }
 
-          is.close()
-
-          this.synchronized {
-            done += 1
-          }
+          insertBatch(batch)
+          batch.clear()
+          batchCntr = 0
         } catch {
           case e: Exception =>
             log.error("exception while reading files: " + path, e)
-            observer.onNext(AckMessage(AckMessage.Code.ERROR, "exception while reading files: " + path))
+            observer.onNext(AckMessage(AckMessage.Code.ERROR, "error while reading files: " + path))
+            insertBatch(batch)
+            batch.clear()
+            batchCntr = 0
         }
-      }
 
+        is.close()
+
+        this.synchronized {
+          done += 1
+        }
+      } catch {
+        case e: Exception =>
+          log.error("exception while reading files: " + path, e)
+          observer.onNext(AckMessage(AckMessage.Code.ERROR, "exception while reading files: " + path))
+      }
+    }
+
+
+    def insertBatch(batch: Seq[InsertMessage]): Unit = {
       log.trace("inserting batch of length " + batch.length)
 
       val inserts = batch.groupBy(_.entity).mapValues(_.flatMap(_.tuples)).map { case (entity, tuples) => InsertMessage(entity, tuples) }.toSeq
@@ -161,7 +175,7 @@ class ProtoImporterExporter()(@transient implicit val ac: AdamContext) extends S
       inserts.foreach { insert =>
         val res = Await.result(op(insert), Duration.Inf)
         if (res.code != AckMessage.Code.OK) {
-          log.error("exception while inserting files: " + pathBatch.mkString(";") + " - retrying", res.message)
+          log.error("exception while inserting files - retrying", res.message)
 
           //retry to insert each tuple separately
           insert.tuples.foreach { tupleinsert =>
@@ -173,17 +187,17 @@ class ProtoImporterExporter()(@transient implicit val ac: AdamContext) extends S
           }
 
         }
-        observer.onNext(AckMessage(res.code, pathBatch.mkString(";")))
+        observer.onNext(AckMessage(res.code))
       }
 
       log.info("status: " + done + "/" + length)
-    })
+    }
 
     observer.onCompleted()
   }
 
 
-    /**
+  /**
     *
     * @param path
     * @param entity
