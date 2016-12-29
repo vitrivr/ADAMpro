@@ -24,6 +24,8 @@ import scala.util.{Random, Try}
   * March 2016
   */
 class SearchRPC extends AdamSearchGrpc.AdamSearch with Logging {
+  val MAX_RESULTS = 10000
+  
   implicit def ac: AdamContext = SparkStartup.mainContext
 
   /**
@@ -278,7 +280,7 @@ class SearchRPC extends AdamSearchGrpc.AdamSearch with Logging {
     val results: Seq[QueryResultTupleMessage] = if (df.isDefined) {
       val cols = df.get.schema
 
-      df.get.collect().map(row => {
+      df.get.limit(MAX_RESULTS).collect().map(row => {
         val metadata = cols.map(col => {
           try {
             col.name -> {
