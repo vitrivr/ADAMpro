@@ -593,7 +593,7 @@ object CatalogOperator extends Logging {
       }
 
       if (attribute.isDefined) {
-        filter = filter.filter(_.entityname === entityname.get.toString())
+        filter = filter.filter(_.attributename === attribute.get)
       }
 
       if (indextypename.isDefined) {
