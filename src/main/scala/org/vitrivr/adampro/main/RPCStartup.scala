@@ -42,6 +42,7 @@ class RPCServer(executionContext: ExecutionContext) {
     server = NettyServerBuilder.forPort(port)
       .addService(AdamDefinitionGrpc.bindService(new DataDefinitionRPC, executionContext))
       .addService(AdamSearchGrpc.bindService(new SearchRPC, executionContext))
+      .maxMessageSize(12582912)
       .build.start
     Runtime.getRuntime.addShutdownHook(new Thread() {
       override def run(): Unit = {

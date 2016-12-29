@@ -667,7 +667,9 @@ object RPCClient {
     val channel = NettyChannelBuilder.forAddress(host, port)
       .usePlaintext(true)
       .nameResolverFactory(new DnsNameResolverProvider())
-      .asInstanceOf[ManagedChannelBuilder[_]].build()
+      .maxMessageSize(12582912)
+      .asInstanceOf[ManagedChannelBuilder[_]]
+      .build()
 
     new RPCClient(
       channel,
