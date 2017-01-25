@@ -1,9 +1,7 @@
 package org.vitrivr.adampro.index.structures.lsh.hashfunction
 
-import breeze.linalg.DenseVector
-import org.vitrivr.adampro.datatypes.feature.Feature.FeatureVector
-
-import scala.util.Random
+import org.vitrivr.adampro.datatypes.vector.Vector
+import org.vitrivr.adampro.datatypes.vector.Vector._
 
 /**
   * adamtwo
@@ -12,15 +10,15 @@ import scala.util.Random
   * August 2015
   */
 @SerialVersionUID(100L)
-class EuclideanHashFunction(w: Float, offset: Float, proj: FeatureVector, m: Int) extends LSHashFunction with Serializable {
+class EuclideanHashFunction(w: VectorBase, offset: VectorBase, proj: MathVector, m: Int) extends LSHashFunction with Serializable {
   /**
     *
     * @param d
     * @param w
     * @param m
     */
-  def this(d: Int, w: Float, m: Int) {
-    this(w, w * Random.nextFloat(), DenseVector(GaussianDistribution.getNext(d).map(_.toFloat).toArray), m: Int)
+  def this(d: Int, w: VectorBase, m: Int) {
+    this(w, w * Vector.nextRandom(), Vector.conv_draw2vec(GaussianDistribution.getNext(d).map(Vector.conv_double2vb)), m)
   }
 
 
@@ -29,7 +27,7 @@ class EuclideanHashFunction(w: Float, offset: Float, proj: FeatureVector, m: Int
     * @param v
     * @return
     */
-  def hash(v: FeatureVector): Int = math.round((v dot proj: Float) + offset / w.toFloat) % m
+  def hash(v: MathVector): Int = (math.round((v dot proj : VectorBase) + offset / w) % m).toInt
 }
 
 

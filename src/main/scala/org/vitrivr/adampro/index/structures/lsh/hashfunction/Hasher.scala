@@ -2,7 +2,7 @@ package org.vitrivr.adampro.index.structures.lsh.hashfunction
 
 import java.util
 
-import org.vitrivr.adampro.datatypes.feature.Feature.FeatureVector
+import org.vitrivr.adampro.datatypes.vector.Vector._
 
 /**
   * adamtwo
@@ -29,7 +29,7 @@ class Hasher(val functions: Array[LSHashFunction]) extends Serializable {
     * @param v feature vector to hash
     * @return
     */
-  def apply(v: FeatureVector, m: Int): Int = {
+  def apply(v: MathVector, m: Int): Int = {
     val hjs = functions.map(f => f.hash(v))
     util.Arrays.hashCode(hjs) % m //we use hashCode as an hash-combining function
   }

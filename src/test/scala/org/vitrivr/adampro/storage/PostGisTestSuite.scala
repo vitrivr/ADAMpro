@@ -21,7 +21,7 @@ class PostGisTestSuite extends AdamTestBase {
 
   scenario("create an entity") {
     withEntityName { entityname =>
-      val attributes = fieldTypes.map(field => AttributeDefinition(field.name + "field", field, storagehandlername = handlerName)) ++ Seq(AttributeDefinition("id", FieldTypes.AUTOTYPE, true, storagehandlername = handlerName))
+      val attributes = fieldTypes.map(field => AttributeDefinition(field.name + "field", field, storagehandlername = handlerName)) ++ Seq(AttributeDefinition("tid", FieldTypes.LONGTYPE, storagehandlername = handlerName))
       EntityOp.create(entityname, attributes)
       RandomDataOp.apply(entityname, ntuples, Map())
 
@@ -39,7 +39,7 @@ class PostGisTestSuite extends AdamTestBase {
 
   scenario("put query to an entity") {
     withEntityName { entityname =>
-      val attributes = fieldTypes.map(field => AttributeDefinition(field.name + "field", field, storagehandlername = handlerName)) ++ Seq(AttributeDefinition("id", FieldTypes.AUTOTYPE, true, storagehandlername = handlerName))
+      val attributes = fieldTypes.map(field => AttributeDefinition(field.name + "field", field, storagehandlername = handlerName)) ++ Seq(AttributeDefinition("tid", FieldTypes.LONGTYPE, storagehandlername = handlerName))
       EntityOp.create(entityname, attributes)
       RandomDataOp.apply(entityname, ntuples, Map())
 

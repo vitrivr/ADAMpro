@@ -7,6 +7,7 @@ import org.vitrivr.adampro.exception.QueryNotCachedException
 import org.vitrivr.adampro.utils.Logging
 import com.google.common.cache.{CacheBuilder, CacheLoader}
 import org.apache.spark.sql.DataFrame
+import org.vitrivr.adampro.main.AdamContext
 
 import scala.util.{Failure, Success, Try}
 
@@ -16,9 +17,9 @@ import scala.util.{Failure, Success, Try}
   * Ivan Giangreco
   * April 2016
   */
-class QueryLRUCache extends Logging {
-  private val maximumCacheSize = AdamConfig.maximumCacheSizeQueryResults
-  private val expireAfterAccess = AdamConfig.expireAfterAccessQueryResults
+class QueryLRUCache()(@transient implicit val ac: AdamContext) extends Logging {
+  private val maximumCacheSize = ac.config.maximumCacheSizeQueryResults
+  private val expireAfterAccess = ac.config.expireAfterAccessQueryResults
 
   private val queryCache = CacheBuilder.
     newBuilder().

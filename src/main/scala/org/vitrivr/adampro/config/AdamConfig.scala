@@ -11,7 +11,7 @@ import com.typesafe.config.{Config, ConfigFactory}
   * Ivan Giangreco
   * August 2015
   */
-object AdamConfig extends Serializable with Logging {
+class AdamConfig extends Serializable with Logging {
   val config = {
     val externalConfig = getExternalConfigFile().map(_.resolve())
 
@@ -32,7 +32,7 @@ object AdamConfig extends Serializable with Logging {
   log.trace(config.toString)
   config.checkValid(ConfigFactory.defaultReference(), "adampro")
 
-  val internalsPath = cleanPath(config.getString("adampro.internalsPath"))
+  val internalsPath = AdamConfig.cleanPath(config.getString("adampro.internalsPath"))
   val schedulerFile = internalsPath + "/" + "scheduler.xml"
 
   import scala.collection.JavaConversions._
@@ -109,8 +109,9 @@ object AdamConfig extends Serializable with Logging {
       None
     }
   }
+}
 
-
+object AdamConfig {
   /**
     * Cleans paths, e.g. replaces ~ by path to home folder
     *

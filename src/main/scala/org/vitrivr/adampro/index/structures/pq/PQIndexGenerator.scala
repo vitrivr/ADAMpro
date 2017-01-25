@@ -1,19 +1,16 @@
 package org.vitrivr.adampro.index.structures.pq
 
+import org.apache.spark.mllib.clustering.{KMeans, KMeansModel}
+import org.apache.spark.mllib.linalg.Vectors
+import org.apache.spark.sql.functions._
+import org.apache.spark.sql.{DataFrame, Dataset}
 import org.vitrivr.adampro.config.FieldNames
-import org.vitrivr.adampro.entity.Entity
-import org.vitrivr.adampro.entity.Entity.EntityName
-import org.vitrivr.adampro.index.Index.{IndexName, IndexTypeName}
+import org.vitrivr.adampro.datatypes.vector.Vector._
+import org.vitrivr.adampro.index.Index.IndexTypeName
 import org.vitrivr.adampro.index._
 import org.vitrivr.adampro.index.structures.IndexTypes
 import org.vitrivr.adampro.main.AdamContext
 import org.vitrivr.adampro.query.distance.DistanceFunction
-import org.apache.spark.mllib.clustering.{KMeans, KMeansModel}
-import org.apache.spark.mllib.linalg.Vectors
-import org.apache.spark.rdd.RDD
-import org.apache.spark.sql.{DataFrame, Row}
-import org.apache.spark.sql.types.{ArrayType, ByteType, StructField, StructType}
-import org.apache.spark.util.random.Sampling
 
 import scala.collection.immutable.IndexedSeq
 
@@ -26,42 +23,30 @@ import scala.collection.immutable.IndexedSeq
 class PQIndexGenerator(nsq: Int, trainingSize: Int)(@transient implicit val ac: AdamContext) extends IndexGenerator {
   override def indextypename: IndexTypeName = IndexTypes.PQINDEX
 
-  override def index(indexname: IndexName, entityname: EntityName, data: RDD[IndexingTaskTuple[_]]): (DataFrame, Serializable) = {
-    val entity = Entity.load(entityname).get
+  /**
+    *
+    * @param data raw data to index
+    * @return
+    */
+  override def index(data: DataFrame, attribute : String): (DataFrame, Serializable) = {
+    log.trace("PQ started indexing")
 
-    val n = entity.count
-    val fraction = Sampling.computeFractionForSampleSize(math.max(trainingSize, MINIMUM_NUMBER_OF_TUPLE), n, false)
-    var trainData = data.sample(false, fraction).collect()
-    if (trainData.length < MINIMUM_NUMBER_OF_TUPLE) {
-      trainData = data.take(MINIMUM_NUMBER_OF_TUPLE)
-    }
-
-    val meta = train(trainData)
-
-    val dim = trainData.head.feature.size
+    val sample = getSample(math.max(trainingSize, MINIMUM_NUMBER_OF_TUPLE), attribute)(data)
+    val meta = train(sample)
+    val dim = sample.head.ap_indexable.size
 
     assert(dim >= nsq)
 
-    log.debug("PQ indexing...")
+    val cellUDF = udf((c: DenseSparkVector) => {
+      c.grouped(math.max(1, dim / nsq)).toSeq
+        .zipWithIndex
+        .map { case (split, idx) => meta.models(idx).predict(Vectors.dense(split.map(_.toDouble).toArray)).toByte }
+    })
+    val indexed = data.withColumn(FieldNames.featureIndexColumnName, cellUDF(data(attribute)))
 
-    val indexdata = data.map(
-      datum => {
-        val hash = datum.feature.toArray
-          .grouped(math.max(1, dim / nsq)).toSeq
-          .zipWithIndex
-          .map { case (split, idx) => meta.models(idx).predict(Vectors.dense(split.map(_.toDouble))).toByte }
-        Row(datum.id, hash)
-      })
+    log.trace("PQ finished indexing")
 
-
-    val schema = StructType(Seq(
-      StructField(entity.pk.name, entity.pk.fieldtype.datatype, false),
-      StructField(FieldNames.featureIndexColumnName, new ArrayType(ByteType, false), false)
-    ))
-
-    val df = ac.sqlContext.createDataFrame(indexdata, schema)
-
-    (df, meta)
+    (indexed, meta)
   }
 
   /**
@@ -69,17 +54,17 @@ class PQIndexGenerator(nsq: Int, trainingSize: Int)(@transient implicit val ac: 
     * @param trainData training data
     * @return
     */
-  private def train(trainData: Array[IndexingTaskTuple[_]]): PQIndexMetaData = {
+  private def train(trainData: Seq[IndexingTaskTuple]): PQIndexMetaData = {
     log.trace("PQ started training")
 
     val numIterations = 100
     val nsqbits: Int = 8 //index produces a byte array index tuple
     val numClusters: Int = 2 ^ nsqbits
 
-    val d = trainData.head.feature.size
+    val d = trainData.head.ap_indexable.size
 
     //split vectors in sub-vectors and assign to part
-    val rdds = trainData.map(_.feature).flatMap(t =>
+    val rdds = trainData.map(_.ap_indexable).flatMap(t =>
       t.toArray.grouped(math.max(1, d / nsq)).toSeq.zipWithIndex)
       .groupBy(_._2)
       .mapValues(vs => vs.map(_._1))

@@ -1,25 +1,58 @@
 package org.vitrivr.adampro.datatypes.gis
 
-import org.apache.spark.sql.types.{DataTypes, DataType, UserDefinedType, SQLUserDefinedType}
+import org.apache.spark.sql.Row
+import org.apache.spark.sql.types._
 import org.postgis.PGgeometry
+import org.vitrivr.adampro.datatypes.Wrapper
 
 /**
   * ADAMpro
   *
   * Ivan Giangreco
-  * September 2016
+  * January 2017
   */
-@SQLUserDefinedType(udt = classOf[GeographyWrapperUDT])
-case class GeographyWrapper(desc : String) extends PGgeometry(desc) {}
+case class GeographyWrapper(desc : String) extends PGgeometry(desc) {
+  def toRow() = GeographyWrapper.toRow(desc)
+}
 
 
-class GeographyWrapperUDT extends UserDefinedType[GeographyWrapper] {
-  override def sqlType: DataType = DataTypes.StringType
+object GeographyWrapper extends Wrapper{
+  private val FIELD_NAME = "geography_desc"
 
-  override def serialize(obj: Any): Any = obj.asInstanceOf[GeographyWrapper].getValue
+  val datatype: DataType = StructType(Seq(
+    StructField(FIELD_NAME, StringType)
+  ))
 
-  override def userClass: Class[GeographyWrapper] = classOf[GeographyWrapper]
-  override def asNullable: GeographyWrapperUDT = this
+  /**
+    *
+    * @param desc
+    * @return
+    */
+  def toRow(desc : String) =  Row(desc)
 
-  override def deserialize(datum: Any): GeographyWrapper = new GeographyWrapper(datum.toString)
+  /**
+    *
+    * @return
+    */
+  def emptyRow = toRow("")
+
+  /**
+    *
+    * @param r
+    */
+  def fromRow(r : Row): GeographyWrapper = GeographyWrapper(r.getString(0))
+
+  /**
+    *
+    * @param d
+    * @return
+    */
+  def fitsType(d: DataType) = {
+    if(d.isInstanceOf[StructType] &&
+      d.asInstanceOf[StructType].fields.apply(0).name == FIELD_NAME){
+      true
+    } else {
+      false
+    }
+  }
 }

@@ -2,19 +2,20 @@ package org.vitrivr.adampro
 
 import java.sql.DriverManager
 
-import org.apache.spark.sql.types.{LongType, StructField, StructType}
+import org.apache.spark.sql.types._
 import org.apache.spark.sql.{DataFrame, Row, types}
 import org.scalatest.concurrent.{Eventually, IntegrationPatience}
 import org.scalatest.{FeatureSpec, GivenWhenThen}
 import org.vitrivr.adampro.api.EntityOp
 import org.vitrivr.adampro.config.AdamConfig
 import org.vitrivr.adampro.datatypes.FieldTypes
-import org.vitrivr.adampro.datatypes.feature.{FeatureVectorWrapper, FeatureVectorWrapperUDT}
+import org.vitrivr.adampro.datatypes.vector.Vector.MathVector
 import org.vitrivr.adampro.entity.{AttributeDefinition, Entity}
 import org.vitrivr.adampro.main.{AdamContext, SparkStartup}
 import org.vitrivr.adampro.query.distance.{ManhattanDistance, MinkowskiDistance}
 import org.vitrivr.adampro.query.query.Predicate
 import org.vitrivr.adampro.utils.Logging
+import org.vitrivr.adampro.datatypes.vector.Vector
 
 import scala.util.Random
 
@@ -41,7 +42,7 @@ class AdamTestBase extends FeatureSpec with GivenWhenThen with Eventually with I
     */
   def getMetadataConnection = {
     Class.forName("org.postgresql.Driver").newInstance
-    DriverManager.getConnection(AdamConfig.getString("storage.postgres.url"), AdamConfig.getString("storage.postgres.user"), AdamConfig.getString("storage.postgres.password"))
+    DriverManager.getConnection(ac.config.getString("storage.postgres.url"), ac.config.getString("storage.postgres.user"), ac.config.getString("storage.postgres.password"))
   }
 
   /**
@@ -85,17 +86,17 @@ class AdamTestBase extends FeatureSpec with GivenWhenThen with Eventually with I
     try {
       Entity.create(entityname,
         Seq(
-          AttributeDefinition("tid", FieldTypes.LONGTYPE, true, ""),
-          AttributeDefinition("feature", FieldTypes.FEATURETYPE, false, "parquet")
+          AttributeDefinition("tid", FieldTypes.LONGTYPE, storagehandlername = "parquet"),
+          AttributeDefinition("feature", FieldTypes.VECTORTYPE, storagehandlername =  "parquet")
         ))
 
       val schema = StructType(Seq(
         StructField("tid", LongType, false),
-        StructField("feature", new FeatureVectorWrapperUDT, false)
+        StructField("feature", FieldTypes.VECTORTYPE.datatype, false)
       ))
 
       val rdd = ac.sc.parallelize((0 until ntuples).map(id =>
-        Row(Random.nextLong(), new FeatureVectorWrapper(Seq.fill(ndims)(Random.nextFloat())))
+        Row(Random.nextLong(), Seq.fill(ndims)(Vector.nextRandom()))
       ))
 
       val data = ac.sqlContext.createDataFrame(rdd, schema)
@@ -128,7 +129,7 @@ class AdamTestBase extends FeatureSpec with GivenWhenThen with Eventually with I
     *
     * @param entity
     * @param fullData
-    * @param feature
+    * @param vector
     * @param distance
     * @param k
     * @param where
@@ -137,7 +138,7 @@ class AdamTestBase extends FeatureSpec with GivenWhenThen with Eventually with I
     * @param nnbqResults
     */
   case class EvaluationSet(entity: Entity, fullData: DataFrame,
-                           feature: FeatureVectorWrapper, distance: MinkowskiDistance, k: Int,
+                           vector: MathVector, distance: MinkowskiDistance, k: Int,
                            where: Seq[Predicate], options: Map[String, String],
                            nnResults: Seq[(Double, Long)], nnbqResults: Seq[(Double, Long)])
 
@@ -175,7 +176,7 @@ class AdamTestBase extends FeatureSpec with GivenWhenThen with Eventually with I
           val splitted = line.split("\t")
           val distance = splitted(0).toDouble
           val id = splitted(1).toLong
-          val feature = new FeatureVectorWrapper(splitted(2).split(",").map(_.toFloat).toSeq)
+          val vector = splitted(2).split(",").map(Vector.conv_str2vb).toSeq
           val stringfield = splitted(3)
           val floatfield = splitted(4).toFloat
           val doublefield = splitted(5).toDouble
@@ -183,12 +184,12 @@ class AdamTestBase extends FeatureSpec with GivenWhenThen with Eventually with I
           val longfield = splitted(7).toLong
           val booleanfield = splitted(8).toBoolean
 
-          Row(id, feature, stringfield, floatfield, doublefield, intfield, longfield, booleanfield, distance)
+          Row(id, vector, stringfield, floatfield, doublefield, intfield, longfield, booleanfield, distance)
         })
 
       val schema = StructType(Seq(
-        StructField("tid", types.LongType, true),
-        StructField("featurefield", new FeatureVectorWrapperUDT, false),
+        StructField("tid", types.LongType, false),
+        StructField("vectorfield", FieldTypes.VECTORTYPE.datatype, false),
         StructField("stringfield", types.StringType, false),
         StructField("floatfield", types.FloatType, false),
         StructField("doublefield", types.DoubleType, false),
@@ -222,22 +223,22 @@ class AdamTestBase extends FeatureSpec with GivenWhenThen with Eventually with I
     val entityname = getRandomName()
 
     val fieldTemplate = Seq(
-      ("tid", FieldTypes.LONGTYPE, true, "bigint"),
-      ("featurefield", FieldTypes.FEATURETYPE, false, ""),
-      ("stringfield", FieldTypes.STRINGTYPE, false, "text"),
-      ("floatfield", FieldTypes.FLOATTYPE, false, "real"),
-      ("doublefield", FieldTypes.DOUBLETYPE, false, "double precision"),
-      ("intfield", FieldTypes.INTTYPE, false, "integer"),
-      ("longfield", FieldTypes.LONGTYPE, false, "bigint"),
-      ("booleanfield", FieldTypes.BOOLEANTYPE, false, "boolean")
+      ("tid", FieldTypes.LONGTYPE, "bigint"),
+      ("vectorfield", FieldTypes.VECTORTYPE, ""),
+      ("stringfield", FieldTypes.STRINGTYPE, "text"),
+      ("floatfield", FieldTypes.FLOATTYPE, "real"),
+      ("doublefield", FieldTypes.DOUBLETYPE, "double precision"),
+      ("intfield", FieldTypes.INTTYPE, "integer"),
+      ("longfield", FieldTypes.LONGTYPE, "bigint"),
+      ("booleanfield", FieldTypes.BOOLEANTYPE, "boolean")
     )
 
-    val entity = Entity.create(entityname, fieldTemplate.map(ft => new AttributeDefinition(ft._1, ft._2, ft._3)))
+    val entity = Entity.create(entityname, fieldTemplate.map(ft => new AttributeDefinition(ft._1, ft._2, Map[String, String]())))
     assert(entity.isSuccess)
     entity.get.insert(data.drop("gtdistance"))
 
     //queries
-    val feature = new FeatureVectorWrapper(readResourceFile("groundtruth/nnquery.txt").head.split(",").map(_.toFloat))
+    val vector = readResourceFile("groundtruth/nnquery.txt").head.split(",").map(Vector.conv_str2vb)
 
     val where = readResourceFile("groundtruth/bquery.tsv").map(line => {
       val splitted = line.split("\t")
@@ -255,7 +256,7 @@ class AdamTestBase extends FeatureSpec with GivenWhenThen with Eventually with I
     val options = Map[String, String]()
 
 
-    EvaluationSet(entity.get, data, feature, ManhattanDistance, nnres.length, where, options, nnres, nnbqres)
+    EvaluationSet(entity.get, data, Vector.conv_draw2vec(vector), ManhattanDistance, nnres.length, where, options, nnres, nnbqres)
   }
 
 
@@ -265,7 +266,7 @@ class AdamTestBase extends FeatureSpec with GivenWhenThen with Eventually with I
     * @param ndims
     * @return
     */
-  def getRandomFeatureVector(ndims: Int) = new FeatureVectorWrapper(Seq.fill(ndims)(Random.nextFloat()))
+  def getRandomFeatureVector(ndims: Int) = Seq.fill(ndims)(Random.nextFloat())
 
   /**
     * Corrspondence score between two lists

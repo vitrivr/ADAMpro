@@ -267,12 +267,12 @@ function entityAttributeDetails(entityname, attribute, handler, async) {
 /**
  *
  * @param entityname
- * @param attributes
+ * @param attribute
  * @param materialize
  * @param replace
  * @param npartitions
  */
-function entityPartition(entityname, attributes, materialize, replace, npartitions) {
+function entityPartition(entityname, attribute, materialize, replace, npartitions) {
     if (entityname === null || entityname.length == 0) {
         raiseError("Please specify an entity."); return;
     }
@@ -285,7 +285,7 @@ function entityPartition(entityname, attributes, materialize, replace, npartitio
 
     var params = {};
     params.entityname = entityname;
-    params.attributes = attributes;
+    params.attribute = attribute;
     params.materialize = materialize;
     params.replace = replace;
     params.npartitions = npartitions;
@@ -568,12 +568,12 @@ function indexDetails(indexname, handler, async) {
 /**
  *
  * @param indexname
- * @param attributes
+ * @param attribute
  * @param materialize
  * @param replace
  * @param npartitions
  */
-function indexPartition(indexname, attributes, materialize, replace, npartitions) {
+function indexPartition(indexname, attribute, materialize, replace, npartitions) {
     if (indexname === null || indexname.length == 0) {
         raiseError("Please specify an index."); return;
     }
@@ -586,7 +586,7 @@ function indexPartition(indexname, attributes, materialize, replace, npartitions
 
     var params = {};
     params.indexname = indexname;
-    params.attributes = attributes;
+    params.attribute = attribute;
     params.materialize = materialize;
     params.replace = replace;
     params.npartitions = npartitions;

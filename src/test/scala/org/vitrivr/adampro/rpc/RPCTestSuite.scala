@@ -24,15 +24,18 @@ import scala.util.Random
   */
 class RPCTestSuite extends AdamTestBase with ScalaFutures {
   private val MAX_WAITING_TIME: Duration = 100.seconds
-  new Thread(new RPCStartup()).start
+  new Thread(new RPCStartup(ac.config.grpcPort)).start
   Thread.sleep(5000)
   //wait for RPC server to startup
 
-  val channel = ManagedChannelBuilder.forAddress("localhost", AdamConfig.grpcPort).usePlaintext(true).asInstanceOf[ManagedChannelBuilder[_]].build()
+  val channel = ManagedChannelBuilder.forAddress("localhost", ac.config.grpcPort).usePlaintext(true).asInstanceOf[ManagedChannelBuilder[_]].build()
   val definition = AdamDefinitionGrpc.blockingStub(channel)
   val definitionNb = AdamDefinitionGrpc.stub(channel)
   val search = AdamSearchGrpc.blockingStub(channel)
   val searchNb = AdamSearchGrpc.stub(channel)
+
+  def ntuples() = Random.nextInt(5)
+  def ndims() = 20 + Random.nextInt(80)
 
 
   feature("data definition") {
@@ -46,7 +49,7 @@ class RPCTestSuite extends AdamTestBase with ScalaFutures {
           definition.createEntity(
             CreateEntityMessage(entityname,
               Seq(
-                AttributeDefinitionMessage("tid", AttributeType.LONG, true),
+                AttributeDefinitionMessage("tid", AttributeType.LONG),
                 AttributeDefinitionMessage("feature", AttributeType.FEATURE)
               )))
         Then("the entity should exist")
@@ -60,7 +63,7 @@ class RPCTestSuite extends AdamTestBase with ScalaFutures {
     scenario("insert feature data into entity") {
       withEntityName { entityname =>
         Given("an entity")
-        val entity = Entity.create(entityname, Seq(new AttributeDefinition("tid", FieldTypes.LONGTYPE, true), new AttributeDefinition("feature", FieldTypes.FEATURETYPE, false)))
+        val entity = Entity.create(entityname, Seq(new AttributeDefinition("tid", FieldTypes.LONGTYPE), new AttributeDefinition("feature", FieldTypes.VECTORTYPE)))
         assert(entity.isSuccess)
 
         val requestObserver: StreamObserver[InsertMessage] = definitionNb.streamInsert(new StreamObserver[AckMessage]() {
@@ -73,13 +76,14 @@ class RPCTestSuite extends AdamTestBase with ScalaFutures {
           def onCompleted() {}
         })
 
-        val ntuples = 10
+        val tuplesInsert = ntuples()
+        val dimsInsert = ndims()
 
         When("tuples are inserted")
-        val tuples = (0 until ntuples)
+        val tuples = (0 until tuplesInsert)
           .map(i => Map[String, DataMessage](
             "tid" -> DataMessage().withLongData(Random.nextLong()),
-            "feature" -> DataMessage().withFeatureData(FeatureVectorMessage().withDenseVector(DenseVectorMessage(Seq.fill(10)(Random.nextFloat()))))
+            "feature" -> DataMessage().withFeatureData(FeatureVectorMessage().withDenseVector(DenseVectorMessage(Seq.fill(dimsInsert)(Random.nextFloat()))))
           ))
 
         requestObserver.onNext(InsertMessage(entityname, tuples.map(tuple => TupleInsertMessage(tuple))))
@@ -88,7 +92,7 @@ class RPCTestSuite extends AdamTestBase with ScalaFutures {
         Then("the tuples should eventually be available")
         eventually {
           Thread.sleep(500)
-          assert(definition.count(EntityNameMessage(entityname)).message.toInt == ntuples)
+          assert(definition.count(EntityNameMessage(entityname)).message.toInt == tuplesInsert)
         }
       }
     }
@@ -101,8 +105,8 @@ class RPCTestSuite extends AdamTestBase with ScalaFutures {
       withEntityName { entityname =>
         Given("an entity")
         val entity = Entity.create(entityname, Seq(
-          new AttributeDefinition("tid", FieldTypes.LONGTYPE, true), new AttributeDefinition("feature", FieldTypes.FEATURETYPE,false),
-          new AttributeDefinition("stringfield", FieldTypes.STRINGTYPE, false), new AttributeDefinition("intfield", FieldTypes.INTTYPE, false)
+          new AttributeDefinition("tid", FieldTypes.LONGTYPE), new AttributeDefinition("feature", FieldTypes.VECTORTYPE),
+          new AttributeDefinition("stringfield", FieldTypes.STRINGTYPE), new AttributeDefinition("intfield", FieldTypes.INTTYPE)
         ))
 
         assert(entity.isSuccess)
@@ -117,13 +121,14 @@ class RPCTestSuite extends AdamTestBase with ScalaFutures {
           def onCompleted() {}
         })
 
-        val ntuples = 10
+        val tuplesInsert = ntuples()
+        val dimsInsert = ndims()
 
         When("tuples are inserted")
-        val tuples = (0 until ntuples)
+        val tuples = (0 until tuplesInsert)
           .map(i => Map[String, DataMessage](
             "tid" -> DataMessage().withLongData(Random.nextLong()),
-            "featurefield" -> DataMessage().withFeatureData(FeatureVectorMessage().withDenseVector(DenseVectorMessage(Seq.fill(10)(Random.nextFloat())))),
+            "vectorfield" -> DataMessage().withFeatureData(FeatureVectorMessage().withDenseVector(DenseVectorMessage(Seq.fill(dimsInsert)(Random.nextFloat())))),
             "intfield" -> DataMessage().withIntData(Random.nextInt(10)),
             "stringfield" -> DataMessage().withStringData(getRandomName(10))
           ))
@@ -135,7 +140,7 @@ class RPCTestSuite extends AdamTestBase with ScalaFutures {
           Thread.sleep(500)
           val response = definition.count(EntityNameMessage(entityname))
           assert(response.code == AckMessage.Code.OK)
-          assert(response.message.toInt == ntuples)
+          assert(response.message.toInt == tuplesInsert)
         }
       }
     }
@@ -146,10 +151,10 @@ class RPCTestSuite extends AdamTestBase with ScalaFutures {
         Given("an entity")
         val createEntityFuture = definition.createEntity(CreateEntityMessage(entityname,
           Seq(
-            AttributeDefinitionMessage("tid", AttributeType.LONG, true),
+            AttributeDefinitionMessage("tid", AttributeType.LONG),
             AttributeDefinitionMessage("stringfield", AttributeType.STRING),
             AttributeDefinitionMessage("intfield", AttributeType.INT),
-            AttributeDefinitionMessage("featurefield", AttributeType.FEATURE)
+            AttributeDefinitionMessage("vectorfield", AttributeType.FEATURE)
           )))
 
         val requestObserver: StreamObserver[InsertMessage] = definitionNb.streamInsert(new StreamObserver[AckMessage]() {
@@ -162,13 +167,14 @@ class RPCTestSuite extends AdamTestBase with ScalaFutures {
           def onCompleted() {}
         })
 
-        val ntuples = 10
+        val tuplesInsert = ntuples()
+        val dimsInsert = ndims()
 
         When("tuples are inserted")
-        val tuples = (0 until ntuples)
+        val tuples = (0 until tuplesInsert)
           .map(i => Map[String, DataMessage](
             "tid" -> DataMessage().withLongData(Random.nextLong()),
-            "featurefield" -> DataMessage().withFeatureData(FeatureVectorMessage().withDenseVector(DenseVectorMessage(Seq.fill(10)(Random.nextFloat())))),
+            "vectorfield" -> DataMessage().withFeatureData(FeatureVectorMessage().withDenseVector(DenseVectorMessage(Seq.fill(dimsInsert)(Random.nextFloat())))),
             "intfield" -> DataMessage().withIntData(Random.nextInt(10)),
             "stringfield" -> DataMessage().withStringData(getRandomName(10))
           ))
@@ -178,13 +184,11 @@ class RPCTestSuite extends AdamTestBase with ScalaFutures {
         Then("the tuples should eventually be available")
         eventually {
           Thread.sleep(500)
-          val inserted = definition.count(EntityNameMessage(entityname)).message.toInt == ntuples
-          assert(inserted)
+          val inserted = definition.count(EntityNameMessage(entityname)).message.toInt
+          assert(inserted == tuplesInsert)
 
-          if (inserted) {
-            val results = search.doQuery(QueryMessage(queryid = "", from = Some(FromMessage().withEntity(entityname)), bq = Some(BooleanQueryMessage(Seq(WhereMessage("tid", Seq(DataMessage().withLongData(tuples.head("tid").getLongData))))))))
-            assert(results.ack.get.code == AckMessage.Code.OK)
-          }
+          val results = search.doQuery(QueryMessage(queryid = "", from = Some(FromMessage().withEntity(entityname)), bq = Some(BooleanQueryMessage(Seq(WhereMessage("tid", Seq(DataMessage().withLongData(tuples.head("tid").getLongData))))))))
+          assert(results.ack.get.code == AckMessage.Code.OK)
         }
 
       }

@@ -1,11 +1,11 @@
 package org.vitrivr.adampro.query.query
 
 import org.vitrivr.adampro.catalog.CatalogOperator
-import org.vitrivr.adampro.datatypes.feature.Feature._
-import org.vitrivr.adampro.datatypes.feature.FeatureVectorWrapper
+import org.vitrivr.adampro.datatypes.vector.Vector._
 import org.vitrivr.adampro.entity.Entity
-import org.vitrivr.adampro.helpers.partition.Partitioning.PartitionID
+import org.vitrivr.adampro.index.partition.Partitioning.PartitionID
 import org.vitrivr.adampro.index.Index
+import org.vitrivr.adampro.main.{AdamContext, SparkStartup}
 import org.vitrivr.adampro.query.distance.DistanceFunction
 
 /**
@@ -87,8 +87,8 @@ case class Predicate(attribute : String, operator : Option[String], values : Seq
   */
 case class NearestNeighbourQuery(
                                   attribute: String,
-                                  q: FeatureVector,
-                                  weights: Option[FeatureVector],
+                                  q: MathVector,
+                                  weights: Option[MathVector],
                                   distance: DistanceFunction,
                                   k: Int,
                                   indexOnly: Boolean = false,
@@ -97,7 +97,7 @@ case class NearestNeighbourQuery(
                                   queryID: Option[String] = Some(java.util.UUID.randomUUID().toString))
   extends QueryObject(queryID) {
 
-  def isConform(entity: Entity): Boolean = {
+  def isConform(entity: Entity)(implicit ac: AdamContext): Boolean = {
     if (options.getOrElse("nochecks", "false").equals("true")) {
       true
     } else {
@@ -106,11 +106,11 @@ case class NearestNeighbourQuery(
 
       //check if feature data exists and dimensionality is correct
       val featureData = if (entity.getFeatureData.isDefined) {
-        var ndims = CatalogOperator.getAttributeOption(entity.entityname, attribute, Some("ndims")).get.get("ndims")
+        var ndims = SparkStartup.catalogOperator.getAttributeOption(entity.entityname, attribute, Some("ndims")).get.get("ndims")
 
         if(ndims.isEmpty){
-          ndims = Some(entity.getFeatureData.get.select(attribute).head().getAs[FeatureVectorWrapper](attribute).vector.length.toString)
-          CatalogOperator.updateAttributeOption(entity.entityname, attribute, "ndims", ndims.get)
+          ndims = Some(entity.getFeatureData.get.select(attribute).head().getAs[DenseSparkVector](attribute).length.toString)
+          SparkStartup.catalogOperator.updateAttributeOption(entity.entityname, attribute, "ndims", ndims.get)
         }
 
         ndims.get.toInt == q.length

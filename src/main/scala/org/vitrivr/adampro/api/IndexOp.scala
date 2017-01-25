@@ -1,16 +1,15 @@
 package org.vitrivr.adampro.api
 
-import org.vitrivr.adampro.catalog.CatalogOperator
+import org.apache.spark.sql.DataFrame
 import org.vitrivr.adampro.entity.Entity
 import org.vitrivr.adampro.entity.Entity._
 import org.vitrivr.adampro.exception.GeneralAdamException
-import org.vitrivr.adampro.helpers.partition.{PartitionMode, PartitionerChoice}
+import org.vitrivr.adampro.index.partition.{PartitionMode, PartitionerChoice}
 import org.vitrivr.adampro.index.Index._
 import org.vitrivr.adampro.index.structures.IndexTypes
 import org.vitrivr.adampro.index.{Index, IndexPartitioner}
-import org.vitrivr.adampro.main.AdamContext
+import org.vitrivr.adampro.main.{AdamContext, SparkStartup}
 import org.vitrivr.adampro.query.distance.DistanceFunction
-import org.apache.spark.sql.DataFrame
 
 import scala.util.{Failure, Success, Try}
 
@@ -27,7 +26,7 @@ object IndexOp extends GenericOp {
     *
     * @param entityname name of entity
     */
-  def list(entityname: EntityName)(implicit ac: AdamContext) : Try[Seq[(IndexName, String, IndexTypeName)]] = {
+  def list(entityname: EntityName)(implicit ac: AdamContext): Try[Seq[(IndexName, String, IndexTypeName)]] = {
     execute("list indexes for " + entityname) {
       Success(Entity.load(entityname).get.indexes.filter(_.isSuccess).map(_.get).map(index => (index.indexname, index.attribute, index.indextypename)))
     }
@@ -37,12 +36,12 @@ object IndexOp extends GenericOp {
     * Lists all indexes.
     *
     */
-  def list()(implicit ac: AdamContext) : Try[Seq[(IndexName, String, IndexTypeName)]] = {
+  def list()(implicit ac: AdamContext): Try[Seq[(IndexName, String, IndexTypeName)]] = {
     execute("list all indexes") {
-      val indexes = CatalogOperator.listIndexes()
+      val indexes = SparkStartup.catalogOperator.listIndexes()
 
-      if(indexes.isSuccess){
-        val res = indexes.get.map(indexname => (indexname, CatalogOperator.getIndexAttribute(indexname).get, CatalogOperator.getIndexTypeName(indexname).get))
+      if (indexes.isSuccess) {
+        val res = indexes.get.map(indexname => (indexname, SparkStartup.catalogOperator.getIndexAttribute(indexname).get, SparkStartup.catalogOperator.getIndexTypeName(indexname).get))
         Success(res)
       } else {
         Failure(indexes.failed.get)
@@ -50,19 +49,6 @@ object IndexOp extends GenericOp {
     }
   }
 
-
-  /**
-    * Creates an index.
-    *
-    * @param entityname    name of entity
-    * @param attribute     name of attribute
-    * @param indextypename index type to use for indexing
-    * @param distance      distance function to use
-    * @param properties    further index specific properties
-    */
-  def apply(entityname: EntityName, attribute: String, indextypename: IndexTypeName, distance: DistanceFunction, properties: Map[String, String] = Map())(implicit ac: AdamContext): Try[Index] = {
-    create(entityname, attribute, indextypename, distance, properties)
-  }
 
   /**
     * Creates an index.
@@ -90,7 +76,7 @@ object IndexOp extends GenericOp {
   def generateAll(entityname: EntityName, attribute: String, distance: DistanceFunction, properties: Map[String, String] = Map())(implicit ac: AdamContext): Try[Seq[IndexName]] = {
     execute("create all indexes for " + entityname) {
       val indexes = IndexTypes.values.map {
-        apply(entityname, attribute, _, distance, properties)
+        IndexOp.create(entityname, attribute, _, distance, properties)
       }
 
       //check and possibly clean up
@@ -158,13 +144,13 @@ object IndexOp extends GenericOp {
     * Returns properties of index.
     *
     * @param indexname name of index
-    * @param options possible options for operation
+    * @param options   possible options for operation
     */
   def properties(indexname: IndexName, options: Map[String, String] = Map())(implicit ac: AdamContext): Try[Map[String, String]] = {
     execute("get properties for " + indexname) {
       val index = Index.load(indexname)
 
-      if(index.isFailure){
+      if (index.isFailure) {
         return Failure(index.failed.get)
       }
 
@@ -178,13 +164,14 @@ object IndexOp extends GenericOp {
     *
     * @param indexname   name of index
     * @param nPartitions number of partitions
-    * @param attributes  attributes to partition after
+    * @param attribute   attributes to partition after
     * @param mode        partition mode (e.g., create new index, replace current index, etc.)
+    * @param partitioner partitioner to use
     * @return
     */
-  def partition(indexname: IndexName, nPartitions: Int, joins: Option[DataFrame], attributes: Option[Seq[String]], mode: PartitionMode.Value, partitioner: PartitionerChoice.Value = PartitionerChoice.SPARK, options: Map[String, String] = Map[String, String]())(implicit ac: AdamContext): Try[Index] = {
+  def partition(indexname: IndexName, nPartitions: Int, joins: Option[DataFrame], attribute: Option[String], mode: PartitionMode.Value, partitioner: PartitionerChoice.Value = PartitionerChoice.SPARK, options: Map[String, String] = Map[String, String]())(implicit ac: AdamContext): Try[Index] = {
     execute("repartition index " + indexname + " operation") {
-      IndexPartitioner(Index.load(indexname).get, nPartitions, joins, attributes, mode, partitioner, options)
+      IndexPartitioner(Index.load(indexname).get, nPartitions, joins, attribute, mode, partitioner, options)
     }
   }
 

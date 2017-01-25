@@ -1,4 +1,4 @@
-package org.vitrivr.adampro.helpers.partition
+package org.vitrivr.adampro.index.partition
 
 /**
   * ADAMpro

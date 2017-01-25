@@ -12,12 +12,12 @@ import org.vitrivr.adampro.grpc.grpc._
 import org.vitrivr.adampro.helpers.optimizer.IndexCollectionFactory.{ExistingIndexCollectionOption, NewIndexCollectionOption}
 import org.vitrivr.adampro.helpers.optimizer.QueryCollectionFactory.{LoggedQueryCollectionOption, RandomQueryCollectionOption}
 import org.vitrivr.adampro.helpers.optimizer._
-import org.vitrivr.adampro.helpers.partition.{PartitionMode, PartitionerChoice}
+import org.vitrivr.adampro.index.partition.{PartitionMode, PartitionerChoice}
 import org.vitrivr.adampro.helpers.storage.Transferer
 import org.vitrivr.adampro.index.structures.IndexTypes
 import org.vitrivr.adampro.main.{AdamContext, SparkStartup}
 import org.vitrivr.adampro.query.query.Predicate
-import org.vitrivr.adampro.utils.{AdamImporter, Logging, ProtoImporterExporter}
+import org.vitrivr.adampro.utils.{Logging, ProtoImporterExporter}
 
 import scala.concurrent.Future
 
@@ -40,7 +40,7 @@ class DataDefinitionRPC extends AdamDefinitionGrpc.AdamDefinition with Logging {
     val entityname = request.entity
 
     val attributes = RPCHelperMethods.prepareAttributes(request.attributes)
-    val res = EntityOp(entityname, attributes)
+    val res = EntityOp.create(entityname, attributes)
 
     if (res.isSuccess) {
       Future.successful(AckMessage(code = AckMessage.Code.OK, res.get.entityname))
@@ -129,13 +129,13 @@ class DataDefinitionRPC extends AdamDefinitionGrpc.AdamDefinition with Logging {
       return Future.successful(AckMessage(code = AckMessage.Code.ERROR, message = "cannot load entity"))
     }
 
-    val schema = entity.get.schema()
+    val schema = entity.get.schema(fullSchema = false)
 
     val rows = request.tuples.map(tuple => {
       val data = schema.map(field => {
         val datum = tuple.data.get(field.name).getOrElse(null)
         if (datum != null) {
-          RPCHelperMethods.prepareDataTypeConverter(field.fieldtype.datatype)(datum)
+          RPCHelperMethods.prepareDataTypeConverter(field.fieldtype)(datum)
         } else {
           null
         }
@@ -171,13 +171,13 @@ class DataDefinitionRPC extends AdamDefinitionGrpc.AdamDefinition with Logging {
           return onError(new GeneralAdamException("cannot load entity"))
         }
 
-        val schema = entity.get.schema()
+        val schema = entity.get.schema(fullSchema = false)
 
         val rows = request.tuples.map(tuple => {
           val data = schema.map(field => {
             val datum = tuple.data.get(field.name).getOrElse(null)
             if (datum != null) {
-              RPCHelperMethods.prepareDataTypeConverter(field.fieldtype.datatype)(datum)
+              RPCHelperMethods.prepareDataTypeConverter(field.fieldtype)(datum)
             } else {
               null
             }
@@ -186,7 +186,7 @@ class DataDefinitionRPC extends AdamDefinitionGrpc.AdamDefinition with Logging {
         })
 
         val rdd = ac.sc.parallelize(rows)
-        val df = ac.sqlContext.createDataFrame(rdd, StructType(entity.get.schema().map(field => StructField(field.name, field.fieldtype.datatype))))
+        val df = ac.sqlContext.createDataFrame(rdd, StructType(entity.get.schema(fullSchema = false).map(field => StructField(field.name, field.fieldtype.datatype))))
 
         val res = EntityOp.insert(entity.get.entityname, df)
 
@@ -286,7 +286,7 @@ class DataDefinitionRPC extends AdamDefinitionGrpc.AdamDefinition with Logging {
 
     val distance = RPCHelperMethods.prepareDistance(request.distance)
 
-    val res = IndexOp(request.entity, request.attribute, indextypename.get, distance, request.options)
+    val res = IndexOp.create(request.entity, request.attribute, indextypename.get, distance, request.options)
 
     if (res.isSuccess) {
       Future.successful(AckMessage(code = AckMessage.Code.OK, message = res.get.indexname))
@@ -465,7 +465,7 @@ class DataDefinitionRPC extends AdamDefinitionGrpc.AdamDefinition with Logging {
   override def repartitionIndexData(request: RepartitionMessage): Future[AckMessage] = {
     log.debug("rpc call for repartitioning index")
 
-    val cols = if (request.attributes.isEmpty) {
+    val attribute = if (request.attributes.isEmpty) {
       None
     } else {
       Some(request.attributes)
@@ -486,7 +486,7 @@ class DataDefinitionRPC extends AdamDefinitionGrpc.AdamDefinition with Logging {
       case _ => PartitionerChoice.SPARK
     }
 
-    val res = IndexOp.partition(request.entity, request.numberOfPartitions, None, cols, option, partitioner, request.options)
+    val res = IndexOp.partition(request.entity, request.numberOfPartitions, None, attribute, option, partitioner, request.options)
 
     if (res.isSuccess) {
       Future.successful(AckMessage(AckMessage.Code.OK, res.get.indexname))
@@ -504,7 +504,7 @@ class DataDefinitionRPC extends AdamDefinitionGrpc.AdamDefinition with Logging {
   override def repartitionEntityData(request: RepartitionMessage): Future[AckMessage] = {
     log.debug("rpc call for repartitioning entity")
 
-    val cols = if (request.attributes.isEmpty) {
+    val attribute = if (request.attributes.isEmpty) {
       None
     } else {
       Some(request.attributes)
@@ -517,7 +517,7 @@ class DataDefinitionRPC extends AdamDefinitionGrpc.AdamDefinition with Logging {
       case _ => PartitionMode.CREATE_NEW
     }
 
-    val res = EntityOp.partition(request.entity, request.numberOfPartitions, None, cols, option)
+    val res = EntityOp.partition(request.entity, request.numberOfPartitions, None, attribute, option)
 
     if (res.isSuccess) {
       Future.successful(AckMessage(AckMessage.Code.OK, res.get.entityname))
@@ -596,14 +596,7 @@ class DataDefinitionRPC extends AdamDefinitionGrpc.AdamDefinition with Logging {
     */
   @Experimental override def importData(request: ImportMessage): Future[AckMessage] = {
     log.debug("rpc call for importing data from old ADAM")
-
-    val res = AdamImporter(request.host, request.database, request.username, request.password)
-    if (res.isSuccess) {
-      Future.successful(AckMessage(AckMessage.Code.OK))
-    } else {
-      log.error(res.failed.get.getMessage, res.failed.get)
-      Future.successful(AckMessage(code = AckMessage.Code.ERROR, message = res.failed.get.getMessage))
-    }
+    Future.failed(new GeneralAdamException("importing from old ADAM is no longer supported"))
   }
 
   /**

@@ -1,22 +1,17 @@
 package org.vitrivr.adampro.index.structures.va
 
+import org.apache.spark.sql.functions._
+import org.apache.spark.sql.{DataFrame, Dataset}
 import org.vitrivr.adampro.config.FieldNames
-import org.vitrivr.adampro.datatypes.bitString.BitStringUDT
-import org.vitrivr.adampro.datatypes.feature.Feature.{FeatureVector, VectorBase}
-import org.vitrivr.adampro.entity.Entity
-import org.vitrivr.adampro.entity.Entity._
+import org.vitrivr.adampro.datatypes.vector.Vector._
 import org.vitrivr.adampro.exception.QueryNotConformException
-import org.vitrivr.adampro.index.Index.{IndexName, IndexTypeName}
+import org.vitrivr.adampro.index.Index.IndexTypeName
 import org.vitrivr.adampro.index._
 import org.vitrivr.adampro.index.structures.IndexTypes
 import org.vitrivr.adampro.index.structures.va.marks.{EquidistantMarksGenerator, EquifrequentMarksGenerator, MarksGenerator}
 import org.vitrivr.adampro.index.structures.va.signature.FixedSignatureGenerator
 import org.vitrivr.adampro.main.AdamContext
 import org.vitrivr.adampro.query.distance.{DistanceFunction, MinkowskiDistance}
-import org.apache.spark.rdd.RDD
-import org.apache.spark.sql.types.{StructField, StructType}
-import org.apache.spark.sql.{DataFrame, Row}
-import org.apache.spark.util.random.Sampling
 
 
 /**
@@ -34,40 +29,23 @@ class VAFIndexGenerator(fixedNumBitsPerDimension: Option[Int], marksGenerator: M
 
   /**
     *
-    * @param indexname  name of index
-    * @param entityname name of entity
-    * @param data       data to index
+    * @param data raw data to index
     * @return
     */
-  override def index(indexname: IndexName, entityname: EntityName, data: RDD[IndexingTaskTuple[_]]): (DataFrame, Serializable) = {
-    val entity = Entity.load(entityname).get
+  override def index(data: DataFrame, attribute : String): (DataFrame, Serializable) = {
+    log.trace("VA-File (fixed) started indexing")
 
-    val n = entity.count
-    val fraction = Sampling.computeFractionForSampleSize(math.max(trainingSize, MINIMUM_NUMBER_OF_TUPLE), n, withReplacement = false)
-    var trainData = data.sample(false, fraction).collect()
-    if (trainData.length < MINIMUM_NUMBER_OF_TUPLE) {
-      trainData = data.take(MINIMUM_NUMBER_OF_TUPLE)
-    }
+    val meta = train(getSample(math.max(trainingSize, MINIMUM_NUMBER_OF_TUPLE), attribute)(data))
 
-    val meta = train(trainData)
+    val cellUDF = udf((c: DenseSparkVector) => {
+      val cells = getCells(c, meta.marks)
+      meta.signatureGenerator.toSignature(cells).serialize
+    })
+    val indexed = data.withColumn(FieldNames.featureIndexColumnName, cellUDF(data(attribute)))
 
-    log.debug("VA-File (fixed) indexing...")
+    log.trace("VA-File (fixed) finished indexing")
 
-    val indexdata = data.map(
-      datum => {
-        val cells = getCells(datum.feature, meta.marks)
-        val signature = meta.signatureGenerator.toSignature(cells)
-        Row(datum.id, signature)
-      })
-
-    val schema = StructType(Seq(
-      StructField(entity.pk.name, entity.pk.fieldtype.datatype, nullable = false),
-      StructField(FieldNames.featureIndexColumnName, new BitStringUDT, nullable = false)
-    ))
-
-    val df = ac.sqlContext.createDataFrame(indexdata, schema)
-
-    (df, meta)
+    (indexed, meta)
   }
 
   /**
@@ -75,10 +53,10 @@ class VAFIndexGenerator(fixedNumBitsPerDimension: Option[Int], marksGenerator: M
     * @param trainData training data
     * @return
     */
-  private def train(trainData: Array[IndexingTaskTuple[_]]): VAIndexMetaData = {
+  private def train(trainData: Seq[IndexingTaskTuple]): VAIndexMetaData = {
     log.trace("VA-File (fixed) started training")
 
-    val dim = trainData.head.feature.length
+    val dim = trainData.head.ap_indexable.length
 
     //formula based on results from Weber/Böhm (2000): Trading Quality for Time with Nearest Neighbor Search
     val nbits = fixedNumBitsPerDimension.getOrElse(math.max(5, math.ceil(5 + 0.5 * math.log(dim / 10) / math.log(2))).toInt)
@@ -96,12 +74,12 @@ class VAFIndexGenerator(fixedNumBitsPerDimension: Option[Int], marksGenerator: M
   /**
     *
     */
-  @inline private def getCells(f: FeatureVector, marks: Seq[Seq[VectorBase]]): Seq[Int] = {
-    f.toArray.zip(marks).map {
+  @inline private def getCells(f: Iterable[VectorBase], marks: Seq[Seq[VectorBase]]): Seq[Int] = {
+    f.zip(marks).map {
       case (x, l) =>
         val index = l.toArray.indexWhere(p => p >= x, 1)
         if (index == -1) l.length - 1 - 1 else index - 1
-    }
+    }.toSeq
   }
 }
 

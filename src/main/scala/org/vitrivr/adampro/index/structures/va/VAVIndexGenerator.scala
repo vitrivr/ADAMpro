@@ -1,23 +1,18 @@
 package org.vitrivr.adampro.index.structures.va
 
 import breeze.linalg._
+import org.apache.spark.sql.functions._
+import org.apache.spark.sql.{DataFrame, Dataset}
 import org.vitrivr.adampro.config.FieldNames
-import org.vitrivr.adampro.datatypes.bitString.BitStringUDT
-import org.vitrivr.adampro.datatypes.feature.Feature._
-import org.vitrivr.adampro.entity.Entity
-import org.vitrivr.adampro.entity.Entity._
+import org.vitrivr.adampro.datatypes.vector.Vector._
 import org.vitrivr.adampro.exception.QueryNotConformException
-import org.vitrivr.adampro.index.Index.{IndexName, IndexTypeName}
+import org.vitrivr.adampro.index.Index.IndexTypeName
 import org.vitrivr.adampro.index.structures.IndexTypes
 import org.vitrivr.adampro.index.structures.va.marks.{EquidistantMarksGenerator, EquifrequentMarksGenerator, MarksGenerator}
 import org.vitrivr.adampro.index.structures.va.signature.VariableSignatureGenerator
-import org.vitrivr.adampro.index.{ParameterInfo, IndexGenerator, IndexGeneratorFactory, IndexingTaskTuple}
+import org.vitrivr.adampro.index.{IndexGenerator, IndexGeneratorFactory, IndexingTaskTuple, ParameterInfo}
 import org.vitrivr.adampro.main.AdamContext
 import org.vitrivr.adampro.query.distance.{DistanceFunction, MinkowskiDistance}
-import org.apache.spark.rdd.RDD
-import org.apache.spark.sql.types.{StructField, StructType}
-import org.apache.spark.sql.{DataFrame, Row}
-import org.apache.spark.util.random.Sampling
 
 /**
   * adamtwo
@@ -33,42 +28,26 @@ class VAVIndexGenerator(nbits_total: Option[Int], nbits_dim : Option[Int], marks
 
   assert(!(nbits_total.isDefined && nbits_dim.isDefined))
 
+
   /**
     *
-    * @param indexname name of index
-    * @param entityname name of entity
-    * @param data data to index
+    * @param data raw data to index
     * @return
     */
-  override def index(indexname: IndexName, entityname: EntityName, data: RDD[IndexingTaskTuple[_]]): (DataFrame, Serializable) = {
-    val entity = Entity.load(entityname).get
+  override def index(data: DataFrame, attribute : String): (DataFrame, Serializable) = {
+    log.trace("VA-File (variable) started indexing")
 
-    val n = entity.count
-    val fraction = Sampling.computeFractionForSampleSize(math.max(trainingSize, MINIMUM_NUMBER_OF_TUPLE), n, false)
-    var trainData = data.sample(false, fraction).collect()
-    if(trainData.length < MINIMUM_NUMBER_OF_TUPLE){
-      trainData = data.take(MINIMUM_NUMBER_OF_TUPLE)
-    }
+    val meta = train(getSample(math.max(trainingSize, MINIMUM_NUMBER_OF_TUPLE), attribute)(data))
 
-    val meta = train(trainData)
+    val cellUDF = udf((c: DenseSparkVector) => {
+      val cells = getCells(c, meta.marks)
+      meta.signatureGenerator.toSignature(cells).serialize
+    })
+    val indexed = data.withColumn(FieldNames.featureIndexColumnName, cellUDF(data(attribute)))
 
-    log.debug("VA-File (variable) indexing...")
+    log.trace("VA-File (variable) finished indexing")
 
-    val indexdata = data.map(
-      datum => {
-        val cells = getCells(datum.feature, meta.marks)
-        val signature = meta.signatureGenerator.toSignature(cells)
-        Row(datum.id, signature)
-      })
-
-    val schema = StructType(Seq(
-      StructField(entity.pk.name, entity.pk.fieldtype.datatype, false),
-      StructField(FieldNames.featureIndexColumnName, new BitStringUDT, false)
-    ))
-
-    val df = ac.sqlContext.createDataFrame(indexdata, schema)
-
-    (df, meta)
+    (indexed, meta)
   }
 
   /**
@@ -76,11 +55,11 @@ class VAVIndexGenerator(nbits_total: Option[Int], nbits_dim : Option[Int], marks
     * @param trainData training data
     * @return
     */
-  private def train(trainData: Array[IndexingTaskTuple[_]]): VAIndexMetaData = {
+  private def train(trainData: Seq[IndexingTaskTuple]): VAIndexMetaData = {
     log.trace("VA-File (variable) started training")
 
     //data
-    val dTrainData = trainData.map(x => x.feature.map(x => x.toDouble).toArray)
+    val dTrainData = trainData.map(x => x.ap_indexable.map(x => x.toDouble).toArray)
 
     val dataMatrix = DenseMatrix(dTrainData.toList: _*)
 
@@ -106,7 +85,7 @@ class VAVIndexGenerator(nbits_total: Option[Int], nbits_dim : Option[Int], marks
   /**
     *
     */
-  @inline private def getCells(f: FeatureVector, marks: Seq[Seq[VectorBase]]): Seq[Int] = {
+  @inline private def getCells(f: Iterable[VectorBase], marks: Seq[Seq[VectorBase]]): Seq[Int] = {
     f.toArray.zip(marks).map {
       case (x, l) =>
         val index = l.toArray.indexWhere(p => p >= x, 1)

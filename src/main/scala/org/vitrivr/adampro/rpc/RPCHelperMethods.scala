@@ -3,15 +3,13 @@ package org.vitrivr.adampro.rpc
 import java.util.concurrent.TimeUnit
 
 import org.vitrivr.adampro.datatypes.FieldTypes
-import org.vitrivr.adampro.datatypes.FieldTypes.FieldType
-import org.vitrivr.adampro.datatypes.feature.Feature._
-import org.vitrivr.adampro.datatypes.feature.{FeatureVectorWrapperUDT, FeatureVectorWrapper}
-import org.vitrivr.adampro.datatypes.gis.{GeometryWrapperUDT, GeographyWrapper, GeographyWrapperUDT}
+import org.vitrivr.adampro.datatypes.FieldTypes.{BOOLEANTYPE, DOUBLETYPE, FLOATTYPE, FieldType, INTTYPE, LONGTYPE, SPARSEVECTORTYPE, STRINGTYPE, TEXTTYPE, VECTORTYPE}
+import org.vitrivr.adampro.datatypes.vector.Vector
 import org.vitrivr.adampro.entity.AttributeDefinition
 import org.vitrivr.adampro.exception.GeneralAdamException
 import org.vitrivr.adampro.grpc.grpc.QueryMessage
 import org.vitrivr.adampro.main.AdamContext
-import org.vitrivr.adampro.query.{QueryHints, QueryCacheOptions}
+import org.vitrivr.adampro.query.{QueryCacheOptions, QueryHints}
 import org.vitrivr.adampro.query.distance._
 import org.vitrivr.adampro.query.handler.external.ExternalScanExpressions
 import org.vitrivr.adampro.query.handler.generic.{QueryEvaluationOptions, QueryExpression}
@@ -22,15 +20,16 @@ import org.vitrivr.adampro.query.handler.internal._
 import org.vitrivr.adampro.query.information.InformationLevels
 import org.vitrivr.adampro.query.information.InformationLevels.{InformationLevel, LAST_STEP_ONLY}
 import org.vitrivr.adampro.query.progressive.{QueryHintsProgressivePathChooser, SimpleProgressivePathChooser}
-import org.vitrivr.adampro.query.query.{Predicate, BooleanQuery, NearestNeighbourQuery}
+import org.vitrivr.adampro.query.query.{BooleanQuery, NearestNeighbourQuery, Predicate}
 import org.vitrivr.adampro.utils.Logging
 import org.apache.spark.sql.types
-import org.apache.spark.sql.types.DataType
+import org.apache.spark.sql.types.{ArrayType, DataType, StructType}
 import org.vitrivr.adampro.grpc.grpc.DistanceMessage.DistanceType
 import org.vitrivr.adampro.grpc.grpc._
+import org.vitrivr.adampro.datatypes.vector.Vector._
 
 import scala.concurrent.duration.Duration
-import scala.util.{Success, Failure, Try}
+import scala.util.{Failure, Success, Try}
 
 /**
   * adampro
@@ -90,19 +89,19 @@ private[rpc] object RPCHelperMethods extends Logging {
 
       //selection
       scan = if (time > 0) {
-        new TimedScanExpression(entityname.get, nnq.get, preparePaths(qm.hints), Duration(time, TimeUnit.MILLISECONDS), queryid)()
+        new TimedScanExpression(entityname.get, nnq.get, preparePaths(qm.hints), Duration(time, TimeUnit.MILLISECONDS), queryid)(None)
       } else if (subexpression.isDefined) {
         new CompoundQueryExpression(toExpression(subexpression).get, queryid)
       } else if (entityname.isDefined) {
-        HintBasedScanExpression(entityname.get, nnq, bq, hints, !qm.noFallback, queryid)()
+        HintBasedScanExpression(entityname.get, nnq, bq, hints, !qm.noFallback, queryid)(None)(ac)
       } else if (qm.from.get.source.isIndexes) {
         val indexes = qm.from.get.getIndexes.indexes
-        new StochasticIndexQueryExpression(indexes.map(index => new IndexScanExpression(index)(nnq.get, queryid)()))(nnq.get, queryid)()
+        new StochasticIndexQueryExpression(indexes.map(index => new IndexScanExpression(index)(nnq.get, queryid)(None)))(nnq.get, queryid)(None)
       } else if (indexname.isDefined) {
         var scan: Option[QueryExpression] = None
 
         if (bq.isDefined) {
-          scan = Some(new BooleanFilterScanExpression(entityname.get)(bq.get)(scan))
+          scan = Some(new BooleanFilterScanExpression(entityname.get)(bq.get, queryid)(scan))
         }
 
         if (nnq.isDefined) {
@@ -182,7 +181,7 @@ private[rpc] object RPCHelperMethods extends Logging {
         case ExpressionQueryMessage.Operation.INTERSECT => Success(IntersectExpression(left.get, right.get, order, Map(), queryid))
         case ExpressionQueryMessage.Operation.JOIN => Success(IntersectExpression(left.get, right.get, order, Map(), queryid))
         case ExpressionQueryMessage.Operation.EXCEPT => Success(ExceptExpression(left.get, right.get, order, Map(), queryid))
-        case _ => Failure(new Exception("operation unknown"))
+        case _ => Failure(new GeneralAdamException("operation is unknown"))
       }
     } catch {
       case e: Exception => Failure(e)
@@ -235,14 +234,14 @@ private[rpc] object RPCHelperMethods extends Logging {
       var expr = qe
 
       if (attributes.nonEmpty) {
-        expr = ProjectionExpression(FieldNameProjection(attributes), expr, queryid)
+        expr = ProjectionExpression(FieldNameProjection(attributes), expr, queryid)(ac)
       }
 
       if (!pm.op.isUnrecognized) {
         expr = pm.op match {
-          case ProjectionMessage.Operation.COUNT => ProjectionExpression(CountOperationProjection(), expr, queryid)
-          case ProjectionMessage.Operation.EXISTS => ProjectionExpression(ExistsOperationProjection(), expr, queryid)
-          case ProjectionMessage.Operation.DISTINCT => ProjectionExpression(DistinctOperationProjection(), expr, queryid)
+          case ProjectionMessage.Operation.COUNT => ProjectionExpression(CountOperationProjection(), expr, queryid)(ac)
+          case ProjectionMessage.Operation.EXISTS => ProjectionExpression(ExistsOperationProjection(), expr, queryid)(ac)
+          case ProjectionMessage.Operation.DISTINCT => ProjectionExpression(DistinctOperationProjection(), expr, queryid)(ac)
           case _ => expr
         }
       }
@@ -270,12 +269,12 @@ private[rpc] object RPCHelperMethods extends Logging {
       }
 
       val fv = if (nnq.query.isDefined) {
-        prepareFeatureVector(nnq.query.get)
+        prepareVector(nnq.query.get)
       } else {
         return Failure(new GeneralAdamException("no query specified"))
       }
 
-      Success(NearestNeighbourQuery(nnq.attribute, fv, nnq.weights.map(prepareFeatureVector(_)), distance, nnq.k, nnq.indexOnly, nnq.options, partitions))
+      Success(NearestNeighbourQuery(nnq.attribute, fv, nnq.weights.map(prepareVector(_)), distance, nnq.k, nnq.indexOnly, nnq.options, partitions))
     } catch {
       case e: Exception => Failure(e)
     }
@@ -287,10 +286,10 @@ private[rpc] object RPCHelperMethods extends Logging {
     * @param fv
     * @return
     */
-  def prepareFeatureVector(fv: FeatureVectorMessage): FeatureVector = fv.feature match {
-    case FeatureVectorMessage.Feature.DenseVector(request) => FeatureVectorWrapper(request.vector).vector
-    case FeatureVectorMessage.Feature.SparseVector(request) => new FeatureVectorWrapper(request.position, request.vector, request.length).vector
-    case FeatureVectorMessage.Feature.IntVector(request) => FeatureVectorWrapper(request.vector.map(_.toFloat)).vector //TODO: change to int vector
+  def prepareVector(fv: FeatureVectorMessage): MathVector = fv.feature match {
+    case FeatureVectorMessage.Feature.DenseVector(request) => Vector.conv_draw2vec(request.vector.map(conv_float2vb))
+    case FeatureVectorMessage.Feature.SparseVector(request) => Vector.conv_sraw2vec(request.position, request.vector.map(conv_float2vb), request.length)
+    case FeatureVectorMessage.Feature.IntVector(request) => Vector.conv_draw2vec(request.vector.map(conv_int2vb)) //TODO: change to int vector
     case _ => null
   }
 
@@ -430,9 +429,9 @@ private[rpc] object RPCHelperMethods extends Logging {
       val fieldtype = getFieldType(attribute.attributetype)
 
       if(attribute.handler != null && attribute.handler != ""){
-        AttributeDefinition(attribute.name, fieldtype, attribute.pk, attribute.handler, attribute.params)
+        AttributeDefinition(attribute.name, fieldtype, attribute.handler, attribute.params)
       } else {
-        new AttributeDefinition(attribute.name, fieldtype, attribute.pk, attribute.params)
+        new AttributeDefinition(attribute.name, fieldtype, attribute.params)
       }
     })
   }
@@ -440,7 +439,7 @@ private[rpc] object RPCHelperMethods extends Logging {
 
   val attributetypemapping = Map(AttributeType.BOOLEAN -> FieldTypes.BOOLEANTYPE, AttributeType.DOUBLE -> FieldTypes.DOUBLETYPE, AttributeType.FLOAT -> FieldTypes.FLOATTYPE,
     AttributeType.INT -> FieldTypes.INTTYPE, AttributeType.LONG -> FieldTypes.LONGTYPE, AttributeType.STRING -> FieldTypes.STRINGTYPE, AttributeType.TEXT -> FieldTypes.TEXTTYPE,
-    AttributeType.FEATURE -> FieldTypes.FEATURETYPE, AttributeType.GEOMETRY -> FieldTypes.GEOMETRYTYPE, AttributeType.GEOGRAPHY -> FieldTypes.GEOGRAPHYTYPE, AttributeType.AUTO -> FieldTypes.AUTOTYPE)
+    AttributeType.FEATURE -> FieldTypes.VECTORTYPE)
 
   val fieldtypemapping: Map[FieldType, AttributeType] = attributetypemapping.map(_.swap)
 
@@ -460,20 +459,20 @@ private[rpc] object RPCHelperMethods extends Logging {
 
   /**
     *
-    * @param datatype
+    * @param fieldtype
     * @return
     */
-  def prepareDataTypeConverter(datatype: DataType): (DataMessage) => (Any) = datatype match {
-    case types.BooleanType => (x) => x.getBooleanData
-    case types.DoubleType => (x) => x.getDoubleData
-    case types.FloatType => (x) => x.getFloatData
-    case types.IntegerType => (x) => x.getIntData
-    case types.LongType => (x) => x.getLongData
-    case types.StringType => (x) => x.getStringData
-    case _: FeatureVectorWrapperUDT => (x) => FeatureVectorWrapper(RPCHelperMethods.prepareFeatureVector(x.getFeatureData))
-    case _: GeographyWrapperUDT => (x) => GeographyWrapper(x.getGeographyData)
-    case _: GeometryWrapperUDT => (x) => GeographyWrapper(x.getGeometryData)
-    //TODO: possibly differentiate between string and text
+  private[rpc] def prepareDataTypeConverter(fieldtype : FieldType): (DataMessage) => (Any) = fieldtype match {
+    case INTTYPE => (x) => x.getIntData
+    case LONGTYPE => (x) => x.getLongData
+    case FLOATTYPE => (x) => x.getFloatData
+    case DOUBLETYPE => (x) => x.getDoubleData
+    case STRINGTYPE => (x) => x.getStringData
+    case TEXTTYPE => (x) => x.getStringData
+    case BOOLEANTYPE => (x) => x.getBooleanData
+    case VECTORTYPE => (x) =>  Vector.conv_vec2dspark(RPCHelperMethods.prepareVector(x.getFeatureData).asInstanceOf[DenseMathVector])
+    case SPARSEVECTORTYPE => (x) => Vector.conv_vec2sspark(RPCHelperMethods.prepareVector(x.getFeatureData).asInstanceOf[SparseMathVector])
+    case _ => throw new GeneralAdamException("field type " + fieldtype.name + " not known")
   }
 }
 

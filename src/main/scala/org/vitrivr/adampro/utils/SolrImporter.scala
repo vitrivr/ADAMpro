@@ -28,7 +28,7 @@ class SolrImporter(file : File)(implicit ac: AdamContext) {
         Row(id, text)
     }
 
-    val statusCreate = EntityOp.create("features_fulltext", Seq(new AttributeDefinition("id", FieldTypes.LONGTYPE, true), new AttributeDefinition("text", FieldTypes.TEXTTYPE, false)))
+    val statusCreate = EntityOp.create("features_fulltext", Seq(new AttributeDefinition("id", FieldTypes.LONGTYPE, Map[String, String]()), new AttributeDefinition("text", FieldTypes.TEXTTYPE, Map[String, String]())))
 
     if(statusCreate.isFailure){
       throw statusCreate.failed.get

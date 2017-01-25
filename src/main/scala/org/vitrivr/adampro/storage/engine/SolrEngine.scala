@@ -25,7 +25,7 @@ import scala.util.{Failure, Success, Try}
 class SolrEngine(private val url: String)(@transient override implicit val ac: AdamContext) extends Engine()(ac) with Logging with Serializable {
   override val name: String = "solr"
 
-  override def supports = Seq(FieldTypes.AUTOTYPE, FieldTypes.SERIALTYPE, FieldTypes.INTTYPE, FieldTypes.LONGTYPE, FieldTypes.FLOATTYPE, FieldTypes.DOUBLETYPE, FieldTypes.STRINGTYPE, FieldTypes.TEXTTYPE, FieldTypes.BOOLEANTYPE)
+  override def supports = Seq(FieldTypes.INTTYPE, FieldTypes.LONGTYPE, FieldTypes.FLOATTYPE, FieldTypes.DOUBLETYPE, FieldTypes.STRINGTYPE, FieldTypes.TEXTTYPE, FieldTypes.BOOLEANTYPE)
 
   override def specializes: Seq[FieldType] = Seq(FieldTypes.TEXTTYPE)
 
@@ -92,8 +92,6 @@ class SolrEngine(private val url: String)(@transient override implicit val ac: A
     * @return
     */
   private def getSuffix(fieldtype: FieldType) = fieldtype match {
-    case FieldTypes.AUTOTYPE => "_l"
-    case FieldTypes.SERIALTYPE => "_l"
     case FieldTypes.INTTYPE => "_i"
     case FieldTypes.LONGTYPE => "_l"
     case FieldTypes.FLOATTYPE => "_f"

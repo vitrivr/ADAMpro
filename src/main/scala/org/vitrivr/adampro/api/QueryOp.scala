@@ -29,7 +29,7 @@ object QueryOp extends GenericOp {
     * @param options options applied when evaluating query
     * @return
     */
-  def apply(q: QueryExpression, options: Option[QueryEvaluationOptions] = None)(implicit ac: AdamContext): Try[Option[DataFrame]] = {
+  def expression(q: QueryExpression, options: Option[QueryEvaluationOptions] = None)(implicit ac: AdamContext): Try[Option[DataFrame]] = {
     execute("query execution operation") {
       log.trace(QUERY_MARKER, "query operation")
       val prepared = q.prepareTree()
@@ -57,10 +57,10 @@ object QueryOp extends GenericOp {
 
       if (bq.isDefined) {
         log.trace("boolean query is defined")
-        scan = Some(new BooleanFilterScanExpression(entityname)(bq.get)(scan))
+        scan = Some(new BooleanFilterScanExpression(entityname)(bq.get, None)(scan)(ac))
       }
 
-      scan = Some(new SequentialScanExpression(entityname)(nnq)(scan))
+      scan = Some(new SequentialScanExpression(entityname)(nnq, None)(scan)(ac))
 
       return Success(scan.get.prepareTree().evaluate(options))
     }
@@ -82,10 +82,10 @@ object QueryOp extends GenericOp {
 
       if (bq.isDefined) {
         log.trace("boolean query is defined")
-        scan = Some(new BooleanFilterScanExpression(index.entityname)(bq.get)(scan))
+        scan = Some(new BooleanFilterScanExpression(index.entityname)(bq.get, None)(scan))
       }
 
-      scan = Some(IndexScanExpression(index)(nnq)(scan))
+      scan = Some(IndexScanExpression(index)(nnq, None)(scan)(ac))
 
       Success(scan.get.prepareTree().evaluate(options))
     }
@@ -106,10 +106,10 @@ object QueryOp extends GenericOp {
 
       if (bq.isDefined) {
         log.trace("boolean query is defined")
-        scan = Some(new BooleanFilterScanExpression(entityname)(bq.get)(scan))
+        scan = Some(new BooleanFilterScanExpression(entityname)(bq.get, None)(scan)(ac))
       }
 
-      scan = Some(new IndexScanExpression(entityname, indextypename)(nnq)(scan))
+      scan = Some(new IndexScanExpression(entityname, indextypename)(nnq, None)(scan)(ac))
 
       Success(scan.get.prepareTree().evaluate(options))
     }
@@ -127,7 +127,7 @@ object QueryOp extends GenericOp {
     * @return a tracker for the progressive query
     */
   def progressive[U](entityname: EntityName, nnq: NearestNeighbourQuery, bq: Option[BooleanQuery], pathChooser: ProgressivePathChooser, onComplete: Try[ProgressiveObservation] => U, options: Option[QueryEvaluationOptions] = None)(implicit ac: AdamContext): Try[ProgressiveQueryStatusTracker] = {
-    Success(ProgressiveQueryHandler.progressiveQuery(entityname, nnq, bq, pathChooser, onComplete, options))
+    Success(ProgressiveQueryHandler.progressiveQuery(entityname, nnq, bq, pathChooser, onComplete, options, None))
   }
 
 
@@ -144,7 +144,7 @@ object QueryOp extends GenericOp {
     */
   def timedProgressive(entityname: EntityName, nnq: NearestNeighbourQuery, bq: Option[BooleanQuery], pathChooser: ProgressivePathChooser, timelimit: Duration, options: Option[QueryEvaluationOptions] = None)(implicit ac: AdamContext): Try[ProgressiveObservation] = {
     execute("timed progressive query operation") {
-      Success(ProgressiveQueryHandler.timedProgressiveQuery(entityname, nnq, bq, pathChooser, timelimit, options))
+      Success(ProgressiveQueryHandler.timedProgressiveQuery(entityname, nnq, bq, pathChooser, timelimit, options, None))
     }
   }
 
@@ -174,7 +174,7 @@ object QueryOp extends GenericOp {
 
       if (bq.isDefined) {
         log.trace("boolean query is defined")
-        scan = Some(new BooleanFilterScanExpression(entityname)(bq.get)(scan))
+        scan = Some(new BooleanFilterScanExpression(entityname)(bq.get, None)(scan)(ac))
       }
 
       return Success(scan.get.evaluate(options))

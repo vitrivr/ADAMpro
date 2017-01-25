@@ -4,7 +4,7 @@ import org.vitrivr.adampro.catalog.CatalogOperator
 import org.vitrivr.adampro.entity.AttributeDefinition
 import org.vitrivr.adampro.entity.Entity._
 import org.vitrivr.adampro.exception.GeneralAdamException
-import org.vitrivr.adampro.main.AdamContext
+import org.vitrivr.adampro.main.{AdamContext, SparkStartup}
 import org.vitrivr.adampro.query.query.Predicate
 import org.vitrivr.adampro.storage.engine.Engine
 import org.vitrivr.adampro.utils.Logging
@@ -50,8 +50,8 @@ class StorageHandler(val engine: Engine) extends Serializable with Logging {
     *
     * @param entityname
     */
-  protected def getStorename(entityname: EntityName): String = {
-    val tablename = CatalogOperator.getEntityOption(entityname, Some(ENTITY_OPTION_NAME)).get.get(ENTITY_OPTION_NAME)
+  protected def getStorename(entityname: EntityName)(implicit ac: AdamContext): String = {
+    val tablename = SparkStartup.catalogOperator.getEntityOption(entityname, Some(ENTITY_OPTION_NAME)).get.get(ENTITY_OPTION_NAME)
 
     if (tablename.isEmpty) {
       log.error("storename missing from catalog for entity " + entityname + "; create method has not been called")
@@ -79,11 +79,11 @@ class StorageHandler(val engine: Engine) extends Serializable with Logging {
       val res = engine.create(storename, attributes, params)
 
       if (res.isSuccess) {
-        CatalogOperator.updateEntityOption(entityname, ENTITY_OPTION_NAME, storename)
+        SparkStartup.catalogOperator.updateEntityOption(entityname, ENTITY_OPTION_NAME, storename)
 
         res.get.foreach {
           case (key, value) =>
-            CatalogOperator.updateStorageEngineOption(name, storename, key, value)
+            SparkStartup.catalogOperator.updateStorageEngineOption(name, storename, key, value)
         }
 
         Success(null)
@@ -102,8 +102,10 @@ class StorageHandler(val engine: Engine) extends Serializable with Logging {
   def read(entityname: EntityName, attributes: Seq[AttributeDefinition], predicates: Seq[Predicate] = Seq(), params: Map[String, String] = Map())(implicit ac: AdamContext): Try[DataFrame] = {
     execute("read") {
       val storename = getStorename(entityname)
-      val options = CatalogOperator.getStorageEngineOption(name, storename).get
-      engine.read(storename, attributes, predicates, options ++ params)
+      val options = SparkStartup.catalogOperator.getStorageEngineOption(name, storename).get
+      val df = engine.read(storename, attributes, predicates, options ++ params)
+
+      df
     }
   }
 
@@ -119,7 +121,7 @@ class StorageHandler(val engine: Engine) extends Serializable with Logging {
   def write(entityname: EntityName, df: DataFrame, attributes: Seq[AttributeDefinition], mode: SaveMode = SaveMode.Append, params: Map[String, String] = Map())(implicit ac: AdamContext): Try[Void] = {
     execute("write") {
       val storename = getStorename(entityname)
-      val options = CatalogOperator.getStorageEngineOption(name, storename).get
+      val options = SparkStartup.catalogOperator.getStorageEngineOption(name, storename).get
 
       if (mode == SaveMode.Overwrite) {
         //TODO: on overwrite take over index structures, uniqueness, etc. (possibly call create()!)
@@ -139,19 +141,19 @@ class StorageHandler(val engine: Engine) extends Serializable with Logging {
 
         engine.create(newStorename, attributes, params)
 
-        val res = engine.write(newStorename, df, attributes, SaveMode.ErrorIfExists, params ++ options)
+        val res = engine.write(newStorename, df, attributes, SaveMode.Append, params ++ options)
 
         if (res.isSuccess) {
           //update name
-          CatalogOperator.updateEntityOption(entityname, ENTITY_OPTION_NAME, newStorename)
+          SparkStartup.catalogOperator.updateEntityOption(entityname, ENTITY_OPTION_NAME, newStorename)
           engine.drop(storename)
 
-          val options = CatalogOperator.getStorageEngineOption(name, storename).get
-          CatalogOperator.deleteStorageEngineOption(name, storename, None)
+          val options = SparkStartup.catalogOperator.getStorageEngineOption(name, storename).get
+          SparkStartup.catalogOperator.deleteStorageEngineOption(name, storename, None)
 
           options.foreach {
             case (key, value) =>
-              CatalogOperator.updateStorageEngineOption(name, newStorename, key, value)
+              SparkStartup.catalogOperator.updateStorageEngineOption(name, newStorename, key, value)
           }
 
           Success(null)
@@ -182,7 +184,7 @@ class StorageHandler(val engine: Engine) extends Serializable with Logging {
       val res = engine.drop(getStorename(entityname))
 
       if (res.isSuccess) {
-        CatalogOperator.deleteEntityOption(entityname, ENTITY_OPTION_NAME)
+        SparkStartup.catalogOperator.deleteEntityOption(entityname, ENTITY_OPTION_NAME)
         Success(null)
       } else {
         Failure(res.failed.get)

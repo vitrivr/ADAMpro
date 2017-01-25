@@ -1,5 +1,8 @@
 package org.vitrivr.adampro.main
 
+import org.apache
+import org.apache.spark
+
 /**
  * adamtwo
  *
@@ -9,6 +12,6 @@ package org.vitrivr.adampro.main
 object Startup {
   def main(args : Array[String]) {
     SparkStartup
-    new Thread(new RPCStartup()).start
+    new Thread(new RPCStartup(SparkStartup.mainContext.config.grpcPort)).start
   }
 }

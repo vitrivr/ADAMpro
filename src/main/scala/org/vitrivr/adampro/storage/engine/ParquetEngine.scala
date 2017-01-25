@@ -25,9 +25,9 @@ import scala.util.{Failure, Success, Try}
 class ParquetEngine()(@transient override implicit val ac: AdamContext) extends Engine()(ac) with Logging with Serializable {
   override val name = "parquet"
 
-  override def supports = Seq(FieldTypes.AUTOTYPE, FieldTypes.SERIALTYPE, FieldTypes.INTTYPE, FieldTypes.LONGTYPE, FieldTypes.FLOATTYPE, FieldTypes.DOUBLETYPE, FieldTypes.STRINGTYPE, FieldTypes.TEXTTYPE, FieldTypes.BOOLEANTYPE, FieldTypes.FEATURETYPE)
+  override def supports = Seq(FieldTypes.INTTYPE, FieldTypes.LONGTYPE, FieldTypes.FLOATTYPE, FieldTypes.DOUBLETYPE, FieldTypes.STRINGTYPE, FieldTypes.TEXTTYPE, FieldTypes.BOOLEANTYPE, FieldTypes.VECTORTYPE)
 
-  override def specializes = Seq(FieldTypes.FEATURETYPE)
+  override def specializes = Seq(FieldTypes.VECTORTYPE)
 
   var subengine: GenericParquetEngine = _
 
@@ -106,9 +106,9 @@ class ParquetEngine()(@transient override implicit val ac: AdamContext) extends 
       val partitioningKey = params.get("partitioningKey")
 
       if (partitioningKey.isDefined) {
-        data = data.repartition(AdamConfig.defaultNumberOfPartitions, col(partitioningKey.get))
+        data = data.repartition(ac.config.defaultNumberOfPartitions, col(partitioningKey.get))
       } else {
-        data = data.repartition(AdamConfig.defaultNumberOfPartitions)
+        data = data.repartition(ac.config.defaultNumberOfPartitions)
       }
     }
 
@@ -185,7 +185,9 @@ class ParquetHadoopStorage(private val basepath: String, private val datapath: S
         throw new GeneralAdamException("no file found at " + fullHadoopPath)
       }
 
-      Success(ac.sqlContext.read.parquet(fullHadoopPath + filename))
+      val df = Success(ac.sqlContext.read.parquet(fullHadoopPath + filename))
+
+      df
     } catch {
       case e: Exception => Failure(e)
     }
@@ -282,7 +284,9 @@ class ParquetLocalEngine(private val path: String) extends GenericParquetEngine 
         throw new GeneralAdamException("no file found at " + path + filename)
       }
 
-      Success(ac.sqlContext.read.parquet(sparkPath + filename))
+      val df = Success(ac.sqlContext.read.parquet(sparkPath + filename))
+
+      df
     } catch {
       case e: Exception => Failure(e)
     }

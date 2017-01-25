@@ -1,26 +1,20 @@
 package org.vitrivr.adampro.index.structures.va
 
 import breeze.linalg._
-import org.vitrivr.adampro.config.FieldNames
-import org.vitrivr.adampro.datatypes.bitString.BitStringUDT
-import org.vitrivr.adampro.datatypes.feature.Feature._
-import org.vitrivr.adampro.datatypes.feature.FeatureVectorWrapper
-import org.vitrivr.adampro.entity.Entity
-import org.vitrivr.adampro.entity.Entity._
-import org.vitrivr.adampro.exception.QueryNotConformException
-import org.vitrivr.adampro.index.Index._
-import org.vitrivr.adampro.index.structures.va.marks.VAPlusMarksGenerator
-import org.vitrivr.adampro.index.structures.va.signature.VariableSignatureGenerator
-import org.vitrivr.adampro.index.{ParameterInfo, IndexGeneratorFactory, IndexingTaskTuple, IndexGenerator}
-import org.vitrivr.adampro.index.structures.IndexTypes
-import org.vitrivr.adampro.main.AdamContext
-import org.vitrivr.adampro.query.distance.{DistanceFunction, MinkowskiDistance}
 import org.apache.spark.mllib.feature.{PCA, PCAModel}
 import org.apache.spark.mllib.linalg.Vectors
-import org.apache.spark.rdd.RDD
-import org.apache.spark.sql.types.{StructField, StructType}
-import org.apache.spark.sql.{Row, DataFrame}
-import org.apache.spark.util.random.Sampling
+import org.apache.spark.sql.functions._
+import org.apache.spark.sql.{DataFrame, Dataset}
+import org.vitrivr.adampro.config.FieldNames
+import org.vitrivr.adampro.datatypes.vector.Vector._
+import org.vitrivr.adampro.exception.QueryNotConformException
+import org.vitrivr.adampro.index.Index._
+import org.vitrivr.adampro.index.structures.IndexTypes
+import org.vitrivr.adampro.index.structures.va.marks.VAPlusMarksGenerator
+import org.vitrivr.adampro.index.structures.va.signature.VariableSignatureGenerator
+import org.vitrivr.adampro.index.{IndexGenerator, IndexGeneratorFactory, IndexingTaskTuple, ParameterInfo}
+import org.vitrivr.adampro.main.AdamContext
+import org.vitrivr.adampro.query.distance.{DistanceFunction, MinkowskiDistance}
 
 /**
   * ADAMpro
@@ -35,57 +29,25 @@ class VAPlusIndexGenerator(nbits: Option[Int], ndims : Option[Int], trainingSize
 
   /**
     *
-    * @param indexname  name of index
-    * @param entityname name of entity
-    * @param data       data to index
+    * @param data raw data to index
     * @return
     */
-  override def index(indexname: IndexName, entityname: EntityName, data: RDD[IndexingTaskTuple[_]]): (DataFrame, Serializable) = {
-    val entity = Entity.load(entityname).get
+  override def index(data: DataFrame, attribute : String): (DataFrame, Serializable) = {
+    log.trace("VA-File (plus) started indexing")
 
-    val dims = ndims.getOrElse(data.first().feature.size)
+    val meta = train(getSample(math.max(trainingSize, MINIMUM_NUMBER_OF_TUPLE), attribute)(data), data, attribute)
 
-    val sparkVecData = data.map(x => Vectors.dense(x.feature.toArray.map(_.toDouble)))
+    val cellUDF = udf((c: DenseSparkVector) => {
+      val cells = getCells(meta.pca.transform(Vectors.dense(c.toArray.map(_.toDouble))).toArray, meta.marks)
+      meta.signatureGenerator.toSignature(cells).serialize
+    })
+    val indexed = data.withColumn(FieldNames.featureIndexColumnName, cellUDF(data(attribute)))
 
-    val pca = new PCA(dims).fit(sparkVecData)
-    val indexingdata = data
-      .map(tuple => {
-        val feature: FeatureVector = tuple.feature
+    log.trace("VA-File (plus) finished indexing")
 
-        val sparkVector = Vectors.dense(feature.toArray.map(_.toDouble))
-        val sparkTransformed = pca.transform(sparkVector)
-        val transformedFVW = new FeatureVectorWrapper(sparkTransformed.toArray.map(_.toFloat))
-
-
-        IndexingTaskTuple(tuple.id, transformedFVW.vector)
-      })
-
-    val n = entity.count
-    val fraction = Sampling.computeFractionForSampleSize(math.max(trainingSize, MINIMUM_NUMBER_OF_TUPLE), n, withReplacement = false)
-    var trainData = indexingdata.sample(false, fraction).collect()
-    if (trainData.length < MINIMUM_NUMBER_OF_TUPLE) {
-      trainData = indexingdata.take(MINIMUM_NUMBER_OF_TUPLE)
-    }
-    val meta = train(trainData.map(_.asInstanceOf[IndexingTaskTuple[_]]), pca, dims)
-
-    log.debug("VA-File (plus) indexing...")
-
-    val indexeddata = indexingdata.map(
-      datum => {
-        val cells = getCells(datum.feature, meta.marks)
-        val signature = meta.signatureGenerator.toSignature(cells)
-        Row(datum.id, signature)
-      })
-
-    val schema = StructType(Seq(
-      StructField(entity.pk.name, entity.pk.fieldtype.datatype, false),
-      StructField(FieldNames.featureIndexColumnName, new BitStringUDT, false)
-    ))
-
-    val df = ac.sqlContext.createDataFrame(indexeddata, schema)
-
-    (df, meta)
+    (indexed, meta)
   }
+
 
   /**
     *
@@ -110,11 +72,16 @@ class VAPlusIndexGenerator(nbits: Option[Int], ndims : Option[Int], trainingSize
     * @param trainData training data
     * @return
     */
-  private def train(trainData: Array[IndexingTaskTuple[_]], pca: PCAModel, ndims : Int): VAPlusIndexMetaData = {
+  private def train(trainData: Seq[IndexingTaskTuple], data : DataFrame, attribute : String): VAPlusIndexMetaData = {
     log.trace("VA-File (variable) started training")
+    val dims = ndims.getOrElse(trainData.head.ap_indexable.size)
+
+    import ac.spark.implicits._
+    val pca = new PCA(dims).fit(data.rdd.map(x => Vectors.dense(x.getAs[DenseSparkVector](attribute).toArray)))
+
 
     //data
-    val dTrainData = trainData.map(x => x.feature.map(x => x.toDouble).toArray)
+    val dTrainData = trainData.map(x => x.ap_indexable.map(x => x.toDouble).toArray)
 
     val dataMatrix = DenseMatrix(dTrainData.toList: _*)
 
@@ -122,9 +89,9 @@ class VAPlusIndexGenerator(nbits: Option[Int], ndims : Option[Int], trainingSize
     val variance = diag(cov(dataMatrix, center = true)).toArray
 
     var k = 0
-    var modes = Seq.fill(ndims)(0).toArray
+    var modes = Seq.fill(dims)(0).toArray
 
-    while (k < nbits.getOrElse(ndims * 8)) {
+    while (k < nbits.getOrElse(dims * 8)) {
       val j = getMaxIndex(variance)
       modes(j) += 1
       variance(j) = variance(j) / 4.0
@@ -137,19 +104,19 @@ class VAPlusIndexGenerator(nbits: Option[Int], ndims : Option[Int], trainingSize
 
     log.trace("VA-File (variable) finished training")
 
-    new VAPlusIndexMetaData(marks, signatureGenerator, pca, ndims > pca.k)
+    new VAPlusIndexMetaData(marks, signatureGenerator, pca, dims > pca.k)
   }
 
 
   /**
     *
     */
-  @inline private def getCells(f: FeatureVector, marks: Seq[Seq[VectorBase]]): Seq[Int] = {
-    f.toArray.zip(marks).map {
+  @inline private def getCells(f: Iterable[VectorBase], marks: Seq[Seq[VectorBase]]): Seq[Int] = {
+    f.zip(marks).map {
       case (x, l) =>
         val index = l.toArray.indexWhere(p => p >= x, 1)
         if (index == -1) l.length - 1 - 1 else index - 1
-    }
+    }.toSeq
   }
 }
 

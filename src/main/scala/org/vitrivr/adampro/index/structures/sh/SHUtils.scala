@@ -1,8 +1,8 @@
 package org.vitrivr.adampro.index.structures.sh
 
 import breeze.linalg.{*, DenseMatrix}
-import org.vitrivr.adampro.datatypes.bitString.BitString
-import org.vitrivr.adampro.datatypes.feature.Feature._
+import org.vitrivr.adampro.datatypes.bitstring.BitString
+import org.vitrivr.adampro.datatypes.vector.Vector._
 
 /**
  * adamtwo
@@ -17,10 +17,10 @@ private[sh] object SHUtils {
    * @param indexMetaData
    * @return
    */
-  @inline def hashFeature(f : FeatureVector, indexMetaData : SHIndexMetaData) : BitString[_] = {
+  @inline def hashFeature(f : MathVector, indexMetaData : SHIndexMetaData) : BitString[_] = {
     val fMat = f.toDenseVector.toDenseMatrix
 
-    val v = fMat.*(indexMetaData.pca).asInstanceOf[DenseMatrix[Float]].toDenseVector - indexMetaData.min.toDenseVector
+    val v = fMat.*(indexMetaData.pca).asInstanceOf[DenseMatrix[VectorBase]].toDenseVector - indexMetaData.min.toDenseVector
 
     val res = {
       val omegai : DenseMatrix[VectorBase] = indexMetaData.omegas(*, ::) :* v

@@ -1,6 +1,6 @@
 package org.vitrivr.adampro.query.distance
 
-import org.vitrivr.adampro.datatypes.feature.Feature._
+import org.vitrivr.adampro.datatypes.vector.Vector._
 import org.vitrivr.adampro.query.distance.Distance._
 import org.vitrivr.adampro.utils.Logging
 
@@ -16,7 +16,7 @@ object JaccardDistance extends DistanceFunction with Logging {
   val minDist = MinMaxDistFunc((a: VectorBase, b: VectorBase) => math.min(a, b))
   val maxDist = MinMaxDistFunc((a: VectorBase, b: VectorBase) => math.max(a, b))
 
-  override def apply(v1: FeatureVector, v2: FeatureVector, weights: Option[FeatureVector]): Distance = {
+  override def apply(v1: MathVector, v2: MathVector, weights: Option[MathVector]): Distance = {
     if (weights.isDefined) {
       log.warn("weights cannot be used with cosine distance and are ignored")
     }

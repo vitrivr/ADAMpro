@@ -5,7 +5,7 @@ import org.apache.spark.sql.SaveMode
 import org.vitrivr.adampro.catalog.CatalogOperator
 import org.vitrivr.adampro.config.AdamConfig
 import org.vitrivr.adampro.entity.Entity
-import org.vitrivr.adampro.main.AdamContext
+import org.vitrivr.adampro.main.{AdamContext, SparkStartup}
 import org.vitrivr.adampro.utils.Logging
 
 import scala.util.{Failure, Success, Try}
@@ -49,7 +49,7 @@ object Transferer extends Logging {
 
       //all attributes that should be transfered + the ones that are already in place in this storagehandler
       val attributesForNewHandler = (attributesWithPK.map(_.name) ++ (schema.filter(_.storagehandlername == newHandlerName).map(_.name))).distinct
-      val data = entity.getData(Some(attributesForNewHandler.distinct)).get.repartition(AdamConfig.defaultNumberOfPartitions)
+      val data = entity.getData(Some(attributesForNewHandler.distinct)).get.repartition(ac.config.defaultNumberOfPartitions)
 
       log.trace("new handler will store attributes " + attributesForNewHandler.mkString(","))
 
@@ -92,7 +92,7 @@ object Transferer extends Logging {
 
       //adjust attribute storage handler
       attributesWithoutPK.foreach { attribute =>
-        CatalogOperator.updateAttributeStorageHandler(entity.entityname, attribute.name, newHandlerName)
+        SparkStartup.catalogOperator.updateAttributeStorageHandler(entity.entityname, attribute.name, newHandlerName)
       }
 
       entity.markStale()

@@ -1,8 +1,8 @@
 package org.vitrivr.adampro.index.structures.sh
 
-import org.vitrivr.adampro.config.FieldNames
 import it.unimi.dsi.fastutil.ints.{IntComparators, IntHeapPriorityQueue}
 import org.apache.spark.sql.Row
+import org.vitrivr.adampro.config.FieldNames
 
 import scala.collection.mutable.ListBuffer
 
@@ -27,7 +27,7 @@ class SHResultHandler[A](k: Int) {
         val score = r.getAs[Int](FieldNames.distanceColumnName)
         val tid = r.getAs[A](pk)
         elementsLeft -= 1
-        enqueueAndAddToCandidates(score, tid)
+        enqueueAndAddToCandidates(tid, score)
         return true
       } else { //we have already k elements, therefore check if new element is better
         val peek = queue.firstInt
@@ -37,7 +37,7 @@ class SHResultHandler[A](k: Int) {
           //new element
           queue.dequeueInt()
           val tid = r.getAs[A](pk)
-          enqueueAndAddToCandidates(score, tid)
+          enqueueAndAddToCandidates(tid, score)
           return true
         } else {
           return false
@@ -51,8 +51,8 @@ class SHResultHandler[A](k: Int) {
     * @param score
     * @param tid
     */
-  private def enqueueAndAddToCandidates(score : Int, tid : A): Unit ={
-    enqueueAndAddToCandidates(SHResultElement(score, tid))
+  private def enqueueAndAddToCandidates(tid : A, score : Int): Unit ={
+    enqueueAndAddToCandidates(SHResultElement(tid, score))
   }
 
   /**
@@ -60,7 +60,7 @@ class SHResultHandler[A](k: Int) {
     * @param res
     */
   private def enqueueAndAddToCandidates(res: SHResultElement[A]): Unit = {
-    queue.enqueue(res.score)
+    queue.enqueue(res.ap_score)
     ls += res
   }
 
@@ -69,7 +69,7 @@ class SHResultHandler[A](k: Int) {
     *
     * @return
     */
-  def results = ls.sortBy(_.score).toSeq
+  def results = ls.sortBy(_.ap_score)
 }
 
-case class SHResultElement[A](score : Int, tid: A) {}
+case class SHResultElement[A](ap_id: A, ap_score : Int) {}

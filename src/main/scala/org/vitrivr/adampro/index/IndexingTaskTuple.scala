@@ -1,6 +1,7 @@
 package org.vitrivr.adampro.index
 
-import org.vitrivr.adampro.datatypes.feature.Feature.FeatureVector
+import org.vitrivr.adampro.datatypes.TupleID.TupleID
+import org.vitrivr.adampro.datatypes.vector.Vector.DenseMathVector
 
 /**
   * adamtwo
@@ -11,4 +12,4 @@ import org.vitrivr.adampro.datatypes.feature.Feature.FeatureVector
   * September 2015
   */
 @SerialVersionUID(100L)
-case class IndexingTaskTuple[A](id: A, feature: FeatureVector) extends Serializable
+case class IndexingTaskTuple(ap_id: TupleID, ap_indexable: DenseMathVector) extends Serializable

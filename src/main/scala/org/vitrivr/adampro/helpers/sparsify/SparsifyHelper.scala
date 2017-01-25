@@ -1,10 +1,9 @@
 package org.vitrivr.adampro.helpers.sparsify
 
-import breeze.linalg.SparseVector
-import org.apache.spark.sql.SaveMode
+import org.apache.spark.sql.{Row, SaveMode}
 import org.apache.spark.sql.functions._
-import org.vitrivr.adampro.datatypes.feature.Feature.{SparseFeatureVector, VectorBase}
-import org.vitrivr.adampro.datatypes.feature.FeatureVectorWrapper
+import org.vitrivr.adampro.datatypes.vector.{SparseVectorWrapper, SparseVectorWrapper$}
+import org.vitrivr.adampro.datatypes.vector.Vector.{DenseSparkVector, VectorBase}
 import org.vitrivr.adampro.entity.Entity
 import org.vitrivr.adampro.exception.GeneralAdamException
 import org.vitrivr.adampro.main.AdamContext
@@ -32,43 +31,38 @@ object SparsifyHelper {
       }
 
       var data = entity.getData().get
-      val convertToSparse = udf((c: FeatureVectorWrapper) => {
-        val vec = c.vector
 
-        if (vec.isInstanceOf[SparseFeatureVector]) {
-          c
-        } else {
-          var numNonZeros = 0
-          var k = 0
-          numNonZeros = {
-            var nnz = 0
-            vec.foreach { v =>
-              if (math.abs(v) > 1E-10) {
-                nnz += 1
-              }
-            }
-            nnz
-          }
-
-          //TODO: possibly check here if nnz > 0.5 length then do not translate to sparse (or possibly allow mixed)
-
-          val ii = new Array[Int](numNonZeros)
-          val vv = new Array[VectorBase](numNonZeros)
-          k = 0
-
-          vec.foreachPair { (i, v) =>
+      val convertToSparse = udf((vec: DenseSparkVector) => {
+        var numNonZeros = 0
+        var k = 0
+        numNonZeros = {
+          var nnz = 0
+          vec.foreach { v =>
             if (math.abs(v) > 1E-10) {
-              ii(k) = i
-              vv(k) = v
-              k += 1
+              nnz += 1
             }
           }
+          nnz
+        }
 
-          if (ii.nonEmpty) {
-            new FeatureVectorWrapper(ii, vv, vec.size)
-          } else {
-            FeatureVectorWrapper(SparseVector.zeros(vec.size))
+        //TODO: possibly check here if nnz > 0.5 length then do not translate to sparse (or possibly allow mixed)
+
+        val ii = new Array[Int](numNonZeros)
+        val vv = new Array[VectorBase](numNonZeros)
+        k = 0
+
+        vec.zipWithIndex.foreach{ case (v, i) =>
+          if (math.abs(v) > 1E-10) {
+            ii(k) = i
+            vv(k) = v
+            k += 1
           }
+        }
+
+        if (ii.nonEmpty) {
+          SparseVectorWrapper.toRow(ii, vv, vec.size)
+        } else {
+          SparseVectorWrapper.emptyRow
         }
       })
 
@@ -87,10 +81,8 @@ object SparsifyHelper {
       }
 
       entity.markStale()
-      ac.entityLRUCache.invalidate(entity.entityname)
 
       Success(entity)
-
     } catch {
       case e: Exception => Failure(e)
     }

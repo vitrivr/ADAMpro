@@ -22,7 +22,7 @@ class PostgisEngine(private val url: String, private val user: String, private v
 
   override val name: String = "postgis"
 
-  override def supports: Seq[FieldType] = Seq(FieldTypes.AUTOTYPE, FieldTypes.SERIALTYPE, FieldTypes.INTTYPE, FieldTypes.LONGTYPE, FieldTypes.STRINGTYPE, FieldTypes.GEOMETRYTYPE, FieldTypes.GEOGRAPHYTYPE)
+  override def supports: Seq[FieldType] = Seq(FieldTypes.INTTYPE, FieldTypes.LONGTYPE, FieldTypes.STRINGTYPE, FieldTypes.GEOMETRYTYPE, FieldTypes.GEOGRAPHYTYPE)
 
   override def specializes: Seq[FieldType] = Seq(FieldTypes.GEOMETRYTYPE, FieldTypes.GEOGRAPHYTYPE)
 

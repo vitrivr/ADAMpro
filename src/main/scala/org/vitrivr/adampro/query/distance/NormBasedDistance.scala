@@ -1,7 +1,7 @@
 package org.vitrivr.adampro.query.distance
 
 import breeze.linalg.max
-import org.vitrivr.adampro.datatypes.feature.Feature._
+import org.vitrivr.adampro.datatypes.vector.Vector._
 import org.vitrivr.adampro.query.distance.Distance.Distance
 
 /**
@@ -61,7 +61,7 @@ object SquaredEuclideanDistance extends MinkowskiDistance(2) with Serializable {
   * from Julia: max(abs(x - y))
   */
 object ChebyshevDistance extends MinkowskiDistance(Double.PositiveInfinity) with Serializable {
-  override def apply(v1: FeatureVector, v2: FeatureVector, weights: Option[FeatureVector] = None): Distance = {
+  override def apply(v1: MathVector, v2: MathVector, weights: Option[MathVector] = None): Distance = {
     if (weights.isDefined) {
       max((weights.get :* (v1 - v2)).map(_.abs))
     } else {

@@ -5,7 +5,8 @@ libraryDependencies ++= Seq(
   "io.grpc" % "grpc-netty" % "1.0.1",
   "io.grpc" % "grpc-protobuf" % "1.0.1",
   "io.grpc" % "grpc-stub" % "1.0.1",
-  "org.slf4j" % "slf4j-simple" % "1.7.21"
+  "org.slf4j" % "slf4j-simple" % "1.7.21",
+  "org.scala-lang.modules" %% "scala-xml" % "1.0.2"
 )
 
 unmanagedBase <<= baseDirectory { base => base / ".." / "lib" }

@@ -2,7 +2,7 @@ package org.vitrivr.adampro.index.structures.va.signature
 
 import java.util.BitSet
 
-import org.vitrivr.adampro.datatypes.bitString.BitString
+import org.vitrivr.adampro.datatypes.bitstring.BitString
 
 import scala.collection.mutable.ListBuffer
 

@@ -4,14 +4,14 @@ import java.sql.{Connection, DriverManager}
 
 import org.vitrivr.adampro.api.{EntityOp, IndexOp}
 import org.vitrivr.adampro.datatypes.FieldTypes
-import org.vitrivr.adampro.datatypes.FieldTypes.FEATURETYPE
-import org.vitrivr.adampro.datatypes.feature.FeatureVectorWrapper
 import org.vitrivr.adampro.entity.AttributeDefinition
 import org.vitrivr.adampro.main.AdamContext
 import org.vitrivr.adampro.query.distance.NormBasedDistance
 import org.apache.spark.annotation.Experimental
 import org.apache.spark.sql.jdbc.AdamDialectRegistrar
 import org.apache.spark.sql.types.DataTypes
+import org.vitrivr.adampro.datatypes.FieldTypes.VECTORTYPE
+import org.vitrivr.adampro.datatypes.vector.Vector
 
 import scala.collection.mutable.ListBuffer
 import scala.util.{Failure, Random, Success, Try}
@@ -78,9 +78,8 @@ class AdamImporter(url: String, user: String, password: String) extends Logging 
       var insertDF = df
 
       import org.apache.spark.sql.functions.udf
-      val toFeatureVectorWrapper = udf((c: String) => {
-        val vector = c.substring(1, c.length - 1).split(",").map(_.toFloat)
-        new FeatureVectorWrapper(vector)
+      val toVector = udf((c: String) => {
+        c.substring(1, c.length - 1).split(",").map(Vector.conv_str2vb)
       })
 
       df.schema.fields.filter(x => featureFields.contains(x.name)).map { field =>
@@ -92,7 +91,7 @@ class AdamImporter(url: String, user: String, password: String) extends Logging 
         }
 
         insertDF = insertDF
-          .withColumn(tmpName, toFeatureVectorWrapper(insertDF(field.name)))
+          .withColumn(tmpName, toVector(insertDF(field.name)))
           .drop(field.name)
           .withColumnRenamed(tmpName, newName)
       }
@@ -122,10 +121,10 @@ class AdamImporter(url: String, user: String, password: String) extends Logging 
             field.name
           }
 
-          new AttributeDefinition(newName, FEATURETYPE, field.name.equals(pk))
+          new AttributeDefinition(newName, VECTORTYPE, storagehandlername = "parquet")
         } else {
           val fieldType = FieldTypes.fromDataType(field.dataType)
-          new AttributeDefinition(field.name, fieldType, field.name.equals(pk))
+          new AttributeDefinition(field.name, fieldType, storagehandlername = "parquet")
         }
       })
 

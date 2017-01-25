@@ -6,14 +6,14 @@ import org.vitrivr.adampro.entity.Entity._
 import org.vitrivr.adampro.exception.GeneralAdamException
 import org.vitrivr.adampro.index.Index
 import org.vitrivr.adampro.index.Index._
-import org.vitrivr.adampro.main.AdamContext
+import org.vitrivr.adampro.main.{AdamContext, SparkStartup}
 import org.vitrivr.adampro.query.QueryHints
-import org.vitrivr.adampro.query.handler.generic.{QueryEvaluationOptions, ExpressionDetails, QueryExpression}
+import org.vitrivr.adampro.query.handler.generic.{ExpressionDetails, QueryEvaluationOptions, QueryExpression}
 import org.vitrivr.adampro.query.handler.internal.AggregationExpression.EmptyExpression
 import org.vitrivr.adampro.query.handler.internal.BooleanFilterExpression.BooleanFilterScanExpression
 import QueryHints._
 import org.vitrivr.adampro.query.query.{BooleanQuery, NearestNeighbourQuery}
-import org.vitrivr.adampro.helpers.optimizer.{OptimizerOp}
+import org.vitrivr.adampro.helpers.optimizer.OptimizerOp
 import org.vitrivr.adampro.utils.Logging
 import org.apache.spark.sql.DataFrame
 
@@ -105,7 +105,7 @@ object HintBasedScanExpression extends Logging {
 
     var scan: Option[QueryExpression] = None
     if (bq.isDefined) {
-      scan = Some(new BooleanFilterScanExpression(entityname)(bq.get)(expr))
+      scan = Some(new BooleanFilterScanExpression(entityname)(bq.get, None)(expr)(ac))
     }
 
     if (nnq.isEmpty) {
@@ -119,7 +119,7 @@ object HintBasedScanExpression extends Logging {
             log.trace("measurement-based (empirical) execution plan hint")
             val optimizer = ac.optimizerRegistry.value.apply("svm").get
 
-            val indexes = CatalogOperator.listIndexes(Some(entityname), Some(nnq.get.attribute)).get.map(Index.load(_)).filter(_.isSuccess).map(_.get).groupBy(_.indextypename).mapValues(_.map(_.indexname))
+            val indexes = SparkStartup.catalogOperator.listIndexes(Some(entityname), Some(nnq.get.attribute)).get.map(Index.load(_)).filter(_.isSuccess).map(_.get).groupBy(_.indextypename).mapValues(_.map(_.indexname))
             val index = indexes.values.toSeq.flatten
               .map(indexname => Index.load(indexname, false).get)
               .sortBy(index => -optimizer.getScore(index, nnq.get)).head
@@ -127,9 +127,9 @@ object HintBasedScanExpression extends Logging {
             val entity = Entity.load(entityname).get
 
             if (optimizer.getScore(index, nnq.get) > optimizer.getScore(entity, nnq.get)) {
-              scan = Some(IndexScanExpression(index)(nnq.get)(scan))
+              scan = Some(IndexScanExpression(index)(nnq.get, None)(scan)(ac))
             } else {
-              scan = Some(SequentialScanExpression(entity)(nnq.get)(scan))
+              scan = Some(SequentialScanExpression(entity)(nnq.get, None)(scan)(ac))
             }
 
             log.debug("hint-based chose (empirical) " + scan.get.toString)
@@ -140,7 +140,7 @@ object HintBasedScanExpression extends Logging {
           log.trace("measurement-based (scored) execution plan hint")
             val optimizer = ac.optimizerRegistry.value.apply("naive").get
 
-            val indexes = CatalogOperator.listIndexes(Some(entityname), Some(nnq.get.attribute)).get.map(Index.load(_)).filter(_.isSuccess).map(_.get).groupBy(_.indextypename).mapValues(_.map(_.indexname))
+            val indexes = SparkStartup.catalogOperator.listIndexes(Some(entityname), Some(nnq.get.attribute)).get.map(Index.load(_)).filter(_.isSuccess).map(_.get).groupBy(_.indextypename).mapValues(_.map(_.indexname))
             val index = indexes.values.toSeq.flatten
               .map(indexname => Index.load(indexname, false).get)
               .sortBy(index => -optimizer.getScore(index, nnq.get)).head
@@ -148,9 +148,9 @@ object HintBasedScanExpression extends Logging {
             val entity = Entity.load(entityname).get
 
             if (optimizer.getScore(index, nnq.get) > optimizer.getScore(entity, nnq.get)) {
-              scan = Some(IndexScanExpression(index)(nnq.get)(scan))
+              scan = Some(IndexScanExpression(index)(nnq.get, None)(scan)(ac))
             } else {
-              scan = Some(SequentialScanExpression(entity)(nnq.get)(scan))
+              scan = Some(SequentialScanExpression(entity)(nnq.get, None)(scan)(ac))
             }
 
             log.debug("hint-based (scored) chose " + scan.get.toString)
@@ -161,7 +161,7 @@ object HintBasedScanExpression extends Logging {
             val optimizer = ac.optimizerRegistry.value.apply("scored").get
 
             //index scan
-            val indexChoice = CatalogOperator.listIndexes(Some(entityname), Some(nnq.get.attribute), Some(iqh.structureType)).get.map(Index.load(_)).filter(_.isSuccess).map(_.get)
+            val indexChoice = SparkStartup.catalogOperator.listIndexes(Some(entityname), Some(nnq.get.attribute), Some(iqh.structureType)).get.map(Index.load(_)).filter(_.isSuccess).map(_.get)
 
             if (indexChoice.nonEmpty) {
               val sortedIndexChoice = indexChoice
@@ -173,7 +173,7 @@ object HintBasedScanExpression extends Logging {
                 return None
               }
 
-              scan = Some(IndexScanExpression(sortedIndexChoice.head)(nnq.get)(scan))
+              scan = Some(IndexScanExpression(sortedIndexChoice.head)(nnq.get, None)(scan)(ac))
               return scan
             } else {
               return scan
@@ -181,7 +181,7 @@ object HintBasedScanExpression extends Logging {
 
           case SEQUENTIAL_QUERY =>
             log.trace("sequential execution plan hint")
-            scan = Some(new SequentialScanExpression(entityname)(nnq.get)(scan)) //sequential
+            scan = Some(new SequentialScanExpression(entityname)(nnq.get, None)(scan)(ac)) //sequential
             return scan
 
           case cqh: ComplexQueryHint => {

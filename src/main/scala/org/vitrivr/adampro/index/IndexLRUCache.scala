@@ -2,12 +2,12 @@ package org.vitrivr.adampro.index
 
 import java.util.concurrent.TimeUnit
 
+import com.google.common.cache.{CacheBuilder, CacheLoader}
 import org.vitrivr.adampro.catalog.CatalogOperator
 import org.vitrivr.adampro.config.AdamConfig
 import org.vitrivr.adampro.exception.IndexNotExistingException
 import org.vitrivr.adampro.index.Index.IndexName
-import org.vitrivr.adampro.main.SparkStartup
-import com.google.common.cache.{CacheBuilder, CacheLoader}
+import org.vitrivr.adampro.main.{AdamContext, SparkStartup}
 import org.vitrivr.adampro.utils.Logging
 
 import scala.util.{Failure, Success, Try}
@@ -18,10 +18,10 @@ import scala.util.{Failure, Success, Try}
   * Ivan Giangreco
   * April 2016
   */
-class IndexLRUCache extends Logging {
+class IndexLRUCache()(@transient implicit val ac: AdamContext) extends Logging {
 
-  private val maximumCacheSize = AdamConfig.maximumCacheSizeIndex
-  private val expireAfterAccess = AdamConfig.expireAfterAccessIndex
+  private val maximumCacheSize = ac.config.maximumCacheSizeIndex
+  private val expireAfterAccess = ac.config.expireAfterAccessIndex
 
   private val indexCache = CacheBuilder.
     newBuilder().
@@ -31,7 +31,7 @@ class IndexLRUCache extends Logging {
       new CacheLoader[IndexName, Index]() {
         def load(indexname: IndexName): Index = {
           log.trace("cache miss for index " + indexname + "; loading from disk")
-          val index = Index.loadIndexMetaData(indexname)(SparkStartup.mainContext).get
+          val index = Index.loadIndexMetaData(indexname)(ac).get
           index
         }
       }
@@ -45,7 +45,7 @@ class IndexLRUCache extends Logging {
   def get(indexname: IndexName): Try[Index] = {
     try {
       log.debug("getting index " + indexname + " from cache")
-      if(indexCache.asMap().containsKey(indexname) || CatalogOperator.existsIndex(indexname).get){
+      if(indexCache.asMap().containsKey(indexname) || SparkStartup.catalogOperator.existsIndex(indexname).get){
         Success(indexCache.get(indexname))
       } else {
         throw new IndexNotExistingException()

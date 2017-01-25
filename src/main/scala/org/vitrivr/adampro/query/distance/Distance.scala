@@ -1,15 +1,56 @@
 package org.vitrivr.adampro.query.distance
 
+import org.apache.spark.broadcast.Broadcast
+import org.apache.spark.sql.functions._
+import org.apache.spark.sql.types.DoubleType
+import org.vitrivr.adampro.datatypes.vector.Vector
+import org.vitrivr.adampro.datatypes.vector.Vector._
+import org.vitrivr.adampro.query.query.NearestNeighbourQuery
+import org.vitrivr.adampro.utils.Logging
+
 /**
   * ADAMpro
   *
   * Ivan Giangreco
   * August 2015
   */
-object Distance {
-  type Distance = Float
+object Distance extends Logging {
+  type Distance = Double
+  val SparkDistance = DoubleType
+  val maxValue : Distance = Double.MaxValue
+  val zeroValue : VectorBase = 0.toDouble
 
-  implicit def conv_float2distance(value: Float): Distance = value
+  /**
+    *
+    */
+  val denseVectorDistUDF = (nnq : NearestNeighbourQuery, q : Broadcast[MathVector], w : Broadcast[Option[MathVector]]) => udf((c: DenseSparkVector) => {
+    try {
+      if (c != null) {
+        nnq.distance(q.value, Vector.conv_dspark2vec(c), w.value)
+      } else {
+        maxValue
+      }
+    } catch {
+      case e: Exception =>
+        log.error("error when computing distance", e)
+        maxValue
+    }
+  })
 
-  implicit def conv_double2distance(value: Double): Distance = value.toFloat
+  /**
+    *
+    */
+  val sparseVectorDistUDF = (nnq : NearestNeighbourQuery, q : Broadcast[MathVector], w : Broadcast[Option[MathVector]]) => udf((c: SparseSparkVector) => {
+    try {
+      if (c != null) {
+        nnq.distance(q.value, Vector.conv_sspark2vec(c), w.value)
+      } else {
+        maxValue
+      }
+    } catch {
+      case e: Exception =>
+        log.error("error when computing distance", e)
+        maxValue
+    }
+  })
 }

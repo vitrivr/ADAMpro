@@ -3,7 +3,10 @@ package org.vitrivr.adampro.helpers.optimizer
 import breeze.linalg.DenseVector
 import org.vitrivr.adampro.api.QueryOp
 import org.vitrivr.adampro.catalog.CatalogOperator
-import org.vitrivr.adampro.datatypes.feature.FeatureVectorWrapper
+import org.vitrivr.adampro.config.FieldNames
+import org.vitrivr.adampro.datatypes.TupleID._
+import org.vitrivr.adampro.datatypes.vector.Vector
+import org.vitrivr.adampro.datatypes.vector.Vector._
 import org.vitrivr.adampro.entity.Entity
 import org.vitrivr.adampro.index.structures.ecp.ECPIndex
 import org.vitrivr.adampro.index.structures.lsh.LSHIndex
@@ -12,8 +15,7 @@ import org.vitrivr.adampro.index.structures.pq.PQIndex
 import org.vitrivr.adampro.index.structures.sh.SHIndex
 import org.vitrivr.adampro.index.structures.va.{VAIndex, VAPlusIndex, VAPlusIndexMetaData}
 import org.vitrivr.adampro.index.{Index, IndexingTaskTuple}
-import org.vitrivr.adampro.main.AdamContext
-import org.vitrivr.adampro.main.SparkStartup.Implicits._
+import org.vitrivr.adampro.main.{AdamContext, SparkStartup}
 import org.vitrivr.adampro.ml.{PegasosSVM, TrainingSample}
 import org.vitrivr.adampro.query.query.NearestNeighbourQuery
 
@@ -43,11 +45,11 @@ private[optimizer] class SVMOptimizerHeuristic()(@transient implicit override va
     }.groupBy(_._1).mapValues(_.map(x => (x._2, x._3)))
 
     trainData.foreach { case (indextypename, trainDatum) =>
-      if (trainDatum.nonEmpty && !CatalogOperator.containsOptimizerOptionMeta(name, "svm-index-" + indextypename.name).getOrElse(false)) {
-        CatalogOperator.createOptimizerOption(name, "svm-index-" + indextypename.name, new PegasosSVM(trainDatum.head._1.length))
+      if (trainDatum.nonEmpty && !SparkStartup.catalogOperator.containsOptimizerOptionMeta(name, "svm-index-" + indextypename.name).getOrElse(false)) {
+        SparkStartup.catalogOperator.createOptimizerOption(name, "svm-index-" + indextypename.name, new PegasosSVM(trainDatum.head._1.length))
       }
 
-      val svm = CatalogOperator.getOptimizerOptionMeta(name, "svm-index-" + indextypename.name).get.asInstanceOf[PegasosSVM]
+      val svm = SparkStartup.catalogOperator.getOptimizerOptionMeta(name, "svm-index-" + indextypename.name).get.asInstanceOf[PegasosSVM]
       svm.train(trainDatum.map { case (x, y) => TrainingSample(x, y.time) })
     }
   }
@@ -62,11 +64,11 @@ private[optimizer] class SVMOptimizerHeuristic()(@transient implicit override va
       performMeasurement(entity, nnq).map(time => (buildFeature(entity, nnq), time))
     }
 
-    if (trainDatum.nonEmpty && !CatalogOperator.containsOptimizerOptionMeta(name, "svm-entity").getOrElse(false)) {
-      CatalogOperator.createOptimizerOption(name, "svm-entity", new PegasosSVM(trainDatum.head._1.length))
+    if (trainDatum.nonEmpty && !SparkStartup.catalogOperator.containsOptimizerOptionMeta(name, "svm-entity").getOrElse(false)) {
+      SparkStartup.catalogOperator.createOptimizerOption(name, "svm-entity", new PegasosSVM(trainDatum.head._1.length))
     }
 
-    val svm = CatalogOperator.getOptimizerOptionMeta(name, "svm-entity").get.asInstanceOf[PegasosSVM]
+    val svm = SparkStartup.catalogOperator.getOptimizerOptionMeta(name, "svm-entity").get.asInstanceOf[PegasosSVM]
     svm.train(trainDatum.map { case (x, y) => TrainingSample(x, y.time) })
   }
 
@@ -94,8 +96,8 @@ private[optimizer] class SVMOptimizerHeuristic()(@transient implicit override va
     * @return
     */
   private def getScore(key: String, f : DenseVector[Double]): Double = {
-    if (CatalogOperator.containsOptimizerOptionMeta(name, key).getOrElse(false)) {
-      val metaOpt = CatalogOperator.getOptimizerOptionMeta(name, key)
+    if (SparkStartup.catalogOperator.containsOptimizerOptionMeta(name, key).getOrElse(false)) {
+      val metaOpt = SparkStartup.catalogOperator.getOptimizerOptionMeta(name, key)
 
       if (metaOpt.isSuccess) {
         val svm = metaOpt.get.asInstanceOf[PegasosSVM]
@@ -149,7 +151,8 @@ private[optimizer] class SVMOptimizerHeuristic()(@transient implicit override va
   private def buildFeature(entity: Entity, attribute: String): Seq[Double] = {
     val lb = new ListBuffer[Double]()
 
-    lb += entity.getAttributeData(attribute).get.map { x => IndexingTaskTuple(x.getAs[Any](entity.pk.name), x.getAs[FeatureVectorWrapper](attribute).vector) }.first.feature.length
+    import ac.spark.implicits._
+    lb += entity.getAttributeData(attribute).get.map { x => IndexingTaskTuple(x.getAs[TupleID](FieldNames.indexableColumnName), Vector.conv_draw2vec(x.getAs[DenseRawVector](attribute)).asInstanceOf[DenseMathVector])}.first.ap_indexable.length
     lb += entity.count
 
     lb.toSeq

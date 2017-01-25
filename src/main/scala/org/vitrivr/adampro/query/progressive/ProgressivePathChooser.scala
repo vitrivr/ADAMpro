@@ -40,8 +40,8 @@ class SimpleProgressivePathChooser()(implicit ac: AdamContext) extends Progressi
       .filterNot(_.isEmpty)
       .map(_.head)
       .map(index => {
-        IndexScanExpression(index)(nnq)()
-      }).+:(new SequentialScanExpression(entityname)(nnq)())
+        IndexScanExpression(index)(nnq, None)()(ac)
+      }).+:(new SequentialScanExpression(entityname)(nnq, None)(None)(ac))
   }
 }
 
@@ -52,7 +52,7 @@ class SimpleProgressivePathChooser()(implicit ac: AdamContext) extends Progressi
 class AllProgressivePathChooser(implicit ac: AdamContext) extends ProgressivePathChooser {
   override def getPaths(entityname: EntityName, nnq: NearestNeighbourQuery): Seq[QueryExpression] = {
     Index.list(Some(entityname))
-      .map(index => IndexScanExpression(index.get)(nnq)()).+:(new SequentialScanExpression(entityname)(nnq)())
+      .map(index => IndexScanExpression(index.get)(nnq, None)(None)(ac)).+:(new SequentialScanExpression(entityname)(nnq, None)(None)(ac))
   }
 }
 
@@ -67,7 +67,7 @@ class IndexTypeProgressivePathChooser(indextypenames: Seq[IndexTypeName])(implic
       .map(indextypename => Index.list(Some(entityname), Some(nnq.attribute), Some(indextypename)).filter(_.isSuccess).map(_.get)
         .filter(nnq.isConform(_))
         .sortBy(index => - ac.optimizerRegistry.value.apply("naive").get.getScore(index, nnq)).head)
-      .map(index => IndexScanExpression(index)(nnq)())
+      .map(index => IndexScanExpression(index)(nnq, None)(None)(ac))
   }
 }
 
@@ -92,6 +92,6 @@ class IndexnameSpecifiedProgressivePathChooser(indexnames: Seq[IndexName])(impli
     //here we do not filter for query conformness, as the user has specified explicitly some index names
     //and should get an exception otherwise
     indexnames.map(Index.load(_)).map(_.get)
-      .map(index => IndexScanExpression(index)(nnq)())
+      .map(index => IndexScanExpression(index)(nnq, None)(None)(ac))
   }
 }

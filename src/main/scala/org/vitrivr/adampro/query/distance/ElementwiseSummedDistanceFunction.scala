@@ -1,6 +1,6 @@
 package org.vitrivr.adampro.query.distance
 
-import org.vitrivr.adampro.datatypes.feature.Feature._
+import org.vitrivr.adampro.datatypes.vector.Vector._
 import org.vitrivr.adampro.query.distance.Distance.Distance
 import org.vitrivr.adampro.utils.Logging
 
@@ -11,16 +11,16 @@ import org.vitrivr.adampro.utils.Logging
   * June 2016
   */
 trait ElementwiseSummedDistanceFunction extends DistanceFunction with Logging with Serializable {
-  override def apply(v1_q: FeatureVector, v2: FeatureVector, weights: Option[FeatureVector]): Distance = {
+  override def apply(v1_q: MathVector, v2: MathVector, weights: Option[MathVector]): Distance = {
     var cumSum = 0.0
 
     //computing sum
     if (weights.isEmpty) {
       //un-weighted
-      if (v1_q.isInstanceOf[SparseFeatureVector] && v2.isInstanceOf[SparseFeatureVector]) {
+      if (v1_q.isInstanceOf[SparseMathVector] && v2.isInstanceOf[SparseMathVector]) {
         //sparse vectors
-        val sv1_q = v1_q.asInstanceOf[SparseFeatureVector]
-        val sv2 = v2.asInstanceOf[SparseFeatureVector]
+        val sv1_q = v1_q.asInstanceOf[SparseMathVector]
+        val sv2 = v2.asInstanceOf[SparseMathVector]
         var offset = 0
 
         while (offset < math.max(sv1_q.activeSize, sv2.activeSize)) {
@@ -43,10 +43,10 @@ trait ElementwiseSummedDistanceFunction extends DistanceFunction with Logging wi
       }
     } else {
       //weighted
-      if (weights.get.isInstanceOf[SparseFeatureVector]) {
+      if (weights.get.isInstanceOf[SparseMathVector]) {
         //sparse weights
 
-        val sweights = weights.get.asInstanceOf[SparseFeatureVector]
+        val sweights = weights.get.asInstanceOf[SparseMathVector]
 
         var offset = 0
         while (offset < sweights.activeSize) {
@@ -55,10 +55,10 @@ trait ElementwiseSummedDistanceFunction extends DistanceFunction with Logging wi
           }
           offset += 1
         }
-      } else if (v1_q.isInstanceOf[SparseFeatureVector] && v2.isInstanceOf[SparseFeatureVector]) {
+      } else if (v1_q.isInstanceOf[SparseMathVector] && v2.isInstanceOf[SparseMathVector]) {
         //dense weights, sparse vectors
-        val sv1_q = v1_q.asInstanceOf[SparseFeatureVector]
-        val sv2 = v2.asInstanceOf[SparseFeatureVector]
+        val sv1_q = v1_q.asInstanceOf[SparseMathVector]
+        val sv2 = v2.asInstanceOf[SparseMathVector]
 
         var offset = 0
         while (offset < math.max(sv1_q.activeSize, sv2.activeSize)) {

@@ -7,15 +7,15 @@ package org.apache.spark.sql.execution.datasources.gis
   * September 2016
   */
 
-import java.sql.{Types, SQLException, Connection}
+import java.sql.{Connection, SQLException, Types}
 import java.util.Properties
 
-import org.vitrivr.adampro.datatypes.gis.{GeographyWrapperUDT, GeometryWrapperUDT}
-import org.apache.spark.sql.execution.datasources.jdbc.{JdbcUtils, JDBCPartitioningInfo, JDBCRelation}
-import org.apache.spark.sql.jdbc.{JdbcType, JdbcDialect, JdbcDialects}
+import org.apache.spark.sql.execution.datasources.jdbc.{JDBCOptions, JDBCPartitioningInfo, JDBCRelation, JdbcUtils}
+import org.apache.spark.sql.jdbc.{JdbcDialect, JdbcDialects, JdbcType}
 import org.apache.spark.sql.sources._
-import org.apache.spark.sql.types.{StringType, DataType, MetadataBuilder}
+import org.apache.spark.sql.types.{DataType, MetadataBuilder, StringType, StructType}
 import org.apache.spark.sql.{DataFrame, SQLContext, SaveMode}
+import org.vitrivr.adampro.datatypes.gis.{GeographyWrapper, GeometryWrapper}
 
 class DataSource extends CreatableRelationProvider with DataSourceRegister with RelationProvider with Serializable {
   override def shortName(): String = "postgis"
@@ -23,11 +23,12 @@ class DataSource extends CreatableRelationProvider with DataSourceRegister with 
   /**
     *
     * @param url
-    * @param props
+    * @param table
+    * @param parameters
     * @return
     */
-  private def getConnection(url: String, props: Properties): Connection = {
-    val connection = JdbcUtils.createConnectionFactory(url, props)()
+  private def getConnection(url: String, table: String, parameters: Map[String, String]): Connection = {
+    val connection = JdbcUtils.createConnectionFactory(new JDBCOptions(url, table, parameters))()
     connection.asInstanceOf[org.postgresql.PGConnection].addDataType("geometry", classOf[org.postgis.PGgeometry])
     connection
   }
@@ -40,22 +41,18 @@ class DataSource extends CreatableRelationProvider with DataSourceRegister with 
     * @param data
     * @return
     */
-  override def createRelation(sqlContext: SQLContext,  mode: SaveMode, parameters: Map[String, String], data: DataFrame): BaseRelation = {
+  override def createRelation(sqlContext: SQLContext, mode: SaveMode, parameters: Map[String, String], data: DataFrame): BaseRelation = {
     val url = parameters.getOrElse("url", sys.error("Option 'url' not specified"))
     val table = parameters.getOrElse("table", sys.error("Option 'table' not specified"))
     val partitionColumn = parameters.getOrElse("partitionColumn", null)
     val lowerBound = parameters.getOrElse("lowerBound", null)
     val upperBound = parameters.getOrElse("upperBound", null)
     val numPartitions = parameters.getOrElse("numPartitions", null)
-    val props: Properties = new Properties()
-    parameters.foreach(element => {
-      props.put(element._1, element._2)
-    })
 
     //register dialect
     JdbcDialects.registerDialect(new PostGisDialect(url))
 
-    val conn : Connection = getConnection(url, props)
+    val conn: Connection = getConnection(url, table, parameters)
 
     try {
       var tableExists = JdbcUtils.tableExists(conn, url, table)
@@ -75,7 +72,7 @@ class DataSource extends CreatableRelationProvider with DataSourceRegister with 
 
       // Create the table if the table didn't exist.
       if (!tableExists) {
-        val schema = JdbcUtils.schemaString(data, url)
+        val schema = JdbcUtils.schemaString(data.schema, url)
         val sql = s"CREATE TABLE $table ($schema)"
         val statement = conn.createStatement
         try {
@@ -102,8 +99,8 @@ class DataSource extends CreatableRelationProvider with DataSourceRegister with 
         numPartitions.toInt)
     }
     val parts = JDBCRelation.columnPartition(partitionInfo)
-    val relation = new PostGisRelation(url, table, parts, props)(sqlContext)
-    relation.saveTable(data, url, table, props)
+    val relation = new PostGisRelation(url, table, parts, parameters)(sqlContext.sparkSession)
+    relation.saveTable(data, url, table, parameters)
     return relation
   }
 
@@ -144,7 +141,7 @@ class DataSource extends CreatableRelationProvider with DataSourceRegister with 
     }
     val parts = JDBCRelation.columnPartition(partitionInfo)
 
-    new PostGisRelation(url, table, parts, props)(sqlContext)
+    new PostGisRelation(url, table, parts, parameters)(sqlContext.sparkSession)
   }
 
 
@@ -165,9 +162,17 @@ class DataSource extends CreatableRelationProvider with DataSourceRegister with 
     }
 
     override def getJDBCType(dt: DataType): Option[JdbcType] = dt match {
-      case x: GeometryWrapperUDT => Some(JdbcType("geometry", Types.OTHER))
-      case x: GeographyWrapperUDT => Some(JdbcType("geography", Types.OTHER))
+      case st : StructType => {
+        if(GeometryWrapper.fitsType(dt)){
+          Some(JdbcType("geometry", Types.OTHER))
+        } else if(GeographyWrapper.fitsType(dt)){
+          Some(JdbcType("geography", Types.OTHER))
+        } else {
+          None
+        }
+      }
       case _ => None
     }
   }
+
 }

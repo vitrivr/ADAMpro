@@ -89,12 +89,12 @@
 <script>
 $("#btnSubmit").click(function () {
     var indexname = $("#indexname").val();
-    var attributes = $("#attributes").val().split(",");
+    var attribute = $("#attributes").val();
     var materialize = $('#materialize').is(':checked');
     var replace = $('#replace').is(':checked');
     var npartitions = $("#npartitions").val();
 
-    indexPartition(indexname, attributes, materialize, replace, npartitions);
+    indexPartition(indexname, attribute, materialize, replace, npartitions);
 });
 </script>
 

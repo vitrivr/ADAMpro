@@ -13,7 +13,7 @@ import scala.util.{Failure, Try}
 abstract class GenericOp extends Logging {
   def execute[T](desc: String)(op: => Try[T]): Try[T] = {
     try {
-      log.debug("starting " + desc)
+      log.trace("starting " + desc)
       val t1 = System.currentTimeMillis
       val res = op
 
@@ -22,11 +22,11 @@ abstract class GenericOp extends Logging {
       }
 
       val t2 = System.currentTimeMillis
-      log.debug("performed " + desc + " in " + (t2 - t1) + " msecs")
+      log.trace("performed operation '" + desc + "' in " + (t2 - t1) + " msecs")
       res
     } catch {
       case e: Exception =>
-        log.error("error in " + desc, e)
+        log.error("error in operation: " + desc, e)
         Failure(e)
     }
   }

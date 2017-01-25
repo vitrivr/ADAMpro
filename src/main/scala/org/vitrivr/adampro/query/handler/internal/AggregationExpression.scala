@@ -235,7 +235,7 @@ object AggregationExpression {
 
     override protected def run(options: Option[QueryEvaluationOptions], filter: Option[DataFrame] = None)(implicit ac: AdamContext): Option[DataFrame] = {
       val rdd = ac.sc.emptyRDD[Row]
-      Some(ac.sqlContext.createDataFrame(rdd, Result.resultSchema(new AttributeDefinition("", FieldTypes.STRINGTYPE, false))))
+      Some(ac.sqlContext.createDataFrame(rdd, Result.resultSchema))
     }
 
     override def equals(that: Any): Boolean =

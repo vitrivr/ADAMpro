@@ -4,7 +4,6 @@ import java.net.InetAddress
 
 import org.vitrivr.adampro.datatypes.FieldTypes
 import org.vitrivr.adampro.datatypes.FieldTypes._
-import org.vitrivr.adampro.datatypes.feature.{FeatureVectorWrapper, FeatureVectorWrapperUDT}
 import org.vitrivr.adampro.entity.AttributeDefinition
 import org.vitrivr.adampro.entity.Entity.EntityName
 import org.vitrivr.adampro.exception.GeneralAdamException
@@ -13,8 +12,6 @@ import org.vitrivr.adampro.query.query.Predicate
 import org.vitrivr.adampro.utils.Logging
 import com.datastax.driver.core.Session
 import com.datastax.spark.connector.cql.{CassandraConnector, PasswordAuthConf}
-import org.apache.spark.sql.functions._
-import org.apache.spark.sql.types.ArrayType
 import org.apache.spark.sql.{DataFrame, SaveMode}
 
 import scala.util.{Random, Failure, Success, Try}
@@ -36,9 +33,9 @@ class CassandraEngine(private val url: String, private val port: Int, private va
 
   override val name = "cassandra"
 
-  override def supports = Seq(FieldTypes.AUTOTYPE, FieldTypes.SERIALTYPE, FieldTypes.INTTYPE, FieldTypes.LONGTYPE, FieldTypes.STRINGTYPE, FieldTypes.FEATURETYPE)
+  override def supports = Seq(FieldTypes.INTTYPE, FieldTypes.LONGTYPE, FieldTypes.STRINGTYPE, FieldTypes.VECTORTYPE)
 
-  override def specializes = Seq(FieldTypes.FEATURETYPE)
+  override def specializes = Seq(FieldTypes.VECTORTYPE)
 
   override val repartitionable = false
 
@@ -138,13 +135,12 @@ class CassandraEngine(private val url: String, private val port: Int, private va
     */
   private def getCQLType(fieldtype: FieldType): String = fieldtype match {
     case INTTYPE => "INT"
-    case AUTOTYPE => "BIGINT"
     case LONGTYPE => "BIGINT"
     case FLOATTYPE => "FLOAT"
     case DOUBLETYPE => "DOUBLE"
     case STRINGTYPE => "TEXT"
     case BOOLEANTYPE => "BOOLEAN"
-    case FEATURETYPE => "LIST<FLOAT>"
+    case VECTORTYPE => "LIST<FLOAT>"
     case _ => throw new GeneralAdamException("field type " + fieldtype.name + " is not supported in cassandra handler")
   }
 
@@ -183,11 +179,6 @@ class CassandraEngine(private val url: String, private val port: Int, private va
     */
   override def read(storename: String, attributes: Seq[AttributeDefinition], predicates: Seq[Predicate], params: Map[String, String])(implicit ac: AdamContext): Try[DataFrame] = {
     try {
-      import org.apache.spark.sql.functions.udf
-      val castToFeature = udf((c: Seq[Float]) => {
-        new FeatureVectorWrapper(c)
-      })
-
       val df = ac.sqlContext.read
         .format("org.apache.spark.sql.cassandra")
         .options(Map("table" -> storename, "keyspace" -> keyspace, "cluster" -> connectionId))
@@ -202,10 +193,6 @@ class CassandraEngine(private val url: String, private val port: Int, private va
         })
 
         data = data.where(predicate.attribute + " " + predicate.operator.getOrElse(" IN ") + " " + valueList.mkString("(", ",", ")"))
-      }
-
-      df.schema.fields.filter(_.dataType.isInstanceOf[ArrayType]).foreach { field =>
-        data = data.withColumn(field.name, castToFeature(col(field.name)))
       }
 
       Success(data)
@@ -231,17 +218,8 @@ class CassandraEngine(private val url: String, private val port: Int, private va
       /*if (mode != SaveMode.Append) {
         throw new UnsupportedOperationException("only appending is supported")
       }*/
-      
-      var data = df
-      import org.apache.spark.sql.functions.{col, udf}
-      val castToSeq = udf((c: FeatureVectorWrapper) => {
-        c.toSeq
-      })
-      df.schema.fields.filter(_.dataType.isInstanceOf[FeatureVectorWrapperUDT]).foreach { field =>
-        data = data.withColumn(field.name, castToSeq(col(field.name)))
-      }
 
-      data.write
+      df.write
         .format("org.apache.spark.sql.cassandra")
         .options(Map("table" -> storename, "keyspace" -> keyspace, "cluster" -> connectionId))
         .save()

@@ -2,9 +2,8 @@ package org.vitrivr.adampro.query.handler.generic
 
 import java.util.concurrent.TimeUnit
 
-import org.vitrivr.adampro.catalog.LogOperator
-import org.vitrivr.adampro.config.{AdamConfig, FieldNames}
-import org.vitrivr.adampro.main.AdamContext
+import org.vitrivr.adampro.config.FieldNames
+import org.vitrivr.adampro.main.{AdamContext, SparkStartup}
 import org.vitrivr.adampro.query.information.InformationLevels._
 import org.vitrivr.adampro.utils.Logging
 import org.apache.spark.sql.types.IntegerType
@@ -75,8 +74,8 @@ abstract class QueryExpression(id: Option[String]) extends Serializable with Log
 
     val time = t2 - t1
 
-    if(AdamConfig.logQueryExecutionTime && info.source.isDefined){
-      LogOperator.addQuery(this)
+    if(ac.config.logQueryExecutionTime && info.source.isDefined){
+      SparkStartup.logOperator.addQuery(this)
     }
 
     info.time = Duration(time, TimeUnit.MILLISECONDS)

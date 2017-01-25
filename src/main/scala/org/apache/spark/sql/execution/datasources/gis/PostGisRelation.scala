@@ -1,14 +1,14 @@
 package org.apache.spark.sql.execution.datasources.gis
 
 import java.sql.{Connection, PreparedStatement}
-import java.util.Properties
 
-import org.vitrivr.adampro.datatypes.gis.{GeographyWrapper, GeographyWrapperUDT, GeometryWrapper, GeometryWrapperUDT}
-import org.apache.spark.sql.execution.datasources.jdbc.{JDBCRelation, JdbcUtils}
+import org.apache.spark.Partition
+import org.apache.spark.sql._
+import org.apache.spark.sql.execution.datasources.jdbc.{JDBCOptions, JDBCRelation, JdbcUtils}
 import org.apache.spark.sql.jdbc.{JdbcDialect, JdbcDialects, JdbcType}
 import org.apache.spark.sql.types._
-import org.apache.spark.sql.{DataFrame, Row, SQLContext, SaveMode}
-import org.apache.spark.{Logging, Partition}
+import org.vitrivr.adampro.datatypes.gis.{GeographyWrapper, GeometryWrapper}
+import org.vitrivr.adampro.utils.Logging
 
 import scala.util.control.NonFatal
 
@@ -18,8 +18,8 @@ import scala.util.control.NonFatal
   * Ivan Giangreco
   * September 2016
   */
-class PostGisRelation(url: String, table: String, parts: Array[Partition], props: Properties = new Properties())(sqlContext: SQLContext)
-  extends JDBCRelation(url, table, parts, props)(sqlContext) with Serializable with Logging {
+class PostGisRelation(url: String, table: String, parts: Array[Partition], parameters: Map[String, String] = Map())(@transient override val sparkSession: SparkSession)
+  extends JDBCRelation(parts, new JDBCOptions(url, table, parameters))(sparkSession) with Serializable with Logging {
 
   /**
     *
@@ -30,8 +30,8 @@ class PostGisRelation(url: String, table: String, parts: Array[Partition], props
     data.write
       .format("org.vitrivr.adampro.storage.sources.gis")
       .mode(if (overwrite) SaveMode.Overwrite else SaveMode.Append)
-      .option("url", props.getProperty("url"))
-      .option("table", props.getProperty("table"))
+      .option("url", parameters.get("url").get)
+      .option("table", parameters.get("table").get)
       .save()
   }
 
@@ -46,23 +46,35 @@ class PostGisRelation(url: String, table: String, parts: Array[Partition], props
       throw new IllegalArgumentException(s"Can't get JDBC type for ${dt.simpleString}"))
   }
 
+  /**
+    *
+    * @param url
+    * @param table
+    * @param parameters
+    * @return
+    */
+  private def getConnection(url: String, table: String, parameters: Map[String, String]): Connection = {
+    val connection = JdbcUtils.createConnectionFactory(new JDBCOptions(url, table, parameters))()
+    connection.asInstanceOf[org.postgresql.PGConnection].addDataType("geometry", classOf[org.postgis.PGgeometry])
+    connection
+  }
 
   /**
     *
     * @param df
     * @param url
     * @param table
-    * @param properties
+    * @param parameters
     */
-  def saveTable(df: DataFrame, url: String, table: String, properties: Properties) {
+  def saveTable(df: DataFrame, url: String, table: String, parameters: Map[String, String]) {
     val dialect = JdbcDialects.get(url)
     val nullTypes: Array[Int] = df.schema.fields.map { field =>
       getJdbcType(field.dataType, dialect).jdbcNullType
     }
 
     val rddSchema = df.schema
-    val getConnection: () => Connection = JdbcUtils.createConnectionFactory(url, properties)
-    val batchSize = properties.getProperty("batchsize", "1000").toInt
+    val getConnection: () => Connection = JdbcUtils.createConnectionFactory(new JDBCOptions(url, table, parameters))
+    val batchSize = parameters.getOrElse("batchsize", "1000").toInt
     df.foreachPartition { iterator =>
       savePartition(getConnection, table, iterator, rddSchema, nullTypes, batchSize, dialect)
     }
@@ -78,9 +90,9 @@ class PostGisRelation(url: String, table: String, parts: Array[Partition], props
   private def insertStatement(conn: Connection, table: String, rddSchema: StructType): PreparedStatement = {
     val columns = rddSchema.fields.map(_.name).mkString(",")
     val placeholders = rddSchema.fields.map(field => {
-      if(field.dataType.isInstanceOf[GeometryWrapperUDT]){
+      if (GeometryWrapper.fitsType(field.dataType)) {
         "ST_GeometryFromText(?)"
-      } else if(field.dataType.isInstanceOf[GeographyWrapperUDT]) {
+      } else if (GeographyWrapper.fitsType(field.dataType)) {
         "ST_GeographyFromText(?)"
       } else {
         "?"
@@ -110,7 +122,7 @@ class PostGisRelation(url: String, table: String, parts: Array[Partition], props
         conn.getMetaData().supportsDataDefinitionAndDataManipulationTransactions()
     } catch {
       case NonFatal(e) =>
-        logWarning("Exception while detecting transaction support", e)
+        log.warn("exception while detecting transaction support", e)
         true
     }
 
@@ -142,15 +154,21 @@ class PostGisRelation(url: String, table: String, parts: Array[Partition], props
                 case TimestampType => stmt.setTimestamp(i + 1, row.getAs[java.sql.Timestamp](i))
                 case DateType => stmt.setDate(i + 1, row.getAs[java.sql.Date](i))
                 case t: DecimalType => stmt.setBigDecimal(i + 1, row.getDecimal(i))
-                case g : GeometryWrapperUDT => stmt.setString(i + 1, row.getAs[GeometryWrapper](i).getValue)
-                case g : GeographyWrapperUDT => stmt.setString(i + 1, row.getAs[GeographyWrapper](i).getValue)
                 case ArrayType(et, _) =>
                   val array = conn.createArrayOf(
                     getJdbcType(et, dialect).databaseTypeDefinition.toLowerCase,
                     row.getSeq[AnyRef](i).toArray)
                   stmt.setArray(i + 1, array)
-                case _ => throw new IllegalArgumentException(
-                  s"Can't translate non-null value for field $i")
+                case x => {
+                  if (GeometryWrapper.fitsType(x)) {
+                    stmt.setString(i + 1, GeometryWrapper.fromRow(row.getStruct(i)).getValue)
+                  } else if (GeographyWrapper.fitsType(x)) {
+                    stmt.setString(i + 1, GeographyWrapper.fromRow(row.getStruct(i)).getValue)
+                  } else {
+                    throw new IllegalArgumentException(
+                      s"Can't translate non-null value for field $i")
+                  }
+                }
               }
             }
             i = i + 1
@@ -186,7 +204,7 @@ class PostGisRelation(url: String, table: String, parts: Array[Partition], props
         try {
           conn.close()
         } catch {
-          case e: Exception => logWarning("Transaction succeeded, but closing failed", e)
+          case e: Exception => log.warn("transaction succeeded, but closing failed", e)
         }
       }
     }

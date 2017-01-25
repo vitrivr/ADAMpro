@@ -1,20 +1,17 @@
 package org.vitrivr.adampro.index.structures.lsh
 
+import org.apache.spark.sql.functions._
+import org.apache.spark.sql.{Row, DataFrame, Dataset}
 import org.vitrivr.adampro.config.FieldNames
-import org.vitrivr.adampro.datatypes.bitString.BitStringUDT
-import org.vitrivr.adampro.entity.Entity
-import org.vitrivr.adampro.entity.Entity._
-import org.vitrivr.adampro.index.Index.{IndexName, IndexTypeName}
+import org.vitrivr.adampro.datatypes.vector.Vector._
+import org.vitrivr.adampro.datatypes.vector.Vector
+import org.vitrivr.adampro.index.Index.IndexTypeName
 import org.vitrivr.adampro.index._
 import org.vitrivr.adampro.index.structures.IndexTypes
 import org.vitrivr.adampro.index.structures.lsh.hashfunction.{EuclideanHashFunction, Hasher, ManhattanHashFunction}
 import org.vitrivr.adampro.index.structures.lsh.signature.LSHSignatureGenerator
 import org.vitrivr.adampro.main.AdamContext
 import org.vitrivr.adampro.query.distance.{DistanceFunction, EuclideanDistance, ManhattanDistance}
-import org.apache.spark.rdd.RDD
-import org.apache.spark.sql.{DataFrame, Row}
-import org.apache.spark.sql.types.{StructField, StructType}
-import org.apache.spark.util.random.Sampling
 
 
 class LSHIndexGenerator(numHashTables: Int, numHashes: Int, m: Int, distance: DistanceFunction, trainingSize: Int)(@transient implicit val ac: AdamContext) extends IndexGenerator {
@@ -22,42 +19,23 @@ class LSHIndexGenerator(numHashTables: Int, numHashes: Int, m: Int, distance: Di
 
   /**
     *
-    * @param indexname  name of index
-    * @param entityname name of entity
-    * @param data       data to index
+    * @param data raw data to index
     * @return
     */
-  override def index(indexname: IndexName, entityname: EntityName, data: RDD[IndexingTaskTuple[_]]): (DataFrame, Serializable) = {
-    val entity = Entity.load(entityname).get
+  override def index(data: DataFrame, attribute : String): (DataFrame, Serializable) = {
+    log.trace("LSH started indexing")
 
-    val n = entity.count
-    val fraction = Sampling.computeFractionForSampleSize(math.max(trainingSize, MINIMUM_NUMBER_OF_TUPLE), n, withReplacement = false)
-    var trainData = data.sample(false, fraction).collect()
-    if (trainData.length < MINIMUM_NUMBER_OF_TUPLE) {
-      trainData = data.take(MINIMUM_NUMBER_OF_TUPLE)
-    }
-
-    val meta = train(trainData)
-
-    log.debug("LSH indexing...")
-
+    val meta = train(getSample(math.max(trainingSize, MINIMUM_NUMBER_OF_TUPLE), attribute)(data))
     val signatureGenerator = new LSHSignatureGenerator(meta.hashTables, meta.m)
 
-    val indexdata = data.map(
-      datum => {
-        //compute hash for each vector
-        val hash = signatureGenerator.toSignature(datum.feature)
-        Row(datum.id, hash)
-      })
+    val signatureUDF = udf((c: DenseSparkVector) => {
+      signatureGenerator.toSignature(Vector.conv_dspark2vec(c)).serialize
+    })
+    val indexed = data.withColumn(FieldNames.featureIndexColumnName, signatureUDF(data(attribute)))
 
-    val schema = StructType(Seq(
-      StructField(entity.pk.name, entity.pk.fieldtype.datatype, nullable = false),
-      StructField(FieldNames.featureIndexColumnName, new BitStringUDT, nullable = false)
-    ))
+    log.trace("LSH finished indexing")
 
-    val df = ac.sqlContext.createDataFrame(indexdata, schema)
-
-    (df, meta)
+    (indexed, meta)
   }
 
   /**
@@ -65,16 +43,16 @@ class LSHIndexGenerator(numHashTables: Int, numHashes: Int, m: Int, distance: Di
     * @param trainData training data
     * @return
     */
-  private def train(trainData: Array[IndexingTaskTuple[_]]): LSHIndexMetaData = {
+  private def train(trainData: Seq[IndexingTaskTuple]): LSHIndexMetaData = {
     log.trace("LSH started training")
 
     //data
-    val dims = trainData.head.feature.size
+    val dims = trainData.head.ap_indexable.size
 
 
     //compute average radius for query
     val radiuses = {
-      val res = for (a <- trainData; b <- trainData) yield (a.id, distance(a.feature, b.feature))
+      val res = for (a <- trainData; b <- trainData) yield (a.ap_id, distance(a.ap_indexable, b.ap_indexable))
       res.groupBy(_._1).map(x => x._2.map(_._2).max)
     }.toSeq
     val radius = radiuses.sum / radiuses.length

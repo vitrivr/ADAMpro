@@ -15,12 +15,12 @@ import scala.concurrent.ExecutionContext
   * Ivan Giangreco
   * March 2016
   */
-class RPCStartup extends Thread with Logging {
+class RPCStartup(port : Int) extends Thread with Logging {
   override def run(): Unit = {
     try {
       log.debug("RPC server starting up")
 
-      val server = new RPCServer(scala.concurrent.ExecutionContext.global)
+      val server = new RPCServer(port)(scala.concurrent.ExecutionContext.global)
       server.start()
 
       log.debug("RPC server running")
@@ -32,11 +32,9 @@ class RPCStartup extends Thread with Logging {
   }
 }
 
-class RPCServer(executionContext: ExecutionContext) {
+private class RPCServer(port : Int)(executionContext: ExecutionContext) {
   self =>
   private var server: Server = null
-
-  private val port = AdamConfig.grpcPort
 
   def start(): Unit = {
     server = NettyServerBuilder.forPort(port)

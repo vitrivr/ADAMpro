@@ -4,7 +4,7 @@ import org.vitrivr.adampro.api.QueryOp
 import org.vitrivr.adampro.catalog.CatalogOperator
 import org.vitrivr.adampro.entity.Entity
 import org.vitrivr.adampro.index.Index
-import org.vitrivr.adampro.main.AdamContext
+import org.vitrivr.adampro.main.{AdamContext, SparkStartup}
 import org.vitrivr.adampro.query.query.NearestNeighbourQuery
 
 /**
@@ -32,7 +32,7 @@ private[optimizer] class NaiveOptimizerHeuristic()(@transient implicit override 
       _.map(_._2)
     }.foreach { case (index, measurements) =>
       val scores = totalScore(index, measurements.flatten).toArray
-      CatalogOperator.createOptimizerOption(name, "scores-index-" + index.indexname, scores)
+      SparkStartup.catalogOperator.createOptimizerOption(name, "scores-index-" + index.indexname, scores)
     }
   }
 
@@ -47,7 +47,7 @@ private[optimizer] class NaiveOptimizerHeuristic()(@transient implicit override 
     }
 
     val scores = totalScore(entity, measurements).toArray
-    CatalogOperator.createOptimizerOption(name, "scores-entity-" + entity.entityname, scores)
+    SparkStartup.catalogOperator.createOptimizerOption(name, "scores-entity-" + entity.entityname, scores)
   }
 
 
@@ -74,8 +74,8 @@ private[optimizer] class NaiveOptimizerHeuristic()(@transient implicit override 
     * @return
     */
   private def getScore(key: String): Double = {
-    if (CatalogOperator.containsOptimizerOptionMeta(name, key).getOrElse(false)) {
-      val metaOpt = CatalogOperator.getOptimizerOptionMeta(name, key)
+    if (SparkStartup.catalogOperator.containsOptimizerOptionMeta(name, key).getOrElse(false)) {
+      val metaOpt = SparkStartup.catalogOperator.getOptimizerOptionMeta(name, key)
 
       if (metaOpt.isSuccess) {
         val scores = metaOpt.get.asInstanceOf[Array[Double]]

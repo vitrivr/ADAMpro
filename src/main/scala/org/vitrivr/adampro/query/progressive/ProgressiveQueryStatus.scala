@@ -50,7 +50,7 @@ class ProgressiveQueryStatusTracker(queryID: String)(implicit ac: AdamContext) e
         intermediateResult = new ProgressiveQueryIntermediateResults(future, observation)
       }
 
-      if (!AdamConfig.evaluation) {
+      if (!ac.config.evaluation) {
         // in evaluation mode we want to keep all results and do not stop, as to be able to measure how
         // much time each index would run
         if (math.abs(intermediateResult.observation.confidence - 1.0) < 0.000001) {

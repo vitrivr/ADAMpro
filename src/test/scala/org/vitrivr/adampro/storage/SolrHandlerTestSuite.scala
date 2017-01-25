@@ -1,9 +1,11 @@
 package org.vitrivr.adampro.storage
 
 import org.vitrivr.adampro.AdamTestBase
-import org.vitrivr.adampro.api.{RandomDataOp, EntityOp}
+import org.vitrivr.adampro.api.{EntityOp, RandomDataOp}
 import org.vitrivr.adampro.datatypes.FieldTypes
 import org.vitrivr.adampro.entity.{AttributeDefinition, Entity}
+
+import scala.util.Random
 
 /**
   * ADAMpro
@@ -15,11 +17,11 @@ class SolrHandlerTestSuite extends AdamTestBase {
 
   scenario("create an entity") {
     withEntityName { entityname =>
-      val ntuples = 1000
+      val ntuples = Random.nextInt(500)
 
       val handlerName = "solr"
       val fieldTypes = Seq(FieldTypes.INTTYPE, FieldTypes.LONGTYPE, FieldTypes.FLOATTYPE, FieldTypes.DOUBLETYPE, FieldTypes.STRINGTYPE, FieldTypes.TEXTTYPE, FieldTypes.BOOLEANTYPE)
-      val attributes = fieldTypes.map(field => AttributeDefinition(field.name + "field", field, storagehandlername = handlerName)) ++ Seq(AttributeDefinition("id", FieldTypes.AUTOTYPE, true, storagehandlername = handlerName))
+      val attributes = fieldTypes.map(field => AttributeDefinition(field.name + "field", field, storagehandlername = handlerName)) ++ Seq(AttributeDefinition("tid", FieldTypes.LONGTYPE, storagehandlername = handlerName))
 
       EntityOp.create(entityname, attributes)
 

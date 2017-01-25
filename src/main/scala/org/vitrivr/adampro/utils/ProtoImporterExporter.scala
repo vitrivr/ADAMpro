@@ -6,10 +6,8 @@ import com.google.protobuf.CodedInputStream
 import io.grpc.stub.StreamObserver
 import org.apache.commons.io.FileUtils
 import org.apache.spark.sql.DataFrame
-import org.apache.spark.sql.types._
 import org.vitrivr.adampro.datatypes.FieldTypes
 import org.vitrivr.adampro.datatypes.FieldTypes.FieldType
-import org.vitrivr.adampro.datatypes.feature.{FeatureVectorWrapper, FeatureVectorWrapperUDT}
 import org.vitrivr.adampro.entity.Entity.EntityName
 import org.vitrivr.adampro.entity.{AttributeDefinition, Entity}
 import org.vitrivr.adampro.exception.GeneralAdamException
@@ -211,7 +209,7 @@ class ProtoImporterExporter()(@transient implicit val ac: AdamContext) extends S
 
     try {
       writeDataFile(entity.getData().get, new File(path, entityname + ".bin"))
-      writeCatalogFile(entityname, entity.schema(), new File(path, entityname + ".catalog"))
+      writeCatalogFile(entityname, entity.schema(fullSchema = false), new File(path, entityname + ".catalog"))
 
       Success(null)
     } catch {
@@ -227,7 +225,7 @@ class ProtoImporterExporter()(@transient implicit val ac: AdamContext) extends S
   private def writeDataFile(data: DataFrame, file: File): Unit = {
     val cols = data.schema
 
-    val messages = data.map(row => {
+    /*val messages = data.map(row => {
       val metadata = cols.map(col => {
         try {
           col.name -> {
@@ -238,7 +236,7 @@ class ProtoImporterExporter()(@transient implicit val ac: AdamContext) extends S
               case IntegerType => DataMessage().withIntData(row.getAs[Integer](col.name))
               case LongType => DataMessage().withLongData(row.getAs[Long](col.name))
               case StringType => DataMessage().withStringData(row.getAs[String](col.name))
-              case _: FeatureVectorWrapperUDT => DataMessage().withFeatureData(FeatureVectorMessage().withDenseVector(DenseVectorMessage(row.getAs[FeatureVectorWrapper](col.name).toSeq)))
+              case _ : ArrayType => DataMessage().withFeatureData(FeatureVectorMessage().withDenseVector(DenseVectorMessage(row.getAs[FeatureVectorWrapper](col.name).toSeq)))
               case _ => DataMessage().withStringData("")
             }
           }
@@ -257,7 +255,7 @@ class ProtoImporterExporter()(@transient implicit val ac: AdamContext) extends S
       fos.flush()
     }
 
-    fos.close()
+    fos.close()*/
   }
 
   /**
@@ -276,12 +274,12 @@ class ProtoImporterExporter()(@transient implicit val ac: AdamContext) extends S
       case FieldTypes.LONGTYPE => AttributeType.LONG
       case FieldTypes.STRINGTYPE => AttributeType.STRING
       case FieldTypes.TEXTTYPE => AttributeType.TEXT
-      case FieldTypes.FEATURETYPE => AttributeType.FEATURE
+      case FieldTypes.VECTORTYPE => AttributeType.FEATURE
       case _ => AttributeType.UNKOWNAT
     }
 
     val attributes = schema.map(attribute => {
-      AttributeDefinitionMessage(attribute.name, matchFields(attribute.fieldtype), attribute.pk, attribute.params, attribute.storagehandler.name)
+      AttributeDefinitionMessage(attribute.name, matchFields(attribute.fieldtype), attribute.params, attribute.storagehandler.name)
     })
 
     val message = new CreateEntityMessage(entityname, attributes)

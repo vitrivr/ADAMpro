@@ -32,9 +32,9 @@ object ProgressiveQueryHandler extends Logging {
     * @param id          query id
     * @return
     */
-  def progressiveQuery[U](entityname: EntityName, nnq: NearestNeighbourQuery, bq: Option[BooleanQuery], pathChooser: ProgressivePathChooser, onComplete: Try[ProgressiveObservation] => U, options: Option[QueryEvaluationOptions] = None, id: Option[String] = None)(implicit ac: AdamContext): ProgressiveQueryStatusTracker = {
+  def progressiveQuery[U](entityname: EntityName, nnq: NearestNeighbourQuery, bq: Option[BooleanQuery], pathChooser: ProgressivePathChooser, onComplete: Try[ProgressiveObservation] => U, options: Option[QueryEvaluationOptions], id: Option[String])(implicit ac: AdamContext): ProgressiveQueryStatusTracker = {
     val filter = if (bq.isDefined) {
-      new BooleanFilterScanExpression(entityname)(bq.get)().prepareTree().evaluate(options)
+      new BooleanFilterScanExpression(entityname)(bq.get, None)(None)(ac).prepareTree().evaluate(options)
     } else {
       None
     }
@@ -60,7 +60,7 @@ object ProgressiveQueryHandler extends Logging {
     * @param id         query id
     * @return a tracker for the progressive query
     */
-  private def progressiveQuery[U](exprs: Seq[QueryExpression], filter: Option[DataFrame], onComplete: Try[ProgressiveObservation] => U, options: Option[QueryEvaluationOptions] = None, id: Option[String] = None)(implicit ac: AdamContext): ProgressiveQueryStatusTracker = {
+  private def progressiveQuery[U](exprs: Seq[QueryExpression], filter: Option[DataFrame], onComplete: Try[ProgressiveObservation] => U, options: Option[QueryEvaluationOptions], id: Option[String])(implicit ac: AdamContext): ProgressiveQueryStatusTracker = {
     val tracker = new ProgressiveQueryStatusTracker(id.getOrElse(""))
     log.debug("performing progressive query with " + exprs.length + " paths: " + exprs.map(expr => expr.info.scantype.getOrElse("<missing scantype>") + " (" + expr.info.source.getOrElse("<missing source>") + ")").mkString(", "))
 
@@ -84,9 +84,9 @@ object ProgressiveQueryHandler extends Logging {
     * @param id          query id
     * @return
     */
-  def timedProgressiveQuery[U](entityname: EntityName, nnq: NearestNeighbourQuery, bq: Option[BooleanQuery], pathChooser: ProgressivePathChooser, timelimit: Duration, options: Option[QueryEvaluationOptions] = None, id: Option[String] = None)(implicit ac: AdamContext): ProgressiveObservation = {
+  def timedProgressiveQuery[U](entityname: EntityName, nnq: NearestNeighbourQuery, bq: Option[BooleanQuery], pathChooser: ProgressivePathChooser, timelimit: Duration, options: Option[QueryEvaluationOptions], id: Option[String])(implicit ac: AdamContext): ProgressiveObservation = {
     val filter = if (bq.isDefined) {
-      new BooleanFilterScanExpression(entityname)(bq.get)().prepareTree().evaluate(options)
+      new BooleanFilterScanExpression(entityname)(bq.get, None)(None)(ac).prepareTree().evaluate(options)
     } else {
       None
     }
@@ -112,9 +112,9 @@ object ProgressiveQueryHandler extends Logging {
     * @param id        query id
     * @return the results available together with a confidence score
     */
-  def timedProgressiveQuery(exprs: Seq[QueryExpression], timelimit: Duration, filter: Option[DataFrame], options: Option[QueryEvaluationOptions] = None, id: Option[String] = None)(implicit ac: AdamContext): ProgressiveObservation = {
+  def timedProgressiveQuery(exprs: Seq[QueryExpression], timelimit: Duration, filter: Option[DataFrame], options: Option[QueryEvaluationOptions], id: Option[String])(implicit ac: AdamContext): ProgressiveObservation = {
     log.debug("timed progressive query performs kNN query")
-    val tracker = progressiveQuery[Unit](exprs, filter, (observation: Try[ProgressiveObservation]) => (), options)
+    val tracker = progressiveQuery[Unit](exprs, filter, (observation: Try[ProgressiveObservation]) => (), options, id)
 
     val timerFuture = Future {
       val sleepTime = Duration(500.toLong, "millis")

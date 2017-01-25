@@ -1,20 +1,20 @@
 package org.vitrivr.adampro.index.structures.va
 
+import org.apache.spark.broadcast.Broadcast
+import org.apache.spark.sql.{DataFrame}
 import org.vitrivr.adampro.config.FieldNames
-import org.vitrivr.adampro.datatypes.bitString.BitString
-import org.vitrivr.adampro.datatypes.feature.Feature._
-import org.vitrivr.adampro.index.Index
+import org.vitrivr.adampro.datatypes.bitstring.BitString
+import org.vitrivr.adampro.datatypes.vector.Vector._
+import org.vitrivr.adampro.index.{ResultElement, Index}
 import org.vitrivr.adampro.index.Index.{IndexName, IndexTypeName}
 import org.vitrivr.adampro.index.structures.IndexTypes
 import org.vitrivr.adampro.index.structures.va.VAIndex.{Bounds, Marks}
 import org.vitrivr.adampro.index.structures.va.signature.{FixedSignatureGenerator, VariableSignatureGenerator}
 import org.vitrivr.adampro.main.AdamContext
-import org.vitrivr.adampro.query.Result
 import org.vitrivr.adampro.query.distance.Distance._
 import org.vitrivr.adampro.query.distance.{DistanceFunction, MinkowskiDistance}
 import org.vitrivr.adampro.query.query.NearestNeighbourQuery
-import org.apache.spark.broadcast.Broadcast
-import org.apache.spark.sql.{DataFrame, Row}
+import org.apache.spark.sql.functions._
 
 /**
   * adamtwo
@@ -23,7 +23,7 @@ import org.apache.spark.sql.{DataFrame, Row}
   * August 2015
   */
 class VAIndex(override val indexname: IndexName)(@transient override implicit val ac: AdamContext)
-  extends Index(indexname) {
+  extends Index(indexname)(ac) {
 
   lazy val meta = metadata.get.asInstanceOf[VAIndexMetaData]
 
@@ -50,7 +50,7 @@ class VAIndex(override val indexname: IndexName)(@transient override implicit va
     * @param k        number of elements to retrieve (of the k nearest neighbor search), possibly more than k elements are returned
     * @return a set of candidate tuple ids, possibly together with a tentative score (the number of tuples will be greater than k)
     */
-  override def scan(data: DataFrame, q: FeatureVector, distance: DistanceFunction, options: Map[String, String], k: Int): DataFrame = {
+  override def scan(data: DataFrame, q: MathVector, distance: DistanceFunction, options: Map[String, String], k: Int): DataFrame = {
     log.debug("scanning VA-File index " + indexname)
 
     val signatureGenerator = ac.sc.broadcast(meta.signatureGenerator)
@@ -59,14 +59,14 @@ class VAIndex(override val indexname: IndexName)(@transient override implicit va
     val lbounds = ac.sc.broadcast(bounds._1)
     val ubounds = ac.sc.broadcast(bounds._2)
 
-    import org.apache.spark.sql.functions._
-    val cellsUDF = udf((c: BitString[_]) => {
-      signatureGenerator.value.toCells(c)
+    //compute the cells
+    val cellsUDF = udf((c: Array[Byte]) => {
+      signatureGenerator.value.toCells(BitString.fromByteArray(c))
     })
 
-
+    //compute the approximate distance given the cells
     val distUDF = (bounds: Broadcast[Bounds]) => udf((cells: Seq[Int]) => {
-      var bound: Float = 0
+      var bound : VectorBase = 0
 
       var idx = 0
       while (idx < cells.length) {
@@ -77,11 +77,14 @@ class VAIndex(override val indexname: IndexName)(@transient override implicit va
       bound
     })
 
+    import ac.spark.implicits._
 
-    val results = data
+    val tmp = data
       .withColumn("ap_cells", cellsUDF(data(FieldNames.featureIndexColumnName)))
       .withColumn("ap_lbound", distUDF(lbounds)(col("ap_cells")))
       .withColumn("ap_ubound", distUDF(ubounds)(col("ap_cells"))) //note that this is computed lazy!
+
+    val results = tmp
       .mapPartitions(p => {
       //in here  we compute for each partition the k nearest neighbours and collect the results
       val localRh = new VAResultHandler(k)
@@ -91,13 +94,13 @@ class VAIndex(override val indexname: IndexName)(@transient override implicit va
         localRh.offer(current, this.pk.name)
       }
 
-      localRh.results.map(x => Row(x.tid, x.lower)).iterator
-    })
-
+      localRh.results.map(x => ResultElement(x.ap_id, x.ap_lower)).iterator
+    }).toDF()
 
     //the most correct solution would be to re-do at this point the result handler with the pre-selected results again
     //but in most cases this will be less efficient than just considering all candidates
-    ac.sqlContext.createDataFrame(results, Result.resultSchema(pk))
+
+    results
   }
 
   override def isQueryConform(nnq: NearestNeighbourQuery): Boolean = {
@@ -109,13 +112,14 @@ class VAIndex(override val indexname: IndexName)(@transient override implicit va
   }
 
   /**
+    * Computes the distances to all bounds.
     *
     * @param q        query vector
     * @param marks    marks
     * @param distance distance function
     * @return
     */
-  private[this] def computeBounds(q: FeatureVector, marks: => Marks, @inline distance: MinkowskiDistance): (Bounds, Bounds) = {
+  private[this] def computeBounds(q: MathVector, marks: => Marks, @inline distance: MinkowskiDistance): (Bounds, Bounds) = {
     val lbounds, ubounds = Array.tabulate(marks.length)(i => Array.ofDim[Distance](marks(i).length - 1))
 
     var i = 0

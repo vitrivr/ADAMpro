@@ -1,16 +1,16 @@
 package org.vitrivr.adampro.index.structures.ecp
 
+import org.apache.spark.sql.DataFrame
+import org.apache.spark.sql.functions._
+import org.apache.spark.sql.types.DataTypes
 import org.vitrivr.adampro.config.FieldNames
-import org.vitrivr.adampro.datatypes.feature.Feature.FeatureVector
+import org.vitrivr.adampro.datatypes.vector.Vector._
 import org.vitrivr.adampro.index.Index.{IndexName, IndexTypeName}
 import org.vitrivr.adampro.index._
 import org.vitrivr.adampro.index.structures.IndexTypes
 import org.vitrivr.adampro.main.AdamContext
 import org.vitrivr.adampro.query.distance.DistanceFunction
 import org.vitrivr.adampro.query.query.NearestNeighbourQuery
-import org.apache.spark.sql.DataFrame
-import org.apache.spark.sql.functions._
-import org.apache.spark.sql.types.DataTypes
 
 
 /**
@@ -20,7 +20,7 @@ import org.apache.spark.sql.types.DataTypes
   * October 2015
   */
 class ECPIndex(override val indexname: IndexName)(@transient override implicit val ac: AdamContext)
-  extends Index(indexname) {
+  extends Index(indexname)(ac) {
 
   override val indextypename: IndexTypeName = IndexTypes.ECPINDEX
   override val lossy: Boolean = true
@@ -37,12 +37,12 @@ class ECPIndex(override val indexname: IndexName)(@transient override implicit v
     * @param k        number of elements to retrieve (of the k nearest neighbor search), possibly more than k elements are returned
     * @return a set of candidate tuple ids, possibly together with a tentative score (the number of tuples will be greater than k)
     */
-  override def scan(data: DataFrame, q: FeatureVector, distance: DistanceFunction, options: Map[String, String], k: Int): DataFrame = {
+  override def scan(data: DataFrame, q: MathVector, distance: DistanceFunction, options: Map[String, String], k: Int): DataFrame = {
     log.debug("scanning eCP index " + indexname)
 
     //for every leader, check its distance to the query-vector, then sort by distance.
     val centroids = meta.leaders.map(l => {
-      (l, meta.distance(q, l.feature))
+      (l, meta.distance(q, l.vector))
     }).sortBy(_._2)
 
     //take so many centroids up to the moment where the result-length is over k (therefore + 1)

@@ -238,7 +238,7 @@ class AdamController(rpcClient: RPCClient) extends Controller with Logging {
     *
     */
   post("/entity/partition") { request: EntityPartitionRequest =>
-    val res = rpcClient.entityPartition(request.entityname, request.npartitions, request.attributes.filter(_.length > 0), request.materialize, request.replace)
+    val res = rpcClient.entityPartition(request.entityname, request.npartitions, Some(request.attribute), request.materialize, request.replace)
 
     if (res.isSuccess) {
       response.ok.json(GeneralResponse(200, res.get))
@@ -285,7 +285,7 @@ class AdamController(rpcClient: RPCClient) extends Controller with Logging {
     *
     */
   post("/index/partition") { request: IndexPartitionRequest =>
-    val res = rpcClient.indexPartition(request.indexname, request.npartitions, request.attributes.filter(_.length > 0), request.materialize, request.replace)
+    val res = rpcClient.indexPartition(request.indexname, request.npartitions, Some(request.attribute), request.materialize, request.replace)
 
     if (res.isSuccess) {
       response.ok.json(GeneralResponse(200, res.get))

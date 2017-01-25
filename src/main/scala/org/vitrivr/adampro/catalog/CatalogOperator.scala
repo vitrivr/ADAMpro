@@ -9,9 +9,10 @@ import org.vitrivr.adampro.datatypes.FieldTypes
 import org.vitrivr.adampro.entity.Entity.EntityName
 import org.vitrivr.adampro.entity.{AttributeDefinition, EntityNameHolder}
 import org.vitrivr.adampro.exception._
-import org.vitrivr.adampro.helpers.partition.CustomPartitioner
+import org.vitrivr.adampro.index.partition.CustomPartitioner
 import org.vitrivr.adampro.index.Index.{IndexName, IndexTypeName}
 import org.vitrivr.adampro.index.structures.IndexTypes
+import org.vitrivr.adampro.main.AdamContext
 import org.vitrivr.adampro.utils.Logging
 import slick.dbio.NoStream
 import slick.driver.DerbyDriver.api._
@@ -28,7 +29,7 @@ import scala.util.{Failure, Success, Try}
   * Ivan Giangreco
   * August 2015
   */
-object CatalogOperator extends Logging {
+class CatalogOperator(internalsPath : String) extends Logging {
   private val MAX_WAITING_TIME: Duration = 100.seconds
 
   try {
@@ -42,11 +43,9 @@ object CatalogOperator extends Logging {
 
   private val ds = new ComboPooledDataSource
   ds.setDriverClass("org.apache.derby.jdbc.EmbeddedDriver")
-  ds.setJdbcUrl("jdbc:derby:" + AdamConfig.internalsPath + "/ap_catalog" + "")
+  ds.setJdbcUrl("jdbc:derby:" + internalsPath + "/ap_catalog" + "")
 
   private val DB = Database.forDataSource(ds)
-
-  private[catalog] val SCHEMA = "adampro"
 
   private val _entitites = TableQuery[EntityCatalog]
   private val _entityOptions = TableQuery[EntityOptionsCatalog]
@@ -67,19 +66,21 @@ object CatalogOperator extends Logging {
     * Initializes the catalog. Method is called at the beginning (see below).
     */
   private def init() {
-    val connection = Database.forURL("jdbc:derby:" + AdamConfig.internalsPath + "/ap_catalog" + ";create=true")
+    val connection = Database.forURL("jdbc:derby:" + internalsPath + "/ap_catalog" + ";create=true")
 
     try {
       val actions = new ListBuffer[DBIOAction[_, NoStream, _]]()
 
-      val schemaExists = Await.result(connection.run(sql"""SELECT COUNT(*) FROM SYS.SYSSCHEMAS WHERE SCHEMANAME = '#$SCHEMA'""".as[Int]), MAX_WAITING_TIME).headOption
+      val schema = CatalogOperator.SCHEMA
+
+      val schemaExists = Await.result(connection.run(sql"""SELECT COUNT(*) FROM SYS.SYSSCHEMAS WHERE SCHEMANAME = '#$schema'""".as[Int]), MAX_WAITING_TIME).headOption
 
       if (schemaExists.isEmpty || schemaExists.get == 0) {
         //schema might not exist yet
-        actions += sqlu"""CREATE SCHEMA #$SCHEMA"""
+        actions += sqlu"""CREATE SCHEMA #$schema"""
       }
 
-      val tables = Await.result(connection.run(sql"""SELECT TABLENAME FROM SYS.SYSTABLES NATURAL JOIN SYS.SYSSCHEMAS WHERE SCHEMANAME = '#$SCHEMA'""".as[String]), MAX_WAITING_TIME).toSeq
+      val tables = Await.result(connection.run(sql"""SELECT TABLENAME FROM SYS.SYSTABLES NATURAL JOIN SYS.SYSSCHEMAS WHERE SCHEMANAME = '#$schema'""".as[String]), MAX_WAITING_TIME).toSeq
 
       CATALOGS.foreach { catalog =>
         if (!tables.contains(catalog.baseTableRow.tableName)) {
@@ -427,7 +428,9 @@ object CatalogOperator extends Logging {
       val query = _attributes.filter(_.entityname === entityname.toString()).filter(_.isPK).map(_.attributename).result
       val pkfield = Await.result(DB.run(query), MAX_WAITING_TIME).head
 
-      getAttributes(entityname, Some(pkfield)).get.head
+      val res = getAttributes(entityname, Some(pkfield)).get.head
+      assert(res != null)
+      res
     }
   }
 
@@ -459,7 +462,7 @@ object CatalogOperator extends Logging {
 
         val params = options.getOrElse(name, Map())
 
-        AttributeDefinition(name, fieldtype, pk, handlerName, params)
+        AttributeDefinition(name, fieldtype, handlerName, params)
       })
 
       attributeDefinitions
@@ -929,4 +932,8 @@ object CatalogOperator extends Logging {
       null
     }
   }
+}
+
+object CatalogOperator {
+  private[catalog] val SCHEMA = "adampro"
 }

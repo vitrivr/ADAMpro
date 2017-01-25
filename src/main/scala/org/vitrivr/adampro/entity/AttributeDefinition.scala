@@ -1,5 +1,6 @@
 package org.vitrivr.adampro.entity
 
+import org.vitrivr.adampro.config.FieldNames
 import org.vitrivr.adampro.datatypes.FieldTypes.FieldType
 import org.vitrivr.adampro.exception.GeneralAdamException
 import org.vitrivr.adampro.main.AdamContext
@@ -15,15 +16,22 @@ import scala.collection.mutable.ListBuffer
   *
   * @param name      name of attribute
   * @param fieldtype type of field
-  * @param pk        is primary key
   * @param storagehandlername
   * @param params
   */
-case class AttributeDefinition(name: String, fieldtype: FieldType, pk: Boolean = false, storagehandlername: String, params: Map[String, String] = Map()) {
-  def this(name: String, fieldtype: FieldType, pk: Boolean, params: Map[String, String] = Map())(implicit ac: AdamContext) {
-    this(name, fieldtype, pk, ac.storageHandlerRegistry.value.get(fieldtype).get.name, params)
+case class AttributeDefinition(name: String, fieldtype: FieldType, storagehandlername: String, params: Map[String, String] = Map()) {
+  def this(name: String, fieldtype: FieldType, params: Map[String, String])(implicit ac: AdamContext) {
+    this(name, fieldtype, ac.storageHandlerRegistry.value.get(fieldtype).get.name, params)
   }
 
+  def this(name: String, fieldtype: FieldType)(implicit ac: AdamContext) {
+    this(name, fieldtype, ac.storageHandlerRegistry.value.get(fieldtype).get.name, Map[String, String]())
+  }
+
+  /**
+    * is attribute primary key
+    */
+  @deprecated val pk : Boolean = (name == FieldNames.internalIdColumnName)
 
   /**
     * Returns the storage handler for the given attribute (it possibly uses a fallback, if no storagehandlername is specified by using the fieldtype)
@@ -37,7 +45,6 @@ case class AttributeDefinition(name: String, fieldtype: FieldType, pk: Boolean =
       throw new GeneralAdamException("no handler found for " + storagehandlername)
     }
   }
-
 
   /**
     * Returns a map of properties to the entity. Useful for printing.

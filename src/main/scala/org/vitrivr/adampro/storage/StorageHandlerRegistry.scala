@@ -74,7 +74,7 @@ class StorageHandlerRegistry extends Logging {
     */
   def register(configname: String)(implicit ac: AdamContext): Unit = {
     try {
-      val props: Map[String, String] = AdamConfig.getStorageProperties(configname).toMap
+      val props: Map[String, String] = ac.config.getStorageProperties(configname).toMap
 
       val engineName = props.get("engine")
       if (engineName.isEmpty) {

@@ -14,4 +14,4 @@ private[web] case class IndexCreateAllRequest(entityname: String, attributes: Se
 
 private[web] case class IndexDetailResponse(code: Int, indexname: String, details: Map[String, String])
 
-private[web] case class IndexPartitionRequest(indexname: String, npartitions: Int, materialize: Boolean, replace: Boolean, attributes: Seq[String])
+private[web] case class IndexPartitionRequest(indexname: String, npartitions: Int, materialize: Boolean, replace: Boolean, attribute: String)

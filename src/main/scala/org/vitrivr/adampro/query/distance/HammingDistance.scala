@@ -1,6 +1,6 @@
 package org.vitrivr.adampro.query.distance
 
-import org.vitrivr.adampro.datatypes.feature.Feature.VectorBase
+import org.vitrivr.adampro.datatypes.vector.Vector.VectorBase
 import org.vitrivr.adampro.query.distance.Distance.Distance
 
 /**

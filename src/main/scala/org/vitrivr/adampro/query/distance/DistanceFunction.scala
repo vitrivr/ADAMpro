@@ -1,6 +1,6 @@
 package org.vitrivr.adampro.query.distance
 
-import org.vitrivr.adampro.datatypes.feature.Feature._
+import org.vitrivr.adampro.datatypes.vector.Vector._
 import org.vitrivr.adampro.query.distance.Distance._
 
 /**
@@ -11,5 +11,5 @@ import org.vitrivr.adampro.query.distance.Distance._
   */
 @SerialVersionUID(100L)
 trait DistanceFunction extends Serializable {
-  def apply(v1_q: FeatureVector, v2: FeatureVector, weights: Option[FeatureVector] = None): Distance
+  def apply(v1_q: MathVector, v2: MathVector, weights: Option[MathVector] = None): Distance
 }

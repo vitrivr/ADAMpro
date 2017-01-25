@@ -7,7 +7,7 @@ name := "ADAMpro"
 lazy val commonSettings = Seq(
   organization := "org.vitrivr",
   version := "0.1.0",
-  scalaVersion := "2.10.5"
+  scalaVersion := "2.11.7"
 )
 
 //projects
@@ -32,15 +32,15 @@ lazy val importer = project.dependsOn(grpcclient).
 
 //build
 lazy val buildSettings = Seq(
-  scalaVersion := "2.10.5",
-  crossScalaVersions := Seq("2.10.5"),
+  scalaVersion := "2.11.7",
+  crossScalaVersions := Seq("2.11.7"),
   ivyScala := ivyScala.value.map(_.copy(overrideScalaVersion = true))
 )
 
 mainClass in(Compile, run) := Some("org.vitrivr.adampro.main.Startup")
 
 unmanagedResourceDirectories in Compile += baseDirectory.value / "conf"
-scalacOptions ++= Seq("-target:jvm-1.7")
+scalacOptions ++= Seq()
 
 //lib resolvers
 resolvers ++= Seq(
@@ -51,22 +51,20 @@ resolvers += Resolver.sonatypeRepo("snapshots")
 
 //base libs
 val baseLibs = Seq(
-  "org.scala-lang" % "scala-compiler" % "2.10.5",
-  "org.scala-lang" % "scala-reflect" % "2.10.5"
+  "org.scala-lang" % "scala-compiler" % "2.11.7",
+  "org.scala-lang" % "scala-reflect" % "2.11.7"
 )
 
 //adampro core libs
 val coreLibs = Seq(
-  "org.apache.spark" %% "spark-core" % "1.6.3" excludeAll ExclusionRule("org.apache.hadoop"), //make sure that you use the same spark version as in your deployment!
-  "org.apache.spark" %% "spark-sql" % "1.6.3",
-  "org.apache.spark" %% "spark-hive" % "1.6.3",
-  "org.apache.spark" %% "spark-mllib" % "1.6.3",
+  "org.apache.spark" %% "spark-core" % "2.1.0" excludeAll ExclusionRule("org.apache.hadoop"), //make sure that you use the same spark version as in your deployment!
+  "org.apache.spark" %% "spark-sql" % "2.1.0",
+  "org.apache.spark" %% "spark-hive" % "2.1.0",
+  "org.apache.spark" %% "spark-mllib" % "2.1.0",
   "org.apache.hadoop" % "hadoop-client" % "2.7.0" excludeAll ExclusionRule("javax.servlet") //make sure that you use the same hadoop version as in your deployment!
 ).map(
   _.excludeAll(
-    ExclusionRule("org.scala-lang"),
-    ExclusionRule("org.slf4j"),
-    ExclusionRule("log4j")
+    ExclusionRule("org.scala-lang")
   )
 )
 //TODO: add multiple configurations to sbt, one which has coreLibs as provided (as they do not have to be submitted to spark)
@@ -95,21 +93,13 @@ val secondaryLibs = Seq(
   )
 )
 
-//log libs
-val logLibs = Seq(
-  "org.apache.logging.log4j" % "log4j-api" % "2.7",
-  "org.apache.logging.log4j" % "log4j-core" % "2.7",
-  "org.slf4j" % "slf4j-api" % "1.7.22",
-  "org.apache.logging.log4j" % "log4j-slf4j-impl" % "2.7"
-)
 
 //tertiary libs
 val tertiaryLibs = Seq(
-  "com.lucidworks.spark" % "spark-solr" % "2.2.3",
+  "com.lucidworks.spark" % "spark-solr" % "3.0.0-alpha.2",
   "org.postgresql" % "postgresql" % "9.4.1208",
-  "com.datastax.spark" %% "spark-cassandra-connector" % "1.6.2",
-  "net.postgis" % "postgis-jdbc" % "2.2.1",
-  "com.databricks" %% "spark-avro" % "2.0.1"
+  "com.datastax.spark" % "spark-cassandra-connector_2.11" % "2.0.0-M3",
+  "net.postgis" % "postgis-jdbc" % "2.2.1"
 ).map(
   _.excludeAll(
     ExclusionRule("org.scala-lang"),
@@ -120,7 +110,8 @@ val tertiaryLibs = Seq(
 
 //test libs
 val testLibs = Seq(
-  "org.scalatest" %% "scalatest" % "3.0.0"
+  "org.scalatest" %% "scalatest" % "3.0.0",
+  "io.grpc" % "grpc-netty" % "1.0.1"
 ).map(
   _.excludeAll(
     ExclusionRule("org.scala-lang"),
@@ -129,7 +120,7 @@ val testLibs = Seq(
   )
 )
 
-libraryDependencies := baseLibs ++ coreLibs ++ secondaryLibs ++ logLibs ++ tertiaryLibs ++ testLibs
+libraryDependencies := baseLibs ++ coreLibs ++ secondaryLibs ++ tertiaryLibs ++ testLibs
 
 unmanagedBase <<= baseDirectory { base => base / "lib" }
 unmanagedResourceDirectories in Compile += baseDirectory.value / "conf"

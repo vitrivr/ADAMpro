@@ -1,7 +1,8 @@
 package org.vitrivr.adampro.index.structures.va.marks
 
-import breeze.linalg.{max, min}
-import org.vitrivr.adampro.datatypes.feature.Feature._
+import breeze.linalg.{DenseVector, max, min}
+import org.vitrivr.adampro.datatypes.vector.Vector
+import org.vitrivr.adampro.datatypes.vector.Vector._
 import org.vitrivr.adampro.index.IndexingTaskTuple
 import org.vitrivr.adampro.index.structures.va.VAIndex.Marks
 import org.vitrivr.adampro.utils.Logging
@@ -23,12 +24,12 @@ private[va] object EquidistantMarksGenerator extends MarksGenerator with Seriali
     * @param maxMarks maximal number of marks
     * @return
     */
-  private[va] def getMarks(samples: Array[IndexingTaskTuple[_]], maxMarks: Seq[Int]): Marks = {
+  private[va] def getMarks(samples: Seq[IndexingTaskTuple], maxMarks: Seq[Int]): Marks = {
     log.debug("get equidistant marks for VA-File")
     val dimensionality = maxMarks.length
 
-    val min = getMin(samples.map(_.feature))
-    val max = getMax(samples.map(_.feature))
+    val min = getMin(samples.map(_.ap_indexable)).toArray
+    val max = getMax(samples.map(_.ap_indexable)).toArray
 
     (min zip max).zipWithIndex.map { case (minmax, index) => Seq.tabulate(maxMarks(index))(_ * (minmax._2 - minmax._1) / maxMarks(index).toFloat + minmax._1).toList }
   }
@@ -38,9 +39,9 @@ private[va] object EquidistantMarksGenerator extends MarksGenerator with Seriali
     * @param data
     * @return
     */
-  private def getMin(data: Array[FeatureVector]): FeatureVector = {
+  private def getMin(data: Seq[MathVector]): MathVector = {
     val dimensionality = data.head.size
-    val base: FeatureVector = Seq.fill(dimensionality)(Float.MaxValue)
+    val base : MathVector = DenseVector.fill(dimensionality)(Vector.maxValue)
 
     data.foldLeft(base)((baseV, newV) => min(baseV, newV))
   }
@@ -50,9 +51,9 @@ private[va] object EquidistantMarksGenerator extends MarksGenerator with Seriali
     * @param data
     * @return
     */
-  private def getMax(data: Array[FeatureVector]): FeatureVector = {
+  private def getMax(data: Seq[MathVector]): MathVector = {
     val dimensionality = data.head.size
-    val base: FeatureVector = Seq.fill(dimensionality)(Float.MinValue)
+    val base : MathVector = DenseVector.fill(dimensionality)(Vector.minValue)
 
     data.foldLeft(base)((baseV, newV) => max(baseV, newV))
   }

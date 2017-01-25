@@ -1,6 +1,6 @@
 package org.vitrivr.adampro.index.structures.va.signature
 
-import org.vitrivr.adampro.datatypes.bitString.BitString
+import org.vitrivr.adampro.datatypes.bitstring.BitString
 
 /**
  * adamtwo

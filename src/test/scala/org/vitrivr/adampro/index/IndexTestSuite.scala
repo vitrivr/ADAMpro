@@ -3,12 +3,12 @@ package org.vitrivr.adampro.index
 import org.vitrivr.adampro.AdamTestBase
 import org.vitrivr.adampro.api.{EntityOp, IndexOp}
 import org.vitrivr.adampro.datatypes.FieldTypes
-import org.vitrivr.adampro.datatypes.feature.{FeatureVectorWrapper, FeatureVectorWrapperUDT}
 import org.vitrivr.adampro.entity.{AttributeDefinition, Entity}
 import org.vitrivr.adampro.index.structures.IndexTypes
 import org.vitrivr.adampro.query.distance.EuclideanDistance
-import org.apache.spark.sql.Row
+import org.apache.spark.sql.{Row, types}
 import org.apache.spark.sql.types.{LongType, StructField, StructType}
+import org.vitrivr.adampro.datatypes.vector.Vector
 
 import scala.util.Random
 
@@ -35,7 +35,7 @@ class IndexTestSuite extends AdamTestBase {
         assert(entity.isSuccess)
 
         When("creating the index")
-        val index = IndexOp(entityname, "feature", IndexTypes.ECPINDEX, EuclideanDistance)
+        val index = IndexOp.create(entityname, "feature", IndexTypes.ECPINDEX, EuclideanDistance)
 
         if(index.isFailure){
           throw index.failed.get
@@ -61,29 +61,29 @@ class IndexTestSuite extends AdamTestBase {
     scenario("create and drop indexes of entity with multiple features") {
       Given("an entity with multiple feature vector fields without metadata")
       withEntityName { entityname =>
-        Entity.create(entityname, Seq(new AttributeDefinition("idfield", FieldTypes.LONGTYPE, true), new AttributeDefinition("feature1", FieldTypes.FEATURETYPE, false), new AttributeDefinition("feature2", FieldTypes.FEATURETYPE, false)))
+        Entity.create(entityname, Seq(new AttributeDefinition("idfield", FieldTypes.LONGTYPE), new AttributeDefinition("feature1", FieldTypes.VECTORTYPE), new AttributeDefinition("feature2", FieldTypes.VECTORTYPE)))
 
         val schema = StructType(Seq(
           StructField("idfield", LongType, false),
-          StructField("feature1", new FeatureVectorWrapperUDT, false),
-          StructField("feature2", new FeatureVectorWrapperUDT, false)
+          StructField("feature1", FieldTypes.VECTORTYPE.datatype, false),
+          StructField("feature2", FieldTypes.VECTORTYPE.datatype, false)
         ))
         val rdd = ac.sc.parallelize((0 until ntuples).map(id =>
-          Row(Random.nextLong(), new FeatureVectorWrapper(Seq.fill(ndims)(Random.nextFloat())), new FeatureVectorWrapper(Seq.fill(ndims)(Random.nextFloat())))
+          Row(Random.nextLong(), Seq.fill(ndims)(Vector.nextRandom()), Seq.fill(ndims)(Vector.nextRandom()))
         ))
         val data = ac.sqlContext.createDataFrame(rdd, schema)
         EntityOp.insert(entityname, data)
 
 
         When("creating the first index")
-        val index1 = IndexOp(entityname, "feature1", IndexTypes.ECPINDEX, EuclideanDistance)
+        val index1 = IndexOp.create(entityname, "feature1", IndexTypes.ECPINDEX, EuclideanDistance)
         assert(index1.isSuccess)
 
         Then("the index should be created")
         assert(Index.exists(index1.get.indexname))
 
         When("creating the second index")
-        val index2 = IndexOp(entityname, "feature1", IndexTypes.ECPINDEX, EuclideanDistance)
+        val index2 = IndexOp.create(entityname, "feature1", IndexTypes.ECPINDEX, EuclideanDistance)
         assert(index2.isSuccess)
 
         Then("the index should be created")
@@ -115,7 +115,7 @@ class IndexTestSuite extends AdamTestBase {
         assert(entity.isSuccess)
 
         When("creating the index")
-        val index = IndexOp(entityname, "feature", IndexTypes.ECPINDEX, EuclideanDistance)
+        val index = IndexOp.create(entityname, "feature", IndexTypes.ECPINDEX, EuclideanDistance)
         assert(index.isSuccess)
 
         Then("the index should be created")
@@ -139,7 +139,7 @@ class IndexTestSuite extends AdamTestBase {
         assert(entity.isSuccess)
 
         When("an eCP index is created")
-        val index = IndexOp(entityname, "feature", IndexTypes.ECPINDEX, EuclideanDistance)
+        val index = IndexOp.create(entityname, "feature", IndexTypes.ECPINDEX, EuclideanDistance)
         assert(index.isSuccess)
 
         Then("the index has been created")
@@ -161,7 +161,7 @@ class IndexTestSuite extends AdamTestBase {
         assert(entity.isSuccess)
 
         When("an LSH index is created")
-        val index = IndexOp(entityname, "feature", IndexTypes.LSHINDEX, EuclideanDistance)
+        val index = IndexOp.create(entityname, "feature", IndexTypes.LSHINDEX, EuclideanDistance)
         assert(index.isSuccess)
 
         Then("the index has been created")
@@ -183,7 +183,7 @@ class IndexTestSuite extends AdamTestBase {
         assert(entity.isSuccess)
 
         When("an SH index is created")
-        val index = IndexOp(entityname, "feature", IndexTypes.PQINDEX, EuclideanDistance)
+        val index = IndexOp.create(entityname, "feature", IndexTypes.PQINDEX, EuclideanDistance)
         assert(index.isSuccess)
 
         Then("the index has been created")
@@ -205,7 +205,7 @@ class IndexTestSuite extends AdamTestBase {
         assert(entity.isSuccess)
 
         When("an SH index is created")
-        val index = IndexOp(entityname, "feature", IndexTypes.SHINDEX, EuclideanDistance)
+        val index = IndexOp.create(entityname, "feature", IndexTypes.SHINDEX, EuclideanDistance)
         assert(index.isSuccess)
 
         Then("the index has been created")
@@ -228,7 +228,7 @@ class IndexTestSuite extends AdamTestBase {
         assert(entity.isSuccess)
 
         When("an VA-File index is created")
-        val index = IndexOp(entityname, "feature", IndexTypes.VAFINDEX, EuclideanDistance)
+        val index = IndexOp.create(entityname, "feature", IndexTypes.VAFINDEX, EuclideanDistance)
         assert(index.isSuccess)
 
         Then("the index has been created")
@@ -254,7 +254,7 @@ class IndexTestSuite extends AdamTestBase {
         assert(entity.isSuccess)
 
         When("an VA-File index is created")
-        val index = IndexOp(entityname, "feature", IndexTypes.VAVINDEX, EuclideanDistance)
+        val index = IndexOp.create(entityname, "feature", IndexTypes.VAVINDEX, EuclideanDistance)
         assert(index.isSuccess)
 
         Then("the index has been created")

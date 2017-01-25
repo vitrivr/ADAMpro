@@ -1,18 +1,19 @@
 package org.vitrivr.adampro.api
 
+import org.apache.spark.sql.Row
+import org.apache.spark.sql.types.{StructField, StructType}
 import org.vitrivr.adampro.datatypes.FieldTypes
 import org.vitrivr.adampro.datatypes.FieldTypes.FieldType
-import org.vitrivr.adampro.datatypes.feature.FeatureVectorWrapper
 import org.vitrivr.adampro.datatypes.gis.{GeographyWrapper, GeometryWrapper}
+import org.vitrivr.adampro.datatypes.vector.Vector
+import org.vitrivr.adampro.datatypes.vector.Vector._
 import org.vitrivr.adampro.entity.Entity
 import org.vitrivr.adampro.entity.Entity.EntityName
 import org.vitrivr.adampro.exception.GeneralAdamException
 import org.vitrivr.adampro.main.AdamContext
-import org.apache.spark.sql.Row
-import org.apache.spark.sql.types.{StructField, StructType}
 
 import scala.collection.mutable.ListBuffer
-import scala.util.{Failure, Random, Success, Try}
+import scala.util.{Random, Success, Try}
 
 /**
   * adampro
@@ -40,25 +41,25 @@ object RandomDataOp extends GenericOp {
 
       val entity = Entity.load(entityname)
       if (entity.isFailure) {
-        Failure(entity.failed.get)
+        throw entity.failed.get
       }
 
       //schema of random data dataframe to insert
-      val schema = entity.get.schema()
+      val schema = entity.get.schema(fullSchema = false)
 
       //data
       val limit = math.min(ntuples, MAX_TUPLES_PER_BATCH)
       (0 until ntuples).sliding(limit, limit).foreach { seq =>
-        log.trace("starting generating data")
+        log.trace("start generating data")
         val rdd = ac.sc.parallelize(
           seq.map(idx => {
-            var data = schema.filterNot(_.fieldtype == FieldTypes.AUTOTYPE).map(field => randomGenerator(field.fieldtype, params)())
+            var data = schema.map(field => randomGenerator(field.fieldtype, params)())
             Row(data: _*)
           })
         )
-        val data = ac.sqlContext.createDataFrame(rdd, StructType(schema.filterNot(_.fieldtype == FieldTypes.AUTOTYPE).map(field => StructField(field.name, field.fieldtype.datatype))))
+        val data = ac.sqlContext.createDataFrame(rdd, StructType(schema.map(field => StructField(field.name, field.fieldtype.datatype))))
 
-        log.trace("inserting generated data")
+        log.trace("insert generated data")
         val status = entity.get.insert(data, true)
 
         if (status.isFailure) {
@@ -77,7 +78,7 @@ object RandomDataOp extends GenericOp {
     * @param params
     * @return
     */
-  def randomGenerator(fieldtype: FieldType, params: Map[String, String]): () => Any = {
+  private def randomGenerator(fieldtype: FieldType, params: Map[String, String]): () => Any = {
     fieldtype match {
       case FieldTypes.INTTYPE => () => generateInt(params)
       case FieldTypes.LONGTYPE => () => generateLong(params)
@@ -86,10 +87,11 @@ object RandomDataOp extends GenericOp {
       case FieldTypes.STRINGTYPE => () => generateString(params)
       case FieldTypes.TEXTTYPE => () => generateText(params)
       case FieldTypes.BOOLEANTYPE => () => generateBoolean(params)
-      case FieldTypes.FEATURETYPE => () => generateFeatureVector(params)
-      case FieldTypes.GEOMETRYTYPE => () => generateGeometry(params)
-      case FieldTypes.GEOGRAPHYTYPE => () => generateGeography(params)
-      case _ => log.error("unkown datatype"); null
+      case FieldTypes.VECTORTYPE => () => Vector.conv_vec2dspark(generateDenseFeatureVector(params).asInstanceOf[DenseMathVector])
+      case FieldTypes.SPARSEVECTORTYPE => () => Vector.conv_vec2sspark(generateSparseFeatureVector(params).asInstanceOf[SparseMathVector])
+      case FieldTypes.GEOMETRYTYPE => () => generateGeometry(params).toRow()
+      case FieldTypes.GEOGRAPHYTYPE => () => generateGeography(params).toRow()
+      case _ => log.error("unknown field type for generating random data"); null
     }
   }
 
@@ -97,7 +99,7 @@ object RandomDataOp extends GenericOp {
     *
     * @param params
     */
-  private def generateInt(params: Map[String, String]) : Int = {
+  private def generateInt(params: Map[String, String]): Int = {
     val max = params.get("int-max").map(_.toInt).getOrElse(Integer.MAX_VALUE)
     generateInt(max)
   }
@@ -113,7 +115,7 @@ object RandomDataOp extends GenericOp {
     *
     * @param params
     */
-  private def generateLong(params: Map[String, String]) : Long = {
+  private def generateLong(params: Map[String, String]): Long = {
     generateLong()
   }
 
@@ -127,7 +129,7 @@ object RandomDataOp extends GenericOp {
     *
     * @param params
     */
-  private def generateFloat(params: Map[String, String]) : Float = {
+  private def generateFloat(params: Map[String, String]): Float = {
     val min = params.get("float-min").map(_.toFloat).getOrElse(0.toFloat)
     val max = params.get("float-max").map(_.toFloat).getOrElse(1.toFloat)
 
@@ -145,7 +147,7 @@ object RandomDataOp extends GenericOp {
     *
     * @param params
     */
-  private def generateDouble(params: Map[String, String]) : Double = {
+  private def generateDouble(params: Map[String, String]): Double = {
     val min = params.get("double-min").map(_.toDouble).getOrElse(0.toDouble)
     val max = params.get("double-max").map(_.toDouble).getOrElse(1.toDouble)
 
@@ -163,7 +165,7 @@ object RandomDataOp extends GenericOp {
     * @param params
     * @return
     */
-  private def generateString(params: Map[String, String]) : String = {
+  private def generateString(params: Map[String, String]): String = {
     val nletters = params.get("string-nletters").map(_.toInt).getOrElse(10)
 
     generateString(nletters)
@@ -181,7 +183,7 @@ object RandomDataOp extends GenericOp {
     * @param params
     * @return
     */
-  private def generateText(params: Map[String, String]) : String = {
+  private def generateText(params: Map[String, String]): String = {
     val nwords = params.get("text-nwords").map(_.toInt).getOrElse(100)
     val nletters = params.get("text-nletters").map(_.toInt).getOrElse(10)
 
@@ -203,7 +205,7 @@ object RandomDataOp extends GenericOp {
     * @param params
     * @return
     */
-  private def generateFeatureVector(params: Map[String, String]) : FeatureVectorWrapper = {
+  private def generateDenseFeatureVector(params: Map[String, String]): MathVector = {
     val dimensions = params.get("fv-dimensions").map(_.toInt)
 
     if (dimensions.isEmpty) {
@@ -214,9 +216,7 @@ object RandomDataOp extends GenericOp {
     val min = params.get("fv-min").map(_.toFloat).getOrElse(0.toFloat)
     val max = params.get("fv-max").map(_.toFloat).getOrElse(1.toFloat)
 
-    val sparse = params.get("fv-sparse").map(_.toBoolean).getOrElse(false)
-
-    generateFeatureVector(dimensions.get, sparsity, min, max, sparse)
+    generateDenseFeatureVector(dimensions.get, sparsity, min, max)
   }
 
   /**
@@ -225,10 +225,9 @@ object RandomDataOp extends GenericOp {
     * @param sparsity
     * @param min
     * @param max
-    * @param sparse
     * @return
     */
-  private def generateFeatureVector(dimensions: Int, sparsity: Float, min: Float, max: Float, sparse: Boolean) = {
+  private def generateDenseFeatureVector(dimensions: Int, sparsity: Float, min: VectorBase, max: VectorBase) = {
     if (dimensions == 0) {
       throw new GeneralAdamException("please choose to create vectors with more than zero dimensions")
     }
@@ -237,11 +236,11 @@ object RandomDataOp extends GenericOp {
       throw new GeneralAdamException("sparsity should be between 0 and 1")
     }
 
-    var fv: Array[Float] = (0 until dimensions).map(i => {
-      var rval = generateFloat(min, max)
+    var fv = (0 until dimensions).map(i => {
+      var rval = generateVectorBase(min, max)
       //ensure that we do not have any zeros in vector, sparsify later
       while (math.abs(rval) < 10E-6) {
-        rval = generateFloat(min, max)
+        rval = generateVectorBase(min, max)
       }
 
       rval
@@ -253,23 +252,81 @@ object RandomDataOp extends GenericOp {
       fv(i) = 0.toFloat
     }
 
-    if (sparse) {
-      //sparsify vector
-      val sfv = sparsify(fv)
-      new FeatureVectorWrapper(sfv._2, sfv._1, sfv._3)
-    } else {
-      new FeatureVectorWrapper(fv.toSeq)
-    }
+    new DenseMathVector(fv)
   }
+
+  /**
+    *
+    * @param params
+    * @return
+    */
+  private def generateSparseFeatureVector(params: Map[String, String]): MathVector = {
+    val dimensions = params.get("fv-dimensions").map(_.toInt)
+
+    if (dimensions.isEmpty) {
+      throw new GeneralAdamException("dimensionality not specified for feature vectors")
+    }
+
+    val sparsity = params.get("fv-sparsity").map(_.toFloat).getOrElse(0.toFloat)
+    val min = params.get("fv-min").map(_.toFloat).getOrElse(0.toFloat)
+    val max = params.get("fv-max").map(_.toFloat).getOrElse(1.toFloat)
+
+    generateSparseFeatureVector(dimensions.get, sparsity, min, max)
+  }
+
+  /**
+    *
+    * @param dimensions
+    * @param sparsity
+    * @param min
+    * @param max
+    * @return
+    */
+  private def generateSparseFeatureVector(dimensions: Int, sparsity: Float, min: VectorBase, max: VectorBase) = {
+    if (dimensions == 0) {
+      throw new GeneralAdamException("please choose to create vectors with more than zero dimensions")
+    }
+
+    if (!(sparsity >= 0 && sparsity <= 1.0)) {
+      throw new GeneralAdamException("sparsity should be between 0 and 1")
+    }
+
+    var fv = (0 until dimensions).map(i => {
+      var rval = generateVectorBase(min, max)
+      //ensure that we do not have any zeros in vector, sparsify later
+      while (math.abs(rval) < 10E-6) {
+        rval = generateVectorBase(min, max)
+      }
+
+      rval
+    }).toArray
+
+    //zero the elements in the vector
+    val nzeros = math.floor(dimensions * sparsity).toInt
+    (0 until nzeros).map(i => Random.nextInt(dimensions)).foreach { i =>
+      fv(i) = 0.toFloat
+    }
+
+    //sparsify vector
+    val sfv = sparsify(fv)
+    new SparseMathVector(sfv._2, sfv._1, sfv._3)
+  }
+
+
+  /**
+    *
+    * @return
+    */
+  private def generateVectorBase(min: VectorBase, max: VectorBase) = Vector.nextRandom() * (max - min) + min
 
   /**
     *
     * @param vec
     * @return
     */
-  private def sparsify(vec: Seq[Float]) = {
+  private def sparsify(vec: Seq[VectorBase]) = {
     val ii = new ListBuffer[Int]()
-    val vv = new ListBuffer[Float]()
+    val vv = new ListBuffer[VectorBase]()
 
     vec.zipWithIndex.foreach { x =>
       val v = x._1
@@ -288,7 +345,7 @@ object RandomDataOp extends GenericOp {
     *
     * @param params
     */
-  private def generateBoolean(params: Map[String, String]) : Boolean = {
+  private def generateBoolean(params: Map[String, String]): Boolean = {
     generateBoolean()
   }
 
@@ -298,40 +355,33 @@ object RandomDataOp extends GenericOp {
     */
   private def generateBoolean() = Random.nextBoolean
 
+  /**
+    *
+    * @param params
+    * @return
+    */
+  private def generateGeometry(params: Map[String, String]): GeometryWrapper = generateGeometry()
+
+
+  /**
+    *
+    * @return
+    */
+  private def generateGeometry() =
+    new GeometryWrapper("POINT(" + generateFloat(-100, 100).toString + " " + generateFloat(-100, 100).toString + ")")
+
 
   /**
     *
     * @param params
     * @return
     */
-  private def generateGeometry(params: Map[String, String]) : GeometryWrapper = {
-    generateGeometry()
-  }
+  private def generateGeography(params: Map[String, String]): GeographyWrapper = generateGeography()
+
 
   /**
     *
     * @return
     */
-  private def generateGeometry() = {
-    new GeometryWrapper("POINT(" + generateFloat(-100, 100).toString + " " +  generateFloat(-100, 100).toString + ")")
-  }
-
-  /**
-    *
-    * @param params
-    * @return
-    */
-  private def generateGeography(params: Map[String, String]) : GeographyWrapper = {
-    generateGeography()
-  }
-
-  /**
-    *
-    * @return
-    */
-  private def generateGeography() = {
-    new GeographyWrapper("POINT(" + generateFloat(-100, 100).toString + " " +  generateFloat(-100, 100).toString + ")")
-  }
+  private def generateGeography() = new GeographyWrapper("POINT(" + generateFloat(-100, 100).toString + " " + generateFloat(-100, 100).toString + ")")
 }
-
-

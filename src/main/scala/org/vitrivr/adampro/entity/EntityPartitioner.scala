@@ -1,11 +1,10 @@
 package org.vitrivr.adampro.entity
 
-import org.vitrivr.adampro.exception.GeneralAdamException
-import org.vitrivr.adampro.helpers.partition.PartitionMode
-import org.vitrivr.adampro.main.AdamContext
-import org.vitrivr.adampro.storage.engine.ParquetEngine
 import org.apache.spark.sql.functions.col
 import org.apache.spark.sql.{DataFrame, SaveMode}
+import org.vitrivr.adampro.exception.{AttributeNotExistingException, GeneralAdamException}
+import org.vitrivr.adampro.index.partition.PartitionMode
+import org.vitrivr.adampro.main.AdamContext
 
 import scala.util.{Failure, Success, Try}
 
@@ -20,26 +19,26 @@ object EntityPartitioner {
     * Partitions the entity data.
     *
     * @param entity      entity
-    * @param nPartitions number of partitions
+    * @param npartitions number of partitions
     * @param join        join with dataframe for partitioning
-    * @param cols        columns according to which to partition the data
+    * @param attribute   columns according to which to partition the data
     * @param mode        mode of partitioning (replacing data, etc.)
     * @return
     */
-  def apply(entity: Entity, nPartitions: Int, join: Option[DataFrame] = None, cols: Option[Seq[String]] = None, mode: PartitionMode.Value = PartitionMode.REPLACE_EXISTING)(implicit ac: AdamContext): Try[Entity] = {
+  def apply(entity: Entity, npartitions: Int, join: Option[DataFrame] = None, attribute: Option[String], mode: PartitionMode.Value = PartitionMode.REPLACE_EXISTING)(implicit ac: AdamContext): Try[Entity] = {
     //checks
-    if (entity.getFeatureData.isEmpty) {
-      return Failure(new GeneralAdamException("no feature data available for performing repartitioning"))
+    if (entity.handlers.filter(_.engine.repartitionable).isEmpty) {
+      return Failure(new GeneralAdamException("no partitionable engine available in entity for performing repartitioning"))
     }
 
-    val partitionAttributes = entity.schema(Some(cols.getOrElse(Seq(entity.pk.name))))
-
-    if (!partitionAttributes.filterNot(_.pk).forall(_.storagehandler.engine.isInstanceOf[ParquetEngine])) {
-      return Failure(new GeneralAdamException("repartitioning is only possible using the flat file handler"))
+    val partAttribute = if(attribute.isDefined){
+      entity.schema(nameFilter = Some(Seq(attribute.get))).headOption
+    } else {
+      Some(entity.pk)
     }
 
-    if (partitionAttributes.filterNot(_.pk).map(_.storagehandler).distinct.length > 1) {
-      return Failure(new GeneralAdamException("repartitioning is only possible for data within one handler"))
+    if (partAttribute.isEmpty) {
+      throw new AttributeNotExistingException()
     }
 
     //collect data
@@ -49,60 +48,25 @@ object EntityPartitioner {
     }
 
     //repartition
-    //TODO: possibly add own partitioner
-    //data.map(r => (r.getAs[Any](cols.get.head), r)).partitionBy(new HashPartitioner())
-    data = if (cols.isDefined) {
-      val entityColNames = data.schema.map(_.name)
-      if (!cols.get.forall(name => entityColNames.contains(name))) {
-        Failure(throw new GeneralAdamException("one of the columns " + cols.mkString(",") + " is not existing in entity " + entity.entityname + entityColNames.mkString("(", ",", ")")))
-      }
+    //TODO: use other partitioners
+    data = data.repartition(npartitions, col(partAttribute.get.name))
 
-      data.repartition(nPartitions, cols.get.map(data(_)): _*)
-    } else {
-      data.repartition(nPartitions, data(entity.pk.name))
-    }
-
-    val handlerOption = {
-      val partitionAttributeHandler = partitionAttributes.filterNot(_.pk).headOption
-
-      if (partitionAttributeHandler.isDefined) {
-        partitionAttributeHandler.map(_.storagehandler())
-      } else {
-        val fallback = entity.schema().filter(_.storagehandler.engine.repartitionable).headOption
-
-        if (fallback.isDefined) {
-          fallback.map(_.storagehandler())
-        } else {
-          None
-        }
-      }
-    }
-
-    if(handlerOption.isEmpty){
-      Failure(throw new GeneralAdamException("there are no partitionable columns in this entity"))
-    }
-
-    val handler = handlerOption.get
-
-    //select data which is available in the one handler
-    val attributes = entity.schema().filterNot(_.pk).filter(_.storagehandler == handler).+:(entity.pk)
-    data = data.select(attributes.map(attribute => col(attribute.name)).toArray: _*)
-
+    //store
     mode match {
       case PartitionMode.REPLACE_EXISTING =>
-        val status = handler.write(entity.entityname, data, attributes, SaveMode.Overwrite)
+        entity.schema(fullSchema = false).groupBy(_.storagehandler).filter(_._1.engine.repartitionable).foreach {
+          case (handler, attributes) =>
+            val attributenames = attributes.map(_.name).+:(entity.pk.name)
+            val status = handler.write(entity.entityname, data.select(attributenames.map(col): _*), attributes, SaveMode.Overwrite)
 
-        if (status.isFailure) {
-          throw status.failed.get
+            if (status.isFailure) {
+              throw status.failed.get
+            }
         }
 
         entity.markStale()
-        ac.entityLRUCache.invalidate(entity.entityname)
-
-        entity.resetInsertionCounter()
 
         Success(entity)
-
       case _ => Failure(new GeneralAdamException("partitioning mode unknown"))
     }
   }

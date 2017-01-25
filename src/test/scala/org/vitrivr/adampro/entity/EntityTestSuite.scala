@@ -3,11 +3,12 @@ package org.vitrivr.adampro.entity
 import org.vitrivr.adampro.AdamTestBase
 import org.vitrivr.adampro.api.EntityOp
 import org.vitrivr.adampro.datatypes.FieldTypes
-import org.vitrivr.adampro.datatypes.feature.{FeatureVectorWrapper, FeatureVectorWrapperUDT}
 import org.vitrivr.adampro.query.query.Predicate
-import org.apache.spark.sql.Row
+import org.apache.spark.sql.{Row, types}
 import org.apache.spark.sql.types._
 import org.scalatest.Matchers._
+import org.vitrivr.adampro.config.FieldNames
+import org.vitrivr.adampro.datatypes.vector.Vector
 
 import scala.collection.mutable.ListBuffer
 import scala.util.Random
@@ -20,8 +21,10 @@ import scala.util.Random
   */
 class EntityTestSuite extends AdamTestBase {
 
-  case class TemplateFieldDefinition(name: String, fieldType: FieldTypes.FieldType, pk: Boolean, sqlType: String)
+  case class TemplateFieldDefinition(name: String, fieldType: FieldTypes.FieldType, sqlType: String)
 
+  def ntuples() = Random.nextInt(1000)
+  def ndims() = 20 + Random.nextInt(80)
 
   feature("data definition") {
     /**
@@ -33,7 +36,7 @@ class EntityTestSuite extends AdamTestBase {
         val givenEntities = Entity.list
 
         When("a new random entity (without any metadata) is created")
-        val entity = Entity.create(entityname, Seq(new AttributeDefinition("idfield", FieldTypes.LONGTYPE, true), new AttributeDefinition("feature", FieldTypes.FEATURETYPE, false)))
+        val entity = Entity.create(entityname, Seq(new AttributeDefinition("idfield", FieldTypes.LONGTYPE), new AttributeDefinition("feature", FieldTypes.VECTORTYPE)))
         assert(entity.isSuccess)
 
         Then("one entity should be created")
@@ -53,7 +56,7 @@ class EntityTestSuite extends AdamTestBase {
     scenario("drop an existing entity") {
       withEntityName { entityname =>
         Given("there exists one entity")
-        val entity = Entity.create(entityname, Seq(new AttributeDefinition("idfield", FieldTypes.LONGTYPE, true), new AttributeDefinition("feature", FieldTypes.FEATURETYPE, false)))
+        val entity = Entity.create(entityname, Seq(new AttributeDefinition("idfield", FieldTypes.LONGTYPE), new AttributeDefinition("feature", FieldTypes.VECTORTYPE)))
         assert(entity.isSuccess)
         assert(Entity.list.contains(entityname.toLowerCase()))
 
@@ -74,7 +77,7 @@ class EntityTestSuite extends AdamTestBase {
         val givenEntities = Entity.list
 
         When("a new random entity (without any metadata) is created")
-        val entity = Entity.create(entityname, Seq(new AttributeDefinition("idfield", FieldTypes.LONGTYPE, true), new AttributeDefinition("feature1", FieldTypes.FEATURETYPE, false), new AttributeDefinition("feature2", FieldTypes.FEATURETYPE, false)))
+        val entity = Entity.create(entityname, Seq(new AttributeDefinition("idfield", FieldTypes.LONGTYPE), new AttributeDefinition("feature1", FieldTypes.VECTORTYPE), new AttributeDefinition("feature2", FieldTypes.VECTORTYPE)))
         assert(entity.isSuccess)
 
         Then("one entity should be created")
@@ -98,17 +101,17 @@ class EntityTestSuite extends AdamTestBase {
 
         When("a new random entity with metadata is created")
         val fieldTemplate = Seq(
-          TemplateFieldDefinition("idfield", FieldTypes.LONGTYPE, true, "bigint"),
-          TemplateFieldDefinition("featurefield", FieldTypes.FEATURETYPE, false, ""),
-          TemplateFieldDefinition("stringfield", FieldTypes.STRINGTYPE, false, "text"),
-          TemplateFieldDefinition("floatfield", FieldTypes.FLOATTYPE, false, "real"),
-          TemplateFieldDefinition("doublefield", FieldTypes.DOUBLETYPE, false, "double precision"),
-          TemplateFieldDefinition("intfield", FieldTypes.INTTYPE, false, "integer"),
-          TemplateFieldDefinition("longfield", FieldTypes.LONGTYPE, false, "bigint"),
-          TemplateFieldDefinition("booleanfield", FieldTypes.BOOLEANTYPE, false, "boolean")
+          TemplateFieldDefinition("idfield", FieldTypes.LONGTYPE, "bigint"),
+          TemplateFieldDefinition("vectorfield", FieldTypes.VECTORTYPE, ""),
+          TemplateFieldDefinition("stringfield", FieldTypes.STRINGTYPE, "text"),
+          TemplateFieldDefinition("floatfield", FieldTypes.FLOATTYPE, "real"),
+          TemplateFieldDefinition("doublefield", FieldTypes.DOUBLETYPE, "double precision"),
+          TemplateFieldDefinition("intfield", FieldTypes.INTTYPE, "integer"),
+          TemplateFieldDefinition("longfield", FieldTypes.LONGTYPE, "bigint"),
+          TemplateFieldDefinition("booleanfield", FieldTypes.BOOLEANTYPE, "boolean")
         )
 
-        val entity = Entity.create(entityname, fieldTemplate.map(ft => new AttributeDefinition(ft.name, ft.fieldType, ft.pk)))
+        val entity = Entity.create(entityname, fieldTemplate.map(ft => new AttributeDefinition(ft.name, ft.fieldType)))
         assert(entity.isSuccess)
 
         Then("the entity should be created")
@@ -118,7 +121,7 @@ class EntityTestSuite extends AdamTestBase {
         assert(finalEntities.contains(entityname.toLowerCase()))
 
         And("The metadata table should have been created")
-        val result = getMetadataConnection.createStatement().executeQuery("SELECT column_name, data_type FROM information_schema.columns WHERE table_schema = 'public' AND table_name = '" + entityname.toLowerCase() + "'")
+        val result = getMetadataConnection.createStatement().executeQuery("SELECT column_name, data_type FROM information_schema.columns WHERE table_schema = 'public' AND table_name = '" + entityname.toLowerCase() + "' AND column_name != '" + FieldNames.internalIdColumnName + "'")
 
         val lb = new ListBuffer[(String, String)]()
         while (result.next) {
@@ -135,9 +138,9 @@ class EntityTestSuite extends AdamTestBase {
         assert(dbNames.keySet.forall({ key => dbNames(key) == templateNames(key) }))
 
         And("the index on the id field is created")
-        val indexesResult = getMetadataConnection.createStatement().executeQuery("SELECT t.relname AS table, i.relname AS index, a.attname AS column FROM pg_class t, pg_class i, pg_index ix, pg_attribute a WHERE t.oid = ix.indrelid AND i.oid = ix.indexrelid AND a.attrelid = t.oid AND a.attnum = ANY(ix.indkey) AND t.relkind = 'r' AND t.relname = '" + entityname.toLowerCase() + "' AND a.attname = '" + "idfield" + "'")
+        val indexesResult = getMetadataConnection.createStatement().executeQuery("SELECT t.relname AS table, i.relname AS index, a.attname AS column FROM pg_class t, pg_class i, pg_index ix, pg_attribute a WHERE t.oid = ix.indrelid AND i.oid = ix.indexrelid AND a.attrelid = t.oid AND a.attnum = ANY(ix.indkey) AND t.relkind = 'r' AND t.relname = '" + entityname.toLowerCase() + "' AND a.attname = '" + FieldNames.internalIdColumnName + "'")
         indexesResult.next()
-        assert(indexesResult.getString(3) == "idfield")
+        assert(indexesResult.getString(3) == FieldNames.internalIdColumnName)
       }
     }
 
@@ -147,8 +150,8 @@ class EntityTestSuite extends AdamTestBase {
     scenario("drop an entity with metadata") {
       withEntityName { entityname =>
         Given("an entity with metadata")
-        val fields = Seq[AttributeDefinition](new AttributeDefinition("idfield", FieldTypes.LONGTYPE, true), new AttributeDefinition("feature", FieldTypes.FEATURETYPE, false), new AttributeDefinition("stringfield", FieldTypes.STRINGTYPE, false))
-        EntityOp(entityname, fields)
+        val fields = Seq[AttributeDefinition](new AttributeDefinition("idfield", FieldTypes.LONGTYPE), new AttributeDefinition("feature", FieldTypes.VECTORTYPE), new AttributeDefinition("stringfield", FieldTypes.STRINGTYPE))
+        EntityOp.create(entityname, fields)
 
         val preResult = getMetadataConnection.createStatement().executeQuery("SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = '" + entityname.toLowerCase() + "'")
         var tableCount = 0
@@ -177,21 +180,21 @@ class EntityTestSuite extends AdamTestBase {
       withEntityName { entityname =>
         Given("an entity with metadata")
         val fields = Seq[AttributeDefinition](
-          new AttributeDefinition("pkfield", FieldTypes.LONGTYPE, true),
-          new AttributeDefinition("uniquefield", FieldTypes.INTTYPE, false, params = Map("unique" -> "true")),
-          new AttributeDefinition("indexedfield", FieldTypes.INTTYPE, false, params = Map("indexed" -> "true")),
-          new AttributeDefinition("feature", FieldTypes.FEATURETYPE, false)
+          new AttributeDefinition("pkfield", FieldTypes.LONGTYPE),
+          new AttributeDefinition("uniquefield", FieldTypes.INTTYPE, params = Map("unique" -> "true")),
+          new AttributeDefinition("indexedfield", FieldTypes.INTTYPE, params = Map("indexed" -> "true")),
+          new AttributeDefinition("feature", FieldTypes.VECTORTYPE)
         )
 
         When("the entity is created")
-        EntityOp(entityname, fields)
+        EntityOp.create(entityname, fields)
 
         Then("the PK should be correctly")
         val pkResult = getMetadataConnection.createStatement().executeQuery(
           "SELECT a.attname FROM pg_index i JOIN   pg_attribute a ON a.attrelid = i.indrelid AND a.attnum = ANY(i.indkey) WHERE  i.indrelid = '" + entityname.toLowerCase() + "'::regclass AND i.indisprimary;")
         pkResult.next()
         val pk = pkResult.getString(1)
-        assert(pk == "pkfield")
+        assert(pk == FieldNames.internalIdColumnName)
 
         And("the unique and indexed fields should be set correctly")
         val indexesResult = getMetadataConnection.createStatement().executeQuery("SELECT t.relname AS table, i.relname AS index, a.attname AS column FROM pg_class t, pg_class i, pg_index ix, pg_attribute a WHERE t.oid = ix.indrelid AND i.oid = ix.indexrelid AND a.attrelid = t.oid AND a.attnum = ANY(ix.indkey) AND t.relkind = 'r' AND t.relname = '" + entityname.toLowerCase() + "'")
@@ -211,69 +214,19 @@ class EntityTestSuite extends AdamTestBase {
     /**
       *
       */
-    scenario("insert data in an entity with auto-increment metadata") {
-      withEntityName { entityname =>
-        Entity.create(entityname, Seq(new AttributeDefinition("idfield", FieldTypes.AUTOTYPE, true), new AttributeDefinition("featurefield", FieldTypes.FEATURETYPE, false)))
-
-        val ntuples = Random.nextInt(1000)
-        val ndims = 100
-
-        When("data is inserted by specifying id")
-        val wrongschema = StructType(Seq(
-          StructField("idfield", LongType, false),
-          StructField("featurefield", new FeatureVectorWrapperUDT, false)
-        ))
-
-        val wrongrdd = ac.sc.parallelize((0 until ntuples).map(id =>
-          Row(Random.nextLong(), new FeatureVectorWrapper(Seq.fill(ndims)(Random.nextFloat())))
-        ))
-
-        val wrongdata = ac.sqlContext.createDataFrame(wrongrdd, wrongschema)
-
-        val wronginsert = EntityOp.insert(entityname, wrongdata)
-
-        Then("the data is not inserted")
-        assert(wronginsert.isFailure)
-
-
-        val schema = StructType(Seq(
-          StructField("featurefield", new FeatureVectorWrapperUDT, false)
-        ))
-
-        val rdd = ac.sc.parallelize((0 until ntuples).map(id =>
-          Row(new FeatureVectorWrapper(Seq.fill(ndims)(Random.nextFloat())))
-        ))
-
-        val data = ac.sqlContext.createDataFrame(rdd, schema)
-
-        When("data is inserted without specifying id")
-        val insert = EntityOp.insert(entityname, data)
-        assert(insert.isSuccess)
-
-        Then("the data is available")
-        val counted = EntityOp.count(entityname).get
-        assert(counted - ntuples == 0)
-      }
-    }
-
-    /**
-      *
-      */
     scenario("insert data in an entity without metadata") {
       withEntityName { entityname =>
         Given("an entity without metadata")
-        Entity.create(entityname, Seq(new AttributeDefinition("idfield", FieldTypes.LONGTYPE, true), new AttributeDefinition("featurefield", FieldTypes.FEATURETYPE, false)))
+        val creationAttributes = Seq(new AttributeDefinition("idfield", FieldTypes.LONGTYPE), new AttributeDefinition("vectorfield", FieldTypes.VECTORTYPE))
+        Entity.create(entityname, creationAttributes)
 
-        val ntuples = Random.nextInt(1000)
-        val ndims = 100
+        val schema = StructType(creationAttributes.map(a => StructField(a.name, a.fieldtype.datatype, false)))
 
-        val schema = StructType(Seq(
-          StructField("idfield", LongType, false),
-          StructField("featurefield", new FeatureVectorWrapperUDT, false)
-        ))
+        val tuplesInsert = ntuples()
+        val dimsInsert = ndims()
 
-        val rdd = ac.sc.parallelize((0 until ntuples).map(id =>
-          Row(Random.nextLong(), new FeatureVectorWrapper(Seq.fill(ndims)(Random.nextFloat())))
+        val rdd = ac.sc.parallelize((0 until tuplesInsert).map(id =>
+          Row(Random.nextLong(), Seq.fill(dimsInsert)(Vector.nextRandom()))
         ))
 
         val data = ac.sqlContext.createDataFrame(rdd, schema)
@@ -283,7 +236,7 @@ class EntityTestSuite extends AdamTestBase {
 
         Then("the data is available without metadata")
         val counted = EntityOp.count(entityname).get
-        assert(counted - ntuples == 0)
+        assert(counted == tuplesInsert)
       }
     }
 
@@ -293,19 +246,17 @@ class EntityTestSuite extends AdamTestBase {
     scenario("insert data in an entity with multiple feature fields without metadata") {
       withEntityName { entityname =>
         Given("an entity without metadata")
-        Entity.create(entityname, Seq(new AttributeDefinition("idfield", FieldTypes.LONGTYPE, true), new AttributeDefinition("featurefield1", FieldTypes.FEATURETYPE, false), new AttributeDefinition("featurefield2", FieldTypes.FEATURETYPE, false)))
 
-        val ntuples = Random.nextInt(1000)
-        val ndims = 100
+        val creationAttributes = Seq(new AttributeDefinition("idfield", FieldTypes.LONGTYPE), new AttributeDefinition("featurefield1", FieldTypes.VECTORTYPE), new AttributeDefinition("featurefield2", FieldTypes.VECTORTYPE))
+        Entity.create(entityname, creationAttributes)
 
-        val schema = StructType(Seq(
-          StructField("idfield", LongType, false),
-          StructField("featurefield1", new FeatureVectorWrapperUDT, false),
-          StructField("featurefield2", new FeatureVectorWrapperUDT, false)
-        ))
+        val schema = StructType(creationAttributes.map(a => StructField(a.name, a.fieldtype.datatype, false)))
 
-        val rdd = ac.sc.parallelize((0 until ntuples).map(id =>
-          Row(Random.nextLong(), new FeatureVectorWrapper(Seq.fill(ndims)(Random.nextFloat())), new FeatureVectorWrapper(Seq.fill(ndims)(Random.nextFloat())))
+        val tuplesInsert = ntuples()
+        val dimsInsert = ndims()
+
+        val rdd = ac.sc.parallelize((0 until tuplesInsert).map(id =>
+          Row(Random.nextLong(), Seq.fill(dimsInsert)(Vector.nextRandom()), Seq.fill(dimsInsert)(Vector.nextRandom()))
         ))
 
         val data = ac.sqlContext.createDataFrame(rdd, schema)
@@ -315,7 +266,7 @@ class EntityTestSuite extends AdamTestBase {
 
         Then("the data is available without metadata")
         val counted = EntityOp.count(entityname).get
-        assert(counted - ntuples == 0)
+        assert(counted == tuplesInsert)
       }
     }
 
@@ -328,26 +279,24 @@ class EntityTestSuite extends AdamTestBase {
         Given("an entity with metadata")
         //every field has been created twice, one is not filled to check whether this works too
         val fieldTemplate = Seq(
-          TemplateFieldDefinition("idfield", FieldTypes.LONGTYPE, true, "bigint"),
-          TemplateFieldDefinition("featurefield", FieldTypes.FEATURETYPE, false, ""),
-          TemplateFieldDefinition("stringfield", FieldTypes.STRINGTYPE, false, "text"),
-          TemplateFieldDefinition("stringfieldunfilled", FieldTypes.STRINGTYPE, false, "text"),
-          TemplateFieldDefinition("floatfield", FieldTypes.FLOATTYPE, false, "real"),
-          TemplateFieldDefinition("floatfieldunfilled", FieldTypes.FLOATTYPE, false, "real"),
-          TemplateFieldDefinition("doublefield", FieldTypes.DOUBLETYPE, false, "double precision"),
-          TemplateFieldDefinition("doublefieldunfilled", FieldTypes.DOUBLETYPE, false, "double precision"),
-          TemplateFieldDefinition("intfield", FieldTypes.INTTYPE, false, "integer"),
-          TemplateFieldDefinition("intfieldunfilled", FieldTypes.LONGTYPE, false, "integer"),
-          TemplateFieldDefinition("longfield", FieldTypes.LONGTYPE, false, "bigint"),
-          TemplateFieldDefinition("longfieldunfilled", FieldTypes.LONGTYPE, false, "bigint"),
-          TemplateFieldDefinition("booleanfield", FieldTypes.BOOLEANTYPE, false, "boolean"),
-          TemplateFieldDefinition("booleanfieldunfilled", FieldTypes.BOOLEANTYPE, false, "boolean")
+          TemplateFieldDefinition("idfield", FieldTypes.LONGTYPE, "bigint"),
+          TemplateFieldDefinition("vectorfield", FieldTypes.VECTORTYPE, ""),
+          TemplateFieldDefinition("stringfield", FieldTypes.STRINGTYPE, "text"),
+          TemplateFieldDefinition("stringfieldunfilled", FieldTypes.STRINGTYPE, "text"),
+          TemplateFieldDefinition("floatfield", FieldTypes.FLOATTYPE, "real"),
+          TemplateFieldDefinition("floatfieldunfilled", FieldTypes.FLOATTYPE, "real"),
+          TemplateFieldDefinition("doublefield", FieldTypes.DOUBLETYPE, "double precision"),
+          TemplateFieldDefinition("doublefieldunfilled", FieldTypes.DOUBLETYPE, "double precision"),
+          TemplateFieldDefinition("intfield", FieldTypes.INTTYPE, "integer"),
+          TemplateFieldDefinition("intfieldunfilled", FieldTypes.LONGTYPE, "integer"),
+          TemplateFieldDefinition("longfield", FieldTypes.LONGTYPE, "bigint"),
+          TemplateFieldDefinition("longfieldunfilled", FieldTypes.LONGTYPE, "bigint"),
+          TemplateFieldDefinition("booleanfield", FieldTypes.BOOLEANTYPE, "boolean"),
+          TemplateFieldDefinition("booleanfieldunfilled", FieldTypes.BOOLEANTYPE, "boolean")
         )
 
-        val entity = Entity.create(entityname, fieldTemplate.map(x => new AttributeDefinition(x.name, x.fieldType, x.pk)))
+        val entity = Entity.create(entityname, fieldTemplate.map(x => new AttributeDefinition(x.name, x.fieldType)))
 
-        val ntuples = Random.nextInt(1000)
-        val ndims = 100
         val stringLength = 10
         val maxInt = 50000
 
@@ -356,10 +305,13 @@ class EntityTestSuite extends AdamTestBase {
             .map(field => StructField(field.name, field.fieldType.datatype, false))
         )
 
-        val rdd = ac.sc.parallelize((0 until ntuples).map(id =>
+        val tuplesInsert = ntuples()
+        val dimsInsert = ndims()
+
+        val rdd = ac.sc.parallelize((0 until tuplesInsert).map(id =>
           Row(
             Random.nextLong(),
-            new FeatureVectorWrapper(Seq.fill(ndims)(Random.nextFloat())),
+            Seq.fill(dimsInsert)(Vector.nextRandom()),
             Random.nextString(stringLength),
             math.abs(Random.nextFloat()),
             math.abs(Random.nextDouble()),
@@ -374,14 +326,15 @@ class EntityTestSuite extends AdamTestBase {
         EntityOp.insert(entityname, data)
 
         Then("the data is available with metadata")
-        assert(EntityOp.count(entityname).get.toInt == ntuples)
+        val counted = EntityOp.count(entityname).get.toInt
+        assert(counted == tuplesInsert)
 
         And("all tuples are inserted")
         val countResult = getMetadataConnection.createStatement().executeQuery("SELECT COUNT(*) AS count FROM " + entityname)
         countResult.next() //go to first result
 
         val tableCount = countResult.getInt("count")
-        assert(tableCount == ntuples)
+        assert(tableCount == tuplesInsert)
 
         And("all filled fields should be filled")
         val randomRowResult = getMetadataConnection.createStatement().executeQuery("SELECT * FROM " + entityname + " ORDER BY RANDOM() LIMIT 1")

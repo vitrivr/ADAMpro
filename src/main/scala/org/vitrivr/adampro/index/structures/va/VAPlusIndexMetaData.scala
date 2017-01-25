@@ -1,8 +1,8 @@
 package org.vitrivr.adampro.index.structures.va
 
+import org.apache.spark.mllib.feature.PCAModel
 import org.vitrivr.adampro.index.structures.va.VAIndex._
 import org.vitrivr.adampro.index.structures.va.signature.SignatureGenerator
-import org.apache.spark.mllib.feature.PCAModel
 
 /**
   * ADAMpro

@@ -3,11 +3,9 @@ package org.vitrivr.adampro.entity
 import java.util.concurrent.TimeUnit
 
 import com.google.common.cache.{CacheBuilder, CacheLoader}
-import org.vitrivr.adampro.catalog.CatalogOperator
-import org.vitrivr.adampro.config.AdamConfig
 import org.vitrivr.adampro.entity.Entity.EntityName
 import org.vitrivr.adampro.exception.EntityNotExistingException
-import org.vitrivr.adampro.main.SparkStartup
+import org.vitrivr.adampro.main.{AdamContext, SparkStartup}
 import org.vitrivr.adampro.utils.Logging
 
 import scala.util.{Failure, Success, Try}
@@ -18,10 +16,10 @@ import scala.util.{Failure, Success, Try}
   * Ivan Giangreco
   * April 2016
   */
-class EntityLRUCache extends Logging {
+class EntityLRUCache()(@transient implicit val ac: AdamContext) extends Logging {
 
-  private val maximumCacheSize = AdamConfig.maximumCacheSizeEntity
-  private val expireAfterAccess = AdamConfig.expireAfterAccessEntity
+  private val maximumCacheSize = ac.config.maximumCacheSizeEntity
+  private val expireAfterAccess = ac.config.expireAfterAccessEntity
 
   private val entityCache = CacheBuilder.
     newBuilder().
@@ -31,7 +29,7 @@ class EntityLRUCache extends Logging {
       new CacheLoader[EntityName, Entity]() {
         def load(entityname: EntityName): Entity = {
           log.trace("cache miss for entity " + entityname + "; loading and caching")
-          val entity = Entity.loadEntityMetaData(entityname)(SparkStartup.mainContext)
+          val entity = Entity.loadEntityMetaData(entityname)(ac)
           entity.get
         }
       }
@@ -45,7 +43,7 @@ class EntityLRUCache extends Logging {
   def get(entityname: EntityName): Try[Entity] = {
     try {
       log.trace("getting entity " + entityname + " from cache")
-      if(entityCache.asMap().containsKey(entityname) || CatalogOperator.existsEntity(entityname).get){
+      if(entityCache.asMap().containsKey(entityname) || SparkStartup.catalogOperator.existsEntity(entityname).get){
         Success(entityCache.get(entityname))
       } else {
         throw new EntityNotExistingException()

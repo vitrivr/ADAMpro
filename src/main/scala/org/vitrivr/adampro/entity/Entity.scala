@@ -1,18 +1,16 @@
 package org.vitrivr.adampro.entity
 
-import org.apache.spark.sql.functions.col
-import org.apache.spark.sql.types.{StructField, StructType}
+import org.apache.spark.sql.functions.{col, udf}
+import org.apache.spark.sql.types.{LongType, StructField, StructType}
 import org.apache.spark.sql.{DataFrame, Row, SaveMode}
 import org.apache.spark.storage.StorageLevel
-import org.vitrivr.adampro.catalog.CatalogOperator
-import org.vitrivr.adampro.config.{AdamConfig, FieldNames}
-import org.vitrivr.adampro.datatypes.FieldTypes
+import org.vitrivr.adampro.config.FieldNames
 import org.vitrivr.adampro.datatypes.FieldTypes._
+import org.vitrivr.adampro.datatypes.TupleID
 import org.vitrivr.adampro.entity.Entity.EntityName
 import org.vitrivr.adampro.exception.{EntityExistingException, EntityNotExistingException, EntityNotProperlyDefinedException, GeneralAdamException}
-import org.vitrivr.adampro.helpers.partition.PartitionMode
 import org.vitrivr.adampro.index.Index
-import org.vitrivr.adampro.main.AdamContext
+import org.vitrivr.adampro.main.{AdamContext, SparkStartup}
 import org.vitrivr.adampro.query.query.Predicate
 import org.vitrivr.adampro.storage.StorageHandler
 import org.vitrivr.adampro.storage.engine.ParquetEngine
@@ -28,36 +26,38 @@ import scala.util.{Failure, Success, Try}
   * Ivan Giangreco
   * October 2015
   */
-//TODO: make entities singleton? lock on entity?
-case class Entity(val entityname: EntityName)(@transient implicit val ac: AdamContext) extends Serializable with Logging {
-  val mostRecentVersion = this.synchronized {
+case class Entity(entityname: EntityName)(@transient implicit val ac: AdamContext) extends Serializable with Logging {
+  private val mostRecentVersion = this.synchronized {
     if (!ac.entityVersion.contains(entityname)) {
-      ac.entityVersion.+=(entityname.toString -> ac.sc.accumulator(0L, entityname.toString))
+      ac.entityVersion.+=(entityname.toString -> ac.sc.longAccumulator(entityname.toString))
     }
 
-    ac.entityVersion.get(entityname.toString).get
+    ac.entityVersion(entityname)
   }
-  var currentVersion = mostRecentVersion.value
+  private var currentVersion = mostRecentVersion.value
 
   /**
     * Gets the primary key.
     *
     * @return
     */
-  val pk = CatalogOperator.getPrimaryKey(entityname).get
+  val pk : AttributeDefinition = SparkStartup.catalogOperator.getPrimaryKey(entityname).get
 
   private var _schema: Option[Seq[AttributeDefinition]] = None
 
   /**
     * Schema of the entity.
     *
+    * @param nameFilter filter for name
+    * @param typeFilter filter for type
+    * @param fullSchema add internal fields as well (e.g. TID)
     * @return
     */
-  def schema(nameFilter: Option[Seq[String]] = None, typeFilter: Option[Seq[FieldType]] = None): Seq[AttributeDefinition] = {
+  def schema(nameFilter: Option[Seq[String]] = None, typeFilter: Option[Seq[FieldType]] = None, fullSchema: Boolean = true): Seq[AttributeDefinition] = {
     checkVersions()
 
     if (_schema.isEmpty) {
-      _schema = Some(CatalogOperator.getAttributes(entityname).get)
+      _schema = Some(SparkStartup.catalogOperator.getAttributes(entityname).get.filterNot(_.pk))
     }
 
     var tmpSchema = _schema.get
@@ -70,10 +70,58 @@ case class Entity(val entityname: EntityName)(@transient implicit val ac: AdamCo
       tmpSchema = tmpSchema.filter(attribute => typeFilter.get.map(_.name).contains(attribute.fieldtype.name))
     }
 
+    if (fullSchema) {
+      tmpSchema = tmpSchema.+:(pk)
+    }
+
     tmpSchema
   }
 
+  /**
+    *
+    */
+  private[entity] lazy val handlers = schema(fullSchema = false).map(_.storagehandler()).distinct
+
   private var _data: Option[DataFrame] = None
+
+  /**
+    * Reads entity data and caches.
+    *
+    * @param persist persist dataframe to memory
+    */
+  private def readData(persist: Boolean = true): Unit = {
+    val handlerData = schema(fullSchema = false).groupBy(_.storagehandler).map { case (handler, attributes) =>
+      val status = handler.read(entityname, attributes.+:(pk))
+
+      if (status.isFailure) {
+        log.error("failure when reading data", status.failed.get)
+      }
+
+      status
+    }.filter(_.isSuccess).map(_.get)
+
+    if (handlerData.nonEmpty) {
+      if (handlerData.size == 1) {
+        _data = Some(handlerData.head)
+      } else {
+        _data = Some(handlerData.reduce(_.join(_, pk.name)).coalesce(ac.config.defaultNumberOfPartitions))
+      }
+    } else {
+      _data = None
+    }
+
+    if (_data.isDefined && persist) {
+      import scala.concurrent.ExecutionContext.Implicits.global
+      val future = Future[DataFrame] {
+        _data.get.persist(StorageLevel.MEMORY_ONLY_SER)
+      }
+      future.onComplete {
+        case Success(cachedDF) => _data = Some(cachedDF)
+        case Failure(e) => log.error("could not cache data", e)
+      }
+    }
+  }
+
 
   /**
     * Gets the full entity data.
@@ -87,51 +135,20 @@ case class Entity(val entityname: EntityName)(@transient implicit val ac: AdamCo
   def getData(nameFilter: Option[Seq[String]] = None, typeFilter: Option[Seq[FieldType]] = None, handlerFilter: Option[StorageHandler] = None, predicates: Seq[Predicate] = Seq()): Option[DataFrame] = {
     checkVersions()
 
-    //cache data join
-    var data = _data
-
     if (_data.isEmpty) {
-      val handlerData = schema().filterNot(_.pk).groupBy(_.storagehandler).map { case (handler, attributes) =>
-        val status = handler.read(entityname, attributes.+:(pk))
-
-        if (status.isFailure) {
-          log.error("failure when reading data", status.failed.get)
-        }
-
-        status
-      }.filter(_.isSuccess).map(_.get)
-
-      if (handlerData.nonEmpty) {
-        if(handlerData.size == 1){
-          _data = Some(handlerData.head)
-        } else {
-          _data = Some(handlerData.reduce(_.join(_, pk.name)).coalesce(AdamConfig.defaultNumberOfPartitions))
-        }
-      } else {
-        _data = None
-      }
-
-      data = _data
-
-      if (data.isDefined) {
-        import scala.concurrent.ExecutionContext.Implicits.global
-        val future = Future[DataFrame] {
-          data.get.persist(StorageLevel.MEMORY_ONLY_SER)
-        }
-        future.onComplete {
-          case Success(cachedDF) => data = Some(cachedDF)
-          case Failure(e) => log.error("could not cache data", e)
-        }
-      }
+      readData()
     }
+
+    var data = _data
 
     //possibly filter for current call
     var filteredData = data
 
+    //predicates
     if (predicates.nonEmpty && filteredData.isEmpty) {
       val handlerData = schema().filterNot(_.pk).groupBy(_.storagehandler).map { case (handler, attributes) =>
         val predicate = predicates.filter(p => (p.attribute == pk.name || attributes.map(_.name).contains(p.attribute)))
-        val status = handler.read(entityname, attributes, predicate)
+        val status = handler.read(entityname, attributes, predicate.toList)
 
         if (status.isFailure) {
           log.error("failure when reading data", status.failed.get)
@@ -141,29 +158,26 @@ case class Entity(val entityname: EntityName)(@transient implicit val ac: AdamCo
       }.filter(_.isSuccess).map(_.get)
 
       if (handlerData.nonEmpty) {
-        if(handlerData.size == 1){
+        if (handlerData.size == 1) {
           filteredData = Some(handlerData.head)
         } else {
-          filteredData = Some(handlerData.reduce(_.join(_, pk.name)).coalesce(AdamConfig.defaultNumberOfPartitions))
+          filteredData = Some(handlerData.reduce(_.join(_, pk.name)).coalesce(ac.config.defaultNumberOfPartitions))
         }
       }
     } else {
       predicates.foreach { predicate =>
-        val valueList = predicate.values.map(value => value match {
-          case _: String => "'" + value + "'"
-          case _ => value.toString
-        })
-
-        filteredData = filteredData.map(_.where(predicate.attribute + " " + predicate.operator.getOrElse(" IN ") + " " + valueList.mkString("(", ",", ")")))
+        filteredData = filteredData.map(data => data.filter(col(predicate.attribute).isin(predicate.values: _*)))
       }
-
     }
 
-
+    //handler
     if (handlerFilter.isDefined) {
       //filter by handler, name and type
       filteredData = filteredData.map(_.select(schema(nameFilter, typeFilter).filter(a => a.storagehandler.equals(handlerFilter.get)).map(attribute => col(attribute.name)): _*))
-    } else if (nameFilter.isDefined || typeFilter.isDefined) {
+    }
+
+    //name and type filter
+    if (nameFilter.isDefined || typeFilter.isDefined) {
       //filter by name and type
       filteredData = filteredData.map(_.select(schema(nameFilter, typeFilter).map(attribute => col(attribute.name)): _*))
     }
@@ -176,7 +190,7 @@ case class Entity(val entityname: EntityName)(@transient implicit val ac: AdamCo
     *
     * @return
     */
-  def getFeatureData: Option[DataFrame] = getData(typeFilter = Some(Seq(FEATURETYPE)))
+  def getFeatureData: Option[DataFrame] = getData(typeFilter = Some(Seq(VECTORTYPE, SPARSEVECTORTYPE)))
 
   /**
     * Gets feature attribute and pk attribute; use this for indexing purposes.
@@ -191,7 +205,7 @@ case class Entity(val entityname: EntityName)(@transient implicit val ac: AdamCo
     */
   def cache(): Unit = {
     if (_data.isEmpty) {
-      getData()
+      readData()
     }
 
     if (_data.isDefined) {
@@ -199,9 +213,6 @@ case class Entity(val entityname: EntityName)(@transient implicit val ac: AdamCo
       _data.get.count() //counting for caching
     }
   }
-
-
-  private val COUNT_KEY = "ntuples"
 
   /**
     * Returns number of elements in the entity.
@@ -211,13 +222,12 @@ case class Entity(val entityname: EntityName)(@transient implicit val ac: AdamCo
   def count: Long = {
     checkVersions()
 
-    var count = CatalogOperator.getEntityOption(entityname, Some(COUNT_KEY)).get.get(COUNT_KEY).map(_.toLong)
-
+    var count = SparkStartup.catalogOperator.getEntityOption(entityname, Some(Entity.COUNT_KEY)).get.get(Entity.COUNT_KEY).map(_.toLong)
 
     if (count.isEmpty) {
       if (getData().isDefined) {
         count = Some(getData().get.count())
-        CatalogOperator.updateEntityOption(entityname, COUNT_KEY, count.get.toString)
+        SparkStartup.catalogOperator.updateEntityOption(entityname, Entity.COUNT_KEY, count.get.toString)
       }
     }
 
@@ -233,11 +243,30 @@ case class Entity(val entityname: EntityName)(@transient implicit val ac: AdamCo
     */
   def show(k: Int): Option[DataFrame] = getData().map(_.limit(k))
 
+  private val MAX_INSERTS_BEFORE_VACUUM = SparkStartup.catalogOperator.getEntityOption(entityname, Some(Entity.MAX_INSERTS_VACUUMING)).get.get(Entity.MAX_INSERTS_VACUUMING).map(_.toInt).getOrElse(500)
 
-  private val N_INSERTS_VACUUMING = "ninserts"
-  private val MAX_INSERTS_VACUUMING = "maxinserts"
-  private val MAX_INSERTS_BEFORE_REPARTITIONING = CatalogOperator.getEntityOption(entityname, Some(MAX_INSERTS_VACUUMING)).get.get(MAX_INSERTS_VACUUMING).map(_.toInt).getOrElse(500)
-  private val MAX_PARTITIONS = 100
+   /**
+    * Returns the total number of inserts in entity
+    */
+  private def totalNumberOfInserts() = {
+    SparkStartup.catalogOperator.getEntityOption(entityname, Some(Entity.N_INSERTS)).get.get(Entity.N_INSERTS).map(_.toInt).getOrElse(0)
+  }
+
+  /**
+    * Returns the total number of inserts in entity since last vacuuming
+    */
+  private def totalNumberOfInsertsSinceVacuuming() = {
+    SparkStartup.catalogOperator.getEntityOption(entityname, Some(Entity.N_INSERTS_VACUUMING)).get.get(Entity.N_INSERTS_VACUUMING).map(_.toInt).getOrElse(0)
+  }
+
+  /**
+    *
+    * @param i increment by
+    */
+  private def incrementNumberOfInserts(i: Int = 1) = {
+    SparkStartup.catalogOperator.updateEntityOption(entityname, Entity.N_INSERTS, (totalNumberOfInserts + 1).toString)
+    SparkStartup.catalogOperator.updateEntityOption(entityname, Entity.N_INSERTS_VACUUMING, (totalNumberOfInsertsSinceVacuuming + 1).toString)
+  }
 
   /**
     * Inserts data into the entity.
@@ -250,28 +279,28 @@ case class Entity(val entityname: EntityName)(@transient implicit val ac: AdamCo
     log.trace("inserting data into entity")
 
     try {
-      val ninserts = CatalogOperator.getEntityOption(entityname, Some(N_INSERTS_VACUUMING)).get.get(N_INSERTS_VACUUMING).map(_.toInt).getOrElse(0)
+      val ninserts = totalNumberOfInserts()
+      val ninsertsvacuum = totalNumberOfInsertsSinceVacuuming()
+      val currentTime = (System.nanoTime() & ~9223372036854251520L) << 42
 
-      val insertion =
-        if (pk.fieldtype.equals(FieldTypes.AUTOTYPE)) {
-          if (data.schema.fieldNames.contains(pk.name)) {
-            return Failure(new GeneralAdamException("the field " + pk.name + " has been specified as auto and should therefore not be provided"))
-          }
+      val tupleidUDF = udf((count: Long) => {
+        val insertionMask = ((ninserts.toLong + 1)) << 49
+        currentTime + insertionMask + count
+      })
 
-          val rdd = data.rdd.zipWithUniqueId.map { case (r: Row, id: Long) => Row.fromSeq(id +: r.toSeq) }
-          ac.sqlContext
-            .createDataFrame(
-              rdd, StructType(StructField(pk.name, pk.fieldtype.datatype) +: data.schema.fields))
-        } else {
-          data
-        }.repartition(AdamConfig.defaultNumberOfPartitions)
+      //attach TID to rows
+      val rdd = data.rdd.zipWithUniqueId.map { case (r: Row, id: Long) => Row.fromSeq(id +: r.toSeq) }
+      val insertion = ac.sqlContext.createDataFrame(
+        rdd, StructType(StructField(FieldNames.internalIdColumnName, LongType) +: data.schema.fields))
+        .withColumn(FieldNames.internalIdColumnName, tupleidUDF(col(FieldNames.internalIdColumnName)))
+        .repartition(ac.config.defaultNumberOfPartitions)
 
       //TODO: check insertion schema and entity schema before trying to insert
       //TODO: block on other inserts
 
+      //insertion per handler
       val handlers = insertion.schema.fields
-        .map(field => schema(Some(Seq(field.name)))).filterNot(_.isEmpty).map(_.head)
-        .filterNot(_.pk)
+        .map(field => schema(Some(Seq(field.name)), fullSchema = false)).filterNot(_.isEmpty).map(_.head)
         .groupBy(_.storagehandler)
 
       handlers.foreach { case (handler, attributes) =>
@@ -282,7 +311,6 @@ case class Entity(val entityname: EntityName)(@transient implicit val ac: AdamCo
         }
 
         val df = insertion.select(fields.map(attribute => col(attribute.name)): _*)
-        //TODO: check here for PK!
         val status = handler.write(entityname, df, fields, SaveMode.Append, Map("allowRepartitioning" -> "true", "partitioningKey" -> pk.name))
 
         if (status.isFailure) {
@@ -290,50 +318,39 @@ case class Entity(val entityname: EntityName)(@transient implicit val ac: AdamCo
         }
       }
 
-      if (ninserts < MAX_INSERTS_BEFORE_REPARTITIONING) {
-        CatalogOperator.updateEntityOption(entityname, N_INSERTS_VACUUMING, (ninserts + 1).toString)
-      } else {
+      incrementNumberOfInserts()
+
+      if (ninsertsvacuum > MAX_INSERTS_BEFORE_VACUUM) {
         log.info("number of inserts necessitates now re-partitioning")
 
         if (schema().filter(_.storagehandler.engine.isInstanceOf[ParquetEngine]).nonEmpty) {
           //entity is partitionable
-          EntityPartitioner(this, AdamConfig.defaultNumberOfPartitions, None, None, PartitionMode.REPLACE_EXISTING) //this resets insertion counter
+          vacuum()
         } else {
-          //entity is not partitionable, increase number of partitions to max value
-          CatalogOperator.updateEntityOption(entityname, MAX_INSERTS_VACUUMING, Int.MaxValue.toString)
-        }
-      }
-
-      indexes.map(_.map(_.markStale()))
-
-      Success(null)
-    } catch {
-      case e: Exception => Failure(e)
-    } finally {
-
-      //TODO: possibly clean this
-      if (getFeatureData.isDefined) {
-        val npartitions = getFeatureData.get.rdd.getNumPartitions
-
-        if (npartitions > MAX_PARTITIONS && schema().filter(_.storagehandler.engine.isInstanceOf[ParquetEngine]).nonEmpty) {
-          //entity is partitionable
-          EntityPartitioner(this, AdamConfig.defaultNumberOfPartitions, None, None, PartitionMode.REPLACE_EXISTING) //this resets insertion counter
+          //entity is not partitionable, increase number of max inserts to max value
+          SparkStartup.catalogOperator.updateEntityOption(entityname, Entity.MAX_INSERTS_VACUUMING, Int.MaxValue.toString)
         }
       }
 
       markStale()
+
+      Success(null)
+    } catch {
+      case e: Exception => Failure(e)
     }
   }
 
   /**
-    *
+    * Vacuums the entity, i.e., clean up operations for entity
     */
-  private[entity] def resetInsertionCounter(): Unit = {
-    CatalogOperator.deleteEntityOption(entityname, N_INSERTS_VACUUMING)
+  def vacuum(): Unit = {
+    EntityPartitioner(this, ac.config.defaultNumberOfPartitions, attribute = Some(pk.name))
+    SparkStartup.catalogOperator.updateEntityOption(entityname, Entity.N_INSERTS_VACUUMING, 0.toString)
   }
 
 
   /**
+    * Deletes tuples that fit the predicates.
     *
     * @param predicates
     */
@@ -345,8 +362,7 @@ case class Entity(val entityname: EntityName)(@transient implicit val ac: AdamCo
     }
 
     val handlers = newData.schema.fields
-      .map(field => schema(Some(Seq(field.name)))).filterNot(_.isEmpty).map(_.head)
-      .filterNot(_.pk)
+      .map(field => schema(Some(Seq(field.name)), fullSchema = false)).filterNot(_.isEmpty).map(_.head)
       .groupBy(_.storagehandler)
 
     handlers.foreach { case (handler, attributes) =>
@@ -366,12 +382,13 @@ case class Entity(val entityname: EntityName)(@transient implicit val ac: AdamCo
 
     val oldCount = count
 
-    markStale
+    markStale()
 
     val newCount = count
 
     (oldCount - newCount).toInt
   }
+
 
   /**
     * Returns all available indexes for the entity.
@@ -379,21 +396,26 @@ case class Entity(val entityname: EntityName)(@transient implicit val ac: AdamCo
     * @return
     */
   def indexes: Seq[Try[Index]] = {
-    CatalogOperator.listIndexes(Some(entityname)).get.map(index => Index.load(index))
+    SparkStartup.catalogOperator.listIndexes(Some(entityname)).get.map(index => Index.load(index))
   }
+
 
   /**
     * Marks the data stale (e.g., if new data has been inserted to entity).
     */
   def markStale(): Unit = {
     this.synchronized {
-      mostRecentVersion += 1
+      mostRecentVersion.add(1)
 
       _schema = None
       _data.map(_.unpersist())
       _data = None
 
-      CatalogOperator.deleteEntityOption(entityname, COUNT_KEY)
+      indexes.map(_.map(_.markStale()))
+
+      ac.entityLRUCache.invalidate(entityname)
+
+      SparkStartup.catalogOperator.deleteEntityOption(entityname, Entity.COUNT_KEY)
 
       currentVersion = mostRecentVersion.value
     }
@@ -408,7 +430,6 @@ case class Entity(val entityname: EntityName)(@transient implicit val ac: AdamCo
       markStale()
     }
   }
-
 
   /**
     * Drops the data of the entity.
@@ -431,14 +452,14 @@ case class Entity(val entityname: EntityName)(@transient implicit val ac: AdamCo
       case e: Exception =>
         log.error("exception when dropping entity " + entityname, e)
     } finally {
-      CatalogOperator.dropEntity(entityname)
+      SparkStartup.catalogOperator.dropEntity(entityname)
     }
   }
 
   /**
     * Returns stored entity options.
     */
-  def options = CatalogOperator.getEntityOption(entityname)
+  private def options = SparkStartup.catalogOperator.getEntityOption(entityname)
 
   /**
     * Returns a map of properties to the entity. Useful for printing.
@@ -448,8 +469,8 @@ case class Entity(val entityname: EntityName)(@transient implicit val ac: AdamCo
   def propertiesMap(options: Map[String, String] = Map()) = {
     val lb = ListBuffer[(String, String)]()
 
-    lb.append("attributes" -> CatalogOperator.getAttributes(entityname).get.map(field => field.name).mkString(","))
-    lb.append("indexes" -> CatalogOperator.listIndexes(Some(entityname)).get.mkString(","))
+    lb.append("attributes" -> SparkStartup.catalogOperator.getAttributes(entityname).get.map(field => field.name).mkString(","))
+    lb.append("indexes" -> SparkStartup.catalogOperator.listIndexes(Some(entityname)).get.mkString(","))
     lb.append("partitions" -> getFeatureData.map(_.rdd.getNumPartitions.toString).getOrElse("none"))
 
     if (!(options.contains("count") && options("count") == "false")) {
@@ -470,7 +491,6 @@ case class Entity(val entityname: EntityName)(@transient implicit val ac: AdamCo
     schema(Some(Seq(attribute))).headOption.map(_.propertiesMap).getOrElse(Map())
   }
 
-
   override def equals(that: Any): Boolean =
     that match {
       case that: Entity =>
@@ -481,8 +501,15 @@ case class Entity(val entityname: EntityName)(@transient implicit val ac: AdamCo
   override def hashCode: Int = entityname.hashCode
 }
 
+
 object Entity extends Logging {
   type EntityName = EntityNameHolder
+
+  private val COUNT_KEY = "ntuples"
+  private val N_INSERTS = "ninserts"
+  private val N_INSERTS_VACUUMING = "ninsertsvac"
+  private val MAX_INSERTS_VACUUMING = "maxinserts"
+  private val DEFAULT_MAX_INSERTS_BEFORE_VACUUM = 500
 
   /**
     * Check if entity exists. Note that this only checks the catalog; the entity may still exist in the file system.
@@ -490,8 +517,8 @@ object Entity extends Logging {
     * @param entityname name of entity
     * @return
     */
-  def exists(entityname: EntityName): Boolean = {
-    val res = CatalogOperator.existsEntity(entityname)
+  def exists(entityname: EntityName)(implicit ac: AdamContext): Boolean = {
+    val res = SparkStartup.catalogOperator.existsEntity(entityname)
 
     if (res.isFailure) {
       throw res.failed.get
@@ -523,54 +550,30 @@ object Entity extends Logging {
         return Failure(EntityNotProperlyDefinedException("Entity " + entityname + " will have no attributes"))
       }
 
-      FieldNames.reservedNames.foreach { reservedName =>
-        if (creationAttributes.map(_.name).contains(reservedName)) {
-          return Failure(EntityNotProperlyDefinedException("Entity defined with field " + reservedName + ", but name is reserved"))
-        }
+      val reservedNames = creationAttributes.map(a => a.name -> FieldNames.isNameReserved(a.name)).filter(_._2 == true)
+      if (reservedNames.nonEmpty) {
+        return Failure(EntityNotProperlyDefinedException("Entity defined with field " + reservedNames.map(_._1).mkString + ", but name is reserved"))
       }
 
       if (creationAttributes.map(_.name).distinct.length != creationAttributes.length) {
         return Failure(EntityNotProperlyDefinedException("Entity defined with duplicate fields."))
       }
 
-      val allowedPkTypes = FieldTypes.values.filter(_.pk)
+      val attributes = creationAttributes.+:(new AttributeDefinition(FieldNames.internalIdColumnName, TupleID.AdamTupleID))
 
-      if (creationAttributes.count(_.pk) > 1) {
-        return Failure(EntityNotProperlyDefinedException("Entity defined with more than one primary key"))
-      } else if (!creationAttributes.exists(_.pk)) {
-        return Failure(EntityNotProperlyDefinedException("Entity defined has no primary key."))
-      } else if (!creationAttributes.filter(_.pk).forall(field => allowedPkTypes.contains(field.fieldtype))) {
-        return Failure(EntityNotProperlyDefinedException("Entity defined needs a " + allowedPkTypes.map(_.name).mkString(", ") + " primary key"))
-      }
+      SparkStartup.catalogOperator.createEntity(entityname, attributes)
+      SparkStartup.catalogOperator.updateEntityOption(entityname, COUNT_KEY, "0")
 
-      if (creationAttributes.count(_.fieldtype == AUTOTYPE) > 1) {
-        return Failure(EntityNotProperlyDefinedException("Too many auto attributes defined."))
-      } else if (creationAttributes.count(_.fieldtype == AUTOTYPE) > 0 && !creationAttributes.filter(_.pk).forall(_.fieldtype == AUTOTYPE)) {
-        return Failure(EntityNotProperlyDefinedException("Auto type only allowed in primary key."))
-      }
+      val pk = attributes.filter(_.pk)
+      val attributesWithoutPK = attributes.filterNot(_.pk)
 
-      CatalogOperator.createEntity(entityname, creationAttributes)
 
-      val pk = creationAttributes.filter(_.pk)
-      val attributesWithoutPK = creationAttributes.filterNot(_.pk)
-
-      if (attributesWithoutPK.isEmpty) {
-        //only pk attribute is available
-        pk.groupBy(_.storagehandler).foreach {
-          case (handler, attributes) =>
-            val status = handler.create(entityname, attributes)
-            if (status.isFailure) {
-              throw new GeneralAdamException("failing on handler " + handler.name + ":" + status.failed.get)
-            }
-        }
-      } else {
-        attributesWithoutPK.filterNot(_.pk).groupBy(_.storagehandler).foreach {
-          case (handler, attributes) =>
-            val status = handler.create(entityname, attributes.++:(pk))
-            if (status.isFailure) {
-              throw new GeneralAdamException("failing on handler " + handler.name + ":" + status.failed.get)
-            }
-        }
+      attributesWithoutPK.filterNot(_.pk).groupBy(_.storagehandler).foreach {
+        case (handler, handlerAttributes) =>
+          val status = handler.create(entityname, handlerAttributes.++:(pk))
+          if (status.isFailure) {
+            throw new GeneralAdamException("failing on handler " + handler.name + ":" + status.failed.get)
+          }
       }
 
       Success(Entity(entityname)(ac))
@@ -587,7 +590,7 @@ object Entity extends Logging {
         }
 
         //drop from catalog
-        CatalogOperator.dropEntity(entityname, true)
+        SparkStartup.catalogOperator.dropEntity(entityname, true)
 
         Failure(e)
     }
@@ -598,7 +601,7 @@ object Entity extends Logging {
     *
     * @return name of entities
     */
-  def list: Seq[EntityName] = CatalogOperator.listEntities().get
+  def list(implicit ac: AdamContext): Seq[EntityName] = SparkStartup.catalogOperator.listEntities().get
 
 
   /**

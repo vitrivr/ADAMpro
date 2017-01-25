@@ -1,6 +1,10 @@
 package org.vitrivr.adampro.index.structures.mi
 
-import org.vitrivr.adampro.datatypes.feature.Feature._
+import org.apache.spark.annotation.Experimental
+import org.apache.spark.sql.{DataFrame, Row}
+import org.vitrivr.adampro.config.FieldNames
+import org.vitrivr.adampro.datatypes.TupleID.TupleID
+import org.vitrivr.adampro.datatypes.vector.Vector._
 import org.vitrivr.adampro.index.Index
 import org.vitrivr.adampro.index.Index._
 import org.vitrivr.adampro.index.structures.IndexTypes
@@ -8,8 +12,6 @@ import org.vitrivr.adampro.main.AdamContext
 import org.vitrivr.adampro.query.Result
 import org.vitrivr.adampro.query.distance.DistanceFunction
 import org.vitrivr.adampro.query.query.NearestNeighbourQuery
-import org.apache.spark.annotation.Experimental
-import org.apache.spark.sql.{DataFrame, Row}
 
 /**
   * ADAMpro
@@ -18,7 +20,7 @@ import org.apache.spark.sql.{DataFrame, Row}
   * June 2016
   */
 @Experimental class MIIndex(override val indexname: IndexName)(@transient override implicit val ac: AdamContext)
-  extends Index(indexname) {
+  extends Index(indexname)(ac) {
 
   override val indextypename: IndexTypeName = IndexTypes.MIINDEX
   override val lossy: Boolean = true
@@ -27,7 +29,7 @@ import org.apache.spark.sql.{DataFrame, Row}
   val meta = metadata.get.asInstanceOf[MIIndexMetaData]
 
 
-  override def scan(data: DataFrame, q: FeatureVector, distance: DistanceFunction, options: Map[String, String], k: Int): DataFrame = {
+  override def scan(data: DataFrame, q: MathVector, distance: DistanceFunction, options: Map[String, String], k: Int): DataFrame = {
     log.debug("scanning MI index " + indexname)
 
     val ki = meta.ki
@@ -39,15 +41,15 @@ import org.apache.spark.sql.{DataFrame, Row}
     val max_pos_diff = options.mapValues(_.toInt).getOrElse("max_pos_diff", ki)
 
     //take closest ks reference points
-    val q_knp = meta.refs.sortBy(ref => distance(ref.feature, q)).take(ks)
+    val q_knp = meta.refs.sortBy(ref => distance(ref.ap_indexable, q)).take(ks)
 
     log.trace("reference points prepared")
 
-    val rh = new MIResultHandler[Any](ki + 1, k)
+    val rh = new MIResultHandler(ki + 1, k)
 
     q_knp.zipWithIndex.foreach {
       case (e, pos) =>
-        val piv = e.id.asInstanceOf[Int] //pivot = id of reference object
+        val piv = e.ap_id //pivot = id of reference object
 
         val low_inv_file_pos = pos - max_pos_diff
         val high_inv_file_pos = math.min(pos + max_pos_diff, ki)
@@ -64,8 +66,8 @@ import org.apache.spark.sql.{DataFrame, Row}
 
     log.debug("MI index returning " + rh.results.length + " results")
 
-    val results = ac.sc.parallelize(rh.results.map(x => Row(x.tid, x.score)))
-    ac.sqlContext.createDataFrame(results, Result.resultSchema(pk))
+    val results = ac.sc.parallelize(rh.results.map(x => Row(x.ap_id, x.ap_score)))
+    ac.sqlContext.createDataFrame(results, Result.resultSchema)
   }
 
   /**
@@ -77,10 +79,10 @@ import org.apache.spark.sql.{DataFrame, Row}
     * @param high_inv_file_pos highest score
     * @return
     */
-  private def getPostingList(data: DataFrame, piv: Int, low_inv_file_pos: Int, high_inv_file_pos: Int): Seq[(Any, Int)] = {
+  private def getPostingList(data: DataFrame, piv: TupleID, low_inv_file_pos: Int, high_inv_file_pos: Int): Seq[(TupleID, Int)] = {
     val entries = data.filter(data(MIIndex.REFERENCE_OBJ_NAME) === piv).select(MIIndex.POSTING_LIST_NAME, MIIndex.SCORE_LIST_NAME).collect()
 
-    val postings = entries.map(_.getAs[Seq[Any]](MIIndex.POSTING_LIST_NAME)).head
+    val postings = entries.map(_.getAs[Seq[TupleID]](MIIndex.POSTING_LIST_NAME)).head
     val scores = entries.map(_.getAs[Seq[Int]](MIIndex.SCORE_LIST_NAME)).head
 
     val low = math.min(0, low_inv_file_pos)

@@ -1,27 +1,26 @@
 package org.vitrivr.adampro.index.structures.sh
 
+import org.apache.spark.sql.{DataFrame, Row}
 import org.vitrivr.adampro.config.FieldNames
-import org.vitrivr.adampro.datatypes.bitString.BitString
-import org.vitrivr.adampro.datatypes.feature.Feature._
-import org.vitrivr.adampro.datatypes.feature.MovableFeature
-import org.vitrivr.adampro.index.Index
+import org.vitrivr.adampro.datatypes.bitstring.BitString
+import org.vitrivr.adampro.datatypes.vector.Vector._
+import org.vitrivr.adampro.datatypes.vector.MovableFeature
+import org.vitrivr.adampro.index.{ResultElement, Index}
 import org.vitrivr.adampro.index.Index.{IndexName, IndexTypeName}
 import org.vitrivr.adampro.index.structures.IndexTypes
 import org.vitrivr.adampro.main.AdamContext
-import org.vitrivr.adampro.query.Result
 import org.vitrivr.adampro.query.distance.{DistanceFunction, MinkowskiDistance}
 import org.vitrivr.adampro.query.query.NearestNeighbourQuery
-import org.apache.spark.sql.{DataFrame, Row}
 
 
 /**
- * adamtwo
- *
- * Ivan Giangreco
- * August 2015
- */
-class SHIndex(override val indexname: IndexName)(@transient override implicit val ac : AdamContext)
-  extends Index(indexname) {
+  * adamtwo
+  *
+  * Ivan Giangreco
+  * August 2015
+  */
+class SHIndex(override val indexname: IndexName)(@transient override implicit val ac: AdamContext)
+  extends Index(indexname)(ac) {
 
   override val indextypename: IndexTypeName = IndexTypes.SHINDEX
   override val lossy: Boolean = true
@@ -38,35 +37,36 @@ class SHIndex(override val indexname: IndexName)(@transient override implicit va
     * @param k        number of elements to retrieve (of the k nearest neighbor search), possibly more than k elements are returned
     * @return a set of candidate tuple ids, possibly together with a tentative score (the number of tuples will be greater than k)
     */
-  override def scan(data : DataFrame, q : FeatureVector, distance : DistanceFunction, options : Map[String, String], k : Int): DataFrame = {
+  override def scan(data: DataFrame, q: MathVector, distance: DistanceFunction, options: Map[String, String], k: Int): DataFrame = {
     log.debug("scanning SH index " + indexname)
 
     val numOfQueries = options.getOrElse("numOfQ", "3").toInt
 
-    import MovableFeature.conv_feature2MovableFeature
+    import MovableFeature.conv_math2mov
     val originalQuery = SHUtils.hashFeature(q, meta)
     //move the query around by the precomuted radius
     //TODO: possibly adjust weight of computed queries vs. true query
     val queries = ac.sc.broadcast(List.fill(numOfQueries)((1.0, SHUtils.hashFeature(q.move(meta.radius), meta))) ::: List((1.0, originalQuery)))
 
     import org.apache.spark.sql.functions.udf
-    val distUDF = udf((c: BitString[_]) => {
+    val distUDF = udf((c: Array[Byte]) => {
       var i = 0
       var score = 0
       while (i < queries.value.length) {
         val weight = queries.value(i)._1
         val query = queries.value(i)._2
-        score += c.hammingDistance(query) //hamming distance
+        score += BitString.fromByteArray(c).hammingDistance(query) //hamming distance
         i += 1
       }
 
       score
     })
 
-    val rddResults = data
+    import ac.spark.implicits._
+    data
       .withColumn(FieldNames.distanceColumnName, distUDF(data(FieldNames.featureIndexColumnName)))
       .mapPartitions { items =>
-        val handler = new SHResultHandler(k)  //use handler to take closest n elements
+        val handler = new SHResultHandler(k) //use handler to take closest n elements
         //(using this handler is necessary here, as if the closest element has distance 5, we want all closes elements with distance 5;
         //the methods provided by Spark (e.g. take) do not allow this
 
@@ -74,15 +74,13 @@ class SHIndex(override val indexname: IndexName)(@transient override implicit va
           handler.offer(item, this.pk.name)
         })
 
-        handler.results.map(x => Row(x.tid, x.score.toFloat)).iterator
-      }
-
-    ac.sqlContext.createDataFrame(rddResults,  Result.resultSchema(pk))
+        handler.results.map(x => ResultElement(x.ap_id, x.ap_score)).iterator
+      }.toDF()
   }
 
   override def isQueryConform(nnq: NearestNeighbourQuery): Boolean = {
     //is this check correct?
-    if(nnq.distance.isInstanceOf[MinkowskiDistance]){
+    if (nnq.distance.isInstanceOf[MinkowskiDistance]) {
       return true
     }
 

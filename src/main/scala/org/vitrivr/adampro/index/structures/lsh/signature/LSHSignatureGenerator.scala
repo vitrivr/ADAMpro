@@ -1,7 +1,8 @@
 package org.vitrivr.adampro.index.structures.lsh.signature
 
-import org.vitrivr.adampro.datatypes.bitString.BitString
-import org.vitrivr.adampro.datatypes.feature.Feature._
+import org.vitrivr.adampro.datatypes.bitstring.BitString
+import org.vitrivr.adampro.datatypes.vector.Vector
+import org.vitrivr.adampro.datatypes.vector.Vector._
 import org.vitrivr.adampro.index.structures.lsh.hashfunction.Hasher
 import org.vitrivr.adampro.index.structures.va.signature.FixedSignatureGenerator
 
@@ -19,7 +20,7 @@ class LSHSignatureGenerator(hashTables : Seq[Hasher], m : Int) extends Serializa
     * @param f
     * @return
     */
-  def toSignature(f: FeatureVector) : BitString[_] = {
+  def toSignature(f: MathVector) : BitString[_] = {
     signatureGenerator.toSignature(toBuckets(f))
   }
 
@@ -28,7 +29,7 @@ class LSHSignatureGenerator(hashTables : Seq[Hasher], m : Int) extends Serializa
     * @param f
     * @return
     */
-  def toBuckets(f: FeatureVector) = {
+  def toBuckets(f: MathVector) = {
     hashTables.map(ht => ht(f,m))
   }
 

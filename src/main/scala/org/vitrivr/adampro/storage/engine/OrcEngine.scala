@@ -5,12 +5,9 @@ import java.io.File
 import org.apache.commons.io.FileUtils
 import org.apache.hadoop.conf.Configuration
 import org.apache.hadoop.fs.{FileSystem, Path}
-import org.apache.spark.sql.functions._
-import org.apache.spark.sql.types.ArrayType
 import org.apache.spark.sql.{DataFrame, SaveMode}
 import org.vitrivr.adampro.config.AdamConfig
 import org.vitrivr.adampro.datatypes.FieldTypes
-import org.vitrivr.adampro.datatypes.feature.{FeatureVectorWrapperUDT, FeatureVectorWrapper}
 import org.vitrivr.adampro.entity.AttributeDefinition
 import org.vitrivr.adampro.exception.GeneralAdamException
 import org.vitrivr.adampro.main.AdamContext
@@ -28,9 +25,9 @@ import scala.util.{Failure, Success, Try}
 class OrcEngine(@transient override implicit val ac: AdamContext) extends Engine()(ac) with Logging with Serializable {
   override val name = "orc"
 
-  override def supports = Seq(FieldTypes.AUTOTYPE, FieldTypes.SERIALTYPE, FieldTypes.INTTYPE, FieldTypes.LONGTYPE, FieldTypes.FLOATTYPE, FieldTypes.DOUBLETYPE, FieldTypes.STRINGTYPE, FieldTypes.TEXTTYPE, FieldTypes.BOOLEANTYPE, FieldTypes.FEATURETYPE)
+  override def supports = Seq(FieldTypes.INTTYPE, FieldTypes.LONGTYPE, FieldTypes.FLOATTYPE, FieldTypes.DOUBLETYPE, FieldTypes.STRINGTYPE, FieldTypes.TEXTTYPE, FieldTypes.BOOLEANTYPE, FieldTypes.VECTORTYPE)
 
-  override def specializes = Seq(FieldTypes.FEATURETYPE)
+  override def specializes = Seq(FieldTypes.VECTORTYPE)
 
   var subengine: GenericOrcEngine = _
 
@@ -84,28 +81,18 @@ class OrcEngine(@transient override implicit val ac: AdamContext) extends Engine
     */
   override def read(storename: String, attributes: Seq[AttributeDefinition], predicates: Seq[Predicate], params: Map[String, String])(implicit ac: AdamContext): Try[DataFrame] = {
     log.debug("orc read operation")
-    import org.apache.spark.sql.functions.udf
-    val castToFeature = udf((c: Seq[Float]) => {
-      new FeatureVectorWrapper(c)
-    })
 
     try {
       val res = subengine.read(storename)
 
       if (res.isSuccess) {
-        var data = res.get
-
-        res.get.schema.fields.filter(_.dataType.isInstanceOf[ArrayType]).foreach { field =>
-          data = data.withColumn(field.name, castToFeature(col(field.name)))
-        }
-
-        Success(data)
+        Success(res.get)
       } else {
         res
       }
     } catch {
       case e: Exception =>
-        log.error("fatal error when reading from avro", e)
+        log.error("fatal error when reading from orc", e)
         Failure(e)
     }
   }
@@ -121,7 +108,7 @@ class OrcEngine(@transient override implicit val ac: AdamContext) extends Engine
     * @return new options to store
     */
   override def write(storename: String, df: DataFrame, attributes: Seq[AttributeDefinition], mode: SaveMode = SaveMode.Append, params: Map[String, String])(implicit ac: AdamContext): Try[Map[String, String]] = {
-    log.debug("avro write operation")
+    log.debug("orc write operation")
     val allowRepartitioning = params.getOrElse("allowRepartitioning", "false").toBoolean
 
     import org.apache.spark.sql.functions.{col, udf}
@@ -132,28 +119,10 @@ class OrcEngine(@transient override implicit val ac: AdamContext) extends Engine
       val partitioningKey = params.get("partitioningKey")
 
       if (partitioningKey.isDefined) {
-        data = data.repartition(AdamConfig.defaultNumberOfPartitions, col(partitioningKey.get))
+        data = data.repartition(ac.config.defaultNumberOfPartitions, col(partitioningKey.get))
       } else {
-        data = data.repartition(AdamConfig.defaultNumberOfPartitions)
+        data = data.repartition(ac.config.defaultNumberOfPartitions)
       }
-    }
-
-    val arrayUDF = udf((c: FeatureVectorWrapper) => {
-      try {
-        if (c != null) {
-          c.toSeq.toArray[Float]
-        } else {
-          Array[Float]()
-        }
-      } catch {
-        case e: Exception =>
-          log.error("error when converting to avro", e)
-          Array[Float]()
-      }
-    })
-
-    df.schema.fields.filter(_.dataType.isInstanceOf[FeatureVectorWrapperUDT]).foreach { field =>
-      data = data.withColumn(field.name, arrayUDF(col(field.name)))
     }
 
     val res = subengine.write(storename, data, mode)

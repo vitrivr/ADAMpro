@@ -15,11 +15,11 @@ class CassandraTestSuite  extends AdamTestBase {
   val ntuples = 1000
 
   val handlerName = "cassandra"
-  val fieldTypes = Seq(FieldTypes.FEATURETYPE)
+  val fieldTypes = Seq(FieldTypes.VECTORTYPE)
 
   scenario("create an entity") {
     withEntityName { entityname =>
-      val attributes = fieldTypes.map(field => AttributeDefinition(field.name + "field", field, storagehandlername = handlerName)) ++ Seq(AttributeDefinition("id", FieldTypes.AUTOTYPE, true, storagehandlername = handlerName))
+      val attributes = fieldTypes.map(field => AttributeDefinition(field.name + "field", field, storagehandlername = handlerName)) ++ Seq(AttributeDefinition("tid", FieldTypes.LONGTYPE, storagehandlername = handlerName))
       EntityOp.create(entityname, attributes)
       RandomDataOp.apply(entityname, ntuples, Map("fv-dimensions" -> 10.toString))
 

@@ -2,19 +2,19 @@
 <!DOCTYPE log4j:configuration PUBLIC "-//APACHE//DTD LOG4J 1.2//EN" "http://logging.apache.org/log4j/1.2/apidocs/org/apache/log4j/xml/doc-files/log4j.dtd">
 <Configuration status="DEBUG" name="ADAMpro" packages="">
     <Appenders>
-        <RollingFile name="file_system"  fileName="/var/logs/vitrivr/system.log">
+        <RollingFile name="file_system"  fileName="./logs/vitrivr/system.log">
             <PatternLayout>
                 <pattern>%d %p %c{1.} [%t] %m%n</pattern>
             </PatternLayout>
         </RollingFile>
 
-        <RollingFile name="file_adampro" fileName="/var/logs/vitrivr/adampro.log">
+        <RollingFile name="file_adampro" fileName="./logs/vitrivr/adampro.log">
             <PatternLayout>
                 <pattern>%d %p %c{1.} [%t] %m%n</pattern>
             </PatternLayout>
         </RollingFile>
 
-        <RollingFile name="file_query" fileName="/var/logs/vitrivr/query.html">
+        <RollingFile name="file_query" fileName="./logs/vitrivr/query.html">
             <MarkerFilter marker="QUERY_MARKER" onMatch="ACCEPT" onMismatch="DENY"/>
             <HTMLLayout charset="UTF-8" title="Query Logs" locationInfo="true" />
             <PatternLayout>

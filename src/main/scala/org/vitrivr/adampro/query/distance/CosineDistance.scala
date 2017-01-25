@@ -1,7 +1,7 @@
 package org.vitrivr.adampro.query.distance
 
 import breeze.linalg.norm
-import org.vitrivr.adampro.datatypes.feature.Feature._
+import org.vitrivr.adampro.datatypes.vector.Vector._
 import org.vitrivr.adampro.query.distance.Distance._
 import org.vitrivr.adampro.utils.Logging
 
@@ -14,7 +14,7 @@ import org.vitrivr.adampro.utils.Logging
   * from Julia: 1 - dot(x, y) / (norm(x) * norm(y))
   */
 object CosineDistance extends DistanceFunction with Logging with Serializable {
-  override def apply(v1: FeatureVector, v2: FeatureVector, weights: Option[FeatureVector]): Distance = {
+  override def apply(v1: MathVector, v2: MathVector, weights: Option[MathVector]): Distance = {
     if (weights.isDefined) {
       log.warn("weights cannot be used with cosine distance and are ignored")
     }

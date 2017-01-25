@@ -1,14 +1,17 @@
 package org.vitrivr.adampro.query.handler.internal
 
 import com.google.common.hash.{BloomFilter, Funnel, PrimitiveSink}
+import org.apache.spark.broadcast.Broadcast
 import org.apache.spark.sql.DataFrame
 import org.apache.spark.sql.functions._
+import org.apache.spark.sql.types.StructType
 import org.vitrivr.adampro.config.FieldNames
-import org.vitrivr.adampro.datatypes.feature.FeatureVectorWrapper
+import org.vitrivr.adampro.datatypes.vector.Vector._
 import org.vitrivr.adampro.entity.Entity
 import org.vitrivr.adampro.entity.Entity.EntityName
 import org.vitrivr.adampro.exception.QueryNotConformException
 import org.vitrivr.adampro.main.AdamContext
+import org.vitrivr.adampro.query.distance.Distance
 import org.vitrivr.adampro.query.handler.generic.{ExpressionDetails, QueryEvaluationOptions, QueryExpression}
 import org.vitrivr.adampro.query.query.NearestNeighbourQuery
 import org.vitrivr.adampro.utils.Logging
@@ -31,7 +34,7 @@ case class SequentialScanExpression(private val entity: Entity)(private val nnq:
 
   _children ++= filterExpr.map(Seq(_)).getOrElse(Seq())
 
-  def this(entityname: EntityName)(nnq: NearestNeighbourQuery, id: Option[String] = None)(filterExpr: Option[QueryExpression] = None)(implicit ac: AdamContext) {
+  def this(entityname: EntityName)(nnq: NearestNeighbourQuery, id: Option[String])(filterExpr: Option[QueryExpression])(implicit ac: AdamContext) {
     this(Entity.load(entityname).get)(nnq, id)(filterExpr)
   }
 
@@ -116,25 +119,18 @@ object SequentialScanExpression extends Logging {
     */
   def scan(df: DataFrame, nnq: NearestNeighbourQuery)(implicit ac: AdamContext): DataFrame = {
     val q = ac.sc.broadcast(nnq.q)
-    val w = ac.sc.broadcast(nnq.weights)
+    val w: Broadcast[Option[MathVector]] = ac.sc.broadcast(nnq.weights)
 
-    import org.apache.spark.sql.functions.{col, udf}
-    val distUDF = udf((c: FeatureVectorWrapper) => {
-      try {
-        if (c != null) {
-          nnq.distance(q.value, c.vector, w.value)
-        } else {
-          Float.MaxValue
-        }
-      } catch {
-        case e: Exception =>
-          log.error("error when computing distance", e)
-          Float.MaxValue
-      }
-    })
+    val res = if(df.schema.apply(nnq.attribute).dataType.isInstanceOf[StructType]){
+      //sparse vectors
+      df.withColumn(FieldNames.distanceColumnName, Distance.sparseVectorDistUDF(nnq, q, w)(df(nnq.attribute)))
+    } else {
+      //dense vectors
+      df.withColumn(FieldNames.distanceColumnName, Distance.denseVectorDistUDF(nnq, q, w)(df(nnq.attribute)))
+    }
 
-    df.withColumn(FieldNames.distanceColumnName, distUDF(df(nnq.attribute)))
-      .orderBy(col(FieldNames.distanceColumnName))
+    import org.apache.spark.sql.functions.{col}
+    res.orderBy(col(FieldNames.distanceColumnName))
       .limit(nnq.k)
   }
 }

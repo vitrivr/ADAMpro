@@ -3,10 +3,7 @@ package org.vitrivr.adampro.rpc
 import io.grpc.stub.StreamObserver
 import org.apache.spark.sql.DataFrame
 import org.apache.spark.sql.types._
-import org.slf4j.Marker
 import org.vitrivr.adampro.api.{EntityOp, IndexOp, QueryOp}
-import org.vitrivr.adampro.datatypes.feature.{FeatureVectorWrapper, FeatureVectorWrapperUDT}
-import org.vitrivr.adampro.datatypes.gis.{GeographyWrapper, GeographyWrapperUDT, GeometryWrapper, GeometryWrapperUDT}
 import org.vitrivr.adampro.exception.{GeneralAdamException, QueryNotCachedException}
 import org.vitrivr.adampro.grpc.grpc.{AdamSearchGrpc, _}
 import org.vitrivr.adampro.main.{AdamContext, SparkStartup}
@@ -122,7 +119,7 @@ class SearchRPC extends AdamSearchGrpc.AdamSearch with Logging {
       log.trace("\n ------------------- \n" + expression.get.mkString(0) + "\n ------------------- \n")
 
       log.trace(QUERY_MARKER, "before query op " + logId)
-      val res = QueryOp(expression.get, evaluationOptions)
+      val res = QueryOp.expression(expression.get, evaluationOptions)
       log.trace(QUERY_MARKER, "after query op " + logId)
 
       if (res.isSuccess) {
@@ -291,9 +288,12 @@ class SearchRPC extends AdamSearchGrpc.AdamSearch with Logging {
                 case IntegerType => DataMessage().withIntData(row.getAs[Integer](col.name))
                 case LongType => DataMessage().withLongData(row.getAs[Long](col.name))
                 case StringType => DataMessage().withStringData(row.getAs[String](col.name))
-                case _: FeatureVectorWrapperUDT => DataMessage().withFeatureData(FeatureVectorMessage().withDenseVector(DenseVectorMessage(row.getAs[FeatureVectorWrapper](col.name).toSeq)))
-                case _: GeographyWrapperUDT => DataMessage().withStringData(row.getAs[GeographyWrapper](col.name).getValue)
-                case _: GeometryWrapperUDT => DataMessage().withStringData(row.getAs[GeometryWrapper](col.name).getValue)
+                case x : ArrayType => {
+                  x.elementType match {
+                    case DoubleType => DataMessage().withFeatureData(FeatureVectorMessage().withDenseVector(DenseVectorMessage(row.getAs[Seq[Double]](col.name).map(_.toFloat))))
+                    case FloatType => DataMessage().withFeatureData(FeatureVectorMessage().withDenseVector(DenseVectorMessage(row.getAs[Seq[Float]](col.name))))
+                  }
+                }
                 case _ => DataMessage().withStringData("")
               }
             }

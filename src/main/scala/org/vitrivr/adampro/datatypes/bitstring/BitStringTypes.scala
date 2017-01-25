@@ -1,4 +1,4 @@
-package org.vitrivr.adampro.datatypes.bitString
+package org.vitrivr.adampro.datatypes.bitstring
 
 /**
  * adamtwo

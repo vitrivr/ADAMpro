@@ -16,11 +16,12 @@ import scala.concurrent.duration.Duration
   * May 2016
   */
 case class TimedScanExpression(private val exprs: Seq[QueryExpression], private val timelimit: Duration, id: Option[String] = None)(filterExpr: Option[QueryExpression] = None)(@transient implicit val ac: AdamContext) extends QueryExpression(id) {
-  override val info = ExpressionDetails(None, Some("Timed Scan Expression"), id, confidence)
-  _children ++= exprs ++ filterExpr.map(Seq(_)).getOrElse(Seq())
   var confidence : Option[Float] = None
 
-  def this(entityname: EntityName, nnq: NearestNeighbourQuery, pathChooser: ProgressivePathChooser, timelimit: Duration, id: Option[String] = None)(filterExpr: Option[QueryExpression] = None)(implicit ac: AdamContext) = {
+  override val info = ExpressionDetails(None, Some("Timed Scan Expression"), id, confidence)
+  _children ++= exprs ++ filterExpr.map(Seq(_)).getOrElse(Seq())
+
+  def this(entityname: EntityName, nnq: NearestNeighbourQuery, pathChooser: ProgressivePathChooser, timelimit: Duration, id: Option[String])(filterExpr: Option[QueryExpression])(implicit ac: AdamContext) = {
     this(pathChooser.getPaths(entityname, nnq), timelimit, id)(filterExpr)
   }
 
@@ -28,7 +29,7 @@ case class TimedScanExpression(private val exprs: Seq[QueryExpression], private 
     *
     * @return
     */
-  override protected def run(options : Option[QueryEvaluationOptions], filter: Option[DataFrame] = None)(implicit ac: AdamContext): Option[DataFrame] = {
+  override protected def run(options : Option[QueryEvaluationOptions], filter: Option[DataFrame])(implicit ac: AdamContext): Option[DataFrame] = {
     log.debug("perform time-limited evaluation")
 
     ac.sc.setJobGroup(id.getOrElse(""), "timed progressive query", interruptOnCancel = true)

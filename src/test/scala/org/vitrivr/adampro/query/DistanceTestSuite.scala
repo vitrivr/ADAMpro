@@ -1,9 +1,9 @@
 package org.vitrivr.adampro.query
 
 import org.vitrivr.adampro.AdamTestBase
-import org.vitrivr.adampro.datatypes.feature.FeatureVectorWrapper
 import org.vitrivr.adampro.query.distance._
 import org.scalatest.concurrent.ScalaFutures
+import org.vitrivr.adampro.datatypes.vector.Vector
 
 /**
   * ADAMpro
@@ -14,11 +14,11 @@ import org.scalatest.concurrent.ScalaFutures
   * Test was created using distances computed with the Julia Distances.jl code.
   */
 class DistanceTestSuite extends AdamTestBase with ScalaFutures {
-  val x = new FeatureVectorWrapper(Seq.fill(10)(0.toFloat)).vector
-  val y = new FeatureVectorWrapper(Seq.fill(10)(1.toFloat)).vector
-  val z = new FeatureVectorWrapper(Seq.tabulate(10)(_ * 0.1.toFloat + 0.1.toFloat)).vector
+  val x = Vector.conv_draw2vec(Seq.fill(10)(0.toFloat))
+  val y = Vector.conv_draw2vec(Seq.fill(10)(1.toFloat))
+  val z = Vector.conv_draw2vec(Seq.tabulate(10)(_ * 0.1.toFloat + 0.1.toFloat))
 
-  val w = new FeatureVectorWrapper(Seq.tabulate(10)(_ * 0.2.toFloat)).vector
+  val w = Vector.conv_draw2vec(Seq.tabulate(10)(_ * 0.2.toFloat))
 
   feature("distance measures") {
 

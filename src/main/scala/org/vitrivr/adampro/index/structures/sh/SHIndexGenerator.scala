@@ -1,21 +1,16 @@
 package org.vitrivr.adampro.index.structures.sh
 
-import breeze.linalg.{Matrix, Vector, _}
+import breeze.linalg.{Matrix, sum, _}
+import org.apache.spark.sql.functions._
+import org.apache.spark.sql.{DataFrame, Dataset}
 import org.vitrivr.adampro.config.FieldNames
-import org.vitrivr.adampro.datatypes.bitString.BitStringUDT
-import org.vitrivr.adampro.datatypes.feature.Feature
-import org.vitrivr.adampro.datatypes.feature.Feature.{VectorBase, _}
-import org.vitrivr.adampro.entity.Entity
-import org.vitrivr.adampro.entity.Entity._
-import org.vitrivr.adampro.index.Index.{IndexName, IndexTypeName}
+import org.vitrivr.adampro.datatypes.vector.Vector
+import org.vitrivr.adampro.datatypes.vector.Vector.{VectorBase, _}
+import org.vitrivr.adampro.index.Index.IndexTypeName
 import org.vitrivr.adampro.index._
 import org.vitrivr.adampro.index.structures.IndexTypes
-import org.vitrivr.adampro.main.{AdamContext, SparkStartup}
+import org.vitrivr.adampro.main.AdamContext
 import org.vitrivr.adampro.query.distance.DistanceFunction
-import org.apache.spark.rdd.RDD
-import org.apache.spark.sql.{DataFrame, Row}
-import org.apache.spark.sql.types.{StructField, StructType}
-import org.apache.spark.util.random.Sampling
 
 
 /**
@@ -27,40 +22,25 @@ import org.apache.spark.util.random.Sampling
 class SHIndexGenerator(nbits: Option[Int], trainingSize: Int)(@transient implicit val ac: AdamContext) extends IndexGenerator {
   override val indextypename: IndexTypeName = IndexTypes.SHINDEX
 
-
   /**
     *
-    * @param data
+    * @param data raw data to index
     * @return
     */
-  override def index(indexname: IndexName, entityname: EntityName, data: RDD[IndexingTaskTuple[_]]): (DataFrame, Serializable) = {
-    val entity = Entity.load(entityname).get
+  override def index(data: DataFrame, attribute : String): (DataFrame, Serializable) = {
+    log.trace("SH started indexing")
 
-    val n = entity.count
-    val fraction = Sampling.computeFractionForSampleSize(math.max(trainingSize, MINIMUM_NUMBER_OF_TUPLE), n, false)
-    var trainData = data.sample(false, fraction).collect()
-    if(trainData.length < MINIMUM_NUMBER_OF_TUPLE){
-      trainData = data.take(MINIMUM_NUMBER_OF_TUPLE)
-    }
+    val meta = train(getSample(math.max(trainingSize, MINIMUM_NUMBER_OF_TUPLE), attribute)(data))
 
-    val meta = train(trainData)
+    val cellUDF = udf((c: DenseSparkVector) => {
+      SHUtils.hashFeature(Vector.conv_dspark2vec(c), meta).serialize
+    })
 
-    log.debug("SH indexing...")
+    val indexed = data.withColumn(FieldNames.featureIndexColumnName, cellUDF(data(attribute)))
 
-    val indexdata = data.map(
-      datum => {
-        val hash = SHUtils.hashFeature(datum.feature, meta)
-        Row(datum.id, hash)
-      })
+    log.trace("SH finished indexing")
 
-    val schema = StructType(Seq(
-      StructField(entity.pk.name, entity.pk.fieldtype.datatype, false),
-      StructField(FieldNames.featureIndexColumnName, new BitStringUDT, false)
-    ))
-
-    val df = ac.sqlContext.createDataFrame(indexdata, schema)
-
-    (df, meta)
+    (indexed, meta)
   }
 
   /**
@@ -68,10 +48,10 @@ class SHIndexGenerator(nbits: Option[Int], trainingSize: Int)(@transient implici
     * @param trainData
     * @return
     */
-  private def train(trainData: Array[IndexingTaskTuple[_]]): SHIndexMetaData = {
+  private def train(trainData: Seq[IndexingTaskTuple]): SHIndexMetaData = {
     log.trace("SH started training")
 
-    val dTrainData = trainData.map(x => x.feature.map(x => x.toDouble).toArray)
+    val dTrainData = trainData.map(x => x.ap_indexable.map(x => x.toDouble).toArray)
     val dataMatrix = DenseMatrix(dTrainData.toList: _*)
 
     val nfeatures = dTrainData.head.length
@@ -95,7 +75,7 @@ class SHIndexGenerator(nbits: Option[Int], trainingSize: Int)(@transient implici
     }
     }
     val reorderEigv = eigv * reorderPerm
-    val feigv = new DenseMatrix[Float](reorderEigv.rows, reorderEigv.cols, reorderEigv.toArray.map(_.toFloat))
+    val feigv = new DenseMatrix[VectorBase](reorderEigv.rows, reorderEigv.cols, reorderEigv.toArray.map(Vector.conv_double2vb))
     val projected = (dataMatrix.*(reorderEigv)).asInstanceOf[DenseMatrix[Double]]
 
     // fit uniform distribution
@@ -108,9 +88,7 @@ class SHIndexGenerator(nbits: Option[Int], trainingSize: Int)(@transient implici
     val modes = getSortedModes(allModes, minProj, maxProj, nbits.getOrElse(nfeatures * 2))
 
     // compute "radius" for moving query around
-    val min = breeze.linalg.min(dataMatrix(*, ::)).toDenseVector
-    val max = breeze.linalg.max(dataMatrix(*, ::)).toDenseVector
-    val radius = 0.1 * (max - min)
+    val radius = 0.1 * (maxProj - minProj)
 
     log.trace("SH finished training")
 
@@ -161,7 +139,7 @@ class SHIndexGenerator(nbits: Option[Int], trainingSize: Int)(@transient implici
     */
   private def getSortedModes(modes: DenseMatrix[VectorBase], min: Vector[VectorBase], max: Vector[VectorBase], bits: Int): Matrix[VectorBase] = {
     val range = max - min
-    val omega0 = range.mapValues(r => conv_double2vectorBase(math.Pi / math.abs(r))) //abs() added
+    val omega0 = range.mapValues(r => Vector.conv_double2vb(math.Pi / math.abs(r))) //abs() added
     val omegas = modes(*, ::).:*(omega0)
     val omegas2 = omegas :* omegas
     val eigVal = sum(omegas2(*, ::))

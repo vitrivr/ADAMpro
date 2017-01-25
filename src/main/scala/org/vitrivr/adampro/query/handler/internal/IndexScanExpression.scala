@@ -31,11 +31,11 @@ case class IndexScanExpression(val index: Index)(val nnq: NearestNeighbourQuery,
 
   _children ++= filterExpr.map(Seq(_)).getOrElse(Seq())
 
-  def this(indexname: IndexName)(nnq: NearestNeighbourQuery, id: Option[String] = None)(filterExpr: Option[QueryExpression] = None)(implicit ac: AdamContext) {
+  def this(indexname: IndexName)(nnq: NearestNeighbourQuery, id: Option[String])(filterExpr: Option[QueryExpression])(implicit ac: AdamContext) {
     this(Index.load(indexname).get)(nnq, id)(filterExpr)
   }
 
-  def this(entityname: EntityName, indextypename: IndexTypeName)(nnq: NearestNeighbourQuery, id: Option[String] = None)(filterExpr: Option[QueryExpression] = None)(implicit ac: AdamContext) {
+  def this(entityname: EntityName, indextypename: IndexTypeName)(nnq: NearestNeighbourQuery, id: Option[String])(filterExpr: Option[QueryExpression])(implicit ac: AdamContext) {
     this(
       Entity.load(entityname).get.indexes
         .filter(_.isSuccess)

@@ -17,7 +17,7 @@ private[va] trait MarksGenerator extends Serializable {
     * @param maxMarks maximal number of marks (different for every dimension)
     * @return
     */
-  private[va] def getMarks(samples: Array[IndexingTaskTuple[_]], maxMarks: Seq[Int]): Marks
+  private[va] def getMarks(samples: Seq[IndexingTaskTuple], maxMarks: Seq[Int]): Marks
 
   /**
     *
@@ -25,8 +25,8 @@ private[va] trait MarksGenerator extends Serializable {
     * @param maxMarks maximal number of marks (equal for every dimension)
     * @return
     */
-  private[va] def getMarks(samples: Array[IndexingTaskTuple[_]], maxMarks: Int): Marks = {
-    val dimensionality = samples.head.feature.length
+  private[va] def getMarks(samples: Seq[IndexingTaskTuple], maxMarks: Int): Marks = {
+    val dimensionality = samples.head.ap_indexable.length
     getMarks(samples, Seq.fill(dimensionality)(maxMarks))
   }
 }

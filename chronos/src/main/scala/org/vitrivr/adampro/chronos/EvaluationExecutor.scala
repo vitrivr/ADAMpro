@@ -105,16 +105,16 @@ class EvaluationExecutor(val job: EvaluationJob, setStatus: (Double) => (Boolean
     getPartitionCombinations().foreach { case (e, i) =>
       if (e.isDefined) {
         if(RepartitionMessage.Partitioner.values.find(p => p.name == job.access_entity_partitioner).isDefined){
-          client.entityPartition(entityname, e.get, Seq(), true, true, job.access_index_partitioner)
-        } else client.entityPartition(entityname, e.get, Seq(), true, true)
+          client.entityPartition(entityname, e.get, None, true, true, job.access_index_partitioner)
+        } else client.entityPartition(entityname, e.get, None, true, true)
         //TODO: add partition column to job
       }
 
       if (i.isDefined) {
         //TODO: add partition column to job
         if(RepartitionMessage.Partitioner.values.find(p => p.name == job.access_index_partitioner).isDefined){
-          indexnames.foreach(indexname => client.indexPartition(indexname, i.get, Seq(), true, true, job.access_index_partitioner))
-        } else indexnames.foreach(indexname => client.indexPartition(indexname, i.get, Seq(), true, true))
+          indexnames.foreach(indexname => client.indexPartition(indexname, i.get, None, true, true, job.access_index_partitioner))
+        } else indexnames.foreach(indexname => client.indexPartition(indexname, i.get, None, true, true))
       }
 
       //collect queries

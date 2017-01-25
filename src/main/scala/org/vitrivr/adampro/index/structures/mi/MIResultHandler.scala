@@ -1,7 +1,10 @@
 package org.vitrivr.adampro.index.structures.mi
 
-import org.vitrivr.adampro.query.distance.Distance.Distance
 import com.google.common.collect.MinMaxPriorityQueue
+import org.vitrivr.adampro.datatypes.TupleID.TupleID
+import org.vitrivr.adampro.query.distance.Distance.Distance
+import org.vitrivr.adampro.datatypes.vector.Vector
+import org.vitrivr.adampro.query.distance.Distance
 
 import scala.collection.mutable
 
@@ -11,32 +14,32 @@ import scala.collection.mutable
   * Ivan Giangreco
   * June 2016
   */
-private[mi] class MIResultHandler[A](ki: Int, k: Int) {
-  @transient private var objectsOfOrderedRes : MinMaxPriorityQueue[MIResultElement[A]] = MinMaxPriorityQueue.orderedBy(Ordering[MIResultElement[A]].reverse).maximumSize(k).create()
-  @transient protected var orderedRes = mutable.Map[A, MIResultElement[A]]()
-  @transient protected var tempRes = mutable.Map[A, MIResultElement[A]]() //TODO: possibly remove tempRes; it has been added to be similar to the original code, but it does not seem to be necessary
+private[mi] class MIResultHandler(ki: Int, k: Int) {
+  @transient private val objectsOfOrderedRes = MinMaxPriorityQueue.orderedBy(Ordering[MIResultElement].reverse).maximumSize(k).create[MIResultElement]()
+  @transient protected val orderedRes = mutable.Map[TupleID, MIResultElement]()
+  @transient protected val tempRes = mutable.Map[TupleID, MIResultElement]()
 
   val maxEntries = ki
 
-  var kDist = Float.MaxValue
+  var kDist = Distance.maxValue
 
   /**
     *
-    * @param tid
+    * @param ap_id
     * @param score
     * @param position
     * @param postingListsToBeAccessed
     * @param accessedPostingLists
     */
-  def put(tid: A, score: Int, position: Int, postingListsToBeAccessed: Int, accessedPostingLists: Int): Unit = {
+  def put(ap_id: TupleID, score: Int, position: Int, postingListsToBeAccessed: Int, accessedPostingLists: Int): Unit = {
     val increment = Math.abs(position - score)
-    var currentScore = 0.toFloat
+    var currentScore = Distance.zeroValue
 
-    val i = tempRes.get(tid)
+    val i = tempRes.get(ap_id)
 
     if (i.isDefined) {
-      currentScore = i.get.score - maxEntries + increment
-      i.get.score = currentScore
+      currentScore = i.get.ap_score - maxEntries + increment
+      i.get.ap_score = currentScore
     } else {
       currentScore = maxEntries * (postingListsToBeAccessed - 1) + increment
     }
@@ -44,26 +47,26 @@ private[mi] class MIResultHandler[A](ki: Int, k: Int) {
     val minDist = currentScore - maxEntries * (postingListsToBeAccessed - accessedPostingLists) // the minimum distance this object can reach
 
     if (minDist > kDist) {
-      tempRes.remove(tid)
+      tempRes.remove(ap_id)
     } else {
       //the object can enter the best k, so insert it
       if (i.isEmpty) {
-        tempRes += tid -> MIResultElement(currentScore, tid)
+        tempRes += ap_id -> MIResultElement(ap_id, currentScore)
       }
-      orderedInsert(tid, currentScore)
+      orderedInsert(ap_id, currentScore)
     }
   }
 
   /**
     *
-    * @param tid
-    * @param dist
+    * @param ap_id
+    * @param ap_score
     */
-  private def orderedInsert(tid: A, dist: Distance): Unit = {
-    val res = MIResultElement(dist, tid)
-    orderedRes += tid -> res
+  private def orderedInsert(ap_id: TupleID, ap_score: Distance): Unit = {
+    val res = MIResultElement(ap_id, ap_score)
+    orderedRes += ap_id -> res
     objectsOfOrderedRes.add(res)
-    kDist = objectsOfOrderedRes.peekLast().score
+    kDist = objectsOfOrderedRes.peekLast().ap_score
   }
 
   /**
@@ -73,6 +76,6 @@ private[mi] class MIResultHandler[A](ki: Int, k: Int) {
   def results = orderedRes.values.toSeq
 }
 
-case class MIResultElement[A](var score: Float, tid: A) extends Ordered[MIResultElement[A]] {
-  def compare(that: MIResultElement[A]): Int = this.score.compare(that.score)
+case class MIResultElement(ap_id: TupleID, var ap_score: Distance) extends Ordered[MIResultElement] {
+  def compare(that: MIResultElement): Int = this.ap_score.compare(that.ap_score)
 }

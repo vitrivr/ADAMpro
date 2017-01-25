@@ -1,6 +1,6 @@
 package org.vitrivr.adampro.catalog
 
-import java.io.{ObjectInputStream, ByteArrayInputStream, ObjectOutputStream, ByteArrayOutputStream}
+import java.io.{ByteArrayInputStream, ByteArrayOutputStream, ObjectInputStream, ObjectOutputStream}
 
 import org.vitrivr.adampro.catalog.catalogs._
 import org.vitrivr.adampro.config.AdamConfig
@@ -11,6 +11,7 @@ import org.vitrivr.adampro.query.handler.internal.IndexScanExpression
 import org.vitrivr.adampro.query.query.NearestNeighbourQuery
 import org.vitrivr.adampro.utils.Logging
 import com.mchange.v2.c3p0.ComboPooledDataSource
+import org.vitrivr.adampro.main.AdamContext
 import slick.dbio.NoStream
 import slick.driver.DerbyDriver.api._
 
@@ -25,12 +26,12 @@ import scala.util.{Failure, Success, Try}
   * Ivan Giangreco
   * September 2016
   */
-object LogOperator extends Logging {
+class LogOperator(internalsPath : String) extends Logging {
   private val MAX_WAITING_TIME: Duration = 100.seconds
 
   private val ds = new ComboPooledDataSource
   ds.setDriverClass("org.apache.derby.jdbc.EmbeddedDriver")
-  ds.setJdbcUrl("jdbc:derby:" + AdamConfig.internalsPath + "/ap_logs" + "")
+  ds.setJdbcUrl("jdbc:derby:" + internalsPath + "/ap_logs" + "")
 
   private val DB = Database.forDataSource(ds)
 
@@ -47,7 +48,7 @@ object LogOperator extends Logging {
     * Initializes the catalog. Method is called at the beginning (see below).
     */
   private def init() {
-    val connection = Database.forURL("jdbc:derby:" + AdamConfig.internalsPath + "/ap_logs" + ";create=true")
+    val connection = Database.forURL("jdbc:derby:" + internalsPath + "/ap_logs" + ";create=true")
 
     try {
       val actions = new ListBuffer[DBIOAction[_, NoStream, _]]()

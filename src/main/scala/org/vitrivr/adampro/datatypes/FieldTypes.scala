@@ -1,11 +1,9 @@
 package org.vitrivr.adampro.datatypes
 
-import org.vitrivr.adampro.catalog.CatalogOperator
-import org.vitrivr.adampro.datatypes.feature.FeatureVectorWrapperUDT
-import org.vitrivr.adampro.datatypes.gis.{GeographyWrapperUDT, GeometryWrapperUDT}
-import org.vitrivr.adampro.entity.Entity.EntityName
 import org.apache.spark.sql.types
 import org.apache.spark.sql.types.{ArrayType, DataType}
+import org.vitrivr.adampro.datatypes.gis.{GeographyWrapper, GeometryWrapper}
+import org.vitrivr.adampro.datatypes.vector.{DenseVector, SparseVectorWrapper, Vector}
 
 /**
   * adamtwo
@@ -15,59 +13,60 @@ import org.apache.spark.sql.types.{ArrayType, DataType}
   */
 object FieldTypes {
 
-  sealed abstract class FieldType(val name: String, val pk: Boolean, val datatype: DataType) extends Serializable {
+  sealed abstract class FieldType(val name: String, val datatype: DataType, val wrapper : Option[Wrapper] = None) extends Serializable {
     def equals(other: FieldType): Boolean = other.name.equals(name)
   }
 
-  case object AUTOTYPE extends FieldType("auto", true, types.LongType)
+  case object INTTYPE extends FieldType("integer", types.IntegerType)
 
-  case object SERIALTYPE extends FieldType("serial", true, types.LongType) {
-    /**
-      *
-      * @param entityname name of entity
-      * @param attribute  attribute
-      * @return
-      */
-    def getNext(entityname: EntityName, attribute: String): Long = {
-      CatalogOperator.getAndUpdateAttributeOption(entityname, attribute, attribute + "-serial", "0", (s: String) => ((s.toLong + 1).toString))
-        .get.get(attribute + "-serial").get.toLong
-    }
-  }
+  case object LONGTYPE extends FieldType("long", types.LongType)
 
-  case object INTTYPE extends FieldType("integer", true, types.IntegerType)
+  case object FLOATTYPE extends FieldType("float", types.FloatType)
 
-  case object LONGTYPE extends FieldType("long", true, types.LongType)
+  case object DOUBLETYPE extends FieldType("double", types.DoubleType)
 
-  case object FLOATTYPE extends FieldType("float", false, types.FloatType)
+  case object STRINGTYPE extends FieldType("string", types.StringType)
 
-  case object DOUBLETYPE extends FieldType("double", false, types.DoubleType)
+  case object TEXTTYPE extends FieldType("text", types.StringType)
 
-  case object STRINGTYPE extends FieldType("string", true, types.StringType)
+  case object BOOLEANTYPE extends FieldType("boolean", types.BooleanType)
 
-  case object TEXTTYPE extends FieldType("text", false, types.StringType)
+  case object VECTORTYPE extends FieldType("vector", ArrayType(Vector.VectorBaseSparkType, false))
 
-  case object BOOLEANTYPE extends FieldType("boolean", false, types.BooleanType)
+  case object SPARSEVECTORTYPE extends FieldType("sparsevector", SparseVectorWrapper.datatype, Some(SparseVectorWrapper))
 
-  case object FEATURETYPE extends FieldType("feature", false, new FeatureVectorWrapperUDT)
+  case object GEOMETRYTYPE extends FieldType("geometry", GeometryWrapper.datatype, Some(GeometryWrapper))
 
-  case object GEOMETRYTYPE extends FieldType("geometry", false, new GeometryWrapperUDT)
+  case object GEOGRAPHYTYPE extends FieldType("geography", GeographyWrapper.datatype, Some(GeographyWrapper))
 
-  case object GEOGRAPHYTYPE extends FieldType("geography", false, new GeographyWrapperUDT)
+  case object UNRECOGNIZEDTYPE extends FieldType("", types.NullType)
 
-  case object UNRECOGNIZEDTYPE extends FieldType("", false, types.NullType)
+  /**
+    *
+    */
+  val values = Seq(INTTYPE, LONGTYPE, FLOATTYPE, DOUBLETYPE, STRINGTYPE, TEXTTYPE, BOOLEANTYPE, VECTORTYPE, SPARSEVECTORTYPE, GEOMETRYTYPE, GEOGRAPHYTYPE)
 
-
-  //TODO: only add to values if handler is available
-  def values = Seq(INTTYPE, LONGTYPE, FLOATTYPE, DOUBLETYPE, STRINGTYPE, TEXTTYPE, BOOLEANTYPE, FEATURETYPE, GEOMETRYTYPE, GEOGRAPHYTYPE, AUTOTYPE, SERIALTYPE)
-
+  /**
+    *
+    * @param s
+    * @return
+    */
   implicit def fromString(s: String): FieldType = values.filter(x => x.name == s).head
 
+  /**
+    *
+    * @param d
+    * @return
+    */
   implicit def fromDataType(d: DataType): FieldType = {
-    val suggestion = values.filter(x => d == x.datatype)
-    if (d.isInstanceOf[ArrayType]) {
-      FEATURETYPE
+    val wrappedType = values.filter(_.wrapper.isDefined).filter(_.wrapper.get.fitsType(d)).headOption
+
+    if(wrappedType.isDefined){
+      //complex type
+      wrappedType.get
     } else {
-      suggestion.head
+      //simple type
+      values.filter(x => d == x.datatype).head
     }
   }
 }

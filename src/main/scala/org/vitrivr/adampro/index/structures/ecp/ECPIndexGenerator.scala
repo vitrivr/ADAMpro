@@ -1,17 +1,16 @@
 package org.vitrivr.adampro.index.structures.ecp
 
+import org.apache.spark.sql.functions._
+import org.apache.spark.sql.{DataFrame, Dataset}
 import org.vitrivr.adampro.config.FieldNames
-import org.vitrivr.adampro.entity.Entity
-import org.vitrivr.adampro.entity.Entity.EntityName
-import org.vitrivr.adampro.index.Index.{IndexName, IndexTypeName}
+import org.vitrivr.adampro.datatypes.TupleID.TupleID
+import org.vitrivr.adampro.datatypes.vector.Vector._
+import org.vitrivr.adampro.index.Index.IndexTypeName
 import org.vitrivr.adampro.index._
 import org.vitrivr.adampro.index.structures.IndexTypes
 import org.vitrivr.adampro.main.AdamContext
 import org.vitrivr.adampro.query.distance.DistanceFunction
-import org.apache.spark.rdd.RDD
-import org.apache.spark.sql.{DataFrame, Row}
-import org.apache.spark.sql.types.{IntegerType, StructField, StructType}
-import org.apache.spark.util.random.Sampling
+import org.vitrivr.adampro.datatypes.vector.Vector
 
 /**
   * adamtwo
@@ -24,67 +23,55 @@ class ECPIndexGenerator(centroidBasedLeaders: Boolean, distance: DistanceFunctio
 
   /**
     *
-    * @param indexname  name of index
-    * @param entityname name of entity
-    * @param data       data to index
+    * @param data raw data to index
     * @return
     */
-  override def index(indexname: IndexName, entityname: EntityName, data: RDD[IndexingTaskTuple[_]]): (DataFrame, Serializable) = {
-    val entity = Entity.load(entityname).get
+  override def index(data: DataFrame, attribute : String): (DataFrame, Serializable) = {
+    log.trace("eCP index started indexing")
 
+    val sample = getSample(math.max(math.sqrt(data.count()).toInt, MINIMUM_NUMBER_OF_TUPLE), attribute)(data)
+    val bcleaders = ac.sc.broadcast(sample.zipWithIndex.map { case (vector, idx) => IndexingTaskTuple(idx.toLong, vector.ap_indexable) }) //use own ids, not id of data
 
-    //randomly choose leaders
-    val n = entity.count
-    val fraction = Sampling.computeFractionForSampleSize(math.max(trainingSize.getOrElse(math.sqrt(n).toInt), MINIMUM_NUMBER_OF_TUPLE), n, withReplacement = false)
-    var trainData = data.sample(false, fraction).collect().map(_.feature).distinct //take distinct data
+    log.trace("eCP index chosen " + sample.length + " leaders")
 
-    if (trainData.length < MINIMUM_NUMBER_OF_TUPLE) {
-      trainData = data.take(MINIMUM_NUMBER_OF_TUPLE).map(_.feature).distinct //take distinct data
-    }
-
-    if (trainData.length < MINIMUM_NUMBER_OF_TUPLE) {
-      log.warn("not enough distinct data found in eCP indexing, possibly retry?")
-    }
-
-
-      val bcleaders = ac.sc.broadcast(trainData.zipWithIndex.map { case (feature, idx) => IndexingTaskTuple(idx, feature) }) //use own ids, not id of data
-    log.trace("eCP index chosen " + trainData.length + " leaders")
-
-    log.debug("eCP indexing...")
-
-    val indexdata = data.map(datum => {
-      val minTID = bcleaders.value.map({ l =>
-        (l.id, distance.apply(datum.feature, l.feature))
+    val minIdUDF = udf((c: DenseSparkVector) => {
+      bcleaders.value.map({ l =>
+        (l.ap_id, distance.apply(Vector.conv_dspark2vec(c), l.ap_indexable))
       }).minBy(_._2)._1
-
-      (datum.id, minTID, datum.feature)
     })
 
-    val schema = StructType(Seq(
-      StructField(entity.pk.name, entity.pk.fieldtype.datatype, nullable = false),
-      StructField(FieldNames.featureIndexColumnName, IntegerType, nullable = false)
-    ))
+    val indexed = data.withColumn(FieldNames.featureIndexColumnName, minIdUDF(data(attribute)))
 
-    val df = ac.sqlContext.createDataFrame(indexdata.map(x => Row(x._1, x._2)), schema)
-
-    log.trace("eCP index updating leaders")
+    import ac.spark.implicits._
 
     val leaders = if (centroidBasedLeaders) {
-      //compute centroid
-      indexdata.map(x => x._2 ->(x._3, 1))
-        .reduceByKey { case ((value1, count1), (value2, count2)) => (value1 + value2, count1 + count2) }
-        .mapValues { case (value, count) => (value / count.toFloat, count) }
-        .map(x => ECPLeader(x._1, x._2._1, x._2._2))
+      log.trace("eCP index updating leaders, make centroid-based")
+
+      indexed.map(r => (r.getAs[Int](FieldNames.internalIdColumnName), r.getAs[DenseSparkVector](attribute)))
+        .groupByKey(_._1)
+        .mapGroups {
+          case (key, values) => {
+            val tmp = values.toArray.map(x => (x._2, 1))
+              .reduce[(DenseSparkVector, Int)] { case (x1, x2) => (x1._1.zip(x2._1).map { case (xx1, xx2) => xx1 + xx2 }, x1._2 + x2._2) }
+
+            val count = tmp._2
+            val centroid = tmp._1.map(x => x / tmp._2.toFloat)
+
+            key ->(centroid, count)
+          }
+        }
+        .map(x => ECPLeader(x._1, Vector.conv_draw2vec(x._2._1), x._2._2))
         .collect.toSeq
     } else {
-      //use feature vector chosen in beginning as leader
-      val counts = indexdata.map(x => x._2 -> 1).countByKey
-      bcleaders.value.map(x => ECPLeader(x.id, x.feature, counts.getOrElse(x.id, 0))).toSeq
+      val counts = indexed.groupBy(FieldNames.featureIndexColumnName).count()
+        .map { r => (r.getAs[TupleID](FieldNames.featureIndexColumnName), r.getAs[Long]("count")) }.collect().toMap
+
+      bcleaders.value.map(x => ECPLeader(x.ap_id, x.ap_indexable, counts.getOrElse(x.ap_id, 0)))
     }
 
     val meta = ECPIndexMetaData(leaders, distance)
 
-    (df, meta)
+    (indexed, meta)
   }
 }
 

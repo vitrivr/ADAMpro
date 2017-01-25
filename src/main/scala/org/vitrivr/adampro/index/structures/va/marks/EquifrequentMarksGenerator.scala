@@ -1,7 +1,8 @@
 package org.vitrivr.adampro.index.structures.va.marks
 
 import breeze.linalg.{max, min}
-import org.vitrivr.adampro.datatypes.feature.Feature._
+import org.vitrivr.adampro.datatypes.vector.Vector
+import org.vitrivr.adampro.datatypes.vector.Vector._
 import org.vitrivr.adampro.index.IndexingTaskTuple
 import org.vitrivr.adampro.index.structures.va.VAIndex.Marks
 import org.vitrivr.adampro.utils.Logging
@@ -28,13 +29,13 @@ private[va] object EquifrequentMarksGenerator extends MarksGenerator with Serial
     * @param maxMarks maximal number of marks
     * @return
     */
-  private[va] def getMarks(samples: Array[IndexingTaskTuple[_]], maxMarks: Seq[Int]): Marks = {
+  private[va] def getMarks(samples: Seq[IndexingTaskTuple], maxMarks: Seq[Int]): Marks = {
     log.debug("get equifrequent marks for VA-File")
 
     val sampleSize = samples.length
 
-    val min = getMin(samples.map(_.feature))
-    val max = getMax(samples.map(_.feature))
+    val min = getMin(samples.map(_.ap_indexable))
+    val max = getMax(samples.map(_.ap_indexable))
 
     val dimensionality = min.length
 
@@ -43,7 +44,7 @@ private[va] object EquifrequentMarksGenerator extends MarksGenerator with Serial
     samples.foreach { sample =>
       var i = 0
       while (i < dimensionality) {
-        dimData(i).add(sample.feature(i))
+        dimData(i).add(sample.ap_indexable(i))
         i += 1
       }
     }
@@ -52,7 +53,7 @@ private[va] object EquifrequentMarksGenerator extends MarksGenerator with Serial
       if (maxMarks(dim) > 1) {
         val hist = dimData(dim).histogram
 
-        var marks = new Array[Float](maxMarks(dim) - 1)
+        val marks = new Array[VectorBase](maxMarks(dim) - 1)
         var k = 0
         var sum = 0
         for (j <- 1 until (maxMarks(dim) - 1)) {
@@ -79,9 +80,9 @@ private[va] object EquifrequentMarksGenerator extends MarksGenerator with Serial
     * @param data
     * @return
     */
-  private def getMin(data: Array[FeatureVector]): FeatureVector = {
+  private def getMin(data: Seq[MathVector]): MathVector = {
     val dimensionality = data.head.size
-    val base: FeatureVector = Seq.fill(dimensionality)(Float.MaxValue)
+    val base: MathVector = Vector.conv_draw2vec(Seq.fill(dimensionality)(Vector.maxValue))
 
     data.foldLeft(base)((baseV, newV) => min(baseV, newV))
   }
@@ -91,9 +92,9 @@ private[va] object EquifrequentMarksGenerator extends MarksGenerator with Serial
     * @param data
     * @return
     */
-  private def getMax(data: Array[FeatureVector]): FeatureVector = {
+  private def getMax(data: Seq[MathVector]): MathVector = {
     val dimensionality = data.head.size
-    val base: FeatureVector = Seq.fill(dimensionality)(Float.MinValue)
+    val base: MathVector = Vector.conv_draw2vec(Seq.fill(dimensionality)(Vector.minValue))
 
     data.foldLeft(base)((baseV, newV) => max(baseV, newV))
   }

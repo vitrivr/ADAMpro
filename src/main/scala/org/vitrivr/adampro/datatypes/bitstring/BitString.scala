@@ -1,4 +1,4 @@
-package org.vitrivr.adampro.datatypes.bitString
+package org.vitrivr.adampro.datatypes.bitstring
 
 import org.vitrivr.adampro.utils.Logging
 import com.googlecode.javaewah.IntIterator
@@ -41,7 +41,6 @@ object BitString extends Logging {
   *
   * @tparam A sub-type
   */
-@SQLUserDefinedType(udt = classOf[BitStringUDT])
 trait BitString[A] extends Serializable {
   /**
     * Hamming distance between two bit strings.
@@ -96,26 +95,4 @@ trait BitStringFactory {
     * @return
     */
   def deserialize(values: Seq[Byte]): BitString[_]
-}
-
-/**
-  * UDT class for storing bit strings in Spark.
-  */
-@SerialVersionUID(1L)
-class BitStringUDT extends UserDefinedType[BitString[_]] {
-  override def sqlType: DataType = BinaryType
-
-  override def userClass: Class[BitString[_]] = classOf[BitString[_]]
-
-  override def asNullable: BitStringUDT = this
-
-  override def serialize(obj: Any): Array[Byte] = {
-    //possibly adjust for other bit string types, but note that we do not want to store the type every time with the bit string
-    //as this would need too much space and would work against efficient lookup
-    obj.asInstanceOf[EWAHBitString].serialize
-  }
-
-  override def deserialize(datum: Any): BitString[_] = {
-    EWAHBitString.deserialize(datum.asInstanceOf[Array[Byte]])
-  }
 }

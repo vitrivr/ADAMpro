@@ -1,15 +1,15 @@
 package org.vitrivr.adampro.helpers.optimizer
 
-import org.vitrivr.adampro.catalog.LogOperator
-import org.vitrivr.adampro.datatypes.feature.FeatureVectorWrapper
+import org.apache.spark.util.random.Sampling
+import org.vitrivr.adampro.datatypes.vector.Vector
+import org.vitrivr.adampro.datatypes.vector.Vector._
 import org.vitrivr.adampro.entity.Entity
 import org.vitrivr.adampro.entity.Entity.EntityName
 import org.vitrivr.adampro.exception.GeneralAdamException
-import org.vitrivr.adampro.main.AdamContext
+import org.vitrivr.adampro.main.{AdamContext, SparkStartup}
 import org.vitrivr.adampro.query.distance.EuclideanDistance
 import org.vitrivr.adampro.query.query.NearestNeighbourQuery
 import org.vitrivr.adampro.utils.Logging
-import org.apache.spark.util.random.Sampling
 
 /**
   * ADAMpro
@@ -37,12 +37,13 @@ private[optimizer] case class RandomQueryCollection(entityname: EntityName, attr
     val entity = Entity.load(entityname).get
     val n = entity.count
 
+
     val fraction = Sampling.computeFractionForSampleSize(nqueries, n, withReplacement = false)
     val queries = entity.getFeatureData.get
       .sample(withReplacement = false, fraction = fraction)
-      .map(r => r.getAs[FeatureVectorWrapper](attribute))
       .collect()
-      .map(vec => NearestNeighbourQuery(attribute, vec.vector, None, EuclideanDistance, 100, true))
+      .map(r => r.getAs[Seq[VectorBase]](attribute))
+      .map(vec => NearestNeighbourQuery(attribute, Vector.conv_draw2vec(vec), None, EuclideanDistance, 100, true))
 
     queries
   }
@@ -58,7 +59,7 @@ private[optimizer] case class LoggedQueryCollection(entityname: EntityName, attr
     this(entityname, attribute)
   }
 
-  override def getQueries: Seq[NearestNeighbourQuery] = LogOperator.getQueries(entityname, attribute).get //TODO: throw away logs after training has been done on data
+  override def getQueries: Seq[NearestNeighbourQuery] = SparkStartup.logOperator.getQueries(entityname, attribute).get //TODO: throw away logs after training has been done on data
 }
 
 

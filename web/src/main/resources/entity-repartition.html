@@ -75,12 +75,12 @@ $(document).ready(function () {
 
 $("#btnSubmit").click(function () {
     var entityname = $("#entityname").val();
-    var attributes = $("#attributes").val().split(",");
+    var attribute = $("#attributes").val();
     var materialize = true;
     var replace = true;
     var npartitions = $("#npartitions").val();
 
-    entityPartition(entityname, attributes, materialize, replace, npartitions);
+    entityPartition(entityname, attribute, materialize, replace, npartitions);
 });
 </script>
 
