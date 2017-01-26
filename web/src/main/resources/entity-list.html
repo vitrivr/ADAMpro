@@ -92,7 +92,7 @@ $(document).ready(function () {
             $('#btn-' + entityname + '-info').bind("click", function(){infoHandler(entityname)});
             $('#btn-' + entityname + '-vacuum').bind("click", function(){vacuumHandler(entityname)});
             //$('#btn-' + entityname + '-benchmark').bind("click", function(){benchmarkHandler(entityname, "feature")});
-            $('#btn-' + entityname + '-sparsify').bind("click", function(){sparsifyHandler(entityname, "feature")});
+            $('#btn-' + entityname + '-sparsify').bind("click", function(){sparsifyHandler(entityname, "feature")}); //TODO: change name of column
             $('#btn-' + entityname + '-delete').bind("click", function(){dropHandler(entityname)});
         })
     });
