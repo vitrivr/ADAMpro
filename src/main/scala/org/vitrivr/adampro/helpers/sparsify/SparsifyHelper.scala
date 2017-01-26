@@ -60,19 +60,19 @@ object SparsifyHelper {
         }
 
         if (ii.nonEmpty) {
-          SparseVectorWrapper.toRow(ii, vv, vec.size)
+          SparseVectorWrapper(ii, vv, vec.size)
         } else {
-          SparseVectorWrapper.emptyRow
+          SparseVectorWrapper(Array[Int](), Array[VectorBase](), 0)
         }
       })
 
       data = data.withColumn("conv-" + attributename, convertToSparse(data(attributename)))
       data = data.drop(attributename).withColumnRenamed("conv-" + attributename, attributename)
 
-      val handler = entity.schema(Some(Seq(attributename))).head.storagehandler
+      val handler = entity.schema(Some(Seq(attributename)), fullSchema = false).head.storagehandler
 
       //select data which is available in the one handler
-      val attributes = entity.schema().filterNot(_.pk).filter(_.storagehandler == handler).+:(entity.pk)
+      val attributes = entity.schema(fullSchema = false).filter(_.storagehandler == handler).+:(entity.pk)
       data = data.select(attributes.map(attribute => col(attribute.name)).toArray: _*)
 
       val status = handler.write(entity.entityname, data, attributes, SaveMode.Overwrite)
