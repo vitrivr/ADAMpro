@@ -2,7 +2,7 @@ package org.vitrivr.adampro.query.handler.internal
 
 import org.apache.spark.sql.DataFrame
 import org.apache.spark.sql.functions._
-import org.vitrivr.adampro.config.FieldNames
+import org.vitrivr.adampro.config.AttributeNames
 import org.vitrivr.adampro.entity.Entity
 import org.vitrivr.adampro.entity.Entity._
 import org.vitrivr.adampro.exception.QueryNotConformException
@@ -78,7 +78,7 @@ case class IndexScanExpression(val index: Index)(val nnq: NearestNeighbourQuery,
     log.trace(QUERY_MARKER, "finished index scan")
 
     if (options.isDefined && options.get.storeSourceProvenance) {
-      res = res.withColumn(FieldNames.sourceColumnName, lit(sourceDescription))
+      res = res.withColumn(AttributeNames.sourceColumnName, lit(sourceDescription))
     }
 
     Some(res)

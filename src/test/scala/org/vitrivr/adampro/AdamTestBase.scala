@@ -8,7 +8,7 @@ import org.scalatest.concurrent.{Eventually, IntegrationPatience}
 import org.scalatest.{FeatureSpec, GivenWhenThen}
 import org.vitrivr.adampro.api.EntityOp
 import org.vitrivr.adampro.config.AdamConfig
-import org.vitrivr.adampro.datatypes.FieldTypes
+import org.vitrivr.adampro.datatypes.AttributeTypes
 import org.vitrivr.adampro.datatypes.vector.Vector.MathVector
 import org.vitrivr.adampro.entity.{AttributeDefinition, Entity}
 import org.vitrivr.adampro.main.{AdamContext, SparkStartup}
@@ -86,13 +86,13 @@ class AdamTestBase extends FeatureSpec with GivenWhenThen with Eventually with I
     try {
       Entity.create(entityname,
         Seq(
-          AttributeDefinition("tid", FieldTypes.LONGTYPE, storagehandlername = "parquet"),
-          AttributeDefinition("feature", FieldTypes.VECTORTYPE, storagehandlername =  "parquet")
+          AttributeDefinition("tid", AttributeTypes.LONGTYPE, storagehandlername = "parquet"),
+          AttributeDefinition("feature", AttributeTypes.VECTORTYPE, storagehandlername =  "parquet")
         ))
 
       val schema = StructType(Seq(
         StructField("tid", LongType, false),
-        StructField("feature", FieldTypes.VECTORTYPE.datatype, false)
+        StructField("feature", AttributeTypes.VECTORTYPE.datatype, false)
       ))
 
       val rdd = ac.sc.parallelize((0 until ntuples).map(id =>
@@ -189,7 +189,7 @@ class AdamTestBase extends FeatureSpec with GivenWhenThen with Eventually with I
 
       val schema = StructType(Seq(
         StructField("tid", types.LongType, false),
-        StructField("vectorfield", FieldTypes.VECTORTYPE.datatype, false),
+        StructField("vectorfield", AttributeTypes.VECTORTYPE.datatype, false),
         StructField("stringfield", types.StringType, false),
         StructField("floatfield", types.FloatType, false),
         StructField("doublefield", types.DoubleType, false),
@@ -223,14 +223,14 @@ class AdamTestBase extends FeatureSpec with GivenWhenThen with Eventually with I
     val entityname = getRandomName()
 
     val fieldTemplate = Seq(
-      ("tid", FieldTypes.LONGTYPE, "bigint"),
-      ("vectorfield", FieldTypes.VECTORTYPE, ""),
-      ("stringfield", FieldTypes.STRINGTYPE, "text"),
-      ("floatfield", FieldTypes.FLOATTYPE, "real"),
-      ("doublefield", FieldTypes.DOUBLETYPE, "double precision"),
-      ("intfield", FieldTypes.INTTYPE, "integer"),
-      ("longfield", FieldTypes.LONGTYPE, "bigint"),
-      ("booleanfield", FieldTypes.BOOLEANTYPE, "boolean")
+      ("tid", AttributeTypes.LONGTYPE, "bigint"),
+      ("vectorfield", AttributeTypes.VECTORTYPE, ""),
+      ("stringfield", AttributeTypes.STRINGTYPE, "text"),
+      ("floatfield", AttributeTypes.FLOATTYPE, "real"),
+      ("doublefield", AttributeTypes.DOUBLETYPE, "double precision"),
+      ("intfield", AttributeTypes.INTTYPE, "integer"),
+      ("longfield", AttributeTypes.LONGTYPE, "bigint"),
+      ("booleanfield", AttributeTypes.BOOLEANTYPE, "boolean")
     )
 
     val entity = Entity.create(entityname, fieldTemplate.map(ft => new AttributeDefinition(ft._1, ft._2, Map[String, String]())))

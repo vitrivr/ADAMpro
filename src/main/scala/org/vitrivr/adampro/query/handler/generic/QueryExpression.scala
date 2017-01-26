@@ -2,7 +2,7 @@ package org.vitrivr.adampro.query.handler.generic
 
 import java.util.concurrent.TimeUnit
 
-import org.vitrivr.adampro.config.FieldNames
+import org.vitrivr.adampro.config.AttributeNames
 import org.vitrivr.adampro.main.{AdamContext, SparkStartup}
 import org.vitrivr.adampro.query.information.InformationLevels._
 import org.vitrivr.adampro.utils.Logging
@@ -141,7 +141,7 @@ abstract class QueryExpression(id: Option[String]) extends Serializable with Log
 
       if (_results.isDefined && levels.contains(PARTITION_PROVENANCE)) {
         val rdd = results.get.rdd.mapPartitionsWithIndex((idx, iter) => iter.map(r => Row(r.toSeq ++ Seq(idx): _*)), preservesPartitioning = true)
-        _results = Some(ac.sqlContext.createDataFrame(rdd, results.get.schema.add(FieldNames.partitionColumnName, IntegerType)))
+        _results = Some(ac.sqlContext.createDataFrame(rdd, results.get.schema.add(AttributeNames.partitionColumnName, IntegerType)))
       }
 
       info.results = _results

@@ -4,7 +4,7 @@ import org.apache.spark.mllib.clustering.{KMeans, KMeansModel}
 import org.apache.spark.mllib.linalg.Vectors
 import org.apache.spark.sql.functions._
 import org.apache.spark.sql.{DataFrame, Dataset}
-import org.vitrivr.adampro.config.FieldNames
+import org.vitrivr.adampro.config.AttributeNames
 import org.vitrivr.adampro.datatypes.vector.Vector._
 import org.vitrivr.adampro.index.Index.IndexTypeName
 import org.vitrivr.adampro.index._
@@ -42,7 +42,7 @@ class PQIndexGenerator(nsq: Int, trainingSize: Int)(@transient implicit val ac: 
         .zipWithIndex
         .map { case (split, idx) => meta.models(idx).predict(Vectors.dense(split.map(_.toDouble).toArray)).toByte }
     })
-    val indexed = data.withColumn(FieldNames.featureIndexColumnName, cellUDF(data(attribute)))
+    val indexed = data.withColumn(AttributeNames.featureIndexColumnName, cellUDF(data(attribute)))
 
     log.trace("PQ finished indexing")
 

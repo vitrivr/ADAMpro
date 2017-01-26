@@ -2,7 +2,7 @@ package org.vitrivr.adampro.index
 
 import org.apache.spark.sql.{Row, DataFrame}
 import org.apache.spark.util.random.Sampling
-import org.vitrivr.adampro.config.FieldNames
+import org.vitrivr.adampro.config.AttributeNames
 import org.vitrivr.adampro.datatypes.TupleID._
 import org.vitrivr.adampro.datatypes.vector.Vector.DenseSparkVector
 import org.vitrivr.adampro.index.structures.IndexTypes
@@ -75,7 +75,7 @@ trait IndexGenerator extends Serializable with Logging {
     */
   protected def getSample(minN: Int, attribute : String): (DataFrame) => Seq[IndexingTaskTuple] =
     (data: DataFrame) => {
-    getSample(data, minN).map(r => IndexingTaskTuple(r.getAs[TupleID](FieldNames.internalIdColumnName), Vector.conv_dspark2vec(r.getAs[DenseSparkVector](attribute))))
+    getSample(data, minN).map(r => IndexingTaskTuple(r.getAs[TupleID](AttributeNames.internalIdColumnName), Vector.conv_dspark2vec(r.getAs[DenseSparkVector](attribute))))
   }
 
 }

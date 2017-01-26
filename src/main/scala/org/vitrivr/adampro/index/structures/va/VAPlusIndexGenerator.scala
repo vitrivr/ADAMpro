@@ -5,7 +5,7 @@ import org.apache.spark.mllib.feature.{PCA, PCAModel}
 import org.apache.spark.mllib.linalg.Vectors
 import org.apache.spark.sql.functions._
 import org.apache.spark.sql.{DataFrame, Dataset}
-import org.vitrivr.adampro.config.FieldNames
+import org.vitrivr.adampro.config.AttributeNames
 import org.vitrivr.adampro.datatypes.vector.Vector._
 import org.vitrivr.adampro.exception.QueryNotConformException
 import org.vitrivr.adampro.index.Index._
@@ -41,7 +41,7 @@ class VAPlusIndexGenerator(nbits: Option[Int], ndims : Option[Int], trainingSize
       val cells = getCells(meta.pca.transform(Vectors.dense(c.toArray.map(_.toDouble))).toArray, meta.marks)
       meta.signatureGenerator.toSignature(cells).serialize
     })
-    val indexed = data.withColumn(FieldNames.featureIndexColumnName, cellUDF(data(attribute)))
+    val indexed = data.withColumn(AttributeNames.featureIndexColumnName, cellUDF(data(attribute)))
 
     log.trace("VA-File (plus) finished indexing")
 

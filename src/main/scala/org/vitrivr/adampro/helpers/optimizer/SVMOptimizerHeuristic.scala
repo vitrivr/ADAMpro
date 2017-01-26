@@ -3,7 +3,7 @@ package org.vitrivr.adampro.helpers.optimizer
 import breeze.linalg.DenseVector
 import org.vitrivr.adampro.api.QueryOp
 import org.vitrivr.adampro.catalog.CatalogOperator
-import org.vitrivr.adampro.config.FieldNames
+import org.vitrivr.adampro.config.AttributeNames
 import org.vitrivr.adampro.datatypes.TupleID._
 import org.vitrivr.adampro.datatypes.vector.Vector
 import org.vitrivr.adampro.datatypes.vector.Vector._
@@ -152,7 +152,7 @@ private[optimizer] class SVMOptimizerHeuristic()(@transient implicit override va
     val lb = new ListBuffer[Double]()
 
     import ac.spark.implicits._
-    lb += entity.getAttributeData(attribute).get.map { x => IndexingTaskTuple(x.getAs[TupleID](FieldNames.indexableColumnName), Vector.conv_draw2vec(x.getAs[DenseRawVector](attribute)).asInstanceOf[DenseMathVector])}.first.ap_indexable.length
+    lb += entity.getAttributeData(attribute).get.map { x => IndexingTaskTuple(x.getAs[TupleID](AttributeNames.indexableColumnName), Vector.conv_draw2vec(x.getAs[DenseRawVector](attribute)).asInstanceOf[DenseMathVector])}.first.ap_indexable.length
     lb += entity.count
 
     lb.toSeq

@@ -2,7 +2,7 @@ package org.vitrivr.adampro.rpc
 
 import org.vitrivr.adampro.AdamTestBase
 import org.vitrivr.adampro.config.AdamConfig
-import org.vitrivr.adampro.datatypes.FieldTypes
+import org.vitrivr.adampro.datatypes.AttributeTypes
 import org.vitrivr.adampro.entity.{AttributeDefinition, Entity}
 import org.vitrivr.adampro.grpc.grpc.{AdamSearchGrpc, AdamDefinitionGrpc}
 import org.vitrivr.adampro.main.RPCStartup
@@ -50,7 +50,7 @@ class RPCTestSuite extends AdamTestBase with ScalaFutures {
             CreateEntityMessage(entityname,
               Seq(
                 AttributeDefinitionMessage("tid", AttributeType.LONG),
-                AttributeDefinitionMessage("feature", AttributeType.FEATURE)
+                AttributeDefinitionMessage("feature", AttributeType.VECTOR)
               )))
         Then("the entity should exist")
         assert(Entity.exists(entityname))
@@ -63,7 +63,7 @@ class RPCTestSuite extends AdamTestBase with ScalaFutures {
     scenario("insert feature data into entity") {
       withEntityName { entityname =>
         Given("an entity")
-        val entity = Entity.create(entityname, Seq(new AttributeDefinition("tid", FieldTypes.LONGTYPE), new AttributeDefinition("feature", FieldTypes.VECTORTYPE)))
+        val entity = Entity.create(entityname, Seq(new AttributeDefinition("tid", AttributeTypes.LONGTYPE), new AttributeDefinition("feature", AttributeTypes.VECTORTYPE)))
         assert(entity.isSuccess)
 
         val requestObserver: StreamObserver[InsertMessage] = definitionNb.streamInsert(new StreamObserver[AckMessage]() {
@@ -105,8 +105,8 @@ class RPCTestSuite extends AdamTestBase with ScalaFutures {
       withEntityName { entityname =>
         Given("an entity")
         val entity = Entity.create(entityname, Seq(
-          new AttributeDefinition("tid", FieldTypes.LONGTYPE), new AttributeDefinition("feature", FieldTypes.VECTORTYPE),
-          new AttributeDefinition("stringfield", FieldTypes.STRINGTYPE), new AttributeDefinition("intfield", FieldTypes.INTTYPE)
+          new AttributeDefinition("tid", AttributeTypes.LONGTYPE), new AttributeDefinition("feature", AttributeTypes.VECTORTYPE),
+          new AttributeDefinition("stringfield", AttributeTypes.STRINGTYPE), new AttributeDefinition("intfield", AttributeTypes.INTTYPE)
         ))
 
         assert(entity.isSuccess)
@@ -154,7 +154,7 @@ class RPCTestSuite extends AdamTestBase with ScalaFutures {
             AttributeDefinitionMessage("tid", AttributeType.LONG),
             AttributeDefinitionMessage("stringfield", AttributeType.STRING),
             AttributeDefinitionMessage("intfield", AttributeType.INT),
-            AttributeDefinitionMessage("vectorfield", AttributeType.FEATURE)
+            AttributeDefinitionMessage("vectorfield", AttributeType.VECTOR)
           )))
 
         val requestObserver: StreamObserver[InsertMessage] = definitionNb.streamInsert(new StreamObserver[AckMessage]() {

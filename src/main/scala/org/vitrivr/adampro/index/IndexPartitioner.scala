@@ -4,7 +4,7 @@ import org.apache.spark.HashPartitioner
 import org.apache.spark.rdd.RDD
 import org.apache.spark.sql.{DataFrame, Row, SaveMode}
 import org.vitrivr.adampro.catalog.CatalogOperator
-import org.vitrivr.adampro.config.FieldNames
+import org.vitrivr.adampro.config.AttributeNames
 import org.vitrivr.adampro.exception.GeneralAdamException
 import org.vitrivr.adampro.index.partition._
 import org.vitrivr.adampro.main.{AdamContext, SparkStartup}
@@ -51,7 +51,7 @@ object IndexPartitioner extends Logging {
         case PartitionerChoice.ECP => ECPPartitioner(data, col, Some(index.indexname), nPartitions)
       }
 
-      data = data.select(index.pk.name, FieldNames.featureIndexColumnName)
+      data = data.select(index.pk.name, AttributeNames.featureIndexColumnName)
     } catch {
       case e: Exception => return Failure(e)
     }

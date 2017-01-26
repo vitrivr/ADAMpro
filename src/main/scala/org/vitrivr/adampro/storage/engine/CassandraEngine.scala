@@ -2,8 +2,8 @@ package org.vitrivr.adampro.storage.engine
 
 import java.net.InetAddress
 
-import org.vitrivr.adampro.datatypes.FieldTypes
-import org.vitrivr.adampro.datatypes.FieldTypes._
+import org.vitrivr.adampro.datatypes.AttributeTypes
+import org.vitrivr.adampro.datatypes.AttributeTypes._
 import org.vitrivr.adampro.entity.AttributeDefinition
 import org.vitrivr.adampro.entity.Entity.EntityName
 import org.vitrivr.adampro.exception.GeneralAdamException
@@ -33,9 +33,9 @@ class CassandraEngine(private val url: String, private val port: Int, private va
 
   override val name = "cassandra"
 
-  override def supports = Seq(FieldTypes.INTTYPE, FieldTypes.LONGTYPE, FieldTypes.STRINGTYPE, FieldTypes.VECTORTYPE)
+  override def supports = Seq(AttributeTypes.AUTOTYPE, AttributeTypes.INTTYPE, AttributeTypes.LONGTYPE, AttributeTypes.STRINGTYPE, AttributeTypes.VECTORTYPE)
 
-  override def specializes = Seq(FieldTypes.VECTORTYPE)
+  override def specializes = Seq(AttributeTypes.VECTORTYPE)
 
   override val repartitionable = false
 
@@ -105,7 +105,7 @@ class CassandraEngine(private val url: String, private val port: Int, private va
     try {
       val attributeString = attributes.map(attribute => {
         val name = attribute.name
-        val cqlType = getCQLType(attribute.fieldtype)
+        val cqlType = getCQLType(attribute.attributeType)
         val pk = if (attribute.pk) {
           "PRIMARY KEY"
         } else {
@@ -130,10 +130,10 @@ class CassandraEngine(private val url: String, private val port: Int, private va
 
   /**
     *
-    * @param fieldtype
+    * @param attributetype
     * @return
     */
-  private def getCQLType(fieldtype: FieldType): String = fieldtype match {
+  private def getCQLType(attributetype: AttributeType): String = attributetype match {
     case INTTYPE => "INT"
     case LONGTYPE => "BIGINT"
     case FLOATTYPE => "FLOAT"
@@ -141,7 +141,7 @@ class CassandraEngine(private val url: String, private val port: Int, private va
     case STRINGTYPE => "TEXT"
     case BOOLEANTYPE => "BOOLEAN"
     case VECTORTYPE => "LIST<FLOAT>"
-    case _ => throw new GeneralAdamException("field type " + fieldtype.name + " is not supported in cassandra handler")
+    case _ => throw new GeneralAdamException("attribute type " + attributetype.name + " is not supported in cassandra handler")
   }
 
   /**

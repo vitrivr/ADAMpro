@@ -3,7 +3,7 @@ package org.vitrivr.adampro.index.structures.mi
 import org.apache.spark.annotation.Experimental
 import org.apache.spark.sql.types._
 import org.apache.spark.sql.{DataFrame, Row}
-import org.vitrivr.adampro.config.FieldNames
+import org.vitrivr.adampro.config.AttributeNames
 import org.vitrivr.adampro.datatypes.TupleID
 import org.vitrivr.adampro.datatypes.TupleID._
 import org.vitrivr.adampro.datatypes.vector.Vector
@@ -42,7 +42,7 @@ import org.vitrivr.adampro.query.distance.DistanceFunction
     case class ReferencePointAssignment(tid: TupleID, refid: TupleID, score: Int)
 
     val indexed = data.rdd
-      .map(r => IndexingTaskTuple(r.getAs(FieldNames.internalIdColumnName), Vector.conv_dspark2vec(r.getAs[DenseSparkVector](attribute))))
+      .map(r => IndexingTaskTuple(r.getAs(AttributeNames.internalIdColumnName), Vector.conv_dspark2vec(r.getAs[DenseSparkVector](attribute))))
       .flatMap(datum => {
         refs.value
           .sortBy(ref => distance.apply(datum.ap_indexable, ref.ap_indexable)) //sort refs by distance

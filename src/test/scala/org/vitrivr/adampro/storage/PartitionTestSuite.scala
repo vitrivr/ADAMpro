@@ -2,7 +2,7 @@ package org.vitrivr.adampro.storage
 
 import org.vitrivr.adampro.AdamTestBase
 import org.vitrivr.adampro.api.{IndexOp, QueryOp}
-import org.vitrivr.adampro.config.FieldNames
+import org.vitrivr.adampro.config.AttributeNames
 import org.vitrivr.adampro.index.partition.PartitionMode
 import org.vitrivr.adampro.index.Index
 import org.vitrivr.adampro.index.structures.IndexTypes
@@ -38,7 +38,7 @@ class PartitionTestSuite extends AdamTestBase {
         val partnnq = NearestNeighbourQuery("vectorfield", es.vector, None, es.distance, es.k, false, Map[String, String](), Some(Set(0)))
 
         val partresults = QueryOp.index(index.get.indexname, partnnq, None).get.get
-          .map(r => (r.getAs[Distance](FieldNames.distanceColumnName), r.getAs[Long]("tid"))).collect()
+          .map(r => (r.getAs[Distance](AttributeNames.distanceColumnName), r.getAs[Long]("tid"))).collect()
           .sortBy(_._1).toSeq
 
         Then("we should retrieve the k nearest neighbors of one partition only")
@@ -60,7 +60,7 @@ class PartitionTestSuite extends AdamTestBase {
         val partnnq = NearestNeighbourQuery("vectorfield", es.vector, None, es.distance, es.k, false, Map[String, String](), Some(Set(0)))
 
         val partresults = QueryOp.index(partindex.get.indexname, partnnq, None).get.get
-          .map(r => (r.getAs[Distance](FieldNames.distanceColumnName), r.getAs[Long]("tid"))).collect()
+          .map(r => (r.getAs[Distance](AttributeNames.distanceColumnName), r.getAs[Long]("tid"))).collect()
           .sortBy(_._1).toSeq
 
         Then("we should retrieve the k nearest neighbors of one partition only")
@@ -96,7 +96,7 @@ class PartitionTestSuite extends AdamTestBase {
         val x = QueryOp.index(partindex.get.indexname, partnnq, None).get.get
 
         val partresults = x
-          .map(r => (r.getAs[Distance](FieldNames.distanceColumnName), r.getAs[Long]("tid"))).collect()
+          .map(r => (r.getAs[Distance](AttributeNames.distanceColumnName), r.getAs[Long]("tid"))).collect()
           .sortBy(_._1).toSeq
 
         And("we should retrieve the k nearest neighbors of one partition only")
@@ -123,7 +123,7 @@ class PartitionTestSuite extends AdamTestBase {
         assert(loadedIndex.isSuccess)
 
         val partresults = QueryOp.index(partindex.get.indexname, partnnq, None).get.get
-          .map(r => (r.getAs[Distance](FieldNames.distanceColumnName), r.getAs[Long]("tid"))).collect() //get here TID of metadata
+          .map(r => (r.getAs[Distance](AttributeNames.distanceColumnName), r.getAs[Long]("tid"))).collect() //get here TID of metadata
           .sortBy(_._1).toSeq
 
         And("we should retrieve the k nearest neighbors of one partition only")

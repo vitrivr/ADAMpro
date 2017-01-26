@@ -6,9 +6,9 @@ import org.apache.solr.client.solrj.request.CoreAdminRequest
 import org.apache.solr.common.SolrInputDocument
 import org.apache.spark.sql.types.{FloatType, StructField, StructType}
 import org.apache.spark.sql.{DataFrame, Row, SaveMode}
-import org.vitrivr.adampro.config.FieldNames
-import org.vitrivr.adampro.datatypes.FieldTypes
-import org.vitrivr.adampro.datatypes.FieldTypes.FieldType
+import org.vitrivr.adampro.config.AttributeNames
+import org.vitrivr.adampro.datatypes.AttributeTypes
+import org.vitrivr.adampro.datatypes.AttributeTypes.AttributeType
 import org.vitrivr.adampro.entity.AttributeDefinition
 import org.vitrivr.adampro.main.AdamContext
 import org.vitrivr.adampro.query.query.Predicate
@@ -25,9 +25,9 @@ import scala.util.{Failure, Success, Try}
 class SolrEngine(private val url: String)(@transient override implicit val ac: AdamContext) extends Engine()(ac) with Logging with Serializable {
   override val name: String = "solr"
 
-  override def supports = Seq(FieldTypes.INTTYPE, FieldTypes.LONGTYPE, FieldTypes.FLOATTYPE, FieldTypes.DOUBLETYPE, FieldTypes.STRINGTYPE, FieldTypes.TEXTTYPE, FieldTypes.BOOLEANTYPE)
+  override def supports = Seq(AttributeTypes.AUTOTYPE, AttributeTypes.INTTYPE, AttributeTypes.LONGTYPE, AttributeTypes.FLOATTYPE, AttributeTypes.DOUBLETYPE, AttributeTypes.STRINGTYPE, AttributeTypes.TEXTTYPE, AttributeTypes.BOOLEANTYPE)
 
-  override def specializes: Seq[FieldType] = Seq(FieldTypes.TEXTTYPE)
+  override def specializes: Seq[AttributeType] = Seq(AttributeTypes.TEXTTYPE)
 
   override val repartitionable = false
 
@@ -86,38 +86,39 @@ class SolrEngine(private val url: String)(@transient override implicit val ac: A
   }
 
   /**
-    * Returns the dynamic suffix for storing the fieldtype in solr.
+    * Returns the dynamic suffix for storing the attribute type in solr.
     *
-    * @param fieldtype
+    * @param attributetype
     * @return
     */
-  private def getSuffix(fieldtype: FieldType) = fieldtype match {
-    case FieldTypes.INTTYPE => "_i"
-    case FieldTypes.LONGTYPE => "_l"
-    case FieldTypes.FLOATTYPE => "_f"
-    case FieldTypes.DOUBLETYPE => "_d"
-    case FieldTypes.STRINGTYPE => "_s"
-    case FieldTypes.TEXTTYPE => "_txt"
-    case FieldTypes.BOOLEANTYPE => "_b"
+  private def getSuffix(attributetype: AttributeType) = attributetype match {
+    case AttributeTypes.INTTYPE => "_i"
+    case AttributeTypes.LONGTYPE => "_l"
+    case AttributeTypes.AUTOTYPE => "_l"
+    case AttributeTypes.FLOATTYPE => "_f"
+    case AttributeTypes.DOUBLETYPE => "_d"
+    case AttributeTypes.STRINGTYPE => "_s"
+    case AttributeTypes.TEXTTYPE => "_txt"
+    case AttributeTypes.BOOLEANTYPE => "_b"
     case _ => "_s" //in case we do not know how to store the data, choose string
   }
 
 
   /**
-    * Returns the fieldtype given a solr suffix.
+    * Returns the attribute type given a solr suffix.
     *
     * @param suffix
     * @return
     */
-  private def getFieldType(suffix: String) = suffix match {
-    case "_i" => FieldTypes.INTTYPE
-    case "_l" => FieldTypes.LONGTYPE
-    case "_f" => FieldTypes.FLOATTYPE
-    case "_d" => FieldTypes.DOUBLETYPE
-    case "_s" => FieldTypes.STRINGTYPE
-    case "_txt" => FieldTypes.TEXTTYPE
-    case "_b" => FieldTypes.BOOLEANTYPE
-    case _ => FieldTypes.STRINGTYPE
+  private def getAttributeType(suffix: String) = suffix match {
+    case "_i" => AttributeTypes.INTTYPE
+    case "_l" => AttributeTypes.LONGTYPE
+    case "_f" => AttributeTypes.FLOATTYPE
+    case "_d" => AttributeTypes.DOUBLETYPE
+    case "_s" => AttributeTypes.STRINGTYPE
+    case "_txt" => AttributeTypes.TEXTTYPE
+    case "_b" => AttributeTypes.BOOLEANTYPE
+    case _ => AttributeTypes.STRINGTYPE
   }
 
   /**
@@ -132,7 +133,7 @@ class SolrEngine(private val url: String)(@transient override implicit val ac: A
   override def read(storename: String, attributes: Seq[AttributeDefinition], predicates: Seq[Predicate], params: Map[String, String])(implicit ac: AdamContext): Try[DataFrame] = {
     try {
       val client = new HttpSolrClient(url + "/" + storename)
-      val nameDicAttributenameToSolrname = attributes.map(attribute => attribute.name -> (attribute.name + getSuffix(attribute.fieldtype))).toMap
+      val nameDicAttributenameToSolrname = attributes.map(attribute => attribute.name -> (attribute.name + getSuffix(attribute.attributeType))).toMap
       val nameDicSolrnameToAttributename = nameDicAttributenameToSolrname.map(_.swap)
 
       //set query for retrieving data
@@ -186,11 +187,11 @@ class SolrEngine(private val url: String)(@transient override implicit val ac: A
         val tmpDoc = results.get(0)
         val schema = (nameDicSolrnameToAttributename.keys.toSeq ++ Seq("score")).map(solrname => {
           if (solrname == "score") {
-            StructField(FieldNames.scoreColumnName, FloatType)
+            StructField(AttributeNames.scoreColumnName, FloatType)
           } else if (tmpDoc.get(solrname) != null) {
             val name = nameDicSolrnameToAttributename(solrname)
-            val fieldtype = getFieldType(solrname.substring(solrname.lastIndexOf("_")))
-            StructField(name, fieldtype.datatype)
+            val attributetype = getAttributeType(solrname.substring(solrname.lastIndexOf("_")))
+            StructField(name, attributetype.datatype)
           } else {
             null
           }
@@ -262,7 +263,7 @@ class SolrEngine(private val url: String)(@transient override implicit val ac: A
 
             attributes.foreach {
               attribute =>
-                val solrname = attribute.name + getSuffix(attribute.fieldtype)
+                val solrname = attribute.name + getSuffix(attribute.attributeType)
                 doc.addField(solrname, row.getAs[Any](attribute.name).toString)
             }
 

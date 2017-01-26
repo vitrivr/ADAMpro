@@ -1,6 +1,6 @@
 package org.vitrivr.adampro.index.partition
 
-import org.vitrivr.adampro.config.FieldNames
+import org.vitrivr.adampro.config.AttributeNames
 import org.vitrivr.adampro.datatypes.vector.Vector._
 import org.vitrivr.adampro.entity.{Entity, EntityNameHolder}
 import org.vitrivr.adampro.exception.GeneralAdamException
@@ -71,7 +71,7 @@ object ECPPartitioner extends CustomPartitioner with Logging with Serializable {
     } catch {
       case e: java.util.NoSuchElementException => throw new GeneralAdamException("Repartitioning Failed because ECP Index was not created")
     }
-    val joinDF = index.getData().get.withColumnRenamed(FieldNames.featureIndexColumnName, FieldNames.partitionKey)
+    val joinDF = index.getData().get.withColumnRenamed(AttributeNames.featureIndexColumnName, AttributeNames.partitionKey)
     val joinedDF = data.join(joinDF, index.pk.name)
     log.debug("repartitioning ")
 
@@ -82,7 +82,7 @@ object ECPPartitioner extends CustomPartitioner with Logging with Serializable {
     SparkStartup.catalogOperator.createPartitioner(indexName.get, npartitions, new ECPPartitionerMetaData(npartitions, leaders, indexmeta.distance), ECPPartitioner)
     //repartition
     val partitioner = new ECPPartitioner(new ECPPartitionerMetaData(npartitions, leaders, indexmeta.distance), indexmeta)
-    val repartitioned: RDD[(Any, Row)] = joinedDF.map(r => (r.getAs[Any](FieldNames.partitionKey), r)).rdd.partitionBy(partitioner)
+    val repartitioned: RDD[(Any, Row)] = joinedDF.map(r => (r.getAs[Any](AttributeNames.partitionKey), r)).rdd.partitionBy(partitioner)
     val reparRDD = repartitioned.mapPartitions((it) => {
       it.map(f => f._2)
     }, true)

@@ -4,9 +4,9 @@ import org.apache.spark.sql.functions.{col, udf}
 import org.apache.spark.sql.types.{LongType, StructField, StructType}
 import org.apache.spark.sql.{DataFrame, Row, SaveMode}
 import org.apache.spark.storage.StorageLevel
-import org.vitrivr.adampro.config.FieldNames
-import org.vitrivr.adampro.datatypes.FieldTypes._
-import org.vitrivr.adampro.datatypes.TupleID
+import org.vitrivr.adampro.config.AttributeNames
+import org.vitrivr.adampro.datatypes.AttributeTypes._
+import org.vitrivr.adampro.datatypes.{AttributeTypes, TupleID}
 import org.vitrivr.adampro.entity.Entity.EntityName
 import org.vitrivr.adampro.exception.{EntityExistingException, EntityNotExistingException, EntityNotProperlyDefinedException, GeneralAdamException}
 import org.vitrivr.adampro.index.Index
@@ -41,7 +41,7 @@ case class Entity(entityname: EntityName)(@transient implicit val ac: AdamContex
     *
     * @return
     */
-  val pk : AttributeDefinition = SparkStartup.catalogOperator.getPrimaryKey(entityname).get
+  val pk: AttributeDefinition = SparkStartup.catalogOperator.getPrimaryKey(entityname).get
 
   private var _schema: Option[Seq[AttributeDefinition]] = None
 
@@ -53,7 +53,7 @@ case class Entity(entityname: EntityName)(@transient implicit val ac: AdamContex
     * @param fullSchema add internal fields as well (e.g. TID)
     * @return
     */
-  def schema(nameFilter: Option[Seq[String]] = None, typeFilter: Option[Seq[FieldType]] = None, fullSchema: Boolean = true): Seq[AttributeDefinition] = {
+  def schema(nameFilter: Option[Seq[String]] = None, typeFilter: Option[Seq[AttributeType]] = None, fullSchema: Boolean = true): Seq[AttributeDefinition] = {
     checkVersions()
 
     if (_schema.isEmpty) {
@@ -67,7 +67,7 @@ case class Entity(entityname: EntityName)(@transient implicit val ac: AdamContex
     }
 
     if (typeFilter.isDefined) {
-      tmpSchema = tmpSchema.filter(attribute => typeFilter.get.map(_.name).contains(attribute.fieldtype.name))
+      tmpSchema = tmpSchema.filter(attribute => typeFilter.get.map(_.name).contains(attribute.attributeType.name))
     }
 
     if (fullSchema) {
@@ -132,7 +132,7 @@ case class Entity(entityname: EntityName)(@transient implicit val ac: AdamContex
     * @param predicates    attributename -> predicate (will only be applied if supported by handler)
     * @return
     */
-  def getData(nameFilter: Option[Seq[String]] = None, typeFilter: Option[Seq[FieldType]] = None, handlerFilter: Option[StorageHandler] = None, predicates: Seq[Predicate] = Seq()): Option[DataFrame] = {
+  def getData(nameFilter: Option[Seq[String]] = None, typeFilter: Option[Seq[AttributeType]] = None, handlerFilter: Option[StorageHandler] = None, predicates: Seq[Predicate] = Seq()): Option[DataFrame] = {
     checkVersions()
 
     if (_data.isEmpty) {
@@ -245,7 +245,7 @@ case class Entity(entityname: EntityName)(@transient implicit val ac: AdamContex
 
   private val MAX_INSERTS_BEFORE_VACUUM = SparkStartup.catalogOperator.getEntityOption(entityname, Some(Entity.MAX_INSERTS_VACUUMING)).get.get(Entity.MAX_INSERTS_VACUUMING).map(_.toInt).getOrElse(500)
 
-   /**
+  /**
     * Returns the total number of inserts in entity
     */
   private def totalNumberOfInserts() = {
@@ -290,10 +290,27 @@ case class Entity(entityname: EntityName)(@transient implicit val ac: AdamContex
 
       //attach TID to rows
       val rdd = data.rdd.zipWithUniqueId.map { case (r: Row, id: Long) => Row.fromSeq(id +: r.toSeq) }
-      val insertion = ac.sqlContext.createDataFrame(
-        rdd, StructType(StructField(FieldNames.internalIdColumnName, LongType) +: data.schema.fields))
-        .withColumn(FieldNames.internalIdColumnName, tupleidUDF(col(FieldNames.internalIdColumnName)))
-        .repartition(ac.config.defaultNumberOfPartitions)
+
+      var insertion = ac.sqlContext.createDataFrame(
+        rdd, StructType(StructField(AttributeNames.internalIdColumnName, LongType) +: data.schema.fields))
+
+      insertion = insertion.withColumn(AttributeNames.internalIdColumnName, tupleidUDF(col(AttributeNames.internalIdColumnName)))
+
+
+      //AUTOTYPE attributes
+      val autoAttributes = schema(typeFilter = Some(Seq(AttributeTypes.AUTOTYPE)), fullSchema = false)
+      if(autoAttributes.nonEmpty){
+        if(autoAttributes.map(_.name).exists(x => data.schema.fieldNames.contains(x))){
+          return Failure(new GeneralAdamException("the attributes " + autoAttributes.map(_.name).mkString(", ") + " have been specified as auto and should therefore not be provided"))
+        }
+
+        autoAttributes.foreach{ attribute =>
+          insertion = insertion.withColumn(attribute.name, col(AttributeNames.internalIdColumnName))
+        }
+
+      }
+
+      insertion = insertion.repartition(ac.config.defaultNumberOfPartitions)
 
       //TODO: check insertion schema and entity schema before trying to insert
       //TODO: block on other inserts
@@ -550,7 +567,7 @@ object Entity extends Logging {
         return Failure(EntityNotProperlyDefinedException("Entity " + entityname + " will have no attributes"))
       }
 
-      val reservedNames = creationAttributes.map(a => a.name -> FieldNames.isNameReserved(a.name)).filter(_._2 == true)
+      val reservedNames = creationAttributes.map(a => a.name -> AttributeNames.isNameReserved(a.name)).filter(_._2 == true)
       if (reservedNames.nonEmpty) {
         return Failure(EntityNotProperlyDefinedException("Entity defined with field " + reservedNames.map(_._1).mkString + ", but name is reserved"))
       }
@@ -559,7 +576,7 @@ object Entity extends Logging {
         return Failure(EntityNotProperlyDefinedException("Entity defined with duplicate fields."))
       }
 
-      val attributes = creationAttributes.+:(new AttributeDefinition(FieldNames.internalIdColumnName, TupleID.AdamTupleID))
+      val attributes = creationAttributes.+:(new AttributeDefinition(AttributeNames.internalIdColumnName, TupleID.AdamTupleID))
 
       SparkStartup.catalogOperator.createEntity(entityname, attributes)
       SparkStartup.catalogOperator.updateEntityOption(entityname, COUNT_KEY, "0")

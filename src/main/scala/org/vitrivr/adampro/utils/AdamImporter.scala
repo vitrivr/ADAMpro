@@ -3,14 +3,14 @@ package org.vitrivr.adampro.utils
 import java.sql.{Connection, DriverManager}
 
 import org.vitrivr.adampro.api.{EntityOp, IndexOp}
-import org.vitrivr.adampro.datatypes.FieldTypes
+import org.vitrivr.adampro.datatypes.AttributeTypes
 import org.vitrivr.adampro.entity.AttributeDefinition
 import org.vitrivr.adampro.main.AdamContext
 import org.vitrivr.adampro.query.distance.NormBasedDistance
 import org.apache.spark.annotation.Experimental
 import org.apache.spark.sql.jdbc.AdamDialectRegistrar
 import org.apache.spark.sql.types.DataTypes
-import org.vitrivr.adampro.datatypes.FieldTypes.VECTORTYPE
+import org.vitrivr.adampro.datatypes.AttributeTypes.VECTORTYPE
 import org.vitrivr.adampro.datatypes.vector.Vector
 
 import scala.collection.mutable.ListBuffer
@@ -123,13 +123,13 @@ class AdamImporter(url: String, user: String, password: String) extends Logging 
 
           new AttributeDefinition(newName, VECTORTYPE, storagehandlername = "parquet")
         } else {
-          val fieldType = FieldTypes.fromDataType(field.dataType)
-          new AttributeDefinition(field.name, fieldType, storagehandlername = "parquet")
+          val attributetype = AttributeTypes.fromDataType(field.dataType)
+          new AttributeDefinition(field.name, attributetype, storagehandlername = "parquet")
         }
       })
 
 
-      log.info("creating new entity " + entityname + " with schema: " + schema.map(field => field.name + "(" + field.fieldtype.name + ")").mkString(", "))
+      log.info("creating new entity " + entityname + " with schema: " + schema.map(field => field.name + "(" + field.attributeType.name + ")").mkString(", "))
       val entity = EntityOp.create(entityname, schema, true)
 
       if (entity.isSuccess) {

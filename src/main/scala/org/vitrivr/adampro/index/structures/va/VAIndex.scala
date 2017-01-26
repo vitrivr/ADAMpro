@@ -2,7 +2,7 @@ package org.vitrivr.adampro.index.structures.va
 
 import org.apache.spark.broadcast.Broadcast
 import org.apache.spark.sql.{DataFrame}
-import org.vitrivr.adampro.config.FieldNames
+import org.vitrivr.adampro.config.AttributeNames
 import org.vitrivr.adampro.datatypes.bitstring.BitString
 import org.vitrivr.adampro.datatypes.vector.Vector._
 import org.vitrivr.adampro.index.{ResultElement, Index}
@@ -80,7 +80,7 @@ class VAIndex(override val indexname: IndexName)(@transient override implicit va
     import ac.spark.implicits._
 
     val tmp = data
-      .withColumn("ap_cells", cellsUDF(data(FieldNames.featureIndexColumnName)))
+      .withColumn("ap_cells", cellsUDF(data(AttributeNames.featureIndexColumnName)))
       .withColumn("ap_lbound", distUDF(lbounds)(col("ap_cells")))
       .withColumn("ap_ubound", distUDF(ubounds)(col("ap_cells"))) //note that this is computed lazy!
 

@@ -2,8 +2,8 @@ package org.vitrivr.adampro.query.handler.internal
 
 import java.util.concurrent.TimeUnit
 
-import org.vitrivr.adampro.config.FieldNames
-import org.vitrivr.adampro.datatypes.FieldTypes
+import org.vitrivr.adampro.config.AttributeNames
+import org.vitrivr.adampro.datatypes.AttributeTypes
 import org.vitrivr.adampro.entity.AttributeDefinition
 import org.vitrivr.adampro.main.AdamContext
 import org.vitrivr.adampro.query.Result
@@ -64,27 +64,27 @@ abstract class AggregationExpression(private val left: QueryExpression, private 
     var firstResult = first.evaluate(options).get
 
     //TODO: possibly consider fuzzy sets rather than ignoring distance
-    val pk = firstResult.schema.fields.filterNot(_.name == FieldNames.distanceColumnName).head.name
+    val pk = firstResult.schema.fields.filterNot(_.name == AttributeNames.distanceColumnName).head.name
     second.filter = Some(firstResult.select(pk))
     var secondResult = second.evaluate(options).get
 
     var result = secondResult
 
     if (options.isDefined && options.get.storeSourceProvenance) {
-      if(firstResult.columns.contains(FieldNames.sourceColumnName)){
-        firstResult = firstResult.withColumnRenamed(FieldNames.sourceColumnName, FieldNames.sourceColumnName + "-1")
+      if(firstResult.columns.contains(AttributeNames.sourceColumnName)){
+        firstResult = firstResult.withColumnRenamed(AttributeNames.sourceColumnName, AttributeNames.sourceColumnName + "-1")
       } else {
-        firstResult = firstResult.withColumn(FieldNames.sourceColumnName + "-1", lit(first.info.scantype.getOrElse("undefined")))
+        firstResult = firstResult.withColumn(AttributeNames.sourceColumnName + "-1", lit(first.info.scantype.getOrElse("undefined")))
       }
 
-      if(secondResult.columns.contains(FieldNames.sourceColumnName)){
-        secondResult = secondResult.withColumnRenamed(FieldNames.sourceColumnName, FieldNames.sourceColumnName + "-2")
+      if(secondResult.columns.contains(AttributeNames.sourceColumnName)){
+        secondResult = secondResult.withColumnRenamed(AttributeNames.sourceColumnName, AttributeNames.sourceColumnName + "-2")
       } else {
-        secondResult = secondResult.withColumn(FieldNames.sourceColumnName + "-2", lit(second.info.scantype.getOrElse("undefined")))
+        secondResult = secondResult.withColumn(AttributeNames.sourceColumnName + "-2", lit(second.info.scantype.getOrElse("undefined")))
       }
       val sourceUDF = udf((s1: String, s2 : String) => s1 + "->" + s2)
-      result = firstResult.select(pk, FieldNames.sourceColumnName + "-1").join(secondResult, pk)
-      result = result.withColumn(FieldNames.sourceColumnName, sourceUDF(col(FieldNames.sourceColumnName + "-1"), col(FieldNames.sourceColumnName + "-2"))).drop(FieldNames.sourceColumnName + "-1").drop(FieldNames.sourceColumnName + "-2")
+      result = firstResult.select(pk, AttributeNames.sourceColumnName + "-1").join(secondResult, pk)
+      result = result.withColumn(AttributeNames.sourceColumnName, sourceUDF(col(AttributeNames.sourceColumnName + "-1"), col(AttributeNames.sourceColumnName + "-2"))).drop(AttributeNames.sourceColumnName + "-1").drop(AttributeNames.sourceColumnName + "-2")
     }
 
     result
@@ -98,7 +98,7 @@ abstract class AggregationExpression(private val left: QueryExpression, private 
 
     val f = for (firstResult <- ffut; secondResult <- sfut)
     //TODO: possilby consider fuzzy sets rather than ignoring distance
-      yield aggregate(firstResult.get, secondResult.get, firstResult.get.schema.fields.filterNot(_.name == FieldNames.distanceColumnName).head.name, options)
+      yield aggregate(firstResult.get, secondResult.get, firstResult.get.schema.fields.filterNot(_.name == AttributeNames.distanceColumnName).head.name, options)
 
     var result = Await.result(f, Duration(100, TimeUnit.SECONDS))
 
@@ -133,16 +133,16 @@ object AggregationExpression {
       var right = rightResult
 
       if (options.isDefined && options.get.storeSourceProvenance) {
-        if(left.columns.contains(FieldNames.sourceColumnName)){
-          left = left.select(pk, FieldNames.sourceColumnName)
+        if(left.columns.contains(AttributeNames.sourceColumnName)){
+          left = left.select(pk, AttributeNames.sourceColumnName)
         } else {
-          left = left.select(pk).withColumn(FieldNames.sourceColumnName, lit(l.info.scantype.getOrElse("undefined")))
+          left = left.select(pk).withColumn(AttributeNames.sourceColumnName, lit(l.info.scantype.getOrElse("undefined")))
         }
 
-        if(right.columns.contains(FieldNames.sourceColumnName)){
-          right = right.select(pk, FieldNames.sourceColumnName)
+        if(right.columns.contains(AttributeNames.sourceColumnName)){
+          right = right.select(pk, AttributeNames.sourceColumnName)
         } else {
-          right = right.select(pk).withColumn(FieldNames.sourceColumnName, lit(r.info.scantype.getOrElse("undefined")))
+          right = right.select(pk).withColumn(AttributeNames.sourceColumnName, lit(r.info.scantype.getOrElse("undefined")))
         }
       } else {
         left = left.select(pk)
@@ -150,7 +150,7 @@ object AggregationExpression {
       }
 
       import org.apache.spark.sql.functions.lit
-      left.unionAll(right).withColumn(FieldNames.distanceColumnName, lit(0.toFloat))
+      left.unionAll(right).withColumn(AttributeNames.distanceColumnName, lit(0.toFloat))
     }
   }
 
@@ -169,16 +169,16 @@ object AggregationExpression {
 
 
       if (options.isDefined && options.get.storeSourceProvenance) {
-        if(left.columns.contains(FieldNames.sourceColumnName)){
-          left = left.select(pk, FieldNames.sourceColumnName)
+        if(left.columns.contains(AttributeNames.sourceColumnName)){
+          left = left.select(pk, AttributeNames.sourceColumnName)
         } else {
-          left = left.select(pk).withColumn(FieldNames.sourceColumnName, lit(l.info.scantype.getOrElse("undefined") + " " + aggregationName + " " + r.info.scantype.getOrElse("undefined")))
+          left = left.select(pk).withColumn(AttributeNames.sourceColumnName, lit(l.info.scantype.getOrElse("undefined") + " " + aggregationName + " " + r.info.scantype.getOrElse("undefined")))
         }
 
-        if(right.columns.contains(FieldNames.sourceColumnName)){
-          right = right.select(pk, FieldNames.sourceColumnName)
+        if(right.columns.contains(AttributeNames.sourceColumnName)){
+          right = right.select(pk, AttributeNames.sourceColumnName)
         } else {
-          right = right.select(pk).withColumn(FieldNames.sourceColumnName, lit(l.info.scantype.getOrElse("undefined") + " " + aggregationName + " " + r.info.scantype.getOrElse("undefined")))
+          right = right.select(pk).withColumn(AttributeNames.sourceColumnName, lit(l.info.scantype.getOrElse("undefined") + " " + aggregationName + " " + r.info.scantype.getOrElse("undefined")))
         }
       } else {
         left = left.select(pk)
@@ -186,7 +186,7 @@ object AggregationExpression {
       }
 
       import org.apache.spark.sql.functions.lit
-      left.intersect(right).withColumn(FieldNames.distanceColumnName, lit(0.toFloat))
+      left.intersect(right).withColumn(AttributeNames.distanceColumnName, lit(0.toFloat))
     }
   }
 
@@ -204,16 +204,16 @@ object AggregationExpression {
       var right = rightResult
 
       if (options.isDefined && options.get.storeSourceProvenance) {
-        if(left.columns.contains(FieldNames.sourceColumnName)){
-          left = left.select(pk, FieldNames.sourceColumnName)
+        if(left.columns.contains(AttributeNames.sourceColumnName)){
+          left = left.select(pk, AttributeNames.sourceColumnName)
         } else {
-          left = left.select(pk).withColumn(FieldNames.sourceColumnName, lit(l.info.scantype.getOrElse("undefined") + " " + aggregationName + " " + r.info.scantype.getOrElse("undefined")))
+          left = left.select(pk).withColumn(AttributeNames.sourceColumnName, lit(l.info.scantype.getOrElse("undefined") + " " + aggregationName + " " + r.info.scantype.getOrElse("undefined")))
         }
 
-        if(right.columns.contains(FieldNames.sourceColumnName)){
-          right = right.select(pk, FieldNames.sourceColumnName)
+        if(right.columns.contains(AttributeNames.sourceColumnName)){
+          right = right.select(pk, AttributeNames.sourceColumnName)
         } else {
-          right = right.select(pk).withColumn(FieldNames.sourceColumnName, lit(l.info.scantype.getOrElse("undefined") + " " + aggregationName + " " + r.info.scantype.getOrElse("undefined")))
+          right = right.select(pk).withColumn(AttributeNames.sourceColumnName, lit(l.info.scantype.getOrElse("undefined") + " " + aggregationName + " " + r.info.scantype.getOrElse("undefined")))
         }
       } else {
         left = left.select(pk)
@@ -222,7 +222,7 @@ object AggregationExpression {
 
 
       import org.apache.spark.sql.functions.lit
-      left.except(right).withColumn(FieldNames.distanceColumnName, lit(0.toFloat))
+      left.except(right).withColumn(AttributeNames.distanceColumnName, lit(0.toFloat))
     }
   }
 

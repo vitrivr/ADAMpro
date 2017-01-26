@@ -2,7 +2,7 @@ package org.vitrivr.adampro.storage
 
 import org.vitrivr.adampro.AdamTestBase
 import org.vitrivr.adampro.api.{QueryOp, RandomDataOp, EntityOp}
-import org.vitrivr.adampro.datatypes.FieldTypes
+import org.vitrivr.adampro.datatypes.AttributeTypes
 import org.vitrivr.adampro.entity.{Entity, AttributeDefinition}
 import org.vitrivr.adampro.query.handler.external.GisScanExpression
 import org.vitrivr.adampro.query.query.BooleanQuery
@@ -17,11 +17,11 @@ class PostGisTestSuite extends AdamTestBase {
   val ntuples = 1000
 
   val handlerName = "postgis"
-  val fieldTypes = Seq(FieldTypes.GEOMETRYTYPE)
+  val fieldTypes = Seq(AttributeTypes.GEOMETRYTYPE)
 
   scenario("create an entity") {
     withEntityName { entityname =>
-      val attributes = fieldTypes.map(field => AttributeDefinition(field.name + "field", field, storagehandlername = handlerName)) ++ Seq(AttributeDefinition("tid", FieldTypes.LONGTYPE, storagehandlername = handlerName))
+      val attributes = fieldTypes.map(field => AttributeDefinition(field.name + "field", field, storagehandlername = handlerName)) ++ Seq(AttributeDefinition("tid", AttributeTypes.LONGTYPE, storagehandlername = handlerName))
       EntityOp.create(entityname, attributes)
       RandomDataOp.apply(entityname, ntuples, Map())
 
@@ -39,7 +39,7 @@ class PostGisTestSuite extends AdamTestBase {
 
   scenario("put query to an entity") {
     withEntityName { entityname =>
-      val attributes = fieldTypes.map(field => AttributeDefinition(field.name + "field", field, storagehandlername = handlerName)) ++ Seq(AttributeDefinition("tid", FieldTypes.LONGTYPE, storagehandlername = handlerName))
+      val attributes = fieldTypes.map(field => AttributeDefinition(field.name + "field", field, storagehandlername = handlerName)) ++ Seq(AttributeDefinition("tid", AttributeTypes.LONGTYPE, storagehandlername = handlerName))
       EntityOp.create(entityname, attributes)
       RandomDataOp.apply(entityname, ntuples, Map())
 

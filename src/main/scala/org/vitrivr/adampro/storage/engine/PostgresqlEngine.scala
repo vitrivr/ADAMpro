@@ -3,8 +3,8 @@ package org.vitrivr.adampro.storage.engine
 import java.sql.Connection
 import java.util.Properties
 
-import org.vitrivr.adampro.datatypes.FieldTypes
-import org.vitrivr.adampro.datatypes.FieldTypes.FieldType
+import org.vitrivr.adampro.datatypes.AttributeTypes
+import org.vitrivr.adampro.datatypes.AttributeTypes.AttributeType
 import org.vitrivr.adampro.entity.AttributeDefinition
 import org.vitrivr.adampro.main.AdamContext
 import org.vitrivr.adampro.query.query.Predicate
@@ -25,9 +25,9 @@ class PostgresqlEngine(private val url: String, private val user: String, privat
 
   override val name = "postgresql"
 
-  override def supports: Seq[FieldType] = Seq(FieldTypes.INTTYPE, FieldTypes.LONGTYPE, FieldTypes.FLOATTYPE, FieldTypes.DOUBLETYPE, FieldTypes.STRINGTYPE, FieldTypes.BOOLEANTYPE)
+  override def supports: Seq[AttributeType] = Seq(AttributeTypes.AUTOTYPE, AttributeTypes.INTTYPE, AttributeTypes.LONGTYPE, AttributeTypes.FLOATTYPE, AttributeTypes.DOUBLETYPE, AttributeTypes.STRINGTYPE, AttributeTypes.BOOLEANTYPE)
 
-  override def specializes: Seq[FieldType] = Seq(FieldTypes.INTTYPE, FieldTypes.LONGTYPE, FieldTypes.FLOATTYPE, FieldTypes.DOUBLETYPE, FieldTypes.STRINGTYPE, FieldTypes.BOOLEANTYPE)
+  override def specializes: Seq[AttributeType] = Seq(AttributeTypes.INTTYPE, AttributeTypes.LONGTYPE, AttributeTypes.FLOATTYPE, AttributeTypes.DOUBLETYPE, AttributeTypes.STRINGTYPE, AttributeTypes.BOOLEANTYPE)
 
   override val repartitionable = false
 
@@ -96,8 +96,8 @@ class PostgresqlEngine(private val url: String, private val user: String, privat
 
     try {
       val structFields = attributes.map {
-        field => StructField(field.name, field.fieldtype.datatype)
-      }.toSeq
+        attribute => StructField(attribute.name, attribute.attributeType.datatype)
+      }
 
       val df = ac.sqlContext.createDataFrame(ac.sc.emptyRDD[Row], StructType(structFields))
 
@@ -187,7 +187,7 @@ class PostgresqlEngine(private val url: String, private val user: String, privat
       }
 
       attributes.foreach { attribute =>
-        df = df.withColumn(attribute.name, df.col(attribute.name).cast(attribute.fieldtype.datatype))
+        df = df.withColumn(attribute.name, df.col(attribute.name).cast(attribute.attributeType.datatype))
       }
 
       Success(df)

@@ -2,7 +2,7 @@ package org.vitrivr.adampro.index.structures.sh
 
 import it.unimi.dsi.fastutil.ints.{IntComparators, IntHeapPriorityQueue}
 import org.apache.spark.sql.Row
-import org.vitrivr.adampro.config.FieldNames
+import org.vitrivr.adampro.config.AttributeNames
 
 import scala.collection.mutable.ListBuffer
 
@@ -24,14 +24,14 @@ class SHResultHandler[A](k: Int) {
   def offer(r: Row, pk : String): Boolean = {
     queue.synchronized {
       if (elementsLeft > 0) { //we have not yet inserted k elements, no checks therefore
-        val score = r.getAs[Int](FieldNames.distanceColumnName)
+        val score = r.getAs[Int](AttributeNames.distanceColumnName)
         val tid = r.getAs[A](pk)
         elementsLeft -= 1
         enqueueAndAddToCandidates(tid, score)
         return true
       } else { //we have already k elements, therefore check if new element is better
         val peek = queue.firstInt
-        val score = r.getAs[Int](FieldNames.distanceColumnName)
+        val score = r.getAs[Int](AttributeNames.distanceColumnName)
         if (peek >= score) {
           //if peek is larger than lower, then dequeue worst element and insert
           //new element

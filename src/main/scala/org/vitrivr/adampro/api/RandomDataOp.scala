@@ -2,8 +2,8 @@ package org.vitrivr.adampro.api
 
 import org.apache.spark.sql.Row
 import org.apache.spark.sql.types.{StructField, StructType}
-import org.vitrivr.adampro.datatypes.FieldTypes
-import org.vitrivr.adampro.datatypes.FieldTypes.FieldType
+import org.vitrivr.adampro.datatypes.AttributeTypes
+import org.vitrivr.adampro.datatypes.AttributeTypes.AttributeType
 import org.vitrivr.adampro.datatypes.gis.{GeographyWrapper, GeometryWrapper}
 import org.vitrivr.adampro.datatypes.vector.Vector
 import org.vitrivr.adampro.datatypes.vector.Vector._
@@ -53,11 +53,11 @@ object RandomDataOp extends GenericOp {
         log.trace("start generating data")
         val rdd = ac.sc.parallelize(
           seq.map(idx => {
-            var data = schema.map(field => randomGenerator(field.fieldtype, params)())
+            var data = schema.map(field => randomGenerator(field.attributeType, params)())
             Row(data: _*)
           })
         )
-        val data = ac.sqlContext.createDataFrame(rdd, StructType(schema.map(field => StructField(field.name, field.fieldtype.datatype))))
+        val data = ac.sqlContext.createDataFrame(rdd, StructType(schema.map(field => StructField(field.name, field.attributeType.datatype))))
 
         log.trace("insert generated data")
         val status = entity.get.insert(data, true)
@@ -74,23 +74,23 @@ object RandomDataOp extends GenericOp {
 
   /**
     *
-    * @param fieldtype
+    * @param attributetype
     * @param params
     * @return
     */
-  private def randomGenerator(fieldtype: FieldType, params: Map[String, String]): () => Any = {
-    fieldtype match {
-      case FieldTypes.INTTYPE => () => generateInt(params)
-      case FieldTypes.LONGTYPE => () => generateLong(params)
-      case FieldTypes.FLOATTYPE => () => generateFloat(params)
-      case FieldTypes.DOUBLETYPE => () => generateDouble(params)
-      case FieldTypes.STRINGTYPE => () => generateString(params)
-      case FieldTypes.TEXTTYPE => () => generateText(params)
-      case FieldTypes.BOOLEANTYPE => () => generateBoolean(params)
-      case FieldTypes.VECTORTYPE => () => Vector.conv_vec2dspark(generateDenseFeatureVector(params).asInstanceOf[DenseMathVector])
-      case FieldTypes.SPARSEVECTORTYPE => () => Vector.conv_vec2sspark(generateSparseFeatureVector(params).asInstanceOf[SparseMathVector])
-      case FieldTypes.GEOMETRYTYPE => () => generateGeometry(params).toRow()
-      case FieldTypes.GEOGRAPHYTYPE => () => generateGeography(params).toRow()
+  private def randomGenerator(attributetype: AttributeType, params: Map[String, String]): () => Any = {
+    attributetype match {
+      case AttributeTypes.INTTYPE => () => generateInt(params)
+      case AttributeTypes.LONGTYPE => () => generateLong(params)
+      case AttributeTypes.FLOATTYPE => () => generateFloat(params)
+      case AttributeTypes.DOUBLETYPE => () => generateDouble(params)
+      case AttributeTypes.STRINGTYPE => () => generateString(params)
+      case AttributeTypes.TEXTTYPE => () => generateText(params)
+      case AttributeTypes.BOOLEANTYPE => () => generateBoolean(params)
+      case AttributeTypes.VECTORTYPE => () => Vector.conv_vec2dspark(generateDenseFeatureVector(params).asInstanceOf[DenseMathVector])
+      case AttributeTypes.SPARSEVECTORTYPE => () => Vector.conv_vec2sspark(generateSparseFeatureVector(params).asInstanceOf[SparseMathVector])
+      case AttributeTypes.GEOMETRYTYPE => () => generateGeometry(params).toRow()
+      case AttributeTypes.GEOGRAPHYTYPE => () => generateGeography(params).toRow()
       case _ => log.error("unknown field type for generating random data"); null
     }
   }

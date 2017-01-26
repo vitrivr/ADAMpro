@@ -3,7 +3,7 @@ package org.vitrivr.adampro.query
 import java.util.concurrent.TimeUnit
 import org.vitrivr.adampro.AdamTestBase
 import org.vitrivr.adampro.api._
-import org.vitrivr.adampro.config.FieldNames
+import org.vitrivr.adampro.config.AttributeNames
 import org.vitrivr.adampro.datatypes.TupleID.TupleID
 import org.vitrivr.adampro.datatypes.vector.Vector
 import org.vitrivr.adampro.index.Index._
@@ -40,7 +40,7 @@ class QueryTestSuite extends AdamTestBase with ScalaFutures {
         When("performing a kNN query")
         val nnq = NearestNeighbourQuery("vectorfield", es.vector, None, es.distance, es.k, false, es.options)
         val results = QueryOp.sequential(es.entity.entityname, nnq, None).get.get
-          .map(r => (r.getAs[Distance](FieldNames.distanceColumnName), r.getAs[Long]("tid"))).collect() //get here TID of metadata
+          .map(r => (r.getAs[Distance](AttributeNames.distanceColumnName), r.getAs[Long]("tid"))).collect() //get here TID of metadata
           .sortBy(_._1).toSeq
 
         Then("we should retrieve the k nearest neighbors")
@@ -58,7 +58,7 @@ class QueryTestSuite extends AdamTestBase with ScalaFutures {
         val weights = Vector.conv_draw2vec(Seq.fill(es.vector.length)(Vector.zeroValue))
         val nnq = NearestNeighbourQuery("vectorfield", es.vector, Some(weights), es.distance, es.k,  false, es.options)
         val results = QueryOp.sequential(es.entity.entityname, nnq, None).get.get
-          .map(r => (r.getAs[Distance](FieldNames.distanceColumnName), r.getAs[Long]("tid"))).collect() //get here TID of metadata
+          .map(r => (r.getAs[Distance](AttributeNames.distanceColumnName), r.getAs[Long]("tid"))).collect() //get here TID of metadata
           .sortBy(_._1).toSeq
 
         Then("we should retrieve the k nearest neighbors")
@@ -76,7 +76,7 @@ class QueryTestSuite extends AdamTestBase with ScalaFutures {
       When("performing a kNN query")
       val nnq = NearestNeighbourQuery("vectorfield", es.vector, None, es.distance, es.k, false, es.options)
       val results = QueryOp.index(index.get.indexname, nnq, None).get.get
-        .map(r => (r.getAs[Distance](FieldNames.distanceColumnName), r.getAs[Long]("tid"))).collect() //get here TID of metadata
+        .map(r => (r.getAs[Distance](AttributeNames.distanceColumnName), r.getAs[Long]("tid"))).collect() //get here TID of metadata
         .sortBy(_._1).toSeq
 
       if (matchAll) {
@@ -153,7 +153,7 @@ class QueryTestSuite extends AdamTestBase with ScalaFutures {
         When("performing a kNN query")
         val nnq = NearestNeighbourQuery("vectorfield", es.vector, None, es.distance, es.k, false, es.options)
         val results = QueryOp.entityIndex(es.entity.entityname, IndexTypes.VAFINDEX, nnq, None).get.get
-          .map(r => (r.getAs[Distance](FieldNames.distanceColumnName), r.getAs[Long]("tid"))).collect() //get here TID of metadata
+          .map(r => (r.getAs[Distance](AttributeNames.distanceColumnName), r.getAs[Long]("tid"))).collect() //get here TID of metadata
           .sortBy(_._1).toSeq
 
         Then("we should retrieve the k nearest neighbors")
@@ -193,7 +193,7 @@ class QueryTestSuite extends AdamTestBase with ScalaFutures {
         val nnq = NearestNeighbourQuery("vectorfield", es.vector, None, es.distance, es.k, false, es.options)
         val bq = BooleanQuery(es.where)
         val results = QueryOp.index(index.get.indexname, nnq, Option(bq)).get.get
-          .map(r => (r.getAs[Distance](FieldNames.distanceColumnName), r.getAs[Long]("tid"))).collect() //get here TID of metadata
+          .map(r => (r.getAs[Distance](AttributeNames.distanceColumnName), r.getAs[Long]("tid"))).collect() //get here TID of metadata
           .sortBy(_._1).toSeq
 
         Then("we should retrieve the k nearest neighbors")
@@ -253,7 +253,7 @@ class QueryTestSuite extends AdamTestBase with ScalaFutures {
 
           val po = tpo.get
 
-          val results = po.results.get.map(r => (r.getAs[Distance](FieldNames.distanceColumnName), r.getAs[Long]("tid"))).collect() //get here TID of metadata
+          val results = po.results.get.map(r => (r.getAs[Distance](AttributeNames.distanceColumnName), r.getAs[Long]("tid"))).collect() //get here TID of metadata
             .sortBy(_._1).toSeq
 
           Then("eventually we should retrieve the k nearest neighbors")
@@ -296,7 +296,7 @@ class QueryTestSuite extends AdamTestBase with ScalaFutures {
         val po = QueryOp.timedProgressive(es.entity.entityname, nnq, None, new AllProgressivePathChooser(), timelimit).get
 
         Then("we should have a match at least in the first element")
-        val results = po.results.get.map(r => (r.getAs[Distance](FieldNames.distanceColumnName), r.getAs[Long]("tid"))).collect() //get here TID of metadata
+        val results = po.results.get.map(r => (r.getAs[Distance](AttributeNames.distanceColumnName), r.getAs[Long]("tid"))).collect() //get here TID of metadata
           .sortBy(_._1).toSeq
 
         Seq(results.zip(es.nnResults).head).map {
@@ -330,11 +330,11 @@ class QueryTestSuite extends AdamTestBase with ScalaFutures {
 
         val results = time {
           new CompoundQueryExpression(new IntersectExpression(shqh, vhqh)).prepareTree().evaluate().get
-            .map(r => (r.getAs[TupleID](FieldNames.internalIdColumnName))).collect().sorted
+            .map(r => (r.getAs[TupleID](AttributeNames.internalIdColumnName))).collect().sorted
         }
 
-        val shres = shqh.prepareTree().evaluate().get.map(r => r.getAs[TupleID](FieldNames.internalIdColumnName)).collect()
-        val vhres = vhqh.prepareTree().evaluate().get.map(r => r.getAs[TupleID](FieldNames.internalIdColumnName)).collect()
+        val shres = shqh.prepareTree().evaluate().get.map(r => r.getAs[TupleID](AttributeNames.internalIdColumnName)).collect()
+        val vhres = vhqh.prepareTree().evaluate().get.map(r => r.getAs[TupleID](AttributeNames.internalIdColumnName)).collect()
 
         Then("we should have a match in the aggregated list")
         val gt = vhres.intersect(shres).sorted
@@ -366,12 +366,12 @@ class QueryTestSuite extends AdamTestBase with ScalaFutures {
 
         val results = time {
           CompoundQueryExpression(new IntersectExpression(va1qh, va2qh, ExpressionEvaluationOrder.Parallel)).prepareTree().evaluate().get
-            .map(r => (r.getAs[TupleID](FieldNames.internalIdColumnName))).collect().sorted
+            .map(r => (r.getAs[TupleID](AttributeNames.internalIdColumnName))).collect().sorted
         }
 
         //results (note we truly compare the id-attribute here and not the metadata "tid"
-        val vh1res = va1qh.prepareTree().evaluate().get.map(r => r.getAs[TupleID](FieldNames.internalIdColumnName)).collect()
-        val vh2res = va2qh.prepareTree().evaluate().get.map(r => r.getAs[TupleID](FieldNames.internalIdColumnName)).collect()
+        val vh1res = va1qh.prepareTree().evaluate().get.map(r => r.getAs[TupleID](AttributeNames.internalIdColumnName)).collect()
+        val vh2res = va2qh.prepareTree().evaluate().get.map(r => r.getAs[TupleID](AttributeNames.internalIdColumnName)).collect()
 
         Then("we should have a match in the aggregated list")
         val gt = vh1res.intersect(vh2res).sorted
@@ -395,7 +395,7 @@ class QueryTestSuite extends AdamTestBase with ScalaFutures {
         val indexscans = es.entity.indexes.map(index => IndexScanExpression(index.get)(nnq)()(ac))
 
         val results = StochasticIndexQueryExpression(indexscans)(nnq)()(ac).prepareTree()
-          .evaluate()(ac).get.map(r => (r.getAs[Distance](FieldNames.distanceColumnName), r.getAs[Long]("tid"))).collect() //get here TID of metadata
+          .evaluate()(ac).get.map(r => (r.getAs[Distance](AttributeNames.distanceColumnName), r.getAs[Long]("tid"))).collect() //get here TID of metadata
           .sortBy(x => (x._1, x._2)).toSeq
 
         Then("we should retrieve the k nearest neighbors")

@@ -135,7 +135,7 @@ class DataDefinitionRPC extends AdamDefinitionGrpc.AdamDefinition with Logging {
       val data = schema.map(field => {
         val datum = tuple.data.get(field.name).getOrElse(null)
         if (datum != null) {
-          RPCHelperMethods.prepareDataTypeConverter(field.fieldtype)(datum)
+          RPCHelperMethods.prepareDataTypeConverter(field.attributeType)(datum)
         } else {
           null
         }
@@ -144,7 +144,7 @@ class DataDefinitionRPC extends AdamDefinitionGrpc.AdamDefinition with Logging {
     })
 
     val rdd = ac.sc.parallelize(rows)
-    val df = ac.sqlContext.createDataFrame(rdd, StructType(entity.get.schema().map(field => StructField(field.name, field.fieldtype.datatype))))
+    val df = ac.sqlContext.createDataFrame(rdd, StructType(entity.get.schema().map(field => StructField(field.name, field.attributeType.datatype))))
 
     val res = EntityOp.insert(entity.get.entityname, df)
 
@@ -177,7 +177,7 @@ class DataDefinitionRPC extends AdamDefinitionGrpc.AdamDefinition with Logging {
           val data = schema.map(field => {
             val datum = tuple.data.get(field.name).getOrElse(null)
             if (datum != null) {
-              RPCHelperMethods.prepareDataTypeConverter(field.fieldtype)(datum)
+              RPCHelperMethods.prepareDataTypeConverter(field.attributeType)(datum)
             } else {
               null
             }
@@ -186,7 +186,7 @@ class DataDefinitionRPC extends AdamDefinitionGrpc.AdamDefinition with Logging {
         })
 
         val rdd = ac.sc.parallelize(rows)
-        val df = ac.sqlContext.createDataFrame(rdd, StructType(entity.get.schema(fullSchema = false).map(field => StructField(field.name, field.fieldtype.datatype))))
+        val df = ac.sqlContext.createDataFrame(rdd, StructType(entity.get.schema(fullSchema = false).map(field => StructField(field.name, field.attributeType.datatype))))
 
         val res = EntityOp.insert(entity.get.entityname, df)
 
@@ -643,7 +643,7 @@ class DataDefinitionRPC extends AdamDefinitionGrpc.AdamDefinition with Logging {
   override def listStorageHandlers(request: EmptyMessage): Future[StorageHandlersMessage] = {
     log.debug("rpc call for listing storage handlers")
 
-    val handlers = SparkStartup.mainContext.storageHandlerRegistry.value.handlers.filterNot(_._2.supports.isEmpty).map(handler => handler._1 -> handler._2.supports.map(RPCHelperMethods.getAttributeType(_)))
+    val handlers = SparkStartup.mainContext.storageHandlerRegistry.value.handlers.filterNot(_._2.supports.isEmpty).map(handler => handler._1 -> handler._2.supports.map(RPCHelperMethods.getGrpcType(_)))
 
     Future.successful(StorageHandlersMessage(handlers.map(handler => StorageHandlerMessage(handler._1, handler._2)).toSeq))
   }

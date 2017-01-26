@@ -1,6 +1,6 @@
 package org.vitrivr.adampro.storage.engine
 
-import org.vitrivr.adampro.datatypes.FieldTypes.FieldType
+import org.vitrivr.adampro.datatypes.AttributeTypes.AttributeType
 import org.vitrivr.adampro.entity.AttributeDefinition
 import org.vitrivr.adampro.main.AdamContext
 import org.vitrivr.adampro.query.query.Predicate
@@ -18,9 +18,9 @@ import scala.util.Try
 abstract class Engine()(@transient implicit val ac: AdamContext) extends Serializable with Logging {
   val name: String
 
-  def supports: Seq[FieldType]
+  def supports: Seq[AttributeType]
 
-  def specializes: Seq[FieldType]
+  def specializes: Seq[AttributeType]
 
   //specializes should be contained in supports
   assert(specializes.forall(supports.contains(_)))

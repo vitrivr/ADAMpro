@@ -6,7 +6,7 @@ package org.vitrivr.adampro.config
   * Ivan Giangreco
   * March 2016
   */
-object FieldNames {
+object AttributeNames {
 
   val internalIdColumnName = "ap_id"
 

@@ -1,7 +1,7 @@
 package org.vitrivr.adampro.utils
 
 import org.vitrivr.adampro.api.EntityOp
-import org.vitrivr.adampro.datatypes.FieldTypes
+import org.vitrivr.adampro.datatypes.AttributeTypes
 import org.vitrivr.adampro.entity.AttributeDefinition
 import org.vitrivr.adampro.main.{AdamContext, SparkStartup}
 import org.apache.spark.sql.Row
@@ -28,7 +28,7 @@ class SolrImporter(file : File)(implicit ac: AdamContext) {
         Row(id, text)
     }
 
-    val statusCreate = EntityOp.create("features_fulltext", Seq(new AttributeDefinition("id", FieldTypes.LONGTYPE, Map[String, String]()), new AttributeDefinition("text", FieldTypes.TEXTTYPE, Map[String, String]())))
+    val statusCreate = EntityOp.create("features_fulltext", Seq(new AttributeDefinition("id", AttributeTypes.LONGTYPE, Map[String, String]()), new AttributeDefinition("text", AttributeTypes.TEXTTYPE, Map[String, String]())))
 
     if(statusCreate.isFailure){
       throw statusCreate.failed.get

@@ -9,7 +9,7 @@ import org.apache.hadoop.fs.{FileSystem, Path}
 
 import org.apache.spark.sql.{DataFrame, SaveMode}
 import org.vitrivr.adampro.config.AdamConfig
-import org.vitrivr.adampro.datatypes.FieldTypes
+import org.vitrivr.adampro.datatypes.AttributeTypes
 import org.vitrivr.adampro.entity.AttributeDefinition
 import org.vitrivr.adampro.exception.GeneralAdamException
 import org.vitrivr.adampro.main.AdamContext
@@ -27,9 +27,9 @@ import scala.util.{Failure, Success, Try}
 class AvroEngine(@transient override implicit val ac: AdamContext) extends Engine()(ac) with Logging with Serializable {
   override val name = "avro"
 
-  override def supports = Seq(FieldTypes.INTTYPE, FieldTypes.LONGTYPE, FieldTypes.FLOATTYPE, FieldTypes.DOUBLETYPE, FieldTypes.STRINGTYPE, FieldTypes.TEXTTYPE, FieldTypes.BOOLEANTYPE, FieldTypes.VECTORTYPE)
+  override def supports = Seq(AttributeTypes.AUTOTYPE, AttributeTypes.INTTYPE, AttributeTypes.LONGTYPE, AttributeTypes.FLOATTYPE, AttributeTypes.DOUBLETYPE, AttributeTypes.STRINGTYPE, AttributeTypes.TEXTTYPE, AttributeTypes.BOOLEANTYPE, AttributeTypes.VECTORTYPE)
 
-  override def specializes = Seq(FieldTypes.VECTORTYPE)
+  override def specializes = Seq(AttributeTypes.VECTORTYPE)
 
   var subengine: GenericAvroEngine = _
 

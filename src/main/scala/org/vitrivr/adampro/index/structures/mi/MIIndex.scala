@@ -2,7 +2,7 @@ package org.vitrivr.adampro.index.structures.mi
 
 import org.apache.spark.annotation.Experimental
 import org.apache.spark.sql.{DataFrame, Row}
-import org.vitrivr.adampro.config.FieldNames
+import org.vitrivr.adampro.config.AttributeNames
 import org.vitrivr.adampro.datatypes.TupleID.TupleID
 import org.vitrivr.adampro.datatypes.vector.Vector._
 import org.vitrivr.adampro.index.Index

@@ -2,7 +2,7 @@ package org.vitrivr.adampro.index.structures.lsh
 
 import org.apache.spark.sql.functions._
 import org.apache.spark.sql.{Row, DataFrame, Dataset}
-import org.vitrivr.adampro.config.FieldNames
+import org.vitrivr.adampro.config.AttributeNames
 import org.vitrivr.adampro.datatypes.vector.Vector._
 import org.vitrivr.adampro.datatypes.vector.Vector
 import org.vitrivr.adampro.index.Index.IndexTypeName
@@ -31,7 +31,7 @@ class LSHIndexGenerator(numHashTables: Int, numHashes: Int, m: Int, distance: Di
     val signatureUDF = udf((c: DenseSparkVector) => {
       signatureGenerator.toSignature(Vector.conv_dspark2vec(c)).serialize
     })
-    val indexed = data.withColumn(FieldNames.featureIndexColumnName, signatureUDF(data(attribute)))
+    val indexed = data.withColumn(AttributeNames.featureIndexColumnName, signatureUDF(data(attribute)))
 
     log.trace("LSH finished indexing")
 

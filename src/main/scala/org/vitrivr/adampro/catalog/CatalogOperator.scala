@@ -5,7 +5,7 @@ import java.io._
 import com.mchange.v2.c3p0.ComboPooledDataSource
 import org.vitrivr.adampro.catalog.catalogs._
 import org.vitrivr.adampro.config.AdamConfig
-import org.vitrivr.adampro.datatypes.FieldTypes
+import org.vitrivr.adampro.datatypes.AttributeTypes
 import org.vitrivr.adampro.entity.Entity.EntityName
 import org.vitrivr.adampro.entity.{AttributeDefinition, EntityNameHolder}
 import org.vitrivr.adampro.exception._
@@ -139,7 +139,7 @@ class CatalogOperator(internalsPath : String) extends Logging {
       actions += _entitites.+=(entityname)
 
       attributes.foreach { attribute =>
-        actions += _attributes.+=(entityname, attribute.name, attribute.fieldtype.name, attribute.pk, attribute.storagehandlername)
+        actions += _attributes.+=(entityname, attribute.name, attribute.attributeType.name, attribute.pk, attribute.storagehandlername)
 
         attribute.params.foreach { case (key, value) =>
           actions += _attributeOptions.+=(entityname, attribute.name, key, value)
@@ -453,7 +453,7 @@ class CatalogOperator(internalsPath : String) extends Logging {
 
       val attributeDefinitions = attributes.map(x => {
         val name = x._2
-        val fieldtype = FieldTypes.fromString(x._3)
+        val attributetype = AttributeTypes.fromString(x._3)
         val pk = x._4
         val handlerName = x._5
 
@@ -462,7 +462,7 @@ class CatalogOperator(internalsPath : String) extends Logging {
 
         val params = options.getOrElse(name, Map())
 
-        AttributeDefinition(name, fieldtype, handlerName, params)
+        AttributeDefinition(name, attributetype, handlerName, params)
       })
 
       attributeDefinitions

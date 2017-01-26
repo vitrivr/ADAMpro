@@ -1,6 +1,6 @@
 package org.vitrivr.adampro.query.handler.internal
 
-import org.vitrivr.adampro.config.FieldNames
+import org.vitrivr.adampro.config.AttributeNames
 import org.vitrivr.adampro.entity.Entity
 import org.vitrivr.adampro.entity.Entity._
 import org.vitrivr.adampro.main.AdamContext
@@ -97,7 +97,7 @@ object BooleanFilterExpression extends Logging {
       }
 
       if (result.isDefined && options.isDefined && options.get.storeSourceProvenance) {
-        result = Some(result.get.withColumn(FieldNames.sourceColumnName, lit(info.scantype.getOrElse("undefined"))))
+        result = Some(result.get.withColumn(AttributeNames.sourceColumnName, lit(info.scantype.getOrElse("undefined"))))
       }
 
       result.map(BooleanFilterExpression.filter(_, bq))

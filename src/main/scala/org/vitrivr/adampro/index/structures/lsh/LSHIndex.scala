@@ -2,7 +2,7 @@ package org.vitrivr.adampro.index.structures.lsh
 
 import org.apache.spark.sql.DataFrame
 import org.apache.spark.sql.functions.col
-import org.vitrivr.adampro.config.FieldNames
+import org.vitrivr.adampro.config.AttributeNames
 import org.vitrivr.adampro.datatypes.bitstring.BitString
 import org.vitrivr.adampro.datatypes.vector.Vector._
 import org.vitrivr.adampro.datatypes.vector.MovableFeature
@@ -74,8 +74,8 @@ class LSHIndex(override val indexname: IndexName)(@transient override implicit v
 
 
     data
-      .withColumn(FieldNames.distanceColumnName, distUDF(data(FieldNames.featureIndexColumnName)))
-      .filter(col(FieldNames.distanceColumnName) > 0)
+      .withColumn(AttributeNames.distanceColumnName, distUDF(data(AttributeNames.featureIndexColumnName)))
+      .filter(col(AttributeNames.distanceColumnName) > 0)
   }
 
   override def isQueryConform(nnq: NearestNeighbourQuery): Boolean = {

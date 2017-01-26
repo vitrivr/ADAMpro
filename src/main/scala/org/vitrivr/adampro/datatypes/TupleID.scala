@@ -13,6 +13,6 @@ import org.apache.spark.sql.types.{DataType, LongType}
   */
 object TupleID {
   type TupleID = Long
-  val AdamTupleID = FieldTypes.LONGTYPE
+  val AdamTupleID = AttributeTypes.LONGTYPE
   val SparkTupleID = AdamTupleID.datatype
 }

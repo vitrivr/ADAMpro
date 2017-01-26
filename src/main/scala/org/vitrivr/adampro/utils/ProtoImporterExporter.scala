@@ -6,11 +6,12 @@ import com.google.protobuf.CodedInputStream
 import io.grpc.stub.StreamObserver
 import org.apache.commons.io.FileUtils
 import org.apache.spark.sql.DataFrame
-import org.vitrivr.adampro.datatypes.FieldTypes
-import org.vitrivr.adampro.datatypes.FieldTypes.FieldType
+import org.vitrivr.adampro.datatypes.AttributeTypes
+import org.vitrivr.adampro.datatypes.AttributeTypes.AttributeType
 import org.vitrivr.adampro.entity.Entity.EntityName
 import org.vitrivr.adampro.entity.{AttributeDefinition, Entity}
 import org.vitrivr.adampro.exception.GeneralAdamException
+import org.vitrivr.adampro.grpc.grpc
 import org.vitrivr.adampro.grpc.grpc.InsertMessage.TupleInsertMessage
 import org.vitrivr.adampro.grpc.grpc._
 import org.vitrivr.adampro.main.AdamContext
@@ -266,20 +267,20 @@ class ProtoImporterExporter()(@transient implicit val ac: AdamContext) extends S
   private def writeCatalogFile(entityname: EntityName, schema: Seq[AttributeDefinition], file: File): Unit = {
     val fos = new FileOutputStream(file)
 
-    def matchFields(ft: FieldType) = ft match {
-      case FieldTypes.BOOLEANTYPE => AttributeType.BOOLEAN
-      case FieldTypes.DOUBLETYPE => AttributeType.DOUBLE
-      case FieldTypes.FLOATTYPE => AttributeType.FLOAT
-      case FieldTypes.INTTYPE => AttributeType.INT
-      case FieldTypes.LONGTYPE => AttributeType.LONG
-      case FieldTypes.STRINGTYPE => AttributeType.STRING
-      case FieldTypes.TEXTTYPE => AttributeType.TEXT
-      case FieldTypes.VECTORTYPE => AttributeType.FEATURE
-      case _ => AttributeType.UNKOWNAT
+    def matchFields(ft: AttributeType) = ft match {
+      case AttributeTypes.BOOLEANTYPE => grpc.AttributeType.BOOLEAN
+      case AttributeTypes.DOUBLETYPE => grpc.AttributeType.DOUBLE
+      case AttributeTypes.FLOATTYPE => grpc.AttributeType.FLOAT
+      case AttributeTypes.INTTYPE => grpc.AttributeType.INT
+      case AttributeTypes.LONGTYPE => grpc.AttributeType.LONG
+      case AttributeTypes.STRINGTYPE => grpc.AttributeType.STRING
+      case AttributeTypes.TEXTTYPE => grpc.AttributeType.TEXT
+      case AttributeTypes.VECTORTYPE => grpc.AttributeType.VECTOR
+      case _ => grpc.AttributeType.UNKOWNAT
     }
 
     val attributes = schema.map(attribute => {
-      AttributeDefinitionMessage(attribute.name, matchFields(attribute.fieldtype), attribute.params, attribute.storagehandler.name)
+      AttributeDefinitionMessage(attribute.name, matchFields(attribute.attributeType), attribute.params, attribute.storagehandler.name)
     })
 
     val message = new CreateEntityMessage(entityname, attributes)

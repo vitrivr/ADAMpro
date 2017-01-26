@@ -4,7 +4,7 @@ import org.apache.spark.sql.Row
 import org.apache.spark.sql.types._
 import org.vitrivr.adampro.datatypes.Wrapper
 import org.vitrivr.adampro.datatypes.gis.GeometryWrapper
-import org.vitrivr.adampro.datatypes.vector.Vector.VectorBase
+import org.vitrivr.adampro.datatypes.vector.Vector.{DenseMathVector, MathVector, SparseMathVector, VectorBase}
 
 /**
   * ADAMpro
@@ -26,6 +26,13 @@ object SparseVectorWrapper extends Wrapper {
     StructField("data", ArrayType(Vector.VectorBaseSparkType)),
     StructField("length", IntegerType)
   ))
+
+  /**
+    *
+    * @param vec
+    * @return
+    */
+  def apply(vec : SparseMathVector): SparseVectorWrapper = SparseVectorWrapper(vec.index, vec.data, vec.length)
 
   /**
     *

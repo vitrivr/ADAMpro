@@ -1,7 +1,7 @@
 package org.vitrivr.adampro.index.structures.sh
 
 import org.apache.spark.sql.{DataFrame, Row}
-import org.vitrivr.adampro.config.FieldNames
+import org.vitrivr.adampro.config.AttributeNames
 import org.vitrivr.adampro.datatypes.bitstring.BitString
 import org.vitrivr.adampro.datatypes.vector.Vector._
 import org.vitrivr.adampro.datatypes.vector.MovableFeature
@@ -64,7 +64,7 @@ class SHIndex(override val indexname: IndexName)(@transient override implicit va
 
     import ac.spark.implicits._
     data
-      .withColumn(FieldNames.distanceColumnName, distUDF(data(FieldNames.featureIndexColumnName)))
+      .withColumn(AttributeNames.distanceColumnName, distUDF(data(AttributeNames.featureIndexColumnName)))
       .mapPartitions { items =>
         val handler = new SHResultHandler(k) //use handler to take closest n elements
         //(using this handler is necessary here, as if the closest element has distance 5, we want all closes elements with distance 5;

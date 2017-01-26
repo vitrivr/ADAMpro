@@ -1,7 +1,7 @@
 package org.vitrivr.adampro.storage
 
 import org.vitrivr.adampro.config.AdamConfig
-import org.vitrivr.adampro.datatypes.FieldTypes.FieldType
+import org.vitrivr.adampro.datatypes.AttributeTypes.AttributeType
 import org.vitrivr.adampro.exception.GeneralAdamException
 import org.vitrivr.adampro.main.AdamContext
 import org.vitrivr.adampro.storage.engine.Engine
@@ -44,25 +44,25 @@ class StorageHandlerRegistry extends Logging {
 
   /**
     *
-    * @param fieldtype
+    * @param attributetype
     */
-  def get(fieldtype: FieldType): Option[StorageHandler] = {
+  def get(attributetype: AttributeType): Option[StorageHandler] = {
     var result: Option[StorageHandler] = None
 
     if (result.isEmpty) {
       //try fallback: specializes
-      result = handlers.values.filter(_.specializes.contains(fieldtype)).headOption
+      result = handlers.values.filter(_.specializes.contains(attributetype)).headOption
     }
 
     if (result.isEmpty) {
       //try fallback: supports
-      result = handlers.values.filter(_.supports.contains(fieldtype)).headOption
+      result = handlers.values.filter(_.supports.contains(attributetype)).headOption
     }
 
     if (result.isEmpty) {
       //no handler registered
       log.error("no suitable storage handler found in registry")
-      throw new GeneralAdamException("no suitable storage handler found in registry for " + fieldtype.name)
+      throw new GeneralAdamException("no suitable storage handler found in registry for " + attributetype.name)
     } else {
       result
     }

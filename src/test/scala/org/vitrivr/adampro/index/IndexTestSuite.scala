@@ -2,7 +2,7 @@ package org.vitrivr.adampro.index
 
 import org.vitrivr.adampro.AdamTestBase
 import org.vitrivr.adampro.api.{EntityOp, IndexOp}
-import org.vitrivr.adampro.datatypes.FieldTypes
+import org.vitrivr.adampro.datatypes.AttributeTypes
 import org.vitrivr.adampro.entity.{AttributeDefinition, Entity}
 import org.vitrivr.adampro.index.structures.IndexTypes
 import org.vitrivr.adampro.query.distance.EuclideanDistance
@@ -61,12 +61,12 @@ class IndexTestSuite extends AdamTestBase {
     scenario("create and drop indexes of entity with multiple features") {
       Given("an entity with multiple feature vector fields without metadata")
       withEntityName { entityname =>
-        Entity.create(entityname, Seq(new AttributeDefinition("idfield", FieldTypes.LONGTYPE), new AttributeDefinition("feature1", FieldTypes.VECTORTYPE), new AttributeDefinition("feature2", FieldTypes.VECTORTYPE)))
+        Entity.create(entityname, Seq(new AttributeDefinition("idfield", AttributeTypes.LONGTYPE), new AttributeDefinition("feature1", AttributeTypes.VECTORTYPE), new AttributeDefinition("feature2", AttributeTypes.VECTORTYPE)))
 
         val schema = StructType(Seq(
           StructField("idfield", LongType, false),
-          StructField("feature1", FieldTypes.VECTORTYPE.datatype, false),
-          StructField("feature2", FieldTypes.VECTORTYPE.datatype, false)
+          StructField("feature1", AttributeTypes.VECTORTYPE.datatype, false),
+          StructField("feature2", AttributeTypes.VECTORTYPE.datatype, false)
         ))
         val rdd = ac.sc.parallelize((0 until ntuples).map(id =>
           Row(Random.nextLong(), Seq.fill(ndims)(Vector.nextRandom()), Seq.fill(ndims)(Vector.nextRandom()))

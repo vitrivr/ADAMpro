@@ -5,8 +5,8 @@ import org.apache.spark.sql.functions._
 import org.apache.spark.sql.{DataFrame, Encoders, SaveMode}
 import org.apache.spark.storage.StorageLevel
 import org.vitrivr.adampro.catalog.CatalogOperator
-import org.vitrivr.adampro.config.{AdamConfig, FieldNames}
-import org.vitrivr.adampro.datatypes.FieldTypes.VECTORTYPE
+import org.vitrivr.adampro.config.{AdamConfig, AttributeNames}
+import org.vitrivr.adampro.datatypes.AttributeTypes.VECTORTYPE
 import org.vitrivr.adampro.datatypes.vector.Vector._
 import org.vitrivr.adampro.entity.Entity
 import org.vitrivr.adampro.entity.Entity._
@@ -412,9 +412,9 @@ object Index extends Logging {
         return Failure(new IndexNotProperlyDefinedException("attribute not existing in entity " + entity.entityname + entity.schema().map(_.name).mkString("(", ",", ")")))
       }
 
-      val columnFieldtype = entity.schema().filter(_.name == attribute).map(_.fieldtype).head
-      if (columnFieldtype != VECTORTYPE) {
-        return Failure(new IndexNotProperlyDefinedException(attribute + " is of type " + columnFieldtype.name + ", not feature"))
+      val attributetype = entity.schema().filter(_.name == attribute).map(_.attributeType).head
+      if (attributetype != VECTORTYPE) {
+        return Failure(new IndexNotProperlyDefinedException(attribute + " is of type " + attributetype.name + ", not feature"))
       }
 
       val count = entity.count
@@ -446,11 +446,11 @@ object Index extends Logging {
       import ac.spark.implicits._
 
       val indexableData = entity.getAttributeData(attribute).get
-        .select(FieldNames.internalIdColumnName, attribute)
+        .select(AttributeNames.internalIdColumnName, attribute)
 
       val generatorRes = indexgenerator.index(indexableData, attribute)
       val data = generatorRes._1
-        .withColumnRenamed(FieldNames.internalIdColumnName, entity.pk.name)
+        .withColumnRenamed(AttributeNames.internalIdColumnName, entity.pk.name)
         .repartition(ac.config.defaultNumberOfPartitionsIndex)
       val meta = generatorRes._2
 

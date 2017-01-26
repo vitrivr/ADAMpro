@@ -34,8 +34,8 @@ object Transferer extends Logging {
       assert(ac.storageHandlerRegistry.value.get(newHandlerName).isDefined)
       val storagehandler = ac.storageHandlerRegistry.value.get(newHandlerName).get
 
-      val fieldtypes = schema.filter(x => attributes.contains(x.name)).map(_.fieldtype).distinct
-      assert(fieldtypes.forall(storagehandler.supports.contains(_)))
+      val attributetypes = schema.filter(x => attributes.contains(x.name)).map(_.attributeType).distinct
+      assert(attributetypes.forall(storagehandler.supports.contains(_)))
 
       //TODO: check if only pk is moved (and entity contains only pk)
       //TODO: don't move if situation stays same

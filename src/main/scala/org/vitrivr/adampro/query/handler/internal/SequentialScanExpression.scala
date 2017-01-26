@@ -5,7 +5,7 @@ import org.apache.spark.broadcast.Broadcast
 import org.apache.spark.sql.DataFrame
 import org.apache.spark.sql.functions._
 import org.apache.spark.sql.types.StructType
-import org.vitrivr.adampro.config.FieldNames
+import org.vitrivr.adampro.config.AttributeNames
 import org.vitrivr.adampro.datatypes.vector.Vector._
 import org.vitrivr.adampro.entity.Entity
 import org.vitrivr.adampro.entity.Entity.EntityName
@@ -86,7 +86,7 @@ case class SequentialScanExpression(private val entity: Entity)(private val nnq:
 
     //adjust output
     if (result.isDefined && options.isDefined && options.get.storeSourceProvenance) {
-      result = Some(result.get.withColumn(FieldNames.sourceColumnName, lit(sourceDescription)))
+      result = Some(result.get.withColumn(AttributeNames.sourceColumnName, lit(sourceDescription)))
     }
 
     //distance computation
@@ -123,14 +123,14 @@ object SequentialScanExpression extends Logging {
 
     val res = if(df.schema.apply(nnq.attribute).dataType.isInstanceOf[StructType]){
       //sparse vectors
-      df.withColumn(FieldNames.distanceColumnName, Distance.sparseVectorDistUDF(nnq, q, w)(df(nnq.attribute)))
+      df.withColumn(AttributeNames.distanceColumnName, Distance.sparseVectorDistUDF(nnq, q, w)(df(nnq.attribute)))
     } else {
       //dense vectors
-      df.withColumn(FieldNames.distanceColumnName, Distance.denseVectorDistUDF(nnq, q, w)(df(nnq.attribute)))
+      df.withColumn(AttributeNames.distanceColumnName, Distance.denseVectorDistUDF(nnq, q, w)(df(nnq.attribute)))
     }
 
     import org.apache.spark.sql.functions.{col}
-    res.orderBy(col(FieldNames.distanceColumnName))
+    res.orderBy(col(AttributeNames.distanceColumnName))
       .limit(nnq.k)
   }
 }

@@ -2,7 +2,7 @@ package org.vitrivr.adampro.index.structures.ecp
 
 import org.apache.spark.sql.functions._
 import org.apache.spark.sql.{DataFrame, Dataset}
-import org.vitrivr.adampro.config.FieldNames
+import org.vitrivr.adampro.config.AttributeNames
 import org.vitrivr.adampro.datatypes.TupleID.TupleID
 import org.vitrivr.adampro.datatypes.vector.Vector._
 import org.vitrivr.adampro.index.Index.IndexTypeName
@@ -40,14 +40,14 @@ class ECPIndexGenerator(centroidBasedLeaders: Boolean, distance: DistanceFunctio
       }).minBy(_._2)._1
     })
 
-    val indexed = data.withColumn(FieldNames.featureIndexColumnName, minIdUDF(data(attribute)))
+    val indexed = data.withColumn(AttributeNames.featureIndexColumnName, minIdUDF(data(attribute)))
 
     import ac.spark.implicits._
 
     val leaders = if (centroidBasedLeaders) {
       log.trace("eCP index updating leaders, make centroid-based")
 
-      indexed.map(r => (r.getAs[Int](FieldNames.internalIdColumnName), r.getAs[DenseSparkVector](attribute)))
+      indexed.map(r => (r.getAs[Int](AttributeNames.internalIdColumnName), r.getAs[DenseSparkVector](attribute)))
         .groupByKey(_._1)
         .mapGroups {
           case (key, values) => {
@@ -63,8 +63,8 @@ class ECPIndexGenerator(centroidBasedLeaders: Boolean, distance: DistanceFunctio
         .map(x => ECPLeader(x._1, Vector.conv_draw2vec(x._2._1), x._2._2))
         .collect.toSeq
     } else {
-      val counts = indexed.groupBy(FieldNames.featureIndexColumnName).count()
-        .map { r => (r.getAs[TupleID](FieldNames.featureIndexColumnName), r.getAs[Long]("count")) }.collect().toMap
+      val counts = indexed.groupBy(AttributeNames.featureIndexColumnName).count()
+        .map { r => (r.getAs[TupleID](AttributeNames.featureIndexColumnName), r.getAs[Long]("count")) }.collect().toMap
 
       bcleaders.value.map(x => ECPLeader(x.ap_id, x.ap_indexable, counts.getOrElse(x.ap_id, 0)))
     }

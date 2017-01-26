@@ -18,7 +18,7 @@ private[catalog] class AttributeCatalog(tag: Tag) extends Table[(String, String,
 
   def attributename = column[String]("attribute")
 
-  def fieldtype = column[String]("fieldtype")
+  def attributetype = column[String]("fieldtype") //for legacy reasons in catalog not renamed to attribute
 
   def isPK = column[Boolean]("ispk")
 
@@ -29,7 +29,7 @@ private[catalog] class AttributeCatalog(tag: Tag) extends Table[(String, String,
     */
   def pk = primaryKey("attribute_pk", (entityname, attributename))
 
-  def * = (entityname, attributename, fieldtype, isPK, handlername)
+  def * = (entityname, attributename, attributetype, isPK, handlername)
 
   def idx = index("idx_attribute_entityname", entityname)
 

@@ -1,6 +1,6 @@
 package org.vitrivr.adampro.query
 
-import org.vitrivr.adampro.config.FieldNames
+import org.vitrivr.adampro.config.AttributeNames
 import org.vitrivr.adampro.datatypes.TupleID
 import org.vitrivr.adampro.entity.AttributeDefinition
 import org.vitrivr.adampro.query.distance.Distance
@@ -16,8 +16,8 @@ import org.vitrivr.adampro.query.distance.Distance.Distance
   */
 object Result {
   def resultSchema = StructType(Seq(
-    StructField(FieldNames.internalIdColumnName, TupleID.SparkTupleID, nullable = true),
-    StructField(FieldNames.distanceColumnName, Distance.SparkDistance, nullable = true)
+    StructField(AttributeNames.internalIdColumnName, TupleID.SparkTupleID, nullable = true),
+    StructField(AttributeNames.distanceColumnName, Distance.SparkDistance, nullable = true)
   ))
 }
 

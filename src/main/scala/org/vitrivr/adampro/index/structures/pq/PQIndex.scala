@@ -2,7 +2,7 @@ package org.vitrivr.adampro.index.structures.pq
 
 import org.apache.spark.sql.DataFrame
 import org.apache.spark.sql.types.DataTypes
-import org.vitrivr.adampro.config.FieldNames
+import org.vitrivr.adampro.config.AttributeNames
 import org.vitrivr.adampro.datatypes.vector.Vector
 import org.vitrivr.adampro.datatypes.vector.Vector._
 import org.vitrivr.adampro.index.Index
@@ -56,8 +56,8 @@ class PQIndex(override val indexname: IndexName)(@transient override implicit va
     })
 
     data
-      .withColumn(FieldNames.distanceColumnName, distUDF(data(FieldNames.featureIndexColumnName)).cast(DataTypes.FloatType))
-      .sort(FieldNames.distanceColumnName)
+      .withColumn(AttributeNames.distanceColumnName, distUDF(data(AttributeNames.featureIndexColumnName)).cast(DataTypes.FloatType))
+      .sort(AttributeNames.distanceColumnName)
       .limit(k)
   }
 

@@ -1,7 +1,7 @@
 package org.vitrivr.adampro.entity
 
-import org.vitrivr.adampro.config.FieldNames
-import org.vitrivr.adampro.datatypes.FieldTypes.FieldType
+import org.vitrivr.adampro.config.AttributeNames
+import org.vitrivr.adampro.datatypes.AttributeTypes.AttributeType
 import org.vitrivr.adampro.exception.GeneralAdamException
 import org.vitrivr.adampro.main.AdamContext
 import org.vitrivr.adampro.storage.StorageHandler
@@ -14,24 +14,24 @@ import scala.collection.mutable.ListBuffer
   * Ivan Giangreco
   * May 2016
   *
-  * @param name      name of attribute
-  * @param fieldtype type of field
+  * @param name          name of attribute
+  * @param attributeType type of attribute
   * @param storagehandlername
   * @param params
   */
-case class AttributeDefinition(name: String, fieldtype: FieldType, storagehandlername: String, params: Map[String, String] = Map()) {
-  def this(name: String, fieldtype: FieldType, params: Map[String, String])(implicit ac: AdamContext) {
-    this(name, fieldtype, ac.storageHandlerRegistry.value.get(fieldtype).get.name, params)
+case class AttributeDefinition(name: String, attributeType: AttributeType, storagehandlername: String, params: Map[String, String] = Map()) {
+  def this(name: String, attributetype: AttributeType, params: Map[String, String])(implicit ac: AdamContext) {
+    this(name, attributetype, ac.storageHandlerRegistry.value.get(attributetype).get.name, params)
   }
 
-  def this(name: String, fieldtype: FieldType)(implicit ac: AdamContext) {
-    this(name, fieldtype, ac.storageHandlerRegistry.value.get(fieldtype).get.name, Map[String, String]())
+  def this(name: String, attributetype: AttributeType)(implicit ac: AdamContext) {
+    this(name, attributetype, ac.storageHandlerRegistry.value.get(attributetype).get.name, Map[String, String]())
   }
 
   /**
     * is attribute primary key
     */
-  @deprecated val pk : Boolean = (name == FieldNames.internalIdColumnName)
+  @deprecated val pk: Boolean = (name == AttributeNames.internalIdColumnName)
 
   /**
     * Returns the storage handler for the given attribute (it possibly uses a fallback, if no storagehandlername is specified by using the fieldtype)
@@ -52,7 +52,7 @@ case class AttributeDefinition(name: String, fieldtype: FieldType, storagehandle
   def propertiesMap: Map[String, String] = {
     val lb = ListBuffer[(String, String)]()
 
-    lb.append("fieldtype" -> fieldtype.name)
+    lb.append("fieldtype" -> attributeType.name)
     lb.append("pk" -> pk.toString)
 
     if (!pk) {

@@ -2,9 +2,9 @@ package org.vitrivr.adampro.rpc
 
 import java.util.concurrent.TimeUnit
 
-import org.vitrivr.adampro.datatypes.FieldTypes
-import org.vitrivr.adampro.datatypes.FieldTypes.{BOOLEANTYPE, DOUBLETYPE, FLOATTYPE, FieldType, INTTYPE, LONGTYPE, SPARSEVECTORTYPE, STRINGTYPE, TEXTTYPE, VECTORTYPE}
-import org.vitrivr.adampro.datatypes.vector.Vector
+import org.vitrivr.adampro.datatypes.AttributeTypes
+import org.vitrivr.adampro.datatypes.AttributeTypes.{BOOLEANTYPE, DOUBLETYPE, FLOATTYPE, AttributeType, GEOGRAPHYTYPE, GEOMETRYTYPE, INTTYPE, LONGTYPE, SPARSEVECTORTYPE, STRINGTYPE, TEXTTYPE, VECTORTYPE}
+import org.vitrivr.adampro.datatypes.vector.{SparseVectorWrapper, Vector}
 import org.vitrivr.adampro.entity.AttributeDefinition
 import org.vitrivr.adampro.exception.GeneralAdamException
 import org.vitrivr.adampro.grpc.grpc.QueryMessage
@@ -22,10 +22,10 @@ import org.vitrivr.adampro.query.information.InformationLevels.{InformationLevel
 import org.vitrivr.adampro.query.progressive.{QueryHintsProgressivePathChooser, SimpleProgressivePathChooser}
 import org.vitrivr.adampro.query.query.{BooleanQuery, NearestNeighbourQuery, Predicate}
 import org.vitrivr.adampro.utils.Logging
-import org.apache.spark.sql.types
-import org.apache.spark.sql.types.{ArrayType, DataType, StructType}
+import org.vitrivr.adampro.datatypes.gis.GeographyWrapper
 import org.vitrivr.adampro.grpc.grpc.DistanceMessage.DistanceType
 import org.vitrivr.adampro.grpc.grpc._
+import org.vitrivr.adampro.grpc._
 import org.vitrivr.adampro.datatypes.vector.Vector._
 
 import scala.concurrent.duration.Duration
@@ -426,43 +426,46 @@ private[rpc] object RPCHelperMethods extends Logging {
     */
   def prepareAttributes(attributes: Seq[AttributeDefinitionMessage])(implicit ac: AdamContext): Seq[AttributeDefinition] = {
     attributes.map(attribute => {
-      val fieldtype = getFieldType(attribute.attributetype)
+      val attributetype = getAdamType(attribute.attributetype)
 
       if(attribute.handler != null && attribute.handler != ""){
-        AttributeDefinition(attribute.name, fieldtype, attribute.handler, attribute.params)
+        AttributeDefinition(attribute.name, attributetype, attribute.handler, attribute.params)
       } else {
-        new AttributeDefinition(attribute.name, fieldtype, attribute.params)
+        new AttributeDefinition(attribute.name, attributetype, attribute.params)
       }
     })
   }
 
 
-  val attributetypemapping = Map(AttributeType.BOOLEAN -> FieldTypes.BOOLEANTYPE, AttributeType.DOUBLE -> FieldTypes.DOUBLETYPE, AttributeType.FLOAT -> FieldTypes.FLOATTYPE,
-    AttributeType.INT -> FieldTypes.INTTYPE, AttributeType.LONG -> FieldTypes.LONGTYPE, AttributeType.STRING -> FieldTypes.STRINGTYPE, AttributeType.TEXT -> FieldTypes.TEXTTYPE,
-    AttributeType.FEATURE -> FieldTypes.VECTORTYPE)
+  val grpc2adamTypes = Map(grpc.AttributeType.BOOLEAN -> AttributeTypes.BOOLEANTYPE, grpc.AttributeType.DOUBLE -> AttributeTypes.DOUBLETYPE, grpc.AttributeType.FLOAT -> AttributeTypes.FLOATTYPE,
+    grpc.AttributeType.INT -> AttributeTypes.INTTYPE, grpc.AttributeType.LONG -> AttributeTypes.LONGTYPE, grpc.AttributeType.STRING -> AttributeTypes.STRINGTYPE,
+    grpc.AttributeType.TEXT -> AttributeTypes.TEXTTYPE,
+    grpc.AttributeType.VECTOR -> AttributeTypes.VECTORTYPE, grpc.AttributeType.SPARSEVECTOR -> AttributeTypes.SPARSEVECTORTYPE,
+    grpc.AttributeType.GEOMETRY -> AttributeTypes.GEOMETRYTYPE, grpc.AttributeType.GEOGRAPHY -> AttributeTypes.GEOGRAPHYTYPE,
+    grpc.AttributeType.AUTO -> AttributeTypes.AUTOTYPE)
 
-  val fieldtypemapping: Map[FieldType, AttributeType] = attributetypemapping.map(_.swap)
-
-  /**
-    *
-    * @param a
-    * @return
-    */
-  private[rpc] def getFieldType(a: AttributeType) = attributetypemapping.getOrElse(a, FieldTypes.UNRECOGNIZEDTYPE)
+  val adam2grpcTypes: Map[AttributeType, grpc.AttributeType] = grpc2adamTypes.map(_.swap)
 
   /**
     *
-    * @param f
+    * @param attributetype
     * @return
     */
-  private[rpc] def getAttributeType(f: FieldType) = fieldtypemapping.getOrElse(f, AttributeType.UNKOWNAT)
+  private[rpc] def getAdamType(attributetype: grpc.AttributeType) = grpc2adamTypes.getOrElse(attributetype, AttributeTypes.UNRECOGNIZEDTYPE)
 
   /**
     *
-    * @param fieldtype
+    * @param attributetype
     * @return
     */
-  private[rpc] def prepareDataTypeConverter(fieldtype : FieldType): (DataMessage) => (Any) = fieldtype match {
+  private[rpc] def getGrpcType(attributetype: AttributeType) = adam2grpcTypes.getOrElse(attributetype, grpc.AttributeType.UNKOWNAT)
+
+  /**
+    *
+    * @param attributetype
+    * @return
+    */
+  private[rpc] def prepareDataTypeConverter(attributetype : AttributeType): (DataMessage) => (Any) = attributetype match {
     case INTTYPE => (x) => x.getIntData
     case LONGTYPE => (x) => x.getLongData
     case FLOATTYPE => (x) => x.getFloatData
@@ -471,8 +474,10 @@ private[rpc] object RPCHelperMethods extends Logging {
     case TEXTTYPE => (x) => x.getStringData
     case BOOLEANTYPE => (x) => x.getBooleanData
     case VECTORTYPE => (x) =>  Vector.conv_vec2dspark(RPCHelperMethods.prepareVector(x.getFeatureData).asInstanceOf[DenseMathVector])
-    case SPARSEVECTORTYPE => (x) => Vector.conv_vec2sspark(RPCHelperMethods.prepareVector(x.getFeatureData).asInstanceOf[SparseMathVector])
-    case _ => throw new GeneralAdamException("field type " + fieldtype.name + " not known")
+    case SPARSEVECTORTYPE => (x) => SparseVectorWrapper(RPCHelperMethods.prepareVector(x.getFeatureData).asInstanceOf[SparseMathVector]).toRow()
+    case GEOGRAPHYTYPE => (x) => GeographyWrapper(x.getGeographyData).toRow()
+    case GEOMETRYTYPE => (x) => GeographyWrapper(x.getGeometryData).toRow()
+    case _ => throw new GeneralAdamException("field type " + attributetype.name + " not known")
   }
 }
 

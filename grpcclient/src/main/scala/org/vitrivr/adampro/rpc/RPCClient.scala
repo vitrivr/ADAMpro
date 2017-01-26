@@ -61,7 +61,7 @@ class RPCClient(channel: ManagedChannel,
   def entityCreate(entityname: String, attributes: Seq[RPCAttributeDefinition]): Try[String] = {
     execute("create entity operation") {
       val attributeMessages = attributes.map { attribute =>
-        var adm = AttributeDefinitionMessage(attribute.name, getAttributeType(attribute.datatype), params = attribute.params)
+        var adm = AttributeDefinitionMessage(attribute.name, getGrpcType(attribute.datatype), params = attribute.params)
 
         //add handler information if available
         if (attribute.storagehandlername.isDefined) {
@@ -644,20 +644,20 @@ class RPCClient(channel: ManagedChannel,
   }
 
 
-  val fieldtypemapping = Map("feature" -> AttributeType.FEATURE, "long" -> AttributeType.LONG, "int" -> AttributeType.INT, "float" -> AttributeType.FLOAT,
+  val str2grpcTypes = Map("feature" -> AttributeType.VECTOR, "long" -> AttributeType.LONG, "int" -> AttributeType.INT, "float" -> AttributeType.FLOAT,
     "double" -> AttributeType.DOUBLE, "string" -> AttributeType.STRING, "text" -> AttributeType.TEXT, "boolean" -> AttributeType.BOOLEAN, "geography" -> AttributeType.GEOGRAPHY,
     "geometry" -> AttributeType.GEOMETRY)
 
-  val attributetypemapping = fieldtypemapping.map(_.swap)
+  val grpc2strTypes = str2grpcTypes.map(_.swap)
 
   /**
     *
     * @param s string of field type name
     * @return
     */
-  private def getAttributeType(s: String): AttributeType = fieldtypemapping.get(s).orNull
+  private def getGrpcType(s: String): AttributeType = str2grpcTypes.get(s).orNull
 
-  private def getFieldTypeName(a: AttributeType): String = attributetypemapping.get(a).orNull
+  private def getStrType(a: AttributeType): String = grpc2strTypes.get(a).orNull
 
   //TODO: add get attributes-method for an entity, to retrieve attributes to display
 }

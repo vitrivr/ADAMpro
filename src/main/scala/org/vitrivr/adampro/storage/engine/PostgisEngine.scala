@@ -2,8 +2,8 @@ package org.vitrivr.adampro.storage.engine
 
 import java.sql.{Connection, DriverManager}
 
-import org.vitrivr.adampro.datatypes.FieldTypes
-import org.vitrivr.adampro.datatypes.FieldTypes.FieldType
+import org.vitrivr.adampro.datatypes.AttributeTypes
+import org.vitrivr.adampro.datatypes.AttributeTypes.AttributeType
 import org.vitrivr.adampro.entity.AttributeDefinition
 import org.vitrivr.adampro.main.AdamContext
 import org.vitrivr.adampro.query.query.Predicate
@@ -22,9 +22,9 @@ class PostgisEngine(private val url: String, private val user: String, private v
 
   override val name: String = "postgis"
 
-  override def supports: Seq[FieldType] = Seq(FieldTypes.INTTYPE, FieldTypes.LONGTYPE, FieldTypes.STRINGTYPE, FieldTypes.GEOMETRYTYPE, FieldTypes.GEOGRAPHYTYPE)
+  override def supports: Seq[AttributeType] = Seq(AttributeTypes.AUTOTYPE, AttributeTypes.INTTYPE, AttributeTypes.LONGTYPE, AttributeTypes.STRINGTYPE, AttributeTypes.GEOMETRYTYPE, AttributeTypes.GEOGRAPHYTYPE)
 
-  override def specializes: Seq[FieldType] = Seq(FieldTypes.GEOMETRYTYPE, FieldTypes.GEOGRAPHYTYPE)
+  override def specializes: Seq[AttributeType] = Seq(AttributeTypes.GEOMETRYTYPE, AttributeTypes.GEOGRAPHYTYPE)
 
   override val repartitionable = false
 

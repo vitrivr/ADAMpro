@@ -3,7 +3,7 @@ package org.vitrivr.adampro.index.structures.va
 import breeze.linalg._
 import org.apache.spark.sql.functions._
 import org.apache.spark.sql.{DataFrame, Dataset}
-import org.vitrivr.adampro.config.FieldNames
+import org.vitrivr.adampro.config.AttributeNames
 import org.vitrivr.adampro.datatypes.vector.Vector._
 import org.vitrivr.adampro.exception.QueryNotConformException
 import org.vitrivr.adampro.index.Index.IndexTypeName
@@ -43,7 +43,7 @@ class VAVIndexGenerator(nbits_total: Option[Int], nbits_dim : Option[Int], marks
       val cells = getCells(c, meta.marks)
       meta.signatureGenerator.toSignature(cells).serialize
     })
-    val indexed = data.withColumn(FieldNames.featureIndexColumnName, cellUDF(data(attribute)))
+    val indexed = data.withColumn(AttributeNames.featureIndexColumnName, cellUDF(data(attribute)))
 
     log.trace("VA-File (variable) finished indexing")
 

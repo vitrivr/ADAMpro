@@ -3,7 +3,7 @@ package org.vitrivr.adampro.index.structures.ecp
 import org.apache.spark.sql.DataFrame
 import org.apache.spark.sql.functions._
 import org.apache.spark.sql.types.DataTypes
-import org.vitrivr.adampro.config.FieldNames
+import org.vitrivr.adampro.config.AttributeNames
 import org.vitrivr.adampro.datatypes.vector.Vector._
 import org.vitrivr.adampro.index.Index.{IndexName, IndexTypeName}
 import org.vitrivr.adampro.index._
@@ -57,8 +57,8 @@ class ECPIndex(override val indexname: IndexName)(@transient override implicit v
 
     //iterate over all centroids until the result-count is over k
     import org.apache.spark.sql.functions._
-    val results = data.filter(col(FieldNames.featureIndexColumnName) isin (ids.value : _*))
-      .withColumn(FieldNames.distanceColumnName, distUDF(col(FieldNames.featureIndexColumnName)).cast(DataTypes.FloatType))
+    val results = data.filter(col(AttributeNames.featureIndexColumnName) isin (ids.value : _*))
+      .withColumn(AttributeNames.distanceColumnName, distUDF(col(AttributeNames.featureIndexColumnName)).cast(DataTypes.FloatType))
 
     results
   }
