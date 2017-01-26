@@ -298,7 +298,7 @@ path {
     border-radius: 50%;
     behavior: url(PIE.htc); /* remove if you don't care about IE8 */
     position: absolute;
-    right: 10px;
+    right: -0.5em;
     width: 1em;
     height: 1em;
     background-color: #26a69a;
@@ -344,4 +344,17 @@ path, .jsplumb-endpoint { cursor:pointer; }
     opacity:1;
 }
 
+.settings {
+    margin-top: 20px;
+}
 
+.settings input,
+.settings select {
+    height: 1rem;
+    font-size: 0.8rem;
+}
+
+.settings .input-field{
+    margin-top: 0px;
+    margin-bottom: 1rem;
+}

@@ -52,19 +52,6 @@
 <div class='container' style='width:90%'><div class='row'><h1 style='font-size:40pt;'>Compound<span style='font-size:20pt; padding-left: 20px'>Search</span></h1></div>
 
 <div class="row" style="margin-bottom: 0px;">
-    <div id="centityname" class="input-field col s2"></div>
-    <div class="input-field col s2">
-        <input type="text" class="form-control" id="attribute" placeholder="attribute">
-    </div>
-
-    <div class="input-field col s3">
-        <input type="text" class="form-control" id="query" placeholder="query">
-    </div>
-
-    <div class="input-field col s1">
-        <input type="text" class="form-control" id="k" placeholder="k" style="text-align:right;">
-    </div>
-
     <div class="input-field col s3">
         <select id="informationlevel">
             <option value="all">all information</option>
@@ -74,57 +61,66 @@
         <label>level of information</label>
     </div>
 
+    <div class="col s3">
+        <div class="input-field col s10">
+            <select id="indextype">
+                <option value="sequential" data-operation="sequential" data-subtype="sequential"
+                        data-details="<input type='text' class='form-control' name='entityname' placeholder='entityname'><input type='text' class='form-control' name='attribute' placeholder='attribute'><input type='text' class='form-control' name='query' placeholder='query'><input type='number' class='form-control' name='k' placeholder='k'><input type='text' class='form-control' placeholder='weights'><div class='input-field'><select class='browser-default' name='distance'><option value='chisquared'>Chi2 distance</option><option value='correlation'>Correlation distance</option><option value='cosine'>Cosine distance</option><option value='hamming'>Hamming distance</option><option value='jaccard'>Jaccard distance</option><option value='kullbackleibler'>Kullback-Leibler divergence</option><option value='chebyshev'>Chebyshev distance</option><option value='euclidean'>Euclidean distance</option><option selected='selected' value='squaredeuclidean'>Squared Euclidean distance</option><option value='manhattan'>Manhattan distance</option><option value='spannorm'>Span norm distance</option><option value='modulo'>Modulo distance</option></select></div>">Sequential</option>
+                <option value="ecp" data-operation="index" data-subtype="ecp"
+                        data-details="<input type='text' class='form-control' name='entityname' placeholder='entityname'><input type='text' class='form-control' name='indexname' placeholder='indexname'><input type='text' class='form-control' name='attribute' placeholder='attribute'><input type='text' class='form-control' name='query' placeholder='query'><input type='number' class='form-control' name='k' placeholder='k'><input type='text' class='form-control' placeholder='weights'><div class='input-field'><select class='browser-default' name='distance'><option value='chisquared'>Chi2 distance</option><option value='correlation'>Correlation distance</option><option value='cosine'>Cosine distance</option><option value='hamming'>Hamming distance</option><option value='jaccard'>Jaccard distance</option><option value='kullbackleibler'>Kullback-Leibler divergence</option><option value='chebyshev'>Chebyshev distance</option><option value='euclidean'>Euclidean distance</option><option selected='selected' value='squaredeuclidean'>Squared Euclidean distance</option><option value='manhattan'>Manhattan distance</option><option value='spannorm'>Span norm distance</option><option value='modulo'>Modulo distance</option></select></div><input type='text' class='form-control' name='partitions' placeholder='all partitions'>">eCP Index</option>
+                <option value="lsh" data-operation="index" data-subtype="lsh"
+                        data-details="<input type='text' class='form-control' name='entityname' placeholder='entityname'><input type='text' class='form-control' name='indexname' placeholder='indexname'><input type='text' class='form-control' name='attribute' placeholder='attribute'><input type='text' class='form-control' name='query' placeholder='query'><input type='number' class='form-control' name='k' placeholder='k'><input type='text' class='form-control' placeholder='weights'><div class='input-field'><select class='browser-default' name='distance'><option value='chisquared'>Chi2 distance</option><option value='correlation'>Correlation distance</option><option value='cosine'>Cosine distance</option><option value='hamming'>Hamming distance</option><option value='jaccard'>Jaccard distance</option><option value='kullbackleibler'>Kullback-Leibler divergence</option><option value='chebyshev'>Chebyshev distance</option><option value='euclidean'>Euclidean distance</option><option selected='selected' value='squaredeuclidean'>Squared Euclidean distance</option><option value='manhattan'>Manhattan distance</option><option value='spannorm'>Span norm distance</option><option value='modulo'>Modulo distance</option></select></div><input type='text' class='form-control' name='partitions' placeholder='all partitions'>">LSH Index</option>
+                <option value="mi" data-operation="index" data-subtype="mi"
+                        data-details="<input type='text' class='form-control' name='entityname' placeholder='entityname'><input type='text' class='form-control' name='indexname' placeholder='indexname'><input type='text' class='form-control' name='attribute' placeholder='attribute'><input type='text' class='form-control' name='query' placeholder='query'><input type='number' class='form-control' name='k' placeholder='k'><input type='text' class='form-control' placeholder='weights'><div class='input-field'><select class='browser-default' name='distance'><option value='chisquared'>Chi2 distance</option><option value='correlation'>Correlation distance</option><option value='cosine'>Cosine distance</option><option value='hamming'>Hamming distance</option><option value='jaccard'>Jaccard distance</option><option value='kullbackleibler'>Kullback-Leibler divergence</option><option value='chebyshev'>Chebyshev distance</option><option value='euclidean'>Euclidean distance</option><option selected='selected' value='squaredeuclidean'>Squared Euclidean distance</option><option value='manhattan'>Manhattan distance</option><option value='spannorm'>Span norm distance</option><option value='modulo'>Modulo distance</option></select></div><input type='text' class='form-control' name='partitions' placeholder='all partitions'>">MI Index</option>
+                <option value="pq" data-operation="index" data-subtype="pq"
+                        data-details="<input type='text' class='form-control' name='entityname' placeholder='entityname'><input type='text' class='form-control' name='indexname' placeholder='indexname'><input type='text' class='form-control' name='attribute' placeholder='attribute'><input type='text' class='form-control' name='query' placeholder='query'><input type='number' class='form-control' name='k' placeholder='k'><input type='text' class='form-control' placeholder='weights'><div class='input-field'><select class='browser-default' name='distance'><option value='chisquared'>Chi2 distance</option><option value='correlation'>Correlation distance</option><option value='cosine'>Cosine distance</option><option value='hamming'>Hamming distance</option><option value='jaccard'>Jaccard distance</option><option value='kullbackleibler'>Kullback-Leibler divergence</option><option value='chebyshev'>Chebyshev distance</option><option value='euclidean'>Euclidean distance</option><option selected='selected' value='squaredeuclidean'>Squared Euclidean distance</option><option value='manhattan'>Manhattan distance</option><option value='spannorm'>Span norm distance</option><option value='modulo'>Modulo distance</option></select></div><input type='text' class='form-control' name='partitions' placeholder='all partitions'>">PQ Index</option>
+                <option value="sh" data-operation="index" data-subtype="sh"
+                        data-details="<input type='text' class='form-control' name='entityname' placeholder='entityname'><input type='text' class='form-control' name='indexname' placeholder='indexname'><input type='text' class='form-control' name='attribute' placeholder='attribute'><input type='text' class='form-control' name='query' placeholder='query'><input type='number' class='form-control' name='k' placeholder='k'><input type='text' class='form-control' placeholder='weights'><div class='input-field'><select class='browser-default' name='distance'><option value='chisquared'>Chi2 distance</option><option value='correlation'>Correlation distance</option><option value='cosine'>Cosine distance</option><option value='hamming'>Hamming distance</option><option value='jaccard'>Jaccard distance</option><option value='kullbackleibler'>Kullback-Leibler divergence</option><option value='chebyshev'>Chebyshev distance</option><option value='euclidean'>Euclidean distance</option><option selected='selected' value='squaredeuclidean'>Squared Euclidean distance</option><option value='manhattan'>Manhattan distance</option><option value='spannorm'>Span norm distance</option><option value='modulo'>Modulo distance</option></select></div><input type='text' class='form-control' name='partitions' placeholder='all partitions'>">SH Index</option>
+                <option value="vaf" data-operation="index" data-subtype="vaf"
+                        data-details="<input type='text' class='form-control' name='entityname' placeholder='entityname'><input type='text' class='form-control' name='indexname' placeholder='indexname'><input type='text' class='form-control' name='attribute' placeholder='attribute'><input type='text' class='form-control' name='query' placeholder='query'><input type='number' class='form-control' name='k' placeholder='k'><input type='text' class='form-control' placeholder='weights'><div class='input-field'><select class='browser-default' name='distance'><option value='chisquared'>Chi2 distance</option><option value='correlation'>Correlation distance</option><option value='cosine'>Cosine distance</option><option value='hamming'>Hamming distance</option><option value='jaccard'>Jaccard distance</option><option value='kullbackleibler'>Kullback-Leibler divergence</option><option value='chebyshev'>Chebyshev distance</option><option value='euclidean'>Euclidean distance</option><option selected='selected' value='squaredeuclidean'>Squared Euclidean distance</option><option value='manhattan'>Manhattan distance</option><option value='spannorm'>Span norm distance</option><option value='modulo'>Modulo distance</option></select></div><input type='text' class='form-control' name='partitions' placeholder='all partitions'>">VAF Index</option>
+                <option value="vav" data-operation="index" data-subtype="vav"
+                        data-details="<input type='text' class='form-control' name='entityname' placeholder='entityname'><input type='text' class='form-control' name='indexname' placeholder='indexname'><input type='text' class='form-control' name='attribute' placeholder='attribute'><input type='text' class='form-control' name='query' placeholder='query'><input type='number' class='form-control' name='k' placeholder='k'><input type='text' class='form-control' placeholder='weights'><div class='input-field'><select class='browser-default' name='distance'><option value='chisquared'>Chi2 distance</option><option value='correlation'>Correlation distance</option><option value='cosine'>Cosine distance</option><option value='hamming'>Hamming distance</option><option value='jaccard'>Jaccard distance</option><option value='kullbackleibler'>Kullback-Leibler divergence</option><option value='chebyshev'>Chebyshev distance</option><option value='euclidean'>Euclidean distance</option><option selected='selected' value='squaredeuclidean'>Squared Euclidean distance</option><option value='manhattan'>Manhattan distance</option><option value='spannorm'>Span norm distance</option><option value='modulo'>Modulo distance</option></select></div><input type='text' class='form-control' name='partitions' placeholder='all partitions'>">VAV Index</option>
+                <option value="vap" data-operation="index" data-subtype="vap"
+                        data-details="<input type='text' class='form-control' name='entityname' placeholder='entityname'><input type='text' class='form-control' name='indexname' placeholder='indexname'><input type='text' class='form-control' name='attribute' placeholder='attribute'><input type='text' class='form-control' name='query' placeholder='query'><input type='number' class='form-control' name='k' placeholder='k'><input type='text' class='form-control' placeholder='weights'><div class='input-field'><select class='browser-default' name='distance'><option value='chisquared'>Chi2 distance</option><option value='correlation'>Correlation distance</option><option value='cosine'>Cosine distance</option><option value='hamming'>Hamming distance</option><option value='jaccard'>Jaccard distance</option><option value='kullbackleibler'>Kullback-Leibler divergence</option><option value='chebyshev'>Chebyshev distance</option><option value='euclidean'>Euclidean distance</option><option selected='selected' value='squaredeuclidean'>Squared Euclidean distance</option><option value='manhattan'>Manhattan distance</option><option value='spannorm'>Span norm distance</option><option value='modulo'>Modulo distance</option></select></div><input type='text' class='form-control' name='partitions' placeholder='all partitions'>">VAP Index</option>
+                <option value="bq" data-operation="boolean" data-subtype="bq"
+                        data-details="<input type='text' class='form-control' name='entityname' placeholder='entityname'><input type='text' class='form-control' name='attribute' placeholder='attribute'><input type='text' class='form-control' name='value' placeholder='value'>">Boolan Query</option>
+                <option value="solr" data-operation="external" data-subtype="solr"
+                        data-details="<input type='text' class='form-control' name='entityname' placeholder='entityname'><input type='text' class='form-control' name='query' placeholder='query (attribute:value)'>">Solr</option>
+                <option value="gis" data-operation="external" data-subtype="gis"
+                        data-details="<input type='text' class='form-control' name='entityname' placeholder='entityname'><input type='text' class='form-control' name='query' placeholder='query (after SELECT)'><input type='text' class='form-control' name='limit' placeholder='limit'>">GIS</option>
+                <option value="empirical" data-operation="index" data-subtype="empirical"
+                        data-details="<input type='text' class='form-control' name='entityname' placeholder='entityname'><input type='text' class='form-control' name='attribute' placeholder='attribute'><input type='text' class='form-control' name='query' placeholder='query'><input type='number' class='form-control' name='k' placeholder='k'><input type='text' class='form-control' placeholder='weights'><div class='input-field'><select class='browser-default' name='distance'><option value='chisquared'>Chi2 distance</option><option value='correlation'>Correlation distance</option><option value='cosine'>Cosine distance</option><option value='hamming'>Hamming distance</option><option value='jaccard'>Jaccard distance</option><option value='kullbackleibler'>Kullback-Leibler divergence</option><option value='chebyshev'>Chebyshev distance</option><option value='euclidean'>Euclidean distance</option><option selected='selected' value='squaredeuclidean'>Squared Euclidean distance</option><option value='manhattan'>Manhattan distance</option><option value='spannorm'>Span norm distance</option><option value='modulo'>Modulo distance</option></select></div><input type='text' class='form-control' name='partitions' placeholder='all partitions'>">Empirical NN</option>
+                <option value="scored" data-operation="index" data-subtype="scored"
+                        data-details="<input type='text' class='form-control' name='entityname' placeholder='entityname'><input type='text' class='form-control' name='attribute' placeholder='attribute'><input type='text' class='form-control' name='query' placeholder='query'><input type='number' class='form-control' name='k' placeholder='k'><input type='text' class='form-control' placeholder='weights'><div class='input-field'><select class='browser-default' name='distance'><option value='chisquared'>Chi2 distance</option><option value='correlation'>Correlation distance</option><option value='cosine'>Cosine distance</option><option value='hamming'>Hamming distance</option><option value='jaccard'>Jaccard distance</option><option value='kullbackleibler'>Kullback-Leibler divergence</option><option value='chebyshev'>Chebyshev distance</option><option value='euclidean'>Euclidean distance</option><option selected='selected' value='squaredeuclidean'>Squared Euclidean distance</option><option value='manhattan'>Manhattan distance</option><option value='spannorm'>Span norm distance</option><option value='modulo'>Modulo distance</option></select></div><input type='text' class='form-control' name='partitions' placeholder='all partitions'>">Score-based NN</option>
+            </select>
+            <label>scan type</label>
+        </div>
+        <div class="input-field col s2">
+            <a class="btn-floating" id="btnAddIndex"><i class="material-icons">add</i></a>
+        </div>
+    </div>
+
+    <div class="col s3">
+        <div class="input-field col s10">
+            <select id="indexoperation">
+                <option value="union" data-operation="aggregation" data-subtype="union"
+                        data-details="<div class='input-field'><select name='operationorder' class='browser-default'><option value='parallel' selected='selected'>parallel</option><option value='left'>left first</option><option value='right'>right first</option> </select></div>">Union</option>
+                <option value="intersect" data-operation="aggregation" data-subtype="intersect"
+                        data-details="<div class='input-field'><select name='operationorder' class='browser-default'><option value='parallel' selected='selected'>parallel</option><option value='left'>left first</option><option value='right'>right first</option> </select></div>">Intersect</option>
+                <option value="except" data-operation="aggregation" data-subtype="except"
+                        data-details="<div class='input-field'><select name='operationorder' class='browser-default'><option value='parallel' selected='selected'>parallel</option><option value='left'>left first</option><option value='right'>right first</option> </select></div>">Except</option>
+            </select>
+            <label>aggregation</label>
+        </div>
+        <div class="input-field col s2">
+            <a class="btn-floating" id="btnAddOperation"><i class="material-icons">add</i></a>
+        </div>
+    </div>
+
     <div class="input-field col s1" style="text-align:right">
         <button class="btn waves-effect waves-light red" name="action" id="btnSubmit">
             Search
         </button>
-    </div>
-</div>
-
-<div id="btnadvancedoptions" class="row" style="color: #cccccc; display: block; margin-bottom: 0px; -webkit-transition: all 0.5s ease-in-out; -moz-transition: all 0.5s ease-in-out; -o-transition: all 0.5s ease-in-out; transition: all 0.5s ease-in-out;">
-    <i class="material-icons">keyboard_arrow_down</i><span style="font-size: small;">Advanced Options</span>
-</div>
-
-<div id="advancedoptions" class="row" style="display:none;">
-    <div class="input-field col s2 switch">
-        <label>
-            Dense
-            <input id="sparsequery" type="checkbox">
-            <span class="lever"></span>
-            Sparse
-        </label>
-    </div>
-
-    <div class="input-field col s3">
-        <input type="text" class="form-control" id="weights" placeholder="weights">
-    </div>
-
-    <div class="input-field col s2 switch">
-        <label>
-            Dense
-            <input id="sparseweights" type="checkbox">
-            <span class="lever"></span>
-            Sparse
-        </label>
-    </div>
-
-
-    <div class="input-field col s4">
-        <select id="distance">
-            <option value="chisquared">Chi2 distance</option>
-            <option value="correlation">Correlation distance</option>
-            <option value="cosine">Cosine distance</option>
-            <option value="hamming">Hamming distance</option>
-            <option value="jaccard">Jaccard distance</option>
-            <option value="kullbackleibler">Kullback-Leibler divergence</option>
-            <option value="chebyshev">Chebyshev distance</option>
-            <option value="euclidean">Euclidean distance</option>
-            <option selected="selected" value="squaredeuclidean">Squared Euclidean distance</option>
-            <option value="manhattan">Manhattan distance</option>
-            <option value="spannorm">Span norm distance</option>
-            <option value="modulo">Modulo distance</option>
-        </select>
-        <label>distance</label>
     </div>
 </div>
 
@@ -151,60 +147,7 @@
 
 
 <div class="row">
-    <div class="col s3">
-        <div class="input-field col s10">
-            <select id="indextype">
-                <option value="sequential" data-operation="sequential" data-subtype="sequential">Sequential</option>
-                <option value="ecp" data-operation="index" data-subtype="ecp"
-                        data-details="<input type='text' class='form-control' name='indexname' placeholder='indexname'><input type='text' class='form-control' name='partitions' placeholder='all partitions'>">eCP Index</option>
-                <option value="lsh" data-operation="index" data-subtype="lsh"
-                        data-details="<input type='text' class='form-control' name='indexname' placeholder='indexname'><input type='text' class='form-control' name='partitions' placeholder='all partitions'>">LSH Index</option>
-                <option value="mi" data-operation="index" data-subtype="mi"
-                        data-details="<input type='text' class='form-control' name='indexname' placeholder='indexname'><input type='text' class='form-control' name='partitions' placeholder='all partitions'><input type='text' class='form-control' name='ks' placeholder='ks'>">MI Index</option>
-                <option value="pq" data-operation="index" data-subtype="pq"
-                        data-details="<input type='text' class='form-control' name='indexname' placeholder='indexname'><input type='text' class='form-control' name='partitions' placeholder='all partitions'>">PQ Index</option>
-                <option value="sh" data-operation="index" data-subtype="sh"
-                        data-details="<input type='text' class='form-control' name='indexname' placeholder='indexname'><input type='text' class='form-control' name='partitions' placeholder='all partitions'>">SH Index</option>
-                <option value="vaf" data-operation="index" data-subtype="vaf"
-                        data-details="<input type='text' class='form-control' name='indexname' placeholder='indexname'><input type='text' class='form-control' name='partitions' placeholder='all partitions'>">VAF Index</option>
-                <option value="vav" data-operation="index" data-subtype="vav"
-                        data-details="<input type='text' class='form-control' name='indexname' placeholder='indexname'><input type='text' class='form-control' name='partitions' placeholder='all partitions'>">VAV Index</option>
-                <option value="vap" data-operation="index" data-subtype="vap"
-                        data-details="<input type='text' class='form-control' name='indexname' placeholder='indexname'><input type='text' class='form-control' name='partitions' placeholder='all partitions'>">VAP Index</option>
-                <option value="bq" data-operation="boolean" data-subtype="bq"
-                        data-details="<input type='text' class='form-control' name='field' placeholder='field'><input type='text' class='form-control' name='value' placeholder='value'>">Boolan Query</option>
-                <option value="solr" data-operation="external" data-subtype="solr"
-                        data-details="<input type='text' class='form-control' name='query' placeholder='query (field:value)'>">Solr</option>
-                <option value="gis" data-operation="external" data-subtype="gis"
-                        data-details="<input type='text' class='form-control' name='query' placeholder='query (after SELECT)'><input type='text' class='form-control' name='limit' placeholder='limit'>">GIS</option>
-                <option value="empirical" data-operation="index" data-subtype="empirical"
-                        data-details="">Empirical</option>
-                <option value="scored" data-operation="index" data-subtype="scored"
-                        data-details="">Score-based</option>
-            </select>
-            <label>scan type</label>
-        </div>
-        <div class="input-field col s2">
-            <a class="btn-floating" id="btnAddIndex"><i class="material-icons">add</i></a>
-        </div>
-    </div>
 
-    <div class="col s3">
-        <div class="input-field col s10">
-            <select id="indexoperation">
-                <option value="union" data-operation="aggregation" data-subtype="union"
-                        data-details="<div class='input-field'><select name='operationorder' class='browser-default'><option value='parallel' selected='selected'>parallel</option><option value='left'>left first</option><option value='right'>right first</option> </select></div>">Union</option>
-                <option value="intersect" data-operation="aggregation" data-subtype="intersect"
-                        data-details="<div class='input-field'><select name='operationorder' class='browser-default'><option value='parallel' selected='selected'>parallel</option><option value='left'>left first</option><option value='right'>right first</option> </select></div>">Intersect</option>
-                <option value="except" data-operation="aggregation" data-subtype="except"
-                        data-details="<div class='input-field'><select name='operationorder' class='browser-default'><option value='parallel' selected='selected'>parallel</option><option value='left'>left first</option><option value='right'>right first</option> </select></div>">Except</option>
-            </select>
-            <label>aggregation</label>
-        </div>
-        <div class="input-field col s2">
-            <a class="btn-floating" id="btnAddOperation"><i class="material-icons">add</i></a>
-        </div>
-    </div>
 </div>
 
 <div id="resultbox" class="material-table" style="display:none">

@@ -3,8 +3,7 @@ package org.vitrivr.adampro.rpc.datastructures
 import org.vitrivr.adampro.grpc.grpc.BooleanQueryMessage.WhereMessage
 import org.vitrivr.adampro.grpc.grpc.QueryMessage.InformationLevel
 import org.vitrivr.adampro.grpc.grpc.QueryMessage.InformationLevel._
-import org.vitrivr.adampro.grpc.grpc._
-import org.vitrivr.adampro.grpc.grpc.QueryMessage
+import org.vitrivr.adampro.grpc.grpc.{QueryMessage, _}
 
 import scala.collection.mutable.ListBuffer
 
@@ -14,11 +13,11 @@ import scala.collection.mutable.ListBuffer
   * Ivan Giangreco
   * July 2016
   */
-case class RPCQueryObject(var id: String, var operation: String, var options: Map[String, String], var targets: Option[Seq[RPCQueryObject]])  {
+case class RPCQueryObject(var id: String, var operation: String, var options: Map[String, String], var targets: Option[Seq[RPCQueryObject]]) {
   /**
     *
     */
-  def getQueryMessage : QueryMessage = {
+  def getQueryMessage: QueryMessage = {
     this.prepare()
     this.qm()
   }
@@ -46,13 +45,17 @@ case class RPCQueryObject(var id: String, var operation: String, var options: Ma
   }
 
   private def query = {
-    val vals = options.get("query").get.split(",").map(_.toFloat)
+    if (options.get("query").isDefined) {
+      val vals = options.get("query").get.split(",").map(_.toFloat)
 
-    if (options.get("sparsequery").map(_.toBoolean).getOrElse(false)) {
-      val (vv, ii, size) = sparsify(vals)
-      VectorMessage().withSparseVector(SparseVectorMessage(ii, vv, size))
+      if (options.get("sparsequery").map(_.toBoolean).getOrElse(false)) {
+        val (vv, ii, size) = sparsify(vals)
+        Some(VectorMessage().withSparseVector(SparseVectorMessage(ii, vv, size)))
+      } else {
+        Some(VectorMessage().withDenseVector(DenseVectorMessage(vals)))
+      }
     } else {
-      VectorMessage().withDenseVector(DenseVectorMessage(vals))
+      None
     }
   }
 
@@ -108,14 +111,18 @@ case class RPCQueryObject(var id: String, var operation: String, var options: Ma
       Seq[Int]()
     }
 
-    val nnq = NearestNeighbourQueryMessage(options.getOrElse("attribute", "feature"), Some(query),
+    val nnq = NearestNeighbourQueryMessage(options.getOrElse("attribute", "feature"), query,
       weights, Some(distance),
       options.get("k").getOrElse("100").toInt,
       options, //not overly clean solution, but not problematic to send too much information in this case
       options.get("indexonly").map(_.toBoolean).getOrElse(false),
       partitions)
 
-    nnq
+    if(nnq.query.isEmpty){
+      None
+    } else {
+      Some(nnq)
+    }
   }
 
   /**
@@ -144,7 +151,7 @@ case class RPCQueryObject(var id: String, var operation: String, var options: Ma
     */
   private def qm(): QueryMessage = {
     val fromExpression = if (targets.isEmpty || targets.get.isEmpty) {
-      SubExpressionQueryMessage().withQm(QueryMessage(queryid = "sequential", from = Some(FromMessage().withEntity(entity)), nnq = Option(nnq), hints = Seq("sequential")))
+      SubExpressionQueryMessage().withQm(QueryMessage(queryid = "sequential", from = Some(FromMessage().withEntity(entity)), nnq = nnq, hints = Seq("sequential")))
     } else {
       targets.get.head.seqm()
     }
@@ -154,9 +161,9 @@ case class RPCQueryObject(var id: String, var operation: String, var options: Ma
       //projection = Some(ProjectionMessage().withField(ProjectionMessage.FieldnameMessage.apply(Seq("id", "adamprodistance")))),
       information = informationLevel(),
       hints = hints(),
-      nnq = Option(nnq))
+      nnq = nnq)
 
-    if(operation == "progressive"){
+    if (operation == "progressive") {
       qm = qm.withFrom(FromMessage().withEntity(entity))
     } else {
       qm = qm.withFrom(FromMessage().withExpression(fromExpression))
@@ -242,13 +249,13 @@ case class RPCQueryObject(var id: String, var operation: String, var options: Ma
     sqm
   }
 
-  private def ssiqm(): QueryMessage = QueryMessage(queryid = id, from = Some(FromMessage().withIndex(options.get("indexname").get)), nnq = Option(nnq))
+  private def ssiqm(): QueryMessage = QueryMessage(queryid = id, from = Some(FromMessage().withIndex(options.get("indexname").get)), nnq = nnq)
 
-  private def ssqm(): QueryMessage = QueryMessage(queryid = id, from = Some(FromMessage().withEntity(entity)), nnq = Option(nnq), hints = Seq("sequential"))
+  private def ssqm(): QueryMessage = QueryMessage(queryid = id, from = Some(FromMessage().withEntity(entity)), nnq = nnq, hints = Seq("sequential"))
 
-  private def siqm(): QueryMessage = QueryMessage(queryid = id, from = Some(FromMessage().withEntity(entity)), hints = Seq(subtype), nnq = Option(nnq))
+  private def siqm(): QueryMessage = QueryMessage(queryid = id, from = Some(FromMessage().withEntity(entity)), hints = Seq(subtype), nnq = nnq)
 
   private def ehqm(): ExternalHandlerQueryMessage = ExternalHandlerQueryMessage(id, entity, subtype, options)
 
-  private def sbqm(): QueryMessage = QueryMessage(queryid = id, from = Some(FromMessage().withEntity(entity)), bq = Some(BooleanQueryMessage(Seq(WhereMessage(options.get("field").get, Seq(DataMessage().withStringData(options.get("value").get)))))))
+  private def sbqm(): QueryMessage = QueryMessage(queryid = id, from = Some(FromMessage().withEntity(entity)), bq = Some(BooleanQueryMessage(Seq(WhereMessage(options.get("attribute").get, Seq(DataMessage().withStringData(options.get("value").get)))))))
 }

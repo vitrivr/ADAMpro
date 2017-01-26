@@ -113,6 +113,7 @@ $("#btnAddIndex").click(function () {
     var subtype = option.data("subtype");
     var details = option.data("details");
     newNode(0, 0, frontname, operation, subtype, details);
+    $('select').material_select();
 });
 
 //add operation
@@ -123,26 +124,12 @@ $("#btnAddOperation").click(function () {
     var subtype = option.data("subtype");
     var details = option.data("details");
     newNode(0, 0, frontname, operation, subtype, details);
+    $('select').material_select();
 });
 
 
 //submit operation
 $("#btnSubmit").click(function () {
-    if ($("#entityname").val().length === 0) {
-        showAlert(" Please specify an entity.");
-        return;
-    }
-
-    if ($("#query").val().length === 0) {
-        showAlert(" Please specify a query vector.");
-        return;
-    }
-
-    if ($("#attribute").val().length === 0) {
-        showAlert(" Please specify an attribute.");
-        return;
-    }
-
     $("#resultbox").hide();
 
     var handler = function(data) {$.each(data.details.intermediate_responses, function (idx, val) {
@@ -217,24 +204,15 @@ function evaluate (id) {
 
     params.options.indexonly = "true";
 
-    params.options.entityname = $("#entityname").val();
-    params.options.attribute = $("#attribute").val();
-    params.options.query = $("#query").val().replace("[", "").replace("]", "").trim();
-    params.options.sparsequery = $("#sparsequery").prop("checked");
-
-    params.options.weights = $("#weights").val().replace("[", "").replace("]", "").trim();
-    params.options.sparseweights = $("#sparseweights").prop("checked");
-
-    params.options.distance =  $("#distance").val();
-
     params.options.informationlevel = $("#informationlevel").val();
 
-    if ($("#k").val().length > 0) {
-        params.options.k = $("#k").val();
-    }
     $("#" + id + " > .settings").find(":input").each(function () {
         if ($(this).val().length > 0) {
             params.options[$(this).attr('name')] = $(this).val();
+
+            if($(this).attr('name') == "query" || $(this).attr('name') == "weights"){
+                params.options[$(this).attr('name')] = $(this).val().replace("[", "").replace("]", "").trim();
+            }
         }
     });
 
