@@ -83,7 +83,7 @@ class RPCTestSuite extends AdamTestBase with ScalaFutures {
         val tuples = (0 until tuplesInsert)
           .map(i => Map[String, DataMessage](
             "tid" -> DataMessage().withLongData(Random.nextLong()),
-            "feature" -> DataMessage().withFeatureData(FeatureVectorMessage().withDenseVector(DenseVectorMessage(Seq.fill(dimsInsert)(Random.nextFloat()))))
+            "feature" -> DataMessage().withVectorData(VectorMessage().withDenseVector(DenseVectorMessage(Seq.fill(dimsInsert)(Random.nextFloat()))))
           ))
 
         requestObserver.onNext(InsertMessage(entityname, tuples.map(tuple => TupleInsertMessage(tuple))))
@@ -128,7 +128,7 @@ class RPCTestSuite extends AdamTestBase with ScalaFutures {
         val tuples = (0 until tuplesInsert)
           .map(i => Map[String, DataMessage](
             "tid" -> DataMessage().withLongData(Random.nextLong()),
-            "vectorfield" -> DataMessage().withFeatureData(FeatureVectorMessage().withDenseVector(DenseVectorMessage(Seq.fill(dimsInsert)(Random.nextFloat())))),
+            "vectorfield" -> DataMessage().withVectorData(VectorMessage().withDenseVector(DenseVectorMessage(Seq.fill(dimsInsert)(Random.nextFloat())))),
             "intfield" -> DataMessage().withIntData(Random.nextInt(10)),
             "stringfield" -> DataMessage().withStringData(getRandomName(10))
           ))
@@ -174,7 +174,7 @@ class RPCTestSuite extends AdamTestBase with ScalaFutures {
         val tuples = (0 until tuplesInsert)
           .map(i => Map[String, DataMessage](
             "tid" -> DataMessage().withLongData(Random.nextLong()),
-            "vectorfield" -> DataMessage().withFeatureData(FeatureVectorMessage().withDenseVector(DenseVectorMessage(Seq.fill(dimsInsert)(Random.nextFloat())))),
+            "vectorfield" -> DataMessage().withVectorData(VectorMessage().withDenseVector(DenseVectorMessage(Seq.fill(dimsInsert)(Random.nextFloat())))),
             "intfield" -> DataMessage().withIntData(Random.nextInt(10)),
             "stringfield" -> DataMessage().withStringData(getRandomName(10))
           ))

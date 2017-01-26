@@ -86,7 +86,9 @@
                     <div class="input-field col s4">
                         <select id="datatype">
                             <option value="" selected defaultSelected></option>
-                            <option value="feature">feature</option>
+                            <option value="auto">auto</option>
+                            <option value="vector">vector</option>
+                            <option value="sparsevector">sparse vector</option>
                             <option value="long">long</option>
                             <option value="int">int</option>
                             <option value="float">float</option>
@@ -98,10 +100,6 @@
                             <option value="geography">geography</option>
                         </select>
                         <label>data type</label>
-                    </div>
-                    <div class="input-field col s2">
-                        <input type="checkbox" id="pk"/>
-                        <label for="pk">primary key</label>
                     </div>
                 </div>
                 <div class="row">

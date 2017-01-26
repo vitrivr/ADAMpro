@@ -1,6 +1,8 @@
 package org.vitrivr.adampro.rpc.datastructures
 
 import org.vitrivr.adampro.grpc.grpc.DataMessage.Datatype
+import org.vitrivr.adampro.grpc.grpc.VectorMessage.Vector
+
 import org.vitrivr.adampro.grpc.grpc.QueryResultInfoMessage
 
 /**
@@ -20,7 +22,13 @@ case class RPCQueryResults(id: String, time: Long, source : String = "", info : 
         case Datatype.DoubleData(x) => x.toDouble.toString
         case Datatype.StringData(x) => x.toString
         case Datatype.BooleanData(x) => x.toString
-        case Datatype.FeatureData(x) => x.feature.denseVector.get.vector.mkString("[", ",", "]")
+        case Datatype.VectorData(x) => {
+          x.vector match {
+            case Vector.DenseVector(y) => y.vector.mkString("[", ",", "]")
+            case Vector.SparseVector(y) => y.index.zip(y.data).map{case(index, data) => "(" + index + "," + data + ")"}.mkString("[", ",", "]")
+            case Vector.IntVector(y) => y.vector.mkString("[", ",", "]")
+          }
+        }
         case _ => ""
       }
       key -> value

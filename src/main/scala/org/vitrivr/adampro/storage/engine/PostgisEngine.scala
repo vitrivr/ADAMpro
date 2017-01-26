@@ -95,7 +95,9 @@ class PostgisEngine(private val url: String, private val user: String, private v
     log.debug("postgresql write operation")
 
     try {
-      df.write.mode(mode)
+      var data = df
+
+      data.write.mode(mode)
         .format("org.apache.spark.sql.execution.datasources.gis.DataSource")
         .options(propsMap ++ Seq("table" -> storename))
         .save

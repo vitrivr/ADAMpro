@@ -1,6 +1,8 @@
 package org.vitrivr.adampro.datatypes.vector
 
-import org.apache.spark.sql.types.{ArrayType, DataType, StructType}
+import org.apache.spark.sql.types.{ArrayType, DataType}
+import org.vitrivr.adampro.datatypes.Wrapper
+import org.vitrivr.adampro.datatypes.vector.Vector.VectorBaseSparkType
 
 /**
   * ADAMpro
@@ -8,7 +10,7 @@ import org.apache.spark.sql.types.{ArrayType, DataType, StructType}
   * Ivan Giangreco
   * January 2017
   */
-object DenseVector {
+object DenseVectorWrapper extends Wrapper {
   /**
     *
     * @param d
@@ -22,4 +24,10 @@ object DenseVector {
       false
     }
   }
+
+  /**
+    *
+    * @return
+    */
+  override def datatype: DataType = ArrayType(VectorBaseSparkType)
 }

@@ -50,9 +50,9 @@ case class RPCQueryObject(var id: String, var operation: String, var options: Ma
 
     if (options.get("sparsequery").map(_.toBoolean).getOrElse(false)) {
       val (vv, ii, size) = sparsify(vals)
-      FeatureVectorMessage().withSparseVector(SparseVectorMessage(vv, ii, size))
+      VectorMessage().withSparseVector(SparseVectorMessage(ii, vv, size))
     } else {
-      FeatureVectorMessage().withDenseVector(DenseVectorMessage(vals))
+      VectorMessage().withDenseVector(DenseVectorMessage(vals))
     }
   }
 
@@ -62,9 +62,9 @@ case class RPCQueryObject(var id: String, var operation: String, var options: Ma
 
       if (options.get("sparseweights").map(_.toBoolean).getOrElse(false)) {
         val (vv, ii, size) = sparsify(vals)
-        Some(FeatureVectorMessage().withSparseVector(SparseVectorMessage(vv, ii, size)))
+        Some(VectorMessage().withSparseVector(SparseVectorMessage(ii, vv, size)))
       } else {
-        Some(FeatureVectorMessage().withDenseVector(DenseVectorMessage(vals)))
+        Some(VectorMessage().withDenseVector(DenseVectorMessage(vals)))
       }
     } else {
       None

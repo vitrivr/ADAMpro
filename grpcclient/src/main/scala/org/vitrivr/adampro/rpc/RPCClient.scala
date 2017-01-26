@@ -12,7 +12,7 @@ import org.vitrivr.adampro.grpc.grpc.AdaptScanMethodsMessage.IndexCollection.NEW
 import org.vitrivr.adampro.grpc.grpc.AdaptScanMethodsMessage.QueryCollection.RANDOM_QUERIES
 import org.vitrivr.adampro.grpc.grpc.DistanceMessage.DistanceType
 import org.vitrivr.adampro.grpc.grpc.RepartitionMessage.PartitionOptions
-import org.vitrivr.adampro.grpc.grpc._
+import org.vitrivr.adampro.grpc.grpc.{AttributeType, _}
 import org.vitrivr.adampro.rpc.datastructures.{RPCAttributeDefinition, RPCQueryObject, RPCQueryResults}
 import org.vitrivr.adampro.utils.Logging
 
@@ -644,9 +644,9 @@ class RPCClient(channel: ManagedChannel,
   }
 
 
-  val str2grpcTypes = Map("feature" -> AttributeType.VECTOR, "long" -> AttributeType.LONG, "int" -> AttributeType.INT, "float" -> AttributeType.FLOAT,
+  val str2grpcTypes = Map("auto" -> AttributeType.AUTO, "long" -> AttributeType.LONG, "int" -> AttributeType.INT, "float" -> AttributeType.FLOAT,
     "double" -> AttributeType.DOUBLE, "string" -> AttributeType.STRING, "text" -> AttributeType.TEXT, "boolean" -> AttributeType.BOOLEAN, "geography" -> AttributeType.GEOGRAPHY,
-    "geometry" -> AttributeType.GEOMETRY)
+    "geometry" -> AttributeType.GEOMETRY, "vector" -> AttributeType.VECTOR, "sparsevector" -> AttributeType.SPARSEVECTOR)
 
   val grpc2strTypes = str2grpcTypes.map(_.swap)
 

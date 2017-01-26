@@ -4,6 +4,9 @@ import io.grpc.stub.StreamObserver
 import org.apache.spark.sql.DataFrame
 import org.apache.spark.sql.types._
 import org.vitrivr.adampro.api.{EntityOp, IndexOp, QueryOp}
+import org.vitrivr.adampro.datatypes.gis.{GeographyWrapper, GeometryWrapper}
+import org.vitrivr.adampro.datatypes.vector.Vector.{DenseSparkVector, SparseSparkVector}
+import org.vitrivr.adampro.datatypes.vector.{DenseVectorWrapper, SparseVectorWrapper}
 import org.vitrivr.adampro.exception.{GeneralAdamException, QueryNotCachedException}
 import org.vitrivr.adampro.grpc.grpc.{AdamSearchGrpc, _}
 import org.vitrivr.adampro.main.{AdamContext, SparkStartup}
@@ -21,8 +24,6 @@ import scala.util.{Random, Try}
   * March 2016
   */
 class SearchRPC extends AdamSearchGrpc.AdamSearch with Logging {
-  val MAX_RESULTS = 10000
-  
   implicit def ac: AdamContext = SparkStartup.mainContext
 
   /**
@@ -88,7 +89,7 @@ class SearchRPC extends AdamSearchGrpc.AdamSearch with Logging {
       }
 
       if (res.isSuccess) {
-        Future.successful(QueryResultsMessage(Some(AckMessage(AckMessage.Code.OK)), Seq((prepareResults("", 1.toFloat, 0, "sequential scan", Map(), Some(res.get))))))
+        Future.successful(QueryResultsMessage(Some(AckMessage(AckMessage.Code.OK)), Seq((RPCHelperMethods.prepareResults("", 1.toFloat, 0, "sequential scan", Map(), Some(res.get))))))
       } else {
         log.error(res.failed.get.getMessage, res.failed.get)
         Future.successful(QueryResultsMessage(Some(AckMessage(code = AckMessage.Code.ERROR, message = res.failed.get.getMessage))))
@@ -124,7 +125,7 @@ class SearchRPC extends AdamSearchGrpc.AdamSearch with Logging {
 
       if (res.isSuccess) {
         val results = expression.get.information(informationLevel).map(res =>
-          prepareResults(res.id.getOrElse(""), res.confidence.getOrElse(0), res.time.toMillis, res.source.getOrElse(""), Map(), res.results)
+          RPCHelperMethods.prepareResults(res.id.getOrElse(""), res.confidence.getOrElse(0), res.time.toMillis, res.source.getOrElse(""), Map(), res.results)
         )
 
         QueryResultsMessage(
@@ -196,7 +197,7 @@ class SearchRPC extends AdamSearchGrpc.AdamSearch with Logging {
               val po = tpo.get
               responseObserver.onNext(
                 QueryResultsMessage(Some(AckMessage(AckMessage.Code.OK)),
-                  Seq(prepareResults(request.queryid, po.confidence, po.t2 - po.t1, po.source, po.info, po.results))))
+                  Seq(RPCHelperMethods.prepareResults(request.queryid, po.confidence, po.t2 - po.t1, po.source, po.info, po.results))))
             } else {
               responseObserver.onNext(
                 QueryResultsMessage(Some(AckMessage(AckMessage.Code.ERROR, tpo.failed.get.getMessage))))
@@ -254,7 +255,7 @@ class SearchRPC extends AdamSearchGrpc.AdamSearch with Logging {
       val res = ac.queryLRUCache.get(request.queryid)
 
       if (res.isSuccess) {
-        Future.successful(QueryResultsMessage(Some(AckMessage(code = AckMessage.Code.OK)), Seq(prepareResults(request.queryid, 0, 0, "cache", Map(), Some(res.get)))))
+        Future.successful(QueryResultsMessage(Some(AckMessage(code = AckMessage.Code.OK)), Seq(RPCHelperMethods.prepareResults(request.queryid, 0, 0, "cache", Map(), Some(res.get)))))
       } else {
         log.error(res.failed.get.getMessage, res.failed.get)
         Future.failed(QueryNotCachedException())
@@ -263,51 +264,4 @@ class SearchRPC extends AdamSearchGrpc.AdamSearch with Logging {
   }
 
 
-  /**
-    *
-    * @param queryid
-    * @param confidence
-    * @param time
-    * @param source
-    * @param info
-    * @param df
-    * @return
-    */
-  private def prepareResults(queryid: String, confidence: Float, time: Long, source: String, info: Map[String, String], df: Option[DataFrame]): QueryResultInfoMessage = {
-    val results: Seq[QueryResultTupleMessage] = if (df.isDefined) {
-      val cols = df.get.schema
-
-      df.get.limit(MAX_RESULTS).collect().map(row => {
-        val metadata = cols.map(col => {
-          try {
-            col.name -> {
-              col.dataType match {
-                case BooleanType => DataMessage().withBooleanData(row.getAs[Boolean](col.name))
-                case DoubleType => DataMessage().withDoubleData(row.getAs[Double](col.name))
-                case FloatType => DataMessage().withFloatData(row.getAs[Float](col.name))
-                case IntegerType => DataMessage().withIntData(row.getAs[Integer](col.name))
-                case LongType => DataMessage().withLongData(row.getAs[Long](col.name))
-                case StringType => DataMessage().withStringData(row.getAs[String](col.name))
-                case x : ArrayType => {
-                  x.elementType match {
-                    case DoubleType => DataMessage().withFeatureData(FeatureVectorMessage().withDenseVector(DenseVectorMessage(row.getAs[Seq[Double]](col.name).map(_.toFloat))))
-                    case FloatType => DataMessage().withFeatureData(FeatureVectorMessage().withDenseVector(DenseVectorMessage(row.getAs[Seq[Float]](col.name))))
-                  }
-                }
-                case _ => DataMessage().withStringData("")
-              }
-            }
-          } catch {
-            case e: Exception => col.name -> DataMessage().withStringData("")
-          }
-        }).toMap
-
-        QueryResultTupleMessage(metadata)
-      })
-    } else {
-      Seq()
-    }
-
-    QueryResultInfoMessage(Some(AckMessage(AckMessage.Code.OK)), queryid, confidence, time, source, info, results)
-  }
 }

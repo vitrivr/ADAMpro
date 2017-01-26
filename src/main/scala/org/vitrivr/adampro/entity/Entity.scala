@@ -241,7 +241,7 @@ case class Entity(entityname: EntityName)(@transient implicit val ac: AdamContex
     * @param k number of elements to show in preview
     * @return
     */
-  def show(k: Int): Option[DataFrame] = getData().map(_.limit(k))
+  def show(k: Int): Option[DataFrame] = getData().map(_.select(schema(fullSchema = false).map(_.name).map(col) : _*).limit(k))
 
   private val MAX_INSERTS_BEFORE_VACUUM = SparkStartup.catalogOperator.getEntityOption(entityname, Some(Entity.MAX_INSERTS_VACUUMING)).get.get(Entity.MAX_INSERTS_VACUUMING).map(_.toInt).getOrElse(500)
 
@@ -299,12 +299,12 @@ case class Entity(entityname: EntityName)(@transient implicit val ac: AdamContex
 
       //AUTOTYPE attributes
       val autoAttributes = schema(typeFilter = Some(Seq(AttributeTypes.AUTOTYPE)), fullSchema = false)
-      if(autoAttributes.nonEmpty){
-        if(autoAttributes.map(_.name).exists(x => data.schema.fieldNames.contains(x))){
+      if (autoAttributes.nonEmpty) {
+        if (autoAttributes.map(_.name).exists(x => data.schema.fieldNames.contains(x))) {
           return Failure(new GeneralAdamException("the attributes " + autoAttributes.map(_.name).mkString(", ") + " have been specified as auto and should therefore not be provided"))
         }
 
-        autoAttributes.foreach{ attribute =>
+        autoAttributes.foreach { attribute =>
           insertion = insertion.withColumn(attribute.name, col(AttributeNames.internalIdColumnName))
         }
 
@@ -486,9 +486,14 @@ case class Entity(entityname: EntityName)(@transient implicit val ac: AdamContex
   def propertiesMap(options: Map[String, String] = Map()) = {
     val lb = ListBuffer[(String, String)]()
 
-    lb.append("attributes" -> SparkStartup.catalogOperator.getAttributes(entityname).get.map(field => field.name).mkString(","))
+    lb.append("attributes" -> schema(fullSchema = false).map(field => field.name).mkString(","))
     lb.append("indexes" -> SparkStartup.catalogOperator.listIndexes(Some(entityname)).get.mkString(","))
-    lb.append("partitions" -> getFeatureData.map(_.rdd.getNumPartitions.toString).getOrElse("none"))
+
+    try {
+      lb.append("partitions" -> getFeatureData.map(_.rdd.getNumPartitions.toString).getOrElse("none"))
+    } catch {
+      case e: Exception => log.warn("no partition information retrievable, possibly no data yet inserted")
+    }
 
     if (!(options.contains("count") && options("count") == "false")) {
       lb.append("count" -> count.toString)
@@ -505,7 +510,7 @@ case class Entity(entityname: EntityName)(@transient implicit val ac: AdamContex
     * @return
     */
   def attributePropertiesMap(attribute: String, options: Map[String, String] = Map()): Map[String, String] = {
-    schema(Some(Seq(attribute))).headOption.map(_.propertiesMap).getOrElse(Map())
+    schema(Some(Seq(attribute)), fullSchema = false).headOption.map(_.propertiesMap).getOrElse(Map())
   }
 
   override def equals(that: Any): Boolean =

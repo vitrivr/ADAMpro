@@ -2,9 +2,11 @@ package org.vitrivr.adampro.rpc
 
 import java.util.concurrent.TimeUnit
 
+import org.apache.spark.sql.DataFrame
+import org.apache.spark.sql.types._
 import org.vitrivr.adampro.datatypes.AttributeTypes
-import org.vitrivr.adampro.datatypes.AttributeTypes.{BOOLEANTYPE, DOUBLETYPE, FLOATTYPE, AttributeType, GEOGRAPHYTYPE, GEOMETRYTYPE, INTTYPE, LONGTYPE, SPARSEVECTORTYPE, STRINGTYPE, TEXTTYPE, VECTORTYPE}
-import org.vitrivr.adampro.datatypes.vector.{SparseVectorWrapper, Vector}
+import org.vitrivr.adampro.datatypes.AttributeTypes.{AttributeType, BOOLEANTYPE, DOUBLETYPE, FLOATTYPE, GEOGRAPHYTYPE, GEOMETRYTYPE, INTTYPE, LONGTYPE, SPARSEVECTORTYPE, STRINGTYPE, TEXTTYPE, VECTORTYPE}
+import org.vitrivr.adampro.datatypes.vector.{DenseVectorWrapper, SparseVectorWrapper, Vector}
 import org.vitrivr.adampro.entity.AttributeDefinition
 import org.vitrivr.adampro.exception.GeneralAdamException
 import org.vitrivr.adampro.grpc.grpc.QueryMessage
@@ -22,7 +24,7 @@ import org.vitrivr.adampro.query.information.InformationLevels.{InformationLevel
 import org.vitrivr.adampro.query.progressive.{QueryHintsProgressivePathChooser, SimpleProgressivePathChooser}
 import org.vitrivr.adampro.query.query.{BooleanQuery, NearestNeighbourQuery, Predicate}
 import org.vitrivr.adampro.utils.Logging
-import org.vitrivr.adampro.datatypes.gis.GeographyWrapper
+import org.vitrivr.adampro.datatypes.gis.{GeographyWrapper, GeometryWrapper}
 import org.vitrivr.adampro.grpc.grpc.DistanceMessage.DistanceType
 import org.vitrivr.adampro.grpc.grpc._
 import org.vitrivr.adampro.grpc._
@@ -283,13 +285,13 @@ private[rpc] object RPCHelperMethods extends Logging {
 
   /**
     *
-    * @param fv
+    * @param vec
     * @return
     */
-  def prepareVector(fv: FeatureVectorMessage): MathVector = fv.feature match {
-    case FeatureVectorMessage.Feature.DenseVector(request) => Vector.conv_draw2vec(request.vector.map(conv_float2vb))
-    case FeatureVectorMessage.Feature.SparseVector(request) => Vector.conv_sraw2vec(request.position, request.vector.map(conv_float2vb), request.length)
-    case FeatureVectorMessage.Feature.IntVector(request) => Vector.conv_draw2vec(request.vector.map(conv_int2vb)) //TODO: change to int vector
+  def prepareVector(vec: VectorMessage): MathVector = vec.vector match {
+    case VectorMessage.Vector.DenseVector(request) => Vector.conv_draw2vec(request.vector.map(conv_float2vb))
+    case VectorMessage.Vector.SparseVector(request) => Vector.conv_sraw2vec(request.index, request.data.map(conv_float2vb), request.length)
+    case VectorMessage.Vector.IntVector(request) => Vector.conv_draw2vec(request.vector.map(conv_int2vb)) //TODO: change to int vector
     case _ => null
   }
 
@@ -394,7 +396,7 @@ private[rpc] object RPCHelperMethods extends Logging {
     * @param putInCache
     * @return
     */
-  private def prepareCacheExpression(readFromCache: Boolean, putInCache: Boolean) = Some(QueryCacheOptions(readFromCache, putInCache))
+  def prepareCacheExpression(readFromCache: Boolean, putInCache: Boolean) = Some(QueryCacheOptions(readFromCache, putInCache))
 
 
   /**
@@ -451,21 +453,21 @@ private[rpc] object RPCHelperMethods extends Logging {
     * @param attributetype
     * @return
     */
-  private[rpc] def getAdamType(attributetype: grpc.AttributeType) = grpc2adamTypes.getOrElse(attributetype, AttributeTypes.UNRECOGNIZEDTYPE)
+  def getAdamType(attributetype: grpc.AttributeType) = grpc2adamTypes.getOrElse(attributetype, AttributeTypes.UNRECOGNIZEDTYPE)
 
   /**
     *
     * @param attributetype
     * @return
     */
-  private[rpc] def getGrpcType(attributetype: AttributeType) = adam2grpcTypes.getOrElse(attributetype, grpc.AttributeType.UNKOWNAT)
+  def getGrpcType(attributetype: AttributeType) = adam2grpcTypes.getOrElse(attributetype, grpc.AttributeType.UNKOWNAT)
 
   /**
     *
     * @param attributetype
     * @return
     */
-  private[rpc] def prepareDataTypeConverter(attributetype : AttributeType): (DataMessage) => (Any) = attributetype match {
+  def prepareDataTypeConverter(attributetype : AttributeType): (DataMessage) => (Any) = attributetype match {
     case INTTYPE => (x) => x.getIntData
     case LONGTYPE => (x) => x.getLongData
     case FLOATTYPE => (x) => x.getFloatData
@@ -473,11 +475,71 @@ private[rpc] object RPCHelperMethods extends Logging {
     case STRINGTYPE => (x) => x.getStringData
     case TEXTTYPE => (x) => x.getStringData
     case BOOLEANTYPE => (x) => x.getBooleanData
-    case VECTORTYPE => (x) =>  Vector.conv_vec2dspark(RPCHelperMethods.prepareVector(x.getFeatureData).asInstanceOf[DenseMathVector])
-    case SPARSEVECTORTYPE => (x) => SparseVectorWrapper(RPCHelperMethods.prepareVector(x.getFeatureData).asInstanceOf[SparseMathVector]).toRow()
+    case VECTORTYPE => (x) =>  Vector.conv_vec2dspark(RPCHelperMethods.prepareVector(x.getVectorData).asInstanceOf[DenseMathVector])
+    case SPARSEVECTORTYPE => (x) => SparseVectorWrapper(RPCHelperMethods.prepareVector(x.getVectorData).asInstanceOf[SparseMathVector]).toRow()
     case GEOGRAPHYTYPE => (x) => GeographyWrapper(x.getGeographyData).toRow()
     case GEOMETRYTYPE => (x) => GeographyWrapper(x.getGeometryData).toRow()
     case _ => throw new GeneralAdamException("field type " + attributetype.name + " not known")
+  }
+
+
+  val MAX_RESULTS = 10000
+
+  /**
+    *
+    * @param queryid
+    * @param confidence
+    * @param time
+    * @param source
+    * @param info
+    * @param df
+    * @return
+    */
+  def prepareResults(queryid: String, confidence: Float, time: Long, source: String, info: Map[String, String], df: Option[DataFrame]): QueryResultInfoMessage = {
+    val results: Seq[QueryResultTupleMessage] = if (df.isDefined) {
+      val cols = df.get.schema
+
+      df.get.limit(MAX_RESULTS).collect().map(row => {
+        val res = cols.map(col => {
+          try {
+            col.name -> {
+              col.dataType match {
+                case BooleanType => DataMessage().withBooleanData(row.getAs[Boolean](col.name))
+                case DoubleType => DataMessage().withDoubleData(row.getAs[Double](col.name))
+                case FloatType => DataMessage().withFloatData(row.getAs[Float](col.name))
+                case IntegerType => DataMessage().withIntData(row.getAs[Integer](col.name))
+                case LongType => DataMessage().withLongData(row.getAs[Long](col.name))
+                case StringType => DataMessage().withStringData(row.getAs[String](col.name))
+                case x => {
+
+                  if(DenseVectorWrapper.fitsType(x)){
+                    val vec = row.getAs[DenseSparkVector](col.name)
+                    DataMessage().withVectorData(VectorMessage().withDenseVector(DenseVectorMessage(vec.map(_.toFloat))))
+                  } else if (SparseVectorWrapper.fitsType(x)){
+                    val vec = SparseVectorWrapper.fromRow(row.getAs[SparseSparkVector](col.name))
+                    DataMessage().withVectorData(VectorMessage().withSparseVector(SparseVectorMessage(vec.index, vec.data.map(_.toFloat), vec.length  )))
+                  } else if (GeometryWrapper.fitsType(x)){
+                    DataMessage().withGeometryData(GeometryWrapper.fromRow(row.getAs(col.name)).desc)
+                  } else if (GeographyWrapper.fitsType(x)){
+                    DataMessage().withGeographyData(GeographyWrapper.fromRow(row.getAs(col.name)).desc)
+                  } else {
+                    DataMessage().withStringData("")
+                  }
+                }
+              }
+            }
+          } catch {
+            case e: Exception => col.name -> DataMessage().withStringData("")
+          }
+        }).toMap
+
+        QueryResultTupleMessage(res)
+      })
+    } else {
+      Seq()
+    }
+
+    QueryResultInfoMessage(Some(AckMessage(AckMessage.Code.OK)), queryid, confidence, time, source, info, results)
   }
 }
 

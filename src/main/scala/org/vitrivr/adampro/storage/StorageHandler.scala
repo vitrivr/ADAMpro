@@ -18,7 +18,7 @@ import scala.util.{Failure, Random, Success, Try}
   * Ivan Giangreco
   * September 2016
   */
-class StorageHandler(val engine: Engine) extends Serializable with Logging {
+class StorageHandler(val engine: Engine, val priority : Int = 0) extends Serializable with Logging {
   val name = engine.name
 
   def supports = engine.supports

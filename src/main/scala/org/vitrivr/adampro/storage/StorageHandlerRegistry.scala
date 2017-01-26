@@ -1,6 +1,5 @@
 package org.vitrivr.adampro.storage
 
-import org.vitrivr.adampro.config.AdamConfig
 import org.vitrivr.adampro.datatypes.AttributeTypes.AttributeType
 import org.vitrivr.adampro.exception.GeneralAdamException
 import org.vitrivr.adampro.main.AdamContext
@@ -51,12 +50,12 @@ class StorageHandlerRegistry extends Logging {
 
     if (result.isEmpty) {
       //try fallback: specializes
-      result = handlers.values.filter(_.specializes.contains(attributetype)).headOption
+      result = handlers.values.filter(_.specializes.contains(attributetype)).toSeq.sortBy(_.priority).reverse.headOption
     }
 
     if (result.isEmpty) {
       //try fallback: supports
-      result = handlers.values.filter(_.supports.contains(attributetype)).headOption
+      result = handlers.values.filter(_.supports.contains(attributetype)).toSeq.sortBy(_.priority).reverse.headOption
     }
 
     if (result.isEmpty) {
@@ -71,10 +70,11 @@ class StorageHandlerRegistry extends Logging {
   /**
     *
     * @param configname
+    * @param priority
     */
-  def register(configname: String)(implicit ac: AdamContext): Unit = {
+  def register(configname: String, priority: Int = 0)(implicit ac: AdamContext): Unit = {
     try {
-      val props: Map[String, String] = ac.config.getStorageProperties(configname).toMap
+      val props: Map[String, String] = ac.config.getStorageProperties(configname)
 
       val engineName = props.get("engine")
       if (engineName.isEmpty) {
@@ -84,7 +84,7 @@ class StorageHandlerRegistry extends Logging {
       val constructor = Class.forName(classOf[Engine].getPackage.getName + "." + engineName.get).getConstructor(classOf[Map[_, _]], classOf[AdamContext])
 
       val engine = constructor.newInstance(props, ac).asInstanceOf[Engine]
-      val handler = new StorageHandler(engine)
+      val handler = new StorageHandler(engine, priority)
 
       val name = props.getOrElse("storagename", handler.name)
 
@@ -108,7 +108,7 @@ class StorageHandlerRegistry extends Logging {
     * @param handler
     */
   def register(name: String, handler: StorageHandler): Unit = {
-    if(handlers.contains(name)){
+    if (handlers.contains(name)) {
       log.error("handler with name " + name + " exists already")
     } else {
       handlers += name -> handler

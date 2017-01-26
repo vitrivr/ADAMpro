@@ -45,7 +45,7 @@ object RandomDataOp extends GenericOp {
       }
 
       //schema of random data dataframe to insert
-      val schema = entity.get.schema(fullSchema = false)
+      val schema = entity.get.schema(fullSchema = false).filterNot(_.attributeType == AttributeTypes.AUTOTYPE)
 
       //data
       val limit = math.min(ntuples, MAX_TUPLES_PER_BATCH)
@@ -53,7 +53,7 @@ object RandomDataOp extends GenericOp {
         log.trace("start generating data")
         val rdd = ac.sc.parallelize(
           seq.map(idx => {
-            var data = schema.map(field => randomGenerator(field.attributeType, params)())
+            var data = schema.map(attribute => randomGenerator(attribute.attributeType, params)())
             Row(data: _*)
           })
         )

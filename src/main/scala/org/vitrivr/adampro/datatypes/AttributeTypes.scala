@@ -12,6 +12,7 @@ import org.vitrivr.adampro.datatypes.vector.{SparseVectorWrapper, Vector}
   * March 2016
   */
 object AttributeTypes {
+  //TODO: clean up all datatypes and wrappers
 
   sealed abstract class AttributeType(val name: String, val datatype: DataType, val wrapper : Option[Wrapper] = None) extends Serializable {
     def equals(other: AttributeType): Boolean = other.name.equals(name)

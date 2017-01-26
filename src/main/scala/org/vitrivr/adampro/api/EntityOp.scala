@@ -201,7 +201,11 @@ object EntityOp extends GenericOp {
       val entity = Entity.load(entityname)
 
       if (entity.isSuccess) {
-        Success(entity.get.attributePropertiesMap(attribute.get, options))
+        if(attribute.isDefined) {
+          Success(entity.get.attributePropertiesMap(attribute.get, options))
+        } else {
+          Success(entity.get.propertiesMap(options))
+        }
       } else {
         Failure(entity.failed.get)
       }
