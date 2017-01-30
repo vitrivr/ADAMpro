@@ -40,7 +40,7 @@ lazy val buildSettings = Seq(
 mainClass in(Compile, run) := Some("org.vitrivr.adampro.main.Startup")
 
 unmanagedResourceDirectories in Compile += baseDirectory.value / "conf"
-javacOptions ++= ("-encoding", "UTF-8")
+javacOptions ++= Seq("-encoding", "UTF-8")
 scalacOptions ++= Seq()
 
 //lib resolvers
