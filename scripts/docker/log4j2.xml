@@ -1,0 +1,57 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE log4j:configuration PUBLIC "-//APACHE//DTD LOG4J 1.2//EN" "http://logging.apache.org/log4j/1.2/apidocs/org/apache/log4j/xml/doc-files/log4j.dtd">
+<Configuration status="DEBUG" name="ADAMpro" packages="">
+    <Appenders>
+        <RollingFile name="file_system"  fileName="/adampro/logs/vitrivr/system.log">
+            <PatternLayout>
+                <pattern>%d %p %c{1.} [%t] %m%n</pattern>
+            </PatternLayout>
+        </RollingFile>
+
+        <RollingFile name="file_adampro" fileName="/adampro/logs/vitrivr/adampro.log">
+            <PatternLayout>
+                <pattern>%d %p %c{1.} [%t] %m%n</pattern>
+            </PatternLayout>
+        </RollingFile>
+
+        <RollingFile name="file_query" fileName="/adampro/logs/vitrivr/query.html">
+            <MarkerFilter marker="QUERY_MARKER" onMatch="ACCEPT" onMismatch="DENY"/>
+            <HTMLLayout charset="UTF-8" title="Query Logs" locationInfo="true" />
+            <PatternLayout>
+                <pattern>%d %p %c{1.} [%t] %m%n</pattern>
+            </PatternLayout>
+        </RollingFile>
+
+        <Console name="console" target="SYSTEM_OUT">
+            <PatternLayout pattern="[%-5level] %d{HH:mm:ss.SSS} [%t] %c{1} - %msg%n" />
+        </Console>
+    </Appenders>
+
+
+    <Loggers>
+        <Root level="WARN">
+            <AppenderRef ref="file_system"/>
+            <AppenderRef ref="console"/>
+        </Root>
+        <Logger name="org.spark-project.jetty" level="ERROR">
+            <AppenderRef ref="console"/>
+        </Logger>
+        <Logger name="org.apache.spark.repl" level="ERROR">
+            <AppenderRef ref="console"/>
+        </Logger>
+        <Logger name="org.apache.parquet" level="ERROR">
+            <AppenderRef ref="console"/>
+        </Logger>
+        <Logger name="parquet" level="ERROR">
+            <AppenderRef ref="console"/>
+        </Logger>
+        <Logger name="org.vitrivr" level="TRACE">
+            <AppenderRef ref="file_adampro"/>
+            <AppenderRef ref="file_query"/>
+        </Logger>
+        <Logger name="org.vitrivr" level="DEBUG">
+            <AppenderRef ref="console"/>
+        </Logger>
+    </Loggers>
+
+</Configuration>
