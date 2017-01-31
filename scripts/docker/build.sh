@@ -3,6 +3,7 @@
 cd $ADAM_CODE
 
 git checkout $ADAMPRO_BRANCH
+git fetch
 
 UPSTREAM=${1:-'@{u}'}
 LOCAL=$(git rev-parse @)
