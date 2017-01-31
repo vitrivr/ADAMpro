@@ -162,5 +162,5 @@ addCommandAlias("proto", "; grpc/assembly")
 
 lazy val setupDocker = taskKey[Unit]("Setup and start docker container to run ADAMpro.")
 setupDocker := {
-  "./scripts/startDocker.sh" !
+  "./scripts/setupDocker.sh" !
 }
