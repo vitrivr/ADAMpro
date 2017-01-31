@@ -1,4 +1,4 @@
-import sbt._
+import sbt.{ExclusionRule, _}
 import sbt.Keys._
 import sbtassembly.AssemblyPlugin.autoImport._
 
@@ -72,8 +72,8 @@ val coreLibs = Seq(
 
 //secondary libs
 val secondaryLibs = Seq(
-  "org.scalanlp" %% "breeze" % "0.11.2",
-  "org.scalanlp" %% "breeze-natives" % "0.11.2",
+  "org.scalanlp" %% "breeze" % "0.13",
+  "org.scalanlp" %% "breeze-natives" % "0.13",
   "com.typesafe.slick" %% "slick" % "3.1.1",
   "com.mchange" % "c3p0" % "0.9.5.2",
   "org.apache.derby" % "derby" % "10.13.1.1",
@@ -81,11 +81,8 @@ val secondaryLibs = Seq(
   "org.apache.commons" % "commons-lang3" % "3.4",
   "org.apache.commons" % "commons-math3" % "3.4.1",
   "com.googlecode.javaewah" % "JavaEWAH" % "1.1.6",
-  "com.google.guava" % "guava" % "19.0",
-  "com.google.protobuf" % "protobuf-java" % "3.0.0" % "protobuf",
-  "com.trueaccord.scalapb" %% "scalapb-runtime" % com.trueaccord.scalapb.compiler.Version.scalapbVersion % "protobuf",
-  "io.grpc" % "grpc-protobuf" % "1.0.1",
-  "org.jgrapht" % "jgrapht-core" % "1.0.0"
+  "com.google.guava" % "guava" % "21.0",
+  "org.jgrapht" % "jgrapht-core" % "1.0.1"
 ).map(
   _.excludeAll(
     ExclusionRule("org.scala-lang"),
@@ -99,7 +96,7 @@ val secondaryLibs = Seq(
 val tertiaryLibs = Seq(
   "com.lucidworks.spark" % "spark-solr" % "3.0.0-alpha.2",
   "org.postgresql" % "postgresql" % "9.4.1208",
-  "com.datastax.spark" % "spark-cassandra-connector_2.11" % "2.0.0-M3",
+  "com.datastax.spark" %% "spark-cassandra-connector" % "2.0.0-M3",
   "net.postgis" % "postgis-jdbc" % "2.2.1",
   "com.databricks" %% "spark-avro" % "3.1.0"
 ).map(
@@ -112,8 +109,7 @@ val tertiaryLibs = Seq(
 
 //test libs
 val testLibs = Seq(
-  "org.scalatest" %% "scalatest" % "3.0.0",
-  "io.grpc" % "grpc-netty" % "1.0.1"
+  "org.scalatest" %% "scalatest" % "3.2.0-SNAP3"
 ).map(
   _.excludeAll(
     ExclusionRule("org.scala-lang"),
@@ -138,6 +134,7 @@ assemblyMergeStrategy in assembly := {
   case x if x.contains("org.apache.httpcomponents") => MergeStrategy.last
   case x if x.contains("org.apache.commons") => MergeStrategy.last
   case x if x.contains("org.apache.derby") => MergeStrategy.last
+  case x if x.contains("io.netty") => MergeStrategy.last
   case PathList("application.conf") => MergeStrategy.discard
   case PathList("javax", "servlet", xs@_*) => MergeStrategy.last
   case PathList(ps@_*) if ps.last endsWith ".html" => MergeStrategy.last
