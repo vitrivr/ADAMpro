@@ -4,7 +4,7 @@
 $ADAM_HOME/build.sh
 
 # configuration
-sed s/HOSTNAME/$HOSTNAME/ $ADAM_HOME/adampro.conf.template > $ADAM_HOME/adampro.conf
+sed s/HOSTNAME/$HOSTNAME/ $ADAM_HOME/code/scripts/docker/adampro.conf.template > $ADAM_HOME/adampro.conf
 
 # storage engines
 service postgresql stop
