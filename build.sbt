@@ -159,3 +159,8 @@ concurrentRestrictions in Global += Tags.limit(Tags.Test, 1)
 
 //custom commands
 addCommandAlias("proto", "; grpc/assembly")
+
+lazy val setupDocker = taskKey[Unit]("Setup and start docker container to run ADAMpro.")
+setupDocker := {
+  "./scripts/startDocker.sh" !
+}

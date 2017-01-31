@@ -55,22 +55,25 @@ RUN chmod 777 ${ADAM_HOME}
 RUN apt-get -y install git
 
 ENV ADAMPRO_GIT "https://github.com/vitrivr/ADAMpro.git"
+ENV ADAMPRO_BRANCH spark2
 
 # careful: the next step is potentially cached by Docker!
-RUN git clone -b spark2 $ADAMPRO_GIT --recursive $ADAM_CODE
+RUN git clone -b $ADAMPRO_BRANCH $ADAMPRO_GIT --recursive $ADAM_CODE
 RUN cd $ADAM_CODE && sbt proto && sbt assembly && sbt web/assembly
 RUN cp $ADAM_CODE/conf/log4j2.xml ${ADAM_HOME}/log4j2.xml
 RUN cp $ADAM_CODE/target/scala-2.11/ADAMpro-assembly-0.1.0.jar ${ADAM_HOME}/ADAMpro-assembly-0.1.0.jar && cp $ADAM_CODE/web/target/scala-2.11/ADAMpro-web-assembly-0.1.0.jar ${ADAM_HOME}/ADAMpro-web-assembly-0.1.0.jar
 COPY adampro.conf.template ${ADAM_HOME}/adampro.conf.template
 COPY log4j2.xml ${ADAM_HOME}/log4j2.xml
+COPY build.sh ${ADAM_HOME}/build.sh
+RUN chmod 700 ${ADAM_HOME}/build.sh
 
 RUN mkdir -p ${ADAM_HOME}/logs/
 
 # adding data
 RUN mkdir -p ${ADAM_HOME}/data
 COPY data/ ${ADAM_HOME}/data/
-RUN chown -R postgres:postgres $ADAM_HOME/data/data/postgres && chmod -R 700 $PGDATA
-RUN rm -r $SOLR_HOME/server/solr && cp -R $ADAM_HOME/data/data/solr $SOLR_HOME/server
+RUN if [ -d $PGDATA ]; then chown -R postgres:postgres $PGDATA && chmod -R 700 $PGDATA; else su --login - postgres --command "$POSTGRES_HOME/bin/initdb -D $PGDATA"; fi
+RUN if [ -d $ADAM_HOME/data/data/solr ]; then rm -r $SOLR_HOME/server/solr && cp -R $ADAM_HOME/data/data/solr $SOLR_HOME/server; fi
 
 # port for postgresql
 EXPOSE 5432
