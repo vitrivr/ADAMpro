@@ -64,6 +64,7 @@ RUN git clone -b $ADAMPRO_BRANCH $ADAMPRO_GIT --recursive $ADAM_CODE
 RUN mkdir -p ${ADAM_HOME}/data
 COPY data/ ${ADAM_HOME}/data/
 RUN if [ -d $PGDATA ]; then chown -R postgres:postgres $PGDATA && chmod -R 700 $PGDATA; else mkdir -p $PGDATA; chown -R postgres:postgres $PGDATA; su --login - postgres --command "$POSTGRES_HOME/bin/initdb -D $PGDATA"; fi
+RUN echo "host    all             all             0.0.0.0/0               trust" >> $PGDATA/pg_hba.conf && echo "listen_addresses='*'" >> $PGDATA/postgresql.conf
 RUN if [ -d $ADAM_HOME/data/data/solr ]; then rm -r $SOLR_HOME/server/solr && cp -R $ADAM_HOME/data/data/solr $SOLR_HOME/server; fi
 
 RUN cd $ADAM_CODE && sbt proto && sbt assembly && sbt web/assembly
