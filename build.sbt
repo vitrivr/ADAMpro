@@ -1,6 +1,6 @@
 import sbt.{ExclusionRule, _}
 import sbt.Keys._
-import sbtassembly.AssemblyPlugin.autoImport._
+import sbtassembly.AssemblyPlugin.autoImport.{ShadeRule, _}
 
 name := "ADAMpro"
 
@@ -58,14 +58,15 @@ val baseLibs = Seq(
 
 //adampro core libs
 val coreLibs = Seq(
-  "org.apache.spark" %% "spark-core" % "2.1.0" excludeAll ExclusionRule("org.apache.hadoop"), //make sure that you use the same spark version as in your deployment!
-  "org.apache.spark" %% "spark-sql" % "2.1.0",
-  "org.apache.spark" %% "spark-hive" % "2.1.0",
-  "org.apache.spark" %% "spark-mllib" % "2.1.0",
+  "org.apache.spark" %% "spark-core" % "2.1.0" % "provided" excludeAll ExclusionRule("org.apache.hadoop"), //make sure that you use the same spark version as in your deployment!
+  "org.apache.spark" %% "spark-sql" % "2.1.0" % "provided",
+  "org.apache.spark" %% "spark-hive" % "2.1.0" % "provided",
+  "org.apache.spark" %% "spark-mllib" % "2.1.0" % "provided",
   "org.apache.hadoop" % "hadoop-client" % "2.7.0" excludeAll ExclusionRule("javax.servlet") //make sure that you use the same hadoop version as in your deployment!
 ).map(
   _.excludeAll(
-    ExclusionRule("org.scala-lang")
+    ExclusionRule("org.scala-lang"),
+    ExclusionRule("io.netty")
   )
 )
 //TODO: add multiple configurations to sbt, one which has coreLibs as provided (as they do not have to be submitted to spark)
@@ -87,10 +88,10 @@ val secondaryLibs = Seq(
   _.excludeAll(
     ExclusionRule("org.scala-lang"),
     ExclusionRule("org.slf4j"),
-    ExclusionRule("log4j")
+    ExclusionRule("log4j"),
+    ExclusionRule("io.netty")
   )
 )
-
 
 //tertiary libs
 val tertiaryLibs = Seq(
@@ -103,22 +104,35 @@ val tertiaryLibs = Seq(
   _.excludeAll(
     ExclusionRule("org.scala-lang"),
     ExclusionRule("org.slf4j"),
-    ExclusionRule("log4j")
+    ExclusionRule("log4j"),
+    ExclusionRule("io.netty")
   )
 )
 
 //test libs
 val testLibs = Seq(
-  "org.scalatest" %% "scalatest" % "3.2.0-SNAP3"
+  "org.scalatest" %% "scalatest" % "2.2.6",
+  "io.grpc" % "grpc-netty" % "1.0.3"
 ).map(
   _.excludeAll(
     ExclusionRule("org.scala-lang"),
     ExclusionRule("org.slf4j"),
-    ExclusionRule("log4j")
+    ExclusionRule("log4j"),
+    ExclusionRule("io.netty")
   )
 )
 
+//assembly
+assemblyShadeRules in assembly := Seq(
+  ShadeRule.rename("io.netty.**" -> "adampro.grpc.shaded.io.netty.@1").inAll,
+  ShadeRule.rename("com.google.**" -> "adampro.grpc.shaded.com.google.@1").inAll
+)
+
 libraryDependencies := baseLibs ++ coreLibs ++ secondaryLibs ++ tertiaryLibs ++ testLibs
+
+dependencyOverrides ++= Set(
+  "org.apache.hadoop" % "hadoop-hdfs" % "2.7.2"
+)
 
 unmanagedBase <<= baseDirectory { base => base / "lib" }
 unmanagedResourceDirectories in Compile += baseDirectory.value / "conf"
@@ -134,7 +148,6 @@ assemblyMergeStrategy in assembly := {
   case x if x.contains("org.apache.httpcomponents") => MergeStrategy.last
   case x if x.contains("org.apache.commons") => MergeStrategy.last
   case x if x.contains("org.apache.derby") => MergeStrategy.last
-  case x if x.contains("io.netty") => MergeStrategy.last
   case PathList("application.conf") => MergeStrategy.discard
   case PathList("javax", "servlet", xs@_*) => MergeStrategy.last
   case PathList(ps@_*) if ps.last endsWith ".html" => MergeStrategy.last
@@ -143,9 +156,6 @@ assemblyMergeStrategy in assembly := {
   case meta(_) => MergeStrategy.discard
   case x => MergeStrategy.last
 }
-
-assemblyShadeRules in assembly := Seq(
-)
 
 mainClass in assembly := Some("org.vitrivr.adampro.main.Startup")
 
