@@ -7,7 +7,7 @@ name := "ADAMpro"
 lazy val commonSettings = Seq(
   organization := "org.vitrivr",
   version := "0.1.0",
-  scalaVersion := "2.11.7"
+  scalaVersion := "2.11.8"
 )
 
 //projects
@@ -32,8 +32,8 @@ lazy val importer = project.dependsOn(grpcclient).
 
 //build
 lazy val buildSettings = Seq(
-  scalaVersion := "2.11.7",
-  crossScalaVersions := Seq("2.11.7"),
+  scalaVersion := "2.11.8",
+  crossScalaVersions := Seq("2.11.8"),
   ivyScala := ivyScala.value.map(_.copy(overrideScalaVersion = true))
 )
 
@@ -52,8 +52,8 @@ resolvers += Resolver.sonatypeRepo("snapshots")
 
 //base libs
 val baseLibs = Seq(
-  "org.scala-lang" % "scala-compiler" % "2.11.7",
-  "org.scala-lang" % "scala-reflect" % "2.11.7"
+  "org.scala-lang" % "scala-compiler" % "2.11.8",
+  "org.scala-lang" % "scala-reflect" % "2.11.8"
 )
 
 //adampro core libs
