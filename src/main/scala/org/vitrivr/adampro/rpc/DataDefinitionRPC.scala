@@ -17,7 +17,7 @@ import org.vitrivr.adampro.helpers.storage.Transferer
 import org.vitrivr.adampro.index.structures.IndexTypes
 import org.vitrivr.adampro.main.{AdamContext, SparkStartup}
 import org.vitrivr.adampro.query.query.Predicate
-import org.vitrivr.adampro.utils.{Logging, ProtoImporterExporter}
+import org.vitrivr.adampro.utils.{AdamImporter, Logging, ProtoImporterExporter}
 
 import scala.concurrent.Future
 
@@ -596,7 +596,13 @@ class DataDefinitionRPC extends AdamDefinitionGrpc.AdamDefinition with Logging {
     */
   @Experimental override def importData(request: ImportMessage): Future[AckMessage] = {
     log.debug("rpc call for importing data from old ADAM")
-    Future.failed(new GeneralAdamException("importing from old ADAM is no longer supported"))
+    val res = AdamImporter(request.host, request.database, request.username, request.password)
+    if (res.isSuccess) {
+      Future.successful(AckMessage(AckMessage.Code.OK))
+    } else {
+      log.error(res.failed.get.getMessage, res.failed.get)
+      Future.successful(AckMessage(code = AckMessage.Code.ERROR, message = res.failed.get.getMessage))
+    }
   }
 
   /**
