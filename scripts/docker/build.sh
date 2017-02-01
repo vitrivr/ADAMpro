@@ -20,9 +20,9 @@ elif [ $LOCAL = $BASE ]; then
     sbt proto
     sbt assembly
     sbt web/assembly
-    rm -f ${ADAM_HOME}/log4j2.xml
+    rm -f ${ADAM_HOME}/log4j.xml
     rm -f ${ADAM_HOME}/ADAMpro-assembly-0.1.0.jar ${ADAM_HOME}/ADAMpro-web-assembly-0.1.0.jar
-    cp $ADAM_CODE/conf/log4j2.xml ${ADAM_HOME}/log4j2.xml
+    cp $ADAM_CODE/conf/log4j.xml ${ADAM_HOME}/log4j.xml
     cp $ADAM_CODE/target/scala-2.11/ADAMpro-assembly-0.1.0.jar ${ADAM_HOME}/ADAMpro-assembly-0.1.0.jar && cp $ADAM_CODE/web/target/scala-2.11/ADAMpro-web-assembly-0.1.0.jar ${ADAM_HOME}/ADAMpro-web-assembly-0.1.0.jar
 
 elif [ $REMOTE = $BASE ]; then
