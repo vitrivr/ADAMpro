@@ -55,7 +55,7 @@ RUN chmod 777 ${ADAM_HOME}
 RUN apt-get -y install git
 
 ENV ADAMPRO_GIT "https://github.com/vitrivr/ADAMpro.git"
-ENV ADAMPRO_BRANCH spark2
+ENV ADAMPRO_BRANCH master
 
 # careful: the next step is potentially cached by Docker!
 RUN git clone -b $ADAMPRO_BRANCH $ADAMPRO_GIT --recursive $ADAM_CODE
