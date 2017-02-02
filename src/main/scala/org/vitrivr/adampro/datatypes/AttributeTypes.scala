@@ -69,7 +69,7 @@ object AttributeTypes {
       wrappedType.get
     } else {
       //simple type
-      values.filter(x => d == x.datatype).head
+      values.filterNot(p => p == AUTOTYPE).filter(x => d == x.datatype).head
     }
   }
 }
