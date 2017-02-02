@@ -128,11 +128,6 @@ class AdamImporter(url: String, user: String, password: String) extends Logging 
         }
         log.info("successfully imported data into entity " + entityname + "; in df: " + insertDFcount + ", inserted: " + entitycount)
         assert(insertDFcount == entitycount)
-
-        featureFields.foreach {
-          featureField =>
-            IndexOp.create(entityname, featureField, "vaf", NormBasedDistance(2))
-        }
       } else {
         log.error("entity not created", entity.failed.get)
       }
