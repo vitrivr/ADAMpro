@@ -32,12 +32,12 @@ class AdamImporter(url: String, user: String, password: String) extends Logging 
     DriverManager.getConnection(url, user, password)
   }
 
+  private val attributeRenamingRules = Seq(("shotid" -> "id"), ("video" -> "multimediaobject"), ("startframe" -> "segmentstart"), ("endframe" -> "segmentend"), ("frames" -> "framecount"), ("seconds" -> "duration"), ("number" -> "sequencenumber"))
+  private val attributeCasting = Seq(("id" -> DataTypes.StringType), ("multimediaobject" -> DataTypes.StringType))
+
   def importTable(schemaname: String, tablename: String, newtablename: String)(implicit ac: AdamContext) {
     try {
       log.info("importing table " + tablename)
-
-      val attributeRenamingRules = Seq(("shotid" -> "id"), ("video" -> "multimediaobject"), ("startframe" -> "segmentstart"), ("endframe" -> "segmentend"), ("frames" -> "framecount"), ("seconds" -> "duration"), ("number" -> "sequencenumber"))
-      val attributeCasting = Seq(("id" -> DataTypes.StringType), ("multimediaobject" -> DataTypes.StringType))
 
       val entityname = schemaname + "_" + newtablename
 
@@ -52,28 +52,13 @@ class AdamImporter(url: String, user: String, password: String) extends Logging 
 
       val conn = openConnection()
 
-      val pkResult = conn.createStatement().executeQuery(
-        "SELECT a.attname FROM pg_index i JOIN   pg_attribute a ON a.attrelid = i.indrelid AND a.attnum = ANY(i.indkey) WHERE  i.indrelid = '" + schemaname + "." + tablename + "'::regclass AND i.indisprimary;")
-      pkResult.next()
-      val pk = {
-        val adamPK = pkResult.getString(1)
-
-        val renamedPK = attributeRenamingRules.filter(_._1 == adamPK)
-        if (!renamedPK.isEmpty) {
-          renamedPK.head._2
-        } else {
-          adamPK
-        }
-      }
-
       val featureResult = conn.createStatement().executeQuery(
         "SELECT column_name FROM information_schema.columns WHERE table_schema = '" + schemaname + "' AND table_name = '" + tablename + "' AND data_type = 'feature';")
       val lb = ListBuffer[String]()
       while (featureResult.next()) {
         lb.append(featureResult.getString(1))
       }
-      val featureFields = lb.toSeq
-
+      val featureFields = lb
 
       var insertDF = df
 
