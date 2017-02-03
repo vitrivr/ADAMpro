@@ -62,7 +62,10 @@ class PostgisEngine(private val url: String, private val user: String, private v
 
     val query = params.getOrElse("query", "*")
     val limit = params.getOrElse("limit", "ALL")
-    val stmt = s"(SELECT $query FROM $storename LIMIT $limit) AS $storename"
+    val order = params.get("order").map(x => "ORDER BY " + x).getOrElse("")
+    val where = params.get("where").map(x => "WHERE " + x).getOrElse("")
+
+    val stmt = s"(SELECT $query FROM $storename $where $order LIMIT $limit) AS $storename"
 
     try {
       val predicate = params.get("predicate").map(Seq(_))
