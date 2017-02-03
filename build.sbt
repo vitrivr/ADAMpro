@@ -62,10 +62,11 @@ val coreLibs = Seq(
   "org.apache.spark" %% "spark-sql" % "2.1.0" % "provided",
   "org.apache.spark" %% "spark-hive" % "2.1.0" % "provided",
   "org.apache.spark" %% "spark-mllib" % "2.1.0" % "provided",
-  "org.apache.hadoop" % "hadoop-client" % "2.7.0" excludeAll ExclusionRule("javax.servlet") //make sure that you use the same hadoop version as in your deployment!
+  "org.apache.hadoop" % "hadoop-client" % "2.7.0" excludeAll ExclusionRule("javax.servlet")  //make sure that you use the same hadoop version as in your deployment!
 ).map(
   _.excludeAll(
-    ExclusionRule("org.scala-lang")
+    ExclusionRule("org.scala-lang"),
+    ExclusionRule("io.netty") //remove this line if running locally within IDE
   )
 )
 //TODO: add multiple configurations to sbt, one which has coreLibs as provided (as they do not have to be submitted to spark)
