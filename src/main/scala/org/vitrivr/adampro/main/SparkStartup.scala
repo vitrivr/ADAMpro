@@ -4,7 +4,7 @@ import org.apache.spark.SparkConf
 import org.apache.spark.sql.SparkSession
 import org.vitrivr.adampro.catalog.{CatalogOperator, LogOperator}
 import org.vitrivr.adampro.config.AdamConfig
-import org.vitrivr.adampro.helpers.optimizer.OptimizerRegistry
+import org.vitrivr.adampro.query.optimizer.OptimizerRegistry
 import org.vitrivr.adampro.utils.Logging
 
 /**

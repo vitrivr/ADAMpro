@@ -1,4 +1,4 @@
-package org.vitrivr.adampro.helpers.optimizer
+package org.vitrivr.adampro.query.optimizer
 
 import org.apache.spark.util.random.Sampling
 import org.vitrivr.adampro.datatypes.vector.Vector

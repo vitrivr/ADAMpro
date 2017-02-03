@@ -5,7 +5,7 @@ import org.apache.spark.util.LongAccumulator
 import org.apache.spark.{Accumulator, SparkContext}
 import org.vitrivr.adampro.config.AdamConfig
 import org.vitrivr.adampro.entity.EntityLRUCache
-import org.vitrivr.adampro.helpers.optimizer.OptimizerRegistry
+import org.vitrivr.adampro.query.optimizer.OptimizerRegistry
 import org.vitrivr.adampro.index.IndexLRUCache
 import org.vitrivr.adampro.query.QueryLRUCache
 import org.vitrivr.adampro.storage.StorageHandlerRegistry

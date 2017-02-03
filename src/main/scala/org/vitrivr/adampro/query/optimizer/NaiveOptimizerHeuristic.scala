@@ -1,4 +1,4 @@
-package org.vitrivr.adampro.helpers.optimizer
+package org.vitrivr.adampro.query.optimizer
 
 import org.vitrivr.adampro.api.QueryOp
 import org.vitrivr.adampro.catalog.CatalogOperator

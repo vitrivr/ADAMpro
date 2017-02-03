@@ -9,9 +9,9 @@ import org.vitrivr.adampro.entity.Entity
 import org.vitrivr.adampro.exception.GeneralAdamException
 import org.vitrivr.adampro.grpc.grpc.AdaptScanMethodsMessage.{IndexCollection, QueryCollection}
 import org.vitrivr.adampro.grpc.grpc._
-import org.vitrivr.adampro.helpers.optimizer.IndexCollectionFactory.{ExistingIndexCollectionOption, NewIndexCollectionOption}
-import org.vitrivr.adampro.helpers.optimizer.QueryCollectionFactory.{LoggedQueryCollectionOption, RandomQueryCollectionOption}
-import org.vitrivr.adampro.helpers.optimizer._
+import org.vitrivr.adampro.query.optimizer.IndexCollectionFactory.{ExistingIndexCollectionOption, NewIndexCollectionOption}
+import org.vitrivr.adampro.query.optimizer.QueryCollectionFactory.{LoggedQueryCollectionOption, RandomQueryCollectionOption}
+import org.vitrivr.adampro.query.optimizer._
 import org.vitrivr.adampro.index.partition.{PartitionMode, PartitionerChoice}
 import org.vitrivr.adampro.helpers.storage.Transferer
 import org.vitrivr.adampro.index.structures.IndexTypes

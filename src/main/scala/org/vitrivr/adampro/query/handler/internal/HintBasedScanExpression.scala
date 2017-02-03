@@ -13,7 +13,7 @@ import org.vitrivr.adampro.query.handler.internal.AggregationExpression.EmptyExp
 import org.vitrivr.adampro.query.handler.internal.BooleanFilterExpression.BooleanFilterScanExpression
 import QueryHints._
 import org.vitrivr.adampro.query.query.{BooleanQuery, NearestNeighbourQuery}
-import org.vitrivr.adampro.helpers.optimizer.OptimizerOp
+import org.vitrivr.adampro.query.optimizer.OptimizerOp
 import org.vitrivr.adampro.utils.Logging
 import org.apache.spark.sql.DataFrame
 

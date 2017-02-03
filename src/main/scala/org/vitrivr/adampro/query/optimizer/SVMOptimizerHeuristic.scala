@@ -1,4 +1,4 @@
-package org.vitrivr.adampro.helpers.optimizer
+package org.vitrivr.adampro.query.optimizer
 
 import breeze.linalg.DenseVector
 import org.vitrivr.adampro.api.QueryOp
