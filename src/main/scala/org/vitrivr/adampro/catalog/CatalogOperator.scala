@@ -4,15 +4,13 @@ import java.io._
 
 import com.mchange.v2.c3p0.ComboPooledDataSource
 import org.vitrivr.adampro.catalog.catalogs._
-import org.vitrivr.adampro.config.AdamConfig
 import org.vitrivr.adampro.datatypes.AttributeTypes
 import org.vitrivr.adampro.entity.Entity.EntityName
 import org.vitrivr.adampro.entity.{AttributeDefinition, EntityNameHolder}
 import org.vitrivr.adampro.exception._
-import org.vitrivr.adampro.index.partition.CustomPartitioner
 import org.vitrivr.adampro.index.Index.{IndexName, IndexTypeName}
+import org.vitrivr.adampro.index.partition.CustomPartitioner
 import org.vitrivr.adampro.index.structures.IndexTypes
-import org.vitrivr.adampro.main.AdamContext
 import org.vitrivr.adampro.utils.Logging
 import slick.dbio.NoStream
 import slick.driver.DerbyDriver.api._
@@ -29,7 +27,7 @@ import scala.util.{Failure, Success, Try}
   * Ivan Giangreco
   * August 2015
   */
-class CatalogOperator(internalsPath : String) extends Logging {
+class CatalogOperator(internalsPath: String) extends Logging {
   private val MAX_WAITING_TIME: Duration = 100.seconds
 
   try {
@@ -883,6 +881,21 @@ class CatalogOperator(internalsPath : String) extends Logging {
       actions += _optimizerOptions.+=((optimizer, key, meta))
 
       Await.result(DB.run(DBIO.seq(actions.toArray: _*).transactionally), MAX_WAITING_TIME)
+      null
+    }
+  }
+
+  /**
+    * Update options for optimizer
+    *
+    * @param optimizer
+    * @param key
+    * @param optimizermeta
+    */
+  def updateOptimizerOption(optimizer: String, key: String, optimizermeta: Serializable): Try[Void] = {
+    execute("update optimizer option") {
+      dropOptimizerOptionMeta(optimizer, key)
+      createOptimizerOption(optimizer, key, optimizermeta)
       null
     }
   }

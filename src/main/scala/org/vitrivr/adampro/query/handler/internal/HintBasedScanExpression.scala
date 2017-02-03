@@ -158,7 +158,7 @@ object HintBasedScanExpression extends Logging {
             return scan
           case iqh: IndexQueryHint =>
             log.trace("index execution plan hint")
-            val optimizer = ac.optimizerRegistry.value.apply("scored").get
+            val optimizer = ac.optimizerRegistry.value.apply("naive").get
 
             //index scan
             val indexChoice = SparkStartup.catalogOperator.listIndexes(Some(entityname), Some(nnq.get.attribute), Some(iqh.structureType)).get.map(Index.load(_)).filter(_.isSuccess).map(_.get)

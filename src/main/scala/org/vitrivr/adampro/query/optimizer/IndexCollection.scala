@@ -17,7 +17,7 @@ import org.vitrivr.adampro.utils.Logging
   * Ivan Giangreco
   * September 2016
   */
-private[helpers] trait IndexCollection extends Logging with Serializable {
+private[query] trait IndexCollection extends Logging with Serializable {
   def getIndexes: Seq[Index]
 }
 
@@ -71,6 +71,15 @@ private[optimizer] case class NewIndexCollection(entityname: EntityName, attribu
   }
 }
 
+/**
+  * Collects a manual list of indexes
+  *
+  * @param indexes
+  */
+private[optimizer] case class ManualIndexCollection(indexes : Seq[Index])(@transient implicit val ac: AdamContext) extends IndexCollection {
+  override def getIndexes: Seq[Index] = indexes
+}
+
 object IndexCollectionFactory {
 
   def apply(entityname: EntityName, attribute: String, ico: IndexCollectionOption, params: Map[String, String])(implicit ac: AdamContext): IndexCollection = {
@@ -86,5 +95,7 @@ object IndexCollectionFactory {
   case object ExistingIndexCollectionOption extends IndexCollectionOption
 
   case object NewIndexCollectionOption extends IndexCollectionOption
+
+  case object ManualIndexCollectionOption extends IndexCollectionOption
 
 }

@@ -15,7 +15,7 @@ case class TrainingSample(f: DenseVector[Double], time: Double)
   * November 2016
   */
 class PegasosSVM(private val dims: Int, private val lambda: Double = 0.01, private val batchSize: Int = 5, private val epsilon: Double = 0.01) extends Logging with Serializable {
-  private val MAX_ITER = 200000
+  private val MAX_ITER = 5000
 
   private var w = DenseVector.zeros[Double](dims)
   //possibly use Random

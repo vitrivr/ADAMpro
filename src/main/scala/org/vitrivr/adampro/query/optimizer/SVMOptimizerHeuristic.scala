@@ -27,7 +27,7 @@ import scala.collection.mutable.ListBuffer
   * Ivan Giangreco
   * November 2016
   */
-private[optimizer] class SVMOptimizerHeuristic()(@transient implicit override val ac: AdamContext) extends OptimizerHeuristic("svm") {
+private[optimizer] class SVMOptimizerHeuristic(nruns : Int = 100)(@transient implicit override val ac: AdamContext) extends OptimizerHeuristic("svm", nruns) {
   /**
     *
     * @param indexes
@@ -51,6 +51,7 @@ private[optimizer] class SVMOptimizerHeuristic()(@transient implicit override va
 
       val svm = SparkStartup.catalogOperator.getOptimizerOptionMeta(name, "svm-index-" + indextypename.name).get.asInstanceOf[PegasosSVM]
       svm.train(trainDatum.map { case (x, y) => TrainingSample(x, y.time) })
+      SparkStartup.catalogOperator.updateOptimizerOption(name, "svm-index-" + indextypename.name, svm)
     }
   }
 
@@ -70,6 +71,7 @@ private[optimizer] class SVMOptimizerHeuristic()(@transient implicit override va
 
     val svm = SparkStartup.catalogOperator.getOptimizerOptionMeta(name, "svm-entity").get.asInstanceOf[PegasosSVM]
     svm.train(trainDatum.map { case (x, y) => TrainingSample(x, y.time) })
+    SparkStartup.catalogOperator.updateOptimizerOption(name, "svm-entity", svm)
   }
 
   /**
@@ -151,8 +153,8 @@ private[optimizer] class SVMOptimizerHeuristic()(@transient implicit override va
   private def buildFeature(entity: Entity, attribute: String): Seq[Double] = {
     val lb = new ListBuffer[Double]()
 
-    import ac.spark.implicits._
-    lb += entity.getAttributeData(attribute).get.map { x => IndexingTaskTuple(x.getAs[TupleID](AttributeNames.indexableColumnName), Vector.conv_draw2vec(x.getAs[DenseRawVector](attribute)).asInstanceOf[DenseMathVector])}.first.ap_indexable.length
+    val head = entity.getAttributeData(attribute).get.head()
+    lb += IndexingTaskTuple(head.getAs[TupleID](entity.pk.name), Vector.conv_draw2vec(head.getAs[DenseRawVector](attribute))).ap_indexable.length
     lb += entity.count
 
     lb.toSeq

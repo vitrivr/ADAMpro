@@ -46,7 +46,7 @@ class OptimizerRegistry() extends Logging {
 
 object OptimizerRegistry {
   def loadDefault()(implicit ac: AdamContext): Unit ={
-    ac.optimizerRegistry.value.register("scored", new NaiveOptimizerHeuristic())
-    ac.optimizerRegistry.value.register("empirical", new SVMOptimizerHeuristic())
+    ac.optimizerRegistry.value.register("naive", new NaiveOptimizerHeuristic())
+    ac.optimizerRegistry.value.register("svm", new SVMOptimizerHeuristic())
   }
 }

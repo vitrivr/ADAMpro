@@ -17,7 +17,7 @@ import org.vitrivr.adampro.utils.Logging
   * Ivan Giangreco
   * September 2016
   */
-private[helpers] trait QueryCollection extends Logging with Serializable {
+private[query] trait QueryCollection extends Logging with Serializable {
   def getQueries: Seq[NearestNeighbourQuery]
 }
 
