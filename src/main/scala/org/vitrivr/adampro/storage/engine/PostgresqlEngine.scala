@@ -115,7 +115,7 @@ class PostgresqlEngine(private val url: String, private val user: String, privat
       }.mkString("; ")
 
       //add index to table
-      val indexedStmt = attributes.filter(_.params.getOrElse("indexed", "false").toBoolean).map {
+      val indexedStmt = (attributes.filter(_.params.getOrElse("indexed", "false").toBoolean) ++ attributes.filter(_.pk)).distinct.map {
         field =>
           val fieldname = field.name
           s"""CREATE INDEX ON $storename ($fieldname)""".stripMargin
