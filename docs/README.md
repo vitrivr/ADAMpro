@@ -173,3 +173,6 @@ For more information on this consider e.g., this article: https://community.hort
 
 ### Unit tests
 ADAMpro comes with a set of unit tests which can be run from the [test package](https://github.com/vitrivr/ADAMpro/tree/master/src/test). Note that for having all test pass, a certain setup is necessary. For instance, for having the PostGIS test pass, the database has to be set up and it must be configured in the configuration file. You may use the script `setupLocalUnitTests.sh` for setting up all the necessary Docker containers for then performing the unit tests.
+
+### Flame graphs
+For checking the performance of ADAMpro, also consider the creation of flame graphs. For more information see [here](https://gist.github.com/kayousterhout/7008a8ebf2babeedc7ce6f8723fd1bf4).
