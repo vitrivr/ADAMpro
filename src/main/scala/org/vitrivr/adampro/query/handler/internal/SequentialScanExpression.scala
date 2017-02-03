@@ -1,6 +1,5 @@
 package org.vitrivr.adampro.query.handler.internal
 
-import com.google.common.hash.{BloomFilter, Funnel, PrimitiveSink}
 import org.apache.spark.broadcast.Broadcast
 import org.apache.spark.sql.DataFrame
 import org.apache.spark.sql.functions._
@@ -15,6 +14,9 @@ import org.vitrivr.adampro.query.distance.Distance
 import org.vitrivr.adampro.query.handler.generic.{ExpressionDetails, QueryEvaluationOptions, QueryExpression}
 import org.vitrivr.adampro.query.query.NearestNeighbourQuery
 import org.vitrivr.adampro.utils.Logging
+import org.apache.spark.util.sketch.BloomFilter
+import org.vitrivr.adampro.datatypes.TupleID
+import org.vitrivr.adampro.datatypes.TupleID.TupleID
 
 /**
   * adamtwo
@@ -50,35 +52,28 @@ case class SequentialScanExpression(private val entity: Entity)(private val nnq:
     }
 
     val df = entity.getData().get
+    var bf : BloomFilter = null
 
     //prepare filter
-    val funnel = new Funnel[Any] {
-      override def funnel(t: Any, primitiveSink: PrimitiveSink): Unit =
-        t match {
-          case s: String => primitiveSink.putUnencodedChars(s)
-          case l: Long => primitiveSink.putLong(l)
-          case i: Int => primitiveSink.putInt(i)
-          case _ => primitiveSink.putUnencodedChars(t.toString)
-        }
-    }
-    val ids = BloomFilter.create[Any](funnel, 1000, 0.05)
-
     if (filter.isDefined) {
-      filter.get.select(entity.pk.name).collect().map(_.getAs[Any](entity.pk.name)).toSeq.foreach {
-        ids.put(_)
-      }
+      bf = filter.get.stat.bloomFilter(entity.pk.name, 2000, 0.05)
     }
 
     if (filterExpr.isDefined) {
       filterExpr.get.filter = filter
-      filterExpr.get.evaluate(options).get.select(entity.pk.name).collect().map(_.getAs[Any](entity.pk.name)).toSeq.foreach {
-        ids.put(_)
+      val filterExprBf = filterExpr.get.evaluate(options).get.select(entity.pk.name).stat.bloomFilter(entity.pk.name, 2000, 0.05)
+
+      if(bf != null){
+        bf = bf.mergeInPlace(filterExprBf)
+      } else {
+        bf = filterExprBf
       }
+
     }
 
     var result = if (filter.isDefined || filterExpr.isDefined) {
-      val idsBc = ac.sc.broadcast(ids)
-      val filterUdf = udf((arg: Any) => idsBc.value.mightContain(arg))
+      val bfBc = ac.sc.broadcast(bf)
+      val filterUdf = udf((arg: TupleID) => bfBc.value.mightContain(arg))
       Some(df.filter(filterUdf(col(entity.pk.name))))
     } else {
       Some(df)
