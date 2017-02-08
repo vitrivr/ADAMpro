@@ -187,7 +187,7 @@ class PostgresqlEngine(private val url: String, private val user: String, privat
       }
 
       attributes.foreach { attribute =>
-        df = df.withColumn(attribute.name, df.col(attribute.name).cast(attribute.attributeType.datatype))
+        df = df.withColumn(attribute.name + "-cast", df.col(attribute.name).cast(attribute.attributeType.datatype)).drop(attribute.name).withColumnRenamed(attribute.name + "-cast", attribute.name)
       }
 
       Success(df)

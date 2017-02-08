@@ -292,9 +292,9 @@ case class Entity(entityname: EntityName)(@transient implicit val ac: AdamContex
       val rdd = data.rdd.zipWithUniqueId.map { case (r: Row, id: Long) => Row.fromSeq(id +: r.toSeq) }
 
       var insertion = ac.sqlContext.createDataFrame(
-        rdd, StructType(StructField(AttributeNames.internalIdColumnName, LongType) +: data.schema.fields))
+        rdd, StructType(StructField(AttributeNames.internalIdColumnName + "-tmp", LongType) +: data.schema.fields))
 
-      insertion = insertion.withColumn(AttributeNames.internalIdColumnName, tupleidUDF(col(AttributeNames.internalIdColumnName)))
+      insertion = insertion.withColumn(AttributeNames.internalIdColumnName, tupleidUDF(col(AttributeNames.internalIdColumnName + "-tmp"))).drop(AttributeNames.internalIdColumnName + "-tmp")
 
 
       //AUTOTYPE attributes
@@ -307,7 +307,6 @@ case class Entity(entityname: EntityName)(@transient implicit val ac: AdamContex
         autoAttributes.foreach { attribute =>
           insertion = insertion.withColumn(attribute.name, col(AttributeNames.internalIdColumnName))
         }
-
       }
 
       insertion = insertion.repartition(ac.config.defaultNumberOfPartitions)
