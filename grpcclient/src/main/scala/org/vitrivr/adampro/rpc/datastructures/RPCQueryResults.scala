@@ -27,6 +27,7 @@ case class RPCQueryResults(id: String, time: Long, source : String = "", info : 
             case Vector.DenseVector(y) => y.vector.mkString("[", ",", "]")
             case Vector.SparseVector(y) => y.index.zip(y.data).map{case(index, data) => "(" + index + "," + data + ")"}.mkString("[", ",", "]")
             case Vector.IntVector(y) => y.vector.mkString("[", ",", "]")
+            case _ => throw new Exception("unknown feature type")
           }
         }
         case _ => ""
