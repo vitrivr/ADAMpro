@@ -28,6 +28,14 @@ class StorageHandlerRegistry extends Logging {
   /**
     *
     * @param name
+    * @return
+    */
+  def contains(name : String) = handlers.contains(name)
+
+
+  /**
+    *
+    * @param name
     */
   def get(name: String): Option[StorageHandler] = {
     var result: Option[StorageHandler] = handlers.get(name)

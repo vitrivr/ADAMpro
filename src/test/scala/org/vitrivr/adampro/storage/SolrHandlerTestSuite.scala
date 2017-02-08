@@ -14,18 +14,22 @@ import scala.util.Random
   * July 2016
   */
 class SolrHandlerTestSuite extends AdamTestBase {
+  val handlerName = "solr"
+  def ntuples() = Random.nextInt(500)
+
+  assert(ac.storageHandlerRegistry.value.contains(handlerName))
 
   scenario("create an entity") {
-    withEntityName { entityname =>
-      val ntuples = Random.nextInt(500)
+    val tuplesInsert = ntuples()
 
-      val handlerName = "solr"
+    withEntityName { entityname =>
+
       val attributetypes = Seq(AttributeTypes.INTTYPE, AttributeTypes.LONGTYPE, AttributeTypes.FLOATTYPE, AttributeTypes.DOUBLETYPE, AttributeTypes.STRINGTYPE, AttributeTypes.TEXTTYPE, AttributeTypes.BOOLEANTYPE)
       val attributes = attributetypes.map(field => AttributeDefinition(field.name + "field", field, storagehandlername = handlerName)) ++ Seq(AttributeDefinition("tid", AttributeTypes.LONGTYPE, storagehandlername = handlerName))
 
       EntityOp.create(entityname, attributes)
 
-      RandomDataOp.apply(entityname, ntuples, Map("fv-dimensions" -> "10"))
+      RandomDataOp.apply(entityname, tuplesInsert, Map("fv-dimensions" -> "10"))
 
       val data = Entity.load(entityname).get.getData().get.collect()
 
@@ -40,7 +44,7 @@ class SolrHandlerTestSuite extends AdamTestBase {
           val booleanfield = datum.getAs[Boolean]("booleanfield")
       }
 
-      assert(data.size == ntuples)
+      assert(data.size == tuplesInsert)
     }
   }
 
