@@ -6,12 +6,15 @@ import org.apache.spark.sql.DataFrame
 import org.apache.spark.sql.types._
 import org.vitrivr.adampro.datatypes.AttributeTypes
 import org.vitrivr.adampro.datatypes.AttributeTypes.{AttributeType, BOOLEANTYPE, DOUBLETYPE, FLOATTYPE, GEOGRAPHYTYPE, GEOMETRYTYPE, INTTYPE, LONGTYPE, SPARSEVECTORTYPE, STRINGTYPE, TEXTTYPE, VECTORTYPE}
+import org.vitrivr.adampro.datatypes.gis.{GeographyWrapper, GeometryWrapper}
+import org.vitrivr.adampro.datatypes.vector.Vector._
 import org.vitrivr.adampro.datatypes.vector.{DenseVectorWrapper, SparseVectorWrapper, Vector}
 import org.vitrivr.adampro.entity.AttributeDefinition
 import org.vitrivr.adampro.exception.GeneralAdamException
-import org.vitrivr.adampro.grpc.grpc.QueryMessage
+import org.vitrivr.adampro.grpc._
+import org.vitrivr.adampro.grpc.grpc.DistanceMessage.DistanceType
+import org.vitrivr.adampro.grpc.grpc.{QueryMessage, _}
 import org.vitrivr.adampro.main.AdamContext
-import org.vitrivr.adampro.query.{QueryCacheOptions, QueryHints}
 import org.vitrivr.adampro.query.distance._
 import org.vitrivr.adampro.query.handler.external.ExternalScanExpressions
 import org.vitrivr.adampro.query.handler.generic.{QueryEvaluationOptions, QueryExpression}
@@ -23,12 +26,8 @@ import org.vitrivr.adampro.query.information.InformationLevels
 import org.vitrivr.adampro.query.information.InformationLevels.{InformationLevel, LAST_STEP_ONLY}
 import org.vitrivr.adampro.query.progressive.{QueryHintsProgressivePathChooser, SimpleProgressivePathChooser}
 import org.vitrivr.adampro.query.query.{BooleanQuery, NearestNeighbourQuery, Predicate}
+import org.vitrivr.adampro.query.{QueryCacheOptions, QueryHints}
 import org.vitrivr.adampro.utils.Logging
-import org.vitrivr.adampro.datatypes.gis.{GeographyWrapper, GeometryWrapper}
-import org.vitrivr.adampro.grpc.grpc.DistanceMessage.DistanceType
-import org.vitrivr.adampro.grpc.grpc._
-import org.vitrivr.adampro.grpc._
-import org.vitrivr.adampro.datatypes.vector.Vector._
 
 import scala.concurrent.duration.Duration
 import scala.util.{Failure, Success, Try}
@@ -430,7 +429,7 @@ private[rpc] object RPCHelperMethods extends Logging {
     attributes.map(attribute => {
       val attributetype = getAdamType(attribute.attributetype)
 
-      if(attribute.handler != null && attribute.handler != ""){
+      if (attribute.handler != null && attribute.handler != "") {
         AttributeDefinition(attribute.name, attributetype, attribute.handler, attribute.params)
       } else {
         new AttributeDefinition(attribute.name, attributetype, attribute.params)
@@ -467,7 +466,7 @@ private[rpc] object RPCHelperMethods extends Logging {
     * @param attributetype
     * @return
     */
-  def prepareDataTypeConverter(attributetype : AttributeType): (DataMessage) => (Any) = attributetype match {
+  def prepareDataTypeConverter(attributetype: AttributeType): (DataMessage) => (Any) = attributetype match {
     case INTTYPE => (x) => x.getIntData
     case LONGTYPE => (x) => x.getLongData
     case FLOATTYPE => (x) => x.getFloatData
@@ -475,7 +474,7 @@ private[rpc] object RPCHelperMethods extends Logging {
     case STRINGTYPE => (x) => x.getStringData
     case TEXTTYPE => (x) => x.getStringData
     case BOOLEANTYPE => (x) => x.getBooleanData
-    case VECTORTYPE => (x) =>  Vector.conv_vec2dspark(RPCHelperMethods.prepareVector(x.getVectorData).asInstanceOf[DenseMathVector])
+    case VECTORTYPE => (x) => Vector.conv_vec2dspark(RPCHelperMethods.prepareVector(x.getVectorData).asInstanceOf[DenseMathVector])
     case SPARSEVECTORTYPE => (x) => SparseVectorWrapper(RPCHelperMethods.prepareVector(x.getVectorData).asInstanceOf[SparseMathVector]).toRow()
     case GEOGRAPHYTYPE => (x) => GeographyWrapper(x.getGeographyData).toRow()
     case GEOMETRYTYPE => (x) => GeographyWrapper(x.getGeometryData).toRow()
@@ -503,29 +502,33 @@ private[rpc] object RPCHelperMethods extends Logging {
         val res = cols.map(col => {
           try {
             col.name -> {
-              col.dataType match {
-                case BooleanType => DataMessage().withBooleanData(row.getAs[Boolean](col.name))
-                case DoubleType => DataMessage().withDoubleData(row.getAs[Double](col.name))
-                case FloatType => DataMessage().withFloatData(row.getAs[Float](col.name))
-                case IntegerType => DataMessage().withIntData(row.getAs[Integer](col.name))
-                case LongType => DataMessage().withLongData(row.getAs[Long](col.name))
-                case StringType => DataMessage().withStringData(row.getAs[String](col.name))
-                case x => {
+              if (row.getAs[Any](col.name) != null) {
+                col.dataType match {
+                  case BooleanType => DataMessage().withBooleanData(row.getAs[Boolean](col.name))
+                  case DoubleType => DataMessage().withDoubleData(row.getAs[Double](col.name))
+                  case FloatType => DataMessage().withFloatData(row.getAs[Float](col.name))
+                  case IntegerType => DataMessage().withIntData(row.getAs[Integer](col.name))
+                  case LongType => DataMessage().withLongData(row.getAs[Long](col.name))
+                  case StringType => DataMessage().withStringData(row.getAs[String](col.name))
+                  case x => {
 
-                  if(DenseVectorWrapper.fitsType(x)){
-                    val vec = row.getAs[DenseSparkVector](col.name)
-                    DataMessage().withVectorData(VectorMessage().withDenseVector(DenseVectorMessage(vec.map(_.toFloat))))
-                  } else if (SparseVectorWrapper.fitsType(x)){
-                    val vec = SparseVectorWrapper.fromRow(row.getAs[SparseSparkVector](col.name))
-                    DataMessage().withVectorData(VectorMessage().withSparseVector(SparseVectorMessage(vec.index, vec.data.map(_.toFloat), vec.length  )))
-                  } else if (GeometryWrapper.fitsType(x)){
-                    DataMessage().withGeometryData(GeometryWrapper.fromRow(row.getAs(col.name)).desc)
-                  } else if (GeographyWrapper.fitsType(x)){
-                    DataMessage().withGeographyData(GeographyWrapper.fromRow(row.getAs(col.name)).desc)
-                  } else {
-                    DataMessage().withStringData("")
+                    if (DenseVectorWrapper.fitsType(x)) {
+                      val vec = row.getAs[DenseSparkVector](col.name)
+                      DataMessage().withVectorData(VectorMessage().withDenseVector(DenseVectorMessage(vec.map(_.toFloat))))
+                    } else if (SparseVectorWrapper.fitsType(x)) {
+                      val vec = SparseVectorWrapper.fromRow(row.getAs[SparseSparkVector](col.name))
+                      DataMessage().withVectorData(VectorMessage().withSparseVector(SparseVectorMessage(vec.index, vec.data.map(_.toFloat), vec.length)))
+                    } else if (GeometryWrapper.fitsType(x)) {
+                      DataMessage().withGeometryData(GeometryWrapper.fromRow(row.getAs(col.name)).desc)
+                    } else if (GeographyWrapper.fitsType(x)) {
+                      DataMessage().withGeographyData(GeographyWrapper.fromRow(row.getAs(col.name)).desc)
+                    } else {
+                      DataMessage().withStringData("")
+                    }
                   }
                 }
+              } else {
+                DataMessage()
               }
             }
           } catch {
