@@ -23,7 +23,6 @@ http://localhost:4040
 
 to open the ADAMpro UI. Furthermore, you can connect on port 5890 to make use of the database.
 
-Note that the Docker container downloads the newest version of the code from the repository and builds new jars every time the container is started. By adjusting the `/adampro/build.sh` script, this behaviour can be turned off.
 
 ### Manually building the Docker image
 Navigate to the Docker file in `./scripts/Docker/` and run 
