@@ -35,6 +35,8 @@ class SolrEngine(private val url: String)(@transient override implicit val ac: A
   private val SOLR_OPTION_ENTITYNAME = "storing-solr-corename"
   private val SOLR_OPTION_FIELDNAME = "storing-solr-fieldname"
 
+  private val SOLR_MAX_RESULTS = 5000
+
   /**
     *
     * @param props
@@ -145,7 +147,7 @@ class SolrEngine(private val url: String)(@transient override implicit val ac: A
         solrQuery.setFilterQueries(params.get("filter").get.split(",").toSeq: _*)
       }
       solrQuery.setFields("*", "score")
-      solrQuery.setRows(500)
+      solrQuery.setRows(SOLR_MAX_RESULTS)
       solrQuery.setSort("score", SolrQuery.ORDER.desc)
       solrQuery.set("defType", "edismax")
 
