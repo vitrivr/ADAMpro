@@ -4,62 +4,40 @@ ADAMpro is the persistent polystore (based on Apache Spark) for all data require
 
 ## Getting started
 
-### sbt setupDocker
-ADAMpro can be built and run using the provided [scripts](../scripts). The easiest way to run ADAMpro is to use [Docker](https://www.docker.com/).
+### Docker Hub
 
-Locally check out the git repository and run
+A Docker image of ADAMpro is released on [Docker Hub](https://hub.docker.com/r/vitrivr/adampro/).
 
+Pull the image using
 ```
-sbt setupDocker
+docker pull vitrivr/adampro
 ```
 
-in the main folder. Note that `sbt setupDocker` is an alias for running the `./scripts/setupDocker.sh` script.
+or run directly using (with the recommended ports being opened):
+```
+docker run -p 5005:5005 -p 5890:5890 -p 9099:9099 -p 5432:5432 -p 9000:9000 -p 4040:4040 vitrivr/adampro
+```
 
-The script will build the Docker image (the Docker file is located in the folder `./scripts/Docker/`), possibly populate it with data (if data is available in the correct format in the folder `./scripts/Docker/data/`), and run it. After the creation of the container, you can navigate to
+After the creation of the container, you can navigate to
 
 ```
 http://localhost:4040
 ```
-
 to open the ADAMpro UI. Furthermore, you can connect on port 5890 to make use of the database.
 
-
-### Manually building the Docker image
-Navigate to the Docker file in `./scripts/Docker/` and run 
-
-```
-docker build -t adampro .
-```
-
-Note again that data that is located in the sub-folder `data` is copied into the Docker image and is being used (if in the correct format). 
- 
-Then run 
-
-```
-docker run -d -p 5890:5890 -p 9099:9099 adampro
-```
-
-to start the Docker container.
-
-
-### pre-built Images
-We provide pre-built Docker images to download:
-
-- [Empty ADAMpro](http://download-dbis.dmi.unibas.ch/ADAMpro/adampro2-nodata.tar)
-- [ADAMpro with OSVC](http://download-dbis.dmi.unibas.ch/ADAMpro/adampro2-osvc.tar)
+We provide a pre-built image [ADAMpro container with OSVC](http://download-dbis.dmi.unibas.ch/ADAMpro/adampro2-osvc.tar) for download.
 
 To use the pre-built images, download the image and run
 
 ```
-docker load < adampro2-nodata.tar
+docker load < adampro2-osvc.tar
 ```
 
 ### Running ADAMpro locally
-ADAMpro can be built using [sbt](http://www.scala-sbt.org/). We provide various sbt tasks to be run on the ADAMpro project, to simplify the deployment and development.
+ADAMpro can be built using [sbt](http://www.scala-sbt.org/). We provide various sbt tasks to simplify the deployment and development.
 
 * `assembly` creates a fat jar with ADAMpro to submit to spark, run `sbt proto` first
 * `proto` generates a jar file from the grpc folder and includes it in the main project (this is necessary, as shadowing is necessary of the netty dependency)
-* `setupDocker` sets up a self-contained Docker image for running ADAMpro
 
 Other helpful sbt tasks include
 * `dependencyTree` displays the dependencies to other packages
