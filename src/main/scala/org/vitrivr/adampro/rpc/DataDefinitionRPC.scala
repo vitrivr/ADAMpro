@@ -144,7 +144,7 @@ class DataDefinitionRPC extends AdamDefinitionGrpc.AdamDefinition with Logging {
     })
 
     val rdd = ac.sc.parallelize(rows)
-    val df = ac.sqlContext.createDataFrame(rdd, StructType(entity.get.schema().map(field => StructField(field.name, field.attributeType.datatype))))
+    val df = ac.sqlContext.createDataFrame(rdd, StructType(entity.get.schema(fullSchema = false).map(field => StructField(field.name, field.attributeType.datatype))))
 
     val res = EntityOp.insert(entity.get.entityname, df)
 
