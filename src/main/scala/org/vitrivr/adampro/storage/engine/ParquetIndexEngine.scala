@@ -1,7 +1,12 @@
 package org.vitrivr.adampro.storage.engine
 
+import org.apache.spark.sql.{Row, SaveMode}
+import org.apache.spark.sql.types.{StructField, StructType}
 import org.vitrivr.adampro.config.AdamConfig
+import org.vitrivr.adampro.entity.AttributeDefinition
 import org.vitrivr.adampro.main.AdamContext
+
+import scala.util.{Success, Try}
 
 /**
   * ADAMpro
@@ -27,5 +32,17 @@ class ParquetIndexEngine()(@transient override implicit val ac: AdamContext) ext
     } else {
       subengine = new ParquetLocalEngine(AdamConfig.cleanPath(props.get("path").get))
     }
+  }
+
+  /**
+    *
+    * @param storename  adapted entityname to store feature to
+    * @param attributes attributes of the entity (w.r.t. handler)
+    * @param params     creation parameters
+    * @return options to store
+    */
+  override def create(storename: String, attributes: Seq[AttributeDefinition], params: Map[String, String])(implicit ac: AdamContext): Try[Map[String, String]] = {
+    log.debug("parquet create operation")
+    Success(Map())
   }
 }

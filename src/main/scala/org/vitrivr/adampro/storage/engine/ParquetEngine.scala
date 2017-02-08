@@ -12,7 +12,8 @@ import org.vitrivr.adampro.utils.Logging
 import org.apache.commons.io.FileUtils
 import org.apache.hadoop.conf.Configuration
 import org.apache.hadoop.fs.{FileSystem, Path}
-import org.apache.spark.sql.{DataFrame, SaveMode}
+import org.apache.spark.sql.types.{StructField, StructType}
+import org.apache.spark.sql.{DataFrame, Row, SaveMode}
 
 import scala.util.{Failure, Success, Try}
 
@@ -56,7 +57,9 @@ class ParquetEngine()(@transient override implicit val ac: AdamContext) extends 
     */
   override def create(storename: String, attributes: Seq[AttributeDefinition], params: Map[String, String])(implicit ac: AdamContext): Try[Map[String, String]] = {
     log.debug("parquet create operation")
-    Success(Map())
+
+    val schema = StructType(attributes.map(attribute => StructField(attribute.name.toString, attribute.attributeType.datatype)))
+    write(storename, ac.spark.createDataFrame(ac.sc.emptyRDD[Row], schema), attributes, SaveMode.ErrorIfExists, params)
   }
 
   /**
