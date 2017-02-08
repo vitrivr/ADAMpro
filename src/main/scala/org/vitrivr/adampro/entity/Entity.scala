@@ -300,7 +300,7 @@ case class Entity(entityname: EntityName)(@transient implicit val ac: AdamContex
       //AUTOTYPE attributes
       val autoAttributes = schema(typeFilter = Some(Seq(AttributeTypes.AUTOTYPE)), fullSchema = false)
       if (autoAttributes.nonEmpty) {
-        if (autoAttributes.map(_.name).exists(x => data.schema.fieldNames.contains(x))) {
+        if (autoAttributes.map(_.name).exists(x => data.schema.fieldNames.map(AttributeNameHolder(_)).contains(x))) {
           return Failure(new GeneralAdamException("the attributes " + autoAttributes.map(_.name).mkString(", ") + " have been specified as auto and should therefore not be provided"))
         }
 
