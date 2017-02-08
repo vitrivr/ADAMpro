@@ -2,12 +2,15 @@ package org.vitrivr.adampro.storage.engine
 
 import java.sql.{Connection, DriverManager}
 
+import org.apache.spark.ml.attribute
+import org.apache.spark.sql.types.{StructField, StructType}
 import org.vitrivr.adampro.datatypes.AttributeTypes
 import org.vitrivr.adampro.datatypes.AttributeTypes.AttributeType
 import org.vitrivr.adampro.entity.AttributeDefinition
 import org.vitrivr.adampro.main.AdamContext
 import org.vitrivr.adampro.query.query.Predicate
-import org.apache.spark.sql.{DataFrame, SaveMode}
+import org.apache.spark.sql.{DataFrame, Row, SaveMode}
+import spire.syntax.field
 
 import scala.util.{Failure, Success, Try}
 
@@ -49,6 +52,60 @@ class PostgisEngine(private val url: String, private val user: String, private v
   }
 
   /**
+    * Create the entity.
+    *
+    * @param storename  adapted entityname to store feature to
+    * @param attributes attributes of the entity (w.r.t. handler)
+    * @param params     creation parameters
+    * @return options to store
+    */
+  override def create(storename: String, attributes: Seq[AttributeDefinition], params: Map[String, String])(implicit ac: AdamContext): Try[Map[String, String]] = {
+    log.debug("postgis create operation")
+
+    super.create(storename, attributes, params)(ac)
+
+    val connection = openConnection()
+
+    try {
+      val typeGeographyStmt = attributes.filter(attribute => attribute.attributeType == AttributeTypes.GEOGRAPHYTYPE).map {
+        attribute =>
+          val attributename = attribute.name
+          s"""ALTER TABLE $storename ALTER $attributename TYPE GEOGRAPHY(point,4326)""".stripMargin
+      }.mkString("; ")
+
+      val typeGeometryStmt = attributes.filter(attribute => attribute.attributeType == AttributeTypes.GEOMETRYTYPE).map {
+        attribute =>
+          val attributename = attribute.name
+          //TODO: possibly use parameters here to specify the SRID
+          s"""ALTER TABLE $storename ALTER $attributename TYPE GEOMETRY(point,4326)""".stripMargin
+       }.mkString("; ")
+
+      //indexes
+      val indexGeographyStmt = attributes.filter(attribute => attribute.attributeType == AttributeTypes.GEOGRAPHYTYPE).map {
+        attribute =>
+          val attributename = attribute.name
+          s"""CREATE INDEX ON $storename USING gist($attributename)""".stripMargin
+      }.mkString("; ")
+
+      val indexGeometryStmt = attributes.filter(attribute => attribute.attributeType == AttributeTypes.GEOMETRYTYPE).map {
+        attribute =>
+          val attributename = attribute.name
+          s"""CREATE INDEX ON $storename USING gist($attributename)""".stripMargin
+      }.mkString("; ")
+
+      connection.createStatement().executeUpdate(typeGeographyStmt + "; " + typeGeometryStmt + "; " +  indexGeographyStmt + "; " + indexGeometryStmt)
+
+      Success(Map())
+    } catch {
+      case e: Exception =>
+        Failure(e)
+    } finally {
+      connection.close()
+    }
+  }
+
+
+    /**
     * Read entity.
     *
     * @param storename  adapted entityname to store feature to

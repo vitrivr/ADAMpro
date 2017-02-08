@@ -2,7 +2,8 @@ package org.vitrivr.adampro.query.handler.external
 
 import org.apache.spark.sql.DataFrame
 import org.vitrivr.adampro.entity.Entity
-import org.vitrivr.adampro.entity.Entity._
+import org.vitrivr.adampro.entity.Entity.EntityName
+import org.vitrivr.adampro.exception.GeneralAdamException
 import org.vitrivr.adampro.main.AdamContext
 import org.vitrivr.adampro.query.handler.generic.{ExpressionDetails, QueryEvaluationOptions, QueryExpression}
 
@@ -10,11 +11,14 @@ import org.vitrivr.adampro.query.handler.generic.{ExpressionDetails, QueryEvalua
   * ADAMpro
   *
   * Ivan Giangreco
-  * September 2016
+  * February 2017
   */
-case class GisScanExpression(entityname: EntityName, handlername : String, params: Map[String, String], id: Option[String] = None)(@transient implicit val ac: AdamContext) extends QueryExpression(id) {
-  override val info = ExpressionDetails(None, Some("Gis Scan Expression"), id, None)
+case class GenericExternalScanExpression(entityname: EntityName, handlername : String, params: Map[String, String], id: Option[String] = None)(@transient implicit val ac: AdamContext) extends QueryExpression(id) {
+  override val info = ExpressionDetails(None, Some("Generic External Scan Expression"), id, None)
 
+  if (!ac.storageHandlerRegistry.value.contains(handlername)) {
+    throw new GeneralAdamException("no handler '" + handlername + "' found in registry")
+  }
   private val handler = {
     assert(ac.storageHandlerRegistry.value.get(handlername).isDefined)
     ac.storageHandlerRegistry.value.get(handlername).get

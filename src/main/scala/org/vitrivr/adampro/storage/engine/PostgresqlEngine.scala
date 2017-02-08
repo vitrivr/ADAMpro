@@ -11,6 +11,7 @@ import org.vitrivr.adampro.query.query.Predicate
 import com.mchange.v2.c3p0.ComboPooledDataSource
 import org.apache.spark.sql.types.{StructField, StructType}
 import org.apache.spark.sql.{DataFrame, Row, SaveMode}
+import spire.syntax.field
 
 import scala.util.{Failure, Success, Try}
 
@@ -107,27 +108,27 @@ class PostgresqlEngine(private val url: String, private val user: String, privat
         return Failure(tableStmt.failed.get)
       }
 
-      //make fields unique
+      //make attributes unique
       val uniqueStmt = attributes.filter(_.params.getOrElse("unique", "false").toBoolean).map {
-        field =>
-          val fieldname = field.name
-          s"""ALTER TABLE $storename ADD UNIQUE ($fieldname)""".stripMargin
+        attribute =>
+          val attributename = attribute.name
+          s"""ALTER TABLE $storename ADD UNIQUE ($attributename)""".stripMargin
       }.mkString("; ")
 
       //add index to table
       val indexedStmt = (attributes.filter(_.params.getOrElse("indexed", "false").toBoolean) ++ attributes.filter(_.pk)).distinct.map {
-        field =>
-          val fieldname = field.name
-          s"""CREATE INDEX ON $storename ($fieldname)""".stripMargin
+        attribute =>
+          val attributename = attribute.name
+          s"""CREATE INDEX ON $storename ($attributename)""".stripMargin
       }.mkString("; ")
 
       //add primary key
-      val pkfield = attributes.filter(_.pk)
-      assert(pkfield.size <= 1)
-      val pkStmt = pkfield.map {
-        case field =>
-          val fieldname = field.name
-          s"""ALTER TABLE $storename ADD PRIMARY KEY ($fieldname)""".stripMargin
+      val pkattribute = attributes.filter(_.pk)
+      assert(pkattribute.size <= 1)
+      val pkStmt = pkattribute.map {
+        case attribute =>
+          val attributename = attribute.name
+          s"""ALTER TABLE $storename ADD PRIMARY KEY ($attributename)""".stripMargin
       }.mkString("; ")
 
       connection.createStatement().executeUpdate(uniqueStmt + "; " + indexedStmt + "; " + pkStmt)

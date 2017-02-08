@@ -161,9 +161,10 @@ class PostGisRelation(url: String, table: String, parts: Array[Partition], param
                   stmt.setArray(i + 1, array)
                 case x => {
                   if (GeometryWrapper.fitsType(x)) {
-                    stmt.setString(i + 1, GeometryWrapper.fromRow(row.getStruct(i)).getValue)
+                    //TODO: possibly adjust SRID
+                    stmt.setString(i + 1, "SRID=4326;" + GeometryWrapper.fromRow(row.getStruct(i)).getValue + "") //insert data as e.g., POINT(x,y)
                   } else if (GeographyWrapper.fitsType(x)) {
-                    stmt.setString(i + 1, GeographyWrapper.fromRow(row.getStruct(i)).getValue)
+                    stmt.setString(i + 1, "SRID=4326;" + GeographyWrapper.fromRow(row.getStruct(i)).getValue + "") //insert data as e.g., POINT(x,y)
                   } else {
                     throw new IllegalArgumentException(
                       s"Can't translate non-null value for field $i")

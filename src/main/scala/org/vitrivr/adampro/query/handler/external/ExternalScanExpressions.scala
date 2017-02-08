@@ -13,9 +13,7 @@ import org.vitrivr.adampro.query.handler.generic.QueryExpression
 object ExternalScanExpressions {
   def toQueryExpression(handlername: String, entityname: EntityName, params: Map[String, String], id: Option[String] = None)(implicit ac: AdamContext): QueryExpression = {
     handlername match {
-      case "solr" => new SolrScanExpression(entityname, handlername, params, id)
-      case "gis" => new GisScanExpression(entityname, handlername, params, id)
-      case _ => null
+      case _ => new GenericExternalScanExpression(entityname, handlername, params, id)
     }
   }
 }
