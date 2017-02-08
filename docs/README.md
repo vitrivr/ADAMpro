@@ -85,7 +85,11 @@ sbt assembly
 ./spark-submit --master "local[4]" --driver-memory 2g --executor-memory 2g --class org.vitrivr.adampro.main.Startup $ADAM_HOME/ADAMpro-assembly-0.1.0.jar
 ```
 
-ADAMpro can also be started locally, e.g., from an IDE. For this, remove the `% "provided"` statements from `build.sbt` and run the main class `org.vitrivr.adampro.main.Startup` (note that the storage engines have to be running or you have to adjust the config file). 
+ADAMpro can also be started locally, e.g., from an IDE. For this, remove the `% "provided"` statements from `build.sbt` and the marked line `ExclusionRule("io.netty")`, and run the main class `org.vitrivr.adampro.main.Startup`. You can use
+```
+sbt run
+```
+for running ADAMpro, as well. **Note that the storage engines specified in the configuration have to be running already or you have to adjust the config file accordingly.**
 
 
 ## Configuration
