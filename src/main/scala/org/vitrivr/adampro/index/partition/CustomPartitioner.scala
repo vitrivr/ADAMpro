@@ -1,9 +1,10 @@
 package org.vitrivr.adampro.index.partition
 
+import org.apache.spark.sql.DataFrame
 import org.vitrivr.adampro.datatypes.vector.Vector._
+import org.vitrivr.adampro.entity.Entity.AttributeName
 import org.vitrivr.adampro.entity.EntityNameHolder
 import org.vitrivr.adampro.main.AdamContext
-import org.apache.spark.sql.DataFrame
 
 /**
   * ADAMpar.
@@ -27,12 +28,12 @@ abstract class CustomPartitioner {
     * Maybe in the future the indexname will be removed and each partitioner will train on their own keys.
     *
     * @param data        DataFrame you want to partition
-    * @param cols        Columns you want to perform the partition on. If none are provided, the index pk is used instead
+    * @param attribute   Attribute you want to perform the partition on. If none are provided, the index pk is used instead
     * @param indexName   Will be used to store partitioner information in the catalog
     * @param nPartitions how many partitions shall be created
     * @return the partitioned DataFrame
     */
-  def apply(data: DataFrame, cols: Option[String] = None, indexName: Option[EntityNameHolder] = None, nPartitions: Int, options: Map[String, String] = Map[String, String]())(implicit ac: AdamContext): DataFrame
+  def apply(data: DataFrame, attribute: Option[AttributeName] = None, indexName: Option[EntityNameHolder] = None, nPartitions: Int, options: Map[String, String] = Map[String, String]())(implicit ac: AdamContext): DataFrame
 
   /** Returns the partitions to be queried for a given Featurevector */
   def getPartitions(q: MathVector, dropPercentage: Double, indexName: EntityNameHolder)(implicit ac: AdamContext): Seq[Int]

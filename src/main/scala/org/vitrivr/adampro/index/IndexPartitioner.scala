@@ -5,6 +5,7 @@ import org.apache.spark.rdd.RDD
 import org.apache.spark.sql.{DataFrame, Row, SaveMode}
 import org.vitrivr.adampro.catalog.CatalogOperator
 import org.vitrivr.adampro.config.AttributeNames
+import org.vitrivr.adampro.entity.Entity.AttributeName
 import org.vitrivr.adampro.exception.GeneralAdamException
 import org.vitrivr.adampro.index.partition._
 import org.vitrivr.adampro.main.{AdamContext, SparkStartup}
@@ -25,13 +26,13 @@ object IndexPartitioner extends Logging {
     * @param index       index
     * @param nPartitions number of partitions
     * @param join        other dataframes to join on, on which the partitioning is performed
-    * @param col        columns to partition on, if not specified the primary key is used
+    * @param attribute        columns to partition on, if not specified the primary key is used
     * @param mode        partition mode
     * @param partitioner Which Partitioner you want to use.
     * @param options     Options for partitioner. See each partitioner for details
     * @return
     */
-  def apply(index: Index, nPartitions: Int, join: Option[DataFrame], col: Option[String], mode: PartitionMode.Value, partitioner: PartitionerChoice.Value = PartitionerChoice.SPARK, options: Map[String, String] = Map[String, String]())(implicit ac: AdamContext): Try[Index] = {
+  def apply(index: Index, nPartitions: Int, join: Option[DataFrame], attribute: Option[AttributeName], mode: PartitionMode.Value, partitioner: PartitionerChoice.Value = PartitionerChoice.SPARK, options: Map[String, String] = Map[String, String]())(implicit ac: AdamContext): Try[Index] = {
     log.debug("Repartitioning Index: " + index.indexname + " with partitioner " + partitioner)
     var data = index.getData().get.join(index.entity.get.getData().get, index.pk.name)
 
@@ -46,9 +47,9 @@ object IndexPartitioner extends Logging {
     try {
       //repartition
       data = partitioner match {
-        case PartitionerChoice.SPARK => SparkPartitioner(data, col, Some(index.indexname), nPartitions)
-        case PartitionerChoice.RANDOM => RandomPartitioner(data, col, Some(index.indexname), nPartitions)
-        case PartitionerChoice.ECP => ECPPartitioner(data, col, Some(index.indexname), nPartitions)
+        case PartitionerChoice.SPARK => SparkPartitioner(data, attribute, Some(index.indexname), nPartitions)
+        case PartitionerChoice.RANDOM => RandomPartitioner(data, attribute, Some(index.indexname), nPartitions)
+        case PartitionerChoice.ECP => ECPPartitioner(data, attribute, Some(index.indexname), nPartitions)
       }
 
       data = data.select(index.pk.name, AttributeNames.featureIndexColumnName)

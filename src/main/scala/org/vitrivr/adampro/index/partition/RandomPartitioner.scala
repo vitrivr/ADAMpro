@@ -3,6 +3,7 @@ package org.vitrivr.adampro.index.partition
 import org.apache.spark.Partitioner
 import org.apache.spark.sql.DataFrame
 import org.vitrivr.adampro.datatypes.vector.Vector.MathVector
+import org.vitrivr.adampro.entity.Entity.AttributeName
 import org.vitrivr.adampro.entity.EntityNameHolder
 import org.vitrivr.adampro.index.Index
 import org.vitrivr.adampro.index.Index.IndexName
@@ -40,7 +41,7 @@ object RandomPartitioner extends CustomPartitioner {
     * @param nPartitions how many partitions shall be created
     * @return the partitioned DataFrame
     */
-  override def apply(data: DataFrame, attribute: Option[String], indexName: Option[IndexName], nPartitions: Int, options: Map[String, String] = Map[String, String]())(implicit ac: AdamContext): DataFrame = {
+  override def apply(data: DataFrame, attribute: Option[AttributeName], indexName: Option[IndexName], nPartitions: Int, options: Map[String, String] = Map[String, String]())(implicit ac: AdamContext): DataFrame = {
     import ac.spark.implicits._
 
     val schema = data.schema

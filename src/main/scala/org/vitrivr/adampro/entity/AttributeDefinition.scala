@@ -2,6 +2,7 @@ package org.vitrivr.adampro.entity
 
 import org.vitrivr.adampro.config.AttributeNames
 import org.vitrivr.adampro.datatypes.AttributeTypes.AttributeType
+import org.vitrivr.adampro.entity.Entity.AttributeName
 import org.vitrivr.adampro.exception.GeneralAdamException
 import org.vitrivr.adampro.main.AdamContext
 import org.vitrivr.adampro.storage.StorageHandler
@@ -19,12 +20,12 @@ import scala.collection.mutable.ListBuffer
   * @param storagehandlername
   * @param params
   */
-case class AttributeDefinition(name: String, attributeType: AttributeType, storagehandlername: String, params: Map[String, String] = Map()) {
-  def this(name: String, attributetype: AttributeType, params: Map[String, String])(implicit ac: AdamContext) {
+case class AttributeDefinition(name: AttributeName, attributeType: AttributeType, storagehandlername: String, params: Map[String, String] = Map()) {
+  def this(name: AttributeName, attributetype: AttributeType, params: Map[String, String])(implicit ac: AdamContext) {
     this(name, attributetype, ac.storageHandlerRegistry.value.get(attributetype).get.name, params)
   }
 
-  def this(name: String, attributetype: AttributeType)(implicit ac: AdamContext) {
+  def this(name: AttributeName, attributetype: AttributeType)(implicit ac: AdamContext) {
     this(name, attributetype, ac.storageHandlerRegistry.value.get(attributetype).get.name, Map[String, String]())
   }
 

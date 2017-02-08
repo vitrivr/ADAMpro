@@ -2,6 +2,7 @@ package org.vitrivr.adampro.entity
 
 import org.apache.spark.sql.functions.col
 import org.apache.spark.sql.{DataFrame, SaveMode}
+import org.vitrivr.adampro.entity.Entity.AttributeName
 import org.vitrivr.adampro.exception.{AttributeNotExistingException, GeneralAdamException}
 import org.vitrivr.adampro.index.partition.PartitionMode
 import org.vitrivr.adampro.main.AdamContext
@@ -25,7 +26,7 @@ object EntityPartitioner {
     * @param mode        mode of partitioning (replacing data, etc.)
     * @return
     */
-  def apply(entity: Entity, npartitions: Int, join: Option[DataFrame] = None, attribute: Option[String], mode: PartitionMode.Value = PartitionMode.REPLACE_EXISTING)(implicit ac: AdamContext): Try[Entity] = {
+  def apply(entity: Entity, npartitions: Int, join: Option[DataFrame] = None, attribute: Option[AttributeName], mode: PartitionMode.Value = PartitionMode.REPLACE_EXISTING)(implicit ac: AdamContext): Try[Entity] = {
     //checks
     if (entity.handlers.filter(_.engine.repartitionable).isEmpty) {
       return Failure(new GeneralAdamException("no partitionable engine available in entity for performing repartitioning"))
@@ -57,7 +58,7 @@ object EntityPartitioner {
         entity.schema(fullSchema = false).groupBy(_.storagehandler).filter(_._1.engine.repartitionable).foreach {
           case (handler, attributes) =>
             val attributenames = attributes.map(_.name).+:(entity.pk.name)
-            val status = handler.write(entity.entityname, data.select(attributenames.map(col): _*), attributes, SaveMode.Overwrite)
+            val status = handler.write(entity.entityname, data.select(attributenames.map(x => col(x.toString)): _*), attributes, SaveMode.Overwrite)
 
             if (status.isFailure) {
               throw status.failed.get

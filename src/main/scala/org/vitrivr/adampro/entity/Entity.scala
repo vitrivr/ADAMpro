@@ -7,7 +7,7 @@ import org.apache.spark.storage.StorageLevel
 import org.vitrivr.adampro.config.AttributeNames
 import org.vitrivr.adampro.datatypes.AttributeTypes._
 import org.vitrivr.adampro.datatypes.{AttributeTypes, TupleID}
-import org.vitrivr.adampro.entity.Entity.EntityName
+import org.vitrivr.adampro.entity.Entity.{AttributeName, EntityName}
 import org.vitrivr.adampro.exception.{EntityExistingException, EntityNotExistingException, EntityNotProperlyDefinedException, GeneralAdamException}
 import org.vitrivr.adampro.index.Index
 import org.vitrivr.adampro.main.{AdamContext, SparkStartup}
@@ -53,7 +53,7 @@ case class Entity(entityname: EntityName)(@transient implicit val ac: AdamContex
     * @param fullSchema add internal fields as well (e.g. TID)
     * @return
     */
-  def schema(nameFilter: Option[Seq[String]] = None, typeFilter: Option[Seq[AttributeType]] = None, fullSchema: Boolean = true): Seq[AttributeDefinition] = {
+  def schema(nameFilter: Option[Seq[AttributeName]] = None, typeFilter: Option[Seq[AttributeType]] = None, fullSchema: Boolean = true): Seq[AttributeDefinition] = {
     checkVersions()
 
     if (_schema.isEmpty) {
@@ -132,7 +132,7 @@ case class Entity(entityname: EntityName)(@transient implicit val ac: AdamContex
     * @param predicates    attributename -> predicate (will only be applied if supported by handler)
     * @return
     */
-  def getData(nameFilter: Option[Seq[String]] = None, typeFilter: Option[Seq[AttributeType]] = None, handlerFilter: Option[StorageHandler] = None, predicates: Seq[Predicate] = Seq()): Option[DataFrame] = {
+  def getData(nameFilter: Option[Seq[AttributeName]] = None, typeFilter: Option[Seq[AttributeType]] = None, handlerFilter: Option[StorageHandler] = None, predicates: Seq[Predicate] = Seq()): Option[DataFrame] = {
     checkVersions()
 
     if (_data.isEmpty) {
@@ -241,7 +241,7 @@ case class Entity(entityname: EntityName)(@transient implicit val ac: AdamContex
     * @param k number of elements to show in preview
     * @return
     */
-  def show(k: Int): Option[DataFrame] = getData().map(_.select(schema(fullSchema = false).map(_.name).map(col) : _*).limit(k))
+  def show(k: Int): Option[DataFrame] = getData().map(_.select(schema(fullSchema = false).map(_.name).map(x => col(x.toString)) : _*).limit(k))
 
   private val MAX_INSERTS_BEFORE_VACUUM = SparkStartup.catalogOperator.getEntityOption(entityname, Some(Entity.MAX_INSERTS_VACUUMING)).get.get(Entity.MAX_INSERTS_VACUUMING).map(_.toInt).getOrElse(500)
 
@@ -526,6 +526,7 @@ case class Entity(entityname: EntityName)(@transient implicit val ac: AdamContex
 
 object Entity extends Logging {
   type EntityName = EntityNameHolder
+  type AttributeName = AttributeNameHolder
 
   private val COUNT_KEY = "ntuples"
   private val N_INSERTS = "ninserts"
@@ -578,7 +579,7 @@ object Entity extends Logging {
       }
 
       if (creationAttributes.map(_.name).distinct.length != creationAttributes.length) {
-        return Failure(EntityNotProperlyDefinedException("Entity defined with duplicate fields."))
+        return Failure(EntityNotProperlyDefinedException("Entity defined with duplicate fields; note that all attribute names have to be lower-case."))
       }
 
       val attributes = creationAttributes.+:(new AttributeDefinition(AttributeNames.internalIdColumnName, TupleID.AdamTupleID))

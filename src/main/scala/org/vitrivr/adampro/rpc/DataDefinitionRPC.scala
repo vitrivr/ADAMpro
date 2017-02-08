@@ -5,7 +5,7 @@ import org.apache.spark.annotation.Experimental
 import org.apache.spark.sql.Row
 import org.apache.spark.sql.types.{StructField, StructType}
 import org.vitrivr.adampro.api._
-import org.vitrivr.adampro.entity.Entity
+import org.vitrivr.adampro.entity.{AttributeNameHolder, Entity}
 import org.vitrivr.adampro.exception.GeneralAdamException
 import org.vitrivr.adampro.grpc.grpc.AdaptScanMethodsMessage.{IndexCollection, QueryCollection}
 import org.vitrivr.adampro.grpc.grpc._
@@ -468,7 +468,7 @@ class DataDefinitionRPC extends AdamDefinitionGrpc.AdamDefinition with Logging {
     val attribute = if (request.attributes.isEmpty) {
       None
     } else {
-      Some(request.attributes)
+      Some(AttributeNameHolder(request.attributes))
     }
 
     val option = request.option match {
@@ -517,7 +517,7 @@ class DataDefinitionRPC extends AdamDefinitionGrpc.AdamDefinition with Logging {
       case _ => PartitionMode.CREATE_NEW
     }
 
-    val res = EntityOp.partition(request.entity, request.numberOfPartitions, None, attribute, option)
+    val res = EntityOp.partition(request.entity, request.numberOfPartitions, None, attribute.map(AttributeNameHolder(_)), option)
 
     if (res.isSuccess) {
       Future.successful(AckMessage(AckMessage.Code.OK, res.get.entityname))

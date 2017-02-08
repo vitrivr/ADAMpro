@@ -10,6 +10,7 @@ import org.vitrivr.adampro.config.AttributeNames
 import org.vitrivr.adampro.datatypes.AttributeTypes
 import org.vitrivr.adampro.datatypes.AttributeTypes.AttributeType
 import org.vitrivr.adampro.entity.AttributeDefinition
+import org.vitrivr.adampro.entity.Entity.AttributeName
 import org.vitrivr.adampro.main.AdamContext
 import org.vitrivr.adampro.query.query.Predicate
 import org.vitrivr.adampro.utils.Logging
@@ -218,7 +219,7 @@ class SolrEngine(private val url: String)(@transient override implicit val ac: A
     * @param nameDic
     * @return
     */
-  private def adjustAttributeName(originalQuery: String, nameDic: Map[String, String]): String = {
+  private def adjustAttributeName(originalQuery: String, nameDic: Map[AttributeName, String]): String = {
 
     val pattern = "([^:\"']+)|(\"[^\"]*\")|('[^']*')".r
     pattern.findAllIn(originalQuery).zipWithIndex.map {

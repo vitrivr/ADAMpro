@@ -169,7 +169,7 @@ object IndexOp extends GenericOp {
     * @param partitioner partitioner to use
     * @return
     */
-  def partition(indexname: IndexName, nPartitions: Int, joins: Option[DataFrame], attribute: Option[String], mode: PartitionMode.Value, partitioner: PartitionerChoice.Value = PartitionerChoice.SPARK, options: Map[String, String] = Map[String, String]())(implicit ac: AdamContext): Try[Index] = {
+  def partition(indexname: IndexName, nPartitions: Int, joins: Option[DataFrame], attribute: Option[AttributeName], mode: PartitionMode.Value, partitioner: PartitionerChoice.Value = PartitionerChoice.SPARK, options: Map[String, String] = Map[String, String]())(implicit ac: AdamContext): Try[Index] = {
     execute("repartition index " + indexname + " operation") {
       IndexPartitioner(Index.load(indexname).get, nPartitions, joins, attribute, mode, partitioner, options)
     }

@@ -3,6 +3,7 @@ package org.vitrivr.adampro.index.partition
 import org.apache.spark.HashPartitioner
 import org.apache.spark.sql.DataFrame
 import org.vitrivr.adampro.datatypes.vector.Vector.MathVector
+import org.vitrivr.adampro.entity.Entity.AttributeName
 import org.vitrivr.adampro.entity.EntityNameHolder
 import org.vitrivr.adampro.exception.GeneralAdamException
 import org.vitrivr.adampro.index.Index
@@ -31,21 +32,21 @@ object SparkPartitioner extends CustomPartitioner with Logging with Serializable
     * @param nPartitions how many partitions shall be created
     * @return the partitioned DataFrame
     */
-  override def apply(data: DataFrame, attribute: Option[String], indexName: Option[IndexName], nPartitions: Int, options: Map[String, String] = Map[String, String]())(implicit ac: AdamContext): DataFrame = {
+  override def apply(data: DataFrame, attribute: Option[AttributeName], indexName: Option[IndexName], nPartitions: Int, options: Map[String, String] = Map[String, String]())(implicit ac: AdamContext): DataFrame = {
     SparkStartup.catalogOperator.dropPartitioner(indexName.get)
     SparkStartup.catalogOperator.createPartitioner(indexName.get, nPartitions, null, SparkPartitioner)
 
     val partCol = if (attribute.isDefined) {
       val entityColNames = data.schema.map(_.name)
 
-      if (!entityColNames.contains(attribute.get)) {
+      if (!entityColNames.contains(attribute.get.toString)) {
         throw new GeneralAdamException("the columns " + attribute + " does not exist in the data " + entityColNames.mkString("(", ",", ")"))
       }
 
-      attribute.get
+      attribute.get.toString
     } else {
       if (indexName.isDefined) {
-        Index.load(indexName.get).get.pk.name
+        Index.load(indexName.get).get.pk.name.toString
       } else {
         data.schema.head.name
       }

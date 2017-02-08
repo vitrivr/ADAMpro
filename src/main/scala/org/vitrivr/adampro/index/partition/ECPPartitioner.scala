@@ -14,6 +14,7 @@ import org.apache.spark.Partitioner
 import org.apache.spark.rdd.RDD
 import org.apache.spark.sql.{DataFrame, Row}
 import org.apache.spark.util.random.Sampling
+import org.vitrivr.adampro.entity.Entity.AttributeName
 import org.vitrivr.adampro.index.Index.IndexName
 
 /**
@@ -62,7 +63,7 @@ object ECPPartitioner extends CustomPartitioner with Logging with Serializable {
     * @param npartitions how many partitions shall be created
     * @return the partitioned DataFrame
     */
-  override def apply(data: DataFrame, attribute: Option[String], indexName: Option[IndexName], npartitions: Int, options: Map[String, String] = Map[String, String]())(implicit ac: AdamContext): DataFrame = {
+  override def apply(data: DataFrame, attribute: Option[AttributeName], indexName: Option[IndexName], npartitions: Int, options: Map[String, String] = Map[String, String]())(implicit ac: AdamContext): DataFrame = {
     import ac.spark.implicits._
 
     //loads the first ECPIndex

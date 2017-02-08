@@ -221,7 +221,7 @@ object EntityOp extends GenericOp {
     * @param mode        partition mode (e.g., create new index, replace current index, etc.)
     * @return
     */
-  def partition(entityname: EntityName, npartitions: Int, joins: Option[DataFrame], attribute: Option[String], mode: PartitionMode.Value)(implicit ac: AdamContext): Try[Entity] = {
+  def partition(entityname: EntityName, npartitions: Int, joins: Option[DataFrame], attribute: Option[AttributeName], mode: PartitionMode.Value)(implicit ac: AdamContext): Try[Entity] = {
     execute("repartition entity " + entityname + " operation") {
       val entity = Entity.load(entityname)
 
