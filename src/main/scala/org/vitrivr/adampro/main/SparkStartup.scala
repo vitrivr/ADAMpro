@@ -40,6 +40,8 @@ object SparkStartup extends Logging {
       .getOrCreate()
 
     @transient implicit lazy val sc = spark.sparkContext
+    //the following line has been added to to a bug related to SPARK-18883 and SPARK-15849
+    sc.hadoopConfiguration.set("mapreduce.fileoutputcommitter.algorithm.version", "2")
 
     @transient implicit lazy val config = new AdamConfig()
     sc.setLogLevel(config.loglevel)
