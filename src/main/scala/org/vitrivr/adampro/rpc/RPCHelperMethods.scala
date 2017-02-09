@@ -49,6 +49,10 @@ private[rpc] object RPCHelperMethods extends Logging {
     try {
       val queryid = prepareQueryId(qm.queryid)
 
+      if(qm.from.isEmpty){
+        throw new GeneralAdamException("no from expression in query message")
+      }
+
       val entityname = qm.from.get.source.entity
       val indexname = qm.from.get.source.index
       val subexpression = qm.from.get.source.expression
@@ -127,7 +131,9 @@ private[rpc] object RPCHelperMethods extends Logging {
 
       Success(scan)
     } catch {
-      case e: Exception => Failure(e)
+      case e: Exception =>
+        log.error("error while parsing expression", e)
+        Failure(e)
     }
   }
 
