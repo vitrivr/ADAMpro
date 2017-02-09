@@ -143,11 +143,6 @@ assemblyOption in assembly :=
 
 val meta = """META.INF(.)*""".r
 assemblyMergeStrategy in assembly := {
-  case x if x.contains("slf4j-api") => MergeStrategy.last
-  case x if x.contains("org.slf4j") => MergeStrategy.last
-  case x if x.contains("org.apache.httpcomponents") => MergeStrategy.last
-  case x if x.contains("org.apache.commons") => MergeStrategy.last
-  case x if x.contains("org.apache.derby") => MergeStrategy.last
   case PathList("application.conf") => MergeStrategy.discard
   case PathList("javax", "servlet", xs@_*) => MergeStrategy.last
   case PathList(ps@_*) if ps.last endsWith ".html" => MergeStrategy.last
