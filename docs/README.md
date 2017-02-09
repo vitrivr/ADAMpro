@@ -36,7 +36,7 @@ docker load < adampro2-osvc.tar
 Our Docker containers come with an update script located at `/adampro/update.sh`, which allows you to check out the newest version of the code from the repository and re-build the jars without creating a new container (and therefore loosing existing data). To run the update routine, run in your host system:
 
 ```
-docker exec adampro /adampro/build.sh
+docker exec adampro /adampro/update.sh
 ```
 
 ### Running ADAMpro locally
