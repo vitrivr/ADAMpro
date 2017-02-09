@@ -4,7 +4,7 @@ ADAMpro is the persistent polystore (based on Apache Spark) for all data require
 
 ## Getting started
 
-### Docker Hub
+### Docker container
 
 A Docker image of ADAMpro is released on [Docker Hub](https://hub.docker.com/r/vitrivr/adampro/).
 
@@ -31,6 +31,12 @@ To use the pre-built images, download the image and run
 
 ```
 docker load < adampro2-osvc.tar
+```
+
+Our Docker containers come with an update script located at `/adampro/update.sh`, which allows you to check out the newest version of the code from the repository and re-build the jars without creating a new container (and therefore loosing existing data). To run the update routine, run in your host system:
+
+```
+docker exec adampro /adampro/build.sh
 ```
 
 ### Running ADAMpro locally

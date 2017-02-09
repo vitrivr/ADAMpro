@@ -71,8 +71,8 @@ RUN cd $ADAM_CODE && sbt proto && sbt assembly && sbt web/assembly
 RUN cp $ADAM_CODE/conf/log4j.xml ${ADAM_HOME}/log4j.xml
 RUN cp $ADAM_CODE/target/scala-2.11/ADAMpro-assembly-0.1.0.jar ${ADAM_HOME}/ADAMpro-assembly-0.1.0.jar && cp $ADAM_CODE/web/target/scala-2.11/ADAMpro-web-assembly-0.1.0.jar ${ADAM_HOME}/ADAMpro-web-assembly-0.1.0.jar
 COPY adampro.conf.template ${ADAM_HOME}/adampro.conf.template
-COPY build.sh ${ADAM_HOME}/build.sh
-RUN chmod 700 ${ADAM_HOME}/build.sh
+COPY update.sh ${ADAM_HOME}/update.sh
+RUN chmod 700 ${ADAM_HOME}/update.sh
 
 RUN mkdir -p ${ADAM_HOME}/logs/
 
