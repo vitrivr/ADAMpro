@@ -25,13 +25,17 @@ http://localhost:4040
 ```
 to open the ADAMpro UI. Furthermore, you can connect on port 5890 to make use of the database.
 
-We provide a pre-built image [ADAMpro container with OSVC](http://download-dbis.dmi.unibas.ch/ADAMpro/adampro2-osvc.tar) for download.
+We provide the OSVC data for [download](http://download-dbis.dmi.unibas.ch/ADAMpro/osvc.tar.gz).
 
-To use the pre-built images, download the image and run
+Untar the folder and copy to `adampro/data`; then restart the container.
 
 ```
-docker load < adampro2-osvc.tar
+docker cp osvc.tar.gz adampro:/adampro/data
+docker exec adampro tar -C /adampro/data/ -xzf /adampro/data/osvc.tar.gz 
+docker restart adampro
 ```
+
+Note that if solr data is available, `$SOLR_HOME/server/solr` should point to `$ADAM_HOME/data/data/solr`. 
 
 Our Docker containers come with an update script located at `/adampro/update.sh`, which allows you to check out the newest version of the code from the repository and re-build the jars without creating a new container (and therefore loosing existing data). To run the update routine, run in your host system:
 
