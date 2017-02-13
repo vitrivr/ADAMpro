@@ -1,5 +1,7 @@
 package org.vitrivr.adampro.main
 
+import java.net.{InetAddress, NetworkInterface}
+
 import org.apache.spark.SparkConf
 import org.apache.spark.sql.SparkSession
 import org.vitrivr.adampro.catalog.{CatalogOperator, LogOperator}
@@ -57,4 +59,29 @@ object SparkStartup extends Logging {
 
   mainContext.config.engines.zipWithIndex.foreach { case(engine, priority) => mainContext.storageHandlerRegistry.value.register(engine, mainContext.config.engines.length - priority)(mainContext) }
   OptimizerRegistry.loadDefault()(mainContext)
+
+  if(isLocal(InetAddress.getByName(mainContext.sc.getConf.get("spark.driver.host")))){
+    //start RPC only on master
+    new Thread(new RPCStartup(SparkStartup.mainContext.config.grpcPort)).start
+  } else {
+    log.warn("not starting RPC connection, as node runs worker")
+  }
+
+
+  /**
+    *
+    * @param ipaddr
+    * @return
+    */
+  def isLocal(ipaddr : InetAddress) : Boolean = {
+    if (ipaddr.isAnyLocalAddress || ipaddr.isLoopbackAddress){
+      true
+    } else {
+      try {
+        (NetworkInterface.getByInetAddress(ipaddr) != null)
+      } catch {
+        case e : Exception => false
+      }
+    }
+  }
 }

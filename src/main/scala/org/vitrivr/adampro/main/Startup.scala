@@ -12,6 +12,5 @@ import org.apache.spark
 object Startup {
   def main(args : Array[String]) {
     SparkStartup
-    new Thread(new RPCStartup(SparkStartup.mainContext.config.grpcPort)).start
   }
 }
