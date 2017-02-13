@@ -94,6 +94,8 @@ EXPOSE 4040
 EXPOSE 5890
 # port for ADAMpro web UI
 EXPOSE 9099
+# port for spark notebook
+EXPOSE 10088
 
 # bootstrap
 ENV ADAMPRO_START_POSTGRES true
