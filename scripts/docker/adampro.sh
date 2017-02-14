@@ -28,5 +28,11 @@ if [[ ( -z "$ADAMPRO_START_NOTEBOOK" ) || ( "$ADAMPRO_START_NOTEBOOK" == "true")
     $SPARK_NOTEBOOK_HOME/bin/spark-notebook -Dhttp.port=10088 &
 fi
 
-while true; do sleep 1000; done
+# startup
+if [[ $1 == "-d" ]]; then
+  while true; do sleep 1000; done
+fi
 
+if [[ $1 == "-bash" ]]; then
+  /bin/bash
+fi
