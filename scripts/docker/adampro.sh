@@ -23,7 +23,7 @@ if [[ ( -z "$ADAMPRO_START_WEBUI" ) || ( "$ADAMPRO_START_WEBUI" == "true")]]; th
     java -jar $ADAM_HOME/ADAMpro-web-assembly-0.1.0.jar &
 fi
 
-
+# start notebook
 if [[ ( -z "$ADAMPRO_START_NOTEBOOK" ) || ( "$ADAMPRO_START_NOTEBOOK" == "true")]]; then
     $SPARK_NOTEBOOK_HOME/bin/spark-notebook -Dhttp.port=10088 &
 fi
