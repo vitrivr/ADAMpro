@@ -15,7 +15,7 @@ docker pull vitrivr/adampro
 
 or run directly using (with the recommended ports being opened):
 ```
-docker run -p 5005:5005 -p 5890:5890 -p 9099:9099 -p 5432:5432 -p 9000:9000 -p 4040:4040 vitrivr/adampro
+docker run --name adampro -p 5005:5005 -p 5890:5890 -p 9099:9099 -p 5432:5432 -p 9000:9000 -p 4040:4040 -d vitrivr/adampro
 ```
 
 After the creation of the container, you can navigate to
