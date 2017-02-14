@@ -1,0 +1,48 @@
+master:
+    build: .
+    entrypoint: /adampro/master.sh
+    hostname: master
+    environment:
+      SPARK_PUBLIC_DNS: localhost
+      ADAMPRO_MASTER: spark://master:7077
+    expose:
+      - 7001
+      - 7002
+      - 7003
+      - 7004
+      - 7005
+      - 7006
+      - 7077
+      - 6066
+    ports:
+      - 4040:4040
+      - 6066:6066
+      - 7077:7077
+      - 8020:8020
+      - 8080:8080
+      - 9099:9099
+    volumes:
+      - ./shared/:/adampro/data/shared
+
+worker:
+    build: .
+    entrypoint: /adampro/worker.sh
+    hostname: worker
+    environment:
+      SPARK_WORKER_CORES: 2
+      SPARK_WORKER_MEMORY: 2g
+      SPARK_PUBLIC_DNS: localhost
+      ADAMPRO_MASTER: spark://master:7077
+    links:
+      - master
+    expose:
+      - 7012
+      - 7013
+      - 7014
+      - 7015
+      - 7016
+      - 8881
+    ports:
+      - 8081
+    volumes:
+      - ./shared/:/adampro/data/
