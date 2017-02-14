@@ -443,8 +443,6 @@ object Index extends Logging {
     */
   private def createIndex(indexname: String, entity: Entity, attribute: String, indexgenerator: IndexGenerator)(implicit ac: AdamContext): Try[Index] = {
     try {
-      import ac.spark.implicits._
-
       val indexableData = entity.getAttributeData(attribute).get
         .select(AttributeNames.internalIdColumnName, attribute)
 
