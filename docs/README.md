@@ -169,15 +169,18 @@ ADAMpro comes with a set of unit tests which can be run from the [test package](
 For checking the performance of ADAMpro, also consider the creation of flame graphs. For more information see [here](https://gist.github.com/kayousterhout/7008a8ebf2babeedc7ce6f8723fd1bf4).
 
 ## Deployment
-For introductory information see the [Getting started](#getting-started) section.
+For introductory information see the [getting started](#getting-started) section in this documentation.
 
-### Advanced deployment without HDFS
-The folder `scripts/docker-nohdfs` contains a `docker-compose.yml` file which can be used with `docker-compose`. For this move into the `docker-nohdfs` folder an do:
+### Distributed deployment without HDFS
+The distributed deployment without HDFS can be used if ADAMpro is being deployed on one single machine only (but still in a simulated distributed environment).
+
+The folder `scripts/docker-nohdfs` contains a `docker-compose.yml` file which can be used with `docker-compose`. For this, move into the `docker-nohdfs` folder an run:
 ```
 docker-compose up
 ```
-This will start up a master and a worker node. For adding more workers, run:
+This will start up a master and a single worker node. To add more workers, run the `scale` command and specify the number of workers you would like to deploy in total:
 ```
 docker-compose scale worker = 5
 ```
-Note that this setup will not use Hadoop for creating a HDFS, but will rather just mount a folder to all Docker containers (both master and worker container).
+Note that this setup will not use Hadoop for creating a HDFS, but will rather just mount a folder to all Docker containers (both master and worker container). Therefore this deployment will only work if all containers run on one single machine.
+
