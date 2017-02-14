@@ -409,7 +409,7 @@ object Index extends Logging {
   def createIndex(entity: Entity, attribute: String, indexgenerator: IndexGenerator)(implicit ac: AdamContext): Try[Index] = {
     try {
       if (!entity.schema().map(_.name).contains(attribute)) {
-        return Failure(new IndexNotProperlyDefinedException("attribute " + attribute + " not existing in entity " + entity.entityname + entity.schema().map(_.name).mkString("(", ",", ")")))
+        return Failure(new IndexNotProperlyDefinedException("attribute " + attribute + " not existing in entity " + entity.entityname + entity.schema(fullSchema = false).map(_.name).mkString("(", ",", ")")))
       }
 
       val attributetype = entity.schema().filter(_.name == attribute).map(_.attributeType).head
