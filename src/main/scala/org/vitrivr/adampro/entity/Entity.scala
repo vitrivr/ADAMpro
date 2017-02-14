@@ -581,18 +581,15 @@ object Entity extends Logging {
         return Failure(EntityNotProperlyDefinedException("Entity defined with duplicate fields; note that all attribute names have to be lower-case."))
       }
 
-      val attributes = creationAttributes.+:(new AttributeDefinition(AttributeNames.internalIdColumnName, TupleID.AdamTupleID))
+      val pk = new AttributeDefinition(AttributeNames.internalIdColumnName, TupleID.AdamTupleID)
+      val attributes = creationAttributes.+:(pk)
 
       SparkStartup.catalogOperator.createEntity(entityname, attributes)
       SparkStartup.catalogOperator.updateEntityOption(entityname, COUNT_KEY, "0")
 
-      val pk = attributes.filter(_.pk)
-      val attributesWithoutPK = attributes.filterNot(_.pk)
-
-
-      attributesWithoutPK.filterNot(_.pk).groupBy(_.storagehandler).foreach {
+      creationAttributes.groupBy(_.storagehandler).foreach {
         case (handler, handlerAttributes) =>
-          val status = handler.create(entityname, handlerAttributes.++:(pk))
+          val status = handler.create(entityname, handlerAttributes.+:(pk))
           if (status.isFailure) {
             throw new GeneralAdamException("failing on handler " + handler.name + ":" + status.failed.get)
           }

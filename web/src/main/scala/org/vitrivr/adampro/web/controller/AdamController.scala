@@ -184,7 +184,7 @@ class AdamController(rpcClient: RPCClient) extends Controller with Logging {
     *
     */
   post("/entity/add") { request: EntityCreateRequest =>
-    val res = rpcClient.entityCreate(request.entityname, request.attributes.map(a => RPCAttributeDefinition(a.name, a.datatype, a.pk, params = a.params)))
+    val res = rpcClient.entityCreate(request.entityname, request.attributes.map(a => RPCAttributeDefinition(a.name, a.datatype, if(a.storagehandler == null){None} else {Some(a.storagehandler)}, params = a.params)))
 
     if (res.isSuccess) {
       response.ok.json(GeneralResponse(200, res.get))

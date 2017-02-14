@@ -6,5 +6,5 @@ package org.vitrivr.adampro.rpc.datastructures
   * Ivan Giangreco
   * July 2016
   */
-case class RPCAttributeDefinition(name: String, datatype: String, pk: Boolean = false, storagehandlername : Option[String] = None, params : Map[String, String] = Map())
+case class RPCAttributeDefinition(name: String, datatype: String, storagehandlername : Option[String] = None, params : Map[String, String] = Map())
 

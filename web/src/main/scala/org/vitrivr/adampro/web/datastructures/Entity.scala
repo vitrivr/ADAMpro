@@ -14,7 +14,7 @@ private[web] case class EntityDetailResponse(code: Int, entityname: String, attr
 
 private[web] case class EntityCreateRequest(entityname: String, attributes: Seq[EntityField])
 
-private[web] case class EntityField(name: String, datatype: String, pk: Boolean, storagehandler : String, params : Map[String, String])
+private[web] case class EntityField(name: String, datatype: String, storagehandler : String, params : Map[String, String])
 
 private[web] case class EntityFillRequest(entityname: String, ntuples: Int, ndims: Int)
 
