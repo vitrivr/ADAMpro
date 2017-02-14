@@ -1,0 +1,34 @@
+adampro {
+  loglevel = "ERROR"
+
+  internalsPath = "/adampro/data/internals"
+
+  grpc {
+    port = "5890"
+  }
+
+  engines = ["index", "parquet", "postgres"]
+}
+
+storage {
+  parquet {
+    engine = "ParquetEngine"
+    hadoop = true
+    basepath = "hdfs://HOSTNAME:9000/"
+    datapath = "/adampro/data/data/"
+  }
+
+  index {
+    engine = "ParquetIndexEngine"
+    hadoop = true
+    basepath = "hdfs://HOSTNAME:9000/"
+    datapath = "/adampro/data/index/"
+  }
+
+  postgres {
+    engine = "PostgresqlEngine"
+    url = "jdbc:postgresql://HOSTNAME:5432/adampro"
+    user = "adampro"
+    password = "adampro"
+  }
+}

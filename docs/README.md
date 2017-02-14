@@ -184,3 +184,14 @@ docker-compose scale worker = 5
 ```
 Note that this setup will not use Hadoop for creating a HDFS, but will rather just mount a folder to all Docker containers (both master and worker container). Therefore this deployment will only work if all containers run on one single machine.
 
+
+### Distributed deployment with HDFS
+The distributed deployment with HDFS can be used to run ADAMpro with data being distributed over HDFS.
+
+The folder `scripts/docker-hdfs` contains a `docker-compose.yml` file which can be used with `docker-compose`. For this, move into the `docker-hdfs` folder an run:
+```
+docker-compose up
+```
+This will start up a master and a single worker node.
+
+The distributed deployment with HDFS is still experimental. In particular, we are currently ensuring that you can easily scale the number of workers. However, this feature is not yet implemented.

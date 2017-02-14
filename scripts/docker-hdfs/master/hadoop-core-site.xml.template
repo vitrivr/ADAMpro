@@ -1,0 +1,12 @@
+<?xml version="1.0"?>
+<!-- core-site.xml -->
+<configuration>
+    <property>
+        <name>fs.defaultFS</name>
+        <value>hdfs://MASTER_NODE:9000</value>
+    </property>
+    <property>
+         <name>fs.default.name</name>
+         <value>hdfs://MASTER_NODE:9000</value>
+    </property>
+</configuration>
