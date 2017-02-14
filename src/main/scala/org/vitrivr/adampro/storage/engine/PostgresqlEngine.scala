@@ -59,6 +59,7 @@ class PostgresqlEngine(private val url: String, private val user: String, privat
   protected def init() {
     val connection = openConnection()
 
+    //TODO: execute these commands on all partitions?
     try {
       val createSchemaStmt = s"""CREATE SCHEMA IF NOT EXISTS $schema;""".stripMargin
 
@@ -109,6 +110,7 @@ class PostgresqlEngine(private val url: String, private val user: String, privat
       }
 
       //make attributes unique
+      //TODO: execute these commands on all partitions?
       val uniqueStmt = attributes.filter(_.params.getOrElse("unique", "false").toBoolean).map {
         attribute =>
           val attributename = attribute.name
@@ -154,6 +156,7 @@ class PostgresqlEngine(private val url: String, private val user: String, privat
     val connection = openConnection()
 
     try {
+      //TODO: execute these commands on all partitions?
       val existsSql = s"""SELECT EXISTS ( SELECT 1 FROM pg_catalog.pg_class c JOIN pg_catalog.pg_namespace n ON n.oid = c.relnamespace WHERE n.nspname = 'public' AND c.relname = '$storename')""".stripMargin
       val results = connection.createStatement().executeQuery(existsSql)
       results.next()

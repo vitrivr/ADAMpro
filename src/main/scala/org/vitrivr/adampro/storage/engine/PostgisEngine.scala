@@ -67,6 +67,7 @@ class PostgisEngine(private val url: String, private val user: String, private v
     val connection = openConnection()
 
     try {
+      //TODO: execute these commands on all partitions?
       val typeGeographyStmt = attributes.filter(attribute => attribute.attributeType == AttributeTypes.GEOGRAPHYTYPE).map {
         attribute =>
           val attributename = attribute.name
