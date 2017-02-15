@@ -39,7 +39,6 @@ services:
         args:
           MASTER_NODE: master
       entrypoint: /adampro/bootstrap.sh -d -workernode
-      hostname: worker
       environment:
         SPARK_WORKER_CORES: 2
         SPARK_WORKER_MEMORY: 2g
