@@ -7,7 +7,7 @@ adampro {
     port = "5890"
   }
 
-  engines = ["index", "parquet", "postgres"]
+  engines = ["index", "parquet", "postgres", "solr"]
 }
 
 storage {
@@ -25,8 +25,13 @@ storage {
 
   postgres {
     engine = "PostgresqlEngine"
-    url = "jdbc:postgresql://HOSTNAME:5432/adampro"
+    url = "jdbc:postgresql://MASTER_HOSTNAME:5432/adampro"
     user = "adampro"
     password = "adampro"
+  }
+
+  solr {
+    engine = "SolrEngine"
+    url = "http://MASTER_HOSTNAME:8983/solr"
   }
 }
