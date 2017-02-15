@@ -7,7 +7,7 @@ ENV MASTER_HOSTNAME $MASTER_NODE
 ENV ADAMPRO_MASTER spark://$MASTER_HOSTNAME:7077
 
 # ssh, dnsmasq
-RUN apt-get -y install ssh net-tools
+RUN apt-get -y install ssh
 COPY id_rsa.pub /root/.ssh/id_rsa.pub
 COPY id_rsa /root/.ssh/id_rsa
 RUN chmod 600 /root/.ssh/id_rsa
@@ -20,7 +20,7 @@ ADD ssh_config /root/.ssh/config
 RUN chmod 600 /root/.ssh/config && \
     chown root:root /root/.ssh/config
 
-RUN apt-get -y install dnsmasq snappy openssl && \
+RUN apt-get -y install dnsmasq snappy openssl net-tools && \
     echo user=root >> /etc/dnsmasq.conf && \
     echo bogus-priv >> /etc/dnsmasq.conf && \
     echo interface=eth0 >> /etc/dnsmasq.conf && \
@@ -58,14 +58,9 @@ RUN mkdir -p /hdfs/namenode && mkdir -p /hdfs/datanode && mkdir $HADOOP_HOME/log
 RUN chmod 700 ${HADOOP_HOME}/etc/hadoop/hadoop-env.sh && chmod 700 ${HADOOP_HOME}/sbin/start-dfs.sh
 RUN sed s/MASTER_HOSTNAME/localhost/ ${HADOOP_HOME}/etc/hadoop/core-site.xml.template > ${HADOOP_HOME}/etc/hadoop/core-site.xml && \
     sed s/MASTER_HOSTNAME/localhost/ ${HADOOP_HOME}/etc/hadoop/yarn-site.xml.template > ${HADOOP_HOME}/etc/hadoop/yarn-site.xml
-RUN service ssh restart && \
-    ${HADOOP_HOME}/sbin/start-dfs.sh && \
-    $HADOOP_HOME/bin/hadoop namenode -format && \
-    ${HADOOP_HOME}/etc/hadoop/hadoop-env.sh && \
-    ${HADOOP_HOME}/sbin/start-dfs.sh && \
-    ${HADOOP_HOME}/bin/hdfs dfs -mkdir -p /adampro/data/data && \
-    ${HADOOP_HOME}/bin/hdfs dfs -mkdir -p /adampro/data/index && \
-    ${HADOOP_HOME}/sbin/stop-dfs.sh
+
+ENV HADOOP_FIRST_STARTUP /hdfs/startup.tmp
+RUN touch $HADOOP_FIRST_STARTUP
 
 # adampro
 COPY adampro.conf.template ${ADAM_HOME}/adampro.conf.template
