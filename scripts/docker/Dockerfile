@@ -103,8 +103,8 @@ ENV ADAMPRO_START_SOLR true
 ENV ADAMPRO_START_WEBUI true
 ENV ADAMPRO_START_NOTEBOOK true
 
-COPY adampro.sh ${ADAM_HOME}/adampro.sh
-RUN chown root.root ${ADAM_HOME}/adampro.sh
-RUN chmod 700 ${ADAM_HOME}/adampro.sh
+COPY bootstrap.sh ${ADAM_HOME}/bootstrap.sh
+RUN chown root.root ${ADAM_HOME}/bootstrap.sh
+RUN chmod 700 ${ADAM_HOME}/bootstrap.sh
 
-ENTRYPOINT ["/adampro/adampro.sh"]
+ENTRYPOINT ["/adampro/bootstrap.sh"]
