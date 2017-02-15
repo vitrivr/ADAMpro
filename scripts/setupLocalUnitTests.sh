@@ -4,6 +4,7 @@
 # prepare Docker containers for running unit tests
 ####################
 
+DOCKERMACHINE=adampro
 ADAMPRODIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && cd ".." && pwd )"
 
 docker network create --driver bridge vitrvrnw
