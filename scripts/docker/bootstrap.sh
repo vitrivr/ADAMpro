@@ -29,10 +29,8 @@ if [[ ( -z "$ADAMPRO_START_NOTEBOOK" ) || ( "$ADAMPRO_START_NOTEBOOK" == "true")
 fi
 
 # startup
-if [[ $1 = "-d" ]]; then
-  while true; do sleep 60 ; done
-fi
-
 if [[ $1 == "-bash" ]]; then
   /bin/bash
 fi
+
+while true; do sleep 60 ; done

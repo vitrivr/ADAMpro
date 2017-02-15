@@ -64,3 +64,5 @@ fi
 if [[ $1 = "-bash" || $2 = "-bash" ]]; then
   /bin/bash
 fi
+
+while true; do sleep 60 ; done
