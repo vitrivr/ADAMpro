@@ -1,5 +1,3 @@
-# based on https://github.com/sfedyakov/hadoop-271-cluster
-
 FROM vitrivr/adampro:latest
 
 ARG MASTER_NODE
@@ -27,6 +25,7 @@ RUN apt-get -y install dnsmasq snappy openssl net-tools && \
     echo no-dhcp-interface=eth0 >> /etc/dnsmasq.conf
 
 # hadoop
+# hadoop installation based on https://github.com/sfedyakov/hadoop-271-cluster
 RUN curl http://d3kbcqa49mib13.cloudfront.net/hadoop-2.7.3.tar.gz | tar -xz -C /usr/lib/
 RUN cd /usr/lib && ln -s hadoop-2.7.3 hadoop
 RUN mkdir -p /usr/local/hadoop_work/hdfs/datanode && mkdir -p /usr/local/hadoop_work/hdfs/namenode && mkdir -p /usr/local/hadoop_work/hdfs/namesecondary
