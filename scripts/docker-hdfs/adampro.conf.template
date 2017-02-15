@@ -7,28 +7,33 @@ adampro {
     port = "5890"
   }
 
-  engines = ["index", "parquet", "postgres"]
+  engines = ["index", "parquet", "postgres", "solr"]
 }
 
 storage {
   parquet {
     engine = "ParquetEngine"
     hadoop = true
-    basepath = "hdfs://HOSTNAME:9000/"
+    basepath = "hdfs://MASTER_HOSTNAME:9000/"
     datapath = "/adampro/data/data/"
   }
 
   index {
     engine = "ParquetIndexEngine"
     hadoop = true
-    basepath = "hdfs://HOSTNAME:9000/"
+    basepath = "hdfs://MASTER_HOSTNAME:9000/"
     datapath = "/adampro/data/index/"
   }
 
   postgres {
     engine = "PostgresqlEngine"
-    url = "jdbc:postgresql://HOSTNAME:5432/adampro"
+    url = "jdbc:postgresql://MASTER_HOSTNAME:5432/adampro"
     user = "adampro"
     password = "adampro"
+  }
+
+  solr {
+    engine = "SolrEngine"
+    url = "http://MASTER_HOSTNAME:8983/solr"
   }
 }

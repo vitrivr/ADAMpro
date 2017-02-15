@@ -2,12 +2,16 @@ version: '3'
 
 services:
   master:
-      build: ./master/.
-      entrypoint: /adampro/master.sh
+      build:
+        context: .
+        args:
+          MASTER_NODE: master
+      image: vitrivr/adampro-dist-hdfs
+      entrypoint: "/adampro/bootstrap.sh -d -masternode"
       hostname: master
       environment:
+        SPARK_DRIVER_MEMORY: 4g
         SPARK_PUBLIC_DNS: localhost
-        ADAMPRO_MASTER: spark://master:7077
       expose:
         - 7001
         - 7002
@@ -24,21 +28,26 @@ services:
         - 7077:7077
         - 8020:8020
         - 8080:8080
+        - 8088:8088
         - 9000:9000
         - 9099:9099
+        - 19888:19888
+        - 50070:50070
       networks:
         - vitrivrnw
 
 
   worker:
-      build: ./worker/.
-      entrypoint: /adampro/worker.sh
-      hostname: worker
+      build:
+        context: .
+        args:
+          MASTER_NODE: master
+      image: vitrivr/adampro-dist-hdfs
+      entrypoint: "/adampro/bootstrap.sh -d -workernode"
       environment:
         SPARK_WORKER_CORES: 2
         SPARK_WORKER_MEMORY: 2g
         SPARK_PUBLIC_DNS: localhost
-        ADAMPRO_MASTER: spark://master:7077
       links:
         - master
       expose:

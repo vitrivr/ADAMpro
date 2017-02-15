@@ -1,19 +1,30 @@
+# based on https://github.com/sfedyakov/hadoop-271-cluster
+
 FROM vitrivr/adampro:latest
 
-ENV MASTER_NODE master
+ARG MASTER_NODE
+ENV MASTER_HOSTNAME $MASTER_NODE
+ENV ADAMPRO_MASTER spark://$MASTER_HOSTNAME:7077
 
-# ssh
-RUN apt-get -y install ssh
+# ssh, dnsmasq
+RUN apt-get -y install ssh net-tools
 COPY id_rsa.pub /root/.ssh/id_rsa.pub
 COPY id_rsa /root/.ssh/id_rsa
 RUN chmod 600 /root/.ssh/id_rsa
 RUN cat /root/.ssh/id_rsa.pub >> /root/.ssh/authorized_keys
 
-RUN sed  -i "/^[^#]*UsePAM/ s/.*/#&/"  /etc/ssh/sshd_config
-RUN echo "UsePAM no" >> /etc/ssh/sshd_config
-RUN echo "Port 2122" >> /etc/ssh/sshd_config
-RUN echo "Port 2122" >> /etc/ssh/ssh_config
-RUN echo StrictHostKeyChecking=no >> /etc/ssh/ssh_config
+RUN sed  -i "/^[^#]*UsePAM/ s/.*/#&/"  /etc/ssh/sshd_config && \
+    echo "UsePAM no" >> /etc/ssh/sshd_config && \
+    echo "Port 2122" >> /etc/ssh/sshd_config
+ADD ssh_config /root/.ssh/config
+RUN chmod 600 /root/.ssh/config && \
+    chown root:root /root/.ssh/config
+
+RUN apt-get -y install dnsmasq snappy openssl && \
+    echo user=root >> /etc/dnsmasq.conf && \
+    echo bogus-priv >> /etc/dnsmasq.conf && \
+    echo interface=eth0 >> /etc/dnsmasq.conf && \
+    echo no-dhcp-interface=eth0 >> /etc/dnsmasq.conf
 
 # hadoop
 RUN curl http://d3kbcqa49mib13.cloudfront.net/hadoop-2.7.3.tar.gz | tar -xz -C /usr/lib/
@@ -37,15 +48,16 @@ ENV PATH $HADOOP_HOME/bin:$HADOOP_HOME/sbin:$PATH
 COPY hadoop-core-site.xml.template $HADOOP_HOME/etc/hadoop/core-site.xml.template
 COPY hadoop-hdfs-site.xml.template $HADOOP_HOME/etc/hadoop/hdfs-site.xml
 COPY hadoop-mapred-site.xml.template $HADOOP_HOME/etc/hadoop/mapred-site.xml
-COPY hadoop-yarn-site.xml.template $HADOOP_HOME/etc/hadoop/yarn-site.xml
+COPY hadoop-yarn-site.xml.template $HADOOP_HOME/etc/hadoop/yarn-site.xml.template
 
-RUN echo export JAVA_HOME=$JAVA_HOME >> $HADOOP_HOME/etc/hadoop/hadoop-env.sh
-RUN echo export HADOOP_CONF_DIR=$HADOOP_CONF_DIR >> $HADOOP_HOME/etc/hadoop/hadoop-env.sh
+RUN echo export JAVA_HOME=$JAVA_HOME >> $HADOOP_HOME/etc/hadoop/hadoop-env.sh && \
+    echo export HADOOP_CONF_DIR=$HADOOP_CONF_DIR >> $HADOOP_HOME/etc/hadoop/hadoop-env.sh
 
 RUN mkdir -p /hdfs/namenode && mkdir -p /hdfs/datanode && mkdir $HADOOP_HOME/logs
 
 RUN chmod 700 ${HADOOP_HOME}/etc/hadoop/hadoop-env.sh && chmod 700 ${HADOOP_HOME}/sbin/start-dfs.sh
-RUN sed s/MASTER_NODE/localhost/ ${HADOOP_HOME}/etc/hadoop/core-site.xml.template > ${HADOOP_HOME}/etc/hadoop/core-site.xml
+RUN sed s/MASTER_HOSTNAME/localhost/ ${HADOOP_HOME}/etc/hadoop/core-site.xml.template > ${HADOOP_HOME}/etc/hadoop/core-site.xml && \
+    sed s/MASTER_HOSTNAME/localhost/ ${HADOOP_HOME}/etc/hadoop/yarn-site.xml.template > ${HADOOP_HOME}/etc/hadoop/yarn-site.xml
 RUN service ssh restart && \
     ${HADOOP_HOME}/sbin/start-dfs.sh && \
     $HADOOP_HOME/bin/hadoop namenode -format && \
@@ -55,8 +67,18 @@ RUN service ssh restart && \
     ${HADOOP_HOME}/bin/hdfs dfs -mkdir -p /adampro/data/index && \
     ${HADOOP_HOME}/sbin/stop-dfs.sh
 
-RUN echo $MASTER_NODE >> $HADOOP_HOME/etc/hadoop/masters
+# adampro
+COPY adampro.conf.template ${ADAM_HOME}/adampro.conf.template
+
+# hdfs ports
+EXPOSE 50010 50020 50070 50075 50090
+# mapred ports
+EXPOSE 19888
+# yarn ports
+EXPOSE 8030 8031 8032 8033 8040 8042 8088
+# other ports
+EXPOSE 49707 2122
 
 # bootstrap
-COPY worker.sh ${ADAM_HOME}/worker.sh
-RUN chmod 700 ${ADAM_HOME}/worker.sh
+COPY bootstrap.sh ${ADAM_HOME}/bootstrap.sh
+RUN chmod 700 ${ADAM_HOME}/bootstrap.sh

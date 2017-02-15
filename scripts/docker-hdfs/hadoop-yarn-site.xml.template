@@ -19,8 +19,24 @@ adoop/mapreduce/lib/*, /usr/local/hadoop/share/hadoop/yarn/*, /usr/local/hadoop/
     </property>
 
     <property>
-    <name>yarn.nodemanager.delete.debug-delay-sec</name>
-    <value>600</value>
-  </property>
+      <name>yarn.nodemanager.delete.debug-delay-sec</name>
+      <value>600</value>
+    </property>
+
+
+    <property>
+      <name>yarn.resourcemanager.address</name>
+      <value>MASTER_HOSTNAME:8032</value>
+    </property>
+
+    <property>
+      <name>yarn.resourcemanager.resource-tracker.address</name>
+      <value>MASTER_HOSTNAME:8031</value>
+    </property>
+
+    <property>
+      <name>yarn.resourcemanager.scheduler.address</name>
+      <value>MASTER_HOSTNAME:8030</value>
+    </property>
 
 </configuration>

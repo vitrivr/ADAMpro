@@ -178,7 +178,7 @@ The folder `scripts/docker-nohdfs` contains a `docker-compose.yml` file which ca
 ```
 docker-compose up
 ```
-This will start up a master and a single worker node. To add more workers, run the `scale` command and specify the number of workers you would like to deploy in total:
+This will start up a master and a single worker node. To add more workers (note that the number of masters is limited to 1), run the `scale` command and specify the number of workers you would like to deploy in total:
 ```
 docker-compose scale worker = 5
 ```
@@ -186,12 +186,14 @@ Note that this setup will not use Hadoop for creating a HDFS, but will rather ju
 
 
 ### Distributed deployment with HDFS
+
+#### Using docker-compose
 The distributed deployment with HDFS can be used to run ADAMpro with data being distributed over HDFS.
 
 The folder `scripts/docker-hdfs` contains a `docker-compose.yml` file which can be used with `docker-compose`. For this, move into the `docker-hdfs` folder an run:
 ```
 docker-compose up
 ```
-This will start up a master and a single worker node.
+This will start up a master and a single worker node. Note that using the `scale` command of `docker-compose` you may create multiple workers; however, the number of master nodes (and Hadoop name nodes) is limited to 1.
 
-The distributed deployment with HDFS is still experimental. In particular, we are currently ensuring that you can easily scale the number of workers. However, this feature is not yet implemented.
+#### Using docker swarm
