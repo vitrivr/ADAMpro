@@ -197,4 +197,4 @@ docker-compose up
 This will start up a master and a single worker node. Note that using the `scale` command of `docker-compose` you may create multiple workers; however, the number of master nodes (and Hadoop name nodes) is limited to 1.
 
 #### Using Docker swarm
-Consider [this](https://github.com/sfedyakov/hadoop-271-cluster#3-running-hadoop-cluster-on-distributed-machines-with-docker-machine-and-docker-compose) documentation for more information on how to use the images with Docker swarm.
+Consider [the official documentation](https://docs.docker.com/engine/swarm/swarm-tutorial/) and [this inofficial documentation](https://github.com/sfedyakov/hadoop-271-cluster#3-running-hadoop-cluster-on-distributed-machines-with-docker-machine-and-docker-compose) for more information on how to use the images with Docker swarm and how to set up a Docker swarm cluster.
