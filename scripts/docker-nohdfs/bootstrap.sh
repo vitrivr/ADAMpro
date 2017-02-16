@@ -3,7 +3,7 @@
 # configuration
 sed s/MASTER_HOSTNAME/$MASTER_HOSTNAME/ ${ADAM_HOME}/adampro.conf.template > $ADAM_HOME/adampro.conf
 
-if [[ $1 = "-masternode" || $2 = "-masternode" ]]; then
+if [[ $1 = "--masternode" || $2 = "--masternode" ]]; then
    echo "starting master..."
 
   # storage engines
@@ -18,7 +18,7 @@ if [[ $1 = "-masternode" || $2 = "-masternode" ]]; then
   java -jar $ADAM_HOME/ADAMpro-web-assembly-0.1.0.jar &
 fi
 
-if [[ $1 = "-workernode" || $2 = "-workernode" ]]; then
+if [[ $1 = "--workernode" || $2 = "--workernode" ]]; then
    echo "starting worker..."
    $SPARK_HOME/sbin/start-slave.sh $ADAMPRO_MASTER
 fi

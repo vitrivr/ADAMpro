@@ -6,7 +6,7 @@ services:
         context: .
         args:
           MASTER_NODE: master
-      entrypoint: /adampro/bootstrap.sh -d -masternode
+      entrypoint: /adampro/bootstrap.sh -d --masternode
       image: vitrivr/adampro-dist
       hostname: master
       environment:
@@ -38,7 +38,7 @@ services:
         context: .
         args:
           MASTER_NODE: master
-      entrypoint: /adampro/bootstrap.sh -d -workernode
+      entrypoint: /adampro/bootstrap.sh -d --workernode
       environment:
         SPARK_WORKER_CORES: 2
         SPARK_WORKER_MEMORY: 2g

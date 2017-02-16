@@ -76,3 +76,8 @@ EXPOSE 49707 2122
 # bootstrap
 COPY bootstrap.sh ${ADAM_HOME}/bootstrap.sh
 RUN chmod 700 ${ADAM_HOME}/bootstrap.sh
+
+ENTRYPOINT ["/adampro/bootstrap.sh"]
+
+# per default, the node is started as worker
+CMD ["--workernode"]

@@ -7,7 +7,7 @@ services:
         args:
           MASTER_NODE: master
       image: vitrivr/adampro-dist-hdfs
-      entrypoint: "/adampro/bootstrap.sh -d -masternode"
+      entrypoint: "/adampro/bootstrap.sh -d --masternode"
       hostname: master
       environment:
         SPARK_DRIVER_MEMORY: 4g
@@ -43,7 +43,7 @@ services:
         args:
           MASTER_NODE: master
       image: vitrivr/adampro-dist-hdfs
-      entrypoint: "/adampro/bootstrap.sh -d -workernode"
+      entrypoint: "/adampro/bootstrap.sh -d --workernode"
       environment:
         SPARK_WORKER_CORES: 2
         SPARK_WORKER_MEMORY: 2g

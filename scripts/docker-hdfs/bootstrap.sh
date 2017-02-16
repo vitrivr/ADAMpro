@@ -16,10 +16,12 @@ rm /tmp/*.pid
 cd $HADOOP_HOME/share/hadoop/common ; for cp in ${ACP//,/ }; do  echo == $cp; curl -LO $cp ; done; cd -
 
 
-if [[ $1 = "-masternode" || $2 = "-masternode" ]]; then
+if [[ $1 = "--masternode" || $2 = "--masternode" ]]; then
    echo "starting master..."
 
    if [ -f $HADOOP_FIRST_STARTUP ]; then
+      # the first time hadoop is started, we have to format the node and set up certain directories
+      # this is done in the bootstrap.sh, so that we can maintain the image same for master and worker
       echo "setting up hadoop for first time run..."
       $HADOOP_HOME/bin/hadoop namenode -format
       ${HADOOP_HOME}/sbin/start-dfs.sh
@@ -47,7 +49,7 @@ if [[ $1 = "-masternode" || $2 = "-masternode" ]]; then
 fi
 
 
-if [[ $1 = "-workernode" || $2 = "-workernode" ]]; then
+if [[ $1 = "--workernode" || $2 = "--workernode" ]]; then
   echo "starting worker..."
 
   HN=`hostname`
