@@ -148,14 +148,7 @@ class StorageHandler(val engine: Engine, val priority : Int = 0) extends Seriali
           SparkStartup.catalogOperator.updateEntityOption(entityname, ENTITY_OPTION_NAME, newStorename)
           engine.drop(storename)
 
-          val options = SparkStartup.catalogOperator.getStorageEngineOption(name, storename).get
-          SparkStartup.catalogOperator.deleteStorageEngineOption(name, storename, None)
-
-          options.foreach {
-            case (key, value) =>
-              SparkStartup.catalogOperator.updateStorageEngineOption(name, newStorename, key, value)
-          }
-
+          updateOptions(newStorename, res.get)
           Success(null)
         } else {
           Failure(res.failed.get)
@@ -163,6 +156,7 @@ class StorageHandler(val engine: Engine, val priority : Int = 0) extends Seriali
       } else {
         //other save modes
         val res = engine.write(storename, df, attributes, mode, params ++ options)
+        updateOptions(storename, res.get)
 
         if (res.isSuccess) {
           Success(null)
@@ -171,6 +165,18 @@ class StorageHandler(val engine: Engine, val priority : Int = 0) extends Seriali
         }
       }
     }
+  }
+
+  private def updateOptions(storename : String, newOptions : Map[String, String]): Unit ={
+    val options = SparkStartup.catalogOperator.getStorageEngineOption(name, storename).get
+    SparkStartup.catalogOperator.deleteStorageEngineOption(name, storename, None)
+
+    newOptions.foreach {
+      case (key, value) =>
+        SparkStartup.catalogOperator.updateStorageEngineOption(name, storename, key, value)
+    }
+
+
   }
 
   /**
