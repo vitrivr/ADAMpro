@@ -35,8 +35,6 @@ docker exec adampro tar -C /adampro/data/ -xzf /adampro/data/osvc.tar.gz
 docker restart adampro
 ```
 
-Note that if solr data is available, `$SOLR_HOME/server/solr` should point to `$ADAM_HOME/data/data/solr`. 
-
 Our Docker containers come with an update script located at `/adampro/update.sh`, which allows you to check out the newest version of the code from the repository and re-build the jars without creating a new container (and therefore loosing existing data). To run the update routine, run in your host system:
 
 ```
@@ -149,6 +147,9 @@ ADAMpro builds on [Apache Spark 2](http://spark.apache.org) and uses a large var
 
 ## Development
 
+### Unit tests
+ADAMpro comes with a set of unit tests which can be run from the [test package](https://github.com/vitrivr/ADAMpro/tree/master/src/test). Note that for having all test pass, a certain setup is necessary. For instance, for having the PostGIS test pass, the database has to be set up and it must be configured in the configuration file. You may use the script `setupLocalUnitTests.sh` for setting up all the necessary Docker containers for then performing the unit tests.
+
 ### Debugging
 We recommend the use of IntelliJ IDEA for developing ADAMpro. It can be run locally using the run commands in the IDE for debugging purposes.
 
@@ -158,12 +159,11 @@ ADAMpro can be debugged even if being submitted to Spark. By setting the debuggi
 ```
 export SPARK_SUBMIT_OPTS=-agentlib:jdwp=transport=dt_socket,server=y,suspend=y,address=5005
 ```
-In here, we have opened port 5005 and have the application wait until a debugger attaches. We use port 5005 in the Docker containers provided for debugging (however, the `suspend` option is not turned on in the Docker container).
+In here, we have opened port 5005 and, given the `suspend` option, have the application wait until a debugger attaches.
 
-For more information on this consider e.g., this article: https://community.hortonworks.com/articles/15030/spark-remote-debugging.html
+The Docker container we provide has the `SPARK_SUBMIT_OPTS` options set and we use port 5005 in the Docker containers provided for debugging (however, note that the `suspend` option which makes the application wait until a debugger attaches is turned off in the Docker container).
 
-### Unit tests
-ADAMpro comes with a set of unit tests which can be run from the [test package](https://github.com/vitrivr/ADAMpro/tree/master/src/test). Note that for having all test pass, a certain setup is necessary. For instance, for having the PostGIS test pass, the database has to be set up and it must be configured in the configuration file. You may use the script `setupLocalUnitTests.sh` for setting up all the necessary Docker containers for then performing the unit tests.
+In your IDE, bind to the application by setting up remote debugging on the port specified. For more information on how to use remote debugging consider e.g., this article: https://community.hortonworks.com/articles/15030/spark-remote-debugging.html
 
 ### Flame graphs
 For checking the performance of ADAMpro, also consider the creation of flame graphs. For more information see [here](https://gist.github.com/kayousterhout/7008a8ebf2babeedc7ce6f8723fd1bf4).
@@ -174,7 +174,7 @@ For introductory information see the [getting started](#getting-started) section
 ### Distributed deployment without HDFS
 The distributed deployment without HDFS can be used if ADAMpro is being deployed on one single machine only (but still in a simulated distributed environment).
 
-The folder `scripts/docker-nohdfs` contains a `docker-compose.yml` file which can be used with `docker-compose`. For this, move into the `docker-nohdfs` folder an run:
+Check out the ADAMpro repository. The folder `scripts/docker-nohdfs` contains a `docker-compose.yml` file which can be used with `docker-compose`. For this, move into the `docker-nohdfs` folder an run:
 ```
 docker-compose up
 ```
@@ -188,9 +188,9 @@ Note that this setup will not use Hadoop for creating a HDFS, but will rather ju
 ### Distributed deployment with HDFS
 
 #### Using docker-compose
-The distributed deployment with HDFS can be used to run ADAMpro with data being distributed over HDFS.
+The distributed deployment with HDFS can be used to run ADAMpro with data being distributed over HDFS. This can be helpful for truly distributed setups.
 
-The folder `scripts/docker-hdfs` contains a `docker-compose.yml` file which can be used with `docker-compose`. For this, move into the `docker-hdfs` folder an run:
+The folder `scripts/docker-hdfs` contains a `docker-compose.yml`; move into the `docker-hdfs` folder an run:
 ```
 docker-compose up
 ```
