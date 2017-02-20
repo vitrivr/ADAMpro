@@ -393,7 +393,7 @@ class CatalogOperator(internalsPath: String) extends Logging {
     execute("drop entity") {
       if (!existsEntity(entityname).get) {
         if (!ifExists) {
-          throw new EntityNotExistingException()
+          throw EntityNotExistingException.withEntityname(entityname)
         }
       }
 
@@ -524,7 +524,7 @@ class CatalogOperator(internalsPath: String) extends Logging {
   def createIndex(indexname: IndexName, entityname: EntityName, attributename: String, indextypename: IndexTypeName, indexmeta: Serializable): Try[Void] = {
     execute("create index") {
       if (!existsEntity(entityname).get) {
-        throw new EntityNotExistingException()
+        throw EntityNotExistingException.withEntityname(entityname)
       }
 
       if (existsIndex(indexname).get) {

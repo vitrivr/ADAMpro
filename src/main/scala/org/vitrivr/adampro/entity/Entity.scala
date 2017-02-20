@@ -648,7 +648,7 @@ object Entity extends Logging {
     */
   private[entity] def loadEntityMetaData(entityname: EntityName)(implicit ac: AdamContext): Try[Entity] = {
     if (!exists(entityname)) {
-      return Failure(EntityNotExistingException())
+      return Failure(EntityNotExistingException.withEntityname(entityname))
     }
 
     try {
@@ -670,7 +670,7 @@ object Entity extends Logging {
     try {
       if (!exists(entityname)) {
         if (!ifExists) {
-          return Failure(EntityNotExistingException())
+          return Failure(EntityNotExistingException.withEntityname(entityname))
         } else {
           return Success(null)
         }

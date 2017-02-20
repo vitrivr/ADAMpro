@@ -46,7 +46,7 @@ class EntityLRUCache()(@transient implicit val ac: AdamContext) extends Logging 
       if(entityCache.asMap().containsKey(entityname) || SparkStartup.catalogOperator.existsEntity(entityname).get){
         Success(entityCache.get(entityname))
       } else {
-        throw new EntityNotExistingException()
+        throw EntityNotExistingException.withEntityname(entityname)
       }
     } catch {
       case e: Exception =>

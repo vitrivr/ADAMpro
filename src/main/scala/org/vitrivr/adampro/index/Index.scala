@@ -552,7 +552,7 @@ object Index extends Logging {
     //TODO: tries to load index to drop; but what if index creation went wrong? -> cannot load index
     try {
       if (!exists(indexname)) {
-        return Failure(EntityNotExistingException())
+        return Failure(IndexNotExistingException())
       }
 
       Index.load(indexname).get.drop()
