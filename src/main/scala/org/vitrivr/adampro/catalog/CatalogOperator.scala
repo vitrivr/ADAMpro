@@ -560,7 +560,7 @@ class CatalogOperator(internalsPath: String) extends Logging {
     execute("drop index") {
       if (!existsIndex(indexname).get) {
         if (!ifExists) {
-          throw new IndexNotExistingException()
+          throw IndexNotExistingException.withIndexname(indexname)
         }
       }
 
@@ -771,7 +771,7 @@ class CatalogOperator(internalsPath: String) extends Logging {
   def createPartitioner(indexname: EntityNameHolder, noPartitions: Int, partitionerMeta: Serializable, partitioner: CustomPartitioner): Try[Void] = {
     execute("create partitioner") {
       if (!existsIndex(indexname).get) {
-        throw new IndexNotExistingException()
+        throw IndexNotExistingException.withIndexname(indexname)
       }
 
       val mbos = new ByteArrayOutputStream()
@@ -852,7 +852,7 @@ class CatalogOperator(internalsPath: String) extends Logging {
   def dropPartitioner(indexname: EntityNameHolder): Try[Void] = {
     execute("drop partitioner") {
       if (!existsIndex(indexname).get) {
-        throw new IndexNotExistingException()
+        throw IndexNotExistingException.withIndexname(indexname)
       }
       Await.result(DB.run(_partitioners.filter(_.indexname === indexname.toString).delete), MAX_WAITING_TIME)
       null

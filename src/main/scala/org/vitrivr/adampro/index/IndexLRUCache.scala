@@ -48,7 +48,7 @@ class IndexLRUCache()(@transient implicit val ac: AdamContext) extends Logging {
       if(indexCache.asMap().containsKey(indexname) || SparkStartup.catalogOperator.existsIndex(indexname).get){
         Success(indexCache.get(indexname))
       } else {
-        throw new IndexNotExistingException()
+        throw IndexNotExistingException.withIndexname(indexname)
       }
     } catch {
       case e: Exception =>

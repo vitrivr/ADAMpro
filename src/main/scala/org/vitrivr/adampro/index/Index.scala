@@ -525,7 +525,7 @@ object Index extends Logging {
     */
   private[index] def loadIndexMetaData(indexname: IndexName)(implicit ac: AdamContext): Try[Index] = {
     if (!exists(indexname)) {
-      Failure(IndexNotExistingException())
+      Failure(IndexNotExistingException.withIndexname(indexname))
     }
 
     try {
@@ -552,7 +552,7 @@ object Index extends Logging {
     //TODO: tries to load index to drop; but what if index creation went wrong? -> cannot load index
     try {
       if (!exists(indexname)) {
-        return Failure(IndexNotExistingException())
+        return Failure(IndexNotExistingException.withIndexname(indexname))
       }
 
       Index.load(indexname).get.drop()
