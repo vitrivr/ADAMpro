@@ -57,7 +57,7 @@ Because of its project structure, for building ADAMpro, you have to first run
 sbt proto
 ```
 
-which generates the proto-files and creates a jar file containing the proto sources into the `./lib/` folder.
+in the main folder, which generates the proto-files and creates a jar file containing the proto sources into the `./lib/` folder.
 
 Running
 
