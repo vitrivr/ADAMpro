@@ -18,7 +18,7 @@ object Distance extends Logging {
   type Distance = Double
   val SparkDistance = DoubleType
   val maxValue : Distance = Double.MaxValue
-  val zeroValue : VectorBase = 0.toDouble
+  val zeroValue : Distance = 0.toDouble
 
   /**
     *

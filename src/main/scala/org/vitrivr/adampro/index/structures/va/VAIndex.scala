@@ -70,7 +70,7 @@ class VAIndex(override val indexname: IndexName)(@transient override implicit va
 
     //compute the approximate distance given the cells
     val distUDF = (boundsBc: Broadcast[Bounds]) => udf((cells: Seq[Int]) => {
-      var bound : VectorBase = 0
+      var bound : Distance = 0
 
       var idx = 0
       while (idx < cells.length) {

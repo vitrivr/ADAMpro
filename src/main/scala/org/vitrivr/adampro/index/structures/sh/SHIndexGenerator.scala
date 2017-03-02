@@ -77,11 +77,11 @@ class SHIndexGenerator(nbits: Option[Int], trainingSize: Int)(@transient implici
     }
     val reorderEigv = eigv * reorderPerm
     val feigv = new DenseMatrix[VectorBase](reorderEigv.rows, reorderEigv.cols, reorderEigv.toArray.map(Vector.conv_double2vb))
-    val projected = (dataMatrix.*(reorderEigv)).asInstanceOf[DenseMatrix[Double]]
+    val projected = (dataMatrix.*(reorderEigv))
 
     // fit uniform distribution
-    val minProj = breeze.linalg.min(projected(::, *)).t.toDenseVector
-    val maxProj = breeze.linalg.max(projected(::, *)).t.toDenseVector
+    val minProj = breeze.linalg.min(projected(::, *)).t.toDenseVector.map(Vector.conv_double2vb)
+    val maxProj = breeze.linalg.max(projected(::, *)).t.toDenseVector.map(Vector.conv_double2vb)
 
     // enumerate eigenfunctions
     val maxMode = computeShareOfBits(minProj, maxProj, nbits.getOrElse(nfeatures * 2))
@@ -89,7 +89,7 @@ class SHIndexGenerator(nbits: Option[Int], trainingSize: Int)(@transient implici
     val modes = getSortedModes(allModes, minProj, maxProj, nbits.getOrElse(nfeatures * 2))
 
     // compute "radius" for moving query around
-    val radius = 0.1 * (maxProj - minProj)
+    val radius = Vector.conv_double2vb(0.1) * (maxProj - minProj)
 
     log.trace("SH finished training")
 

@@ -1,5 +1,6 @@
 package org.vitrivr.adampro.query.distance
 
+import org.vitrivr.adampro.datatypes.vector.Vector
 import org.vitrivr.adampro.datatypes.vector.Vector._
 import org.vitrivr.adampro.query.distance.Distance.Distance
 import org.vitrivr.adampro.utils.Logging
@@ -12,7 +13,7 @@ import org.vitrivr.adampro.utils.Logging
   */
 trait ElementwiseSummedDistanceFunction extends DistanceFunction with Logging with Serializable {
   override def apply(v1_q: MathVector, v2: MathVector, weights: Option[MathVector]): Distance = {
-    var cumSum = 0.0
+    var cumSum = Distance.zeroValue
 
     //computing sum
     if (weights.isEmpty) {
@@ -27,9 +28,9 @@ trait ElementwiseSummedDistanceFunction extends DistanceFunction with Logging wi
           if (offset < sv1_q.activeSize && offset < sv2.activeSize) {
             cumSum += element(sv1_q.valueAt(offset), sv2.valueAt(offset))
           } else if (offset < sv1_q.activeSize) {
-            cumSum += element(sv1_q.valueAt(offset), 0.0)
+            cumSum += element(sv1_q.valueAt(offset), Vector.zeroValue)
           } else if (offset < sv2.activeSize) {
-            cumSum += element(0.0, sv2.valueAt(offset))
+            cumSum += element(Vector.zeroValue, sv2.valueAt(offset))
           }
           offset += 1
         }
@@ -65,9 +66,9 @@ trait ElementwiseSummedDistanceFunction extends DistanceFunction with Logging wi
           if (offset < sv1_q.activeSize && offset < sv2.activeSize) {
             cumSum += element(sv1_q.valueAt(offset), sv2.valueAt(offset), weights.get(offset))
           } else if (offset < sv1_q.activeSize) {
-            cumSum += element(sv1_q.valueAt(offset), 0.0, weights.get(offset))
+            cumSum += element(sv1_q.valueAt(offset), Vector.zeroValue, weights.get(offset))
           } else if (offset < sv2.activeSize) {
-            cumSum += element(0.0, sv2.valueAt(offset), weights.get(offset))
+            cumSum += element(Vector.zeroValue, sv2.valueAt(offset), weights.get(offset))
           }
           offset += 1
         }
@@ -93,7 +94,7 @@ trait ElementwiseSummedDistanceFunction extends DistanceFunction with Logging wi
     * @param w  weight
     * @return
     */
-  @inline def element(v1_q: VectorBase, v2: VectorBase, w: VectorBase = 1.0): Distance
+  @inline def element(v1_q: VectorBase, v2: VectorBase, w: VectorBase = Vector.conv_double2vb(1.0)): Distance
 
   /**
     * Normalization after summing up the element-wise distances.

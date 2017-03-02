@@ -50,7 +50,7 @@ class PQIndex(override val indexname: IndexName)(@transient override implicit va
       var sum : VectorBase = 0
       //sum up distance of each part by choosing the right cluster
       while(i < c.length){
-        sum += distancesBc.value(i)(c(i))
+        sum += Vector.conv_double2vb(distancesBc.value(i)(c(i)))
         i += 1
       }
       sum

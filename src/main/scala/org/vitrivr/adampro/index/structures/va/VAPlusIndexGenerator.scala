@@ -6,6 +6,7 @@ import org.apache.spark.mllib.linalg.Vectors
 import org.apache.spark.sql.functions._
 import org.apache.spark.sql.{DataFrame, Dataset}
 import org.vitrivr.adampro.config.AttributeNames
+import org.vitrivr.adampro.datatypes.vector.Vector
 import org.vitrivr.adampro.datatypes.vector.Vector._
 import org.vitrivr.adampro.exception.QueryNotConformException
 import org.vitrivr.adampro.helpers.tracker.OperationTracker
@@ -39,7 +40,7 @@ class VAPlusIndexGenerator(nbits: Option[Int], ndims : Option[Int], trainingSize
     val meta = train(getSample(math.max(trainingSize, MINIMUM_NUMBER_OF_TUPLE), attribute)(data), data, attribute)
 
     val cellUDF = udf((c: DenseSparkVector) => {
-      val cells = getCells(meta.pca.transform(Vectors.dense(c.toArray.map(_.toDouble))).toArray, meta.marks)
+      val cells = getCells(meta.pca.transform(Vectors.dense(c.toArray.map(_.toDouble))).toArray.map(Vector.conv_double2vb(_)), meta.marks)
       meta.signatureGenerator.toSignature(cells).serialize
     })
     val indexed = data.withColumn(AttributeNames.featureIndexColumnName, cellUDF(data(attribute)))
@@ -78,7 +79,7 @@ class VAPlusIndexGenerator(nbits: Option[Int], ndims : Option[Int], trainingSize
     val dims = ndims.getOrElse(trainData.head.ap_indexable.size)
 
     import ac.spark.implicits._
-    val pca = new PCA(dims).fit(data.rdd.map(x => Vectors.dense(x.getAs[DenseSparkVector](attribute).toArray)))
+    val pca = new PCA(dims).fit(data.rdd.map(x => Vectors.dense(x.getAs[DenseSparkVector](attribute).toArray.map(_.toDouble))))
 
 
     //data

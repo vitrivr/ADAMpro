@@ -2,6 +2,7 @@ package org.vitrivr.adampro.index.structures.va
 
 import org.apache.spark.mllib.linalg.Vectors
 import org.apache.spark.sql.DataFrame
+import org.vitrivr.adampro.datatypes.vector.Vector
 import org.vitrivr.adampro.datatypes.vector.Vector._
 import org.vitrivr.adampro.helpers.tracker.OperationTracker
 import org.vitrivr.adampro.index.Index._
@@ -34,6 +35,6 @@ class VAPlusIndex(override val indexname: IndexName)(@transient override implici
 
   override def scan(data: DataFrame, q: MathVector, distance: DistanceFunction, options: Map[String, String], k: Int)(tracker : OperationTracker): DataFrame = {
     val adjustedQuery = meta.asInstanceOf[VAPlusIndexMetaData].pca.transform(Vectors.dense(q.toArray.map(_.toDouble)))
-    super.scan(data, new DenseMathVector(adjustedQuery.toArray), distance, options, k)(tracker)
+    super.scan(data, new DenseMathVector(adjustedQuery.toArray.map(Vector.conv_double2vb(_))), distance, options, k)(tracker)
   }
 }
