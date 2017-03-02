@@ -415,7 +415,7 @@ class EntityTestSuite extends AdamTestBase {
         var totalInsert = 0
         val times = new ListBuffer[Long]()
 
-        (0 to 100).foreach { i =>
+        (0 to (300 + Random.nextInt(200))).foreach { i =>
           val tuplesInsert = ntuples(max = 10)
           totalInsert += tuplesInsert
 
