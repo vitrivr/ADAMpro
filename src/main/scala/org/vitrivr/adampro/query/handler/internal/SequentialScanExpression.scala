@@ -113,20 +113,23 @@ object SequentialScanExpression extends Logging {
     * @return
     */
   def scan(df: DataFrame, nnq: NearestNeighbourQuery)(implicit ac: AdamContext): DataFrame = {
-    val q = ac.sc.broadcast(nnq.q)
-    val w: Broadcast[Option[MathVector]] = ac.sc.broadcast(nnq.weights)
+    val qBc = ac.sc.broadcast(nnq.q)
+    val wBc = ac.sc.broadcast(nnq.weights)
 
-    val res = if(df.schema.apply(nnq.attribute).dataType.isInstanceOf[StructType]){
+    val dfDistance = if(df.schema.apply(nnq.attribute).dataType.isInstanceOf[StructType]){
       //sparse vectors
-      df.withColumn(AttributeNames.distanceColumnName, Distance.sparseVectorDistUDF(nnq, q, w)(df(nnq.attribute)))
+      df.withColumn(AttributeNames.distanceColumnName, Distance.sparseVectorDistUDF(nnq, qBc, wBc)(df(nnq.attribute)))
     } else {
       //dense vectors
-      df.withColumn(AttributeNames.distanceColumnName, Distance.denseVectorDistUDF(nnq, q, w)(df(nnq.attribute)))
+      df.withColumn(AttributeNames.distanceColumnName, Distance.denseVectorDistUDF(nnq, qBc, wBc)(df(nnq.attribute)))
     }
 
     import org.apache.spark.sql.functions.{col}
-    res.orderBy(col(AttributeNames.distanceColumnName))
+    val res = dfDistance.orderBy(col(AttributeNames.distanceColumnName))
       .limit(nnq.k)
+
+
+    res
   }
 }
 

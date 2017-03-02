@@ -30,12 +30,12 @@ class ECPIndexGenerator(centroidBasedLeaders: Boolean, distance: DistanceFunctio
     log.trace("eCP index started indexing")
 
     val sample = getSample(math.max(math.sqrt(data.count()).toInt, MINIMUM_NUMBER_OF_TUPLE), attribute)(data)
-    val bcleaders = ac.sc.broadcast(sample.zipWithIndex.map { case (vector, idx) => IndexingTaskTuple(idx.toLong, vector.ap_indexable) }) //use own ids, not id of data
+    val leadersBc = ac.sc.broadcast(sample.zipWithIndex.map { case (vector, idx) => IndexingTaskTuple(idx.toLong, vector.ap_indexable) }) //use own ids, not id of data
 
     log.trace("eCP index chosen " + sample.length + " leaders")
 
     val minIdUDF = udf((c: DenseSparkVector) => {
-      bcleaders.value.map({ l =>
+      leadersBc.value.map({ l =>
         (l.ap_id, distance.apply(Vector.conv_dspark2vec(c), l.ap_indexable))
       }).minBy(_._2)._1
     })
@@ -66,7 +66,7 @@ class ECPIndexGenerator(centroidBasedLeaders: Boolean, distance: DistanceFunctio
       val counts = indexed.groupBy(AttributeNames.featureIndexColumnName).count()
         .map { r => (r.getAs[TupleID](AttributeNames.featureIndexColumnName), r.getAs[Long]("count")) }.collect().toMap
 
-      bcleaders.value.map(x => ECPLeader(x.ap_id, x.ap_indexable, counts.getOrElse(x.ap_id, 0)))
+      leadersBc.value.map(x => ECPLeader(x.ap_id, x.ap_indexable, counts.getOrElse(x.ap_id, 0)))
     }
 
     val meta = ECPIndexMetaData(leaders, distance)

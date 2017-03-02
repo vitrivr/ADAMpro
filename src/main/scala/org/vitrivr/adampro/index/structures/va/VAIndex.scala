@@ -53,24 +53,24 @@ class VAIndex(override val indexname: IndexName)(@transient override implicit va
   override def scan(data: DataFrame, q: MathVector, distance: DistanceFunction, options: Map[String, String], k: Int): DataFrame = {
     log.debug("scanning VA-File index " + indexname)
 
-    val signatureGenerator = ac.sc.broadcast(meta.signatureGenerator)
+    val signatureGeneratorBc = ac.sc.broadcast(meta.signatureGenerator)
 
     val bounds = computeBounds(q, meta.marks, distance.asInstanceOf[MinkowskiDistance])
-    val lbounds = ac.sc.broadcast(bounds._1)
-    val ubounds = ac.sc.broadcast(bounds._2)
+    val lboundsBc = ac.sc.broadcast(bounds._1)
+    val uboundsBc = ac.sc.broadcast(bounds._2)
 
     //compute the cells
     val cellsUDF = udf((c: Array[Byte]) => {
-      signatureGenerator.value.toCells(BitString.fromByteArray(c))
+      signatureGeneratorBc.value.toCells(BitString.fromByteArray(c))
     })
 
     //compute the approximate distance given the cells
-    val distUDF = (bounds: Broadcast[Bounds]) => udf((cells: Seq[Int]) => {
+    val distUDF = (boundsBc: Broadcast[Bounds]) => udf((cells: Seq[Int]) => {
       var bound : VectorBase = 0
 
       var idx = 0
       while (idx < cells.length) {
-        bound += bounds.value(idx)(cells(idx))
+        bound += boundsBc.value(idx)(cells(idx))
         idx += 1
       }
 
@@ -81,10 +81,10 @@ class VAIndex(override val indexname: IndexName)(@transient override implicit va
 
     val tmp = data
       .withColumn("ap_cells", cellsUDF(data(AttributeNames.featureIndexColumnName)))
-      .withColumn("ap_lbound", distUDF(lbounds)(col("ap_cells")))
-      .withColumn("ap_ubound", distUDF(ubounds)(col("ap_cells"))) //note that this is computed lazy!
+      .withColumn("ap_lbound", distUDF(lboundsBc)(col("ap_cells")))
+      .withColumn("ap_ubound", distUDF(uboundsBc)(col("ap_cells"))) //note that this is computed lazy!
 
-    val results = tmp
+    val res = tmp
       .mapPartitions(p => {
       //in here  we compute for each partition the k nearest neighbours and collect the results
       val localRh = new VAResultHandler(k)
@@ -100,7 +100,7 @@ class VAIndex(override val indexname: IndexName)(@transient override implicit va
     //the most correct solution would be to re-do at this point the result handler with the pre-selected results again
     //but in most cases this will be less efficient than just considering all candidates
 
-    results
+    res
   }
 
   override def isQueryConform(nnq: NearestNeighbourQuery): Boolean = {

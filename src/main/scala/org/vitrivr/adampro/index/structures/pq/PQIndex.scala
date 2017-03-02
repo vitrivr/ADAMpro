@@ -32,7 +32,7 @@ class PQIndex(override val indexname: IndexName)(@transient override implicit va
     log.debug("scanning PQ index " + indexname)
 
     //precompute distance
-    val distances = ac.sc.broadcast(q.toArray
+    val distancesBc = ac.sc.broadcast(q.toArray
       .grouped(math.max(1, q.size / meta.nsq)).toSeq
       .zipWithIndex
       .map { case (split, idx) =>
@@ -49,16 +49,18 @@ class PQIndex(override val indexname: IndexName)(@transient override implicit va
       var sum : VectorBase = 0
       //sum up distance of each part by choosing the right cluster
       while(i < c.length){
-        sum += distances.value(i)(c(i))
+        sum += distancesBc.value(i)(c(i))
         i += 1
       }
       sum
     })
 
-    data
+    val res = data
       .withColumn(AttributeNames.distanceColumnName, distUDF(data(AttributeNames.featureIndexColumnName)).cast(DataTypes.FloatType))
       .sort(AttributeNames.distanceColumnName)
       .limit(k)
+
+    res
   }
 
   override def isQueryConform(nnq: NearestNeighbourQuery): Boolean = {

@@ -47,7 +47,7 @@ class ECPIndex(override val indexname: IndexName)(@transient override implicit v
 
     //take so many centroids up to the moment where the result-length is over k (therefore + 1)
     val numberOfCentroidsToUse = centroids.map(_._1.count).scanLeft(0.toLong)(_ + _).takeWhile(_ < k).length + 1
-    val ids = ac.sc.broadcast(centroids.take(numberOfCentroidsToUse).map(_._1.id))
+    val idsBc = ac.sc.broadcast(centroids.take(numberOfCentroidsToUse).map(_._1.id))
 
     log.trace("centroids prepared")
 
@@ -57,7 +57,7 @@ class ECPIndex(override val indexname: IndexName)(@transient override implicit v
 
     //iterate over all centroids until the result-count is over k
     import org.apache.spark.sql.functions._
-    val results = data.filter(col(AttributeNames.featureIndexColumnName) isin (ids.value : _*))
+    val results = data.filter(col(AttributeNames.featureIndexColumnName) isin (idsBc.value : _*))
       .withColumn(AttributeNames.distanceColumnName, distUDF(col(AttributeNames.featureIndexColumnName)).cast(DataTypes.FloatType))
 
     results

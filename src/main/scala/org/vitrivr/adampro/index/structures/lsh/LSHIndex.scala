@@ -36,26 +36,26 @@ class LSHIndex(override val indexname: IndexName)(@transient override implicit v
 
     val numOfQueries = options.getOrElse("numOfQ", "3").toInt
 
-    val signatureGenerator = ac.sc.broadcast( new LSHSignatureGenerator(meta.hashTables, meta.m))
+    val signatureGeneratorBc = ac.sc.broadcast( new LSHSignatureGenerator(meta.hashTables, meta.m))
 
     import MovableFeature.conv_math2mov
-    val originalQuery = signatureGenerator.value.toBuckets(q)
+    val originalQuery = signatureGeneratorBc.value.toBuckets(q)
     //move the query around by the precomuted radius
     //TODO: possibly adjust weight of computed queries vs. true query
-    val queries = ac.sc.broadcast(List.fill(numOfQueries)((1.0, signatureGenerator.value.toBuckets(q.move(meta.radius)))) ::: List((1.0, originalQuery)))
+    val queriesBc = ac.sc.broadcast(List.fill(numOfQueries)((1.0, signatureGeneratorBc.value.toBuckets(q.move(meta.radius)))) ::: List((1.0, originalQuery)))
 
     import org.apache.spark.sql.functions.udf
     val distUDF = udf((c: Array[Byte]) => {
       var i = 0
       var score = 0
-      val buckets = signatureGenerator.value.toBuckets(BitString.fromByteArray(c))
+      val buckets = signatureGeneratorBc.value.toBuckets(BitString.fromByteArray(c))
 
-      while (i < queries.value.length) {
+      while (i < queriesBc.value.length) {
         var j = 0
         var sum = 0
 
-        val weight = queries.value(i)._1
-        val query = queries.value(i)._2
+        val weight = queriesBc.value(i)._1
+        val query = queriesBc.value(i)._2
 
         while(j < buckets.length){
           if(buckets(j) == query(j)){
@@ -72,10 +72,11 @@ class LSHIndex(override val indexname: IndexName)(@transient override implicit v
       score
     })
 
-
-    data
+    val res = data
       .withColumn(AttributeNames.distanceColumnName, distUDF(data(AttributeNames.featureIndexColumnName)))
       .filter(col(AttributeNames.distanceColumnName) > 0)
+
+    res
   }
 
   override def isQueryConform(nnq: NearestNeighbourQuery): Boolean = {

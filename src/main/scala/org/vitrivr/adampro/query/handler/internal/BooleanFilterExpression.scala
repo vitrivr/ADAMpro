@@ -52,14 +52,16 @@ object BooleanFilterExpression extends Logging {
       }
 
       if (ids.nonEmpty) {
-        val idsbc = ac.sc.broadcast(ids)
+        val idsBc = ac.sc.broadcast(ids)
         df = df.map(d => {
-          val rdd = d.rdd.filter(x => idsbc.value.contains(x.getAs[Any](entity.pk.name)))
+          val rdd = d.rdd.filter(x => idsBc.value.contains(x.getAs[Any](entity.pk.name)))
           ac.sqlContext.createDataFrame(rdd, d.schema)
         })
       }
 
-      df.map(BooleanFilterExpression.filter(_, bq))
+      val res = df.map(BooleanFilterExpression.filter(_, bq))
+
+      res
     }
 
     override def equals(that: Any): Boolean =

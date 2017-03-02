@@ -33,18 +33,18 @@ import org.vitrivr.adampro.query.distance.DistanceFunction
 
     val sample = getSample(math.max(nrefs.getOrElse(math.ceil(2 * math.sqrt(data.count())).toInt), MINIMUM_NUMBER_OF_TUPLE), attribute)(data)
 
-    val refs = ac.sc.broadcast(sample.zipWithIndex.map { case (idt, idx) => IndexingTaskTuple(idx.toLong, idt.ap_indexable) })
-    val ki = p_ki.getOrElse(math.min(100, refs.value.length))
-    val ks = p_ks.getOrElse(math.min(100, refs.value.length))
+    val refsBc = ac.sc.broadcast(sample.zipWithIndex.map { case (idt, idx) => IndexingTaskTuple(idx.toLong, idt.ap_indexable) })
+    val ki = p_ki.getOrElse(math.min(100, refsBc.value.length))
+    val ks = p_ks.getOrElse(math.min(100, refsBc.value.length))
     assert(ks <= ki)
-    log.trace("MI index chosen " + refs.value.length + " reference points")
+    log.trace("MI index chosen " + refsBc.value.length + " reference points")
 
     case class ReferencePointAssignment(tid: TupleID, refid: TupleID, score: Int)
 
     val indexed = data.rdd
       .map(r => IndexingTaskTuple(r.getAs(AttributeNames.internalIdColumnName), Vector.conv_dspark2vec(r.getAs[DenseSparkVector](attribute))))
       .flatMap(datum => {
-        refs.value
+        refsBc.value
           .sortBy(ref => distance.apply(datum.ap_indexable, ref.ap_indexable)) //sort refs by distance
           .zipWithIndex //give rank (score)
           .map { case (ref, idx) => ReferencePointAssignment(datum.ap_id, ref.ap_id, idx) } //obj, postingListId, score
@@ -73,7 +73,7 @@ import org.vitrivr.adampro.query.distance.DistanceFunction
     ))
 
     val df = ac.sqlContext.createDataFrame(indexed, schema)
-    val meta = MIIndexMetaData(ki, ks, refs.value)
+    val meta = MIIndexMetaData(ki, ks, refsBc.value)
 
     (df, meta)
   }

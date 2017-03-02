@@ -46,15 +46,15 @@ class SHIndex(override val indexname: IndexName)(@transient override implicit va
     val originalQuery = SHUtils.hashFeature(q, meta)
     //move the query around by the precomuted radius
     //TODO: possibly adjust weight of computed queries vs. true query
-    val queries = ac.sc.broadcast(List.fill(numOfQueries)((1.0, SHUtils.hashFeature(q.move(meta.radius), meta))) ::: List((1.0, originalQuery)))
+    val queriesBc = ac.sc.broadcast(List.fill(numOfQueries)((1.0, SHUtils.hashFeature(q.move(meta.radius), meta))) ::: List((1.0, originalQuery)))
 
     import org.apache.spark.sql.functions.udf
     val distUDF = udf((c: Array[Byte]) => {
       var i = 0
       var score = 0
-      while (i < queries.value.length) {
-        val weight = queries.value(i)._1
-        val query = queries.value(i)._2
+      while (i < queriesBc.value.length) {
+        val weight = queriesBc.value(i)._1
+        val query = queriesBc.value(i)._2
         score += BitString.fromByteArray(c).hammingDistance(query) //hamming distance
         i += 1
       }
@@ -63,7 +63,7 @@ class SHIndex(override val indexname: IndexName)(@transient override implicit va
     })
 
     import ac.spark.implicits._
-    data
+    val res = data
       .withColumn(AttributeNames.distanceColumnName, distUDF(data(AttributeNames.featureIndexColumnName)))
       .mapPartitions { items =>
         val handler = new SHResultHandler(k) //use handler to take closest n elements
@@ -76,6 +76,8 @@ class SHIndex(override val indexname: IndexName)(@transient override implicit va
 
         handler.results.map(x => ResultElement(x.ap_id, x.ap_score)).iterator
       }.toDF()
+
+    res
   }
 
   override def isQueryConform(nnq: NearestNeighbourQuery): Boolean = {
