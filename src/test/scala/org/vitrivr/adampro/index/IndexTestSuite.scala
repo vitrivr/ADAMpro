@@ -24,6 +24,30 @@ class IndexTestSuite extends AdamTestBase {
   val ntuples = 1000 + Random.nextInt(1000)
   val ndims = 100
 
+
+  /**
+    *
+    * @param indextype
+    */
+  def indexCreationTest(indextype : IndexTypes.IndexType) {
+      withSimpleEntity(ntuples, ndims) { entityname =>
+        Given("an entity without metadata")
+        val entity = Entity.load(entityname)
+        assert(entity.isSuccess)
+
+        When("a " + indextype.toString() + " index is created")
+        val index = IndexOp.create(entity.get.entityname, "feature", indextype, EuclideanDistance)
+        assert(index.isSuccess)
+
+        Then("the index has been created")
+        assert(Index.exists(index.get.indexname))
+        And("and the confidence is set properly")
+        assert(index.get.confidence <= 1)
+        And("all elements are indexed")
+        assert(index.get.count == EntityOp.count(entityname).get)
+      }
+  }
+
   feature("index creation") {
     /**
       *
@@ -133,88 +157,28 @@ class IndexTestSuite extends AdamTestBase {
       *
       */
     scenario("create eCP index") {
-      withSimpleEntity(ntuples, ndims) { entityname =>
-        Given("an entity without metadata")
-        val entity = Entity.load(entityname)
-        assert(entity.isSuccess)
-
-        When("an eCP index is created")
-        val index = IndexOp.create(entityname, "feature", IndexTypes.ECPINDEX, EuclideanDistance)
-        assert(index.isSuccess)
-
-        Then("the index has been created")
-        assert(Index.exists(index.get.indexname))
-        And("and the confidence is set properly")
-        assert(index.get.confidence <= 1)
-        And("all elements are indexed")
-        assert(index.get.count == EntityOp.count(entityname).get)
-      }
+      indexCreationTest(IndexTypes.ECPINDEX)
     }
 
     /**
       *
       */
     scenario("create LSH index") {
-      withSimpleEntity(ntuples, ndims) { entityname =>
-        Given("an entity without metadata")
-        val entity = Entity.load(entityname)
-        assert(entity.isSuccess)
-
-        When("an LSH index is created")
-        val index = IndexOp.create(entityname, "feature", IndexTypes.LSHINDEX, EuclideanDistance)
-        assert(index.isSuccess)
-
-        Then("the index has been created")
-        assert(Index.exists(index.get.indexname))
-        And("and the confidence is set properly")
-        assert(index.get.confidence <= 1)
-        And("all elements are indexed")
-        assert(index.get.count == EntityOp.count(entityname).get)
-      }
+      indexCreationTest(IndexTypes.LSHINDEX)
     }
 
     /**
       *
       */
     scenario("create PQ index") {
-      withSimpleEntity(ntuples, ndims) { entityname =>
-        Given("an entity without metadata")
-        val entity = Entity.load(entityname)
-        assert(entity.isSuccess)
-
-        When("an SH index is created")
-        val index = IndexOp.create(entityname, "feature", IndexTypes.PQINDEX, EuclideanDistance)
-        assert(index.isSuccess)
-
-        Then("the index has been created")
-        assert(Index.exists(index.get.indexname))
-        And("and the confidence is set properly")
-        assert(index.get.confidence <= 1)
-        And("all elements are indexed")
-        assert(index.get.count == EntityOp.count(entityname).get)
-      }
+      indexCreationTest(IndexTypes.PQINDEX)
     }
 
     /**
       *
       */
     scenario("create SH index") {
-      withSimpleEntity(ntuples, ndims) { entityname =>
-        Given("an entity without metadata")
-        val entity = Entity.load(entityname)
-        assert(entity.isSuccess)
-
-        When("an SH index is created")
-        val index = IndexOp.create(entityname, "feature", IndexTypes.SHINDEX, EuclideanDistance)
-        assert(index.isSuccess)
-
-        Then("the index has been created")
-        assert(Index.exists(index.get.indexname))
-        And("and the confidence is set properly")
-        assert(index.get.confidence <= 1)
-        And("all elements are indexed")
-        assert(index.get.count == EntityOp.count(entityname).get)
-      }
+      indexCreationTest(IndexTypes.SHINDEX)
     }
 
 
@@ -222,25 +186,7 @@ class IndexTestSuite extends AdamTestBase {
       *
       */
     scenario("create VA-File (fixed) index") {
-      withSimpleEntity(ntuples, ndims) { entityname =>
-        Given("an entity without metadata")
-        val entity = Entity.load(entityname)
-        assert(entity.isSuccess)
-
-        When("an VA-File index is created")
-        val index = IndexOp.create(entityname, "feature", IndexTypes.VAFINDEX, EuclideanDistance)
-        assert(index.isSuccess)
-
-        Then("the index has been created")
-        assert(Index.exists(index.get.indexname))
-        And("and the confidence is set properly")
-        assert(index.get.confidence == 1)
-        And("all elements are indexed")
-        assert(index.get.count == EntityOp.count(entityname).get)
-
-        //clean up
-        EntityOp.drop(entityname)
-      }
+      indexCreationTest(IndexTypes.VAFINDEX)
     }
 
 
@@ -248,22 +194,14 @@ class IndexTestSuite extends AdamTestBase {
       *
       */
     scenario("create VA-File (variable) index") {
-      withSimpleEntity(ntuples, ndims) { entityname =>
-        Given("an entity without metadata")
-        val entity = Entity.load(entityname)
-        assert(entity.isSuccess)
+      indexCreationTest(IndexTypes.VAVINDEX)
+    }
 
-        When("an VA-File index is created")
-        val index = IndexOp.create(entityname, "feature", IndexTypes.VAVINDEX, EuclideanDistance)
-        assert(index.isSuccess)
-
-        Then("the index has been created")
-        assert(Index.exists(index.get.indexname))
-        And("and the confidence is set properly")
-        assert(index.get.confidence == 1)
-        And("all elements are indexed")
-        assert(index.get.count == EntityOp.count(entityname).get)
-      }
+    /**
+      *
+      */
+    scenario("create VA-File (plus) index") {
+      indexCreationTest(IndexTypes.VAPLUSINDEX)
     }
   }
 }
