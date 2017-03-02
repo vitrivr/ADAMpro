@@ -23,9 +23,9 @@ class EntityTestSuite extends AdamTestBase {
 
   case class TemplateFieldDefinition(name: String, attributetype: AttributeTypes.AttributeType, sqlType: String)
 
-  def ntuples() = Random.nextInt(1000)
+  def ntuples(min : Int = 1, max : Int = 1000) =  min + Random.nextInt(max - min)
 
-  def ndims() = 20 + Random.nextInt(80)
+  def ndims(min : Int = 20, max : Int = 100) = min + Random.nextInt(max - min)
 
   feature("data definition") {
     /**
@@ -397,6 +397,47 @@ class EntityTestSuite extends AdamTestBase {
         assert(randomRowResult.getInt("intfieldunfilled") == 0)
         assert(randomRowResult.getLong("longfieldunfilled") == 0)
         assert(randomRowResult.getBoolean("booleanfieldunfilled") == false)
+      }
+    }
+
+    /**
+      *
+      */
+    scenario("perform many insertions") {
+      withEntityName { entityname =>
+        Given("an entity without metadata")
+        val creationAttributes = Seq(new AttributeDefinition("idfield", AttributeTypes.LONGTYPE), new AttributeDefinition("vectorfield", AttributeTypes.VECTORTYPE))
+        Entity.create(entityname, creationAttributes)
+
+        val schema = StructType(creationAttributes.map(a => StructField(a.name, a.attributeType.datatype, false)))
+        val dimsInsert = ndims()
+
+        var totalInsert = 0
+        val times = new ListBuffer[Long]()
+
+        (0 to 100).foreach { i =>
+          val tuplesInsert = ntuples(max = 10)
+          totalInsert += tuplesInsert
+
+          val rdd = ac.sc.parallelize((0 until tuplesInsert).map(id =>
+            Row(Random.nextLong(), Seq.fill(dimsInsert)(Vector.nextRandom()))
+          ))
+
+          val data = ac.sqlContext.createDataFrame(rdd, schema)
+
+          When("data without metadata is inserted")
+          val t1 = System.currentTimeMillis()
+          EntityOp.insert(entityname, data)
+          val t2 = System.currentTimeMillis()
+
+          times += (t2 - t1)
+        }
+
+        Then("the data is available without metadata")
+        val counted = EntityOp.count(entityname).get
+        assert(counted == totalInsert)
+
+        log.info("times for insertion: " + times.mkString(", "))
       }
     }
 
