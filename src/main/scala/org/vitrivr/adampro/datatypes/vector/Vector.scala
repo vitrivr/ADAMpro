@@ -12,13 +12,13 @@ import scala.util.Random
   * October 2015
   */
 object Vector {
-  type VectorBase = Double
-  val VectorBaseSparkType = DataTypes.DoubleType
+  type VectorBase = Float
+  val VectorBaseSparkType = DataTypes.FloatType
 
-  val zeroValue : VectorBase = 0.toDouble
-  val minValue : VectorBase = Double.MinValue
-  val maxValue : VectorBase = Double.MaxValue
-  def nextRandom() : VectorBase = Random.nextDouble()
+  val zeroValue : VectorBase = 0.toFloat
+  val minValue : VectorBase = Float.MinValue
+  val maxValue : VectorBase = Float.MaxValue
+  def nextRandom() : VectorBase = Random.nextFloat()
 
   type DenseRawVector = Seq[VectorBase]
   type SparseRawVector = SparseVectorWrapper
@@ -42,9 +42,9 @@ object Vector {
   def conv_vec2sspark(v: SparseMathVector): SparseSparkVector = SparseVectorWrapper(v.index, v.data, v.length).toRow()
 
 
-  def conv_int2vb(v: Int): VectorBase = v.toDouble
-  def conv_float2vb(v: Float): VectorBase = v.toDouble
-  def conv_double2vb(v: Double): VectorBase = v
-  def conv_str2vb(v : String): VectorBase = v.toDouble
+  def conv_int2vb(v: Int): VectorBase = v.toFloat
+  def conv_float2vb(v: Float): VectorBase = v
+  def conv_double2vb(v: Double): VectorBase = v.toFloat
+  def conv_str2vb(v : String): VectorBase = v.toFloat
 }
 
