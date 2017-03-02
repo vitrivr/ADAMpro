@@ -12,6 +12,7 @@ import org.vitrivr.adampro.main.AdamContext
 import org.vitrivr.adampro.query.distance.{DistanceFunction, MinkowskiDistance}
 import org.vitrivr.adampro.query.query.NearestNeighbourQuery
 import org.vitrivr.adampro.datatypes.vector.Vector._
+import org.vitrivr.adampro.helpers.tracker.OperationTracker
 
 /**
   * adampro
@@ -28,7 +29,7 @@ class PQIndex(override val indexname: IndexName)(@transient override implicit va
 
   val meta = metadata.get.asInstanceOf[PQIndexMetaData]
 
-  override def scan(data : DataFrame, q : MathVector, distance : DistanceFunction, options : Map[String, String], k : Int): DataFrame = {
+  override def scan(data : DataFrame, q : MathVector, distance : DistanceFunction, options : Map[String, String], k : Int)(tracker : OperationTracker): DataFrame = {
     log.debug("scanning PQ index " + indexname)
 
     //precompute distance
@@ -41,7 +42,7 @@ class PQIndex(override val indexname: IndexName)(@transient override implicit va
           distance(Vector.conv_draw2vec(center.toArray.map(Vector.conv_double2vb(_))), Vector.conv_draw2vec(qsub))
         }).toIndexedSeq
       }.toIndexedSeq)
-
+    tracker.addBroadcast(distancesBc)
 
     import org.apache.spark.sql.functions.udf
     val distUDF = udf((c: Seq[Byte]) => {

@@ -8,6 +8,7 @@ import org.vitrivr.adampro.query.information.InformationLevels._
 import org.vitrivr.adampro.utils.Logging
 import org.apache.spark.sql.types.IntegerType
 import org.apache.spark.sql.{DataFrame, Row}
+import org.vitrivr.adampro.helpers.tracker.OperationTracker
 
 import scala.collection.mutable.ListBuffer
 import scala.concurrent.duration.Duration
@@ -60,14 +61,14 @@ abstract class QueryExpression(id: Option[String]) extends Serializable with Log
     *
     * @return
     */
-  def evaluate(options : Option[QueryEvaluationOptions] = None)(implicit ac: AdamContext): Option[DataFrame] = {
+  def evaluate(options : Option[QueryEvaluationOptions] = None)(tracker : OperationTracker)(implicit ac: AdamContext): Option[DataFrame] = {
     if (!prepared) {
       log.warn("expression should be prepared before running")
     }
 
     val t1 = System.currentTimeMillis
     log.trace(QUERY_MARKER, "before evaluating query")
-    results = run(options, filter)
+    results = run(options, filter)(tracker)
     log.trace(QUERY_MARKER, "evaluated query")
     run = true
     val t2 = System.currentTimeMillis
@@ -89,7 +90,7 @@ abstract class QueryExpression(id: Option[String]) extends Serializable with Log
     * @param filter filter to apply to data
     * @return
     */
-  protected def run(options : Option[QueryEvaluationOptions], filter: Option[DataFrame])(implicit ac: AdamContext): Option[DataFrame]
+  protected def run(options : Option[QueryEvaluationOptions], filter: Option[DataFrame])(tracker : OperationTracker)(implicit ac: AdamContext): Option[DataFrame]
 
 
   /**

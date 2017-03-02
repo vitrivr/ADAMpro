@@ -16,6 +16,7 @@ import org.vitrivr.adampro.query.query.{BooleanQuery, NearestNeighbourQuery}
 import org.vitrivr.adampro.query.optimizer.OptimizerOp
 import org.vitrivr.adampro.utils.Logging
 import org.apache.spark.sql.DataFrame
+import org.vitrivr.adampro.helpers.tracker.OperationTracker
 
 /**
   * adamtwo
@@ -28,10 +29,10 @@ case class HintBasedScanExpression(private val entityname: EntityName, private v
   override val info = ExpressionDetails(expr.info.source, Some("Hint-Based Expression: " + expr.info.scantype), id, expr.info.confidence)
   _children ++= Seq(expr) ++ filterExpr.map(Seq(_)).getOrElse(Seq())
 
-  override protected def run(options : Option[QueryEvaluationOptions], filter: Option[DataFrame] = None)(implicit ac: AdamContext): Option[DataFrame] = {
+  override protected def run(options : Option[QueryEvaluationOptions], filter: Option[DataFrame] = None)(tracker : OperationTracker)(implicit ac: AdamContext): Option[DataFrame] = {
     log.debug("evaluate hint-based expression, scanning " + expr.info.scantype)
     expr.filter = filter
-    expr.evaluate(options)
+    expr.evaluate(options)(tracker)
   }
 
   override def prepareTree(): QueryExpression = {

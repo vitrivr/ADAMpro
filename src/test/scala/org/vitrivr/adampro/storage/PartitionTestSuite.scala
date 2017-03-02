@@ -3,6 +3,7 @@ package org.vitrivr.adampro.storage
 import org.vitrivr.adampro.AdamTestBase
 import org.vitrivr.adampro.api.{IndexOp, QueryOp}
 import org.vitrivr.adampro.config.AttributeNames
+import org.vitrivr.adampro.helpers.tracker.OperationTracker
 import org.vitrivr.adampro.index.partition.PartitionMode
 import org.vitrivr.adampro.index.Index
 import org.vitrivr.adampro.index.structures.IndexTypes
@@ -29,20 +30,23 @@ class PartitionTestSuite extends AdamTestBase {
       */
     scenario("repartition index replacing existing") {
       withQueryEvaluationSet { es =>
-        val index = IndexOp.create(es.entity.entityname, "vectorfield", IndexTypes.ECPINDEX, EuclideanDistance)
+        val index = IndexOp.create(es.entity.entityname, "vectorfield", IndexTypes.ECPINDEX, EuclideanDistance)()
         assert(index.isSuccess)
 
         When("performing a repartitioning with replacement")
         IndexOp.partition(index.get.indexname, nPartitions, None, Some("tid"), PartitionMode.REPLACE_EXISTING)
 
         val partnnq = NearestNeighbourQuery("vectorfield", es.vector, None, es.distance, es.k, false, Map[String, String](), Some(Set(0)))
+        val tracker = new OperationTracker()
 
-        val partresults = QueryOp.index(index.get.indexname, partnnq, None).get.get
+        val partresults = QueryOp.index(index.get.indexname, partnnq, None)(tracker).get.get
           .map(r => (r.getAs[Distance](AttributeNames.distanceColumnName), r.getAs[Long]("tid"))).collect()
           .sortBy(_._1).toSeq
 
         Then("we should retrieve the k nearest neighbors of one partition only")
         assert(partresults.map(x => x._2 % nPartitions).distinct.length == 1)
+
+        tracker.cleanAll()
       }
     }
 
@@ -52,14 +56,15 @@ class PartitionTestSuite extends AdamTestBase {
       */
     scenario("repartition index creating temporary new") {
       withQueryEvaluationSet { es =>
-        val index = IndexOp.create(es.entity.entityname, "vectorfield", IndexTypes.ECPINDEX, EuclideanDistance)
+        val index = IndexOp.create(es.entity.entityname, "vectorfield", IndexTypes.ECPINDEX, EuclideanDistance)()
         assert(index.isSuccess)
 
         When("performing a repartitioning with replacement")
         val partindex = IndexOp.partition(index.get.indexname, nPartitions, None, Some("tid"), PartitionMode.CREATE_TEMP)
         val partnnq = NearestNeighbourQuery("vectorfield", es.vector, None, es.distance, es.k, false, Map[String, String](), Some(Set(0)))
+        val tracker = new OperationTracker()
 
-        val partresults = QueryOp.index(partindex.get.indexname, partnnq, None).get.get
+        val partresults = QueryOp.index(partindex.get.indexname, partnnq, None)(tracker).get.get
           .map(r => (r.getAs[Distance](AttributeNames.distanceColumnName), r.getAs[Long]("tid"))).collect()
           .sortBy(_._1).toSeq
 
@@ -72,6 +77,8 @@ class PartitionTestSuite extends AdamTestBase {
         Then("the index should be gone")
         val loadedIndex = Index.load(partindex.get.indexname)
         assert(loadedIndex.isFailure)
+
+        tracker.cleanAll()
       }
     }
 
@@ -80,12 +87,13 @@ class PartitionTestSuite extends AdamTestBase {
       */
     scenario("repartition index creating new") {
       withQueryEvaluationSet { es =>
-        val index = IndexOp.create(es.entity.entityname, "vectorfield", IndexTypes.ECPINDEX, EuclideanDistance)
+        val index = IndexOp.create(es.entity.entityname, "vectorfield", IndexTypes.ECPINDEX, EuclideanDistance)()
         assert(index.isSuccess)
 
         When("performing a repartitioning, creating new")
         val partindex = IndexOp.partition(index.get.indexname, nPartitions, None, Some("tid"), PartitionMode.CREATE_NEW)
         val partnnq = NearestNeighbourQuery("vectorfield", es.vector, None, es.distance, es.k, false, Map[String, String](), Some(Set(0)))
+        val tracker = new OperationTracker()
 
         ac.indexLRUCache.empty()
 
@@ -93,7 +101,7 @@ class PartitionTestSuite extends AdamTestBase {
         val loadedIndex = Index.load(partindex.get.indexname)
         assert(loadedIndex.isSuccess)
 
-        val x = QueryOp.index(partindex.get.indexname, partnnq, None).get.get
+        val x = QueryOp.index(partindex.get.indexname, partnnq, None)(tracker).get.get
 
         val partresults = x
           .map(r => (r.getAs[Distance](AttributeNames.distanceColumnName), r.getAs[Long]("tid"))).collect()
@@ -101,6 +109,8 @@ class PartitionTestSuite extends AdamTestBase {
 
         And("we should retrieve the k nearest neighbors of one partition only")
         assert(partresults.map(x => x._2 % nPartitions).distinct.length == 1)
+
+        tracker.cleanAll()
       }
     }
 
@@ -109,12 +119,13 @@ class PartitionTestSuite extends AdamTestBase {
       */
     scenario("repartition index based on metadata") {
       withQueryEvaluationSet { es =>
-        val index = IndexOp.create(es.entity.entityname, "vectorfield", IndexTypes.ECPINDEX, EuclideanDistance)
+        val index = IndexOp.create(es.entity.entityname, "vectorfield", IndexTypes.ECPINDEX, EuclideanDistance)()
         assert(index.isSuccess)
 
         When("performing a repartitioning, creating new")
         val partindex = IndexOp.partition(index.get.indexname, nPartitions, None, Some("tid"), PartitionMode.CREATE_NEW)
         val partnnq = NearestNeighbourQuery("vectorfield", es.vector, None, es.distance, es.k, false, Map[String, String](), Some(Set(0)))
+        val tracker = new OperationTracker()
 
         ac.indexLRUCache.empty()
 
@@ -122,12 +133,14 @@ class PartitionTestSuite extends AdamTestBase {
         val loadedIndex = Index.load(partindex.get.indexname)
         assert(loadedIndex.isSuccess)
 
-        val partresults = QueryOp.index(partindex.get.indexname, partnnq, None).get.get
+        val partresults = QueryOp.index(partindex.get.indexname, partnnq, None)(tracker).get.get
           .map(r => (r.getAs[Distance](AttributeNames.distanceColumnName), r.getAs[Long]("tid"))).collect() //get here TID of metadata
           .sortBy(_._1).toSeq
 
         And("we should retrieve the k nearest neighbors of one partition only")
         assert(partresults.map(x => x._2 % nPartitions).distinct.length == 1)
+
+        tracker.cleanAll()
       }
     }
   }

@@ -6,6 +6,7 @@ import org.apache.spark.sql.{DataFrame, Dataset}
 import org.vitrivr.adampro.config.AttributeNames
 import org.vitrivr.adampro.datatypes.vector.Vector
 import org.vitrivr.adampro.datatypes.vector.Vector.{VectorBase, _}
+import org.vitrivr.adampro.helpers.tracker.OperationTracker
 import org.vitrivr.adampro.index.Index.IndexTypeName
 import org.vitrivr.adampro.index._
 import org.vitrivr.adampro.index.structures.IndexTypes
@@ -27,7 +28,7 @@ class SHIndexGenerator(nbits: Option[Int], trainingSize: Int)(@transient implici
     * @param data raw data to index
     * @return
     */
-  override def index(data: DataFrame, attribute : String): (DataFrame, Serializable) = {
+  override def index(data: DataFrame, attribute : String)(tracker : OperationTracker): (DataFrame, Serializable) = {
     log.trace("SH started indexing")
 
     val meta = train(getSample(math.max(trainingSize, MINIMUM_NUMBER_OF_TUPLE), attribute)(data))

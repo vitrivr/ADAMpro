@@ -1,8 +1,9 @@
 package org.vitrivr.adampro.query.handler.internal
 
 import org.vitrivr.adampro.main.AdamContext
-import org.vitrivr.adampro.query.handler.generic.{QueryEvaluationOptions, ExpressionDetails, QueryExpression}
+import org.vitrivr.adampro.query.handler.generic.{ExpressionDetails, QueryEvaluationOptions, QueryExpression}
 import org.apache.spark.sql.DataFrame
+import org.vitrivr.adampro.helpers.tracker.OperationTracker
 
 /**
   * adamtwo
@@ -14,13 +15,13 @@ case class CompoundQueryExpression(private val expr : QueryExpression, id: Optio
   override val info = ExpressionDetails(None, Some("Compound Query Expression"), id, None)
   _children ++= Seq(expr)
 
-  override protected def run(options : Option[QueryEvaluationOptions], filter : Option[DataFrame] = None)(implicit ac: AdamContext): Option[DataFrame] = {
+  override protected def run(options : Option[QueryEvaluationOptions], filter: Option[DataFrame] = None)(tracker : OperationTracker)(implicit ac: AdamContext): Option[DataFrame] = {
     log.debug("evaluate compound query")
 
     ac.sc.setJobGroup(id.getOrElse(""), "compound query", interruptOnCancel = true)
 
     expr.filter = filter
-    expr.evaluate(options)
+    expr.evaluate(options)(tracker)
   }
 
   override def equals(that: Any): Boolean =

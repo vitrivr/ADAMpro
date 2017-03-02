@@ -8,6 +8,7 @@ import org.vitrivr.adampro.query.handler.internal.BooleanFilterExpression.Boolea
 import org.vitrivr.adampro.query.query.{BooleanQuery, NearestNeighbourQuery}
 import org.vitrivr.adampro.utils.Logging
 import org.apache.spark.sql.DataFrame
+import org.vitrivr.adampro.helpers.tracker.OperationTracker
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.duration.Duration
@@ -32,9 +33,9 @@ object ProgressiveQueryHandler extends Logging {
     * @param id          query id
     * @return
     */
-  def progressiveQuery[U](entityname: EntityName, nnq: NearestNeighbourQuery, bq: Option[BooleanQuery], pathChooser: ProgressivePathChooser, onComplete: Try[ProgressiveObservation] => U, options: Option[QueryEvaluationOptions], id: Option[String])(implicit ac: AdamContext): ProgressiveQueryStatusTracker = {
+  def progressiveQuery[U](entityname: EntityName, nnq: NearestNeighbourQuery, bq: Option[BooleanQuery], pathChooser: ProgressivePathChooser, onComplete: Try[ProgressiveObservation] => U, options: Option[QueryEvaluationOptions], id: Option[String])(tracker : OperationTracker)(implicit ac: AdamContext): ProgressiveQueryStatusTracker = {
     val filter = if (bq.isDefined) {
-      new BooleanFilterScanExpression(entityname)(bq.get, None)(None)(ac).prepareTree().evaluate(options)
+      new BooleanFilterScanExpression(entityname)(bq.get, None)(None)(ac).prepareTree().evaluate(options)(tracker)
     } else {
       None
     }
@@ -46,7 +47,7 @@ object ProgressiveQueryHandler extends Logging {
       log.debug("removed " + (distinctPaths.length - paths.length) + " paths for progressive querying, which were duplicates")
     }
 
-    progressiveQuery(distinctPaths, filter, onComplete, options, id)
+    progressiveQuery(distinctPaths, filter, onComplete, options, id)(tracker)
   }
 
 
@@ -60,16 +61,16 @@ object ProgressiveQueryHandler extends Logging {
     * @param id         query id
     * @return a tracker for the progressive query
     */
-  private def progressiveQuery[U](exprs: Seq[QueryExpression], filter: Option[DataFrame], onComplete: Try[ProgressiveObservation] => U, options: Option[QueryEvaluationOptions], id: Option[String])(implicit ac: AdamContext): ProgressiveQueryStatusTracker = {
-    val tracker = new ProgressiveQueryStatusTracker(id.getOrElse(""))
+  private def progressiveQuery[U](exprs: Seq[QueryExpression], filter: Option[DataFrame], onComplete: Try[ProgressiveObservation] => U, options: Option[QueryEvaluationOptions], id: Option[String])(tracker : OperationTracker)(implicit ac: AdamContext): ProgressiveQueryStatusTracker = {
+    val pqtracker = new ProgressiveQueryStatusTracker(id.getOrElse(""))
     log.debug("performing progressive query with " + exprs.length + " paths: " + exprs.map(expr => expr.info.scantype.getOrElse("<missing scantype>") + " (" + expr.info.source.getOrElse("<missing source>") + ")").mkString(", "))
 
     if (exprs.isEmpty) {
       throw new GeneralAdamException("no paths for progressive query set; possible causes: is the entity or the attribute existing?")
     }
 
-    val scanFutures = exprs.map(expr => new ScanFuture(expr, filter, onComplete, tracker))
-    tracker
+    val scanFutures = exprs.map(expr => new ScanFuture(expr, filter, onComplete, pqtracker)(tracker))
+    pqtracker
   }
 
 
@@ -84,9 +85,9 @@ object ProgressiveQueryHandler extends Logging {
     * @param id          query id
     * @return
     */
-  def timedProgressiveQuery[U](entityname: EntityName, nnq: NearestNeighbourQuery, bq: Option[BooleanQuery], pathChooser: ProgressivePathChooser, timelimit: Duration, options: Option[QueryEvaluationOptions], id: Option[String])(implicit ac: AdamContext): ProgressiveObservation = {
+  def timedProgressiveQuery[U](entityname: EntityName, nnq: NearestNeighbourQuery, bq: Option[BooleanQuery], pathChooser: ProgressivePathChooser, timelimit: Duration, options: Option[QueryEvaluationOptions], id: Option[String])(tracker : OperationTracker)(implicit ac: AdamContext): ProgressiveObservation = {
     val filter = if (bq.isDefined) {
-      new BooleanFilterScanExpression(entityname)(bq.get, None)(None)(ac).prepareTree().evaluate(options)
+      new BooleanFilterScanExpression(entityname)(bq.get, None)(None)(ac).prepareTree().evaluate(options)(tracker)
     } else {
       None
     }
@@ -98,7 +99,7 @@ object ProgressiveQueryHandler extends Logging {
       log.debug("removed " + (distinctPaths.length - paths.length) + " paths for progressive querying, which were duplicates")
     }
 
-    timedProgressiveQuery(distinctPaths, timelimit, filter, options, id)
+    timedProgressiveQuery(distinctPaths, timelimit, filter, options, id)(tracker)
   }
 
 
@@ -112,23 +113,23 @@ object ProgressiveQueryHandler extends Logging {
     * @param id        query id
     * @return the results available together with a confidence score
     */
-  def timedProgressiveQuery(exprs: Seq[QueryExpression], timelimit: Duration, filter: Option[DataFrame], options: Option[QueryEvaluationOptions], id: Option[String])(implicit ac: AdamContext): ProgressiveObservation = {
+  def timedProgressiveQuery(exprs: Seq[QueryExpression], timelimit: Duration, filter: Option[DataFrame], options: Option[QueryEvaluationOptions], id: Option[String])(tracker : OperationTracker)(implicit ac: AdamContext): ProgressiveObservation = {
     log.debug("timed progressive query performs kNN query")
-    val tracker = progressiveQuery[Unit](exprs, filter, (observation: Try[ProgressiveObservation]) => (), options, id)
+    val pqtracker = progressiveQuery[Unit](exprs, filter, (observation: Try[ProgressiveObservation]) => (), options, id)(tracker)
 
     val timerFuture = Future {
       val sleepTime = Duration(500.toLong, "millis")
       var nSleep = (timelimit / sleepTime).toInt
 
-      while (tracker.status != ProgressiveQueryStatus.FINISHED && nSleep > 0) {
+      while (pqtracker.status != ProgressiveQueryStatus.FINISHED && nSleep > 0) {
         nSleep -= 1
         Thread.sleep(sleepTime.toMillis)
       }
     }
 
     Await.result(timerFuture, timelimit)
-    tracker.stop()
+    pqtracker.stop()
 
-    tracker.results.observation
+    pqtracker.results.observation
   }
 }

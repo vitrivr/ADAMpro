@@ -6,6 +6,7 @@ import org.vitrivr.adampro.config.AttributeNames
 import org.vitrivr.adampro.datatypes.bitstring.BitString
 import org.vitrivr.adampro.datatypes.vector.Vector._
 import org.vitrivr.adampro.datatypes.vector.MovableFeature
+import org.vitrivr.adampro.helpers.tracker.OperationTracker
 import org.vitrivr.adampro.index.Index
 import org.vitrivr.adampro.index.Index.{IndexName, IndexTypeName}
 import org.vitrivr.adampro.index.structures.IndexTypes
@@ -31,18 +32,20 @@ class LSHIndex(override val indexname: IndexName)(@transient override implicit v
   val meta = metadata.get.asInstanceOf[LSHIndexMetaData]
 
 
-  override def scan(data: DataFrame, q: MathVector, distance: DistanceFunction, options: Map[String, String], k: Int): DataFrame = {
+  override def scan(data: DataFrame, q: MathVector, distance: DistanceFunction, options: Map[String, String], k: Int)(tracker : OperationTracker): DataFrame = {
     log.debug("scanning LSH index " + indexname)
 
     val numOfQueries = options.getOrElse("numOfQ", "3").toInt
 
     val signatureGeneratorBc = ac.sc.broadcast( new LSHSignatureGenerator(meta.hashTables, meta.m))
+    tracker.addBroadcast(signatureGeneratorBc)
 
     import MovableFeature.conv_math2mov
     val originalQuery = signatureGeneratorBc.value.toBuckets(q)
     //move the query around by the precomuted radius
     //TODO: possibly adjust weight of computed queries vs. true query
     val queriesBc = ac.sc.broadcast(List.fill(numOfQueries)((1.0, signatureGeneratorBc.value.toBuckets(q.move(meta.radius)))) ::: List((1.0, originalQuery)))
+    tracker.addBroadcast(queriesBc)
 
     import org.apache.spark.sql.functions.udf
     val distUDF = udf((c: Array[Byte]) => {

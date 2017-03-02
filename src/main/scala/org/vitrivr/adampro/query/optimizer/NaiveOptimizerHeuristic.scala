@@ -3,6 +3,7 @@ package org.vitrivr.adampro.query.optimizer
 import org.vitrivr.adampro.api.QueryOp
 import org.vitrivr.adampro.catalog.CatalogOperator
 import org.vitrivr.adampro.entity.Entity
+import org.vitrivr.adampro.helpers.tracker.OperationTracker
 import org.vitrivr.adampro.index.Index
 import org.vitrivr.adampro.main.{AdamContext, SparkStartup}
 import org.vitrivr.adampro.query.query.NearestNeighbourQuery
@@ -22,8 +23,10 @@ private[optimizer] class NaiveOptimizerHeuristic(nruns : Int = 100)(@transient i
   override def train(indexes: Seq[Index], queries: Seq[NearestNeighbourQuery]): Unit = {
     val entity = indexes.head.entity.get
 
+    val tracker = new OperationTracker()
+
     queries.flatMap { nnq =>
-      val rel = QueryOp.sequential(entity.entityname, nnq, None).get.get.select(entity.pk.name).collect().map(_.getAs[Any](0)).toSet
+      val rel = QueryOp.sequential(entity.entityname, nnq, None)(tracker).get.get.select(entity.pk.name).collect().map(_.getAs[Any](0)).toSet
 
       indexes.map { index =>
         index -> performMeasurement(index, nnq, rel)
@@ -34,6 +37,8 @@ private[optimizer] class NaiveOptimizerHeuristic(nruns : Int = 100)(@transient i
       val scores = totalScore(index, measurements.flatten).toArray
       SparkStartup.catalogOperator.createOptimizerOption(name, "scores-index-" + index.indexname, scores)
     }
+
+    tracker.cleanAll()
   }
 
   /**

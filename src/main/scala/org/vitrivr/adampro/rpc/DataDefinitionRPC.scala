@@ -14,6 +14,7 @@ import org.vitrivr.adampro.query.optimizer.QueryCollectionFactory.{LoggedQueryCo
 import org.vitrivr.adampro.query.optimizer._
 import org.vitrivr.adampro.index.partition.{PartitionMode, PartitionerChoice}
 import org.vitrivr.adampro.helpers.storage.Transferer
+import org.vitrivr.adampro.helpers.tracker.OperationTracker
 import org.vitrivr.adampro.index.structures.IndexTypes
 import org.vitrivr.adampro.main.{AdamContext, SparkStartup}
 import org.vitrivr.adampro.query.query.Predicate
@@ -286,14 +287,19 @@ class DataDefinitionRPC extends AdamDefinitionGrpc.AdamDefinition with Logging {
 
     val distance = RPCHelperMethods.prepareDistance(request.distance)
 
-    val res = IndexOp.create(request.entity, request.attribute, indextypename.get, distance, request.options)
+    val tracker = new OperationTracker()
+    val res = IndexOp.create(request.entity, request.attribute, indextypename.get, distance, request.options)(tracker)
 
-    if (res.isSuccess) {
+    val message = if (res.isSuccess) {
       Future.successful(AckMessage(code = AckMessage.Code.OK, message = res.get.indexname))
     } else {
       log.error(res.failed.get.getMessage, res.failed.get)
       Future.successful(AckMessage(code = AckMessage.Code.ERROR, message = res.failed.get.getMessage))
     }
+
+    tracker.cleanAll()
+
+    message
   }
 
 
@@ -579,14 +585,19 @@ class DataDefinitionRPC extends AdamDefinitionGrpc.AdamDefinition with Logging {
     log.debug("rpc call for generating all indexes")
 
     val distance = RPCHelperMethods.prepareDistance(request.distance)
-    val res = IndexOp.generateAll(request.entity, request.attribute, distance)
+    val tracker = new OperationTracker()
+    val res = IndexOp.generateAll(request.entity, request.attribute, distance)(tracker)
 
-    if (res.isSuccess) {
+    val message = if (res.isSuccess) {
       Future.successful(AckMessage(AckMessage.Code.OK, res.get.mkString(",")))
     } else {
       log.error(res.failed.get.getMessage, res.failed.get)
       Future.successful(AckMessage(code = AckMessage.Code.ERROR, message = res.failed.get.getMessage))
     }
+
+    tracker.cleanAll()
+
+    message
   }
 
   /**

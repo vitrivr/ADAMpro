@@ -6,6 +6,7 @@ import org.apache.spark.sql.functions._
 import org.apache.spark.sql.{DataFrame, Dataset}
 import org.vitrivr.adampro.config.AttributeNames
 import org.vitrivr.adampro.datatypes.vector.Vector._
+import org.vitrivr.adampro.helpers.tracker.OperationTracker
 import org.vitrivr.adampro.index.Index.IndexTypeName
 import org.vitrivr.adampro.index._
 import org.vitrivr.adampro.index.structures.IndexTypes
@@ -28,7 +29,7 @@ class PQIndexGenerator(nsq: Int, trainingSize: Int)(@transient implicit val ac: 
     * @param data raw data to index
     * @return
     */
-  override def index(data: DataFrame, attribute : String): (DataFrame, Serializable) = {
+  override def index(data: DataFrame, attribute : String)(tracker : OperationTracker): (DataFrame, Serializable) = {
     log.trace("PQ started indexing")
 
     val sample = getSample(math.max(trainingSize, MINIMUM_NUMBER_OF_TUPLE), attribute)(data)

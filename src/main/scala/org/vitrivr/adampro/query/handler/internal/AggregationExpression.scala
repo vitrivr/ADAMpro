@@ -11,6 +11,7 @@ import org.vitrivr.adampro.query.handler.generic.{ExpressionDetails, QueryEvalua
 import org.vitrivr.adampro.query.handler.internal.AggregationExpression.ExpressionEvaluationOrder
 import org.apache.spark.sql.functions._
 import org.apache.spark.sql.{DataFrame, Row}
+import org.vitrivr.adampro.helpers.tracker.OperationTracker
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.duration.Duration
@@ -29,15 +30,15 @@ abstract class AggregationExpression(private val left: QueryExpression, private 
 
   def aggregationName: String
 
-  override protected def run(options: Option[QueryEvaluationOptions], filter: Option[DataFrame] = None)(implicit ac: AdamContext): Option[DataFrame] = {
+  override protected def run(options : Option[QueryEvaluationOptions], filter: Option[DataFrame] = None)(tracker : OperationTracker)(implicit ac: AdamContext): Option[DataFrame] = {
     log.debug("run aggregation operation " + aggregationName + " between " +  left.getClass.getName + " and " + right.getClass.getName  + "  ordered " + order.toString)
 
     ac.sc.setJobGroup(id.getOrElse(""), "aggregation", interruptOnCancel = true)
 
     val result = order match {
-      case ExpressionEvaluationOrder.LeftFirst => asymmetric(left, right, options, filter)
-      case ExpressionEvaluationOrder.RightFirst => asymmetric(right, left, options, filter)
-      case ExpressionEvaluationOrder.Parallel => symmetric(left, right, options, filter)
+      case ExpressionEvaluationOrder.LeftFirst => asymmetric(left, right, options, filter)(tracker)
+      case ExpressionEvaluationOrder.RightFirst => asymmetric(right, left, options, filter)(tracker)
+      case ExpressionEvaluationOrder.Parallel => symmetric(left, right, options, filter)(tracker)
     }
 
     Some(result)
@@ -59,14 +60,14 @@ abstract class AggregationExpression(private val left: QueryExpression, private 
     result
   }
 
-  private def asymmetric(first: QueryExpression, second: QueryExpression, options: Option[QueryEvaluationOptions], filter: Option[DataFrame] = None): DataFrame = {
+  private def asymmetric(first: QueryExpression, second: QueryExpression, options: Option[QueryEvaluationOptions], filter: Option[DataFrame] = None)(tracker : OperationTracker): DataFrame = {
     first.filter = filter
-    var firstResult = first.evaluate(options).get
+    var firstResult = first.evaluate(options)(tracker).get
 
     //TODO: possibly consider fuzzy sets rather than ignoring distance
     val pk = firstResult.schema.fields.filterNot(_.name == AttributeNames.distanceColumnName).head.name
     second.filter = Some(firstResult.select(pk))
-    var secondResult = second.evaluate(options).get
+    var secondResult = second.evaluate(options)(tracker).get
 
     var result = secondResult
 
@@ -90,11 +91,11 @@ abstract class AggregationExpression(private val left: QueryExpression, private 
     result
   }
 
-  private def symmetric(first: QueryExpression, second: QueryExpression, options: Option[QueryEvaluationOptions], filter: Option[DataFrame] = None): DataFrame = {
+  private def symmetric(first: QueryExpression, second: QueryExpression, options: Option[QueryEvaluationOptions], filter: Option[DataFrame] = None)(tracker : OperationTracker): DataFrame = {
     first.filter = filter
-    val ffut = Future(first.evaluate(options))
+    val ffut = Future(first.evaluate(options)(tracker))
     second.filter = filter
-    val sfut = Future(second.evaluate(options))
+    val sfut = Future(second.evaluate(options)(tracker))
 
     val f = for (firstResult <- ffut; secondResult <- sfut)
     //TODO: possilby consider fuzzy sets rather than ignoring distance
@@ -233,7 +234,7 @@ object AggregationExpression {
   case class EmptyExpression(id: Option[String] = None) extends QueryExpression(id) {
     override val info = ExpressionDetails(None, Some("Empty Expression"), id, None)
 
-    override protected def run(options: Option[QueryEvaluationOptions], filter: Option[DataFrame] = None)(implicit ac: AdamContext): Option[DataFrame] = {
+    override protected def run(options : Option[QueryEvaluationOptions], filter: Option[DataFrame] = None)(tracker : OperationTracker)(implicit ac: AdamContext): Option[DataFrame] = {
       val rdd = ac.sc.emptyRDD[Row]
       Some(ac.sqlContext.createDataFrame(rdd, Result.resultSchema))
     }

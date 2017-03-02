@@ -2,11 +2,12 @@ package org.vitrivr.adampro.query.handler.internal
 
 import org.vitrivr.adampro.config.AttributeNames
 import org.vitrivr.adampro.main.AdamContext
-import org.vitrivr.adampro.query.handler.generic.{QueryEvaluationOptions, ExpressionDetails, QueryExpression}
+import org.vitrivr.adampro.query.handler.generic.{ExpressionDetails, QueryEvaluationOptions, QueryExpression}
 import org.vitrivr.adampro.query.query.NearestNeighbourQuery
 import org.apache.http.annotation.Experimental
 import org.apache.spark.sql.DataFrame
 import org.apache.spark.sql.functions._
+import org.vitrivr.adampro.helpers.tracker.OperationTracker
 
 /**
   * ADAMpro
@@ -30,7 +31,7 @@ case class StochasticIndexQueryExpression(private val exprs: Seq[IndexScanExpres
 
   val entity = exprs.head.index.entity.get
 
-  override protected def run(options : Option[QueryEvaluationOptions], filter: Option[DataFrame] = None)(implicit ac: AdamContext): Option[DataFrame] = {
+  override protected def run(options : Option[QueryEvaluationOptions], filter: Option[DataFrame] = None)(tracker : OperationTracker)(implicit ac: AdamContext): Option[DataFrame] = {
     log.debug("evaluate compound query index scan")
 
     ac.sc.setJobGroup(id.getOrElse(""), "compound query index scan", interruptOnCancel = true)
@@ -38,7 +39,7 @@ case class StochasticIndexQueryExpression(private val exprs: Seq[IndexScanExpres
     exprs.map(_.filter = filter)
     val results = exprs.map(expr => {
       //make sure that index only is queried and not a sequential scan too!
-      expr.evaluate(options)
+      expr.evaluate(options)(tracker)
     })
 
     var result = results.filter(_.isDefined).map(_.get).reduce[DataFrame] { case (a, b) => a.select(entity.pk.name, AttributeNames.distanceColumnName).unionAll(b.select(entity.pk.name, AttributeNames.distanceColumnName)) }

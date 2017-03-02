@@ -8,6 +8,7 @@ import org.vitrivr.adampro.datatypes.TupleID
 import org.vitrivr.adampro.datatypes.TupleID._
 import org.vitrivr.adampro.datatypes.vector.Vector
 import org.vitrivr.adampro.datatypes.vector.Vector._
+import org.vitrivr.adampro.helpers.tracker.OperationTracker
 import org.vitrivr.adampro.index.Index._
 import org.vitrivr.adampro.index.structures.IndexTypes
 import org.vitrivr.adampro.index.{IndexGenerator, IndexGeneratorFactory, IndexingTaskTuple, ParameterInfo}
@@ -28,12 +29,14 @@ import org.vitrivr.adampro.query.distance.DistanceFunction
     * @param data raw data to index
     * @return
     */
-  override def index(data: DataFrame, attribute: String): (DataFrame, Serializable) = {
+  override def index(data: DataFrame, attribute: String)(tracker : OperationTracker): (DataFrame, Serializable) = {
     log.trace("LSH started indexing")
 
     val sample = getSample(math.max(nrefs.getOrElse(math.ceil(2 * math.sqrt(data.count())).toInt), MINIMUM_NUMBER_OF_TUPLE), attribute)(data)
 
     val refsBc = ac.sc.broadcast(sample.zipWithIndex.map { case (idt, idx) => IndexingTaskTuple(idx.toLong, idt.ap_indexable) })
+    tracker.addBroadcast(refsBc)
+
     val ki = p_ki.getOrElse(math.min(100, refsBc.value.length))
     val ks = p_ks.getOrElse(math.min(100, refsBc.value.length))
     assert(ks <= ki)

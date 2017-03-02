@@ -5,6 +5,7 @@ import org.apache.spark.sql.functions._
 import org.apache.spark.sql.types.DataTypes
 import org.vitrivr.adampro.config.AttributeNames
 import org.vitrivr.adampro.datatypes.vector.Vector._
+import org.vitrivr.adampro.helpers.tracker.OperationTracker
 import org.vitrivr.adampro.index.Index.{IndexName, IndexTypeName}
 import org.vitrivr.adampro.index._
 import org.vitrivr.adampro.index.structures.IndexTypes
@@ -37,7 +38,7 @@ class ECPIndex(override val indexname: IndexName)(@transient override implicit v
     * @param k        number of elements to retrieve (of the k nearest neighbor search), possibly more than k elements are returned
     * @return a set of candidate tuple ids, possibly together with a tentative score (the number of tuples will be greater than k)
     */
-  override def scan(data: DataFrame, q: MathVector, distance: DistanceFunction, options: Map[String, String], k: Int): DataFrame = {
+  override def scan(data: DataFrame, q: MathVector, distance: DistanceFunction, options: Map[String, String], k: Int)(tracker : OperationTracker): DataFrame = {
     log.debug("scanning eCP index " + indexname)
 
     //for every leader, check its distance to the query-vector, then sort by distance.
@@ -48,7 +49,7 @@ class ECPIndex(override val indexname: IndexName)(@transient override implicit v
     //take so many centroids up to the moment where the result-length is over k (therefore + 1)
     val numberOfCentroidsToUse = centroids.map(_._1.count).scanLeft(0.toLong)(_ + _).takeWhile(_ < k).length + 1
     val idsBc = ac.sc.broadcast(centroids.take(numberOfCentroidsToUse).map(_._1.id))
-
+    tracker.addBroadcast(idsBc)
     log.trace("centroids prepared")
 
     val distUDF = udf((idx : Int) => {

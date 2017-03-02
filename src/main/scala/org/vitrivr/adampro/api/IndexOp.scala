@@ -4,6 +4,7 @@ import org.apache.spark.sql.DataFrame
 import org.vitrivr.adampro.entity.Entity
 import org.vitrivr.adampro.entity.Entity._
 import org.vitrivr.adampro.exception.GeneralAdamException
+import org.vitrivr.adampro.helpers.tracker.OperationTracker
 import org.vitrivr.adampro.index.partition.{PartitionMode, PartitionerChoice}
 import org.vitrivr.adampro.index.Index._
 import org.vitrivr.adampro.index.structures.IndexTypes
@@ -59,9 +60,11 @@ object IndexOp extends GenericOp {
     * @param distance      distance function to use
     * @param properties    further index specific properties
     */
-  def create(entityname: EntityName, attribute: String, indextypename: IndexTypeName, distance: DistanceFunction, properties: Map[String, String] = Map())(implicit ac: AdamContext): Try[Index] = {
+  def create(entityname: EntityName, attribute: String, indextypename: IndexTypeName, distance: DistanceFunction, properties: Map[String, String] = Map())(tracker : OperationTracker = new OperationTracker())(implicit ac: AdamContext): Try[Index] = {
     execute("create index for " + entityname) {
-      Index.createIndex(Entity.load(entityname).get, attribute, indextypename, distance, properties)
+      val res = Index.createIndex(Entity.load(entityname).get, attribute, indextypename, distance, properties)(tracker)
+      tracker.cleanAll()
+      res
     }
   }
 
@@ -73,10 +76,10 @@ object IndexOp extends GenericOp {
     * @param distance   distance function to use
     * @param properties further index specific properties
     */
-  def generateAll(entityname: EntityName, attribute: String, distance: DistanceFunction, properties: Map[String, String] = Map())(implicit ac: AdamContext): Try[Seq[IndexName]] = {
+  def generateAll(entityname: EntityName, attribute: String, distance: DistanceFunction, properties: Map[String, String] = Map())(tracker : OperationTracker = new OperationTracker())(implicit ac: AdamContext): Try[Seq[IndexName]] = {
     execute("create all indexes for " + entityname) {
       val indexes = IndexTypes.values.map {
-        IndexOp.create(entityname, attribute, _, distance, properties)
+        IndexOp.create(entityname, attribute, _, distance, properties)(tracker)
       }
 
       //check and possibly clean up

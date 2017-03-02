@@ -8,6 +8,7 @@ import org.apache.spark.sql.{DataFrame, Dataset}
 import org.vitrivr.adampro.config.AttributeNames
 import org.vitrivr.adampro.datatypes.vector.Vector._
 import org.vitrivr.adampro.exception.QueryNotConformException
+import org.vitrivr.adampro.helpers.tracker.OperationTracker
 import org.vitrivr.adampro.index.Index._
 import org.vitrivr.adampro.index.structures.IndexTypes
 import org.vitrivr.adampro.index.structures.va.marks.VAPlusMarksGenerator
@@ -32,7 +33,7 @@ class VAPlusIndexGenerator(nbits: Option[Int], ndims : Option[Int], trainingSize
     * @param data raw data to index
     * @return
     */
-  override def index(data: DataFrame, attribute : String): (DataFrame, Serializable) = {
+  override def index(data: DataFrame, attribute : String)(tracker : OperationTracker): (DataFrame, Serializable) = {
     log.trace("VA-File (plus) started indexing")
 
     val meta = train(getSample(math.max(trainingSize, MINIMUM_NUMBER_OF_TUPLE), attribute)(data), data, attribute)

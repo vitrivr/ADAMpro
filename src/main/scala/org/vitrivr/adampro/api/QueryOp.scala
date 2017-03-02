@@ -7,9 +7,10 @@ import org.vitrivr.adampro.main.AdamContext
 import org.vitrivr.adampro.query.handler.generic.{QueryEvaluationOptions, QueryExpression}
 import org.vitrivr.adampro.query.handler.internal.BooleanFilterExpression.BooleanFilterScanExpression
 import org.vitrivr.adampro.query.handler.internal._
-import org.vitrivr.adampro.query.progressive.{ProgressiveQueryStatusTracker, ProgressiveObservation, ProgressivePathChooser, ProgressiveQueryHandler}
+import org.vitrivr.adampro.query.progressive.{ProgressiveObservation, ProgressivePathChooser, ProgressiveQueryHandler, ProgressiveQueryStatusTracker}
 import org.vitrivr.adampro.query.query.{BooleanQuery, NearestNeighbourQuery}
 import org.apache.spark.sql.DataFrame
+import org.vitrivr.adampro.helpers.tracker.OperationTracker
 
 import scala.concurrent.duration.Duration
 import scala.util.{Success, Try}
@@ -29,12 +30,12 @@ object QueryOp extends GenericOp {
     * @param options options applied when evaluating query
     * @return
     */
-  def expression(q: QueryExpression, options: Option[QueryEvaluationOptions] = None)(implicit ac: AdamContext): Try[Option[DataFrame]] = {
+  def expression(q: QueryExpression, options: Option[QueryEvaluationOptions] = None)(tracker : OperationTracker)(implicit ac: AdamContext): Try[Option[DataFrame]] = {
     execute("query execution operation") {
       log.trace(QUERY_MARKER, "query operation")
       val prepared = q.prepareTree()
       log.trace(QUERY_MARKER, "prepared tree")
-      val res = prepared.evaluate(options)
+      val res = prepared.evaluate(options)(tracker)
       log.trace(QUERY_MARKER, "evaluated query")
 
       Success(res)
@@ -51,7 +52,7 @@ object QueryOp extends GenericOp {
     * @param options    options applied when evaluating query
     * @return
     */
-  def sequential(entityname: EntityName, nnq: NearestNeighbourQuery, bq: Option[BooleanQuery], options: Option[QueryEvaluationOptions] = None)(implicit ac: AdamContext): Try[Option[DataFrame]] = {
+  def sequential(entityname: EntityName, nnq: NearestNeighbourQuery, bq: Option[BooleanQuery], options: Option[QueryEvaluationOptions] = None)(tracker : OperationTracker)(implicit ac: AdamContext): Try[Option[DataFrame]] = {
     execute("sequential query operation") {
       var scan: Option[QueryExpression] = None
 
@@ -62,7 +63,7 @@ object QueryOp extends GenericOp {
 
       scan = Some(new SequentialScanExpression(entityname)(nnq, None)(scan)(ac))
 
-      return Success(scan.get.prepareTree().evaluate(options))
+      return Success(scan.get.prepareTree().evaluate(options)(tracker))
     }
   }
 
@@ -74,7 +75,7 @@ object QueryOp extends GenericOp {
     * @param options   options applied when evaluating query
     * @return
     */
-  def index(indexname: IndexName, nnq: NearestNeighbourQuery, bq: Option[BooleanQuery], options: Option[QueryEvaluationOptions] = None)(implicit ac: AdamContext): Try[Option[DataFrame]] = {
+  def index(indexname: IndexName, nnq: NearestNeighbourQuery, bq: Option[BooleanQuery], options: Option[QueryEvaluationOptions] = None)(tracker : OperationTracker)(implicit ac: AdamContext): Try[Option[DataFrame]] = {
     execute("specified index query operation") {
       val index = Index.load(indexname).get
 
@@ -87,7 +88,7 @@ object QueryOp extends GenericOp {
 
       scan = Some(IndexScanExpression(index)(nnq, None)(scan)(ac))
 
-      Success(scan.get.prepareTree().evaluate(options))
+      Success(scan.get.prepareTree().evaluate(options)(tracker))
     }
   }
 
@@ -100,7 +101,7 @@ object QueryOp extends GenericOp {
     * @param options       options applied when evaluating query
     * @return
     */
-  def entityIndex(entityname: EntityName, indextypename: IndexTypeName, nnq: NearestNeighbourQuery, bq: Option[BooleanQuery], options: Option[QueryEvaluationOptions] = None)(implicit ac: AdamContext): Try[Option[DataFrame]] = {
+  def entityIndex(entityname: EntityName, indextypename: IndexTypeName, nnq: NearestNeighbourQuery, bq: Option[BooleanQuery], options: Option[QueryEvaluationOptions] = None)(tracker : OperationTracker)(implicit ac: AdamContext): Try[Option[DataFrame]] = {
     execute("index query operation") {
       var scan: Option[QueryExpression] = None
 
@@ -111,7 +112,7 @@ object QueryOp extends GenericOp {
 
       scan = Some(new IndexScanExpression(entityname, indextypename)(nnq, None)(scan)(ac))
 
-      Success(scan.get.prepareTree().evaluate(options))
+      Success(scan.get.prepareTree().evaluate(options)(tracker))
     }
   }
 
@@ -126,8 +127,8 @@ object QueryOp extends GenericOp {
     * @param options     options applied when evaluating query
     * @return a tracker for the progressive query
     */
-  def progressive[U](entityname: EntityName, nnq: NearestNeighbourQuery, bq: Option[BooleanQuery], pathChooser: ProgressivePathChooser, onComplete: Try[ProgressiveObservation] => U, options: Option[QueryEvaluationOptions] = None)(implicit ac: AdamContext): Try[ProgressiveQueryStatusTracker] = {
-    Success(ProgressiveQueryHandler.progressiveQuery(entityname, nnq, bq, pathChooser, onComplete, options, None))
+  def progressive[U](entityname: EntityName, nnq: NearestNeighbourQuery, bq: Option[BooleanQuery], pathChooser: ProgressivePathChooser, onComplete: Try[ProgressiveObservation] => U, options: Option[QueryEvaluationOptions] = None)(tracker : OperationTracker)(implicit ac: AdamContext): Try[ProgressiveQueryStatusTracker] = {
+    Success(ProgressiveQueryHandler.progressiveQuery(entityname, nnq, bq, pathChooser, onComplete, options, None)(tracker))
   }
 
 
@@ -142,9 +143,9 @@ object QueryOp extends GenericOp {
     * @param options     options applied when evaluating query
     * @return the results available together with a confidence score
     */
-  def timedProgressive(entityname: EntityName, nnq: NearestNeighbourQuery, bq: Option[BooleanQuery], pathChooser: ProgressivePathChooser, timelimit: Duration, options: Option[QueryEvaluationOptions] = None)(implicit ac: AdamContext): Try[ProgressiveObservation] = {
+  def timedProgressive(entityname: EntityName, nnq: NearestNeighbourQuery, bq: Option[BooleanQuery], pathChooser: ProgressivePathChooser, timelimit: Duration, options: Option[QueryEvaluationOptions] = None)(tracker : OperationTracker)(implicit ac: AdamContext): Try[ProgressiveObservation] = {
     execute("timed progressive query operation") {
-      Success(ProgressiveQueryHandler.timedProgressiveQuery(entityname, nnq, bq, pathChooser, timelimit, options, None))
+      Success(ProgressiveQueryHandler.timedProgressiveQuery(entityname, nnq, bq, pathChooser, timelimit, options, None)(tracker))
     }
   }
 
@@ -155,9 +156,9 @@ object QueryOp extends GenericOp {
     * @param options options applied when evaluating query
     * @return
     */
-  def compoundQuery(expr: QueryExpression, options: Option[QueryEvaluationOptions] = None)(implicit ac: AdamContext): Try[Option[DataFrame]] = {
+  def compoundQuery(expr: QueryExpression, options: Option[QueryEvaluationOptions] = None)(tracker : OperationTracker)(implicit ac: AdamContext): Try[Option[DataFrame]] = {
     execute("compound query operation") {
-      Success(CompoundQueryExpression(expr).evaluate(options))
+      Success(CompoundQueryExpression(expr).evaluate(options)(tracker))
     }
   }
 
@@ -168,7 +169,7 @@ object QueryOp extends GenericOp {
     * @param bq         information for boolean query
     * @param options    options applied when evaluating query
     */
-  def booleanQuery(entityname: EntityName, bq: Option[BooleanQuery], options: Option[QueryEvaluationOptions] = None)(implicit ac: AdamContext): Try[Option[DataFrame]] = {
+  def booleanQuery(entityname: EntityName, bq: Option[BooleanQuery], options: Option[QueryEvaluationOptions] = None)(tracker : OperationTracker)(implicit ac: AdamContext): Try[Option[DataFrame]] = {
     execute("boolean query operation") {
       var scan: Option[QueryExpression] = None
 
@@ -177,7 +178,7 @@ object QueryOp extends GenericOp {
         scan = Some(new BooleanFilterScanExpression(entityname)(bq.get, None)(scan)(ac))
       }
 
-      return Success(scan.get.evaluate(options))
+      return Success(scan.get.evaluate(options)(tracker))
     }
   }
 }

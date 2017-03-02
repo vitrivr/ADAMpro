@@ -5,6 +5,7 @@ import org.apache.spark.sql.{DataFrame, Row}
 import org.vitrivr.adampro.config.AttributeNames
 import org.vitrivr.adampro.datatypes.TupleID.TupleID
 import org.vitrivr.adampro.datatypes.vector.Vector._
+import org.vitrivr.adampro.helpers.tracker.OperationTracker
 import org.vitrivr.adampro.index.Index
 import org.vitrivr.adampro.index.Index._
 import org.vitrivr.adampro.index.structures.IndexTypes
@@ -29,7 +30,7 @@ import org.vitrivr.adampro.query.query.NearestNeighbourQuery
   val meta = metadata.get.asInstanceOf[MIIndexMetaData]
 
 
-  override def scan(data: DataFrame, q: MathVector, distance: DistanceFunction, options: Map[String, String], k: Int): DataFrame = {
+  override def scan(data: DataFrame, q: MathVector, distance: DistanceFunction, options: Map[String, String], k: Int)(tracker : OperationTracker): DataFrame = {
     log.debug("scanning MI index " + indexname)
 
     val ki = meta.ki

@@ -5,7 +5,8 @@ import org.vitrivr.adampro.config.AttributeNames
 import org.vitrivr.adampro.datatypes.bitstring.BitString
 import org.vitrivr.adampro.datatypes.vector.Vector._
 import org.vitrivr.adampro.datatypes.vector.MovableFeature
-import org.vitrivr.adampro.index.{ResultElement, Index}
+import org.vitrivr.adampro.helpers.tracker.OperationTracker
+import org.vitrivr.adampro.index.{Index, ResultElement}
 import org.vitrivr.adampro.index.Index.{IndexName, IndexTypeName}
 import org.vitrivr.adampro.index.structures.IndexTypes
 import org.vitrivr.adampro.main.AdamContext
@@ -37,7 +38,7 @@ class SHIndex(override val indexname: IndexName)(@transient override implicit va
     * @param k        number of elements to retrieve (of the k nearest neighbor search), possibly more than k elements are returned
     * @return a set of candidate tuple ids, possibly together with a tentative score (the number of tuples will be greater than k)
     */
-  override def scan(data: DataFrame, q: MathVector, distance: DistanceFunction, options: Map[String, String], k: Int): DataFrame = {
+  override def scan(data: DataFrame, q: MathVector, distance: DistanceFunction, options: Map[String, String], k: Int)(tracker : OperationTracker): DataFrame = {
     log.debug("scanning SH index " + indexname)
 
     val numOfQueries = options.getOrElse("numOfQ", "3").toInt
@@ -47,6 +48,7 @@ class SHIndex(override val indexname: IndexName)(@transient override implicit va
     //move the query around by the precomuted radius
     //TODO: possibly adjust weight of computed queries vs. true query
     val queriesBc = ac.sc.broadcast(List.fill(numOfQueries)((1.0, SHUtils.hashFeature(q.move(meta.radius), meta))) ::: List((1.0, originalQuery)))
+    tracker.addBroadcast(queriesBc)
 
     import org.apache.spark.sql.functions.udf
     val distUDF = udf((c: Array[Byte]) => {

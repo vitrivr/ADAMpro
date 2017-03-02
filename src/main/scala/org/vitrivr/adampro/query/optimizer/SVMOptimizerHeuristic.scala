@@ -8,6 +8,7 @@ import org.vitrivr.adampro.datatypes.TupleID._
 import org.vitrivr.adampro.datatypes.vector.Vector
 import org.vitrivr.adampro.datatypes.vector.Vector._
 import org.vitrivr.adampro.entity.Entity
+import org.vitrivr.adampro.helpers.tracker.OperationTracker
 import org.vitrivr.adampro.index.structures.ecp.ECPIndex
 import org.vitrivr.adampro.index.structures.lsh.LSHIndex
 import org.vitrivr.adampro.index.structures.mi.MIIndex
@@ -35,9 +36,10 @@ private[optimizer] class SVMOptimizerHeuristic(nruns : Int = 100)(@transient imp
     */
   override def train(indexes: Seq[Index], queries: Seq[NearestNeighbourQuery]): Unit = {
     val entity = indexes.head.entity.get
+    val tracker = new OperationTracker()
 
     val trainData = queries.flatMap { nnq =>
-      val rel = QueryOp.sequential(entity.entityname, nnq, None).get.get.select(entity.pk.name).collect().map(_.getAs[Any](0)).toSet
+      val rel = QueryOp.sequential(entity.entityname, nnq, None)(tracker).get.get.select(entity.pk.name).collect().map(_.getAs[Any](0)).toSet
 
       indexes.map { index =>
         performMeasurement(index, nnq, rel).map(time => (index.indextypename, buildFeature(index, nnq), time))
@@ -53,6 +55,8 @@ private[optimizer] class SVMOptimizerHeuristic(nruns : Int = 100)(@transient imp
       svm.train(trainDatum.map { case (x, y) => TrainingSample(x, y.time) })
       SparkStartup.catalogOperator.updateOptimizerOption(name, "svm-index-" + indextypename.name, svm)
     }
+
+    tracker.cleanAll()
   }
 
   /**

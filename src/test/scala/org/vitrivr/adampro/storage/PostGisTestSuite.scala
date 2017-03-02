@@ -4,6 +4,7 @@ import org.vitrivr.adampro.AdamTestBase
 import org.vitrivr.adampro.api.{EntityOp, QueryOp, RandomDataOp}
 import org.vitrivr.adampro.datatypes.AttributeTypes
 import org.vitrivr.adampro.entity.{AttributeDefinition, Entity}
+import org.vitrivr.adampro.helpers.tracker.OperationTracker
 import org.vitrivr.adampro.query.handler.external.GenericExternalScanExpression
 import org.vitrivr.adampro.query.query.BooleanQuery
 
@@ -52,8 +53,9 @@ class PostGisTestSuite extends AdamTestBase {
 
       val query = "(ST_Distance('LINESTRING(-122.33 47.606, 0.0 51.5)'::geography, 'POINT(-21.96 64.15)':: geography))::int"
       val ncollect = 10
+      val tracker = new OperationTracker()
 
-      val results = QueryOp.compoundQuery(GenericExternalScanExpression(entityname, "postgis", Map("query" -> query, "limit" -> ncollect.toString))(ac)).get.get
+      val results = QueryOp.compoundQuery(GenericExternalScanExpression(entityname, "postgis", Map("query" -> query, "limit" -> ncollect.toString))(ac))(tracker).get.get
 
       val collected = results.collect()
       val count = collected.length

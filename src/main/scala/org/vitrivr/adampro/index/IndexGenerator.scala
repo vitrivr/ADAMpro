@@ -1,6 +1,6 @@
 package org.vitrivr.adampro.index
 
-import org.apache.spark.sql.{Row, DataFrame}
+import org.apache.spark.sql.{DataFrame, Row}
 import org.apache.spark.util.random.Sampling
 import org.vitrivr.adampro.config.AttributeNames
 import org.vitrivr.adampro.datatypes.TupleID._
@@ -10,6 +10,7 @@ import org.vitrivr.adampro.main.AdamContext
 import org.vitrivr.adampro.query.distance.DistanceFunction
 import org.vitrivr.adampro.utils.Logging
 import org.vitrivr.adampro.datatypes.vector.Vector
+import org.vitrivr.adampro.helpers.tracker.OperationTracker
 
 /**
   * adamtwo
@@ -35,7 +36,7 @@ trait IndexGenerator extends Serializable with Logging {
     * @param attribute name of attribute to index
     * @return
     */
-  def index(data: DataFrame, attribute: String): (DataFrame, Serializable)
+  def index(data: DataFrame, attribute: String)(tracker : OperationTracker): (DataFrame, Serializable)
 
   /**
     *

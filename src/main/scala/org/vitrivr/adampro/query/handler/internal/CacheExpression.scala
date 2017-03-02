@@ -1,6 +1,7 @@
 package org.vitrivr.adampro.query.handler.internal
 
 import org.apache.spark.sql.DataFrame
+import org.vitrivr.adampro.helpers.tracker.OperationTracker
 import org.vitrivr.adampro.main.AdamContext
 import org.vitrivr.adampro.query.QueryCacheOptions
 import org.vitrivr.adampro.query.handler.generic.{ExpressionDetails, QueryEvaluationOptions, QueryExpression}
@@ -15,7 +16,7 @@ case class CacheExpression(private val expr: QueryExpression, private val cache:
   override val info = ExpressionDetails(None, Some("Cache Expression"), id, None)
   _children ++= Seq(expr)
 
-  override protected def run(options : Option[QueryEvaluationOptions], filter: Option[DataFrame] = None)(implicit ac: AdamContext): Option[DataFrame] = {
+  override protected def run(options : Option[QueryEvaluationOptions], filter: Option[DataFrame] = None)(tracker : OperationTracker)(implicit ac: AdamContext): Option[DataFrame] = {
     log.debug("run cache operation")
 
     ac.sc.setLocalProperty("spark.scheduler.pool", "slow")
@@ -28,7 +29,7 @@ case class CacheExpression(private val expr: QueryExpression, private val cache:
       }
     }
 
-    val res = expr.evaluate(options)
+    val res = expr.evaluate(options)(tracker)
     if (id.isDefined && cache.putInCache) {
       ac.queryLRUCache.put(id.get, res.get)
     }

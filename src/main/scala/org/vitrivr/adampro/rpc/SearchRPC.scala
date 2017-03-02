@@ -9,6 +9,7 @@ import org.vitrivr.adampro.datatypes.vector.Vector.{DenseSparkVector, SparseSpar
 import org.vitrivr.adampro.datatypes.vector.{DenseVectorWrapper, SparseVectorWrapper}
 import org.vitrivr.adampro.exception.{GeneralAdamException, QueryNotCachedException}
 import org.vitrivr.adampro.grpc.grpc.{AdamSearchGrpc, _}
+import org.vitrivr.adampro.helpers.tracker.OperationTracker
 import org.vitrivr.adampro.main.{AdamContext, SparkStartup}
 import org.vitrivr.adampro.query.QueryHints
 import org.vitrivr.adampro.query.progressive.{ProgressiveObservation, QueryHintsProgressivePathChooser, SimpleProgressivePathChooser}
@@ -120,10 +121,13 @@ class SearchRPC extends AdamSearchGrpc.AdamSearch with Logging {
       log.trace("\n ------------------- \n" + expression.get.mkString(0) + "\n ------------------- \n")
 
       log.trace(QUERY_MARKER, "before query op " + logId)
-      val res = QueryOp.expression(expression.get, evaluationOptions)
+
+      val tracker = new OperationTracker()
+      val res = QueryOp.expression(expression.get, evaluationOptions)(tracker)
+
       log.trace(QUERY_MARKER, "after query op " + logId)
 
-      if (res.isSuccess) {
+      val message = if (res.isSuccess) {
         val results = expression.get.information(informationLevel).map(res =>
           RPCHelperMethods.prepareResults(res.id.getOrElse(""), res.confidence.getOrElse(0), res.time.toMillis, res.source.getOrElse(""), Map(), res.results)
         )
@@ -136,6 +140,10 @@ class SearchRPC extends AdamSearchGrpc.AdamSearch with Logging {
         log.error(res.failed.get.getMessage, res.failed.get)
         QueryResultsMessage(Some(AckMessage(code = AckMessage.Code.ERROR, message = res.failed.get.getMessage)))
       }
+
+      tracker.cleanAll()
+
+      message
     }
   }
 
@@ -224,15 +232,17 @@ class SearchRPC extends AdamSearchGrpc.AdamSearch with Logging {
         val evaluationOptions = RPCHelperMethods.prepareEvaluationOptions(request)
 
         //TODO: change here, so that we do not need to rely on "getEntity"
-        val tracker = QueryOp.progressive(request.from.get.getEntity, nnq, bq, pathChooser, onComplete, evaluationOptions)
+        val tracker = new OperationTracker()
+        val pqtracker = QueryOp.progressive(request.from.get.getEntity, nnq, bq, pathChooser, onComplete, evaluationOptions)(tracker)
 
         //track on completed
-        while (!tracker.get.isCompleted) {
+        while (!pqtracker.get.isCompleted) {
           Thread.sleep(1000)
         }
 
-        if (tracker.get.isCompleted) {
+        if (pqtracker.get.isCompleted) {
           responseObserver.onCompleted()
+          tracker.cleanAll()
         }
       } catch {
         case e: Exception => {

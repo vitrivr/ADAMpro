@@ -1,11 +1,11 @@
 package org.vitrivr.adampro.index.structures.va
 
 import org.apache.spark.broadcast.Broadcast
-import org.apache.spark.sql.{DataFrame}
+import org.apache.spark.sql.DataFrame
 import org.vitrivr.adampro.config.AttributeNames
 import org.vitrivr.adampro.datatypes.bitstring.BitString
 import org.vitrivr.adampro.datatypes.vector.Vector._
-import org.vitrivr.adampro.index.{ResultElement, Index}
+import org.vitrivr.adampro.index.{Index, ResultElement}
 import org.vitrivr.adampro.index.Index.{IndexName, IndexTypeName}
 import org.vitrivr.adampro.index.structures.IndexTypes
 import org.vitrivr.adampro.index.structures.va.VAIndex.{Bounds, Marks}
@@ -15,6 +15,7 @@ import org.vitrivr.adampro.query.distance.Distance._
 import org.vitrivr.adampro.query.distance.{DistanceFunction, MinkowskiDistance}
 import org.vitrivr.adampro.query.query.NearestNeighbourQuery
 import org.apache.spark.sql.functions._
+import org.vitrivr.adampro.helpers.tracker.OperationTracker
 
 /**
   * adamtwo
@@ -50,14 +51,17 @@ class VAIndex(override val indexname: IndexName)(@transient override implicit va
     * @param k        number of elements to retrieve (of the k nearest neighbor search), possibly more than k elements are returned
     * @return a set of candidate tuple ids, possibly together with a tentative score (the number of tuples will be greater than k)
     */
-  override def scan(data: DataFrame, q: MathVector, distance: DistanceFunction, options: Map[String, String], k: Int): DataFrame = {
+  override def scan(data: DataFrame, q: MathVector, distance: DistanceFunction, options: Map[String, String], k: Int)(tracker : OperationTracker): DataFrame = {
     log.debug("scanning VA-File index " + indexname)
 
     val signatureGeneratorBc = ac.sc.broadcast(meta.signatureGenerator)
+    tracker.addBroadcast(signatureGeneratorBc)
 
     val bounds = computeBounds(q, meta.marks, distance.asInstanceOf[MinkowskiDistance])
     val lboundsBc = ac.sc.broadcast(bounds._1)
+    tracker.addBroadcast(lboundsBc)
     val uboundsBc = ac.sc.broadcast(bounds._2)
+    tracker.addBroadcast(uboundsBc)
 
     //compute the cells
     val cellsUDF = udf((c: Array[Byte]) => {

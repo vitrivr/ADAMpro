@@ -1,11 +1,12 @@
 package org.vitrivr.adampro.query.handler.internal
 
 import org.vitrivr.adampro.main.AdamContext
-import org.vitrivr.adampro.query.handler.generic.{QueryEvaluationOptions, ExpressionDetails, QueryExpression}
+import org.vitrivr.adampro.query.handler.generic.{ExpressionDetails, QueryEvaluationOptions, QueryExpression}
 import org.vitrivr.adampro.query.handler.internal.ProjectionExpression.ProjectionField
 import org.vitrivr.adampro.utils.Logging
 import org.apache.spark.sql.types.{BooleanType, LongType, StructField, StructType}
 import org.apache.spark.sql.{DataFrame, Row}
+import org.vitrivr.adampro.helpers.tracker.OperationTracker
 
 /**
   * adamtwo
@@ -17,9 +18,9 @@ case class ProjectionExpression(private val projection: ProjectionField, private
   override val info = ExpressionDetails(None, Some("Projection Expression"), id, None)
   _children ++= Seq(expr)
 
-  override protected def run(options : Option[QueryEvaluationOptions], filter: Option[DataFrame] = None)(implicit ac: AdamContext): Option[DataFrame] = {
+  override protected def run(options : Option[QueryEvaluationOptions], filter: Option[DataFrame] = None)(tracker : OperationTracker)(implicit ac: AdamContext): Option[DataFrame] = {
     log.debug("performing projection on data")
-    expr.evaluate(options).map(projection.f)
+    expr.evaluate(options)(tracker).map(projection.f)
   }
 
   override def equals(that: Any): Boolean =

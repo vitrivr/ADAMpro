@@ -11,6 +11,7 @@ import org.vitrivr.adampro.index.structures.IndexTypes
 import org.vitrivr.adampro.main.AdamContext
 import org.vitrivr.adampro.query.distance.DistanceFunction
 import org.vitrivr.adampro.datatypes.vector.Vector
+import org.vitrivr.adampro.helpers.tracker.OperationTracker
 
 /**
   * adamtwo
@@ -26,11 +27,12 @@ class ECPIndexGenerator(centroidBasedLeaders: Boolean, distance: DistanceFunctio
     * @param data raw data to index
     * @return
     */
-  override def index(data: DataFrame, attribute : String): (DataFrame, Serializable) = {
+  override def index(data: DataFrame, attribute : String)(tracker : OperationTracker): (DataFrame, Serializable) = {
     log.trace("eCP index started indexing")
 
     val sample = getSample(math.max(math.sqrt(data.count()).toInt, MINIMUM_NUMBER_OF_TUPLE), attribute)(data)
     val leadersBc = ac.sc.broadcast(sample.zipWithIndex.map { case (vector, idx) => IndexingTaskTuple(idx.toLong, vector.ap_indexable) }) //use own ids, not id of data
+    tracker.addBroadcast(leadersBc)
 
     log.trace("eCP index chosen " + sample.length + " leaders")
 

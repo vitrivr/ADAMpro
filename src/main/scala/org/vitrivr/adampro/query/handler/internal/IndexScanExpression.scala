@@ -6,6 +6,7 @@ import org.vitrivr.adampro.config.AttributeNames
 import org.vitrivr.adampro.entity.Entity
 import org.vitrivr.adampro.entity.Entity._
 import org.vitrivr.adampro.exception.QueryNotConformException
+import org.vitrivr.adampro.helpers.tracker.OperationTracker
 import org.vitrivr.adampro.index.Index
 import org.vitrivr.adampro.index.Index._
 import org.vitrivr.adampro.main.AdamContext
@@ -46,7 +47,7 @@ case class IndexScanExpression(val index: Index)(val nnq: NearestNeighbourQuery,
     )(nnq, id)(filterExpr)
   }
 
-  override protected def run(options: Option[QueryEvaluationOptions], filter: Option[DataFrame] = None)(implicit ac: AdamContext): Option[DataFrame] = {
+  override protected def run(options : Option[QueryEvaluationOptions], filter: Option[DataFrame] = None)(tracker : OperationTracker)(implicit ac: AdamContext): Option[DataFrame] = {
     log.debug("performing index scan operation")
 
     ac.sc.setLocalProperty("spark.scheduler.pool", "index")
@@ -62,18 +63,18 @@ case class IndexScanExpression(val index: Index)(val nnq: NearestNeighbourQuery,
 
     val prefilter = if (filter.isDefined && filterExpr.isDefined) {
       val pk = index.entity.get.pk
-      Some(filter.get.select(pk.name).join(filterExpr.get.evaluate(options).get, pk.name))
+      Some(filter.get.select(pk.name).join(filterExpr.get.evaluate(options)(tracker).get, pk.name))
     } else if (filter.isDefined) {
       filter
     } else if (filterExpr.isDefined) {
-      filterExpr.get.evaluate(options)
+      filterExpr.get.evaluate(options)(tracker)
     } else {
       None
     }
 
     log.trace(QUERY_MARKER, "starting index scan")
 
-    var res = IndexScanExpression.scan(index)(prefilter, nnq, id)
+    var res = IndexScanExpression.scan(index)(prefilter, nnq, id)(tracker)
 
     log.trace(QUERY_MARKER, "finished index scan")
 
@@ -117,7 +118,7 @@ object IndexScanExpression extends Logging {
     * @param id    query id
     * @return
     */
-  def scan(index: Index)(filter: Option[DataFrame], nnq: NearestNeighbourQuery, id: Option[String] = None)(implicit ac: AdamContext): DataFrame = {
-    index.scan(nnq, filter)
+  def scan(index: Index)(filter: Option[DataFrame], nnq: NearestNeighbourQuery, id: Option[String] = None)(tracker : OperationTracker)(implicit ac: AdamContext): DataFrame = {
+    index.scan(nnq, filter)(tracker)
   }
 }

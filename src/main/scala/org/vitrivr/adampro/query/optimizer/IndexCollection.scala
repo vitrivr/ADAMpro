@@ -4,6 +4,7 @@ import org.vitrivr.adampro.api.IndexOp
 import org.vitrivr.adampro.entity.Entity
 import org.vitrivr.adampro.entity.Entity._
 import org.vitrivr.adampro.exception.GeneralAdamException
+import org.vitrivr.adampro.helpers.tracker.OperationTracker
 import org.vitrivr.adampro.index.Index
 import org.vitrivr.adampro.main.AdamContext
 import org.vitrivr.adampro.query.QueryHints
@@ -51,7 +52,9 @@ private[optimizer] case class NewIndexCollection(entityname: EntityName, attribu
   }
 
   override def getIndexes: Seq[Index] = {
-    hints.flatMap { hint =>
+    val tracker = new OperationTracker()
+
+    val indexes = hints.flatMap { hint =>
       if (hint.isInstanceOf[IndexQueryHint]) {
         val iqh = hint.asInstanceOf[IndexQueryHint]
 
@@ -60,7 +63,7 @@ private[optimizer] case class NewIndexCollection(entityname: EntityName, attribu
         val params: Seq[Map[String, String]] = combine(factory.parametersInfo.map(x => x.suggestedValues.map(v => x.name -> v))).map(_.toMap)
 
         params.map { param =>
-          IndexOp.create(entityname, attribute, iqh.structureType, EuclideanDistance, param)
+          IndexOp.create(entityname, attribute, iqh.structureType, EuclideanDistance, param)(tracker)
         }
       } else {
         log.error("only index query hints accepted")
@@ -68,6 +71,10 @@ private[optimizer] case class NewIndexCollection(entityname: EntityName, attribu
       }
 
     }.filter(x => x != null && x.isSuccess).map(_.get)
+
+    tracker.cleanAll()
+
+    indexes
   }
 }
 

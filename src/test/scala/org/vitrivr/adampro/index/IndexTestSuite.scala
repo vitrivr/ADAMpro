@@ -36,7 +36,7 @@ class IndexTestSuite extends AdamTestBase {
         assert(entity.isSuccess)
 
         When("a " + indextype.toString() + " index is created")
-        val index = IndexOp.create(entity.get.entityname, "feature", indextype, EuclideanDistance)
+        val index = IndexOp.create(entity.get.entityname, "feature", indextype, EuclideanDistance)()
         assert(index.isSuccess)
 
         Then("the index has been created")
@@ -59,7 +59,7 @@ class IndexTestSuite extends AdamTestBase {
         assert(entity.isSuccess)
 
         When("creating the index")
-        val index = IndexOp.create(entityname, "feature", IndexTypes.ECPINDEX, EuclideanDistance)
+        val index = IndexOp.create(entityname, "feature", IndexTypes.ECPINDEX, EuclideanDistance)()
 
         if(index.isFailure){
           throw index.failed.get
@@ -100,14 +100,14 @@ class IndexTestSuite extends AdamTestBase {
 
 
         When("creating the first index")
-        val index1 = IndexOp.create(entityname, "feature1", IndexTypes.ECPINDEX, EuclideanDistance)
+        val index1 = IndexOp.create(entityname, "feature1", IndexTypes.ECPINDEX, EuclideanDistance)()
         assert(index1.isSuccess)
 
         Then("the index should be created")
         assert(Index.exists(index1.get.indexname))
 
         When("creating the second index")
-        val index2 = IndexOp.create(entityname, "feature1", IndexTypes.ECPINDEX, EuclideanDistance)
+        val index2 = IndexOp.create(entityname, "feature1", IndexTypes.ECPINDEX, EuclideanDistance)()
         assert(index2.isSuccess)
 
         Then("the index should be created")
@@ -139,7 +139,7 @@ class IndexTestSuite extends AdamTestBase {
         assert(entity.isSuccess)
 
         When("creating the index")
-        val index = IndexOp.create(entityname, "feature", IndexTypes.ECPINDEX, EuclideanDistance)
+        val index = IndexOp.create(entityname, "feature", IndexTypes.ECPINDEX, EuclideanDistance)()
         assert(index.isSuccess)
 
         Then("the index should be created")

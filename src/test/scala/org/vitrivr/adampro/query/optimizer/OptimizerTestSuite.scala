@@ -33,9 +33,9 @@ class OptimizerTestSuite extends AdamTestBase with ScalaFutures {
 
         val lb = new ListBuffer[Index]()
 
-        lb += IndexOp.create(entityname, "feature", IndexTypes.VAVINDEX, EuclideanDistance).get
-        lb += IndexOp.create(entityname, "feature", IndexTypes.VAFINDEX, EuclideanDistance).get
-        lb += IndexOp.create(entityname, "feature", IndexTypes.VAPLUSINDEX, EuclideanDistance).get
+        lb += IndexOp.create(entityname, "feature", IndexTypes.VAVINDEX, EuclideanDistance)().get
+        lb += IndexOp.create(entityname, "feature", IndexTypes.VAFINDEX, EuclideanDistance)().get
+        lb += IndexOp.create(entityname, "feature", IndexTypes.VAPLUSINDEX, EuclideanDistance)().get
 
         val optimizer = new SVMOptimizerHeuristic(3)
         val optimizerOp = new OptimizerOp(optimizer)

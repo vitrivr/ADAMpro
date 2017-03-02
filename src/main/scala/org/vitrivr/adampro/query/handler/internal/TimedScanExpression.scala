@@ -2,10 +2,11 @@ package org.vitrivr.adampro.query.handler.internal
 
 import org.vitrivr.adampro.entity.Entity._
 import org.vitrivr.adampro.main.AdamContext
-import org.vitrivr.adampro.query.handler.generic.{QueryEvaluationOptions, ExpressionDetails, QueryExpression}
+import org.vitrivr.adampro.query.handler.generic.{ExpressionDetails, QueryEvaluationOptions, QueryExpression}
 import org.vitrivr.adampro.query.progressive.{ProgressivePathChooser, ProgressiveQueryHandler}
 import org.vitrivr.adampro.query.query.NearestNeighbourQuery
 import org.apache.spark.sql.DataFrame
+import org.vitrivr.adampro.helpers.tracker.OperationTracker
 
 import scala.concurrent.duration.Duration
 
@@ -29,22 +30,22 @@ case class TimedScanExpression(private val exprs: Seq[QueryExpression], private 
     *
     * @return
     */
-  override protected def run(options : Option[QueryEvaluationOptions], filter: Option[DataFrame])(implicit ac: AdamContext): Option[DataFrame] = {
+  override protected def run(options : Option[QueryEvaluationOptions], filter: Option[DataFrame] = None)(tracker : OperationTracker)(implicit ac: AdamContext): Option[DataFrame] = {
     log.debug("perform time-limited evaluation")
 
     ac.sc.setJobGroup(id.getOrElse(""), "timed progressive query", interruptOnCancel = true)
 
     val prefilter = if (filter.isDefined && filterExpr.isDefined) {
-      Some(filter.get.join(filterExpr.get.evaluate(options).get))
+      Some(filter.get.join(filterExpr.get.evaluate(options)(tracker).get))
     } else if (filter.isDefined) {
       filter
     } else if (filterExpr.isDefined){
-      filterExpr.get.evaluate(options)
+      filterExpr.get.evaluate(options)(tracker)
     } else {
       None
     }
 
-    val res = ProgressiveQueryHandler.timedProgressiveQuery(exprs, timelimit, prefilter, options, id)
+    val res = ProgressiveQueryHandler.timedProgressiveQuery(exprs, timelimit, prefilter, options, id)(tracker)
 
     confidence = Some(res.confidence)
     res.results

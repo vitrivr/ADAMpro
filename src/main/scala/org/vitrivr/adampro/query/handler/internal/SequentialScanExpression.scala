@@ -17,6 +17,7 @@ import org.vitrivr.adampro.utils.Logging
 import org.apache.spark.util.sketch.BloomFilter
 import org.vitrivr.adampro.datatypes.TupleID
 import org.vitrivr.adampro.datatypes.TupleID.TupleID
+import org.vitrivr.adampro.helpers.tracker.OperationTracker
 
 /**
   * adamtwo
@@ -40,7 +41,7 @@ case class SequentialScanExpression(private val entity: Entity)(private val nnq:
     this(Entity.load(entityname).get)(nnq, id)(filterExpr)
   }
 
-  override protected def run(options: Option[QueryEvaluationOptions], filter: Option[DataFrame] = None)(implicit ac: AdamContext): Option[DataFrame] = {
+  override protected def run(options : Option[QueryEvaluationOptions], filter: Option[DataFrame] = None)(tracker : OperationTracker)(implicit ac: AdamContext): Option[DataFrame] = {
     log.debug("perform sequential scan")
 
     ac.sc.setLocalProperty("spark.scheduler.pool", "sequential")
@@ -61,7 +62,7 @@ case class SequentialScanExpression(private val entity: Entity)(private val nnq:
 
     if (filterExpr.isDefined) {
       filterExpr.get.filter = filter
-      val filterExprBf = filterExpr.get.evaluate(options).get.select(entity.pk.name).stat.bloomFilter(entity.pk.name, 2000, 0.05)
+      val filterExprBf = filterExpr.get.evaluate(options)(tracker).get.select(entity.pk.name).stat.bloomFilter(entity.pk.name, 2000, 0.05)
 
       if(bf != null){
         bf = bf.mergeInPlace(filterExprBf)
@@ -73,6 +74,8 @@ case class SequentialScanExpression(private val entity: Entity)(private val nnq:
 
     var result = if (filter.isDefined || filterExpr.isDefined) {
       val bfBc = ac.sc.broadcast(bf)
+      tracker.addBroadcast(bfBc)
+
       val filterUdf = udf((arg: TupleID) => bfBc.value.mightContain(arg))
       Some(df.filter(filterUdf(col(entity.pk.name))))
     } else {
@@ -85,7 +88,7 @@ case class SequentialScanExpression(private val entity: Entity)(private val nnq:
     }
 
     //distance computation
-    result.map(SequentialScanExpression.scan(_, nnq))
+    result.map(SequentialScanExpression.scan(_, nnq)(tracker))
   }
 
   override def equals(other: Any): Boolean =
@@ -112,9 +115,11 @@ object SequentialScanExpression extends Logging {
     * @param nnq nearest neighbour query
     * @return
     */
-  def scan(df: DataFrame, nnq: NearestNeighbourQuery)(implicit ac: AdamContext): DataFrame = {
+  def scan(df: DataFrame, nnq: NearestNeighbourQuery)(tracker : OperationTracker)(implicit ac: AdamContext): DataFrame = {
     val qBc = ac.sc.broadcast(nnq.q)
+    tracker.addBroadcast(qBc)
     val wBc = ac.sc.broadcast(nnq.weights)
+    tracker.addBroadcast(wBc)
 
     val dfDistance = if(df.schema.apply(nnq.attribute).dataType.isInstanceOf[StructType]){
       //sparse vectors
