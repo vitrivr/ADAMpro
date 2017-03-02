@@ -264,8 +264,8 @@ case class Entity(entityname: EntityName)(@transient implicit val ac: AdamContex
     * @param i increment by
     */
   private def incrementNumberOfInserts(i: Int = 1) = {
-    SparkStartup.catalogOperator.updateEntityOption(entityname, Entity.N_INSERTS, (totalNumberOfInserts + 1).toString)
-    SparkStartup.catalogOperator.updateEntityOption(entityname, Entity.N_INSERTS_VACUUMING, (totalNumberOfInsertsSinceVacuuming + 1).toString)
+    SparkStartup.catalogOperator.updateEntityOption(entityname, Entity.N_INSERTS, (totalNumberOfInserts + i).toString)
+    SparkStartup.catalogOperator.updateEntityOption(entityname, Entity.N_INSERTS_VACUUMING, (totalNumberOfInsertsSinceVacuuming + i).toString)
   }
 
   /**
@@ -279,23 +279,26 @@ case class Entity(entityname: EntityName)(@transient implicit val ac: AdamContex
     log.trace("inserting data into entity")
 
     try {
+      // 12 bits for the last 12 bits of the current nano time
+      // 28 bits for the current insertion id, i.e., the number of inserts so far into entity
+      // 24 bits for the tuple id within the insertion, i.e., the index within the insertion
       val ninserts = totalNumberOfInserts()
       val ninsertsvacuum = totalNumberOfInsertsSinceVacuuming()
-      val currentTime = (System.nanoTime() & ~9223372036854251520L) << 42
+      val currentTimeBits = (System.nanoTime() & 4095) << 52
 
       val tupleidUDF = udf((count: Long) => {
-        val insertionMask = ((ninserts.toLong + 1)) << 49
-        currentTime + insertionMask + count
+        val ninsertsBits = ((ninserts.toLong + 1) & 268435455) << 24
+        val countBits = (count & 16777215)
+        currentTimeBits + ninsertsBits + countBits
       })
 
       //attach TID to rows
-      val rdd = data.rdd.zipWithUniqueId.map { case (r: Row, id: Long) => Row.fromSeq(id +: r.toSeq) }
+      val rdd = data.rdd.zipWithIndex.map { case (r: Row, id: Long) => Row.fromSeq(id +: r.toSeq) }
 
       var insertion = ac.sqlContext.createDataFrame(
         rdd, StructType(StructField(AttributeNames.internalIdColumnName + "-tmp", LongType) +: data.schema.fields))
 
       insertion = insertion.withColumn(AttributeNames.internalIdColumnName, tupleidUDF(col(AttributeNames.internalIdColumnName + "-tmp"))).drop(AttributeNames.internalIdColumnName + "-tmp")
-
 
       //AUTOTYPE attributes
       val autoAttributes = schema(typeFilter = Some(Seq(AttributeTypes.AUTOTYPE)), fullSchema = false)
