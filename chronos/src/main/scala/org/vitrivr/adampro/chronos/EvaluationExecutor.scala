@@ -209,7 +209,7 @@ class EvaluationExecutor(val job: EvaluationJob, setStatus: (Double) => (Boolean
     val lb = new ListBuffer[RPCAttributeDefinition]()
 
     //pk
-    lb.append(RPCAttributeDefinition("pk", job.data_vector_pk, true, params = Map("indexed" -> "true")))
+    lb.append(RPCAttributeDefinition("pk", job.data_vector_pk, params = Map("indexed" -> "true")))
 
     //vector
     lb.append(RPCAttributeDefinition(FEATURE_VECTOR_ATTRIBUTENAME, "feature"))
