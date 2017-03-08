@@ -19,14 +19,14 @@ import scala.util.{Random, Try}
   * July 2016
   */
 class EvaluationExecutor(val job: EvaluationJob, setStatus: (Double) => (Boolean), inputDirectory: File, outputDirectory: File) {
+  val logger: Logger = Logger.getLogger("ADAMpro")
+
   //rpc client
   val client: RPCClient = RPCClient(job.adampro_url, job.adampro_port)
 
   //if job has been aborted, running will be set to false so that no new queries are started
   var running = true
   var progress = 0.0
-
-  var logger = Logger.getLogger("ADAMpro")
 
   /**
     *
@@ -40,7 +40,7 @@ class EvaluationExecutor(val job: EvaluationJob, setStatus: (Double) => (Boolean
   }
 
   private val ENTITY_NAME_PREFIX = "chr-eval-"
-  private val FEATURE_VECTOR_ATTRIBUTENAME = "fv0"
+  private val FEATURE_VECTOR_ATTRIBUTENAME = "vector"
 
   /**
     * Runs evaluation.
@@ -49,8 +49,10 @@ class EvaluationExecutor(val job: EvaluationJob, setStatus: (Double) => (Boolean
     val results = new ListBuffer[(String, Map[String, String])]()
 
     val entityname = if(job.data_enforcecreation) {
+      //generate a new entity with a random name
       generateString(10)
     } else {
+      //get entity based on creation attributes
       getEntityName()
     }
     val attributes = getAttributeDefinition()
@@ -178,7 +180,10 @@ class EvaluationExecutor(val job: EvaluationJob, setStatus: (Double) => (Boolean
     */
   def getProgress: Double = progress
 
-
+  /**
+    * Generates an entity name based on the parameters chosen for the entity.
+    * @return
+    */
   private def getEntityName() : String = {
     val prime = 31
     var result = 1
