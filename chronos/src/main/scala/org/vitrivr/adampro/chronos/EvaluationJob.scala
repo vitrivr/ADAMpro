@@ -1,6 +1,7 @@
 package org.vitrivr.adampro.chronos
 
-import ch.unibas.cs.dbis.chronos.agent.ChronosJob
+import ch.unibas.dmi.dbis.chronos.agent.ChronosJob
+
 import scala.collection.mutable.ListBuffer
 import scala.xml.{Node, XML}
 

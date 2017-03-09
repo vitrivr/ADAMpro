@@ -3,7 +3,7 @@ package org.vitrivr.adampro.chronos
 import java.io.File
 import java.util.Properties
 
-import ch.unibas.cs.dbis.chronos.agent.{AbstractChronosAgent, ChronosJob}
+import ch.unibas.dmi.dbis.chronos.agent.{AbstractChronosAgent, ChronosJob}
 
 import scala.collection.mutable
 
@@ -20,7 +20,7 @@ class ChronosAgent(ipAddressOrHostname: String) extends AbstractChronosAgent(ipA
     *
     * @param job
     */
-  override def aborded(job: ChronosJob): Unit = {
+  override def aborted(job: ChronosJob): Unit = {
     val executor = runningJobs.get(job.id)
 
     if(executor.isDefined){
@@ -55,7 +55,7 @@ class ChronosAgent(ipAddressOrHostname: String) extends AbstractChronosAgent(ipA
     * @param status
     */
   private def setProgress(job : ChronosJob)(status : Double) : Boolean = {
-    this.setExecutionStatus(job.id, math.floor(status * 100).toByte)
+    this.setProgress(job, math.floor(status * 100).toByte)
   }
 }
 

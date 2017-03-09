@@ -4,7 +4,7 @@ import java.io.File
 import java.util.Properties
 import java.util.logging.Logger
 
-import ch.unibas.cs.dbis.chronos.agent.ChronosJob
+import ch.unibas.dmi.dbis.chronos.agent.ChronosJob
 import org.vitrivr.adampro.grpc.grpc.RepartitionMessage
 import org.vitrivr.adampro.rpc.RPCClient
 import org.vitrivr.adampro.rpc.datastructures.{RPCAttributeDefinition, RPCQueryResults, RPCQueryObject}
