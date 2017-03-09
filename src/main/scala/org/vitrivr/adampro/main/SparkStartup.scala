@@ -28,6 +28,7 @@ object SparkStartup extends Logging {
         .set("spark.serializer", "org.apache.spark.serializer.KryoSerializer")
         .set("spark.kryoserializer.buffer.max", "2047m")
         .set("spark.kryoserializer.buffer", "2047")
+        .set("spark.sql.autoBroadcastJoinThreshold", "52428800")
 
       if (config.master.isDefined) {
         conf.setMaster(config.master.get)
