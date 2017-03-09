@@ -79,6 +79,7 @@ val secondaryLibs = Seq(
   "com.mchange" % "c3p0" % "0.9.5.2",
   "org.apache.derby" % "derby" % "10.13.1.1",
   "it.unimi.dsi" % "fastutil" % "7.0.12",
+  "commons-io" % "commons-io" % "2.5",
   "org.apache.commons" % "commons-lang3" % "3.4",
   "org.apache.commons" % "commons-math3" % "3.4.1",
   "com.googlecode.javaewah" % "JavaEWAH" % "1.1.6",
