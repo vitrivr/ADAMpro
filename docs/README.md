@@ -41,6 +41,8 @@ Our Docker containers come with an update script located at `/adampro/update.sh`
 docker exec adampro /adampro/update.sh
 ```
 
+Note that the Docker container makes use of a number of environment variables which can be adjusted, e.g., for better performance. Note in particular `ADAMPRO_MEMORY` which is set to `2g`. A few other environment variables, e.g., `ADAMPRO_START_WEBUI`, can be used to denote whether certain parts of ADAMpro should be started or not.
+
 ### Running ADAMpro locally
 ADAMpro can be built using [sbt](http://www.scala-sbt.org/). We provide various sbt tasks to simplify the deployment and development.
 

@@ -92,6 +92,7 @@ ENV ADAMPRO_START_POSTGRES true
 ENV ADAMPRO_START_SOLR true
 ENV ADAMPRO_START_WEBUI true
 ENV ADAMPRO_START_NOTEBOOK true
+ENV ADAMPRO_MEMORY 2g
 
 COPY bootstrap.sh ${ADAM_HOME}/bootstrap.sh
 RUN chown root.root ${ADAM_HOME}/bootstrap.sh; chmod 700 ${ADAM_HOME}/bootstrap.sh
