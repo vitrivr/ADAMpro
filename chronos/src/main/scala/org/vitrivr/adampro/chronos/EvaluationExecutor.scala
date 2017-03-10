@@ -39,7 +39,7 @@ class EvaluationExecutor(val job: EvaluationJob, setStatus: (Double) => (Boolean
     this(new EvaluationJob(job), setStatus, inputDirectory, outputDirectory)
   }
 
-  private val ENTITY_NAME_PREFIX = "chr-eval-"
+  private val ENTITY_NAME_PREFIX = "chron_eval"
   private val FEATURE_VECTOR_ATTRIBUTENAME = "vector"
 
   /**
@@ -65,8 +65,15 @@ class EvaluationExecutor(val job: EvaluationJob, setStatus: (Double) => (Boolean
       entityCreatedNewly = false
     } else {
       logger.info("creating entity " + entityname + " (" + attributes.map(a => a.name + "(" + a.datatype + ")").mkString(",") + ")")
+
+      val entityCreatedRes = client.entityCreate(entityname, attributes)
+
+      if(entityCreatedRes.isFailure){
+        logger.severe(entityCreatedRes.failed.get.getMessage)
+        throw entityCreatedRes.failed.get
+      }
+
       entityCreatedNewly = true
-      client.entityCreate(entityname, attributes)
     }
 
     //insert random data
@@ -214,10 +221,10 @@ class EvaluationExecutor(val job: EvaluationJob, setStatus: (Double) => (Boolean
     val lb = new ListBuffer[RPCAttributeDefinition]()
 
     //pk
-    lb.append(RPCAttributeDefinition("pk", job.data_vector_pk, params = Map("indexed" -> "true")))
+    lb.append(RPCAttributeDefinition("id", job.data_vector_pk, params = Map("indexed" -> "true")))
 
     //vector
-    lb.append(RPCAttributeDefinition(FEATURE_VECTOR_ATTRIBUTENAME, "feature"))
+    lb.append(RPCAttributeDefinition(FEATURE_VECTOR_ATTRIBUTENAME, "vector"))
 
     //metadata
     val metadata = Map("long" -> job.data_metadata_long, "int" -> job.data_metadata_int,
