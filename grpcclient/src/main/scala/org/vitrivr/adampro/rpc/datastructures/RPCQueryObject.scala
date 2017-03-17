@@ -91,6 +91,7 @@ case class RPCQueryObject(var id: String, var operation: String, var options: Ma
       case "minkowski" => DistanceMessage(DistanceMessage.DistanceType.minkowski)
       case "spannorm" => DistanceMessage(DistanceMessage.DistanceType.spannorm)
       case "modulo" => DistanceMessage(DistanceMessage.DistanceType.modulo)
+      case "haversine" => DistanceMessage(DistanceMessage.DistanceType.haversine)
       case _ => DistanceMessage(DistanceMessage.DistanceType.minkowski, Map("norm" -> "1"))
     }
   }
