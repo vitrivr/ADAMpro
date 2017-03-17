@@ -52,7 +52,10 @@ object HaversineDistance extends DistanceFunction with Logging with Serializable
   }
 
   def floorMod(dividend: Double, divisor: Double): Double = (dividend % divisor + divisor) % divisor
-  def normalizeLat(lat: Double): Double = floorMod(lat, 90)
+  def normalizeLat(lat: Double): Double = {
+    val latMod = floorMod(lat, 180)
+    if (latMod < 90) { latMod } else { latMod - 180 }
+  }
   def normalizeLng(lng: Double): Double = {
     val lngMod = floorMod(lng, 360)
     if (lngMod < 180) { lngMod } else { lngMod - 360 }
