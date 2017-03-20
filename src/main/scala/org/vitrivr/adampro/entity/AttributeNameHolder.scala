@@ -27,7 +27,7 @@ case class AttributeNameHolder(originalName: String) {
     * @param str name of attribute
     * @return
     */
-  private def cleanName(str : String): String = str.replaceAll("[^A-Za-z0-9_-]", "").toLowerCase()
+  private def cleanName(str : String): String = str.replaceAll("[^A-Za-z0-9_]", "").toLowerCase()
 }
 
 object AttributeNameHolder {
