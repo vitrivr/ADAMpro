@@ -215,6 +215,22 @@ class DistanceTestSuite extends AdamTestBase with ScalaFutures {
       assert(math.abs(yzdist - _yzdist) < 10E-6)
     }
 
+    scenario("haversine distance") {
+      val f = HaversineDistance
+
+      val xydist = 157249
+      val xzdist =  24863
+      val yzdist = 133893
+
+      val _xydist = f(x, y)
+      val _xzdist = f(x, z)
+      val _yzdist = f(y, z)
+
+      assert(math.abs(xydist - _xydist) < 1)
+      assert(math.abs(xzdist - _xzdist) < 1)
+      assert(math.abs(yzdist - _yzdist) < 1)
+    }
+
     scenario("weighted euclidean distance") {
       val f = EuclideanDistance
 

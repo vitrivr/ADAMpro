@@ -327,6 +327,7 @@ private[rpc] object RPCHelperMethods extends Logging {
       }
       case DistanceType.spannorm => SpanNormDistance
       case DistanceType.modulo => ModuloDistance
+      case DistanceType.haversine => HaversineDistance
       case _ => {
         log.warn("no known distance function given, using Euclidean")
         NormBasedDistance(2)
