@@ -15,7 +15,7 @@
     </root>
 
     <category name="org.vitrivr">
-        <priority value ="debug" />
+        <priority value ="warn" />
         <appender-ref ref="console" />
     </category>
 </log4j:configuration>
