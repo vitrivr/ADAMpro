@@ -24,6 +24,7 @@ elif [ $LOCAL = $BASE ]; then
     echo "Newer version in repository: Updating repository and re-building"
 
     git pull
+    git submodule update --recursive --remote
     sbt proto
     sbt assembly
     sbt web/assembly
