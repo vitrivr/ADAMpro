@@ -51,14 +51,18 @@ object HaversineDistance extends DistanceFunction with Logging with Serializable
     }
   }
 
-  def floorMod(dividend: Double, divisor: Double): Double = (dividend % divisor + divisor) % divisor
   def normalizeLat(lat: Double): Double = {
-    val latMod = floorMod(lat, 180)
-    if (latMod < 90) { latMod } else { latMod - 180 }
+    val clamped = Math.max(-90, Math.min(90, lat))
+    if (lat < -90 || lat > 90) {
+      log.warn(s"haversine distances requires latitude values ranging from -90 to 90, but found $lat. Clamped it to $clamped.")
+    }
+    clamped
   }
+
   def normalizeLng(lng: Double): Double = {
-    val lngMod = floorMod(lng, 360)
+    val lngMod = (lng % 360 + 360) % 360
     if (lngMod < 180) { lngMod } else { lngMod - 360 }
   }
+  
   def degreeToRadian(degrees: Double): Double = degrees * Math.PI / 180
 }
