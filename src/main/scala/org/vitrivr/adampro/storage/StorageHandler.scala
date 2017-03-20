@@ -70,10 +70,10 @@ class StorageHandler(val engine: Engine, val priority : Int = 0) extends Seriali
     */
   def create(entityname: EntityName, attributes: Seq[AttributeDefinition], params: Map[String, String] = Map())(implicit ac: AdamContext): Try[Void] = {
     execute("create") {
-      var storename = entityname
+      var storename = cleanStorename(entityname)
 
       while (engine.exists(storename).get) {
-        storename = storename + Random.nextInt(999).toString
+        storename = cleanStorename(storename + Random.nextInt(999)).toString
       }
 
       val res = engine.create(storename, attributes, params)
@@ -137,6 +137,7 @@ class StorageHandler(val engine: Engine, val priority : Int = 0) extends Seriali
 
           //max 40 characters (use last 40)
           newStorename = newStorename.reverse.substring(0, math.min(newStorename.length, 40)).reverse
+          newStorename = cleanStorename(newStorename)
         } while (engine.exists(newStorename).get)
 
         engine.create(newStorename, attributes, params)
@@ -196,6 +197,16 @@ class StorageHandler(val engine: Engine, val priority : Int = 0) extends Seriali
         Failure(res.failed.get)
       }
     }
+  }
+
+
+  /**
+    *
+    * @param entityname
+    * @return
+    */
+  private def cleanStorename(entityname : EntityName) : String = {
+    entityname.replaceAll("[^A-Za-z0-9_]", "")
   }
 
 
