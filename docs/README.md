@@ -182,7 +182,7 @@ docker-compose up
 ```
 This will start up a master and a single worker node. To add more workers (note that the number of masters is limited to 1), run the `scale` command and specify the number of workers you would like to deploy in total:
 ```
-docker-compose scale worker = 5
+docker-compose scale worker=5
 ```
 Note that this setup will not use Hadoop for creating a HDFS, but will rather just mount a folder to all Docker containers (both master and worker container). Therefore this deployment will only work if all containers run on one single machine.
 
