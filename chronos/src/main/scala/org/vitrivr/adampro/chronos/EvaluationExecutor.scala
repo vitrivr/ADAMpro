@@ -39,7 +39,7 @@ class EvaluationExecutor(val job: EvaluationJob, setStatus: (Double) => (Boolean
     this(new EvaluationJob(job), setStatus, inputDirectory, outputDirectory)
   }
 
-  private val ENTITY_NAME_PREFIX = "chron_eval"
+  private val ENTITY_NAME_PREFIX = "chron_eval_"
   private val FEATURE_VECTOR_ATTRIBUTENAME = "vector"
 
   /**
@@ -209,7 +209,7 @@ class EvaluationExecutor(val job: EvaluationJob, setStatus: (Double) => (Boolean
     result = prime * result + job.data_metadata_text.hashCode
     result = prime * result + job.data_vector_pk.hashCode
 
-    ENTITY_NAME_PREFIX + result
+    ENTITY_NAME_PREFIX + result.toString.replace("-","m")
   }
 
   /**
