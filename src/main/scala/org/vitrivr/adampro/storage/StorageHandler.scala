@@ -1,6 +1,5 @@
 package org.vitrivr.adampro.storage
 
-import org.vitrivr.adampro.catalog.CatalogOperator
 import org.vitrivr.adampro.entity.AttributeDefinition
 import org.vitrivr.adampro.entity.Entity._
 import org.vitrivr.adampro.exception.GeneralAdamException
@@ -19,6 +18,8 @@ import scala.util.{Failure, Random, Success, Try}
   * September 2016
   */
 class StorageHandler(val engine: Engine, val priority : Int = 0) extends Serializable with Logging {
+  private val MAX_STORENAME_LENGTH = 40
+
   val name = engine.name
 
   def supports = engine.supports
@@ -73,7 +74,7 @@ class StorageHandler(val engine: Engine, val priority : Int = 0) extends Seriali
       var storename = cleanStorename(entityname)
 
       while (engine.exists(storename).get) {
-        storename = cleanStorename(storename + Random.nextInt(999)).toString
+        storename = cleanStorename(storename + "_" + Random.nextInt(999)).toString
       }
 
       val res = engine.create(storename, attributes, params)
@@ -136,7 +137,7 @@ class StorageHandler(val engine: Engine, val priority : Int = 0) extends Seriali
           }
 
           //max 40 characters (use last 40)
-          newStorename = newStorename.reverse.substring(0, math.min(newStorename.length, 40)).reverse
+          newStorename = newStorename.reverse.substring(0, math.min(newStorename.length, MAX_STORENAME_LENGTH)).reverse
           newStorename = cleanStorename(newStorename)
         } while (engine.exists(newStorename).get)
 
@@ -206,7 +207,7 @@ class StorageHandler(val engine: Engine, val priority : Int = 0) extends Seriali
     * @return
     */
   private def cleanStorename(entityname : EntityName) : String = {
-    entityname.replaceAll("[^A-Za-z0-9_]", "")
+    entityname.toString.reverse.substring(0, MAX_STORENAME_LENGTH).reverse
   }
 
 
