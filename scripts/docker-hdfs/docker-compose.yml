@@ -10,7 +10,8 @@ services:
       entrypoint: "/adampro/bootstrap.sh -d --masternode"
       hostname: master
       environment:
-        SPARK_DRIVER_MEMORY: 4g
+        ADAMPRO_DRIVER_MEMORY: 4g
+        ADAMPRO_EXECUTOR_MEMORY: 2g
         SPARK_PUBLIC_DNS: localhost
       expose:
         - 7001
@@ -46,8 +47,7 @@ services:
       image: vitrivr/adampro-dist-hdfs
       entrypoint: "/adampro/bootstrap.sh -d --workernode"
       environment:
-        SPARK_WORKER_CORES: 2
-        SPARK_WORKER_MEMORY: 2g
+        SPARK_WORKER_INSTANCES: 1
         SPARK_PUBLIC_DNS: localhost
       links:
         - master
