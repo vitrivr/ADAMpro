@@ -235,7 +235,7 @@ class EvaluationExecutor(val job: EvaluationJob, setStatus: (Double) => (Boolean
 
     metadata.foreach { case (datatype, number) =>
       (0 until number).foreach { i =>
-        lb.append(RPCAttributeDefinition(datatype + "i", datatype))
+        lb.append(RPCAttributeDefinition(datatype + "i", datatype, Some("parquet")))
       }
     }
 
