@@ -59,13 +59,14 @@ import org.vitrivr.adampro.query.distance.DistanceFunction
 
 
     //TODO: possibly change structure to fit better Spark and return a ReferencePointAssignment rather than a true posting list
-    /*val indexdata = data.flatMap(datum => {
-      refs.value
-        .sortBy(ref => distance.apply(datum.feature, ref.feature)) //sort refs by distance
+    /*val indexed = data.rdd.flatMap(r => {
+      refsBc.value
+        .sortBy(ref => distance.apply(Vector.conv_dspark2vec(r.getAs[DenseSparkVector](attribute)), ref.ap_indexable)) //sort refs by distance
         .zipWithIndex //give rank (score)
-        .map { case (ref, idx) => ReferencePointAssignment(datum.id, ref.id, idx) } //obj, postingListId, score
+        .map { case (ref, idx) => ReferencePointAssignment(r.getAs(AttributeNames.internalIdColumnName), ref.ap_id, idx) } //obj, postingListId, score
         .take(ki) //limit to number of nearest pivots used when indexing
     }).map(x => Row(x.refid, x.tid, x.score))*/
+
 
     log.trace("MI finished indexing")
 
