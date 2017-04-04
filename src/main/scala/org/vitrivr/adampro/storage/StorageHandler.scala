@@ -207,7 +207,7 @@ class StorageHandler(val engine: Engine, val priority : Int = 0) extends Seriali
     * @return
     */
   private def cleanStorename(entityname : EntityName) : String = {
-    entityname.toString.reverse.substring(0, MAX_STORENAME_LENGTH).reverse
+    entityname.toString.reverse.substring(0, math.min(MAX_STORENAME_LENGTH, entityname.length)).reverse
   }
 
 
