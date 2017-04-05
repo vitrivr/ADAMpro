@@ -7,7 +7,7 @@ import java.util.logging.Logger
 import ch.unibas.dmi.dbis.chronos.agent.ChronosJob
 import org.vitrivr.adampro.grpc.grpc.RepartitionMessage
 import org.vitrivr.adampro.rpc.RPCClient
-import org.vitrivr.adampro.rpc.datastructures.{RPCAttributeDefinition, RPCQueryResults, RPCQueryObject}
+import org.vitrivr.adampro.rpc.datastructures.{RPCAttributeDefinition, RPCQueryObject, RPCQueryResults}
 
 import scala.collection.mutable.ListBuffer
 import scala.util.{Random, Try}
@@ -48,7 +48,9 @@ class EvaluationExecutor(val job: EvaluationJob, setStatus: (Double) => (Boolean
   def run(): Properties = {
     val results = new ListBuffer[(String, Map[String, String])]()
 
-    val entityname = if(job.data_enforcecreation) {
+    updateStatus()
+
+    val entityname = if (job.data_enforcecreation) {
       //generate a new entity with a random name
       generateString(10)
     } else {
@@ -60,7 +62,7 @@ class EvaluationExecutor(val job: EvaluationJob, setStatus: (Double) => (Boolean
     var entityCreatedNewly = false
 
     //create entity
-    if(client.entityExists(entityname).get){
+    if (client.entityExists(entityname).get) {
       logger.info("entity " + entityname + " exists already")
       entityCreatedNewly = false
     } else {
@@ -68,7 +70,7 @@ class EvaluationExecutor(val job: EvaluationJob, setStatus: (Double) => (Boolean
 
       val entityCreatedRes = client.entityCreate(entityname, attributes)
 
-      if(entityCreatedRes.isFailure){
+      if (entityCreatedRes.isFailure) {
         logger.severe(entityCreatedRes.failed.get.getMessage)
         throw entityCreatedRes.failed.get
       }
@@ -78,7 +80,7 @@ class EvaluationExecutor(val job: EvaluationJob, setStatus: (Double) => (Boolean
 
     //insert random data
     logger.info("inserting " + job.data_tuples + " tuples into " + entityname)
-    client.entityGenerateRandomData(entityname, job.data_tuples, job.data_vector_dimensions, job.data_vector_sparsity, job.data_vector_min, job.data_vector_max, job.data_vector_sparse)
+    client.entityGenerateRandomData(entityname, job.data_tuples, job.data_vector_dimensions, job.data_vector_sparsity, job.data_vector_min, job.data_vector_max, Some(job.data_vector_distribution))
 
     var indexCreatedNewly = false
 
@@ -91,8 +93,8 @@ class EvaluationExecutor(val job: EvaluationJob, setStatus: (Double) => (Boolean
       indexCreatedNewly = true
       client.entityCreateAllIndexes(entityname, Seq(FEATURE_VECTOR_ATTRIBUTENAME), 2).get
     } else {
-      if(client.indexExists(entityname, FEATURE_VECTOR_ATTRIBUTENAME, job.execution_subtype).get) {
-        logger.info(job.execution_subtype + " index for " + entityname + " (" +  FEATURE_VECTOR_ATTRIBUTENAME + ") " + "exists already")
+      if (client.indexExists(entityname, FEATURE_VECTOR_ATTRIBUTENAME, job.execution_subtype).get) {
+        logger.info(job.execution_subtype + " index for " + entityname + " (" + FEATURE_VECTOR_ATTRIBUTENAME + ") " + "exists already")
         indexCreatedNewly = false
         client.indexList(entityname).get.filter(_._2 == FEATURE_VECTOR_ATTRIBUTENAME).filter(_._3 == job.execution_subtype).map(_._1)
       } else {
@@ -113,7 +115,7 @@ class EvaluationExecutor(val job: EvaluationJob, setStatus: (Double) => (Boolean
     //partition
     getPartitionCombinations().foreach { case (e, i) =>
       if (e.isDefined) {
-        if(RepartitionMessage.Partitioner.values.find(p => p.name == job.access_entity_partitioner).isDefined){
+        if (RepartitionMessage.Partitioner.values.find(p => p.name == job.access_entity_partitioner).isDefined) {
           client.entityPartition(entityname, e.get, None, true, true, job.access_index_partitioner)
         } else client.entityPartition(entityname, e.get, None, true, true)
         //TODO: add partition column to job
@@ -121,19 +123,24 @@ class EvaluationExecutor(val job: EvaluationJob, setStatus: (Double) => (Boolean
 
       if (i.isDefined) {
         //TODO: add partition column to job
-        if(RepartitionMessage.Partitioner.values.find(p => p.name == job.access_index_partitioner).isDefined){
+        if (RepartitionMessage.Partitioner.values.find(p => p.name == job.access_index_partitioner).isDefined) {
           indexnames.foreach(indexname => client.indexPartition(indexname, i.get, None, true, true, job.access_index_partitioner))
         } else indexnames.foreach(indexname => client.indexPartition(indexname, i.get, None, true, true))
       }
+
+      progress = 0.25
+      updateStatus()
 
       //collect queries
       logger.info("generating queries to execute on " + entityname)
       val queries = getQueries(entityname)
 
+      val queryProgressAddition = (1 - progress) / queries.size.toFloat
+
       //query execution
       queries.zipWithIndex.foreach { case (qo, idx) =>
         if (running) {
-          val runid = "r-" + idx.toString
+          val runid = "run_" + idx.toString
           logger.info("executing query for " + entityname + " (runid: " + runid + ")")
           var result = executeQuery(qo)
 
@@ -143,17 +150,18 @@ class EvaluationExecutor(val job: EvaluationJob, setStatus: (Double) => (Boolean
 
           logger.info("executed query for " + entityname + " (runid: " + runid + ")")
 
-          if (job.measurement_firstrun && idx == 0){
+          if (job.measurement_firstrun && idx == 0) {
             //ignore first run
           } else {
             results += (runid -> result)
           }
 
         } else {
-          logger.info("aborted job " + job.id + ", not running queries anymore")
+          logger.warning("aborted job " + job.id + ", not running queries anymore")
         }
 
-        progress += 1 / queries.size.toFloat
+        progress += queryProgressAddition
+        updateStatus()
       }
     }
 
@@ -166,7 +174,22 @@ class EvaluationExecutor(val job: EvaluationJob, setStatus: (Double) => (Boolean
         .foreach { case (k, v) => prop.setProperty(k, v) } //set property
     }
 
-    if(job.data_enforcecreation) {
+    //get overview for plotting
+    val times = results.map { case (runid, result) => result.get("measuredtime")}.filter(_.isDefined)
+    val quality = results.map { case (runid, result) => result.get("resultquality")}.filter(_.isDefined)
+
+    prop.setProperty("summary_data_vector_dimensions", job.data_vector_dimensions.toString)
+    prop.setProperty("summary_data_tuples", job.data_tuples.toString)
+
+    prop.setProperty("summary_execution_name", job.execution_name)
+    prop.setProperty("summary_execution_subtype", job.execution_subtype)
+
+    prop.setProperty("summary_measuredtime", times.mkString(","))
+    prop.setProperty("summary_resultquality", quality.mkString(","))
+
+
+    //clean up
+    if (job.data_enforcecreation) {
       client.entityDrop(entityname)
     }
 
@@ -181,24 +204,26 @@ class EvaluationExecutor(val job: EvaluationJob, setStatus: (Double) => (Boolean
   }
 
   /**
-    * Returns progress (0 - 1)
     *
     * @return
     */
-  def getProgress: Double = progress
+  def updateStatus() = {
+    setStatus(progress)
+  }
 
   /**
     * Generates an entity name based on the parameters chosen for the entity.
+    *
     * @return
     */
-  private def getEntityName() : String = {
+  private def getEntityName(): String = {
     val prime = 31
     var result = 1
     result = prime * result + job.data_tuples.hashCode
     result = prime * result + job.data_vector_dimensions.hashCode
     result = prime * result + job.data_vector_min.hashCode
     result = prime * result + job.data_vector_max.hashCode
-    result = prime * result + job.data_vector_sparse.hashCode
+    result = prime * result + job.data_vector_distribution.hashCode
     result = prime * result + job.data_vector_sparsity.hashCode
     result = prime * result + job.data_metadata_boolean.hashCode
     result = prime * result + job.data_metadata_double.hashCode
@@ -207,9 +232,8 @@ class EvaluationExecutor(val job: EvaluationJob, setStatus: (Double) => (Boolean
     result = prime * result + job.data_metadata_string.hashCode
     result = prime * result + job.data_metadata_long.hashCode
     result = prime * result + job.data_metadata_text.hashCode
-    result = prime * result + job.data_vector_pk.hashCode
 
-    ENTITY_NAME_PREFIX + result.toString.replace("-","m")
+    ENTITY_NAME_PREFIX + result.toString.replace("-", "m")
   }
 
   /**
@@ -219,9 +243,6 @@ class EvaluationExecutor(val job: EvaluationJob, setStatus: (Double) => (Boolean
     */
   private def getAttributeDefinition(): Seq[RPCAttributeDefinition] = {
     val lb = new ListBuffer[RPCAttributeDefinition]()
-
-    //pk
-    lb.append(RPCAttributeDefinition("id", job.data_vector_pk, params = Map("indexed" -> "true")))
 
     //vector
     lb.append(RPCAttributeDefinition(FEATURE_VECTOR_ATTRIBUTENAME, "vector"))
@@ -269,16 +290,19 @@ class EvaluationExecutor(val job: EvaluationJob, setStatus: (Double) => (Boolean
     *
     * @return
     */
-  private def getQueries(entityname : String): Seq[RPCQueryObject] = {
+  private def getQueries(entityname: String): Seq[RPCQueryObject] = {
     val lb = new ListBuffer[RPCQueryObject]()
 
-    val additionals = if (job.measurement_firstrun) { 1 } else { 0 }
+    val additionals = if (job.measurement_firstrun) {
+      1
+    } else {
+      0
+    }
 
     job.query_k.flatMap { k =>
-      val denseQueries = (0 to job.query_dense_n + additionals).map { i => getQuery(entityname, k, false) }
-      val sparseQueries = (0 to job.query_sparse_n + additionals).map { i => getQuery(entityname, k, true) }
+      val denseQueries = (0 to job.query_n + additionals).map { i => getQuery(entityname, k, false) }
 
-      denseQueries union sparseQueries
+      denseQueries
     }
   }
 
@@ -289,7 +313,7 @@ class EvaluationExecutor(val job: EvaluationJob, setStatus: (Double) => (Boolean
     * @param sparseQuery
     * @return
     */
-  def getQuery(entityname : String, k: Int, sparseQuery: Boolean): RPCQueryObject = {
+  def getQuery(entityname: String, k: Int, sparseQuery: Boolean): RPCQueryObject = {
     val lb = new ListBuffer[(String, String)]()
 
     lb.append("entityname" -> entityname)
@@ -300,12 +324,8 @@ class EvaluationExecutor(val job: EvaluationJob, setStatus: (Double) => (Boolean
 
     lb.append("distance" -> job.query_distance)
 
-    if (job.query_denseweighted || job.query_sparseweighted) {
+    if (job.query_weighted) {
       lb.append("weights" -> generateFeatureVector(job.data_vector_dimensions, job.data_vector_sparsity, job.data_vector_min, job.data_vector_max).mkString(","))
-    }
-
-    if (job.query_sparseweighted) {
-      lb.append("sparseweights" -> "true")
     }
 
     lb.append("query" -> generateFeatureVector(job.data_vector_dimensions, job.data_vector_sparsity, job.data_vector_min, job.data_vector_max).mkString(","))
@@ -322,7 +342,7 @@ class EvaluationExecutor(val job: EvaluationJob, setStatus: (Double) => (Boolean
 
     lb.append("hints" -> job.execution_hint)
 
-    if(job.execution_name == "index"){
+    if (job.execution_name == "index") {
       lb.append("subtype" -> job.execution_subtype)
     }
 
@@ -433,22 +453,22 @@ class EvaluationExecutor(val job: EvaluationJob, setStatus: (Double) => (Boolean
         })
 
         //result quality
-        if(job.measurement_resultquality){
+        if (job.measurement_resultquality) {
           //perform sequential query
           val opt = collection.mutable.Map() ++ qo.options
           opt -= "hints"
           opt += "hints" -> "sequential"
           val gtruth = client.doQuery(qo.copy(options = opt.toMap))
 
-          if(gtruth.isSuccess){
+          if (gtruth.isSuccess) {
             val gtruthPKs = gtruth.get.map(_.results.map(_.get("pk")))
             val resPKs = res.get.map(_.results.map(_.get("pk")))
 
             val agreements = gtruthPKs.intersect(resPKs).length
             //simple hits/total
-            lb+= ("resultquality" -> agreements / qo.options.get("k").get.toInt)
-          } else{
-            lb+= ("resultquality" -> gtruth.failed.get.getMessage)
+            lb += ("resultquality" -> agreements / qo.options.get("k").get.toInt)
+          } else {
+            lb += ("resultquality" -> gtruth.failed.get.getMessage)
           }
         }
       } else {

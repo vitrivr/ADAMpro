@@ -210,7 +210,7 @@ class AdamController(rpcClient: RPCClient) extends Controller with Logging {
     *
     */
   post("/entity/insertdemo") { request: EntityFillRequest =>
-    val res = rpcClient.entityGenerateRandomData(request.entityname, request.ntuples, request.ndims, 0, 0, 1, false)
+    val res = rpcClient.entityGenerateRandomData(request.entityname, request.ntuples, request.ndims, 0, 0, 1, None)
 
     if (res.isSuccess) {
       response.ok.json(GeneralResponse(200))

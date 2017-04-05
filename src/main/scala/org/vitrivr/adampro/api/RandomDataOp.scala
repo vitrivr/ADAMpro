@@ -216,7 +216,7 @@ object RandomDataOp extends GenericOp {
     val min = params.get("fv-min").map(_.toFloat).getOrElse(0.toFloat)
     val max = params.get("fv-max").map(_.toFloat).getOrElse(1.toFloat)
 
-    generateDenseFeatureVector(dimensions.get, sparsity, min, max)
+    generateDenseFeatureVector(dimensions.get, sparsity, min, max, params.get("fv-distribution"))
   }
 
   /**
@@ -227,7 +227,7 @@ object RandomDataOp extends GenericOp {
     * @param max
     * @return
     */
-  private def generateDenseFeatureVector(dimensions: Int, sparsity: Float, min: VectorBase, max: VectorBase) = {
+  private def generateDenseFeatureVector(dimensions: Int, sparsity: Float, min: VectorBase, max: VectorBase, distribution : Option[String]) = {
     if (dimensions == 0) {
       throw new GeneralAdamException("please choose to create vectors with more than zero dimensions")
     }
@@ -237,10 +237,10 @@ object RandomDataOp extends GenericOp {
     }
 
     var fv = (0 until dimensions).map(i => {
-      var rval = generateVectorBase(min, max)
+      var rval = generateVectorBase(min, max, distribution)
       //ensure that we do not have any zeros in vector, sparsify later
       while (math.abs(rval) < 10E-6) {
-        rval = generateVectorBase(min, max)
+        rval = generateVectorBase(min, max, distribution)
       }
 
       rval
@@ -271,7 +271,7 @@ object RandomDataOp extends GenericOp {
     val min = params.get("fv-min").map(_.toFloat).getOrElse(0.toFloat)
     val max = params.get("fv-max").map(_.toFloat).getOrElse(1.toFloat)
 
-    generateSparseFeatureVector(dimensions.get, sparsity, min, max)
+    generateSparseFeatureVector(dimensions.get, sparsity, min, max, params.get("fv-distribution"))
   }
 
   /**
@@ -282,7 +282,7 @@ object RandomDataOp extends GenericOp {
     * @param max
     * @return
     */
-  private def generateSparseFeatureVector(dimensions: Int, sparsity: Float, min: VectorBase, max: VectorBase) = {
+  private def generateSparseFeatureVector(dimensions: Int, sparsity: Float, min: VectorBase, max: VectorBase, distribution : Option[String]) = {
     if (dimensions == 0) {
       throw new GeneralAdamException("please choose to create vectors with more than zero dimensions")
     }
@@ -292,10 +292,10 @@ object RandomDataOp extends GenericOp {
     }
 
     var fv = (0 until dimensions).map(i => {
-      var rval = generateVectorBase(min, max)
+      var rval = generateVectorBase(min, max, distribution)
       //ensure that we do not have any zeros in vector, sparsify later
       while (math.abs(rval) < 10E-6) {
-        rval = generateVectorBase(min, max)
+        rval = generateVectorBase(min, max, distribution)
       }
 
       rval
@@ -317,7 +317,7 @@ object RandomDataOp extends GenericOp {
     *
     * @return
     */
-  private def generateVectorBase(min: VectorBase, max: VectorBase) = Vector.nextRandom() * (max - min) + min
+  private def generateVectorBase(min: VectorBase, max: VectorBase, distribution : Option[String]) = Vector.nextRandom() * (max - min) + min
 
   /**
     *

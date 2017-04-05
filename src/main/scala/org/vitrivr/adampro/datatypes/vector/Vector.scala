@@ -18,7 +18,23 @@ object Vector {
   val zeroValue : VectorBase = 0.toFloat
   val minValue : VectorBase = Float.MinValue
   val maxValue : VectorBase = Float.MaxValue
-  def nextRandom() : VectorBase = Random.nextFloat()
+
+  /**
+    *
+    * @param distribution distribution for next random, e.g. uniform or gaussian
+    * @return
+    */
+  def nextRandom(distribution : Option[String] = None) : VectorBase = {
+    if(distribution.isEmpty){
+      return Random.nextFloat()
+    }
+
+    distribution.get match {
+      case "uniform" => Random.nextFloat()
+      case "gaussian" => Random.nextGaussian().toFloat
+      case _ => Random.nextFloat()
+    }
+  }
 
   type DenseRawVector = Seq[VectorBase]
   type SparseRawVector = SparseVectorWrapper

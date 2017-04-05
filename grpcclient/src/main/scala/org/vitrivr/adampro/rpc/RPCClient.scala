@@ -100,19 +100,24 @@ class RPCClient(channel: ManagedChannel,
   /**
     * Generate random data and fill into entity.
     *
-    * @param entityname name of entity
-    * @param tuples     number of tuples
-    * @param dimensions dimensionality for feature fields
-    * @param sparsity   sparsity of data for feature fields
-    * @param min        min value for feature fields
-    * @param max        max value for feature fields
-    * @param sparse     is feature field sparse or dense
+    * @param entityname   name of entity
+    * @param tuples       number of tuples
+    * @param dimensions   dimensionality for feature fields
+    * @param sparsity     sparsity of data for feature fields
+    * @param min          min value for feature fields
+    * @param max          max value for feature fields
+    * @param distribution distribution for random data
     * @return
     */
-  def entityGenerateRandomData(entityname: String, tuples: Int, dimensions: Int, sparsity: Float, min: Float, max: Float, sparse: Boolean): Try[Void] = {
+  def entityGenerateRandomData(entityname: String, tuples: Int, dimensions: Int, sparsity: Float, min: Float, max: Float, distribution: Option[String]): Try[Void] = {
     execute("entity generate random data operation") {
 
-      val options = Map("fv-dimensions" -> dimensions, "fv-sparsity" -> sparsity, "fv-min" -> min, "fv-max" -> max, "fv-sparse" -> sparse).mapValues(_.toString)
+      var options : Map[String, String] = Map("fv-dimensions" -> dimensions, "fv-sparsity" -> sparsity, "fv-min" -> min, "fv-max" -> max).mapValues(_.toString)
+
+      if(distribution.isDefined){
+        options += "fv-distribution" -> distribution.get
+      }
+
       val res = definerBlocking.generateRandomData(GenerateRandomDataMessage(entityname, tuples, options))
 
       if (res.code == AckMessage.Code.OK) {

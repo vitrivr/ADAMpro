@@ -36,8 +36,7 @@ class EvaluationJob(job: ChronosJob) extends ChronosJob(job) {
   val data_vector_sparsity: Float = getAttribute(data, "vector_sparsity").toFloat
   val data_vector_min: Float = getAttribute(data, "vector_min").toFloat
   val data_vector_max: Float = getAttribute(data, "vector_max").toFloat
-  val data_vector_sparse: Boolean = getAttribute(data, "vector_population").equals("sparse")
-  val data_vector_pk: String = getAttribute(data, "vector_pk")
+  val data_vector_distribution: String = getAttribute(data, "vector_distribution")
 
   val data_metadata_long: Int = getAttribute(data, "metadata_long").toInt
   val data_metadata_int: Int = getAttribute(data, "metadata_int").toInt
@@ -51,11 +50,9 @@ class EvaluationJob(job: ChronosJob) extends ChronosJob(job) {
 
   //query parameters
   val query_k: Seq[Int] = getAttribute(query, "k").split(",").map(_.toInt)
-  val query_dense_n: Int = getAttribute(query, "dense_n").toInt
-  val query_sparse_n: Int = getAttribute(query, "sparse_n").toInt
+  val query_n: Int = getAttribute(query, "n").toInt
   val query_distance: String = getAttribute(query, "distance")
-  val query_denseweighted: Boolean = getBooleanAttribute(query, "denseweighted")
-  val query_sparseweighted: Boolean = getBooleanAttribute(query, "sparseweighted")
+  val query_weighted: Boolean = getBooleanAttribute(query, "weighted")
 
   //execution paths
   val execution_name: String = getAttribute(execution, "name")
@@ -124,8 +121,7 @@ class EvaluationJob(job: ChronosJob) extends ChronosJob(job) {
     lb += ("data_vector_sparsity" -> data_vector_sparsity)
     lb += ("data_vector_min" -> data_vector_min)
     lb += ("data_vector_max" -> data_vector_max)
-    lb += ("data_vector_sparse" -> data_vector_sparse)
-    lb += ("data_vector_pk" -> data_vector_pk)
+    lb += ("data_vector_distribution" -> data_vector_distribution)
     lb += ("data_metadata_long" -> data_metadata_long)
     lb += ("data_metadata_int" -> data_metadata_int)
     lb += ("data_metadata_float" -> data_metadata_float)
@@ -136,11 +132,9 @@ class EvaluationJob(job: ChronosJob) extends ChronosJob(job) {
 
     //query parameters
     lb += ("query_k" -> query_k)
-    lb += ("query_dense_n" -> query_dense_n)
-    lb += ("query_sparse_n" -> query_sparse_n)
+    lb += ("query_n" -> query_n)
     lb += ("query_distance" -> query_distance)
-    lb += ("query_denseweighted" -> query_denseweighted)
-    lb += ("query_sparseweighted" -> query_sparseweighted)
+    lb += ("query_weighted" -> query_weighted)
 
     //execution paths
     lb += ("execution_name" -> execution_name)
