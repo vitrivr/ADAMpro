@@ -175,8 +175,8 @@ class EvaluationExecutor(val job: EvaluationJob, setStatus: (Double) => (Boolean
     }
 
     //get overview for plotting
-    val times = results.map { case (runid, result) => result.get("measuredtime")}.filter(_.isDefined)
-    val quality = results.map { case (runid, result) => result.get("resultquality")}.filter(_.isDefined)
+    val times = results.map { case (runid, result) => result.get("totaltime").getOrElse("-1")}
+    val quality = results.map { case (runid, result) => result.get("resultquality").getOrElse("-1")}
 
     prop.setProperty("summary_data_vector_dimensions", job.data_vector_dimensions.toString)
     prop.setProperty("summary_data_tuples", job.data_tuples.toString)
@@ -184,7 +184,7 @@ class EvaluationExecutor(val job: EvaluationJob, setStatus: (Double) => (Boolean
     prop.setProperty("summary_execution_name", job.execution_name)
     prop.setProperty("summary_execution_subtype", job.execution_subtype)
 
-    prop.setProperty("summary_measuredtime", times.mkString(","))
+    prop.setProperty("summary_totaltime", times.mkString(","))
     prop.setProperty("summary_resultquality", quality.mkString(","))
 
 
@@ -446,6 +446,7 @@ class EvaluationExecutor(val job: EvaluationJob, setStatus: (Double) => (Boolean
       if (res.isSuccess) {
         //time
         lb += ("measuredtime" -> res.get.map(_.time).mkString(";"))
+        lb += ("totaltime" -> math.abs(t2 - t1).toString)
 
         //results
         lb += ("results" -> {
