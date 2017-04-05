@@ -2,6 +2,7 @@ package org.vitrivr.adampro.chronos
 
 import java.io.File
 import java.util.Properties
+import java.util.logging.Logger
 
 import ch.unibas.dmi.dbis.chronos.agent.{AbstractChronosAgent, ChronosJob}
 
@@ -60,12 +61,16 @@ class ChronosAgent(ipAddressOrHostname: String, environment : String) extends Ab
 }
 
 object ChronosAgent {
+  private val LOG = Logger.getLogger(classOf[AbstractChronosAgent].getName)
+
   /**
     *
     * @param args
     */
   def main(args: Array[String]): Unit = {
     val environment = if(args.length > 0){
+      LOG.info("starting agent with environment '" + environment + "'")
+
       args(0)
     } else {
       null
