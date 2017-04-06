@@ -69,7 +69,7 @@ object ChronosAgent {
     */
   def main(args: Array[String]): Unit = {
     val environment = if(args.length > 0){
-      LOG.info("starting agent with environment '" + environment + "'")
+      LOG.info("starting agent with environment '" + args(0) + "'")
 
       args(0)
     } else {
