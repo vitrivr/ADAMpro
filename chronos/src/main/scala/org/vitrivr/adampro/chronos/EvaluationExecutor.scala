@@ -503,10 +503,12 @@ class EvaluationExecutor(val job: EvaluationJob, setStatus: (Double) => (Boolean
           t2 = System.currentTimeMillis
         }))
 
+
       while (!isCompleted) {
         Thread.sleep(1000)
       }
 
+      lb += ("totaltime" -> math.abs(t2 - t1).toString)
       lb += ("starttime" -> t1)
       lb += ("endtime" -> t2)
     }
