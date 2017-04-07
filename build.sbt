@@ -125,8 +125,8 @@ val testLibs = Seq(
 
 //assembly
 assemblyShadeRules in assembly := Seq(
-  ShadeRule.rename("io.netty.**" -> "adampro.shaded.io.netty.@1").inAll,
-  ShadeRule.rename("com.google.**" -> "adampro.shaded.com.google.@1").inAll
+  ShadeRule.rename("io.netty.**" -> "adampro.grpc.shaded.io.netty.@1").inAll,
+  ShadeRule.rename("com.google.**" -> "adampro.grpc.shaded.com.google.@1").inAll
 )
 
 libraryDependencies := baseLibs ++ coreLibs ++ secondaryLibs ++ tertiaryLibs ++ testLibs
