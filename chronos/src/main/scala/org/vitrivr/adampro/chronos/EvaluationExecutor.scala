@@ -50,13 +50,17 @@ class EvaluationExecutor(val job: EvaluationJob, setStatus: (Double) => (Boolean
 
     updateStatus()
 
-    val entityname = if (job.data_enforcecreation) {
+    val entityname = if (job.data_entityname.isDefined) {
+      //use existing entity
+      job.data_entityname.get
+    } else if (job.data_enforcecreation) {
       //generate a new entity with a random name
       generateString(10)
     } else {
       //get entity based on creation attributes
       getEntityName()
     }
+
     val attributes = getAttributeDefinition()
 
     var entityCreatedNewly = false
@@ -75,12 +79,12 @@ class EvaluationExecutor(val job: EvaluationJob, setStatus: (Double) => (Boolean
         throw entityCreatedRes.failed.get
       }
 
+      //insert random data
+      logger.info("inserting " + job.data_tuples + " tuples into " + entityname)
+      client.entityGenerateRandomData(entityname, job.data_tuples, job.data_vector_dimensions, job.data_vector_sparsity, job.data_vector_min, job.data_vector_max, Some(job.data_vector_distribution))
+
       entityCreatedNewly = true
     }
-
-    //insert random data
-    logger.info("inserting " + job.data_tuples + " tuples into " + entityname)
-    client.entityGenerateRandomData(entityname, job.data_tuples, job.data_vector_dimensions, job.data_vector_sparsity, job.data_vector_min, job.data_vector_max, Some(job.data_vector_distribution))
 
     var indexCreatedNewly = false
 
@@ -175,8 +179,8 @@ class EvaluationExecutor(val job: EvaluationJob, setStatus: (Double) => (Boolean
     }
 
     //get overview for plotting
-    val times = results.map { case (runid, result) => result.get("totaltime").getOrElse("-1")}
-    val quality = results.map { case (runid, result) => result.get("resultquality").getOrElse("-1")}
+    val times = results.map { case (runid, result) => result.get("totaltime").getOrElse("-1") }
+    val quality = results.map { case (runid, result) => result.get("resultquality").getOrElse("-1") }
 
     prop.setProperty("summary_data_vector_dimensions", job.data_vector_dimensions.toString)
     prop.setProperty("summary_data_tuples", job.data_tuples.toString)

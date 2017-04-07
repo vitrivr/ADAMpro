@@ -29,6 +29,15 @@ class EvaluationJob(job: ChronosJob) extends ChronosJob(job) {
   val adampro_port: Int = getAttribute(adampro, "port").toInt
 
   //data parameters
+  val data_entityname: Option[String] = {
+    val entityname = getAttribute(data, "entityname", false)
+
+    if (entityname.isEmpty) {
+      None
+    } else {
+      Some(entityname)
+    }
+  }
   val data_enforcecreation: Boolean = getBooleanAttribute(data, "enforcecreation", false)
 
   val data_tuples: Int = getAttribute(data, "tuples").toInt
