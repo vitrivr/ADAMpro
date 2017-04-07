@@ -243,7 +243,7 @@ case class Entity(entityname: EntityName)(@transient implicit val ac: AdamContex
     */
   def show(k: Int): Option[DataFrame] = getData().map(_.select(schema(fullSchema = false).map(_.name).map(x => col(x.toString)) : _*).limit(k))
 
-  private val MAX_INSERTS_BEFORE_VACUUM = SparkStartup.catalogOperator.getEntityOption(entityname, Some(Entity.MAX_INSERTS_VACUUMING)).get.get(Entity.MAX_INSERTS_VACUUMING).map(_.toInt).getOrElse(500)
+  private val MAX_INSERTS_BEFORE_VACUUM = SparkStartup.catalogOperator.getEntityOption(entityname, Some(Entity.MAX_INSERTS_VACUUMING)).get.get(Entity.MAX_INSERTS_VACUUMING).map(_.toInt).getOrElse(100)
 
   /**
     * Returns the total number of inserts in entity
