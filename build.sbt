@@ -62,7 +62,7 @@ val coreLibs = Seq(
   "org.apache.spark" %% "spark-sql" % "2.1.0" % "provided",
   "org.apache.spark" %% "spark-hive" % "2.1.0" % "provided",
   "org.apache.spark" %% "spark-mllib" % "2.1.0" % "provided",
-  "org.apache.hadoop" % "hadoop-client" % "2.7.0" excludeAll ExclusionRule("javax.servlet")  //make sure that you use the same hadoop version as in your deployment!
+  "org.apache.hadoop" % "hadoop-client" % "2.7.3" excludeAll ExclusionRule("javax.servlet")  //make sure that you use the same hadoop version as in your deployment!
 ).map(
   _.excludeAll(
     ExclusionRule("org.scala-lang"),
@@ -132,7 +132,7 @@ assemblyShadeRules in assembly := Seq(
 libraryDependencies := baseLibs ++ coreLibs ++ secondaryLibs ++ tertiaryLibs ++ testLibs
 
 dependencyOverrides ++= Set(
-  "org.apache.hadoop" % "hadoop-hdfs" % "2.7.2"
+  "org.apache.hadoop" % "hadoop-hdfs" % "2.7.3"
 )
 
 unmanagedBase <<= baseDirectory { base => base / "lib" }
