@@ -4,10 +4,12 @@ import org.apache.spark.sql.DataFrame
 import org.vitrivr.adampro.entity.Entity
 import org.vitrivr.adampro.entity.Entity._
 import org.vitrivr.adampro.exception.GeneralAdamException
+import org.vitrivr.adampro.grpc.grpc.IndexType
 import org.vitrivr.adampro.helpers.tracker.OperationTracker
 import org.vitrivr.adampro.index.partition.{PartitionMode, PartitionerChoice}
 import org.vitrivr.adampro.index.Index._
 import org.vitrivr.adampro.index.structures.IndexTypes
+import org.vitrivr.adampro.index.structures.IndexTypes.IndexType
 import org.vitrivr.adampro.index.{Index, IndexPartitioner}
 import org.vitrivr.adampro.main.{AdamContext, SparkStartup}
 import org.vitrivr.adampro.query.distance.DistanceFunction
@@ -77,9 +79,12 @@ object IndexOp extends GenericOp {
     * @param properties further index specific properties
     */
   def generateAll(entityname: EntityName, attribute: String, distance: DistanceFunction, properties: Map[String, String] = Map())(tracker : OperationTracker = new OperationTracker())(implicit ac: AdamContext): Try[Seq[IndexName]] = {
-    execute("create all indexes for " + entityname) {
-      val indexes = IndexTypes.values.map {
-        IndexOp.create(entityname, attribute, _, distance, properties)(tracker)
+    execute("create missing indexes for " + entityname) {
+      val existingIndexTypes = list(entityname).get.map(_._3)
+      val allIndexTypes = IndexTypes.values
+
+      val indexes = (allIndexTypes filterNot (existingIndexTypes contains)).map { indextype =>
+        IndexOp.create(entityname, attribute, indextype, distance, properties)(tracker)
       }
 
       //check and possibly clean up
