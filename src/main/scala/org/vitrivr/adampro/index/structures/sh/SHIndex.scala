@@ -83,8 +83,7 @@ class SHIndex(override val indexname: IndexName)(@transient override implicit va
   }
 
   override def isQueryConform(nnq: NearestNeighbourQuery): Boolean = {
-    //is this check correct?
-    if (nnq.distance.isInstanceOf[MinkowskiDistance]) {
+    if (nnq.distance.isInstanceOf[MinkowskiDistance] && nnq.distance.asInstanceOf[MinkowskiDistance].n == 2) {
       return true
     }
 
