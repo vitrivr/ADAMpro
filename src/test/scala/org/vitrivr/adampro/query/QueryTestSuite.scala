@@ -337,7 +337,7 @@ class QueryTestSuite extends AdamTestBase with ScalaFutures {
     scenario("perform a timed query") {
       withQueryEvaluationSet { es =>
         Given("some indexes")
-        IndexOp.create(es.entity.entityname, "vectorfield", IndexTypes.SHINDEX, es.distance)()
+        IndexOp.create(es.entity.entityname, "vectorfield", IndexTypes.LSHINDEX, es.distance)()
         IndexOp.create(es.entity.entityname, "vectorfield", IndexTypes.VAFINDEX, es.distance)()
 
         val timelimit = Duration(10, TimeUnit.SECONDS)
