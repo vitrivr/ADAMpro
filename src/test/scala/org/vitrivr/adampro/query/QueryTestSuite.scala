@@ -9,7 +9,7 @@ import org.vitrivr.adampro.datatypes.TupleID.TupleID
 import org.vitrivr.adampro.datatypes.vector.Vector
 import org.vitrivr.adampro.index.Index._
 import org.vitrivr.adampro.index.structures.IndexTypes
-import org.vitrivr.adampro.query.distance.Distance
+import org.vitrivr.adampro.query.distance.{Distance, EuclideanDistance}
 import org.vitrivr.adampro.query.distance.Distance.Distance
 import org.vitrivr.adampro.query.handler.internal.AggregationExpression.{ExpressionEvaluationOrder, IntersectExpression}
 import org.vitrivr.adampro.query.handler.internal.{CompoundQueryExpression, IndexScanExpression, StochasticIndexQueryExpression}
@@ -138,7 +138,39 @@ class QueryTestSuite extends AdamTestBase with ScalaFutures {
       *
       */
     scenario("perform a sh index query") {
-      withQueryEvaluationSet { es => indexQuery(es, IndexTypes.SHINDEX, false) }
+      withQueryEvaluationSet { es =>
+        val matchAll = false
+        val indextypename = IndexTypes.SHINDEX
+
+        Given("an index")
+        val index = IndexOp.create(es.entity.entityname, "vectorfield", indextypename, EuclideanDistance)()
+        assert(index.isSuccess)
+
+        When("performing a kNN query")
+        val nnq = NearestNeighbourQuery("vectorfield", es.vector, None, EuclideanDistance, es.k, false, es.options)
+        val tracker = new OperationTracker()
+        val results = QueryOp.index(index.get.indexname, nnq, None)(tracker).get.get
+          .map(r => (r.getAs[Distance](AttributeNames.distanceColumnName), r.getAs[Long]("tid"))).collect() //get here TID of metadata
+          .sortBy(_._1).toSeq
+
+        if (matchAll) {
+          Then("we should retrieve the k nearest neighbors")
+          results.zip(es.nnResults).foreach {
+            case (res, gt) =>
+              assert(res._2 == gt._2)
+              assert(math.abs(res._1 - gt._1) < EPSILON)
+          }
+        } else {
+          Then("we should have a match at least in the first element")
+
+          log.info("score: " + getScore(es.nnResults.map(_._2), results.map(_._2)))
+
+          assert(results.head._2 == es.nnResults.head._2)
+          assert(math.abs(results.head._1 - es.nnResults.head._1) < EPSILON)
+        }
+
+        tracker.cleanAll()
+      }
     }
 
 

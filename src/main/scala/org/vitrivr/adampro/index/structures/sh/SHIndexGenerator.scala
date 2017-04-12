@@ -6,12 +6,13 @@ import org.apache.spark.sql.{DataFrame, Dataset}
 import org.vitrivr.adampro.config.AttributeNames
 import org.vitrivr.adampro.datatypes.vector.Vector
 import org.vitrivr.adampro.datatypes.vector.Vector.{VectorBase, _}
+import org.vitrivr.adampro.exception.GeneralAdamException
 import org.vitrivr.adampro.helpers.tracker.OperationTracker
 import org.vitrivr.adampro.index.Index.IndexTypeName
 import org.vitrivr.adampro.index._
 import org.vitrivr.adampro.index.structures.IndexTypes
 import org.vitrivr.adampro.main.AdamContext
-import org.vitrivr.adampro.query.distance.DistanceFunction
+import org.vitrivr.adampro.query.distance.{DistanceFunction, EuclideanDistance}
 
 
 /**
@@ -163,6 +164,12 @@ class SHIndexGeneratorFactory extends IndexGeneratorFactory {
     * @param properties indexing properties
     */
   def getIndexGenerator(distance: DistanceFunction, properties: Map[String, String] = Map[String, String]())(implicit ac: AdamContext): IndexGenerator = {
+    if(distance != EuclideanDistance){
+      throw new GeneralAdamException("SH index only supports Euclidean distance")
+    }
+
+    assert(distance == EuclideanDistance)
+
     val nbits = if (properties.get("nbits").isDefined) {
       Some(properties.get("nbits").get.toInt)
     } else {
