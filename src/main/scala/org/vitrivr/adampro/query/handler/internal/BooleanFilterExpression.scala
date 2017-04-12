@@ -41,7 +41,7 @@ object BooleanFilterExpression extends Logging {
 
       var df =  entity.getData(predicates = bq.where)
 
-      var ids = mutable.Set[Any]()
+      /*var ids = mutable.Set[Any]()
 
       if (filter.isDefined) {
         ids ++= filter.get.select(entity.pk.name).collect().map(_.getAs[Any](entity.pk.name))
@@ -59,9 +59,28 @@ object BooleanFilterExpression extends Logging {
           ac.sqlContext.createDataFrame(rdd, d.schema)
         })
         tracker.addBroadcast(idsBc)
+
+        val res = df.map(BooleanFilterExpression.filter(_, bq))
+        res
+      }*/
+
+      val ids = if (filter.isDefined && filterExpr.isDefined) {
+        Some(filter.get.select(entity.pk.name).intersect(filterExpr.get.evaluate(options)(tracker).get.select(entity.pk.name)))
+      } else if(filter.isDefined){
+        Some(filter.get.select(entity.pk.name))
+      } else if(filterExpr.isDefined){
+        Some(filterExpr.get.evaluate(options)(tracker).get.select(entity.pk.name))
+      } else {
+        None
       }
 
-      val res = df.map(BooleanFilterExpression.filter(_, bq))
+     val res = if(ids.isDefined){
+        import org.apache.spark.sql.functions.broadcast
+        df.map(_.join(broadcast(ids.get), Seq(entity.pk.name.toString)))
+      } else {
+        df
+      }
+
       res
     }
 
