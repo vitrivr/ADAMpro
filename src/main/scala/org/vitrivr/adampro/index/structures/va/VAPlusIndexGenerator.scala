@@ -130,8 +130,7 @@ class VAPlusIndexGeneratorFactory extends IndexGeneratorFactory {
     */
   def getIndexGenerator(distance: DistanceFunction, properties: Map[String, String] = Map[String, String]())(implicit ac: AdamContext): IndexGenerator = {
     if (!distance.isInstanceOf[MinkowskiDistance]) {
-      log.error("only Minkowski distances allowed for VAV Indexer")
-      throw new QueryNotConformException()
+      throw new QueryNotConformException("VAF index only supports Minkowski distance")
     }
 
     val nbits = if (properties.get("signature-nbits").isDefined) {

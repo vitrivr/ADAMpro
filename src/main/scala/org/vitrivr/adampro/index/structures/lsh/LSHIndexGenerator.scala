@@ -5,6 +5,7 @@ import org.apache.spark.sql.{DataFrame, Dataset, Row}
 import org.vitrivr.adampro.config.AttributeNames
 import org.vitrivr.adampro.datatypes.vector.Vector._
 import org.vitrivr.adampro.datatypes.vector.Vector
+import org.vitrivr.adampro.exception.{GeneralAdamException, QueryNotConformException}
 import org.vitrivr.adampro.helpers.tracker.OperationTracker
 import org.vitrivr.adampro.index.Index.IndexTypeName
 import org.vitrivr.adampro.index._
@@ -79,6 +80,10 @@ class LSHIndexGeneratorFactory extends IndexGeneratorFactory {
     * @param properties indexing properties
     */
   def getIndexGenerator(distance: DistanceFunction, properties: Map[String, String] = Map[String, String]())(implicit ac: AdamContext): IndexGenerator = {
+    if(distance != ManhattanDistance && distance != EuclideanDistance && distance != HammingDistance){
+      throw new QueryNotConformException("LSH index only supports Manhattan, Euclidean and Hamming distance")
+    }
+
     val numHashTables = properties.getOrElse("nhashtables", "64").toInt
     val numHashes = properties.getOrElse("nhashes", "64").toInt
     val maxBuckets = if(distance == HammingDistance){

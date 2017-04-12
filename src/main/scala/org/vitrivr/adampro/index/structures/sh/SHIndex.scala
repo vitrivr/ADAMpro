@@ -87,6 +87,7 @@ class SHIndex(override val indexname: IndexName)(@transient override implicit va
       return true
     }
 
+    log.error("SH index can only be used with Euclidean distance")
     false
   }
 }

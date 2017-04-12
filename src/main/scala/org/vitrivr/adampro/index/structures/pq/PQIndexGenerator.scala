@@ -6,12 +6,13 @@ import org.apache.spark.sql.functions._
 import org.apache.spark.sql.{DataFrame, Dataset}
 import org.vitrivr.adampro.config.AttributeNames
 import org.vitrivr.adampro.datatypes.vector.Vector._
+import org.vitrivr.adampro.exception.{GeneralAdamException, QueryNotConformException}
 import org.vitrivr.adampro.helpers.tracker.OperationTracker
 import org.vitrivr.adampro.index.Index.IndexTypeName
 import org.vitrivr.adampro.index._
 import org.vitrivr.adampro.index.structures.IndexTypes
 import org.vitrivr.adampro.main.AdamContext
-import org.vitrivr.adampro.query.distance.DistanceFunction
+import org.vitrivr.adampro.query.distance.{DistanceFunction, HammingDistance, MinkowskiDistance}
 
 import scala.collection.immutable.IndexedSeq
 
@@ -93,6 +94,10 @@ class PQIndexGeneratorFactory extends IndexGeneratorFactory {
     * @param properties indexing properties
     */
   def getIndexGenerator(distance: DistanceFunction, properties: Map[String, String] = Map[String, String]())(implicit ac: AdamContext): IndexGenerator = {
+    if(!distance.isInstanceOf[MinkowskiDistance]){
+      throw new QueryNotConformException("PQ index only supports Manhattan distance")
+    }
+
     val nsq = properties.getOrElse("nsq", "8").toInt
     val trainingSize = properties.getOrElse("ntraining", "1000").toInt
 

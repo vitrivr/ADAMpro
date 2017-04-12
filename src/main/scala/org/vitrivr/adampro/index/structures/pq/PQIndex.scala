@@ -65,7 +65,6 @@ class PQIndex(override val indexname: IndexName)(@transient override implicit va
   }
 
   override def isQueryConform(nnq: NearestNeighbourQuery): Boolean = {
-    //is this check correct?
     if (nnq.distance.isInstanceOf[MinkowskiDistance]) {
       return true
     }

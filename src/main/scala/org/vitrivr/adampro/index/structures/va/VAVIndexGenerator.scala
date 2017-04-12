@@ -102,15 +102,14 @@ class VAVIndexGeneratorFactory extends IndexGeneratorFactory {
     * @param properties indexing properties
     */
   def getIndexGenerator(distance: DistanceFunction, properties: Map[String, String] = Map[String, String]())(implicit ac: AdamContext): IndexGenerator = {
+    if (!distance.isInstanceOf[MinkowskiDistance]) {
+      throw new QueryNotConformException("VAF index only supports Minkowski distance")
+    }
+
     val marksGeneratorDescription = properties.getOrElse("marktype", "equifrequent")
     val marksGenerator = marksGeneratorDescription.toLowerCase match {
       case "equifrequent" => EquifrequentMarksGenerator
       case "equidistant" => EquidistantMarksGenerator
-    }
-
-    if (!distance.isInstanceOf[MinkowskiDistance]) {
-      log.error("only Minkowski distances allowed for VAV Indexer")
-      throw new QueryNotConformException()
     }
 
     val totalNumBits = if (properties.get("signature-nbits").isDefined) {

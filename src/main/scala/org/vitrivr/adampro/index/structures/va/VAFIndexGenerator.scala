@@ -90,12 +90,11 @@ class VAFIndexGeneratorFactory extends IndexGeneratorFactory {
     * @param properties indexing properties
     */
   def getIndexGenerator(distance: DistanceFunction, properties: Map[String, String] = Map[String, String]())(implicit ac: AdamContext): IndexGenerator = {
-    val maxMarks = properties.get("nmarks").map(_.toInt)
-
     if (!distance.isInstanceOf[MinkowskiDistance]) {
-      log.error("only Minkowski distances allowed for VAF Indexer")
-      throw new QueryNotConformException()
+      throw new QueryNotConformException("VAF index only supports Minkowski distance")
     }
+    
+    val maxMarks = properties.get("nmarks").map(_.toInt)
 
     val marksGeneratorDescription = properties.getOrElse("marktype", "equifrequent")
     val marksGenerator = marksGeneratorDescription.toLowerCase match {
