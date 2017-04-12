@@ -28,6 +28,7 @@ object SparkStartup extends Logging {
         .set("spark.serializer", "org.apache.spark.serializer.KryoSerializer")
         .set("spark.kryoserializer.buffer.max", "2047m")
         .set("spark.kryoserializer.buffer", "2047")
+        .set("spark.network.timeout", "240s")
         .set("spark.sql.autoBroadcastJoinThreshold", (50 * 1024 * 1024).toString)
         .set("spark.sql.files.openCostInBytes", (256 * 1024 * 1024).toString) // see [SPARK-19629]
 
