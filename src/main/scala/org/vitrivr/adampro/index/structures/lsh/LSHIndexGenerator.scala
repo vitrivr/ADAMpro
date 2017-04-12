@@ -9,10 +9,10 @@ import org.vitrivr.adampro.helpers.tracker.OperationTracker
 import org.vitrivr.adampro.index.Index.IndexTypeName
 import org.vitrivr.adampro.index._
 import org.vitrivr.adampro.index.structures.IndexTypes
-import org.vitrivr.adampro.index.structures.lsh.hashfunction.{EuclideanHashFunction, Hasher, ManhattanHashFunction}
+import org.vitrivr.adampro.index.structures.lsh.hashfunction.{EuclideanHashFunction, HammingHashFunction, Hasher, ManhattanHashFunction}
 import org.vitrivr.adampro.index.structures.lsh.signature.LSHSignatureGenerator
 import org.vitrivr.adampro.main.AdamContext
-import org.vitrivr.adampro.query.distance.{DistanceFunction, EuclideanDistance, ManhattanDistance}
+import org.vitrivr.adampro.query.distance.{DistanceFunction, EuclideanDistance, HammingDistance, ManhattanDistance}
 
 
 class LSHIndexGenerator(numHashTables: Int, numHashes: Int, m: Int, distance: DistanceFunction, trainingSize: Int)(@transient implicit val ac: AdamContext) extends IndexGenerator {
@@ -61,6 +61,7 @@ class LSHIndexGenerator(numHashTables: Int, numHashes: Int, m: Int, distance: Di
     val hashFamily = distance match {
       case ManhattanDistance => () => new ManhattanHashFunction(dims, radius.toFloat, m)
       case EuclideanDistance => () => new EuclideanHashFunction(dims, radius.toFloat, m)
+      case HammingDistance => () => HammingHashFunction.withDimension(dims)
       case _ => null
     }
     val hashTables = (0 until numHashTables).map(i => new Hasher(hashFamily, numHashes))
@@ -80,11 +81,17 @@ class LSHIndexGeneratorFactory extends IndexGeneratorFactory {
   def getIndexGenerator(distance: DistanceFunction, properties: Map[String, String] = Map[String, String]())(implicit ac: AdamContext): IndexGenerator = {
     val numHashTables = properties.getOrElse("nhashtables", "64").toInt
     val numHashes = properties.getOrElse("nhashes", "64").toInt
-    val maxBuckets = properties.getOrElse("nbuckets", "256").toInt
+    val maxBuckets = if(distance == HammingDistance){
+      2 //bucket for 0 and 1
+    } else {
+      properties.getOrElse("nbuckets", "256").toInt
+    }
 
     val norm = properties.getOrElse("norm", "2").toInt
 
     val trainingSize = properties.getOrElse("ntraining", "500").toInt
+
+
 
     new LSHIndexGenerator(numHashTables, numHashes, maxBuckets, distance, trainingSize)
   }
