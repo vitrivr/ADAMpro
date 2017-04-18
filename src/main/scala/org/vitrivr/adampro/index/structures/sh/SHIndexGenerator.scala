@@ -33,9 +33,11 @@ class SHIndexGenerator(nbits: Option[Int], trainingSize: Int)(@transient implici
     log.trace("SH started indexing")
 
     val meta = train(getSample(math.max(trainingSize, MINIMUM_NUMBER_OF_TUPLE), attribute)(data))
+    val metaBc = ac.sc.broadcast(meta)
+    tracker.addBroadcast(metaBc)
 
     val cellUDF = udf((c: DenseSparkVector) => {
-      SHUtils.hashFeature(Vector.conv_dspark2vec(c), meta).serialize
+      SHUtils.hashFeature(Vector.conv_dspark2vec(c), metaBc.value).serialize
     })
 
     val indexed = data.withColumn(AttributeNames.featureIndexColumnName, cellUDF(data(attribute)))
