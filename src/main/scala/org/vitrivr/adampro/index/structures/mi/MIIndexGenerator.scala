@@ -93,7 +93,11 @@ class MIIndexGeneratorFactory extends IndexGeneratorFactory {
     val ki = properties.get("ki").map(_.toInt)
     val ks = properties.get("ks").map(_.toInt)
 
-    val nrefs = properties.get("nrefs").map(_.toInt)
+    val nrefs = if (properties.contains("nrefs")) {
+      properties.get("nrefs").map(_.toInt)
+    } else {
+      if(properties.contains("n")) { Some(math.ceil(2 * math.sqrt( properties.get("n").get.toInt )).toInt) } else { None } //slightly hacking...
+    }
 
     new MIIndexGenerator(ki, ks, distance, nrefs)
   }

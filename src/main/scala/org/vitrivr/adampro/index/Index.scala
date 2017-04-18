@@ -390,7 +390,7 @@ object Index extends Logging {
     */
   def createIndex(entity: Entity, attribute: String, indextypename: IndexTypeName, distance: DistanceFunction, properties: Map[String, String] = Map())(tracker : OperationTracker)(implicit ac: AdamContext): Try[Index] = {
     try {
-      val indexGenerator = indextypename.indexGeneratorFactoryClass.newInstance().getIndexGenerator(distance, properties)
+      val indexGenerator = indextypename.indexGeneratorFactoryClass.newInstance().getIndexGenerator(distance, properties + ("n" -> entity.count.toString))
       createIndex(entity, attribute, indexGenerator)(tracker)
     } catch {
       case e: Exception => {
