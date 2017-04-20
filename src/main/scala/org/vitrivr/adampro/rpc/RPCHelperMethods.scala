@@ -350,6 +350,11 @@ private[rpc] object RPCHelperMethods extends Logging {
           } else {
             Some(bqm.op)
           }
+
+          if(bqm.values.isEmpty){
+            throw new GeneralAdamException("empty values field in boolean query message given")
+          }
+
           val values = bqm.values.map(value => value.datatype.number match {
             case DataMessage.BOOLEANDATA_FIELD_NUMBER => value.getBooleanData
             case DataMessage.DOUBLEDATA_FIELD_NUMBER => value.getBooleanData
