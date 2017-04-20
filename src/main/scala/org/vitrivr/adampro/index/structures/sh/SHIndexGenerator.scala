@@ -1,8 +1,8 @@
 package org.vitrivr.adampro.index.structures.sh
 
-import breeze.linalg.{Matrix, sum, _}
+import breeze.linalg._
+import org.apache.spark.sql.DataFrame
 import org.apache.spark.sql.functions._
-import org.apache.spark.sql.{DataFrame, Dataset}
 import org.vitrivr.adampro.config.AttributeNames
 import org.vitrivr.adampro.datatypes.vector.Vector
 import org.vitrivr.adampro.datatypes.vector.Vector.{VectorBase, _}
@@ -29,7 +29,7 @@ class SHIndexGenerator(nbits: Option[Int], trainingSize: Int)(@transient implici
     * @param data raw data to index
     * @return
     */
-  override def index(data: DataFrame, attribute : String)(tracker : OperationTracker): (DataFrame, Serializable) = {
+  override def index(data: DataFrame, attribute: String)(tracker: OperationTracker): (DataFrame, Serializable) = {
     log.trace("SH started indexing")
 
     val meta = train(getSample(math.max(trainingSize, MINIMUM_NUMBER_OF_TUPLE), attribute)(data))
@@ -82,81 +82,43 @@ class SHIndexGenerator(nbits: Option[Int], trainingSize: Int)(@transient implici
     val feigv = new DenseMatrix[VectorBase](reorderEigv.rows, reorderEigv.cols, reorderEigv.toArray.map(Vector.conv_double2vb))
     val projected = (dataMatrix.*(reorderEigv))
 
+    // number of bits to use
+    val bits = nbits.getOrElse(nfeatures * 2)
+
     // fit uniform distribution
     val minProj = breeze.linalg.min(projected(::, *)).t.toDenseVector.map(Vector.conv_double2vb)
     val maxProj = breeze.linalg.max(projected(::, *)).t.toDenseVector.map(Vector.conv_double2vb)
 
     // enumerate eigenfunctions
-    val maxMode = computeShareOfBits(minProj, maxProj, nbits.getOrElse(nfeatures * 2))
-    val allModes = getAllModes(maxMode, numComponents)
-    val modes = getSortedModes(allModes, minProj, maxProj, nbits.getOrElse(nfeatures * 2))
+    val ranges = (maxProj - minProj).toArray
+    val maxRange = ranges.max
+
+    val eigenfuncs = ranges.zipWithIndex.flatMap { case (range, ndim) =>
+      val nmodes = shareOfBits(bits, range, maxRange) //number of modes for dimension
+      (1 to nmodes).map(k => (SHUtils.simplifiedEigenvalue(k, range), ndim, k, range)) //enumerate eigenfunctions
+    } .sortBy(_._1) //sort by eigenvalues
+      .take(bits) //take only limited number of eigenfunctions
+      .map(x => (x._2, x._3, x._4)) //dim, k, range
+      .toArray
 
     // compute "radius" for moving query around
     val radius = Vector.conv_double2vb(0.1) * (maxProj - minProj)
 
     log.trace("SH finished training")
 
-    SHIndexMetaData(feigv, minProj, maxProj, modes.toDenseMatrix, radius)
+    SHIndexMetaData(feigv, minProj, maxProj, eigenfuncs, radius)
   }
 
 
-  /**
+
+    /**
     *
-    * @param min
-    * @param max
-    * @param bits
+    * @param bits number of bits
+    * @param range range on dimension (i.e., b - a)
+    * @param max max value on ranges
     * @return
     */
-  private def computeShareOfBits(min: Vector[VectorBase], max: Vector[VectorBase], bits: Int): Array[Int] = {
-    val range = max - min
-    (range * ((bits + 1) / breeze.linalg.max(range))).map(x => math.ceil(x).toInt - 1).toArray
-  }
-
-  /**
-    *
-    * @param maxMode
-    * @param numComponents
-    * @return
-    */
-  private def getAllModes(maxMode: Array[Int], numComponents: Int): DenseMatrix[VectorBase] = {
-    val modesNum = sum(maxMode) + 1
-    val modes: DenseMatrix[VectorBase] = DenseMatrix.zeros[VectorBase](modesNum, numComponents)
-
-    var pos = 0
-    (0 until numComponents).foreach { nc =>
-      (1 to maxMode(nc)).foreach { m =>
-        modes(pos + m, nc) = m
-      }
-      pos += maxMode(nc)
-    }
-
-    modes
-  }
-
-  /**
-    *
-    * @param modes
-    * @param min
-    * @param max
-    * @param bits
-    * @return
-    */
-  private def getSortedModes(modes: DenseMatrix[VectorBase], min: Vector[VectorBase], max: Vector[VectorBase], bits: Int): Matrix[VectorBase] = {
-    val range = max - min
-    val omega0 = range.mapValues(r => Vector.conv_double2vb(math.Pi / math.abs(r))) //abs() added
-    val omegas = modes(*, ::).:*(omega0)
-    val omegas2 = omegas :* omegas
-    val eigVal = sum(omegas2(*, ::))
-
-    val sortOrder = eigVal.toArray.zipWithIndex.sortBy(x => x._1).map(x => x._2) //removed reverse
-
-    val selectedModes: DenseMatrix[VectorBase] = DenseMatrix.zeros[VectorBase](bits, modes.cols)
-    sortOrder.drop(1).take(bits).zipWithIndex.foreach {
-      case (so, idx) =>
-        selectedModes(idx, ::).:=(modes(so, ::))
-    }
-    selectedModes
-  }
+  private def shareOfBits(bits : Int, range : Double, max : Double) = math.ceil(range * ((bits + 1) / max)).toInt - 1
 }
 
 
@@ -166,7 +128,7 @@ class SHIndexGeneratorFactory extends IndexGeneratorFactory {
     * @param properties indexing properties
     */
   def getIndexGenerator(distance: DistanceFunction, properties: Map[String, String] = Map[String, String]())(implicit ac: AdamContext): IndexGenerator = {
-    if(distance != EuclideanDistance){
+    if (distance != EuclideanDistance) {
       throw new GeneralAdamException("SH index only supports Euclidean distance")
     }
 

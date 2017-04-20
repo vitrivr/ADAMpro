@@ -20,16 +20,45 @@ private[sh] object SHUtils {
   @inline def hashFeature(f : MathVector, indexMetaData : SHIndexMetaData) : BitString[_] = {
     val fMat = f.toDenseVector.toDenseMatrix
 
-    val v = fMat.*(indexMetaData.pca).asInstanceOf[DenseMatrix[VectorBase]].toDenseVector - indexMetaData.min.toDenseVector
+    //projected vector
+    val projV = (fMat.*(indexMetaData.pca).toDenseVector - indexMetaData.min.toDenseVector).data
 
-    val res = {
-      val omegai : DenseMatrix[VectorBase] = indexMetaData.omegas(*, ::) :* v
-      val ys = omegai.map(x => math.sin(x + (Math.PI / 2.0)))
-      val yi = ys(*, ::).map(_.toArray.product).toDenseVector
-
-      yi.findAll(x => x > 0)
+    val yi = indexMetaData.eigenfunctions.map{ case(dim, k, range) =>
+      eigenfunction(k, range, projV(dim))
     }
+
+    val res = yi.zipWithIndex.filter(x => x._1 > 0).map(_._2)
 
     BitString(res)
   }
+
+
+  /**
+    *
+    * @param k number of eigenfunction
+    * @param range range on dimension (i.e., b - a)
+    * @param x value to which eigenfunction is applied
+    * @return
+    */
+  private[sh] def eigenfunction(k : Int,  range : Double, x : Double) =  math.sin(math.Pi / 2.0 + (k * math.Pi / range) * x)
+
+
+  /**
+    *
+    * @param k number of eigenvalue
+    * @param epsilon acceptable similarity
+    * @param range range on dimension (i.e., b - a)
+    * @return
+    */
+  @deprecated("use simplifiedEigenvalue instead")
+  private[sh] def eigenvalue(k : Int, epsilon : Double, range : Double) = (1 - math.pow(math.E, (- (epsilon * epsilon) / 2) * math.pow((k * math.Pi / range), 2) ))
+
+
+  /**
+    *
+    * @param k number of eigenvalue
+    * @param range range on dimension (i.e., b - a)
+    * @return
+    */
+  private[sh] def simplifiedEigenvalue(k : Int, range : Double) = math.pow(k * math.Pi / range, 2)
 }

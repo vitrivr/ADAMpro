@@ -259,7 +259,7 @@ private[optimizer] class SVMOptimizerHeuristic(nruns : Int = 100)(@transient imp
     val lb = new ListBuffer[Double]()
     val meta = index.meta
 
-    lb += meta.modes.size
+    lb += meta.eigenfunctions.size
 
     lb.toSeq
   }
