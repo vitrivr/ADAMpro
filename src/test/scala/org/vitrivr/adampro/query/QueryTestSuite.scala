@@ -372,7 +372,7 @@ class QueryTestSuite extends AdamTestBase with ScalaFutures {
       withQueryEvaluationSet { es =>
         Given("some indexes")
 
-        val shidx = IndexOp.create(es.entity.entityname, "vectorfield", IndexTypes.SHINDEX, es.distance)()
+        val pqidx = IndexOp.create(es.entity.entityname, "vectorfield", IndexTypes.PQINDEX, es.distance)()
         val vaidx = IndexOp.create(es.entity.entityname, "vectorfield", IndexTypes.VAFINDEX, es.distance)()
 
         When("performing a kNN query of two indices and performing the intersect")
@@ -380,19 +380,19 @@ class QueryTestSuite extends AdamTestBase with ScalaFutures {
         val nnq = NearestNeighbourQuery("vectorfield", es.vector, None, es.distance, es.k, true, es.options ++ Map("numOfQ" -> "0"), None)
         val tracker = new OperationTracker()
 
-        val shqh = new IndexScanExpression(shidx.get.indexname)(nnq, None)(None)(ac)
+        val pqqh = new IndexScanExpression(pqidx.get.indexname)(nnq, None)(None)(ac)
         val vhqh = new IndexScanExpression(vaidx.get.indexname)(nnq, None)(None)(ac)
 
         val results = time {
-          new CompoundQueryExpression(new IntersectExpression(shqh, vhqh)).prepareTree().evaluate()(tracker).get
+          new CompoundQueryExpression(new IntersectExpression(pqqh, vhqh)).prepareTree().evaluate()(tracker).get
             .map(r => (r.getAs[TupleID](AttributeNames.internalIdColumnName))).collect().sorted
         }
 
-        val shres = shqh.prepareTree().evaluate()(tracker).get.map(r => r.getAs[TupleID](AttributeNames.internalIdColumnName)).collect()
+        val pqres = pqqh.prepareTree().evaluate()(tracker).get.map(r => r.getAs[TupleID](AttributeNames.internalIdColumnName)).collect()
         val vhres = vhqh.prepareTree().evaluate()(tracker).get.map(r => r.getAs[TupleID](AttributeNames.internalIdColumnName)).collect()
 
         Then("we should have a match in the aggregated list")
-        val gt = vhres.intersect(shres).sorted
+        val gt = vhres.intersect(pqres).sorted
 
         results.zip(gt).map {
           case (res, gt) =>
