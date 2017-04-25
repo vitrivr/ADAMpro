@@ -243,7 +243,7 @@ case class Entity(entityname: EntityName)(@transient implicit val ac: AdamContex
     */
   def show(k: Int): Option[DataFrame] = getData().map(_.select(schema(fullSchema = false).map(_.name).map(x => col(x.toString)) : _*).limit(k))
 
-  private val MAX_INSERTS_BEFORE_VACUUM = SparkStartup.catalogOperator.getEntityOption(entityname, Some(Entity.MAX_INSERTS_VACUUMING)).get.get(Entity.MAX_INSERTS_VACUUMING).map(_.toInt).getOrElse(100)
+  private val MAX_INSERTS_BEFORE_VACUUM = SparkStartup.catalogOperator.getEntityOption(entityname, Some(Entity.MAX_INSERTS_VACUUMING)).get.get(Entity.MAX_INSERTS_VACUUMING).map(_.toInt).getOrElse(DEFAULT_MAX_INSERTS_BEFORE_VACUUM)
 
   /**
     * Returns the total number of inserts in entity
@@ -339,7 +339,8 @@ case class Entity(entityname: EntityName)(@transient implicit val ac: AdamContex
 
       incrementNumberOfInserts()
 
-      if (ninsertsvacuum > MAX_INSERTS_BEFORE_VACUUM) {
+      if (ninsertsvacuum > MAX_INSERTS_BEFORE_VACUUM || getFeatureData.isDefined &&
+        getFeatureData.get.rdd.getNumPartitions > Entity.DEFAULT_MAX_PARTITIONS) {
         log.info("number of inserts necessitates now re-partitioning")
 
         if (schema().filter(_.storagehandler.engine.isInstanceOf[ParquetEngine]).nonEmpty) {
@@ -534,7 +535,8 @@ object Entity extends Logging {
   private val N_INSERTS = "ninserts"
   private val N_INSERTS_VACUUMING = "ninsertsvac"
   private val MAX_INSERTS_VACUUMING = "maxinserts"
-  private val DEFAULT_MAX_INSERTS_BEFORE_VACUUM = 500
+  private val DEFAULT_MAX_INSERTS_BEFORE_VACUUM = 100
+  private val DEFAULT_MAX_PARTITIONS = 100
 
   /**
     * Check if entity exists. Note that this only checks the catalog; the entity may still exist in the file system.
