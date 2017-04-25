@@ -86,6 +86,9 @@ class EvaluationExecutor(val job: EvaluationJob, setStatus: (Double) => (Boolean
       entityCreatedNewly = true
     }
 
+    //vacuuming before doing query
+    client.entityVacuum(entityname)
+
     var indexCreatedNewly = false
 
     val indexnames = if (job.execution_name == "sequential") {
