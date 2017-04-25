@@ -192,6 +192,7 @@ class ParquetHadoopStorage(private val basepath: String, private val datapath: S
 
       df
     } catch {
+      case e : org.apache.spark.sql.AnalysisException => Failure(new GeneralAdamException("no data available for file at " + filename))
       case e: Exception => Failure(e)
     }
   }
@@ -291,6 +292,7 @@ class ParquetLocalEngine(private val path: String) extends GenericParquetEngine 
 
       df
     } catch {
+      case e : org.apache.spark.sql.AnalysisException => Failure(new GeneralAdamException("no data available for file at " + filename))
       case e: Exception => Failure(e)
     }
   }
