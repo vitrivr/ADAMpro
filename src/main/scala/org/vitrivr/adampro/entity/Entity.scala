@@ -192,6 +192,35 @@ case class Entity(entityname: EntityName)(@transient implicit val ac: AdamContex
     */
   def getFeatureData: Option[DataFrame] = getData(typeFilter = Some(Seq(VECTORTYPE, SPARSEVECTORTYPE)))
 
+
+  /**
+    * Returns feature data quickly. Should only be used for internal purposes.
+    *
+    * @return
+    */
+  private def getFeatureDataFast : Option[DataFrame] = {
+    val handlerData  = schema(fullSchema = false).filter(_.storagehandler.engine.isInstanceOf[ParquetEngine]).groupBy(_.storagehandler).map { case (handler, attributes) =>
+      val status = handler.read(entityname, attributes.+:(pk))
+
+      if (status.isFailure) {
+        log.error("failure when reading data", status.failed.get)
+      }
+
+      status
+    }.filter(_.isSuccess).map(_.get)
+
+    if (handlerData.nonEmpty) {
+      if (handlerData.size == 1) {
+        Some(handlerData.head)
+      } else {
+        Some(handlerData.reduce(_.join(_, pk.name)).coalesce(ac.config.defaultNumberOfPartitions))
+      }
+    } else {
+      None
+    }
+  }
+
+
   /**
     * Gets feature attribute and pk attribute; use this for indexing purposes.
     *
@@ -339,8 +368,7 @@ case class Entity(entityname: EntityName)(@transient implicit val ac: AdamContex
 
       incrementNumberOfInserts()
 
-      if (ninsertsvacuum > MAX_INSERTS_BEFORE_VACUUM || getFeatureData.isDefined &&
-        getFeatureData.get.rdd.getNumPartitions > Entity.DEFAULT_MAX_PARTITIONS) {
+      if (ninsertsvacuum > MAX_INSERTS_BEFORE_VACUUM || ninsertsvacuum % (MAX_INSERTS_BEFORE_VACUUM / 5) == 0 && getFeatureDataFast.isDefined && getFeatureDataFast.get.rdd.getNumPartitions > Entity.DEFAULT_MAX_PARTITIONS) {
         log.info("number of inserts necessitates now re-partitioning")
 
         if (schema().filter(_.storagehandler.engine.isInstanceOf[ParquetEngine]).nonEmpty) {
@@ -493,7 +521,7 @@ case class Entity(entityname: EntityName)(@transient implicit val ac: AdamContex
     lb.append("indexes" -> SparkStartup.catalogOperator.listIndexes(Some(entityname)).get.mkString(","))
 
     try {
-      lb.append("partitions" -> getFeatureData.map(_.rdd.getNumPartitions.toString).getOrElse("none"))
+      lb.append("partitions" -> getFeatureDataFast.map(_.rdd.getNumPartitions.toString).getOrElse("none"))
     } catch {
       case e: Exception => log.warn("no partition information retrievable, possibly no data yet inserted")
     }
