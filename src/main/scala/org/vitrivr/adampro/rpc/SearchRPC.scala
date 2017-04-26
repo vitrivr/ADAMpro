@@ -1,17 +1,13 @@
 package org.vitrivr.adampro.rpc
 
 import io.grpc.stub.StreamObserver
-import org.apache.spark.sql.DataFrame
-import org.apache.spark.sql.types._
 import org.vitrivr.adampro.api.{EntityOp, IndexOp, QueryOp}
-import org.vitrivr.adampro.datatypes.gis.{GeographyWrapper, GeometryWrapper}
-import org.vitrivr.adampro.datatypes.vector.Vector.{DenseSparkVector, SparseSparkVector}
-import org.vitrivr.adampro.datatypes.vector.{DenseVectorWrapper, SparseVectorWrapper}
 import org.vitrivr.adampro.exception.{GeneralAdamException, QueryNotCachedException}
 import org.vitrivr.adampro.grpc.grpc.{AdamSearchGrpc, _}
 import org.vitrivr.adampro.helpers.tracker.OperationTracker
 import org.vitrivr.adampro.main.{AdamContext, SparkStartup}
 import org.vitrivr.adampro.query.QueryHints
+import org.vitrivr.adampro.query.optimizer.OptimizerOp
 import org.vitrivr.adampro.query.progressive.{ProgressiveObservation, QueryHintsProgressivePathChooser, SimpleProgressivePathChooser}
 import org.vitrivr.adampro.utils.Logging
 
@@ -273,5 +269,35 @@ class SearchRPC extends AdamSearchGrpc.AdamSearch with Logging {
     }
   }
 
+  /**
+    *
+    * @param request
+    * @return
+    */
+  override def getScoredExecutionPath(request: QuerySimulationMessage): Future[ScoredExecutionPathsMessage] = {
+    time("rpc call to get scored execution path") {
+      try {
+        val scans = OptimizerOp.scoredScans(RPCHelperMethods.getOptimizerName(request.optimizer), request.entity, RPCHelperMethods.prepareNNQ(request.nnq.get).get)(None)(ac)
 
+        val res = scans
+          .map(ep => {
+            ep.expr.prepareTree()
+
+            val score = ep.score
+            val scan = ep.scan
+            val description = ep.expr.mkString()
+
+            ScoredExecutionPathMessage(score, scan, description)
+          })
+
+
+        Future.successful(ScoredExecutionPathsMessage(ack = Some(AckMessage(code = AckMessage.Code.OK)), res))
+      } catch {
+        case e: Exception => {
+          log.error(e.getMessage)
+          Future.successful(ScoredExecutionPathsMessage(ack = Some(AckMessage(code = AckMessage.Code.ERROR, message = e.getMessage))))
+        }
+      }
+    }
+  }
 }

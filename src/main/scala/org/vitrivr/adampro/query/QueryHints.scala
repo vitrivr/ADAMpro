@@ -14,6 +14,7 @@ object QueryHints {
   sealed abstract class SimpleQueryHint extends QueryHint
   sealed abstract class IndexQueryHint(val structureType : IndexTypeName) extends SimpleQueryHint
   sealed abstract class ComplexQueryHint(val hints : Seq[SimpleQueryHint]) extends QueryHint
+  sealed abstract class EmpiricalQueryHint(val optimizerName : String = "svm") extends SimpleQueryHint
 
   case object SEQUENTIAL_QUERY extends SimpleQueryHint
   case object INDEX_QUERY extends ComplexQueryHint(Seq(VAF_INDEX_QUERY, VAV_INDEX_QUERY, PQ_INDEX_QUERY, ECP_INDEX_QUERY, SH_INDEX_QUERY, LSH_INDEX_QUERY))
@@ -28,8 +29,10 @@ object QueryHints {
   case object VAF_INDEX_QUERY extends IndexQueryHint(VAFINDEX)
   case object VAV_INDEX_QUERY extends IndexQueryHint(VAVINDEX)
   case object VAP_INDEX_QUERY extends IndexQueryHint(VAPLUSINDEX)
-  case object EMPIRICAL extends SimpleQueryHint
-  case object SCORED extends SimpleQueryHint
+  case object EMPIRICAL_QUERY extends EmpiricalQueryHint()
+  case object EMPIRICAL_SVM_QUERY extends EmpiricalQueryHint("svm")
+  case object EMPIRICAL_NAIVE_QUERY extends EmpiricalQueryHint("naive")
+  case object SCORED extends EmpiricalQueryHint("naive")
 
   val FALLBACK_HINTS : QueryHint = EXACT_QUERY
 
@@ -47,8 +50,9 @@ object QueryHints {
     case "inexact" => Some(INEXACT_QUERY)
     case "exact" => Some(EXACT_QUERY)
     case "vaf" => Some(VAF_INDEX_QUERY)
-    case "predictive" => Some(EMPIRICAL)
-    case "empirical" => Some(EMPIRICAL)
+    case "empirical" => Some(EMPIRICAL_QUERY)
+    case "empirical_svm" => Some(EMPIRICAL_SVM_QUERY)
+    case "empirical_naive" => Some(EMPIRICAL_NAIVE_QUERY)
     case "scored" => Some(SCORED)
     case _ => None
   }

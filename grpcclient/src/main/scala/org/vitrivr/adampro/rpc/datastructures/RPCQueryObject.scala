@@ -22,7 +22,7 @@ case class RPCQueryObject(var id: String, var operation: String, var options: Ma
     this.qm()
   }
 
-  private def entity = options.get("entityname").get
+  private[rpc] def entity = options.get("entityname").get
 
   private def subtype = options.getOrElse("subtype", "")
 
@@ -100,7 +100,7 @@ case class RPCQueryObject(var id: String, var operation: String, var options: Ma
     *
     * @return
     */
-  private def nnq = {
+  private[rpc] def nnq = {
     val partitions = if (options.get("partitions").isDefined) {
       val s = options.get("partitions").get
       if (s.contains(",")) {

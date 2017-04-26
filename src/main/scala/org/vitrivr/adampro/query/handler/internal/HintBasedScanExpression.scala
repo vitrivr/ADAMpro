@@ -13,7 +13,7 @@ import org.vitrivr.adampro.query.handler.internal.AggregationExpression.EmptyExp
 import org.vitrivr.adampro.query.handler.internal.BooleanFilterExpression.BooleanFilterScanExpression
 import QueryHints._
 import org.vitrivr.adampro.query.query.{BooleanQuery, NearestNeighbourQuery}
-import org.vitrivr.adampro.query.optimizer.OptimizerOp
+import org.vitrivr.adampro.query.optimizer.{OptimizerOp, QueryOptimizer}
 import org.vitrivr.adampro.utils.Logging
 import org.apache.spark.sql.DataFrame
 import org.vitrivr.adampro.helpers.tracker.OperationTracker
@@ -115,48 +115,15 @@ object HintBasedScanExpression extends Logging {
       var j = 0
       while (j < hints.length) {
         hints(j) match {
-          case EMPIRICAL =>
-            //TODO: clean code duplication
+          case eqh : EmpiricalQueryHint =>
             log.trace("measurement-based (empirical) execution plan hint")
-            val optimizer = ac.optimizerRegistry.value.apply("svm").get
 
-            val indexes = SparkStartup.catalogOperator.listIndexes(Some(entityname), Some(nnq.get.attribute)).get.map(Index.load(_)).filter(_.isSuccess).map(_.get).groupBy(_.indextypename).mapValues(_.map(_.indexname))
-            val index = indexes.values.toSeq.flatten
-              .map(indexname => Index.load(indexname, false).get)
-              .sortBy(index => -optimizer.getScore(index, nnq.get)).head
-
-            val entity = Entity.load(entityname).get
-
-            if (optimizer.getScore(index, nnq.get) > optimizer.getScore(entity, nnq.get)) {
-              scan = Some(IndexScanExpression(index)(nnq.get, None)(scan)(ac))
-            } else {
-              scan = Some(SequentialScanExpression(entity)(nnq.get, None)(scan)(ac))
-            }
+            scan = Some(OptimizerOp.getOptimalScan(eqh.optimizerName, entityname, nnq.get)(scan)(ac))
 
             log.debug("hint-based chose (empirical) " + scan.get.toString)
 
             return scan
-          case SCORED =>
-            //TODO: clean code duplication
-          log.trace("measurement-based (scored) execution plan hint")
-            val optimizer = ac.optimizerRegistry.value.apply("naive").get
 
-            val indexes = SparkStartup.catalogOperator.listIndexes(Some(entityname), Some(nnq.get.attribute)).get.map(Index.load(_)).filter(_.isSuccess).map(_.get).groupBy(_.indextypename).mapValues(_.map(_.indexname))
-            val index = indexes.values.toSeq.flatten
-              .map(indexname => Index.load(indexname, false).get)
-              .sortBy(index => -optimizer.getScore(index, nnq.get)).head
-
-            val entity = Entity.load(entityname).get
-
-            if (optimizer.getScore(index, nnq.get) > optimizer.getScore(entity, nnq.get)) {
-              scan = Some(IndexScanExpression(index)(nnq.get, None)(scan)(ac))
-            } else {
-              scan = Some(SequentialScanExpression(entity)(nnq.get, None)(scan)(ac))
-            }
-
-            log.debug("hint-based (scored) chose " + scan.get.toString)
-
-            return scan
           case iqh: IndexQueryHint =>
             log.trace("index execution plan hint")
             val optimizer = ac.optimizerRegistry.value.apply("naive").get

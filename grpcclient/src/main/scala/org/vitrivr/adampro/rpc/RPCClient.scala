@@ -11,6 +11,8 @@ import org.vitrivr.adampro.grpc.grpc.AdamSearchGrpc.{AdamSearchBlockingStub, Ada
 import org.vitrivr.adampro.grpc.grpc.AdaptScanMethodsMessage.IndexCollection.NEW_INDEXES
 import org.vitrivr.adampro.grpc.grpc.AdaptScanMethodsMessage.QueryCollection.RANDOM_QUERIES
 import org.vitrivr.adampro.grpc.grpc.DistanceMessage.DistanceType
+import org.vitrivr.adampro.grpc.grpc.QuerySimulationMessage.Optimizer
+import org.vitrivr.adampro.grpc.grpc.QuerySimulationMessage.Optimizer.{NAIVE_OPTIMIZER, SVM_OPTIMIZER}
 import org.vitrivr.adampro.grpc.grpc.RepartitionMessage.PartitionOptions
 import org.vitrivr.adampro.grpc.grpc.{AttributeType, _}
 import org.vitrivr.adampro.rpc.datastructures.{RPCAttributeDefinition, RPCQueryObject, RPCQueryResults}
@@ -629,6 +631,19 @@ class RPCClient(channel: ManagedChannel,
       Success(null)
     }
   }
+
+  def getScoredQueryExecutionPaths(qo: RPCQueryObject) : Try[Seq[(String, Double)]] = {
+    execute("collecting scored query execution paths operation") {
+      val res = searcherBlocking.getScoredExecutionPath(QuerySimulationMessage(qo.entity, qo.nnq, QuerySimulationMessage.Optimizer.SVM_OPTIMIZER))
+      if (res.ack.get.code.isOk) {
+        return Success(res.executionpaths.map(x => (x.scan, x.score)))
+      } else {
+        throw new Exception(res.ack.get.message)
+      }
+    }
+  }
+
+
 
   /**
     * Returns registered storage handlers.

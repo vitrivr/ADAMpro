@@ -20,14 +20,14 @@ class OptimizerRegistry() extends Logging {
     * @param name
     * @return
     */
-  def apply(name: String): Option[OptimizerOp] = {
+  def apply(name: String): Option[QueryOptimizer] = {
     val res = handlers.get(name)
 
     if (res.isEmpty) {
       throw new GeneralAdamException("no suitable optimizer heuristic found in registry named " + name)
     }
 
-    res.map(new OptimizerOp(_))
+    res.map(new QueryOptimizer(_))
   }
 
   /**

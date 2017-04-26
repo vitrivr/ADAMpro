@@ -1,7 +1,6 @@
 package org.vitrivr.adampro.query.progressive
 
 import org.vitrivr.adampro.entity.Entity.EntityName
-import org.vitrivr.adampro.query.optimizer.OptimizerOp
 import org.vitrivr.adampro.index.Index
 import org.vitrivr.adampro.index.Index._
 import org.vitrivr.adampro.index.structures.IndexTypes

@@ -13,6 +13,7 @@ import org.vitrivr.adampro.entity.AttributeDefinition
 import org.vitrivr.adampro.exception.GeneralAdamException
 import org.vitrivr.adampro.grpc._
 import org.vitrivr.adampro.grpc.grpc.DistanceMessage.DistanceType
+import org.vitrivr.adampro.grpc.grpc.QuerySimulationMessage.Optimizer.{NAIVE_OPTIMIZER, SVM_OPTIMIZER}
 import org.vitrivr.adampro.grpc.grpc.{QueryMessage, _}
 import org.vitrivr.adampro.main.AdamContext
 import org.vitrivr.adampro.query.distance._
@@ -555,6 +556,18 @@ private[rpc] object RPCHelperMethods extends Logging {
     }
 
     QueryResultInfoMessage(Some(AckMessage(AckMessage.Code.OK)), queryid, confidence, time, source, info, results)
+  }
+
+
+  /**
+    *
+    * @param optimizer
+    * @return
+    */
+  def getOptimizerName(optimizer : QuerySimulationMessage.Optimizer) : String = optimizer match {
+    case SVM_OPTIMIZER => "svm"
+    case NAIVE_OPTIMIZER => "naive"
+    case _ => throw new GeneralAdamException("optimizer unknown")
   }
 }
 
