@@ -84,27 +84,26 @@ object IndexOp extends GenericOp {
       val allIndexTypes = IndexTypes.values
 
       val indexes = (allIndexTypes filterNot (existingIndexTypes contains)).map { indextype =>
-        IndexOp.create(entityname, attribute, indextype, distance, properties)(tracker)
+        indextype -> IndexOp.create(entityname, attribute, indextype, distance, properties)(tracker)
       }
 
       //check and possibly clean up
-      if (indexes.forall(_.isSuccess)) {
+      if (indexes.forall(_._2.isSuccess)) {
         //all indexes were created, return
-        return Success(indexes.map(_.get.indexname))
+        return Success(indexes.map(_._2.get.indexname))
       }
 
       log.error("not all indexes were created")
 
       //not all indexes were created, delete the ones that were successfull too
-      indexes
-        .filter(_.isSuccess)
-        .map(_.get.indexname)
-        .foreach {
-          indexname =>
-            Index.drop(indexname)
-        }
+      val failedIndexes = indexes.filter(_._2.isFailure)
 
-      return Failure(new GeneralAdamException("some indexes were not created properly."))
+      failedIndexes.foreach{case(indextype, index) =>
+        log.error(s"""error when generating ${indextype.name} index: """ + index.failed.get.getMessage)
+      }
+
+
+      return Failure(new GeneralAdamException(s"""some indexes (${failedIndexes.map(_._1).mkString}) were not created properly."""))
     }
   }
 
