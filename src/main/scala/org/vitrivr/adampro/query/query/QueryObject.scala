@@ -3,6 +3,7 @@ package org.vitrivr.adampro.query.query
 import org.vitrivr.adampro.catalog.CatalogOperator
 import org.vitrivr.adampro.datatypes.vector.Vector._
 import org.vitrivr.adampro.entity.Entity
+import org.vitrivr.adampro.entity.Entity.AttributeName
 import org.vitrivr.adampro.index.partition.Partitioning.PartitionID
 import org.vitrivr.adampro.index.Index
 import org.vitrivr.adampro.main.{AdamContext, SparkStartup}
@@ -86,7 +87,7 @@ case class Predicate(attribute : String, operator : Option[String], values : Seq
   * @param options    options to pass to handler
   */
 case class NearestNeighbourQuery(
-                                  attribute: String,
+                                  attribute: AttributeName,
                                   q: MathVector,
                                   weights: Option[MathVector],
                                   distance: DistanceFunction,
