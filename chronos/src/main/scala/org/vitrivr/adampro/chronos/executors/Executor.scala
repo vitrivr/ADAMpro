@@ -244,7 +244,8 @@ abstract class Executor(val job: EvaluationJob, setStatus: (Double) => (Boolean)
 
           val agreements = gtruthPKs.intersect(resPKs).length
           //simple hits/total
-          lb += ("resultquality" -> agreements / qo.options.get("k").get.toInt)
+          val quality = (agreements / qo.options.get("k").get.toDouble)
+          lb += ("resultquality" -> quality.toString)
         } else {
           lb += ("resultquality" -> gtruth.failed.get.getMessage)
         }
