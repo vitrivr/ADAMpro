@@ -15,7 +15,7 @@ import org.vitrivr.adampro.query.query.NearestNeighbourQuery
   * Ivan Giangreco
   * April 2017
   */
-case class ExecutionPath(expr : QueryExpression, scan : String, score : Double)
+case class ExecutionPath(expr : QueryExpression, scan : String, scantype : String, score : Double)
 
 
 object OptimizerOp {
@@ -39,14 +39,14 @@ object OptimizerOp {
       .map(index => {
         val score = optimizer.getScore(index, nnq)
 
-        ExecutionPath(IndexScanExpression(index)(nnq, None)(filterExpr)(ac), index.indexname,score)
+        ExecutionPath(IndexScanExpression(index)(nnq, None)(filterExpr)(ac), index.indexname, index.indextypename.name, score)
       })
 
     val entity = Entity.load(entityname).get
     val entityScan = {
         val score = optimizer.getScore(entity, nnq)
 
-        ExecutionPath(SequentialScanExpression(entity)(nnq, None)(filterExpr)(ac), entity.entityname, score)
+        ExecutionPath(SequentialScanExpression(entity)(nnq, None)(filterExpr)(ac), entity.entityname, "sequential", score)
       }
 
     indexScans ++ Seq(entityScan)

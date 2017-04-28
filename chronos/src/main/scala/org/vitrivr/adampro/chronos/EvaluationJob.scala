@@ -14,15 +14,20 @@ import scala.xml.{Node, XML}
   */
 class EvaluationJob(job: ChronosJob) extends ChronosJob(job) {
   private val xml = XML.loadString(job.cdl)
+  private val evaluation = (xml \ "evaluation" \ "evaluation").head
   private val adampro = (xml \ "evaluation" \ "adampro").head
   private val data = (xml \ "evaluation" \ "data").head
   private val query = (xml \ "evaluation" \ "query").head
   private val execution = (xml \ "evaluation" \ "execution").head
   private val access = (xml \ "evaluation" \ "access").head
   private val measurement = (xml \ "evaluation" \ "measurement").head
+  private val maintenance = (xml \ "evaluation" \ "maintenance").head
 
   //attention: add all parameters that you have here also to the method getAllParameters, to ensure
   //that the parameters are properly logged
+
+  //evaluation
+  val evaluation_mode : String = getAttribute(evaluation, "mode")
 
   //adampro
   val adampro_url: String = getAttribute(adampro, "url")
@@ -36,6 +41,15 @@ class EvaluationJob(job: ChronosJob) extends ChronosJob(job) {
       None
     } else {
       Some(entityname)
+    }
+  }
+  val data_attributename: Option[String] = {
+    val attributename = getAttribute(data, "attributename", false)
+
+    if (attributename.isEmpty) {
+      None
+    } else {
+      Some(attributename)
     }
   }
   val data_enforcecreation: Boolean = getBooleanAttribute(data, "enforcecreation", false)
@@ -68,6 +82,16 @@ class EvaluationJob(job: ChronosJob) extends ChronosJob(job) {
   val execution_subtype: String = getAttribute(execution, "subtype")
   val execution_withsequential: Boolean = getBooleanAttribute(execution, "withsequential")
   val execution_hint: String = getAttribute(execution, "hint")
+  val execution_subexecution : Seq[(String, Boolean)] = if(execution.child.nonEmpty && execution.child.head.child.nonEmpty){
+    execution.child.head.child.map{ subexecution =>
+      val subexecution_name = getAttribute(subexecution, "name")
+      val subexecution_withsequential = getBooleanAttribute(subexecution, "withsequential")
+
+      (subexecution_name, subexecution_withsequential)
+    }
+  } else {
+    Seq()
+  }
 
   //data access parameters
   val access_entity_partitions: Seq[Int] = getAttribute(access, "entity_partitions").split(",").filterNot(s => s.length < 0 || s.isEmpty).map(_.toInt)
@@ -79,6 +103,9 @@ class EvaluationJob(job: ChronosJob) extends ChronosJob(job) {
   val measurement_resultquality: Boolean = getBooleanAttribute(measurement, "resultquality")
   val measurement_firstrun: Boolean = getBooleanAttribute(measurement, "firstrun")
   val measurement_cache: Boolean = getBooleanAttribute(measurement, "cache")
+
+  //maintenance parameters
+  val maintenance_delete : Boolean = getBooleanAttribute(maintenance, "delete")
 
 
   /**
@@ -124,6 +151,12 @@ class EvaluationJob(job: ChronosJob) extends ChronosJob(job) {
   def getAllParameters(): Map[String, String] = {
     val lb = new ListBuffer[(String, Any)]()
 
+    lb += ("evaluation_mode" -> evaluation_mode)
+
+    if(evaluation_mode == "see"){
+      lb += ("data_entityname" -> data_entityname.getOrElse("unknown"))
+    }
+
     lb += ("data_enforcecreation" -> data_enforcecreation)
     lb += ("data_tuples" -> data_tuples)
     lb += ("data_vector_dimensions" -> data_vector_dimensions)
@@ -149,6 +182,8 @@ class EvaluationJob(job: ChronosJob) extends ChronosJob(job) {
     lb += ("execution_name" -> execution_name)
     lb += ("execution_withsequential" -> execution_withsequential)
     lb += ("execution_hint" -> execution_hint)
+    lb += ("execution_subtype" -> execution_subtype)
+    lb += ("execution_subexecution" -> execution_subexecution.map(x => x._1 + "_" + x._2).mkString(","))
 
     //data access parameters
     lb += ("access_entity_partitions" -> access_entity_partitions)

@@ -285,9 +285,10 @@ class SearchRPC extends AdamSearchGrpc.AdamSearch with Logging {
 
             val score = ep.score
             val scan = ep.scan
+            val scantype = ep.scantype
             val description = ep.expr.mkString()
 
-            ScoredExecutionPathMessage(score, scan, description)
+            ScoredExecutionPathMessage(score, scan, scantype, description)
           })
 
 

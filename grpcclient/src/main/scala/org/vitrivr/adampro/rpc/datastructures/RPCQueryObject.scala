@@ -24,6 +24,8 @@ case class RPCQueryObject(var id: String, var operation: String, var options: Ma
 
   private[rpc] def entity = options.get("entityname").get
 
+  private def indexes = options.get("indexes").get
+
   private def subtype = options.getOrElse("subtype", "")
 
   private def sparsify(vec: Seq[Float]) = {
@@ -245,6 +247,16 @@ case class RPCQueryObject(var id: String, var operation: String, var options: Ma
 
       case "external" =>
         sqm = sqm.withEhqm(ehqm())
+
+      case "stochastic" =>
+        sqm = sqm.withQm(soqm())
+
+      case "empirical" =>
+        sqm = sqm.withQm(siqm)
+
+      case "hint" =>
+        sqm = sqm.withQm(shqm)
+
     }
 
     sqm
@@ -256,7 +268,11 @@ case class RPCQueryObject(var id: String, var operation: String, var options: Ma
 
   private def siqm(): QueryMessage = QueryMessage(queryid = id, from = Some(FromMessage().withEntity(entity)), hints = Seq(subtype), nnq = nnq)
 
+  private def shqm(): QueryMessage = QueryMessage(queryid = id, from = Some(FromMessage().withEntity(entity)), hints = hints(), nnq = nnq)
+
   private def ehqm(): ExternalHandlerQueryMessage = ExternalHandlerQueryMessage(id, entity, subtype, options)
 
   private def sbqm(): QueryMessage = QueryMessage(queryid = id, from = Some(FromMessage().withEntity(entity)), bq = Some(BooleanQueryMessage(Seq(WhereMessage(options.get("attribute").get, Seq(DataMessage().withStringData(options.get("value").get)))))))
+
+  private def soqm(): QueryMessage = QueryMessage(queryid = id, from = Some(FromMessage().withIndexes(IndexListMessage(indexes = indexes.split(",")))), nnq = nnq)
 }

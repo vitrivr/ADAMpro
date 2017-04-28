@@ -8,11 +8,9 @@ import io.grpc.stub.StreamObserver
 import io.grpc.{ManagedChannel, ManagedChannelBuilder}
 import org.vitrivr.adampro.grpc.grpc.AdamDefinitionGrpc.{AdamDefinitionBlockingStub, AdamDefinitionStub}
 import org.vitrivr.adampro.grpc.grpc.AdamSearchGrpc.{AdamSearchBlockingStub, AdamSearchStub}
-import org.vitrivr.adampro.grpc.grpc.AdaptScanMethodsMessage.IndexCollection.NEW_INDEXES
-import org.vitrivr.adampro.grpc.grpc.AdaptScanMethodsMessage.QueryCollection.RANDOM_QUERIES
+import org.vitrivr.adampro.grpc.grpc.AdaptScanMethodsMessage.IndexCollection.{EXISTING_INDEXES, NEW_INDEXES}
+import org.vitrivr.adampro.grpc.grpc.AdaptScanMethodsMessage.QueryCollection.{LOGGED_QUERIES, RANDOM_QUERIES}
 import org.vitrivr.adampro.grpc.grpc.DistanceMessage.DistanceType
-import org.vitrivr.adampro.grpc.grpc.QuerySimulationMessage.Optimizer
-import org.vitrivr.adampro.grpc.grpc.QuerySimulationMessage.Optimizer.{NAIVE_OPTIMIZER, SVM_OPTIMIZER}
 import org.vitrivr.adampro.grpc.grpc.RepartitionMessage.PartitionOptions
 import org.vitrivr.adampro.grpc.grpc.{AttributeType, _}
 import org.vitrivr.adampro.rpc.datastructures.{RPCAttributeDefinition, RPCQueryObject, RPCQueryResults}
@@ -114,9 +112,9 @@ class RPCClient(channel: ManagedChannel,
   def entityGenerateRandomData(entityname: String, tuples: Int, dimensions: Int, sparsity: Float, min: Float, max: Float, distribution: Option[String]): Try[Void] = {
     execute("entity generate random data operation") {
 
-      var options : Map[String, String] = Map("fv-dimensions" -> dimensions, "fv-sparsity" -> sparsity, "fv-min" -> min, "fv-max" -> max).mapValues(_.toString)
+      var options: Map[String, String] = Map("fv-dimensions" -> dimensions, "fv-sparsity" -> sparsity, "fv-min" -> min, "fv-max" -> max).mapValues(_.toString)
 
-      if(distribution.isDefined){
+      if (distribution.isDefined) {
         options += "fv-distribution" -> distribution.get
       }
 
@@ -367,13 +365,25 @@ class RPCClient(channel: ManagedChannel,
   /**
     * Benchmark entity and update scan weights.
     *
-    * @param entityname name of entity
-    * @param attribute  name of feature attribute
+    * @param entityname         name of entity
+    * @param attribute          name of feature attribute
+    * @param generateNewIndexes generate new indexes
+    * @param loggedQueries      use logged queries for test (alternative: use random queries)
     * @return
     */
-  def entityBenchmarkAndUpdateScanWeights(entityname: String, attribute: String): Try[Void] = {
+  def entityTrainScanWeights(entityname: String, attribute: String, generateNewIndexes: Boolean = true, loggedQueries: Boolean = false): Try[Void] = {
     execute("benchmark entity scans and reset weights operation") {
-      definerBlocking.adaptScanMethods(AdaptScanMethodsMessage(entityname, attribute, NEW_INDEXES, RANDOM_QUERIES))
+
+
+      definerBlocking.adaptScanMethods(AdaptScanMethodsMessage(entityname, attribute, if (generateNewIndexes) {
+        NEW_INDEXES
+      } else {
+        EXISTING_INDEXES
+      }, if (loggedQueries) {
+        LOGGED_QUERIES
+      } else {
+        RANDOM_QUERIES
+      }))
       Success(null)
     }
   }
@@ -632,17 +642,23 @@ class RPCClient(channel: ManagedChannel,
     }
   }
 
-  def getScoredQueryExecutionPaths(qo: RPCQueryObject) : Try[Seq[(String, Double)]] = {
+  def getScoredQueryExecutionPaths(qo: RPCQueryObject, optimizername: String = "svm"): Try[Seq[(String, String, Double)]] = {
     execute("collecting scored query execution paths operation") {
-      val res = searcherBlocking.getScoredExecutionPath(QuerySimulationMessage(qo.entity, qo.nnq, QuerySimulationMessage.Optimizer.SVM_OPTIMIZER))
+
+      val optimizer = optimizername match {
+        case "svm" => QuerySimulationMessage.Optimizer.SVM_OPTIMIZER
+        case "naive" => QuerySimulationMessage.Optimizer.NAIVE_OPTIMIZER
+        case _ => throw new Exception("optimizer name is not known")
+      }
+
+      val res = searcherBlocking.getScoredExecutionPath(QuerySimulationMessage(qo.entity, qo.nnq, optimizer))
       if (res.ack.get.code.isOk) {
-        return Success(res.executionpaths.map(x => (x.scan, x.score)))
+        return Success(res.executionpaths.map(x => (x.scan, x.scantype, x.score)))
       } else {
         throw new Exception(res.ack.get.message)
       }
     }
   }
-
 
 
   /**
