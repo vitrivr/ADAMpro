@@ -45,7 +45,9 @@ class EQEExecutor(job: EvaluationJob, setStatus: (Double) => (Boolean), inputDir
     queries.zipWithIndex.foreach { case (qo, idx) =>
       if (running) {
 
-        val scoring = client.getScoredQueryExecutionPaths(qo, job.execution_subtype).get.map(x => x._1 -> (x._2, x._3)).toMap
+        val scoring = client.getScoredQueryExecutionPaths(qo, job.execution_subtype).get.map(x => (x._1, x._2, x._3))
+          .groupBy(_._2).mapValues(_.sortBy(_._3).reverse.head).toMap
+        //index name, type, score; take only maximum
 
         val runid = "run_" + idx.toString
         logger.info("executing query for " + entityname.get + " (runid: " + runid + ")")
@@ -53,16 +55,18 @@ class EQEExecutor(job: EvaluationJob, setStatus: (Double) => (Boolean), inputDir
         logger.info("executed query for " + entityname.get + " (runid: " + runid + ")")
 
         //add all scans for comparison
-        job.execution_subexecution.map(x => (x._1, scoring.get(x._1).map(_._1).getOrElse("unknown"), scoring.get(x._1).map(_._2).getOrElse(-1)))
-          .foreach{ case(indexname, indextype, scanscore) =>
-            val tmpQo = new RPCQueryObject(qo.id, "index", qo.options ++ Seq("indexname" -> indexname), qo.targets)
-            val tmpResult = executeQuery(tmpQo) ++ Seq("scanscore" -> scanscore.toString)
+        job.execution_subexecution.map { case (indextype, withsequential) => (indextype, scoring.get(indextype)) }
+          .filter(_._2.isDefined)
+          .filterNot(x => x._1 == "sequential")
+          .foreach { case (indextype, scoring) =>
+            val tmpQo = new RPCQueryObject(qo.id, "index", qo.options ++ Seq("indexname" -> scoring.get._1), qo.targets)
+            val tmpResult = executeQuery(tmpQo) ++ Seq("scanscore" -> scoring.get._3.toString)
             results += (runid + "-" + indextype -> tmpResult)
-        }
+          }
 
         {
           val tmpQo = new RPCQueryObject(qo.id, "sequential", qo.options, qo.targets)
-          val tmpResult = executeQuery(tmpQo) ++ Seq("scanscore" -> scoring.get(entityname.get).map(_._2).getOrElse(-1).toString)
+          val tmpResult = executeQuery(tmpQo) ++ Seq("scanscore" -> scoring.get("sequential").map(_._3).getOrElse(-1).toString)
           results += (runid + "-" + "sequential" -> tmpResult)
         }
 

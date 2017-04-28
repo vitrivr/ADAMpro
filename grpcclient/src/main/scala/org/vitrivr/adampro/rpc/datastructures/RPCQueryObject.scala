@@ -153,10 +153,14 @@ case class RPCQueryObject(var id: String, var operation: String, var options: Ma
     * @return
     */
   private def qm(): QueryMessage = {
-    val fromExpression = if (targets.isEmpty || targets.get.isEmpty) {
-      SubExpressionQueryMessage().withQm(QueryMessage(queryid = "sequential", from = Some(FromMessage().withEntity(entity)), nnq = nnq, hints = Seq("sequential")))
+    val from =
+      if (operation == "progressive") {
+        FromMessage().withEntity(entity)
+      } else if (targets.isEmpty || targets.get.isEmpty) {
+      //SubExpressionQueryMessage().withQm(QueryMessage(queryid = "sequential", from = Some(FromMessage().withEntity(entity)), nnq = nnq, hints = Seq("sequential")))
+        FromMessage().withExpression(seqm())
     } else {
-      targets.get.head.seqm()
+        FromMessage().withExpression(targets.get.head.seqm())
     }
 
     var qm = QueryMessage(
@@ -164,13 +168,7 @@ case class RPCQueryObject(var id: String, var operation: String, var options: Ma
       //projection = Some(ProjectionMessage().withField(ProjectionMessage.FieldnameMessage.apply(Seq("id", "adamprodistance")))),
       information = informationLevel(),
       hints = hints(),
-      nnq = nnq)
-
-    if (operation == "progressive") {
-      qm = qm.withFrom(FromMessage().withEntity(entity))
-    } else {
-      qm = qm.withFrom(FromMessage().withExpression(fromExpression))
-    }
+      nnq = nnq, from = Some(from))
 
     qm
   }

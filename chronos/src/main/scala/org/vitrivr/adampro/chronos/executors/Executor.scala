@@ -42,7 +42,8 @@ abstract class Executor(val job: EvaluationJob, setStatus: (Double) => (Boolean)
     * @return
     */
   def updateStatus(progress: Double) = {
-    setStatus(progress)
+    this.progress = progress
+    setStatus(this.progress)
   }
 
   /**
@@ -104,15 +105,10 @@ abstract class Executor(val job: EvaluationJob, setStatus: (Double) => (Boolean)
     * @param sparseQuery
     * @return
     */
-  def getQuery(entityname: String, k: Int, sparseQuery: Boolean): RPCQueryObject = {
+  protected def getQuery(entityname: String, k: Int, sparseQuery: Boolean): RPCQueryObject = {
     val lb = new ListBuffer[(String, String)]()
 
-    val indexes = client.indexList(entityname).get
-      .filter(_._2 == job.data_attributename.getOrElse(FEATURE_VECTOR_ATTRIBUTENAME))
-      .filter(x => job.execution_subexecution.map(_._1).contains(x))
-      .map(_._1)
-
-    lb.append("indexes" -> indexes.mkString(","))
+    lb.append("entityname" -> entityname)
 
     lb.append("attribute" -> job.data_attributename.getOrElse(FEATURE_VECTOR_ATTRIBUTENAME))
 

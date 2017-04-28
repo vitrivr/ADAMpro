@@ -130,7 +130,7 @@ object CreationHelper {
         indexCreatedNewly = true
         client.entityCreateAllIndexes(entityname, Seq(attributename), 2).get
       } else if(job.execution_name == "stochastic" || job.execution_name == "empirical") {
-        job.execution_subexecution.flatMap{ case(indextype, withsequential) =>
+        job.execution_subexecution.map(x => (x._1.toLowerCase, x._2)).filterNot(_._1 == "sequential").flatMap{ case(indextype, withsequential) =>
           if (client.indexExists(entityname, attributename, indextype).get) {
             logger.info(indextype + " index for " + entityname + " (" + attributename + ") " + "exists already")
             indexCreatedNewly = false

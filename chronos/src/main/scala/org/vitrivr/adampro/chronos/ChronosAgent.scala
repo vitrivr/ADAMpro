@@ -46,7 +46,7 @@ class ChronosAgent(ipAddressOrHostname: String, environment: String) extends Abs
   override def execute(job: ChronosJob, inputDirectory: File, outputDirectory: File): Properties = {
     val ejob = new EvaluationJob(job)
 
-    val executor = ejob.evaluation_mode match {
+    val executor = ejob.general_mode match {
       case "eqe" => new EQEExecutor(ejob, setProgress(job)(_), inputDirectory, outputDirectory)
       case "pqe" => new PQEExecutor(ejob, setProgress(job)(_), inputDirectory, outputDirectory)
       case "see" => new SEEExecutor(ejob, setProgress(job)(_), inputDirectory, outputDirectory)

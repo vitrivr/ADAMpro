@@ -34,8 +34,8 @@ class SQEExecutor(job: EvaluationJob, setStatus: (Double) => (Boolean), inputDir
 
 
     //collect queries
-    logger.info("generating queries to execute on " + entityname.get)
-    val queries = getQueries(entityname.get)
+    logger.info("generating queries to execute on " + indexnames.get.mkString(", "))
+    val queries = getQueries(indexnames.get)
 
     val queryProgressAddition = (1 - getStatus) / queries.size.toFloat
 
@@ -73,6 +73,27 @@ class SQEExecutor(job: EvaluationJob, setStatus: (Double) => (Boolean), inputDir
     prop
   }
 
+  /**
+    * Gets queries.
+    *
+    * @return
+    */
+  private def getQueries(indexes: Seq[String]): Seq[RPCQueryObject] = {
+    val lb = new ListBuffer[RPCQueryObject]()
+
+    val additionals = if (job.measurement_firstrun) {
+      1
+    } else {
+      0
+    }
+
+    job.query_k.flatMap { k =>
+      val denseQueries = (0 to job.query_n + additionals).map { i => getQuery(indexes, k, false) }
+
+      denseQueries
+    }
+  }
+
 
   /**
     * Gets single query.
@@ -81,10 +102,10 @@ class SQEExecutor(job: EvaluationJob, setStatus: (Double) => (Boolean), inputDir
     * @param sparseQuery
     * @return
     */
-  override def getQuery(entityname: String, k: Int, sparseQuery: Boolean): RPCQueryObject = {
+  private def getQuery(indexes: Seq[String], k: Int, sparseQuery: Boolean): RPCQueryObject = {
     val lb = new ListBuffer[(String, String)]()
 
-    lb.append("indexes" -> entityname)
+    lb.append("indexes" -> indexes.mkString(","))
 
     lb.append("attribute" -> job.data_attributename.getOrElse(FEATURE_VECTOR_ATTRIBUTENAME))
 
