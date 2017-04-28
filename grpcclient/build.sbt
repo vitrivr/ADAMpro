@@ -1,10 +1,10 @@
 name := "ADAMpro-grpcclient"
 
 libraryDependencies ++= Seq(
-  "com.google.protobuf" % "protobuf-java" % "3.1.0",
-  "io.grpc" % "grpc-netty" % "1.0.3",
-  "io.grpc" % "grpc-protobuf" % "1.0.3",
-  "io.grpc" % "grpc-stub" % "1.0.3",
+  "com.google.protobuf" % "protobuf-java" % "3.2.0",
+  "io.grpc" % "grpc-netty" % "1.2.0",
+  "io.grpc" % "grpc-protobuf" % "1.2.0",
+  "io.grpc" % "grpc-stub" % "1.2.0",
   "org.slf4j" % "slf4j-simple" % "1.7.21"
 )
 

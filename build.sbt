@@ -73,8 +73,8 @@ val coreLibs = Seq(
 
 //secondary libs
 val secondaryLibs = Seq(
-  "org.scalanlp" %% "breeze" % "0.13",
-  "org.scalanlp" %% "breeze-natives" % "0.13",
+  "org.scalanlp" %% "breeze" % "0.13.1",
+  "org.scalanlp" %% "breeze-natives" % "0.13.1",
   "com.typesafe.slick" %% "slick" % "3.1.1",
   "com.mchange" % "c3p0" % "0.9.5.2",
   "org.apache.derby" % "derby" % "10.13.1.1",
@@ -96,9 +96,9 @@ val secondaryLibs = Seq(
 
 //tertiary libs
 val tertiaryLibs = Seq(
-  "com.lucidworks.spark" % "spark-solr" % "3.0.0-alpha.2",
+  "com.lucidworks.spark" % "spark-solr" % "3.0.0-beta3",
   "org.postgresql" % "postgresql" % "9.4.1208",
-  "com.datastax.spark" %% "spark-cassandra-connector" % "2.0.0-M3",
+  "com.datastax.spark" %% "spark-cassandra-connector" % "2.0.1",
   "net.postgis" % "postgis-jdbc" % "2.2.1",
   "com.databricks" %% "spark-avro" % "3.1.0"
 ).map(
@@ -113,7 +113,7 @@ val tertiaryLibs = Seq(
 //test libs
 val testLibs = Seq(
   "org.scalatest" %% "scalatest" % "2.2.6",
-  "io.grpc" % "grpc-netty" % "1.0.3"
+  "io.grpc" % "grpc-netty" % "1.2.0"
 ).map(
   _.excludeAll(
     ExclusionRule("org.scala-lang"),
