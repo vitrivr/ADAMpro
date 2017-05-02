@@ -32,7 +32,20 @@ class EQEExecutor(job: EvaluationJob, setStatus: (Double) => (Boolean), inputDir
     assert(indexnames.isSuccess)
 
     logger.info("started adjusting query weights")
-    client.entityAdaptScanMethods(entityname.get, job.data_attributename.getOrElse(FEATURE_VECTOR_ATTRIBUTENAME), Some(job.execution_subtype), false, false, nqueries = Some(5), nruns = Some(5))
+
+    val nqueries = if(job.execution_nqueries.isEmpty){
+      None
+    } else {
+      Some(job.execution_nqueries.toInt)
+    }
+
+    val nruns = if(job.execution_nruns.isEmpty){
+      None
+    } else {
+      Some(job.execution_nruns.toInt)
+    }
+
+    client.entityAdaptScanMethods(entityname.get, job.data_attributename.getOrElse(FEATURE_VECTOR_ATTRIBUTENAME), Some(job.execution_subtype), false, false, nqueries = nqueries, nruns = nruns)
     logger.info("adjusted query weights")
 
     updateStatus(0.5)
