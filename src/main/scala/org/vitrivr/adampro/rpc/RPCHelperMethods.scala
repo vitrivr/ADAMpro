@@ -182,13 +182,15 @@ private[rpc] object RPCHelperMethods extends Logging {
         return Failure(right.failed.get)
       }
 
-      //TODO: possibly add options to aggregation operations
+      val options = eqm.options
 
       eqm.operation match {
-        case ExpressionQueryMessage.Operation.UNION => Success(UnionExpression(left.get, right.get, Map(), queryid))
-        case ExpressionQueryMessage.Operation.INTERSECT => Success(IntersectExpression(left.get, right.get, order, Map(), queryid))
-        case ExpressionQueryMessage.Operation.JOIN => Success(IntersectExpression(left.get, right.get, order, Map(), queryid))
-        case ExpressionQueryMessage.Operation.EXCEPT => Success(ExceptExpression(left.get, right.get, order, Map(), queryid))
+        case ExpressionQueryMessage.Operation.UNION => Success(UnionExpression(left.get, right.get, options, queryid))
+        case ExpressionQueryMessage.Operation.FUZZYUNION => Success(FuzzyUnionExpression(left.get, right.get, options, queryid))
+        case ExpressionQueryMessage.Operation.INTERSECT => Success(IntersectExpression(left.get, right.get, order, options, queryid))
+        case ExpressionQueryMessage.Operation.FUZZYINTERSECT => Success(FuzzyIntersectExpression(left.get, right.get, order, options, queryid))
+        case ExpressionQueryMessage.Operation.JOIN => Success(IntersectExpression(left.get, right.get, order, options, queryid))
+        case ExpressionQueryMessage.Operation.EXCEPT => Success(ExceptExpression(left.get, right.get, order, options, queryid))
         case _ => Failure(new GeneralAdamException("operation is unknown"))
       }
     } catch {

@@ -2,21 +2,21 @@ package org.vitrivr.adampro.query
 
 import java.util.concurrent.TimeUnit
 
+import org.scalatest.concurrent.ScalaFutures
 import org.vitrivr.adampro.AdamTestBase
 import org.vitrivr.adampro.api._
 import org.vitrivr.adampro.config.AttributeNames
 import org.vitrivr.adampro.datatypes.TupleID.TupleID
 import org.vitrivr.adampro.datatypes.vector.Vector
+import org.vitrivr.adampro.helpers.tracker.OperationTracker
 import org.vitrivr.adampro.index.Index._
 import org.vitrivr.adampro.index.structures.IndexTypes
-import org.vitrivr.adampro.query.distance.{Distance, EuclideanDistance}
 import org.vitrivr.adampro.query.distance.Distance.Distance
-import org.vitrivr.adampro.query.handler.internal.AggregationExpression.{ExpressionEvaluationOrder, IntersectExpression}
+import org.vitrivr.adampro.query.distance.{Distance, EuclideanDistance}
+import org.vitrivr.adampro.query.handler.internal.AggregationExpression.{ExpressionEvaluationOrder, FuzzyIntersectExpression, IntersectExpression}
 import org.vitrivr.adampro.query.handler.internal.{CompoundQueryExpression, IndexScanExpression, StochasticIndexQueryExpression}
 import org.vitrivr.adampro.query.progressive.{AllProgressivePathChooser, ProgressiveObservation}
 import org.vitrivr.adampro.query.query.{BooleanQuery, NearestNeighbourQuery, Predicate}
-import org.scalatest.concurrent.ScalaFutures
-import org.vitrivr.adampro.helpers.tracker.OperationTracker
 
 import scala.concurrent.duration.Duration
 import scala.util.Try
@@ -29,6 +29,7 @@ import scala.util.Try
   * March 2016
   */
 class QueryTestSuite extends AdamTestBase with ScalaFutures {
+
   import ac.spark.implicits._
 
   feature("standard query") {
@@ -58,7 +59,7 @@ class QueryTestSuite extends AdamTestBase with ScalaFutures {
       withQueryEvaluationSet { es =>
         When("performing a kNN query")
         val weights = Vector.conv_draw2vec(Seq.fill(es.vector.length)(Vector.zeroValue))
-        val nnq = NearestNeighbourQuery("vectorfield", es.vector, Some(weights), es.distance, es.k,  false, es.options)
+        val nnq = NearestNeighbourQuery("vectorfield", es.vector, Some(weights), es.distance, es.k, false, es.options)
         val tracker = new OperationTracker()
         val results = QueryOp.sequential(es.entity.entityname, nnq, None)(tracker).get.get
           .map(r => (r.getAs[Distance](AttributeNames.distanceColumnName), r.getAs[Long]("tid"))).collect() //get here TID of metadata
@@ -363,7 +364,6 @@ class QueryTestSuite extends AdamTestBase with ScalaFutures {
   }
 
 
-
   feature("compound query") {
     /**
       *
@@ -443,6 +443,54 @@ class QueryTestSuite extends AdamTestBase with ScalaFutures {
       }
     }
   }
+
+
+  /**
+    *
+    */
+  scenario("perform a compound query with fuzzy intersect") {
+    withQueryEvaluationSet { es =>
+      Given("some indexes")
+
+      val vaidx1 = IndexOp.create(es.entity.entityname, "vectorfield", IndexTypes.VAFINDEX, es.distance, Map("maxMarks" -> "4"))()
+      val vaidx2 = IndexOp.create(es.entity.entityname, "vectorfield", IndexTypes.VAFINDEX, es.distance)()
+
+      When("performing a kNN query of two indices and performing the intersect")
+      //nnq has numOfQ  = 0 to avoid that by the various randomized q's the results get different
+      val nnq = NearestNeighbourQuery("vectorfield", es.vector, None, es.distance, es.k, true, es.options ++ Map("numOfQ" -> "0"), None)
+      val tracker = new OperationTracker()
+
+      val va1qh = new IndexScanExpression(vaidx1.get.indexname)(nnq, None)(None)(ac)
+      val va2qh = new IndexScanExpression(vaidx2.get.indexname)(nnq, None)(None)(ac)
+
+      val results = time {
+        CompoundQueryExpression(new FuzzyIntersectExpression(va1qh, va2qh, ExpressionEvaluationOrder.Parallel))(ac).prepareTree().evaluate()(tracker).get
+          .collect()
+          .map(r => (r.getAs[TupleID](AttributeNames.internalIdColumnName), r.getAs[Distance.Distance](AttributeNames.distanceColumnName)))
+          .sortBy(_._1)
+      }
+
+      //results (note we truly compare the id-attribute here and not the metadata "tid"
+      val vh1res: Array[(TupleID, Distance)] = va1qh.prepareTree().evaluate()(tracker)(ac).get.collect().map(r => (r.getAs[TupleID](AttributeNames.internalIdColumnName), r.getAs[Distance.Distance](AttributeNames.distanceColumnName)))
+      val vh2res: Array[(TupleID, Distance)] = va2qh.prepareTree().evaluate()(tracker)(ac).get.collect().map(r => (r.getAs[TupleID](AttributeNames.internalIdColumnName), r.getAs[Distance.Distance](AttributeNames.distanceColumnName)))
+
+      Then("we should have a match in the aggregated list")
+      val vh1map = vh1res.map(x => x._1 -> x._2).toMap
+      val vh2map = vh2res.map(x => x._1 -> x._2).toMap
+
+      val gt = (vh1map.keySet ++ vh2map.keySet).map(k =>
+        (k, math.min(vh1map.getOrElse(k, 0.0), vh2map.getOrElse(k, 0.0)))
+      ).toList.sortBy(_._1)
+
+      results.zip(gt).map {
+        case (res, gt) =>
+          assert(res == gt)
+      }
+
+      tracker.cleanAll()
+    }
+  }
+
 
   feature("compound index scan") {
     scenario("perform a compound index scan query with various index types on the same entity") {
