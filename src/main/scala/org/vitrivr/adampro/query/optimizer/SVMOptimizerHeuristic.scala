@@ -2,8 +2,6 @@ package org.vitrivr.adampro.query.optimizer
 
 import breeze.linalg.DenseVector
 import org.vitrivr.adampro.api.QueryOp
-import org.vitrivr.adampro.catalog.CatalogOperator
-import org.vitrivr.adampro.config.AttributeNames
 import org.vitrivr.adampro.datatypes.TupleID._
 import org.vitrivr.adampro.datatypes.vector.Vector
 import org.vitrivr.adampro.datatypes.vector.Vector._
@@ -28,13 +26,14 @@ import scala.collection.mutable.ListBuffer
   * Ivan Giangreco
   * November 2016
   */
-private[optimizer] class SVMOptimizerHeuristic(nruns : Int = 100)(@transient implicit override val ac: AdamContext) extends OptimizerHeuristic("svm", nruns) {
+private[optimizer] class SVMOptimizerHeuristic(defaultNRuns: Int = 100)(@transient implicit override val ac: AdamContext) extends OptimizerHeuristic("svm", defaultNRuns) {
   /**
     *
     * @param indexes
     * @param queries
+    * @param options
     */
-  override def train(indexes: Seq[Index], queries: Seq[NearestNeighbourQuery]): Unit = {
+  override def trainIndexes(indexes: Seq[Index], queries: Seq[NearestNeighbourQuery], options: Map[String, String] = Map()): Unit = {
     val entity = indexes.head.entity.get
     val tracker = new OperationTracker()
 
@@ -42,7 +41,7 @@ private[optimizer] class SVMOptimizerHeuristic(nruns : Int = 100)(@transient imp
       val rel = QueryOp.sequential(entity.entityname, nnq, None)(tracker).get.get.select(entity.pk.name).collect().map(_.getAs[Any](0)).toSet
 
       indexes.map { index =>
-        performMeasurement(index, nnq, rel).map(time => (index.indextypename, buildFeature(index, nnq), time))
+        performMeasurement(index, nnq, options.get("nruns").map(_.toInt), rel).map(time => (index.indextypename, buildFeature(index, nnq), time))
       }.flatten
     }.groupBy(_._1).mapValues(_.map(x => (x._2, x._3)))
 
@@ -63,10 +62,11 @@ private[optimizer] class SVMOptimizerHeuristic(nruns : Int = 100)(@transient imp
     *
     * @param entity
     * @param queries
+    * @param options
     */
-  override def train(entity: Entity, queries: Seq[NearestNeighbourQuery]): Unit = {
+  override def trainEntity(entity: Entity, queries: Seq[NearestNeighbourQuery], options: Map[String, String] = Map()): Unit = {
     val trainDatum = queries.flatMap { nnq =>
-      performMeasurement(entity, nnq).map(time => (buildFeature(entity, nnq), time))
+      performMeasurement(entity, nnq, options.get("nruns").map(_.toInt)).map(time => (buildFeature(entity, nnq), time))
     }
 
     if (trainDatum.nonEmpty && !SparkStartup.catalogOperator.containsOptimizerOptionMeta(name, "svm-entity").getOrElse(false)) {
@@ -101,7 +101,7 @@ private[optimizer] class SVMOptimizerHeuristic(nruns : Int = 100)(@transient imp
     * @param f
     * @return
     */
-  private def getScore(key: String, f : DenseVector[Double]): Double = {
+  private def getScore(key: String, f: DenseVector[Double]): Double = {
     if (SparkStartup.catalogOperator.containsOptimizerOptionMeta(name, key).getOrElse(false)) {
       val metaOpt = SparkStartup.catalogOperator.getOptimizerOptionMeta(name, key)
 

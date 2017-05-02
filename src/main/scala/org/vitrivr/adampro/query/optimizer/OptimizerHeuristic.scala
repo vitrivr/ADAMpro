@@ -14,7 +14,7 @@ import org.vitrivr.adampro.utils.Logging
   * Ivan Giangreco
   * November 2016
   */
-private[optimizer] abstract class OptimizerHeuristic(protected val name : String, private val nruns : Int = 100)(@transient implicit val ac: AdamContext) extends Serializable with Logging {
+private[optimizer] abstract class OptimizerHeuristic(protected val name : String, private val defaultNRuns : Int = 100)(@transient implicit val ac: AdamContext) extends Serializable with Logging {
 
   case class Measurement(precision: Double, recall: Double, time: Double)
 
@@ -23,7 +23,7 @@ private[optimizer] abstract class OptimizerHeuristic(protected val name : String
     * @param entity
     * @param queries
     */
-  def train(entity: Entity, queries: Seq[NearestNeighbourQuery]): Unit
+  def trainEntity(entity: Entity, queries: Seq[NearestNeighbourQuery], options : Map[String, String] = Map()): Unit
 
 
   /**
@@ -31,7 +31,7 @@ private[optimizer] abstract class OptimizerHeuristic(protected val name : String
     * @param indexes
     * @param queries
     */
-  def train(indexes: Seq[Index], queries: Seq[NearestNeighbourQuery]): Unit
+  def trainIndexes(indexes: Seq[Index], queries: Seq[NearestNeighbourQuery], options : Map[String, String] = Map()): Unit
 
   /**
     *
@@ -57,11 +57,11 @@ private[optimizer] abstract class OptimizerHeuristic(protected val name : String
     * @param nnq
     * @return
     */
-  protected def performMeasurement(entity: Entity, nnq: NearestNeighbourQuery): Seq[Measurement] = {
+  protected def performMeasurement(entity: Entity, nnq: NearestNeighbourQuery, nruns : Option[Int]): Seq[Measurement] = {
     val entityNNQ = NearestNeighbourQuery(nnq.attribute, nnq.q, nnq.weights, nnq.distance, nnq.k, false, nnq.options, None)
     val tracker = new OperationTracker()
 
-    val res = (0 until nruns).map {
+    val res = (0 until nruns.getOrElse(defaultNRuns)).map {
       i =>
         val t1 = System.currentTimeMillis
         val res = QueryOp.sequential(entity.entityname, entityNNQ, None)(tracker).get.get.select(entity.pk.name).collect()
@@ -87,12 +87,12 @@ private[optimizer] abstract class OptimizerHeuristic(protected val name : String
     * @param rel
     * @return
     */
-  protected def performMeasurement(index: Index, nnq: NearestNeighbourQuery, rel: Set[Any]): Seq[Measurement] = {
+  protected def performMeasurement(index: Index, nnq: NearestNeighbourQuery, nruns : Option[Int], rel: Set[Any]): Seq[Measurement] = {
     val indexOnlyNNQ = NearestNeighbourQuery(nnq.attribute, nnq.q, nnq.weights, nnq.distance, nnq.k, true, nnq.options, None)
     val entityN = index.entity.get.count
     val tracker = new OperationTracker()
 
-    val res = (0 until nruns).map {
+    val res = (0 until nruns.getOrElse(defaultNRuns)).map {
       i =>
         val t1 = System.currentTimeMillis
         val res = QueryOp.index(index.indexname, indexOnlyNNQ, None)(tracker).get.get.select(index.entity.get.pk.name).collect()

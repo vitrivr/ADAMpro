@@ -1,7 +1,6 @@
 package org.vitrivr.adampro.query.optimizer
 
 import org.vitrivr.adampro.api.QueryOp
-import org.vitrivr.adampro.catalog.CatalogOperator
 import org.vitrivr.adampro.entity.Entity
 import org.vitrivr.adampro.helpers.tracker.OperationTracker
 import org.vitrivr.adampro.index.Index
@@ -14,13 +13,14 @@ import org.vitrivr.adampro.query.query.NearestNeighbourQuery
   * Ivan Giangreco
   * September 2016
   */
-private[optimizer] class NaiveOptimizerHeuristic(nruns : Int = 100)(@transient implicit override val ac: AdamContext) extends OptimizerHeuristic("naive", nruns) {
+private[optimizer] class NaiveOptimizerHeuristic(defaultNRuns: Int = 100)(@transient implicit override val ac: AdamContext) extends OptimizerHeuristic("naive", defaultNRuns) {
   /**
     *
     * @param indexes
     * @param queries
+    * @param options
     */
-  override def train(indexes: Seq[Index], queries: Seq[NearestNeighbourQuery]): Unit = {
+  override def trainIndexes(indexes: Seq[Index], queries: Seq[NearestNeighbourQuery], options: Map[String, String] = Map()): Unit = {
     val entity = indexes.head.entity.get
 
     val tracker = new OperationTracker()
@@ -29,7 +29,7 @@ private[optimizer] class NaiveOptimizerHeuristic(nruns : Int = 100)(@transient i
       val rel = QueryOp.sequential(entity.entityname, nnq, None)(tracker).get.get.select(entity.pk.name).collect().map(_.getAs[Any](0)).toSet
 
       indexes.map { index =>
-        index -> performMeasurement(index, nnq, rel)
+        index -> performMeasurement(index, nnq, options.get("nruns").map(_.toInt), rel)
       }
     }.groupBy(_._1).mapValues {
       _.map(_._2)
@@ -45,10 +45,11 @@ private[optimizer] class NaiveOptimizerHeuristic(nruns : Int = 100)(@transient i
     *
     * @param entity
     * @param queries
+    * @param options
     */
-  override def train(entity: Entity, queries: Seq[NearestNeighbourQuery]): Unit = {
+  override def trainEntity(entity: Entity, queries: Seq[NearestNeighbourQuery], options: Map[String, String] = Map()): Unit = {
     val measurements = queries.flatMap { nnq =>
-      performMeasurement(entity, nnq)
+      performMeasurement(entity, nnq, options.get("nruns").map(_.toInt))
     }
 
     val scores = totalScore(entity, measurements).toArray

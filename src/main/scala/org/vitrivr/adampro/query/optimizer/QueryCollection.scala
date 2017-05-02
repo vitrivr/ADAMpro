@@ -11,6 +11,8 @@ import org.vitrivr.adampro.query.distance.EuclideanDistance
 import org.vitrivr.adampro.query.query.NearestNeighbourQuery
 import org.vitrivr.adampro.utils.Logging
 
+import scala.util.Random
+
 /**
   * ADAMpro
   *
@@ -54,12 +56,23 @@ private[optimizer] case class RandomQueryCollection(entityname: EntityName, attr
   *
   * @param entityname
   */
-private[optimizer] case class LoggedQueryCollection(entityname: EntityName, attribute: String)(@transient implicit val ac: AdamContext) extends QueryCollection {
+private[optimizer] case class LoggedQueryCollection(entityname: EntityName, attribute: String, nqueries : Option[Int] = None)(@transient implicit val ac: AdamContext) extends QueryCollection {
   def this(entityname: EntityName, attribute: String, params: Map[String, String])(implicit ac: AdamContext) {
-    this(entityname, attribute)
+    this(entityname, attribute, params.get("nqueries").map(_.toInt))
   }
 
-  override def getQueries: Seq[NearestNeighbourQuery] = SparkStartup.logOperator.getQueries(entityname, attribute).get //TODO: throw away logs after training has been done on data
+  override def getQueries: Seq[NearestNeighbourQuery] = {
+    var queries = SparkStartup.logOperator.getQueries(entityname, attribute).get
+
+    //sample
+    if(nqueries.isDefined){
+      queries = queries.map(x => (Random.nextFloat(), x)).sortBy(_._1).map(_._2).take(nqueries.get)
+    }
+
+    //TODO: throw away logs after training has been done on data?
+
+    queries
+  }
 }
 
 

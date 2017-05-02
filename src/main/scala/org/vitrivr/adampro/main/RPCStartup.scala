@@ -2,7 +2,6 @@ package org.vitrivr.adampro.main
 
 import io.grpc.Server
 import io.grpc.netty.NettyServerBuilder
-import org.vitrivr.adampro.config.AdamConfig
 import org.vitrivr.adampro.grpc.grpc._
 import org.vitrivr.adampro.rpc.{DataDefinitionRPC, SearchRPC}
 import org.vitrivr.adampro.utils.Logging

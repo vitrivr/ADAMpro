@@ -8,6 +8,7 @@ import org.vitrivr.adampro.api._
 import org.vitrivr.adampro.entity.{AttributeNameHolder, Entity}
 import org.vitrivr.adampro.exception.GeneralAdamException
 import org.vitrivr.adampro.grpc.grpc.AdaptScanMethodsMessage.{IndexCollection, QueryCollection}
+import org.vitrivr.adampro.grpc.grpc.Optimizer.NAIVE_OPTIMIZER
 import org.vitrivr.adampro.grpc.grpc._
 import org.vitrivr.adampro.query.optimizer.IndexCollectionFactory.{ExistingIndexCollectionOption, NewIndexCollectionOption}
 import org.vitrivr.adampro.query.optimizer.QueryCollectionFactory.{LoggedQueryCollectionOption, RandomQueryCollectionOption}
@@ -558,21 +559,22 @@ class DataDefinitionRPC extends AdamDefinitionGrpc.AdamDefinition with Logging {
     val qc = QueryCollectionFactory(request.entity, request.attribute, qco, request.options)
 
 
-    val res1 = ac.optimizerRegistry.value.apply("naive").get.train(ic, qc)
-    val res2 = ac.optimizerRegistry.value.apply("svm").get.train(ic, qc)
+    val optimizers = request.optimizer match {
+      case Optimizer.SVM_OPTIMIZER => Seq(ac.optimizerRegistry.value.apply("svm").get)
+      case Optimizer.NAIVE_OPTIMIZER =>  Seq(ac.optimizerRegistry.value.apply("naive").get)
+      case _ => Seq(ac.optimizerRegistry.value.apply("svm").get, ac.optimizerRegistry.value.apply("naive").get)
+    }
 
-    if (res1.isSuccess && res2.isSuccess) {
+    val optResults = optimizers.map{
+      optimizer =>
+        optimizer.train(ic, qc, request.options)
+    }
+
+    if (optResults.forall(_.isSuccess)) {
       Future.successful(AckMessage(AckMessage.Code.OK, request.entity))
-    } else if(res1.isSuccess) {
-      log.error(res2.failed.get.getMessage, res2.failed.get)
-      Future.successful(AckMessage(code = AckMessage.Code.ERROR, message = res2.failed.get.getMessage))
-    } else if(res2.isSuccess) {
-      log.error(res1.failed.get.getMessage, res1.failed.get)
-      Future.successful(AckMessage(code = AckMessage.Code.ERROR, message = res1.failed.get.getMessage))
     } else {
-      log.error(res1.failed.get.getMessage, res1.failed.get)
-      log.error(res2.failed.get.getMessage, res2.failed.get)
-      Future.successful(AckMessage(code = AckMessage.Code.ERROR, message = res1.failed.get.getMessage + " " + res2.failed.get.getMessage))
+      optResults.foreach{ res => log.error("error in training optimizer: " + res.failed.get.getMessage)}
+      Future.successful(AckMessage(code = AckMessage.Code.ERROR, message = optResults.filter(_.isFailure).map(_.failed.get.getMessage).mkString("; ")  ))
     }
   }
 

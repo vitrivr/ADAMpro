@@ -367,23 +367,47 @@ class RPCClient(channel: ManagedChannel,
     *
     * @param entityname         name of entity
     * @param attribute          name of feature attribute
+    * @param optimizername      optimizer name
     * @param generateNewIndexes generate new indexes
     * @param loggedQueries      use logged queries for test (alternative: use random queries)
+    * @param nqueries           number of queries during training phase
+    * @param nruns              number of runs per query during training phase
     * @return
     */
-  def entityTrainScanWeights(entityname: String, attribute: String, generateNewIndexes: Boolean = true, loggedQueries: Boolean = false): Try[Void] = {
+  def entityAdaptScanMethods(entityname: String, attribute: String, optimizername: Option[String] = None, generateNewIndexes: Boolean = true, loggedQueries: Boolean = false, nqueries: Option[Int] = None, nruns: Option[Int] = None): Try[Void] = {
     execute("benchmark entity scans and reset weights operation") {
 
-
-      definerBlocking.adaptScanMethods(AdaptScanMethodsMessage(entityname, attribute, if (generateNewIndexes) {
+      val ic = if (generateNewIndexes) {
         NEW_INDEXES
       } else {
         EXISTING_INDEXES
-      }, if (loggedQueries) {
+      }
+
+      val qc = if (loggedQueries) {
         LOGGED_QUERIES
       } else {
         RANDOM_QUERIES
-      }))
+      }
+
+      var options: Map[String, String] = Map()
+
+      if (qc == RANDOM_QUERIES) {
+        options += "nqueries" -> nqueries.getOrElse(100).toString
+      } else if (nqueries.isDefined) {
+        options += "nqueries" -> nqueries.get.toString
+      }
+
+      if (nruns.isDefined) {
+        options += "nruns" -> nruns.get.toString
+      }
+
+      val optimizer = optimizername.getOrElse("svm") match {
+        case "svm" => Optimizer.SVM_OPTIMIZER
+        case "naive" => Optimizer.NAIVE_OPTIMIZER
+        case _ => Optimizer.SVM_OPTIMIZER
+      }
+
+      definerBlocking.adaptScanMethods(AdaptScanMethodsMessage(entityname, attribute, ic, qc, options, optimizer))
       Success(null)
     }
   }
@@ -646,8 +670,8 @@ class RPCClient(channel: ManagedChannel,
     execute("collecting scored query execution paths operation") {
 
       val optimizer = optimizername match {
-        case "svm" => QuerySimulationMessage.Optimizer.SVM_OPTIMIZER
-        case "naive" => QuerySimulationMessage.Optimizer.NAIVE_OPTIMIZER
+        case "svm" => Optimizer.SVM_OPTIMIZER
+        case "naive" => Optimizer.NAIVE_OPTIMIZER
         case _ => throw new Exception("optimizer name is not known")
       }
 

@@ -87,7 +87,7 @@ class AdamController(rpcClient: RPCClient) extends Controller with Logging {
       response.ok.json(GeneralResponse(500, "attribute not specified"))
     }
 
-    val res = rpcClient.entityTrainScanWeights(entityname.get, attribute.get)
+    val res = rpcClient.entityAdaptScanMethods(entityname.get, attribute.get)
 
     if (res.isSuccess) {
       response.ok.json(GeneralResponse(200))

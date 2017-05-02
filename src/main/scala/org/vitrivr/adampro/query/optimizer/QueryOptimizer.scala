@@ -12,15 +12,16 @@ import scala.util.{Failure, Success, Try}
   * Ivan Giangreco
   * September 2016
   */
-class QueryOptimizer(benchmarker : OptimizerHeuristic) {
+class QueryOptimizer(optimizer: OptimizerHeuristic) {
   /**
     *
     * @param ic collection of indexes
     * @param qc collection of queries
+    * @param options
     */
-  def train(ic: IndexCollection, qc: QueryCollection): Try[Void] = {
+  def train(ic: IndexCollection, qc: QueryCollection, options: Map[String, String]): Try[Void] = {
     try {
-      benchmarker.train(ic.getIndexes, qc.getQueries)
+      optimizer.trainIndexes(ic.getIndexes, qc.getQueries, options)
       Success(null)
     } catch {
       case e: Exception => Failure(e)
@@ -34,7 +35,7 @@ class QueryOptimizer(benchmarker : OptimizerHeuristic) {
     * @return a score which means: the higher the score, the better the index is suited for the given nnq query
     */
   def getScore(index: Index, nnq: NearestNeighbourQuery): Double = {
-    benchmarker.test(index, nnq)
+    optimizer.test(index, nnq)
   }
 
   /**
@@ -44,7 +45,7 @@ class QueryOptimizer(benchmarker : OptimizerHeuristic) {
     * @return a score which means: the higher the score, the better the entity scan is suited for the given nnq query
     */
   def getScore(entity: Entity, nnq: NearestNeighbourQuery): Double = {
-    benchmarker.test(entity, nnq)
+    optimizer.test(entity, nnq)
   }
 }
 
