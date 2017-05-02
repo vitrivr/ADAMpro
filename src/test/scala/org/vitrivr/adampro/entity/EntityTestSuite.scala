@@ -1,5 +1,7 @@
 package org.vitrivr.adampro.entity
 
+import java.util.concurrent.TimeUnit
+
 import org.apache.spark.sql.Row
 import org.apache.spark.sql.types._
 import org.scalatest.Matchers._
@@ -11,6 +13,8 @@ import org.vitrivr.adampro.datatypes.vector.Vector
 import org.vitrivr.adampro.query.query.Predicate
 
 import scala.collection.mutable.ListBuffer
+import scala.concurrent.duration.Duration
+import scala.concurrent.{Await, Future}
 import scala.util.Random
 
 /**
@@ -436,6 +440,54 @@ class EntityTestSuite extends AdamTestBase {
         Then("the data is available without metadata")
         val counted = EntityOp.count(entityname).get
         assert(counted == totalInsert)
+
+        log.info("times for insertion: " + times.mkString(", "))
+      }
+    }
+
+    /**
+      *
+      */
+    scenario("perform many insertions in parallel") {
+      withEntityName { entityname =>
+        Given("an entity without metadata")
+        val creationAttributes = Seq(new AttributeDefinition("idfield", AttributeTypes.LONGTYPE, "parquet"), new AttributeDefinition("vectorfield", AttributeTypes.VECTORTYPE))
+        Entity.create(entityname, creationAttributes)
+
+        val schema = StructType(creationAttributes.map(a => StructField(a.name, a.attributeType.datatype, false)))
+        val dimsInsert = ndims()
+
+        val times = new ListBuffer[Long]()
+
+        val data = (0 to (300 + Random.nextInt(200))).map { i =>
+          val tuplesInsert = ntuples(max = 10)
+
+          val rdd = ac.sc.parallelize((0 until tuplesInsert).map(id =>
+            Row(Random.nextLong(), Seq.fill(dimsInsert)(Vector.nextRandom()))
+          ))
+
+          (tuplesInsert, ac.sqlContext.createDataFrame(rdd, schema))
+        }
+
+        import scala.concurrent.ExecutionContext.Implicits.global
+        val futures = data.map { case(count, datum) =>
+          Future {
+            When("data without metadata is inserted")
+            val t1 = System.currentTimeMillis()
+            EntityOp.insert(entityname, datum)
+            val t2 = System.currentTimeMillis()
+
+            times += (t2 - t1)
+          }
+        }
+
+        while(!futures.forall(f => f.isCompleted)){
+          Thread.sleep(1000)
+        }
+
+        Then("the data is available without metadata")
+        val counted = EntityOp.count(entityname).get
+        assert(counted == data.map(_._1).sum)
 
         log.info("times for insertion: " + times.mkString(", "))
       }

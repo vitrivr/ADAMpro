@@ -1,5 +1,7 @@
 package org.vitrivr.adampro.entity
 
+import java.util.concurrent.locks.ReentrantReadWriteLock
+
 import org.apache.spark.sql.functions.{col, udf}
 import org.apache.spark.sql.types.{LongType, StructField, StructType}
 import org.apache.spark.sql.{DataFrame, Row, SaveMode}
@@ -29,7 +31,7 @@ import scala.util.{Failure, Success, Try}
 case class Entity(entityname: EntityName)(@transient implicit val ac: AdamContext) extends Serializable with Logging {
   private val mostRecentVersion = this.synchronized {
     if (!ac.entityVersion.contains(entityname)) {
-      ac.entityVersion.+=(entityname.toString -> ac.sc.longAccumulator(entityname.toString))
+      ac.entityVersion.+=(entityname.toString -> ac.sc.longAccumulator(entityname.toString + "-version"))
     }
 
     ac.entityVersion(entityname)
@@ -117,7 +119,7 @@ case class Entity(entityname: EntityName)(@transient implicit val ac: AdamContex
       }
       future.onComplete {
         case Success(cachedDF) => _data = Some(cachedDF)
-        case Failure(e) => log.error("could not cache data", e)
+        case Failure(e) => log.error("could not cache data")
       }
     }
   }
@@ -198,8 +200,8 @@ case class Entity(entityname: EntityName)(@transient implicit val ac: AdamContex
     *
     * @return
     */
-  private def getFeatureDataFast : Option[DataFrame] = {
-    val handlerData  = schema(fullSchema = false).filter(_.storagehandler.engine.isInstanceOf[ParquetEngine]).groupBy(_.storagehandler).map { case (handler, attributes) =>
+  private def getFeatureDataFast: Option[DataFrame] = {
+    val handlerData = schema(fullSchema = false).filter(_.storagehandler.engine.isInstanceOf[ParquetEngine]).groupBy(_.storagehandler).map { case (handler, attributes) =>
       val status = handler.read(entityname, attributes.+:(pk))
 
       if (status.isFailure) {
@@ -270,7 +272,7 @@ case class Entity(entityname: EntityName)(@transient implicit val ac: AdamContex
     * @param k number of elements to show in preview
     * @return
     */
-  def show(k: Int): Option[DataFrame] = getData().map(_.select(schema(fullSchema = false).map(_.name).map(x => col(x.toString)) : _*).limit(k))
+  def show(k: Int): Option[DataFrame] = getData().map(_.select(schema(fullSchema = false).map(_.name).map(x => col(x.toString)): _*).limit(k))
 
   private val MAX_INSERTS_BEFORE_VACUUM = SparkStartup.catalogOperator.getEntityOption(entityname, Some(Entity.MAX_INSERTS_VACUUMING)).get.get(Entity.MAX_INSERTS_VACUUMING).map(_.toInt).getOrElse(Entity.DEFAULT_MAX_INSERTS_BEFORE_VACUUM)
 
@@ -344,26 +346,33 @@ case class Entity(entityname: EntityName)(@transient implicit val ac: AdamContex
       insertion = insertion.repartition(ac.config.defaultNumberOfPartitions)
 
       //TODO: check insertion schema and entity schema before trying to insert
-      //TODO: block on other inserts
 
-      //insertion per handler
-      val handlers = insertion.schema.fields
-        .map(field => schema(Some(Seq(field.name)), fullSchema = false)).filterNot(_.isEmpty).map(_.head)
-        .groupBy(_.storagehandler)
+      val lock = ac.entityLocks.getOrElseUpdate(entityname, new ReentrantReadWriteLock())
 
-      handlers.foreach { case (handler, attributes) =>
-        val fields = if (!attributes.exists(_.name == pk.name)) {
-          attributes.+:(pk)
-        } else {
-          attributes
+      lock.writeLock().lock()
+
+      try {
+        //insertion per handler
+        val handlers = insertion.schema.fields
+          .map(field => schema(Some(Seq(field.name)), fullSchema = false)).filterNot(_.isEmpty).map(_.head)
+          .groupBy(_.storagehandler)
+
+        handlers.foreach { case (handler, attributes) =>
+          val fields = if (!attributes.exists(_.name == pk.name)) {
+            attributes.+:(pk)
+          } else {
+            attributes
+          }
+
+          val df = insertion.select(fields.map(attribute => col(attribute.name)): _*)
+          val status = handler.write(entityname, df, fields, SaveMode.Append, Map("allowRepartitioning" -> "true", "partitioningKey" -> pk.name))
+
+          if (status.isFailure) {
+            throw status.failed.get
+          }
         }
-
-        val df = insertion.select(fields.map(attribute => col(attribute.name)): _*)
-        val status = handler.write(entityname, df, fields, SaveMode.Append, Map("allowRepartitioning" -> "true", "partitioningKey" -> pk.name))
-
-        if (status.isFailure) {
-          throw status.failed.get
-        }
+      } finally {
+        lock.writeLock().unlock()
       }
 
       incrementNumberOfInserts()
@@ -392,8 +401,15 @@ case class Entity(entityname: EntityName)(@transient implicit val ac: AdamContex
     * Vacuums the entity, i.e., clean up operations for entity
     */
   def vacuum(): Unit = {
-    EntityPartitioner(this, ac.config.defaultNumberOfPartitions, attribute = Some(pk.name))
-    SparkStartup.catalogOperator.updateEntityOption(entityname, Entity.N_INSERTS_VACUUMING, 0.toString)
+    val lock = ac.entityLocks.getOrElseUpdate(entityname, new ReentrantReadWriteLock())
+    lock.writeLock().lock()
+
+    try {
+      EntityPartitioner(this, ac.config.defaultNumberOfPartitions, attribute = Some(pk.name))
+      SparkStartup.catalogOperator.updateEntityOption(entityname, Entity.N_INSERTS_VACUUMING, 0.toString)
+    } finally {
+      lock.writeLock.unlock()
+    }
   }
 
 

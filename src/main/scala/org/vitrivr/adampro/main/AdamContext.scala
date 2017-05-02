@@ -1,5 +1,7 @@
 package org.vitrivr.adampro.main
 
+import java.util.concurrent.locks.ReentrantReadWriteLock
+
 import org.apache.spark.sql.{SQLContext, SparkSession}
 import org.apache.spark.util.LongAccumulator
 import org.apache.spark.{Accumulator, SparkContext}
@@ -29,6 +31,8 @@ trait AdamContext extends Serializable {
 
   val entityLRUCache = new EntityLRUCache()(this)
   val entityVersion = mutable.Map[String, LongAccumulator]()
+
+  val entityLocks = mutable.Map[String, ReentrantReadWriteLock]()
 
   val indexLRUCache = new IndexLRUCache()(this)
 
