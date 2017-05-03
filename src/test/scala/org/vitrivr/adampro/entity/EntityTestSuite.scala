@@ -10,6 +10,8 @@ import org.vitrivr.adampro.api.EntityOp
 import org.vitrivr.adampro.config.AttributeNames
 import org.vitrivr.adampro.datatypes.AttributeTypes
 import org.vitrivr.adampro.datatypes.vector.Vector
+import org.vitrivr.adampro.grpc.grpc.EntityNameMessage
+import org.vitrivr.adampro.index.partition.PartitionMode
 import org.vitrivr.adampro.query.query.Predicate
 
 import scala.collection.mutable.ListBuffer
@@ -451,7 +453,7 @@ class EntityTestSuite extends AdamTestBase {
     scenario("perform many insertions in parallel") {
       withEntityName { entityname =>
         Given("an entity without metadata")
-        val creationAttributes = Seq(new AttributeDefinition("idfield", AttributeTypes.LONGTYPE, "parquet"), new AttributeDefinition("vectorfield", AttributeTypes.VECTORTYPE))
+        val creationAttributes = Seq(new AttributeDefinition("idfield", AttributeTypes.STRINGTYPE, "parquet"), new AttributeDefinition("vectorfield", AttributeTypes.VECTORTYPE))
         Entity.create(entityname, creationAttributes)
 
         val schema = StructType(creationAttributes.map(a => StructField(a.name, a.attributeType.datatype, false)))
@@ -459,11 +461,11 @@ class EntityTestSuite extends AdamTestBase {
 
         val times = new ListBuffer[Long]()
 
-        val data = (0 to (300 + Random.nextInt(200))).map { i =>
-          val tuplesInsert = ntuples(max = 10)
+        val data = (0 to (50 + Random.nextInt(50))).map { i =>
+          val tuplesInsert = ntuples(max = 50)
 
           val rdd = ac.sc.parallelize((0 until tuplesInsert).map(id =>
-            Row(Random.nextLong(), Seq.fill(dimsInsert)(Vector.nextRandom()))
+            Row(i + "-" + id, Seq.fill(dimsInsert)(Vector.nextRandom()))
           ))
 
           (tuplesInsert, ac.sqlContext.createDataFrame(rdd, schema))
@@ -474,10 +476,12 @@ class EntityTestSuite extends AdamTestBase {
           Future {
             When("data without metadata is inserted")
             val t1 = System.currentTimeMillis()
-            EntityOp.insert(entityname, datum)
+            val insertRes = EntityOp.insert(entityname, datum)
             val t2 = System.currentTimeMillis()
 
             times += (t2 - t1)
+
+            (insertRes, count)
           }
         }
 
@@ -485,11 +489,24 @@ class EntityTestSuite extends AdamTestBase {
           Thread.sleep(1000)
         }
 
-        Then("the data is available without metadata")
-        val counted = EntityOp.count(entityname).get
-        assert(counted == data.map(_._1).sum)
+        val results = futures.map(_.value)
 
+
+        val lengths = data.map(_._1).mkString(", ")
+        val fail1 = results.filter(_.get.isFailure).length
+        val fail2 = results.filter(_.get.isSuccess).filter(_.get.get._1.isFailure).length
+
+        Then("the data is available without metadata")
+        eventually {
+          Thread.sleep(1000)
+          val counted = EntityOp.count(entityname).get
+          assert(results.filter(_.get.isSuccess).filter(_.get.get._1.isSuccess).map(_.get.get._2).sum == counted)
+        }
+
+        log.info("insertion lengths: " + data.map(_._1).mkString(", "))
         log.info("times for insertion: " + times.mkString(", "))
+        log.info("failures at future level: " + results.filter(_.get.isFailure).length)
+        log.info("failures at future level: " + results.filter(_.get.isSuccess).filter(_.get.get._1.isFailure).length)
       }
     }
 

@@ -1,6 +1,6 @@
 package org.vitrivr.adampro.entity
 
-import java.util.concurrent.locks.ReentrantReadWriteLock
+import java.util.concurrent.locks.StampedLock
 
 import org.apache.spark.sql.functions.{col, udf}
 import org.apache.spark.sql.types.{LongType, StructField, StructType}
@@ -347,9 +347,8 @@ case class Entity(entityname: EntityName)(@transient implicit val ac: AdamContex
 
       //TODO: check insertion schema and entity schema before trying to insert
 
-      val lock = ac.entityLocks.getOrElseUpdate(entityname, new ReentrantReadWriteLock())
-
-      lock.writeLock().lock()
+      val lock = ac.entityLocks.putIfAbsent(entityname, new StampedLock())
+      val stamp = lock.writeLock()
 
       try {
         //insertion per handler
@@ -371,11 +370,13 @@ case class Entity(entityname: EntityName)(@transient implicit val ac: AdamContex
             throw status.failed.get
           }
         }
+
+        incrementNumberOfInserts()
+        markStale()
       } finally {
-        lock.writeLock().unlock()
+        lock.unlockWrite(stamp)
       }
 
-      incrementNumberOfInserts()
 
       if (ninsertsvacuum > MAX_INSERTS_BEFORE_VACUUM || ninsertsvacuum % (MAX_INSERTS_BEFORE_VACUUM / 5) == 0 && getFeatureDataFast.isDefined && getFeatureDataFast.get.rdd.getNumPartitions > Entity.DEFAULT_MAX_PARTITIONS) {
         log.info("number of inserts necessitates now re-partitioning")
@@ -389,8 +390,6 @@ case class Entity(entityname: EntityName)(@transient implicit val ac: AdamContex
         }
       }
 
-      markStale()
-
       Success(null)
     } catch {
       case e: Exception => Failure(e)
@@ -401,14 +400,14 @@ case class Entity(entityname: EntityName)(@transient implicit val ac: AdamContex
     * Vacuums the entity, i.e., clean up operations for entity
     */
   def vacuum(): Unit = {
-    val lock = ac.entityLocks.getOrElseUpdate(entityname, new ReentrantReadWriteLock())
-    lock.writeLock().lock()
+    val lock = ac.entityLocks.putIfAbsent(entityname, new StampedLock())
+    val stamp = lock.writeLock()
 
     try {
       EntityPartitioner(this, ac.config.defaultNumberOfPartitions, attribute = Some(pk.name))
       SparkStartup.catalogOperator.updateEntityOption(entityname, Entity.N_INSERTS_VACUUMING, 0.toString)
     } finally {
-      lock.writeLock.unlock()
+      lock.unlock(stamp)
     }
   }
 
@@ -468,22 +467,21 @@ case class Entity(entityname: EntityName)(@transient implicit val ac: AdamContex
     * Marks the data stale (e.g., if new data has been inserted to entity).
     */
   def markStale(): Unit = {
-    this.synchronized {
-      mostRecentVersion.add(1)
+    mostRecentVersion.add(1)
 
-      _schema = None
-      _data.map(_.unpersist())
-      _data = None
+    _schema = None
+    _data.map(_.unpersist())
+    _data = None
 
-      indexes.map(_.map(_.markStale()))
+    indexes.map(_.map(_.markStale()))
 
-      ac.entityLRUCache.invalidate(entityname)
+    ac.entityLRUCache.invalidate(entityname)
 
-      SparkStartup.catalogOperator.deleteEntityOption(entityname, Entity.COUNT_KEY)
+    SparkStartup.catalogOperator.deleteEntityOption(entityname, Entity.COUNT_KEY)
 
-      currentVersion = mostRecentVersion.value
-    }
+    currentVersion = mostRecentVersion.value
   }
+
 
   /**
     * Checks if cached data is up to date, i.e. if version of local entity corresponds to global version of entity
