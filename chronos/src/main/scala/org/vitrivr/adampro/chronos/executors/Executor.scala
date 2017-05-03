@@ -227,7 +227,7 @@ abstract class Executor(val job: EvaluationJob, setStatus: (Double) => (Boolean)
 
       //results
       lb += ("results" -> {
-        res.get.head.results.map(res => (res.get("pk") + "," + res.get("adamprodistance"))).mkString("(", "),(", ")")
+        res.get.head.results.map(res => (res.get("ap_id") + "," + res.get("ap_distance"))).mkString("(", "),(", ")")
       })
 
       //result quality
@@ -239,8 +239,8 @@ abstract class Executor(val job: EvaluationJob, setStatus: (Double) => (Boolean)
         val gtruth = client.doQuery(qo.copy(options = opt.toMap))
 
         if (gtruth.isSuccess) {
-          val gtruthPKs = gtruth.get.map(_.results.map(_.get("pk")))
-          val resPKs = res.get.map(_.results.map(_.get("pk")))
+          val gtruthPKs = gtruth.get.map(_.results.map(_.get("ap_id"))).head.map(_.get)
+          val resPKs = res.get.map(_.results.map(_.get("ap_id"))).head.map(_.get)
 
           val agreements = gtruthPKs.intersect(resPKs).length
           //simple hits/total
