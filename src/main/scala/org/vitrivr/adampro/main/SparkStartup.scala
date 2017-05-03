@@ -23,7 +23,6 @@ object SparkStartup extends Logging {
       val conf = new SparkConf()
         .setAppName("ADAMpro")
         .set("spark.driver.maxResultSize", "1g")
-        .set("spark.executor.memory", "2g")
         .set("spark.rpc.message.maxSize", "1024")
         .set("spark.serializer", "org.apache.spark.serializer.KryoSerializer")
         .set("spark.kryoserializer.buffer.max", "2047m")
