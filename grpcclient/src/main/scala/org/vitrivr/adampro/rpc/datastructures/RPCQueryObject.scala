@@ -184,7 +184,7 @@ case class RPCQueryObject(var id: String, var operation: String, var options: Ma
     * @return
     */
   private def informationLevel(): Seq[InformationLevel] = {
-    val option = options.getOrElse("informationlevel", "final_only")
+    val option = options.getOrElse("informationlevel", "minimal")
 
     option match {
       case "all" => Seq(INFORMATION_FULL_TREE, INFORMATION_INTERMEDIATE_RESULTS, WITH_PROVENANCE_PARTITION_INFORMATION, WITH_PROVENANCE_SOURCE_INFORMATION)

@@ -130,7 +130,7 @@ abstract class Executor(val job: EvaluationJob, setStatus: (Double) => (Boolean)
       lb.append("indexonly" -> "false")
     }
 
-    lb.append("informationlevel" -> "final_only")
+    lb.append("informationlevel" -> "minimal")
 
     lb.append("hints" -> job.execution_hint)
 
