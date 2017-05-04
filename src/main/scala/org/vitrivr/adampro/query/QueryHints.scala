@@ -49,11 +49,19 @@ object QueryHints {
     case "index" => Some(INDEX_QUERY)
     case "inexact" => Some(INEXACT_QUERY)
     case "exact" => Some(EXACT_QUERY)
-    case "vaf" => Some(VAF_INDEX_QUERY)
     case "empirical" => Some(EMPIRICAL_QUERY)
     case "empirical_svm" => Some(EMPIRICAL_SVM_QUERY)
     case "empirical_naive" => Some(EMPIRICAL_NAIVE_QUERY)
     case "scored" => Some(SCORED)
+    case "ecp" => Some(ECP_INDEX_QUERY)
+    case "mi" => Some(MI_INDEX_QUERY)
+    case "lsh" => Some(LSH_INDEX_QUERY)
+    case "pq" => Some(PQ_INDEX_QUERY)
+    case "sh" => Some(SH_INDEX_QUERY)
+    case "va" => Some(VA_INDEX_QUERY)
+    case "vaf" => Some(VAF_INDEX_QUERY)
+    case "vav" => Some(VAV_INDEX_QUERY)
+    case "vap" => Some(VAP_INDEX_QUERY)
     case _ => None
   }
 }
