@@ -265,6 +265,8 @@ abstract class Executor(val job: EvaluationJob, setStatus: (Double) => (Boolean)
   protected def prepareResults(results: ListBuffer[(String, Map[String, String])]) = {
     //fill properties
     val prop = new Properties
+    prop.setProperty("evaluation_mode", job.general_mode)
+
     results.foreach { case (runid, result) =>
       result.map { case (k, v) => (runid + "_" + k) -> v } //remap key
         .foreach { case (k, v) => prop.setProperty(k, v) } //set property

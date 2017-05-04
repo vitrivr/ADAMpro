@@ -4,10 +4,11 @@ import java.io.File
 import java.util.Properties
 
 import org.vitrivr.adampro.chronos.EvaluationJob
-import org.vitrivr.adampro.chronos.utils.CreationHelper
-import org.vitrivr.adampro.rpc.datastructures.RPCQueryObject
+import org.vitrivr.adampro.chronos.utils.{CreationHelper, Helpers}
+import org.vitrivr.adampro.rpc.datastructures.{RPCQueryObject, RPCQueryResults}
 
 import scala.collection.mutable.ListBuffer
+import scala.util.Try
 
 /**
   * ADAMpro
@@ -74,12 +75,52 @@ class PQEExecutor(job: EvaluationJob, setStatus: (Double) => (Boolean), inputDir
   }
 
   /**
+    * Gets single query.
+    *
+    * @param k
+    * @param sparseQuery
+    * @return
+    */
+  override protected def getQuery(entityname: String, k: Int, sparseQuery: Boolean): RPCQueryObject = {
+    val lb = new ListBuffer[(String, String)]()
+
+    lb.append("entityname" -> entityname)
+
+    lb.append("attribute" -> job.data_attributename.getOrElse(FEATURE_VECTOR_ATTRIBUTENAME))
+
+    lb.append("k" -> k.toString)
+
+    lb.append("distance" -> job.query_distance)
+
+    if (job.query_weighted) {
+      lb.append("weights" -> generateFeatureVector(job.data_vector_dimensions, job.data_vector_sparsity, job.data_vector_min, job.data_vector_max).mkString(","))
+    }
+
+    lb.append("query" -> generateFeatureVector(job.data_vector_dimensions, job.data_vector_sparsity, job.data_vector_min, job.data_vector_max).mkString(","))
+
+    if (sparseQuery) {
+      lb.append("sparsequery" -> "true")
+    }
+
+    if (job.execution_withsequential) {
+      lb.append("indexonly" -> "false")
+    }
+
+    lb.append("informationlevel" -> "minimal")
+
+    lb.append("hints" -> job.execution_subexecution.map(_._1.toLowerCase).mkString(","))
+
+    RPCQueryObject(Helpers.generateString(10), job.execution_name, lb.toMap, None)
+  }
+
+  /**
     * Executes a query.
     *
     * @param qo
     */
   override protected def executeQuery(qo: RPCQueryObject): Map[String, String] = {
     val lb = new ListBuffer[(String, Any)]()
+    val ress = new ListBuffer[(Try[RPCQueryResults], Long)]()
 
     lb ++= (job.getAllParameters())
 
@@ -98,16 +139,8 @@ class PQEExecutor(job: EvaluationJob, setStatus: (Double) => (Boolean), inputDir
     //do progressive query
     client.doProgressiveQuery(qo,
       next = (res) => ({
-        if (res.isSuccess) {
-          lb += (res.get.source + "confidence" -> res.get.confidence)
-          lb += (res.get.source + "source" -> res.get.source)
-          lb += (res.get.source + "time" -> res.get.time)
-          lb += (res.get.source + "results" -> {
-            res.get.results.map(res => (res.get("pk") + "," + res.get("adamprodistance"))).mkString("(", "),(", ")")
-          })
-        } else {
-          lb += ("failure" -> res.failed.get.getMessage)
-        }
+        val t3 = System.currentTimeMillis() - t1
+        ress += ((res, t3))
       }),
       completed = (id) => ({
         isCompleted = true
@@ -119,11 +152,108 @@ class PQEExecutor(job: EvaluationJob, setStatus: (Double) => (Boolean), inputDir
       Thread.sleep(1000)
     }
 
+    ress.foreach { case (res, time) =>
+      if (res.isSuccess) {
+        lb += (res.get.source + "_confidence" -> res.get.confidence)
+        lb += (res.get.source + "_source" -> res.get.source)
+        lb += (res.get.source + "_adamprotime" -> res.get.time)
+        lb += (res.get.source + "_measuredtime" -> time)
+        lb += (res.get.source + "_results" -> {
+          res.get.results.map(res => (res.get("ap_id") + "," + res.get("ap_distance"))).mkString("(", "),(", ")")
+        })
+      } else {
+        lb += (res.get.source + "_failure" -> res.failed.get.getMessage)
+      }
+    }
+
+
+    if (job.measurement_resultquality) {
+      //perform sequential query
+      val opt = collection.mutable.Map() ++ qo.options
+      opt -= "hints"
+      opt += "hints" -> "sequential"
+      val gtruth = client.doQuery(qo.copy(operation = "sequential", options = opt.toMap))
+
+      if (gtruth.isSuccess) {
+        val gtruthPKs = gtruth.get.map(_.results.map(_.get("ap_id"))).head.map(_.get)
+
+        ress.foreach { case (res, time) =>
+          if (res.isSuccess) {
+
+            val resPKs = res.get.results.map(_.get("ap_id").get)
+
+            val agreements = gtruthPKs.intersect(resPKs).length
+            //simple hits/total
+            val quality = (agreements / qo.options.get("k").get.toDouble)
+            lb += (res.get.source + "_resultquality" -> quality.toString)
+          } else {
+            lb += (res.get.source + "_resultquality" -> gtruth.failed.get.getMessage)
+          }
+        }
+      }
+    }
+
     lb += ("totaltime" -> math.abs(t2 - t1).toString)
     lb += ("starttime" -> t1)
     lb += ("endtime" -> t2)
 
-
     lb.toMap.mapValues(_.toString)
+  }
+
+  /**
+    *
+    * @param results
+    * @return
+    */
+  override protected def prepareResults(results: ListBuffer[(String, Map[String, String])]) = {
+    //fill properties
+    val prop = new Properties
+    prop.setProperty("evaluation_mode", job.general_mode)
+
+    results.foreach {
+      case (runid, result) =>
+        result.map {
+          case (k, v) => (runid + "_" + k) -> v
+        } //remap key
+          .foreach {
+          case (k, v) => prop.setProperty(k, v)
+        } //set property
+    }
+
+    //get overview for plotting
+    val times = results.map {
+      case (runid, result) => {
+        (runid, result.filter(_._1.endsWith("_measuredtime")).map { case (desc, time) => (desc.replace("_measuredtime", ""), time.toLong) })
+      }
+    }
+    val quality = results.map {
+      case (runid, result) =>
+        (runid, result.filter(_._1.endsWith("_resultquality")).map { case (desc, res) => (desc.replace("_resultquality", ""), res.toDouble) })
+    }
+
+    prop.setProperty("summary_data_vector_dimensions", job.data_vector_dimensions.toString)
+    prop.setProperty("summary_data_tuples", job.data_tuples.toString)
+
+    prop.setProperty("summary_execution_name", job.execution_name)
+    prop.setProperty("summary_execution_subtype", job.execution_subexecution.map(_._1).mkString(", "))
+
+    prop.setProperty("summary_runs", times.length.toString)
+
+    times.map(_._2).zipWithIndex.foreach{
+      case(times, run) =>
+        prop.setProperty("summary_desc_" + run, times.map{case(desc, t) => desc}.mkString(","))
+    }
+
+    times.map(_._2).zipWithIndex.foreach{
+      case(times, run) =>
+        prop.setProperty("summary_totaltime_" + run, times.map{case(desc, t) => t}.mkString(","))
+    }
+
+    quality.map(_._2).zipWithIndex.foreach{
+      case(qualities, run) =>
+        prop.setProperty("summary_resultquality_" + run, qualities.map{case(desc, q) => q}.mkString(","))
+    }
+
+    prop
   }
 }
