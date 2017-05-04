@@ -16,7 +16,7 @@ RUN add-apt-repository -y ppa:webupd8team/java && apt-get update; \
     cd /usr/lib && ln -s jvm/java-8-oracle java
 ENV JAVA_HOME /usr/lib/java/jre
 
-# updating scala to 2.11.8
+# updating scala to 2.11
 RUN mkdir -p /usr/lib/scala-2.11.8 && curl 'http://www.scala-lang.org/files/archive/scala-2.11.8.tgz' | tar -xz -C /usr/lib/; \
     ln -s /usr/lib/scala-2.11.8 /usr/lib/scala
 ENV SCALA_HOME /usr/lib/scala
@@ -29,8 +29,8 @@ RUN echo "deb https://dl.bintray.com/sbt/debian /" | tee -a /etc/apt/sources.lis
     apt-get -y remove openjdk-9-*
 
 # spark
-RUN curl http://d3kbcqa49mib13.cloudfront.net/spark-2.1.0-bin-hadoop2.7.tgz | tar -xz -C /usr/lib/; \
-    cd /usr/lib && ln -s spark-2.1.0-bin-hadoop2.7 spark
+RUN curl http://d3kbcqa49mib13.cloudfront.net/spark-2.1.1-bin-hadoop2.7.tgz | tar -xz -C /usr/lib/; \
+    cd /usr/lib && ln -s spark-2.1.1-bin-hadoop2.7 spark
 ENV SPARK_HOME /usr/lib/spark
 
 # spark notebook
