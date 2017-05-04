@@ -22,7 +22,7 @@ import scala.concurrent.duration.Duration
 abstract class QueryExpression(id: Option[String]) extends Serializable with Logging {
   private val DEFAULT_WEIGHT = 0
 
-  private var prepared = false
+  private[handler] var prepared = false
   private var run = false
 
   private var results: Option[DataFrame] = None

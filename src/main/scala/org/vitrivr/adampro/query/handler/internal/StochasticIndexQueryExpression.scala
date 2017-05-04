@@ -64,7 +64,9 @@ case class StochasticIndexQueryExpression(private val exprs: Seq[IndexScanExpres
   override def prepareTree(): QueryExpression = {
     super.prepareTree()
     if (!nnq.indexOnly) {
-      new SequentialScanExpression(entity)(nnq, id)(Some(this)) //add sequential scan if not only scanning index
+      val expr = new SequentialScanExpression(entity)(nnq, id)(Some(this)) //add sequential scan if not only scanning index
+      expr.prepared = true
+      expr
     } else {
       this
     }
