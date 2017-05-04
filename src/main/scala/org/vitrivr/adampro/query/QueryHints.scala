@@ -17,15 +17,14 @@ object QueryHints {
   sealed abstract class EmpiricalQueryHint(val optimizerName : String = "svm") extends SimpleQueryHint
 
   case object SEQUENTIAL_QUERY extends SimpleQueryHint
-  case object INDEX_QUERY extends ComplexQueryHint(Seq(VAF_INDEX_QUERY, VAV_INDEX_QUERY, PQ_INDEX_QUERY, ECP_INDEX_QUERY, SH_INDEX_QUERY, LSH_INDEX_QUERY))
+  case object INDEX_QUERY extends ComplexQueryHint(Seq(VAF_INDEX_QUERY, VAV_INDEX_QUERY, VAP_INDEX_QUERY, PQ_INDEX_QUERY, ECP_INDEX_QUERY, SH_INDEX_QUERY, LSH_INDEX_QUERY))
   case object INEXACT_QUERY extends ComplexQueryHint(Seq(PQ_INDEX_QUERY, ECP_INDEX_QUERY, SH_INDEX_QUERY, LSH_INDEX_QUERY))
   case object ECP_INDEX_QUERY extends IndexQueryHint(ECPINDEX)
-  case object MI_INDEX_QUERY extends IndexQueryHint(MIINDEX)
   case object LSH_INDEX_QUERY extends IndexQueryHint(LSHINDEX)
   case object PQ_INDEX_QUERY extends IndexQueryHint(PQINDEX)
   case object SH_INDEX_QUERY extends IndexQueryHint(SHINDEX)
   case object EXACT_QUERY extends ComplexQueryHint(Seq(VAF_INDEX_QUERY, VAV_INDEX_QUERY, SEQUENTIAL_QUERY))
-  case object VA_INDEX_QUERY extends ComplexQueryHint(Seq(VAF_INDEX_QUERY, VAV_INDEX_QUERY))
+  case object VA_INDEX_QUERY extends ComplexQueryHint(Seq(VAF_INDEX_QUERY, VAV_INDEX_QUERY, VAP_INDEX_QUERY))
   case object VAF_INDEX_QUERY extends IndexQueryHint(VAFINDEX)
   case object VAV_INDEX_QUERY extends IndexQueryHint(VAVINDEX)
   case object VAP_INDEX_QUERY extends IndexQueryHint(VAPLUSINDEX)
@@ -54,7 +53,6 @@ object QueryHints {
     case "empirical_naive" => Some(EMPIRICAL_NAIVE_QUERY)
     case "scored" => Some(SCORED)
     case "ecp" => Some(ECP_INDEX_QUERY)
-    case "mi" => Some(MI_INDEX_QUERY)
     case "lsh" => Some(LSH_INDEX_QUERY)
     case "pq" => Some(PQ_INDEX_QUERY)
     case "sh" => Some(SH_INDEX_QUERY)

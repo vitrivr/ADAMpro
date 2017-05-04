@@ -26,7 +26,7 @@ object IndexTypes {
 
   case object LSHINDEX extends IndexType("lsh", grpc.IndexType.lsh, classOf[LSHIndex], classOf[LSHIndexGeneratorFactory])
 
-  case object MIINDEX extends IndexType("mi", grpc.IndexType.mi, classOf[MIIndex], classOf[MIIndexGeneratorFactory])
+  private[index] case object MIINDEX extends IndexType("mi", grpc.IndexType.mi, classOf[MIIndex], classOf[MIIndexGeneratorFactory])
 
   case object PQINDEX extends IndexType("pq", grpc.IndexType.pq, classOf[PQIndex], classOf[PQIndexGeneratorFactory])
 
@@ -42,7 +42,7 @@ object IndexTypes {
   /**
     *
     */
-  val values = Seq(ECPINDEX, LSHINDEX, MIINDEX, PQINDEX, SHINDEX, VAFINDEX, VAVINDEX, VAPLUSINDEX)
+  val values = Seq(ECPINDEX, LSHINDEX, PQINDEX, SHINDEX, VAFINDEX, VAVINDEX, VAPLUSINDEX)
 
   /**
     *
