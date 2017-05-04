@@ -95,7 +95,7 @@ object IndexOp extends GenericOp {
 
       log.error("not all indexes were created")
 
-      //not all indexes were created, delete the ones that were successfull too
+      //not all indexes were created, write out error
       val failedIndexes = indexes.filter(_._2.isFailure)
 
       failedIndexes.foreach{case(indextype, index) =>
@@ -103,7 +103,7 @@ object IndexOp extends GenericOp {
       }
 
 
-      return Failure(new GeneralAdamException(s"""some indexes (${failedIndexes.map(_._1).mkString}) were not created properly."""))
+      return Failure(new GeneralAdamException(s"""some indexes (${failedIndexes.map(_._1).mkString(", ")}) were not created properly."""))
     }
   }
 
