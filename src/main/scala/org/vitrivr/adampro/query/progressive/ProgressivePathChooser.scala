@@ -7,7 +7,7 @@ import org.vitrivr.adampro.index.structures.IndexTypes
 import org.vitrivr.adampro.main.AdamContext
 import org.vitrivr.adampro.query.QueryHints
 import org.vitrivr.adampro.query.handler.generic.QueryExpression
-import QueryHints.QueryHint
+import QueryHints.{IndexQueryHint, QueryHint, SEQUENTIAL_QUERY, SimpleQueryHint}
 import org.vitrivr.adampro.query.handler.internal.{HintBasedScanExpression, IndexScanExpression, SequentialScanExpression}
 import org.vitrivr.adampro.query.query.NearestNeighbourQuery
 import org.vitrivr.adampro.utils.Logging
@@ -71,13 +71,18 @@ class IndexTypeProgressivePathChooser(indextypenames: Seq[IndexTypeName])(implic
 }
 
 /**
-  * Chooses first index based on hints given (without sequential scan).
+  * Chooses path based on hints given.
   *
-  * @param hints list of QueryHints, note that only IndexQueryHints are accepted at the moment
+  * @param hints list of QueryHints, note that only Simple are accepted at the moment
   */
 class QueryHintsProgressivePathChooser(hints: Seq[QueryHint])(implicit ac: AdamContext) extends ProgressivePathChooser {
   override def getPaths(entityname: EntityName, nnq: NearestNeighbourQuery): Seq[QueryExpression] = {
-    hints.map(hint => HintBasedScanExpression.startPlanSearch(entityname, Some(nnq), None, Seq(hint), false)()).filterNot(_ == null)
+    if(hints.filter(x => !x.isInstanceOf[SimpleQueryHint]).length > 0){
+      log.warn("only index query hints allowed in path chooser")
+      Seq()
+    } else {
+      hints.map(hint => HintBasedScanExpression.startPlanSearch(entityname, Some(nnq), None, Seq(hint), false)()).filterNot(_ == null)
+    }
   }
 }
 
