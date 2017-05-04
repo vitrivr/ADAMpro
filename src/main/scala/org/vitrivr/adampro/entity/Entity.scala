@@ -347,9 +347,7 @@ case class Entity(entityname: EntityName)(@transient implicit val ac: AdamContex
 
       //TODO: check insertion schema and entity schema before trying to insert
 
-      ac.entityLocks.putIfAbsent(entityname, new StampedLock())
-      val lock = ac.entityLocks.get(entityname)
-
+      val lock = ac.getEntityLock(entityname)
       val stamp = lock.writeLock()
 
       try {
@@ -402,8 +400,7 @@ case class Entity(entityname: EntityName)(@transient implicit val ac: AdamContex
     * Vacuums the entity, i.e., clean up operations for entity
     */
   def vacuum(): Unit = {
-    ac.entityLocks.putIfAbsent(entityname, new StampedLock())
-    val lock = ac.entityLocks.get(entityname)
+    val lock = ac.getEntityLock(entityname)
     val stamp = lock.writeLock()
 
     try {
