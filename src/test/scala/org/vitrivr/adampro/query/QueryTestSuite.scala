@@ -388,8 +388,8 @@ class QueryTestSuite extends AdamTestBase with ScalaFutures {
             .map(r => (r.getAs[TupleID](AttributeNames.internalIdColumnName))).collect().sorted
         }
 
-        val pqres = pqqh.prepareTree().evaluate()(tracker).get.map(r => r.getAs[TupleID](AttributeNames.internalIdColumnName)).collect()
-        val vhres = vhqh.prepareTree().evaluate()(tracker).get.map(r => r.getAs[TupleID](AttributeNames.internalIdColumnName)).collect()
+        val pqres = pqqh.evaluate()(tracker).get.map(r => r.getAs[TupleID](AttributeNames.internalIdColumnName)).collect()
+        val vhres = vhqh.evaluate()(tracker).get.map(r => r.getAs[TupleID](AttributeNames.internalIdColumnName)).collect()
 
         Then("we should have a match in the aggregated list")
         val gt = vhres.intersect(pqres).sorted
@@ -428,8 +428,8 @@ class QueryTestSuite extends AdamTestBase with ScalaFutures {
         }
 
         //results (note we truly compare the id-attribute here and not the metadata "tid"
-        val vh1res = va1qh.prepareTree().evaluate()(tracker).get.map(r => r.getAs[TupleID](AttributeNames.internalIdColumnName)).collect()
-        val vh2res = va2qh.prepareTree().evaluate()(tracker).get.map(r => r.getAs[TupleID](AttributeNames.internalIdColumnName)).collect()
+        val vh1res = va1qh.evaluate()(tracker).get.map(r => r.getAs[TupleID](AttributeNames.internalIdColumnName)).collect()
+        val vh2res = va2qh.evaluate()(tracker).get.map(r => r.getAs[TupleID](AttributeNames.internalIdColumnName)).collect()
 
         Then("we should have a match in the aggregated list")
         val gt = vh1res.intersect(vh2res).sorted
@@ -471,8 +471,8 @@ class QueryTestSuite extends AdamTestBase with ScalaFutures {
       }
 
       //results (note we truly compare the id-attribute here and not the metadata "tid"
-      val vh1res: Array[(TupleID, Distance)] = va1qh.prepareTree().evaluate()(tracker)(ac).get.collect().map(r => (r.getAs[TupleID](AttributeNames.internalIdColumnName), r.getAs[Distance.Distance](AttributeNames.distanceColumnName)))
-      val vh2res: Array[(TupleID, Distance)] = va2qh.prepareTree().evaluate()(tracker)(ac).get.collect().map(r => (r.getAs[TupleID](AttributeNames.internalIdColumnName), r.getAs[Distance.Distance](AttributeNames.distanceColumnName)))
+      val vh1res: Array[(TupleID, Distance)] = va1qh.evaluate()(tracker)(ac).get.collect().map(r => (r.getAs[TupleID](AttributeNames.internalIdColumnName), r.getAs[Distance.Distance](AttributeNames.distanceColumnName)))
+      val vh2res: Array[(TupleID, Distance)] = va2qh.evaluate()(tracker)(ac).get.collect().map(r => (r.getAs[TupleID](AttributeNames.internalIdColumnName), r.getAs[Distance.Distance](AttributeNames.distanceColumnName)))
 
       Then("we should have a match in the aggregated list")
       val vh1map = vh1res.map(x => x._1 -> x._2).toMap
