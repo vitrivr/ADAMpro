@@ -214,11 +214,12 @@ object AggregationExpression {
       right = right.withColumnRenamed(AttributeNames.distanceColumnName, AttributeNames.distanceColumnName + "-r")
       right = right.withColumnRenamed(AttributeNames.sourceColumnName, AttributeNames.sourceColumnName + "-r")
 
+      val emptyValue =  this.options.get("fuzzydefault").map(_.toDouble).getOrElse(0.0)
 
       import org.apache.spark.sql.functions.col
-      var res = left.join(right, left(pk + "-l") === right(pk + "-r"), "outer")
-        .withColumn(AttributeNames.distanceColumnName + "-l", coalesce(col(AttributeNames.distanceColumnName + "-l"), lit(0.0)))
-        .withColumn(AttributeNames.distanceColumnName + "-r", coalesce(col(AttributeNames.distanceColumnName + "-r"), lit(0.0)))
+      var res = left.join(right, left(pk + "-l") === right(pk + "-r"), this.options.getOrElse("fuzzycombination", "outer"))
+        .withColumn(AttributeNames.distanceColumnName + "-l", coalesce(col(AttributeNames.distanceColumnName + "-l"), lit(emptyValue)))
+        .withColumn(AttributeNames.distanceColumnName + "-r", coalesce(col(AttributeNames.distanceColumnName + "-r"), lit(emptyValue)))
         .withColumn(AttributeNames.distanceColumnName, op(col(AttributeNames.distanceColumnName + "-l"), col(AttributeNames.distanceColumnName + "-r")))
         .withColumn(pk, when(col(pk + "-l").isNotNull, col(pk + "-l")).otherwise(col(pk + "-r")))
         .drop(pk + "-r").drop(pk + "-l").drop(col(AttributeNames.distanceColumnName + "-l")).drop(col(AttributeNames.distanceColumnName + "-r"))
@@ -326,10 +327,12 @@ object AggregationExpression {
       right = right.withColumnRenamed(AttributeNames.distanceColumnName, AttributeNames.distanceColumnName + "-r")
       right = right.withColumnRenamed(AttributeNames.sourceColumnName, AttributeNames.sourceColumnName + "-r")
 
+      val emptyValue =  this.options.get("fuzzydefault").map(_.toDouble).getOrElse(0.0)
+
       import org.apache.spark.sql.functions.col
-      var res = left.join(right, left(pk + "-l") === right(pk + "-r"), "outer")
-        .withColumn(AttributeNames.distanceColumnName + "-l", coalesce(col(AttributeNames.distanceColumnName + "-l"), lit(0.0)))
-        .withColumn(AttributeNames.distanceColumnName + "-r", coalesce(col(AttributeNames.distanceColumnName + "-r"), lit(0.0)))
+      var res = left.join(right, left(pk + "-l") === right(pk + "-r"), this.options.getOrElse("fuzzycombination", "outer"))
+        .withColumn(AttributeNames.distanceColumnName + "-l", coalesce(col(AttributeNames.distanceColumnName + "-l"), lit(emptyValue)))
+        .withColumn(AttributeNames.distanceColumnName + "-r", coalesce(col(AttributeNames.distanceColumnName + "-r"), lit(emptyValue)))
         .withColumn(AttributeNames.distanceColumnName, op(col(AttributeNames.distanceColumnName + "-l"), col(AttributeNames.distanceColumnName + "-r")))
         .withColumn(pk, when(col(pk + "-l").isNotNull, col(pk + "-l")).otherwise(col(pk + "-r")))
         .drop(pk + "-r").drop(col(AttributeNames.distanceColumnName + "-l")).drop(col(AttributeNames.distanceColumnName + "-r"))
