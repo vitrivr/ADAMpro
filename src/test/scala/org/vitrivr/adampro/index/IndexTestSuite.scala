@@ -170,13 +170,6 @@ class IndexTestSuite extends AdamTestBase {
     /**
       *
       */
-    scenario("create MI index") {
-      indexCreationTest(IndexTypes.MIINDEX)
-    }
-
-    /**
-      *
-      */
     scenario("create PQ index") {
       indexCreationTest(IndexTypes.PQINDEX)
     }
