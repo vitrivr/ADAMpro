@@ -233,6 +233,8 @@ object AggregationExpression {
           .drop(AttributeNames.sourceColumnName + "-l").drop(AttributeNames.sourceColumnName + "-r")
       }
 
+      res = res.drop(AttributeNames.featureIndexColumnName)
+
       res
     }
   }
@@ -345,6 +347,8 @@ object AggregationExpression {
           .withColumn(AttributeNames.sourceColumnName, concat(col(AttributeNames.sourceColumnName + "-l"), lit(" " + aggregationName + " "), col(AttributeNames.sourceColumnName + "-r")))
           .drop(AttributeNames.sourceColumnName + "-l").drop(AttributeNames.sourceColumnName + "-r")
       }
+
+      res = res.drop(AttributeNames.featureIndexColumnName)
 
       res
     }
