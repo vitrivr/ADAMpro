@@ -63,7 +63,6 @@ abstract class AggregationExpression(private val left: QueryExpression, private 
     first.filter = filter
     var firstResult = first.evaluate(options)(tracker).get
 
-    //TODO: possibly consider fuzzy sets rather than ignoring distance
     val pk = firstResult.schema.fields.filterNot(_.name == AttributeNames.distanceColumnName).head.name
     second.filter = Some(firstResult.select(pk))
     var secondResult = second.evaluate(options)(tracker).get
@@ -97,7 +96,6 @@ abstract class AggregationExpression(private val left: QueryExpression, private 
     val sfut = Future(second.evaluate(options)(tracker))
 
     val f = for (firstResult <- ffut; secondResult <- sfut)
-    //TODO: possilby consider fuzzy sets rather than ignoring distance
       yield aggregate(firstResult.get, secondResult.get, firstResult.get.schema.fields.filterNot(_.name == AttributeNames.distanceColumnName).head.name, options)
 
     var result = Await.result(f, Duration(100, TimeUnit.SECONDS))
