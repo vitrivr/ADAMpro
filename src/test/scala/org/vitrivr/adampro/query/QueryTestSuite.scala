@@ -121,14 +121,6 @@ class QueryTestSuite extends AdamTestBase with ScalaFutures {
     /**
       *
       */
-    scenario("perform a mi index query") {
-      withQueryEvaluationSet { es => indexQuery(es, IndexTypes.MIINDEX, false) }
-
-    }
-
-    /**
-      *
-      */
     scenario("perform a pq index query") {
       withQueryEvaluationSet { es => indexQuery(es, IndexTypes.PQINDEX, false) }
 
