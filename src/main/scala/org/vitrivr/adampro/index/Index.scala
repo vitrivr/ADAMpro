@@ -451,6 +451,7 @@ object Index extends Logging {
       val generatorRes = indexgenerator.index(indexableData, attribute)(tracker)
       val data = generatorRes._1
         .withColumnRenamed(AttributeNames.internalIdColumnName, entity.pk.name)
+        .drop(attribute) //remove feature column from index
         .repartition(ac.config.defaultNumberOfPartitionsIndex)
       val meta = generatorRes._2
 
