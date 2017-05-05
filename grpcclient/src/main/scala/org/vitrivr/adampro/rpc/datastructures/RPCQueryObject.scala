@@ -205,6 +205,8 @@ case class RPCQueryObject(var id: String, var operation: String, var options: Ma
       case "union" => ExpressionQueryMessage.Operation.UNION
       case "intersect" => ExpressionQueryMessage.Operation.INTERSECT
       case "except" => ExpressionQueryMessage.Operation.EXCEPT
+      case "fuzzyunion" => ExpressionQueryMessage.Operation.FUZZYUNION
+      case "fuzzyintersect" => ExpressionQueryMessage.Operation.FUZZYINTERSECT
     }
 
     val lsqm = targets.get(0).seqm()

@@ -31,7 +31,7 @@ abstract class AggregationExpression(private val leftExpression: QueryExpression
 
   def aggregationName: String
 
-  override def prepareTree(silent : Boolean = false): QueryExpression = {
+  override def prepareTree(silent: Boolean = false): QueryExpression = {
     super.prepareTree()
 
     left = left.prepareTree(silent = true) //expr needs to be replaced
@@ -144,14 +144,18 @@ object AggregationExpression {
       if (qeoptions.isDefined && qeoptions.get.storeSourceProvenance) {
         if (left.columns.contains(AttributeNames.sourceColumnName)) {
           left = left.select(pk, AttributeNames.sourceColumnName)
+          left = left.withColumn(AttributeNames.sourceColumnName, concat(col(AttributeNames.sourceColumnName), lit(" " + aggregationName)))
         } else {
-          left = left.select(pk).withColumn(AttributeNames.sourceColumnName, lit(l.info.scantype.getOrElse("undefined")))
+          left = left.select(pk)
+          left = left.withColumn(AttributeNames.sourceColumnName, concat(lit(l.info.scantype.getOrElse("undefined")), lit(" " + aggregationName)))
         }
 
         if (right.columns.contains(AttributeNames.sourceColumnName)) {
           right = right.select(pk, AttributeNames.sourceColumnName)
+          right = right.withColumn(AttributeNames.sourceColumnName, concat(col(AttributeNames.sourceColumnName), lit(" " + aggregationName)))
         } else {
-          right = right.select(pk).withColumn(AttributeNames.sourceColumnName, lit(r.info.scantype.getOrElse("undefined")))
+          right = right.select(pk)
+          right = right.withColumn(AttributeNames.sourceColumnName, concat(lit(r.info.scantype.getOrElse("undefined")), lit(" " + aggregationName)))
         }
       } else {
         left = left.select(pk)
@@ -174,37 +178,14 @@ object AggregationExpression {
 
     override protected def aggregate(leftResult: DataFrame, rightResult: DataFrame, pk: String, qeoptions: Option[QueryEvaluationOptions]): DataFrame = {
       var left = leftResult
-      if (!left.columns.contains(AttributeNames.sourceColumnName)) {
-        left.withColumn(AttributeNames.distanceColumnName, lit(Distance.zeroValue))
+      if (!left.columns.contains(AttributeNames.distanceColumnName)) {
+        left = left.withColumn(AttributeNames.distanceColumnName, lit(Distance.zeroValue))
       }
 
       var right = rightResult
-      if (!right.columns.contains(AttributeNames.sourceColumnName)) {
-        right.withColumn(AttributeNames.distanceColumnName, lit(Distance.zeroValue))
+      if (!right.columns.contains(AttributeNames.distanceColumnName)) {
+        right = right.withColumn(AttributeNames.distanceColumnName, lit(Distance.zeroValue))
       }
-
-      if (qeoptions.isDefined && qeoptions.get.storeSourceProvenance) {
-        if (left.columns.contains(AttributeNames.sourceColumnName)) {
-          left = left.select(pk, AttributeNames.distanceColumnName, AttributeNames.sourceColumnName)
-        } else {
-          left = left.select(pk, AttributeNames.distanceColumnName).withColumn(AttributeNames.sourceColumnName, lit(l.info.scantype.getOrElse("undefined")))
-        }
-
-        if (right.columns.contains(AttributeNames.sourceColumnName)) {
-          right = right.select(pk, AttributeNames.distanceColumnName, AttributeNames.sourceColumnName)
-        } else {
-          right = right.select(pk, AttributeNames.distanceColumnName).withColumn(AttributeNames.sourceColumnName, lit(r.info.scantype.getOrElse("undefined")))
-        }
-      } else {
-        left = left.select(pk, AttributeNames.distanceColumnName)
-        right = right.select(pk, AttributeNames.distanceColumnName)
-      }
-
-      left = left.withColumnRenamed(pk, pk + "-l")
-      left = left.withColumnRenamed(AttributeNames.distanceColumnName, AttributeNames.distanceColumnName + "-l")
-
-      right = right.withColumnRenamed(pk, pk + "-r")
-      right = right.withColumnRenamed(AttributeNames.distanceColumnName, AttributeNames.distanceColumnName + "-r")
 
       val op = this.options.getOrElse("fuzzy", "standard") match {
         case "standard" => udf((d1: Distance.Distance, d2: Distance.Distance) => math.max(d1, d2))
@@ -213,11 +194,45 @@ object AggregationExpression {
         case _ => log.warn("could not match fuzzy union option"); udf((d1: Distance.Distance, d2: Distance.Distance) => math.max(d1, d2))
       }
 
+      if (qeoptions.isDefined && qeoptions.get.storeSourceProvenance) {
+        if (left.columns.contains(AttributeNames.sourceColumnName)) {
+        } else {
+          left = left.withColumn(AttributeNames.sourceColumnName, lit(l.info.scantype.getOrElse("undefined")))
+        }
+
+        if (right.columns.contains(AttributeNames.sourceColumnName)) {
+        } else {
+          right = right.withColumn(AttributeNames.sourceColumnName, lit(r.info.scantype.getOrElse("undefined")))
+        }
+      }
+
+      left = left.withColumnRenamed(pk, pk + "-l")
+      left = left.withColumnRenamed(AttributeNames.distanceColumnName, AttributeNames.distanceColumnName + "-l")
+      left = left.withColumnRenamed(AttributeNames.sourceColumnName, AttributeNames.sourceColumnName + "-l")
+
+      right = right.withColumnRenamed(pk, pk + "-r")
+      right = right.withColumnRenamed(AttributeNames.distanceColumnName, AttributeNames.distanceColumnName + "-r")
+      right = right.withColumnRenamed(AttributeNames.sourceColumnName, AttributeNames.sourceColumnName + "-r")
+
+
       import org.apache.spark.sql.functions.col
-      left.join(right, left(pk + "-l") === right(pk + "-r"), "outer")
+      var res = left.join(right, left(pk + "-l") === right(pk + "-r"), "outer")
+        .withColumn(AttributeNames.distanceColumnName + "-l", coalesce(col(AttributeNames.distanceColumnName + "-l"), lit(0.0)))
+        .withColumn(AttributeNames.distanceColumnName + "-r", coalesce(col(AttributeNames.distanceColumnName + "-r"), lit(0.0)))
         .withColumn(AttributeNames.distanceColumnName, op(col(AttributeNames.distanceColumnName + "-l"), col(AttributeNames.distanceColumnName + "-r")))
-        .withColumn(pk, when(col(pk + "-l").isNotNull and (col(pk + "-l") !== ""), col(pk + "-l")).otherwise(col(pk + "-r")))
-        .select(pk, AttributeNames.distanceColumnName)
+        .withColumn(pk, when(col(pk + "-l").isNotNull, col(pk + "-l")).otherwise(col(pk + "-r")))
+        .drop(pk + "-r").drop(pk + "-l").drop(col(AttributeNames.distanceColumnName + "-l")).drop(col(AttributeNames.distanceColumnName + "-r"))
+
+
+      if (qeoptions.isDefined && qeoptions.get.storeSourceProvenance) {
+        res = res
+          .withColumn(AttributeNames.sourceColumnName + "-l", coalesce(col(AttributeNames.sourceColumnName + "-l"), lit("x")))
+          .withColumn(AttributeNames.sourceColumnName + "-r", coalesce(col(AttributeNames.sourceColumnName + "-r"), lit("x")))
+          .withColumn(AttributeNames.sourceColumnName, concat(col(AttributeNames.sourceColumnName + "-l"), lit(" " + aggregationName + " "), col(AttributeNames.sourceColumnName + "-r")))
+          .drop(AttributeNames.sourceColumnName + "-l").drop(AttributeNames.sourceColumnName + "-r")
+      }
+
+      res
     }
   }
 
@@ -240,14 +255,18 @@ object AggregationExpression {
       if (qeoptions.isDefined && qeoptions.get.storeSourceProvenance) {
         if (left.columns.contains(AttributeNames.sourceColumnName)) {
           left = left.select(pk, AttributeNames.sourceColumnName)
+          left = left.withColumn(AttributeNames.sourceColumnName, concat(col(AttributeNames.sourceColumnName), lit(" " + aggregationName)))
         } else {
-          left = left.select(pk).withColumn(AttributeNames.sourceColumnName, lit(l.info.scantype.getOrElse("undefined") + " " + aggregationName + " " + r.info.scantype.getOrElse("undefined")))
+          left = left.select(pk)
+          left = left.withColumn(AttributeNames.sourceColumnName, concat(lit(l.info.scantype.getOrElse("undefined")), lit(" " + aggregationName)))
         }
 
         if (right.columns.contains(AttributeNames.sourceColumnName)) {
           right = right.select(pk, AttributeNames.sourceColumnName)
+          right = right.withColumn(AttributeNames.sourceColumnName, concat(col(AttributeNames.sourceColumnName), lit(" " + aggregationName)))
         } else {
-          right = right.select(pk).withColumn(AttributeNames.sourceColumnName, lit(l.info.scantype.getOrElse("undefined") + " " + aggregationName + " " + r.info.scantype.getOrElse("undefined")))
+          right = right.select(pk)
+          right = right.withColumn(AttributeNames.sourceColumnName, concat(lit(r.info.scantype.getOrElse("undefined")), lit(" " + aggregationName)))
         }
       } else {
         left = left.select(pk)
@@ -271,37 +290,14 @@ object AggregationExpression {
 
     override protected def aggregate(leftResult: DataFrame, rightResult: DataFrame, pk: String, qeoptions: Option[QueryEvaluationOptions]): DataFrame = {
       var left = leftResult
-      if (!left.columns.contains(AttributeNames.sourceColumnName)) {
-        left.withColumn(AttributeNames.distanceColumnName, lit(Distance.zeroValue))
+      if (!left.columns.contains(AttributeNames.distanceColumnName)) {
+        left = left.withColumn(AttributeNames.distanceColumnName, lit(Distance.zeroValue))
       }
 
       var right = rightResult
-      if (!right.columns.contains(AttributeNames.sourceColumnName)) {
-        right.withColumn(AttributeNames.distanceColumnName, lit(Distance.zeroValue))
+      if (!right.columns.contains(AttributeNames.distanceColumnName)) {
+        right = right.withColumn(AttributeNames.distanceColumnName, lit(Distance.zeroValue))
       }
-
-      if (qeoptions.isDefined && qeoptions.get.storeSourceProvenance) {
-        if (left.columns.contains(AttributeNames.sourceColumnName)) {
-          left = left.select(pk, AttributeNames.distanceColumnName, AttributeNames.sourceColumnName)
-        } else {
-          left = left.select(pk, AttributeNames.distanceColumnName).withColumn(AttributeNames.sourceColumnName, lit(l.info.scantype.getOrElse("undefined")))
-        }
-
-        if (right.columns.contains(AttributeNames.sourceColumnName)) {
-          right = right.select(pk, AttributeNames.distanceColumnName, AttributeNames.sourceColumnName)
-        } else {
-          right = right.select(pk, AttributeNames.distanceColumnName).withColumn(AttributeNames.sourceColumnName, lit(r.info.scantype.getOrElse("undefined")))
-        }
-      } else {
-        left = left.select(pk, AttributeNames.distanceColumnName)
-        right = right.select(pk, AttributeNames.distanceColumnName)
-      }
-
-      left = left.withColumnRenamed(pk, pk + "-l")
-      left = left.withColumnRenamed(AttributeNames.distanceColumnName, AttributeNames.distanceColumnName + "-l")
-
-      right = right.withColumnRenamed(pk, pk + "-r")
-      right = right.withColumnRenamed(AttributeNames.distanceColumnName, AttributeNames.distanceColumnName + "-r")
 
       val op = this.options.getOrElse("fuzzy", "standard") match {
         case "standard" => udf((d1: Distance.Distance, d2: Distance.Distance) => math.min(d1, d2))
@@ -310,11 +306,44 @@ object AggregationExpression {
         case _ => log.warn("could not match fuzzy intersect option"); udf((d1: Distance.Distance, d2: Distance.Distance) => math.min(d1, d2))
       }
 
+      if (qeoptions.isDefined && qeoptions.get.storeSourceProvenance) {
+        if (left.columns.contains(AttributeNames.sourceColumnName)) {
+        } else {
+          left = left.withColumn(AttributeNames.sourceColumnName, lit(l.info.scantype.getOrElse("undefined")))
+        }
+
+        if (right.columns.contains(AttributeNames.sourceColumnName)) {
+        } else {
+          right = right.withColumn(AttributeNames.sourceColumnName, lit(r.info.scantype.getOrElse("undefined")))
+        }
+      }
+
+      left = left.withColumnRenamed(pk, pk + "-l")
+      left = left.withColumnRenamed(AttributeNames.distanceColumnName, AttributeNames.distanceColumnName + "-l")
+      left = left.withColumnRenamed(AttributeNames.sourceColumnName, AttributeNames.sourceColumnName + "-l")
+
+      right = right.withColumnRenamed(pk, pk + "-r")
+      right = right.withColumnRenamed(AttributeNames.distanceColumnName, AttributeNames.distanceColumnName + "-r")
+      right = right.withColumnRenamed(AttributeNames.sourceColumnName, AttributeNames.sourceColumnName + "-r")
+
       import org.apache.spark.sql.functions.col
-      left.join(right, left(pk + "-l") === right(pk + "-r"), "outer")
+      var res = left.join(right, left(pk + "-l") === right(pk + "-r"), "outer")
+        .withColumn(AttributeNames.distanceColumnName + "-l", coalesce(col(AttributeNames.distanceColumnName + "-l"), lit(0.0)))
+        .withColumn(AttributeNames.distanceColumnName + "-r", coalesce(col(AttributeNames.distanceColumnName + "-r"), lit(0.0)))
         .withColumn(AttributeNames.distanceColumnName, op(col(AttributeNames.distanceColumnName + "-l"), col(AttributeNames.distanceColumnName + "-r")))
-        .withColumn(pk, when(col(pk + "-l").isNotNull and (col(pk + "-l") !== ""), col(pk + "-l")).otherwise(col(pk + "-r")))
-        .select(pk, AttributeNames.distanceColumnName)
+        .withColumn(pk, when(col(pk + "-l").isNotNull, col(pk + "-l")).otherwise(col(pk + "-r")))
+        .drop(pk + "-r").drop(col(AttributeNames.distanceColumnName + "-l")).drop(col(AttributeNames.distanceColumnName + "-r"))
+        .drop(pk + "-r").drop(pk + "-l").drop(col(AttributeNames.distanceColumnName + "-l")).drop(col(AttributeNames.distanceColumnName + "-r"))
+
+      if (qeoptions.isDefined && qeoptions.get.storeSourceProvenance) {
+        res = res
+          .withColumn(AttributeNames.sourceColumnName + "-l", coalesce(col(AttributeNames.sourceColumnName + "-l"), lit("x")))
+          .withColumn(AttributeNames.sourceColumnName + "-r", coalesce(col(AttributeNames.sourceColumnName + "-r"), lit("x")))
+          .withColumn(AttributeNames.sourceColumnName, concat(col(AttributeNames.sourceColumnName + "-l"), lit(" " + aggregationName + " "), col(AttributeNames.sourceColumnName + "-r")))
+          .drop(AttributeNames.sourceColumnName + "-l").drop(AttributeNames.sourceColumnName + "-r")
+      }
+
+      res
     }
   }
 
@@ -335,14 +364,18 @@ object AggregationExpression {
       if (qeoptions.isDefined && qeoptions.get.storeSourceProvenance) {
         if (left.columns.contains(AttributeNames.sourceColumnName)) {
           left = left.select(pk, AttributeNames.sourceColumnName)
+          left = left.withColumn(AttributeNames.sourceColumnName, concat(col(AttributeNames.sourceColumnName), lit(" " + aggregationName)))
         } else {
-          left = left.select(pk).withColumn(AttributeNames.sourceColumnName, lit(l.info.scantype.getOrElse("undefined") + " " + aggregationName + " " + r.info.scantype.getOrElse("undefined")))
+          left = left.select(pk)
+          left = left.withColumn(AttributeNames.sourceColumnName, concat(lit(l.info.scantype.getOrElse("undefined")), lit(" " + aggregationName)))
         }
 
         if (right.columns.contains(AttributeNames.sourceColumnName)) {
           right = right.select(pk, AttributeNames.sourceColumnName)
+          right = right.withColumn(AttributeNames.sourceColumnName, concat(col(AttributeNames.sourceColumnName), lit(" " + aggregationName)))
         } else {
-          right = right.select(pk).withColumn(AttributeNames.sourceColumnName, lit(l.info.scantype.getOrElse("undefined") + " " + aggregationName + " " + r.info.scantype.getOrElse("undefined")))
+          right = right.select(pk)
+          right = right.withColumn(AttributeNames.sourceColumnName, concat(lit(r.info.scantype.getOrElse("undefined")), lit(" " + aggregationName)))
         }
       } else {
         left = left.select(pk)
