@@ -19,8 +19,9 @@ class QueryOptimizer(optimizer: OptimizerHeuristic) {
     * @param qc collection of queries
     * @param options
     */
-  def train(ic: IndexCollection, qc: QueryCollection, options: Map[String, String]): Try[Void] = {
+  def train(entity : Entity, ic: IndexCollection, qc: QueryCollection, options: Map[String, String]): Try[Void] = {
     try {
+      optimizer.trainEntity(entity, qc.getQueries, options)
       optimizer.trainIndexes(ic.getIndexes, qc.getQueries, options)
       Success(null)
     } catch {

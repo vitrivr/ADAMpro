@@ -41,7 +41,7 @@ private[optimizer] class SVMOptimizerHeuristic(defaultNRuns: Int = 100)(@transie
       val rel = QueryOp.sequential(entity.entityname, nnq, None)(tracker).get.get.select(entity.pk.name).collect().map(_.getAs[Any](0)).toSet
 
       indexes.map { index =>
-        performMeasurement(index, nnq, options.get("nruns").map(_.toInt), rel).map(time => (index.indextypename, buildFeature(index, nnq), time))
+        performMeasurement(index, nnq, options.get("nruns").map(_.toInt), rel).map(measurement => (index.indextypename, buildFeature(index, nnq, measurement.toConfidence()), measurement))
       }.flatten
     }.groupBy(_._1).mapValues(_.map(x => (x._2, x._3)))
 
@@ -66,7 +66,7 @@ private[optimizer] class SVMOptimizerHeuristic(defaultNRuns: Int = 100)(@transie
     */
   override def trainEntity(entity: Entity, queries: Seq[NearestNeighbourQuery], options: Map[String, String] = Map()): Unit = {
     val trainDatum = queries.flatMap { nnq =>
-      performMeasurement(entity, nnq, options.get("nruns").map(_.toInt)).map(time => (buildFeature(entity, nnq), time))
+      performMeasurement(entity, nnq, options.get("nruns").map(_.toInt)).map(measurement => (buildFeature(entity, nnq, measurement.toConfidence()), measurement))
     }
 
     if (trainDatum.nonEmpty && !SparkStartup.catalogOperator.containsOptimizerOptionMeta(name, "svm-entity").getOrElse(false)) {
@@ -83,7 +83,11 @@ private[optimizer] class SVMOptimizerHeuristic(defaultNRuns: Int = 100)(@transie
     * @param index
     * @param nnq
     */
-  override def test(index: Index, nnq: NearestNeighbourQuery): Double = getScore("svm-index-" + index.indextypename.name, buildFeature(index, nnq))
+  override def test(index: Index, nnq: NearestNeighbourQuery): Double = {
+    val confidence = nnq.options.get("confidence").map(_.toDouble).getOrElse(1.0)
+
+    getScore("svm-index-" + index.indextypename.name, buildFeature(index, nnq, Confidence(confidence)))
+  }
 
 
   /**
@@ -92,7 +96,11 @@ private[optimizer] class SVMOptimizerHeuristic(defaultNRuns: Int = 100)(@transie
     * @param nnq
     * @return
     */
-  override def test(entity: Entity, nnq: NearestNeighbourQuery): Double = getScore("svm-entity", buildFeature(entity, nnq))
+  override def test(entity: Entity, nnq: NearestNeighbourQuery): Double = {
+    val confidence = nnq.options.get("confidence").map(_.toDouble).getOrElse(1.0)
+
+    getScore("svm-entity", buildFeature(entity, nnq, Confidence(confidence)))
+  }
 
 
   /**
@@ -124,16 +132,45 @@ private[optimizer] class SVMOptimizerHeuristic(defaultNRuns: Int = 100)(@transie
     *
     * @param index
     * @param nnq
+    * @param confidence
     */
-  private def buildFeature(index: Index, nnq: NearestNeighbourQuery): DenseVector[Double] = DenseVector[Double]((buildFeature(index) ++ buildFeature(nnq)).toArray)
+  private def buildFeature(index: Index, nnq: NearestNeighbourQuery, confidence : Confidence): DenseVector[Double] = DenseVector[Double]((buildFeature(confidence) ++ buildFeature(index, nnq)).toArray)
+
+  /**
+    *
+    * @param entity
+    * @param nnq
+    * @param confidence
+    */
+  private def buildFeature(entity: Entity, nnq: NearestNeighbourQuery, confidence : Confidence): DenseVector[Double] = DenseVector[Double]((buildFeature(confidence) ++ buildFeature(entity, nnq)).toArray)
+
+
+  /**
+    *
+    * @param index
+    * @param nnq
+    */
+  private def buildFeature(index: Index, nnq: NearestNeighbourQuery): Seq[Double] = buildFeature(index) ++ buildFeature(nnq)
 
   /**
     *
     * @param entity
     * @param nnq
     */
-  private def buildFeature(entity: Entity, nnq: NearestNeighbourQuery): DenseVector[Double] = DenseVector[Double]((buildFeature(entity, nnq.attribute) ++ buildFeature(nnq)).toArray)
+  private def buildFeature(entity: Entity, nnq: NearestNeighbourQuery): Seq[Double] = buildFeature(entity, nnq.attribute) ++ buildFeature(nnq)
 
+  /**
+    *
+    * @param confidence
+    * @return
+    */
+  private def buildFeature(confidence: Confidence): Seq[Double] = {
+    val lb = new ListBuffer[Double]()
+
+    lb += math.max(1.0, confidence.confidence)
+
+    lb.toSeq
+  }
 
   /**
     *
@@ -143,7 +180,7 @@ private[optimizer] class SVMOptimizerHeuristic(defaultNRuns: Int = 100)(@transie
   private def buildFeature(nnq: NearestNeighbourQuery): Seq[Double] = {
     val lb = new ListBuffer[Double]()
 
-    lb += nnq.k
+    lb += math.max(1.0, nnq.k / 100.0)
 
     lb.toSeq
   }
@@ -156,10 +193,10 @@ private[optimizer] class SVMOptimizerHeuristic(defaultNRuns: Int = 100)(@transie
     */
   private def buildFeature(entity: Entity, attribute: String): Seq[Double] = {
     val lb = new ListBuffer[Double]()
-
     val head = entity.getAttributeData(attribute).get.head()
-    lb += IndexingTaskTuple(head.getAs[TupleID](entity.pk.name), Vector.conv_draw2vec(head.getAs[DenseRawVector](attribute))).ap_indexable.length
-    lb += entity.count
+
+    lb += math.max(1.0, IndexingTaskTuple(head.getAs[TupleID](entity.pk.name), Vector.conv_draw2vec(head.getAs[DenseRawVector](attribute))).ap_indexable.length / 1000.0)
+    lb += math.max(1.0, entity.count / 1000000.0)
 
     lb.toSeq
   }
@@ -172,7 +209,7 @@ private[optimizer] class SVMOptimizerHeuristic(defaultNRuns: Int = 100)(@transie
   private def buildFeature(index: Index): Seq[Double] = {
     val lb = new ListBuffer[Double]()
 
-    lb += index.count
+    lb += math.max(1.0, index.count / 1000000.0)
 
     lb ++= (index match {
       case idx: ECPIndex => buildFeature(idx)
@@ -197,7 +234,7 @@ private[optimizer] class SVMOptimizerHeuristic(defaultNRuns: Int = 100)(@transie
     val lb = new ListBuffer[Double]()
     val meta = index.meta
 
-    lb += meta.leaders.length
+    lb += math.max(1.0, meta.leaders.length / 10000.0)
 
     lb.toSeq
   }
@@ -211,10 +248,10 @@ private[optimizer] class SVMOptimizerHeuristic(defaultNRuns: Int = 100)(@transie
     val lb = new ListBuffer[Double]()
     val meta = index.meta
 
-    lb += meta.hashTables.length
-    lb += meta.m
-    lb += meta.radius
-    lb += meta.hashTables.head.functions.size
+    lb += math.max(1.0, meta.hashTables.length / 100.0)
+    lb += math.max(1.0, meta.m / 1000.0)
+    lb += math.max(1.0, meta.radius / 10.0)
+    lb += math.max(1.0, meta.hashTables.head.functions.size / 100.0)
 
     lb.toSeq
   }
@@ -228,9 +265,9 @@ private[optimizer] class SVMOptimizerHeuristic(defaultNRuns: Int = 100)(@transie
     val lb = new ListBuffer[Double]()
     val meta = index.meta
 
-    lb += meta.ki
-    lb += meta.ks
-    lb += meta.refs.length
+    lb += math.max(1.0, meta.ki / 100.0)
+    lb += math.max(1.0, meta.ks / 100.0)
+    lb += math.max(1.0, meta.refs.length / 100.0)
 
     lb.toSeq
   }
@@ -244,8 +281,8 @@ private[optimizer] class SVMOptimizerHeuristic(defaultNRuns: Int = 100)(@transie
     val lb = new ListBuffer[Double]()
     val meta = index.meta
 
-    lb += meta.models.length
-    lb += meta.nsq
+    lb += math.max(1.0, meta.models.length / 100.0)
+    lb += math.max(1.0, meta.nsq / 500.0)
 
     lb.toSeq
   }
@@ -259,7 +296,7 @@ private[optimizer] class SVMOptimizerHeuristic(defaultNRuns: Int = 100)(@transie
     val lb = new ListBuffer[Double]()
     val meta = index.meta
 
-    lb += meta.eigenfunctions.size
+    lb += math.max(1.0, meta.eigenfunctions.size / 100.0)
 
     lb.toSeq
   }
@@ -273,7 +310,7 @@ private[optimizer] class SVMOptimizerHeuristic(defaultNRuns: Int = 100)(@transie
     val lb = new ListBuffer[Double]()
     val meta = index.meta
 
-    lb += meta.marks.length
+    lb += math.max(1.0, meta.marks.length / 500.0)
 
     lb.toSeq
   }
@@ -287,8 +324,8 @@ private[optimizer] class SVMOptimizerHeuristic(defaultNRuns: Int = 100)(@transie
     val lb = new ListBuffer[Double]()
     val meta = index.meta.asInstanceOf[VAPlusIndexMetaData]
 
-    lb += meta.marks.length
-    lb += meta.pca.k
+    lb += math.max(1.0, meta.marks.length / 500.0)
+    lb += math.max(1.0, meta.pca.k / 100.0)
 
     lb.toSeq
   }

@@ -16,7 +16,10 @@ import org.vitrivr.adampro.utils.Logging
   */
 private[optimizer] abstract class OptimizerHeuristic(protected val name : String, private val defaultNRuns : Int = 100)(@transient implicit val ac: AdamContext) extends Serializable with Logging {
 
-  case class Measurement(precision: Double, recall: Double, time: Double)
+  case class Measurement(tp : Int, precision: Double, recall: Double, time: Double){
+    def toConfidence() : Confidence = Confidence(2 * (precision * recall) / (precision + recall))
+  }
+  case class Confidence(confidence : Double)
 
   /**
     *
@@ -71,7 +74,7 @@ private[optimizer] abstract class OptimizerHeuristic(protected val name : String
         val precision = 1.toFloat
         val time = t2 - t1
 
-        Measurement(precision, recall, time)
+        Measurement(nnq.k, precision, recall, time)
     }
 
     tracker.cleanAll()
@@ -100,12 +103,17 @@ private[optimizer] abstract class OptimizerHeuristic(protected val name : String
 
         val ret = res.map(_.getAs[Any](0)).toSet
 
-        val recall = rel.intersect(ret).size / rel.size
-        val precision = rel.intersect(ret).size / ret.size
+        val tp = rel.intersect(ret).size
+
+        val nrelevant = rel.size
+        val nretrieved = ret.size
+
+        val recall = tp.toDouble / nrelevant.toDouble
+        val precision = tp.toDouble / nretrieved.toDouble
         val time = t2 - t1
 
 
-        Measurement(precision, recall, time)
+        Measurement(tp, precision, recall, time)
     }
 
     tracker.cleanAll()

@@ -14,13 +14,11 @@ case class TrainingSample(f: DenseVector[Double], time: Double)
   * Ivan Giangreco
   * November 2016
   */
-class PegasosSVM(private val dims: Int, private val lambda: Double = 0.01, private val batchSize: Int = 5, private val epsilon: Double = 0.01) extends Logging with Serializable {
+class PegasosSVM(private val dims: Int, private val lambda: Double = 100, private val batchSize: Int = 5, private val epsilon: Double = 0.01) extends Logging with Serializable {
   private val MAX_ITER = 5000
 
   private var w = DenseVector.zeros[Double](dims)
-  //possibly use Random
-  private var b = 0.toDouble
-  //2 * Random.nextDouble() - 1
+  private var b = 2 * Random.nextDouble() - 1
   private var t = 1
 
 
@@ -41,7 +39,7 @@ class PegasosSVM(private val dims: Int, private val lambda: Double = 0.01, priva
 
       data.foreach { datum =>
         val x = datum.f //vector
-      val y = datum.time //measurement
+        val y = datum.time //measurement
 
         //epsilon insensitive loss
         val loss = math.abs((w.t * x + b) - y) - epsilon

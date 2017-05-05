@@ -543,6 +543,9 @@ class DataDefinitionRPC extends AdamDefinitionGrpc.AdamDefinition with Logging {
   override def adaptScanMethods(request: AdaptScanMethodsMessage): Future[AckMessage] = {
     log.debug("rpc call for benchmarking entity and index")
 
+    val entity = Entity.load(request.entity)
+    assert(entity.isSuccess)
+
     val ico = request.ic match {
       case IndexCollection.EXISTING_INDEXES => ExistingIndexCollectionOption
       case IndexCollection.NEW_INDEXES => NewIndexCollectionOption
@@ -567,7 +570,7 @@ class DataDefinitionRPC extends AdamDefinitionGrpc.AdamDefinition with Logging {
 
     val optResults = optimizers.map{
       optimizer =>
-        optimizer.train(ic, qc, request.options)
+        optimizer.train(entity.get, ic, qc, request.options)
     }
 
     if (optResults.forall(_.isSuccess)) {

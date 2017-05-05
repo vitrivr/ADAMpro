@@ -20,7 +20,7 @@ import scala.util.Random
   * September 2016
   */
 private[query] trait QueryCollection extends Logging with Serializable {
-  def getQueries: Seq[NearestNeighbourQuery]
+  val getQueries: Seq[NearestNeighbourQuery]
 }
 
 /**
@@ -35,7 +35,7 @@ private[optimizer] case class RandomQueryCollection(entityname: EntityName, attr
     this(entityname, attribute, params.get("nqueries").get.toInt)
   }
 
-  override def getQueries: Seq[NearestNeighbourQuery] = {
+  lazy val getQueries: Seq[NearestNeighbourQuery] = {
     val entity = Entity.load(entityname).get
     val n = entity.count
 
@@ -61,7 +61,7 @@ private[optimizer] case class LoggedQueryCollection(entityname: EntityName, attr
     this(entityname, attribute, params.get("nqueries").map(_.toInt))
   }
 
-  override def getQueries: Seq[NearestNeighbourQuery] = {
+  lazy val getQueries: Seq[NearestNeighbourQuery] = {
     var queries = SparkStartup.logOperator.getQueries(entityname, attribute).get
 
     //sample

@@ -4,7 +4,7 @@ import java.io.File
 import java.util.Properties
 
 import org.vitrivr.adampro.chronos.EvaluationJob
-import org.vitrivr.adampro.chronos.utils.CreationHelper
+import org.vitrivr.adampro.chronos.utils.{CreationHelper, Helpers}
 import org.vitrivr.adampro.rpc.datastructures.RPCQueryObject
 
 import scala.collection.mutable.ListBuffer
@@ -111,5 +111,47 @@ class EQEExecutor(job: EvaluationJob, setStatus: (Double) => (Boolean), inputDir
     }
 
     prop
+  }
+
+  /**
+    * Gets single query.
+    *
+    * @param k
+    * @param sparseQuery
+    * @return
+    */
+  override protected def getQuery(entityname: String, k: Int, sparseQuery: Boolean): RPCQueryObject = {
+    val lb = new ListBuffer[(String, String)]()
+
+    lb.append("entityname" -> entityname)
+
+    lb.append("attribute" -> job.data_attributename.getOrElse(FEATURE_VECTOR_ATTRIBUTENAME))
+
+    lb.append("k" -> k.toString)
+
+    lb.append("distance" -> job.query_distance)
+
+    if (job.query_weighted) {
+      lb.append("weights" -> generateFeatureVector(job.data_vector_dimensions, job.data_vector_sparsity, job.data_vector_min, job.data_vector_max).mkString(","))
+    }
+
+    lb.append("query" -> generateFeatureVector(job.data_vector_dimensions, job.data_vector_sparsity, job.data_vector_min, job.data_vector_max).mkString(","))
+
+    if (sparseQuery) {
+      lb.append("sparsequery" -> "true")
+    }
+
+    if (job.execution_withsequential) {
+      lb.append("indexonly" -> "false")
+    }
+
+    lb.append("informationlevel" -> "minimal")
+
+    //confidence level
+    lb.append("confidence" -> job.execution_confidence)
+
+    lb.append("hints" -> job.execution_hint)
+
+    RPCQueryObject(Helpers.generateString(10), job.execution_name, lb.toMap, None)
   }
 }

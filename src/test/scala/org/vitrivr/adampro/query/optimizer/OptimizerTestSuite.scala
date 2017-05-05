@@ -40,7 +40,7 @@ class OptimizerTestSuite extends AdamTestBase with ScalaFutures {
         val optimizer = new SVMOptimizerHeuristic(3)
         val optimizerOp = new QueryOptimizer(optimizer)
 
-        optimizerOp.train(ManualIndexCollection(lb)(ac), RandomQueryCollection(entityname, "feature", 2)(ac), Map())
+        optimizerOp.train(entity.get, ManualIndexCollection(lb)(ac), RandomQueryCollection(entityname, "feature", 2)(ac), Map())
 
         val vec = Seq.fill(ndims)(Vector.nextRandom())
         val nnq = NearestNeighbourQuery("feature", Vector.conv_draw2vec(vec), None, EuclideanDistance, 100, true)

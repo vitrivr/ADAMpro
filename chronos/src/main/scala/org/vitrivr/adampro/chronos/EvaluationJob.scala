@@ -85,6 +85,7 @@ class EvaluationJob(job: ChronosJob) extends ChronosJob(job) {
 
   val execution_nqueries: String = getAttribute(execution, "nqueries", false)
   val execution_nruns: String = getAttribute(execution, "nruns", false)
+  val execution_confidence: String = getAttribute(execution, "confidence", false)
 
 
   val execution_subexecution : Seq[(String, Boolean)] = if(!isEmpty(execution)){

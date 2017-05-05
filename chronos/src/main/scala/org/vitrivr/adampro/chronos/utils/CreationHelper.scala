@@ -125,7 +125,7 @@ object CreationHelper {
         //no index
         logger.info("creating no index for " + entityname)
         Seq()
-      } else if(job.execution_name == "progressive" || job.execution_name == "stochastic" || job.execution_name == "empirical") {
+      } else if(job.general_mode == "pqe" || job.general_mode == "sqe" || job.general_mode == "eqe") {
         job.execution_subexecution.map(x => (x._1.toLowerCase, x._2)).filterNot(_._1 == "sequential").flatMap{ case(indextype, withsequential) =>
           if (client.indexExists(entityname, attributename, indextype).get) {
             logger.info(indextype + " index for " + entityname + " (" + attributename + ") " + "exists already")
