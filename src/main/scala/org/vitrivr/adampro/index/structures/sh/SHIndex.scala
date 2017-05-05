@@ -6,7 +6,7 @@ import org.vitrivr.adampro.datatypes.bitstring.BitString
 import org.vitrivr.adampro.datatypes.vector.Vector._
 import org.vitrivr.adampro.datatypes.vector.MovableFeature
 import org.vitrivr.adampro.helpers.tracker.OperationTracker
-import org.vitrivr.adampro.index.{Index, ResultElement}
+import org.vitrivr.adampro.index.{Index}
 import org.vitrivr.adampro.index.Index.{IndexName, IndexTypeName}
 import org.vitrivr.adampro.index.structures.IndexTypes
 import org.vitrivr.adampro.main.AdamContext
@@ -64,20 +64,12 @@ class SHIndex(override val indexname: IndexName)(@transient override implicit va
       score
     })
 
-    import ac.spark.implicits._
     val res = data
       .withColumn(AttributeNames.distanceColumnName, distUDF(data(AttributeNames.featureIndexColumnName)))
-      .mapPartitions { items =>
-        val handler = new SHResultHandler(k) //use handler to take closest n elements
-        //(using this handler is necessary here, as if the closest element has distance 5, we want all closes elements with distance 5;
-        //the methods provided by Spark (e.g. take) do not allow this
+      .orderBy(AttributeNames.distanceColumnName)
+      .limit(k)
 
-        items.foreach(item => {
-          handler.offer(item, this.pk.name)
-        })
-
-        handler.results.map(x => ResultElement(x.ap_id, x.ap_score)).iterator
-      }.toDF()
+    //here we possibly loose some results, if distance is same for many elements
 
     res
   }
