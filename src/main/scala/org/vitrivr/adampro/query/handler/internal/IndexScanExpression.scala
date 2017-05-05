@@ -85,8 +85,8 @@ case class IndexScanExpression(val index: Index)(val nnq: NearestNeighbourQuery,
     Some(res)
   }
 
-  override def prepareTree(): QueryExpression = {
-    super.prepareTree()
+  override def prepareTree(silent : Boolean = false): QueryExpression = {
+    super.prepareTree(silent)
     if (!nnq.indexOnly) {
       val expr = new SequentialScanExpression(index.entityname)(nnq, id)(Some(this)) //add sequential scan if not only scanning index
       expr.prepared = true

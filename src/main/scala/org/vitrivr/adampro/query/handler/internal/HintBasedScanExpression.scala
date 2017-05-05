@@ -35,6 +35,12 @@ case class HintBasedScanExpression(private val entityname: EntityName, private v
     expr.evaluate(options)(tracker)
   }
 
+  override def prepareTree(silent : Boolean = false): QueryExpression = {
+    super.prepareTree(silent)
+    expr = expr.prepareTree(silent = true) //expr needs to be replaced
+    this
+  }
+
   override def equals(that: Any): Boolean =
     that match {
       case that: HintBasedScanExpression =>

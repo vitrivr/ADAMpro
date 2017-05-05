@@ -43,13 +43,18 @@ abstract class QueryExpression(id: Option[String]) extends Serializable with Log
   /**
     * Makes adjustments to the tree. Note that you should always perform prepareTree before running evaluate; furthermore,
     * you should perform evaluate() on the "prepared expression" (i.e. on what this method returns) and not on the expression generally
+    *
+    * @param silent log warning if already prepared
+    * @return
     */
-  def prepareTree(): QueryExpression = {
+  def prepareTree(silent : Boolean = false): QueryExpression = {
     if (!prepared) {
       prepared = true
       _children = _children.map(_.prepareTree())
     } else {
-      log.warn("expression was already prepared, still preparing children")
+      if(!silent){
+        log.warn("expression was already prepared, still preparing children")
+      }
       _children = _children.map(_.prepareTree())
     }
 

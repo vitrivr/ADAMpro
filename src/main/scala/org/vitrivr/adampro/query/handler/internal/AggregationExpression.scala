@@ -22,12 +22,22 @@ import scala.concurrent.{Await, Future}
   * Ivan Giangreco
   * April 2016
   */
-abstract class AggregationExpression(private val left: QueryExpression, private val right: QueryExpression, order: ExpressionEvaluationOrder.Order = ExpressionEvaluationOrder.Parallel, options: Map[String, String] = Map(), id: Option[String] = None)(@transient implicit val ac: AdamContext) extends QueryExpression(id) {
+abstract class AggregationExpression(private val leftExpression: QueryExpression, private val rightExpression: QueryExpression, order: ExpressionEvaluationOrder.Order = ExpressionEvaluationOrder.Parallel, options: Map[String, String] = Map(), id: Option[String] = None)(@transient implicit val ac: AdamContext) extends QueryExpression(id) {
+  var left = leftExpression
+  var right = rightExpression
   _children ++= Seq(left, right)
 
   override val info = ExpressionDetails(None, Some("Aggregation Expression (" + aggregationName + ", " + order.toString + ")"), id, None)
 
   def aggregationName: String
+
+  override def prepareTree(silent : Boolean = false): QueryExpression = {
+    super.prepareTree()
+
+    left = left.prepareTree(silent = true) //expr needs to be replaced
+    right = right.prepareTree(silent = true)
+    this
+  }
 
   override protected def run(options: Option[QueryEvaluationOptions], filter: Option[DataFrame] = None)(tracker: OperationTracker)(implicit ac: AdamContext): Option[DataFrame] = {
     log.debug("run aggregation operation " + aggregationName + " between " + left.getClass.getName + " and " + right.getClass.getName + "  ordered " + order.toString)
