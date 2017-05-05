@@ -488,8 +488,13 @@ case class Entity(entityname: EntityName)(@transient implicit val ac: AdamContex
     */
   private def checkVersions(): Unit = {
     if (currentVersion < mostRecentVersion.value) {
-      log.trace("no longer most up to date version, marking stale")
-      markStale()
+
+      _schema = None
+      _data.map(_.unpersist())
+      _data = None
+      ac.entityLRUCache.invalidate(entityname)
+
+      currentVersion = mostRecentVersion.value
     }
   }
 
