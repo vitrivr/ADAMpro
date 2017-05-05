@@ -220,16 +220,6 @@ class PQEExecutor(job: EvaluationJob, setStatus: (Double) => (Boolean), inputDir
         } //set property
     }
 
-    //get overview for plotting
-    val times = results.map {
-      case (runid, result) => {
-        (runid, result.filter(_._1.endsWith("_measuredtime")).map { case (desc, time) => (desc.replace("_measuredtime", ""), time.toLong) })
-      }
-    }
-    val quality = results.map {
-      case (runid, result) =>
-        (runid, result.filter(_._1.endsWith("_resultquality")).map { case (desc, res) => (desc.replace("_resultquality", ""), res.toDouble) })
-    }
 
     prop.setProperty("summary_data_vector_dimensions", job.data_vector_dimensions.toString)
     prop.setProperty("summary_data_tuples", job.data_tuples.toString)
@@ -237,22 +227,32 @@ class PQEExecutor(job: EvaluationJob, setStatus: (Double) => (Boolean), inputDir
     prop.setProperty("summary_execution_name", job.execution_name)
     prop.setProperty("summary_execution_subtype", job.execution_subexecution.map(_._1).mkString(", "))
 
-    prop.setProperty("summary_runs", times.length.toString)
 
-    times.map(_._2).zipWithIndex.foreach{
-      case(times, run) =>
-        prop.setProperty("summary_desc_" + run, times.map{case(desc, t) => desc}.mkString(","))
+    //get overview for plotting
+    val summary = results.zipWithIndex.map {
+      case (result, runid) => {
+        val times = result._2.filter(_._1.endsWith("_measuredtime")).map { case (desc, time) => (desc.replace("_measuredtime", ""), time.toLong) }.toMap
+        val qualities = result._2.filter(_._1.endsWith("_resultquality")).map { case (desc, res) => (desc.replace("_resultquality", ""), res.toDouble) }.toMap
+
+        val descLb = new ListBuffer[String]()
+        val timeLb = new ListBuffer[Long]()
+        val qualityLb = new ListBuffer[Double]()
+
+        val ress = times.keys.map { key =>
+          descLb += key
+          timeLb += times.get(key).get
+          qualityLb += qualities.get(key).getOrElse(-1.0)
+        }
+
+
+        prop.setProperty("summary_desc_" + runid, descLb.mkString(","))
+        prop.setProperty("summary_totaltime_" + runid, timeLb.mkString(","))
+        prop.setProperty("summary_resultquality_" + runid, qualityLb.mkString(","))
+
+      }
     }
 
-    times.map(_._2).zipWithIndex.foreach{
-      case(times, run) =>
-        prop.setProperty("summary_totaltime_" + run, times.map{case(desc, t) => t}.mkString(","))
-    }
-
-    quality.map(_._2).zipWithIndex.foreach{
-      case(qualities, run) =>
-        prop.setProperty("summary_resultquality_" + run, qualities.map{case(desc, q) => q}.mkString(","))
-    }
+    prop.setProperty("summary_runs", summary.length.toString)
 
     prop
   }
