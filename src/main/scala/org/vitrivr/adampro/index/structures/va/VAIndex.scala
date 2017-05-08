@@ -88,6 +88,8 @@ class VAIndex(override val indexname: IndexName)(@transient override implicit va
       .withColumn("ap_lbound", distUDF(lboundsBc)(col("ap_cells")))
       .withColumn("ap_ubound", distUDF(uboundsBc)(col("ap_cells"))) //note that this is computed lazy!
 
+    val pk = this.pk.name
+
     val res = tmp
       .mapPartitions(p => {
       //in here  we compute for each partition the k nearest neighbours and collect the results
@@ -95,7 +97,7 @@ class VAIndex(override val indexname: IndexName)(@transient override implicit va
 
       while (p.hasNext) {
         val current = p.next()
-        localRh.offer(current, this.pk.name)
+        localRh.offer(current, pk)
       }
 
       localRh.results.map(x => ResultElement(x.ap_id, x.ap_lower)).iterator
