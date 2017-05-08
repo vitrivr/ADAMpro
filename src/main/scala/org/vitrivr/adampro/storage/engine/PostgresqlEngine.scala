@@ -72,7 +72,7 @@ class PostgresqlEngine(private val url: String, private val user: String, privat
     }
   }
 
-  lazy val props = {
+  val props = {
     val props = new Properties()
     props.put("url", url)
     props.put("user", user)
@@ -82,7 +82,7 @@ class PostgresqlEngine(private val url: String, private val user: String, privat
     props
   }
 
-  lazy val propsMap = props.keySet().toArray.map(key => key.toString -> props.get(key).toString).toMap
+  val propsMap = props.keySet().toArray.map(key => key.toString -> props.get(key).toString).toMap
 
   /**
     * Create the entity.

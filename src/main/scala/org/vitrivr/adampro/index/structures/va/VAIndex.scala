@@ -26,16 +26,16 @@ import org.vitrivr.adampro.helpers.tracker.OperationTracker
 class VAIndex(override val indexname: IndexName)(@transient override implicit val ac: AdamContext)
   extends Index(indexname)(ac) {
 
-  lazy val meta = metadata.get.asInstanceOf[VAIndexMetaData]
+  val meta = metadata.get.asInstanceOf[VAIndexMetaData]
 
-  override lazy val indextypename: IndexTypeName = meta.signatureGenerator match {
+  override val indextypename: IndexTypeName = meta.signatureGenerator match {
     case fsg: FixedSignatureGenerator => IndexTypes.VAFINDEX
     case vsg: VariableSignatureGenerator => IndexTypes.VAVINDEX
   }
 
-  override lazy val lossy: Boolean = false
-  override lazy val confidence = 1.toFloat
-  override lazy val score : Float = if(indextypename.equals(IndexTypes.VAFINDEX)){
+  override val lossy: Boolean = false
+  override val confidence = 1.toFloat
+  override val score : Float = if(indextypename.equals(IndexTypes.VAFINDEX)){
     0.9.toFloat //slightly less weight if fixed variable
   } else {
     1.toFloat

@@ -19,15 +19,15 @@ import org.vitrivr.adampro.query.distance.DistanceFunction
   * see H. Ferhatosmanoglu, E. Tuncel, D. Agrawal, A. El Abbadi (2006): High dimensional nearest neighbor searching. Information Systems.
   */
 class VAPlusIndex(override val indexname: IndexName)(@transient override implicit val ac: AdamContext) extends VAIndex(indexname)(ac) {
-  override lazy val indextypename: IndexTypeName = IndexTypes.VAPLUSINDEX
+  override val indextypename: IndexTypeName = IndexTypes.VAPLUSINDEX
 
-  override lazy val lossy: Boolean = meta.asInstanceOf[VAPlusIndexMetaData].approximate
-  override lazy val confidence: Float = if (meta.asInstanceOf[VAPlusIndexMetaData].approximate) {
+  override val lossy: Boolean = meta.asInstanceOf[VAPlusIndexMetaData].approximate
+  override val confidence: Float = if (meta.asInstanceOf[VAPlusIndexMetaData].approximate) {
     0.9.toFloat
   } else {
     1.0.toFloat
   }
-  override lazy val score: Float = if (meta.asInstanceOf[VAPlusIndexMetaData].approximate) {
+  override val score: Float = if (meta.asInstanceOf[VAPlusIndexMetaData].approximate) {
     0.9.toFloat
   } else {
     1.0.toFloat

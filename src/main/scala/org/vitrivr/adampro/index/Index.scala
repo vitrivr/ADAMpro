@@ -315,10 +315,10 @@ abstract class Index(val indexname: IndexName)(@transient implicit val ac: AdamC
     val current = this
 
     val index = new Index(newName.getOrElse(current.indexname))(current.ac) {
-      override lazy val entityname = current.entityname
-      override lazy val pk = current.pk
+      override val entityname = current.entityname
+      override val pk = current.pk
       override lazy val entity = current.entity
-      override lazy val attribute = current.attribute
+      override val attribute = current.attribute
 
       def confidence: Float = current.confidence
 

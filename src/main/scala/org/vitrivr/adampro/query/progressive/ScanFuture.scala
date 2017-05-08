@@ -52,5 +52,5 @@ class ScanFuture[U](expression: QueryExpression, filter : Option[DataFrame], onC
       log.error("error when running progressive query", res)
   })
 
-  lazy val confidence: Option[Float] = expression.info.confidence
+  val confidence: Option[Float] = expression.info.confidence
 }
