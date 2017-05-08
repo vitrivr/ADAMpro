@@ -39,7 +39,7 @@ abstract class Index(val indexname: IndexName)(@transient implicit val ac: AdamC
   /**
     *
     */
-  lazy val pk = SparkStartup.catalogOperator.getPrimaryKey(entityname).get
+  val pk = SparkStartup.catalogOperator.getPrimaryKey(entityname).get
 
   /**
     * Gets the entity corresponding to the given index.
@@ -49,12 +49,12 @@ abstract class Index(val indexname: IndexName)(@transient implicit val ac: AdamC
   /**
     * Gets the entityname corresponding to the given index.
     */
-  lazy val entityname = SparkStartup.catalogOperator.getEntityName(indexname).get
+  val entityname = SparkStartup.catalogOperator.getEntityName(indexname).get
 
   /**
     * Gets the indexed attribute.
     */
-  lazy val attribute = SparkStartup.catalogOperator.getIndexAttribute(indexname).get
+  val attribute = SparkStartup.catalogOperator.getIndexAttribute(indexname).get
 
   /**
     * Confidence towards the index. Confidence of 1 means very confident in index results (i.e., precise results).
