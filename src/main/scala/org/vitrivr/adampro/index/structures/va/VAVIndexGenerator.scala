@@ -60,22 +60,22 @@ class VAVIndexGenerator(nbits_total: Option[Int], nbits_dim : Option[Int], marks
     log.trace("VA-File (variable) started training")
 
     //data
-    val dTrainData = trainData.map(x => x.ap_indexable.map(x => x.toDouble).toArray)
+    val doubleTrainData = trainData.map(x => x.ap_indexable.map(x => x.toDouble).toArray)
 
-    val dataMatrix = DenseMatrix(dTrainData.toList: _*)
+    val dataMatrix = DenseMatrix(doubleTrainData.toList: _*)
 
-    val nfeatures = dTrainData.head.length
-    val numComponents = math.min(nfeatures, nbits_total.getOrElse(nfeatures * nbits_dim.getOrElse(8)))
+    val ndims = doubleTrainData.head.length
+    val nbits = math.min(ndims, nbits_total.getOrElse(ndims * nbits_dim.getOrElse(8)))
 
     // pca
     val variance = diag(cov(dataMatrix, center = true)).toArray
     val sumVariance = variance.sum
 
     // compute shares of bits
-    val modes = variance.map(variance => (variance / sumVariance * nbits_total.getOrElse(nfeatures * nbits_dim.getOrElse(8))).toInt)
+    val bitsPerDim = variance.map(variance => (variance / sumVariance * nbits).toInt)
 
-    val signatureGenerator = new VariableSignatureGenerator(modes)
-    val marks = marksGenerator.getMarks(trainData, modes.map(x => 2 << (x - 1)))
+    val signatureGenerator = new VariableSignatureGenerator(bitsPerDim)
+    val marks = marksGenerator.getMarks(trainData, bitsPerDim.map(x => 1 << x))
 
     log.trace("VA-File (variable) finished training")
 
@@ -87,11 +87,11 @@ class VAVIndexGenerator(nbits_total: Option[Int], nbits_dim : Option[Int], marks
     *
     */
   @inline private def getCells(f: Iterable[VectorBase], marks: Seq[Seq[VectorBase]]): Seq[Int] = {
-    f.toArray.zip(marks).map {
+    f.zip(marks).map {
       case (x, l) =>
         val index = l.toArray.indexWhere(p => p >= x, 1)
         if (index == -1) l.length - 1 - 1 else index - 1
-    }
+    }.toSeq
   }
 }
 
