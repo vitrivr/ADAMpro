@@ -311,26 +311,26 @@ class AdamController(rpcClient: RPCClient) extends Controller with Logging {
   /**
     *
     */
-  post("/search/progressive") { request: SearchRequest =>
-    val res = rpcClient.doProgressiveQuery(request.toRPCQueryObject, processProgressiveResults(request.id), completedProgressiveResults)
+  post("/search/parallel") { request: SearchRequest =>
+    val res = rpcClient.doParallelQuery(request.toRPCQueryObject, processProgressiveResults(request.id), completedProgressiveResults)
 
     progTempResults.synchronized {
       if (!progTempResults.contains(request.id)) {
-        val queue = mutable.Queue[SearchProgressiveIntermediaryResponse]()
+        val queue = mutable.Queue[SearchParallelIntermediaryResponse]()
         progTempResults.put(request.id, queue)
       } else {
         log.error("query id is already being used")
       }
     }
 
-    response.ok.json(SearchProgressiveStartResponse(request.id))
+    response.ok.json(SearchParallelStartResponse(request.id))
   }
 
 
   private def processProgressiveResults(id: String)(res: Try[RPCQueryResults]): Unit = {
     if (res.isSuccess) {
       val results = res.get
-      progTempResults.get(id).get += SearchProgressiveIntermediaryResponse(id, results.confidence, results.info.getOrElse("indextype", ""), results.time, results.results, ProgressiveQueryStatus.RUNNING)
+      progTempResults.get(id).get += SearchParallelIntermediaryResponse(id, results.confidence, results.info.getOrElse("indextype", ""), results.time, results.results, ProgressiveQueryStatus.RUNNING)
     } else {
       log.error("error in progressive results processing", res.failed.get)
       completedProgressiveResults(id, res.failed.get.getMessage, ProgressiveQueryStatus.ERROR)
@@ -338,14 +338,14 @@ class AdamController(rpcClient: RPCClient) extends Controller with Logging {
   }
 
 
-  val progTempResults = mutable.HashMap[String, mutable.Queue[SearchProgressiveIntermediaryResponse]]()
+  val progTempResults = mutable.HashMap[String, mutable.Queue[SearchParallelIntermediaryResponse]]()
 
   private def completedProgressiveResults(id: String): Unit = {
     completedProgressiveResults(id, "", ProgressiveQueryStatus.FINISHED)
   }
 
   private def completedProgressiveResults(id: String, message: String, newStatus: ProgressiveQueryStatus.Value): Unit = {
-    progTempResults.get(id).get += SearchProgressiveIntermediaryResponse(id, 0.0, message, 0, Seq(), newStatus)
+    progTempResults.get(id).get += SearchParallelIntermediaryResponse(id, 0.0, message, 0, Seq(), newStatus)
     lazy val f = Future {
       Thread.sleep(10000);
       true
@@ -358,13 +358,13 @@ class AdamController(rpcClient: RPCClient) extends Controller with Logging {
   /**
     *
     */
-  get("/query/progressive/temp") { request: Request =>
+  get("/query/parallel/temp") { request: Request =>
     val id = request.params.get("id").get
 
     progTempResults.synchronized {
       if (progTempResults.get(id).isDefined && !progTempResults.get(id).get.isEmpty) {
         val result = progTempResults.get(id).get.dequeue()
-        response.ok.json(SearchProgressiveResponse(result, result.status.toString))
+        response.ok.json(SearchParallelResponse(result, result.status.toString))
       } else {
         response.ok
       }

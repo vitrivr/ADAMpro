@@ -632,18 +632,18 @@ class RPCClient(channel: ManagedChannel,
   }
 
   /**
-    * Perform a progressive search.
+    * Perform a parallel search.
     *
     * @param qo        search request
     * @param next      function for next result
     * @param completed function for final result
     * @return
     */
-  def doProgressiveQuery(qo: RPCQueryObject, next: (Try[RPCQueryResults]) => (Unit), completed: (String) => (Unit)): Try[Seq[RPCQueryResults]] = {
-    execute("progressive query operation") {
+  def doParallelQuery(qo: RPCQueryObject, next: (Try[RPCQueryResults]) => (Unit), completed: (String) => (Unit)): Try[Seq[RPCQueryResults]] = {
+    execute("parallel query operation") {
       val so = new StreamObserver[QueryResultsMessage]() {
         override def onError(throwable: Throwable): Unit = {
-          log.error("error in progressive querying", throwable)
+          log.error("error in parallel querying", throwable)
         }
 
         override def onCompleted(): Unit = {
@@ -651,7 +651,7 @@ class RPCClient(channel: ManagedChannel,
         }
 
         override def onNext(qr: QueryResultsMessage): Unit = {
-          log.info("new progressive results arrived")
+          log.info("new parallel results arrived")
 
           if (qr.ack.get.code == AckMessage.Code.OK && qr.responses.nonEmpty) {
             next(Success(new RPCQueryResults(qr.responses.head)))
@@ -661,7 +661,7 @@ class RPCClient(channel: ManagedChannel,
         }
       }
 
-      searcher.doProgressiveQuery(qo.getQueryMessage, so)
+      searcher.doParallelQuery(qo.getQueryMessage, so)
       Success(null)
     }
   }

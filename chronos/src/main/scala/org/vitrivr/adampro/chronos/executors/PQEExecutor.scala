@@ -136,8 +136,8 @@ class PQEExecutor(job: EvaluationJob, setStatus: (Double) => (Boolean), inputDir
     val t1 = System.currentTimeMillis
     var t2 = System.currentTimeMillis - 1 //returning -1 on error
 
-    //do progressive query
-    client.doProgressiveQuery(qo,
+    //do parallel query
+    client.doParallelQuery(qo,
       next = (res) => ({
         val t3 = System.currentTimeMillis() - t1
         ress += ((res, t3))

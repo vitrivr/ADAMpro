@@ -25,7 +25,7 @@ import org.vitrivr.adampro.query.handler.internal.ProjectionExpression._
 import org.vitrivr.adampro.query.handler.internal._
 import org.vitrivr.adampro.query.information.InformationLevels
 import org.vitrivr.adampro.query.information.InformationLevels.{InformationLevel, LAST_STEP_ONLY}
-import org.vitrivr.adampro.query.progressive.{QueryHintsProgressivePathChooser, SimpleProgressivePathChooser}
+import org.vitrivr.adampro.query.parallel.{QueryHintsParallelPathChooser, SimpleParallelPathChooser}
 import org.vitrivr.adampro.query.query.{BooleanQuery, NearestNeighbourQuery, Predicate}
 import org.vitrivr.adampro.query.{QueryCacheOptions, QueryHints}
 import org.vitrivr.adampro.utils.Logging
@@ -399,9 +399,9 @@ private[rpc] object RPCHelperMethods extends Logging {
     * @return
     */
   def preparePaths(hints: Seq[String])(implicit ac: AdamContext) = if (hints.isEmpty) {
-    new SimpleProgressivePathChooser()
+    new SimpleParallelPathChooser()
   } else {
-    new QueryHintsProgressivePathChooser(hints.map(QueryHints.withName(_).get))
+    new QueryHintsParallelPathChooser(hints.map(QueryHints.withName(_).get))
   }
 
   /**

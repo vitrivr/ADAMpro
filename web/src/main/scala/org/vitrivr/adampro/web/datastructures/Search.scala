@@ -27,9 +27,9 @@ private[web] case class SearchResponseInfo(id: String, time: Long, results: Seq[
   }
 }
 
-private[web] case class SearchProgressiveResponse(results: SearchProgressiveIntermediaryResponse, status: String)
+private[web] case class SearchParallelResponse(results: SearchParallelIntermediaryResponse, status: String)
 
-private[web] case class SearchProgressiveStartResponse(id: String)
+private[web] case class SearchParallelStartResponse(id: String)
 
-private[web] case class SearchProgressiveIntermediaryResponse(id: String, confidence: Double, source: String, time: Long, results: Seq[Map[String, String]], status: ProgressiveQueryStatus.Value)
+private[web] case class SearchParallelIntermediaryResponse(id: String, confidence: Double, source: String, time: Long, results: Seq[Map[String, String]], status: ProgressiveQueryStatus.Value)
 

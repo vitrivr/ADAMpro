@@ -154,7 +154,7 @@ case class RPCQueryObject(var id: String, var operation: String, var options: Ma
     */
   private def qm(): QueryMessage = {
     val from =
-      if (operation == "progressive" || operation == "empirical") {
+      if (operation == "parallel" || operation == "empirical") {
         FromMessage().withEntity(entity)
       } else if (targets.isEmpty || targets.get.isEmpty) {
       //SubExpressionQueryMessage().withQm(QueryMessage(queryid = "sequential", from = Some(FromMessage().withEntity(entity)), nnq = nnq, hints = Seq("sequential")))

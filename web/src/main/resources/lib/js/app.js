@@ -646,10 +646,10 @@ function searchCompound(params, handler) {
  * @param updateHandler
  * @param errorHandler
  */
-function searchProgressive(id, params, successHandler, updateHandler, errorHandler) {
+function searchParallel(id, params, successHandler, updateHandler, errorHandler) {
     startTask();
 
-    $.ajax(ADAM_CLIENT_HOST + "/search/progressive", {
+    $.ajax(ADAM_CLIENT_HOST + "/search/parallel", {
         data: JSON.stringify(params),
         contentType: 'application/json',
         type: 'POST',
@@ -657,7 +657,7 @@ function searchProgressive(id, params, successHandler, updateHandler, errorHandl
             successHandler(data);
 
             var dataPollIntervalId = setInterval(function () {
-                $.ajax(ADAM_CLIENT_HOST + "/query/progressive/temp?id=" + id, {
+                $.ajax(ADAM_CLIENT_HOST + "/query/parallel/temp?id=" + id, {
                     contentType: 'application/json',
                     type: 'GET',
                     success: function (data) {

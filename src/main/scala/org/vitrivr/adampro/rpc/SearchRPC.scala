@@ -8,7 +8,8 @@ import org.vitrivr.adampro.helpers.tracker.OperationTracker
 import org.vitrivr.adampro.main.{AdamContext, SparkStartup}
 import org.vitrivr.adampro.query.QueryHints
 import org.vitrivr.adampro.query.optimizer.OptimizerOp
-import org.vitrivr.adampro.query.progressive.{ProgressiveObservation, QueryHintsProgressivePathChooser, SimpleProgressivePathChooser}
+import org.vitrivr.adampro.query.parallel.{QueryHintsParallelPathChooser, SimpleParallelPathChooser}
+import org.vitrivr.adampro.query.progressive.ProgressiveObservation
 import org.vitrivr.adampro.utils.Logging
 
 import scala.concurrent.Future
@@ -190,8 +191,8 @@ class SearchRPC extends AdamSearchGrpc.AdamSearch with Logging {
     * @param request
     * @param responseObserver
     */
-  override def doProgressiveQuery(request: QueryMessage, responseObserver: StreamObserver[QueryResultsMessage]): Unit = {
-    time("rpc call for progressive query operation") {
+  override def doParallelQuery(request: QueryMessage, responseObserver: StreamObserver[QueryResultsMessage]): Unit = {
+    time("rpc call for parallel query operation") {
       try {
         //track on next
         val onComplete =
@@ -208,15 +209,15 @@ class SearchRPC extends AdamSearchGrpc.AdamSearch with Logging {
           }
 
         val pathChooser = if (request.hints.isEmpty) {
-          new SimpleProgressivePathChooser()
+          new SimpleParallelPathChooser()
         } else {
-          new QueryHintsProgressivePathChooser(request.hints.map(QueryHints.withName(_).get))
+          new QueryHintsParallelPathChooser(request.hints.map(QueryHints.withName(_).get))
         }
 
         val nnq = if (request.nnq.isDefined) {
           RPCHelperMethods.prepareNNQ(request.nnq.get).get
         } else {
-          throw new GeneralAdamException("nearest neighbour query necessary for progressive query")
+          throw new GeneralAdamException("nearest neighbour query necessary for parallel query")
         }
         val bq = if (request.bq.isDefined) {
           Some(RPCHelperMethods.prepareBQ(request.bq.get).get)
@@ -228,7 +229,7 @@ class SearchRPC extends AdamSearchGrpc.AdamSearch with Logging {
 
         //TODO: change here, so that we do not need to rely on "getEntity"
         val tracker = new OperationTracker()
-        val pqtracker = QueryOp.progressive(request.from.get.getEntity, nnq, bq, pathChooser, onComplete, evaluationOptions)(tracker)
+        val pqtracker = QueryOp.parallel(request.from.get.getEntity, nnq, bq, pathChooser, onComplete, evaluationOptions)(tracker)
 
         //track on completed
         while (!pqtracker.get.isCompleted) {
@@ -254,8 +255,8 @@ class SearchRPC extends AdamSearchGrpc.AdamSearch with Logging {
     * @param request
     * @param responseObserver
     */
-  override def doAdvancingQuery(request: QueryMessage, responseObserver: StreamObserver[QueryResultsMessage]): Unit = {
-    time("rpc call for advancing query operation") {
+  override def doProgressiveQuery(request: QueryMessage, responseObserver: StreamObserver[QueryResultsMessage]): Unit = {
+    time("rpc call for progressive query operation") {
       try {
         //track on next
         val onComplete =
@@ -272,9 +273,9 @@ class SearchRPC extends AdamSearchGrpc.AdamSearch with Logging {
           }
 
         val pathChooser = if (request.hints.isEmpty) {
-          new SimpleProgressivePathChooser()
+          new SimpleParallelPathChooser()
         } else {
-          new QueryHintsProgressivePathChooser(request.hints.map(QueryHints.withName(_).get))
+          new QueryHintsParallelPathChooser(request.hints.map(QueryHints.withName(_).get))
         }
 
         val nnq = if (request.nnq.isDefined) {

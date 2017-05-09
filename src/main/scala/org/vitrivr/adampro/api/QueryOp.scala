@@ -7,10 +7,11 @@ import org.vitrivr.adampro.main.AdamContext
 import org.vitrivr.adampro.query.handler.generic.{QueryEvaluationOptions, QueryExpression}
 import org.vitrivr.adampro.query.handler.internal.BooleanFilterExpression.BooleanFilterScanExpression
 import org.vitrivr.adampro.query.handler.internal._
-import org.vitrivr.adampro.query.progressive.{ProgressiveObservation, ProgressivePathChooser, ProgressiveQueryHandler, ProgressiveQueryStatusTracker}
+import org.vitrivr.adampro.query.progressive.ProgressiveObservation
 import org.vitrivr.adampro.query.query.{BooleanQuery, NearestNeighbourQuery}
 import org.apache.spark.sql.DataFrame
 import org.vitrivr.adampro.helpers.tracker.OperationTracker
+import org.vitrivr.adampro.query.parallel.{ParallelPathChooser, ParallelQueryHandler, ParallelQueryStatusTracker}
 
 import scala.concurrent.duration.Duration
 import scala.util.{Success, Try}
@@ -117,35 +118,35 @@ object QueryOp extends GenericOp {
   }
 
   /**
-    * Performs a progressive query, i.e., all indexes and sequential search are started at the same time and results are returned as soon
+    * Performs a parallel query, i.e., all indexes and sequential search are started at the same time and results are returned as soon
     * as they are available. When a precise result is returned, the whole query is stopped.
     *
     * @param entityname  name of entity
     * @param nnq         information for nearest neighbour query
-    * @param pathChooser progressive query path chooser
+    * @param pathChooser parallel query path chooser
     * @param onComplete  operation to perform as soon as one index returns results
     * @param options     options applied when evaluating query
-    * @return a tracker for the progressive query
+    * @return a tracker for the parallel query
     */
-  def progressive[U](entityname: EntityName, nnq: NearestNeighbourQuery, bq: Option[BooleanQuery], pathChooser: ProgressivePathChooser, onComplete: Try[ProgressiveObservation] => U, options: Option[QueryEvaluationOptions] = None)(tracker : OperationTracker)(implicit ac: AdamContext): Try[ProgressiveQueryStatusTracker] = {
-    Success(ProgressiveQueryHandler.progressiveQuery(entityname, nnq, bq, pathChooser, onComplete, options, None)(tracker))
+  def parallel[U](entityname: EntityName, nnq: NearestNeighbourQuery, bq: Option[BooleanQuery], pathChooser: ParallelPathChooser, onComplete: Try[ProgressiveObservation] => U, options: Option[QueryEvaluationOptions] = None)(tracker : OperationTracker)(implicit ac: AdamContext): Try[ParallelQueryStatusTracker] = {
+    Success(ParallelQueryHandler.parallelQuery(entityname, nnq, bq, pathChooser, onComplete, options, None)(tracker))
   }
 
 
   /**
-    * Performs a timed progressive query, i.e., it performs the query for a maximum of the given time limit and returns then the best possible
+    * Performs a timed parallel query, i.e., it performs the query for a maximum of the given time limit and returns then the best possible
     * available results.
     *
     * @param entityname  name of entity
     * @param nnq         information for nearest neighbour query
-    * @param pathChooser progressive query path chooser
+    * @param pathChooser parallel query path chooser
     * @param timelimit   maximum time to wait
     * @param options     options applied when evaluating query
     * @return the results available together with a confidence score
     */
-  def timedProgressive(entityname: EntityName, nnq: NearestNeighbourQuery, bq: Option[BooleanQuery], pathChooser: ProgressivePathChooser, timelimit: Duration, options: Option[QueryEvaluationOptions] = None)(tracker : OperationTracker)(implicit ac: AdamContext): Try[ProgressiveObservation] = {
-    execute("timed progressive query operation") {
-      Success(ProgressiveQueryHandler.timedProgressiveQuery(entityname, nnq, bq, pathChooser, timelimit, options, None)(tracker))
+  def timedParallel(entityname: EntityName, nnq: NearestNeighbourQuery, bq: Option[BooleanQuery], pathChooser: ParallelPathChooser, timelimit: Duration, options: Option[QueryEvaluationOptions] = None)(tracker : OperationTracker)(implicit ac: AdamContext): Try[ProgressiveObservation] = {
+    execute("timed parallel query operation") {
+      Success(ParallelQueryHandler.timedParallelQuery(entityname, nnq, bq, pathChooser, timelimit, options, None)(tracker))
     }
   }
 

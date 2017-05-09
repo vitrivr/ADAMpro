@@ -1,10 +1,11 @@
-package org.vitrivr.adampro.query.progressive
+package org.vitrivr.adampro.query.parallel
 
-import org.vitrivr.adampro.main.AdamContext
-import org.vitrivr.adampro.query.handler.generic.{QueryEvaluationOptions, QueryExpression}
-import org.vitrivr.adampro.utils.Logging
 import org.apache.spark.sql.DataFrame
 import org.vitrivr.adampro.helpers.tracker.OperationTracker
+import org.vitrivr.adampro.main.AdamContext
+import org.vitrivr.adampro.query.handler.generic.{QueryEvaluationOptions, QueryExpression}
+import org.vitrivr.adampro.query.progressive.ProgressiveObservation
+import org.vitrivr.adampro.utils.Logging
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
@@ -17,7 +18,7 @@ import scala.util.{Failure, Success, Try}
   * Ivan Giangreco
   * October 2015
   */
-class ScanFuture[U](expression: QueryExpression, filter : Option[DataFrame], onComplete: Try[ProgressiveObservation] => U, val pqtracker: ProgressiveQueryStatusTracker, options: Option[QueryEvaluationOptions] = None)(tracker : OperationTracker)(implicit ac: AdamContext) extends Logging{
+class ScanFuture[U](expression: QueryExpression, filter : Option[DataFrame], onComplete: Try[ProgressiveObservation] => U, val pqtracker: ParallelQueryStatusTracker, options: Option[QueryEvaluationOptions] = None)(tracker : OperationTracker)(implicit ac: AdamContext) extends Logging{
   pqtracker.register(this)
 
   val t1 = System.currentTimeMillis()
@@ -49,7 +50,7 @@ class ScanFuture[U](expression: QueryExpression, filter : Option[DataFrame], onC
         onComplete(Failure(res))
       }
 
-      log.error("error when running progressive query", res)
+      log.error("error when running parallel query", res)
   })
 
   val confidence: Option[Float] = expression.info.confidence

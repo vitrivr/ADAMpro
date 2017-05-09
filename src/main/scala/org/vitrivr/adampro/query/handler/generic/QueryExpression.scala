@@ -100,12 +100,12 @@ abstract class QueryExpression(id: Option[String]) extends Serializable with Log
         }
 
         Future {
-          tracker.addResult(Success(ProgressiveObservation(status, results, info.confidence.getOrElse(0.toFloat), info.source.getOrElse(""), info.info, t1, t2)))
+          tracker.addObservation(Success(ProgressiveObservation(status, results, info.confidence.getOrElse(0.toFloat), info.source.getOrElse(""), info.info, t1, t2)))
         }
       }
     } catch {
       case e: Exception =>
-        tracker.addResult(Failure(e))
+        tracker.addObservation(Failure(e))
         throw e
     }
 

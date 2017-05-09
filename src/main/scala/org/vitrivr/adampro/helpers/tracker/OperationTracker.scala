@@ -37,10 +37,11 @@ case class OperationTracker(onComplete : Option[(Try[ProgressiveObservation]) =>
   }
 
   /**
-    *
+    * Add a progressive observation.
+    * 
     * @param observation
     */
-  def addResult(observation : Try[ProgressiveObservation]) : Unit = {
+  def addObservation(observation : Try[ProgressiveObservation]) : Unit = {
     if(onComplete.isDefined){
       onComplete.get(observation)
     }

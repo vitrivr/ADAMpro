@@ -15,7 +15,8 @@ import org.vitrivr.adampro.query.distance.Distance.Distance
 import org.vitrivr.adampro.query.distance.{Distance, EuclideanDistance}
 import org.vitrivr.adampro.query.handler.internal.AggregationExpression.{ExpressionEvaluationOrder, FuzzyIntersectExpression, IntersectExpression}
 import org.vitrivr.adampro.query.handler.internal.{CompoundQueryExpression, IndexScanExpression, StochasticIndexQueryExpression}
-import org.vitrivr.adampro.query.progressive.{AllProgressivePathChooser, ProgressiveObservation}
+import org.vitrivr.adampro.query.parallel.AllParallelPathChooser
+import org.vitrivr.adampro.query.progressive.ProgressiveObservation
 import org.vitrivr.adampro.query.query.{BooleanQuery, NearestNeighbourQuery, Predicate}
 
 import scala.concurrent.duration.Duration
@@ -277,11 +278,11 @@ class QueryTestSuite extends AdamTestBase with ScalaFutures {
     }
   }
 
-  feature("progressive query") {
+  feature("parallel query") {
     /**
       *
       */
-    scenario("perform a progressive query") {
+    scenario("perform a parallel query") {
       withQueryEvaluationSet { es =>
         Given("some indexes")
         IndexOp.create(es.entity.entityname, "vectorfield", IndexTypes.SHINDEX, es.distance)()
@@ -308,10 +309,10 @@ class QueryTestSuite extends AdamTestBase with ScalaFutures {
           }
         }
 
-        When("performing a kNN progressive query")
+        When("performing a kNN parallel query")
         val nnq = NearestNeighbourQuery("vectorfield", es.vector, None, es.distance, es.k, false, es.options)
         val tracker = new OperationTracker()
-        val pqtracker = QueryOp.progressive(es.entity.entityname, nnq, None, new AllProgressivePathChooser(), processResults)(tracker).get
+        val pqtracker = QueryOp.parallel(es.entity.entityname, nnq, None, new AllParallelPathChooser(), processResults)(tracker).get
 
         whenReady(pqtracker) { result =>
           Then("the confidence should be 1.0")
@@ -335,10 +336,10 @@ class QueryTestSuite extends AdamTestBase with ScalaFutures {
 
         val timelimit = Duration(10, TimeUnit.SECONDS)
 
-        When("performing a kNN progressive query")
+        When("performing a kNN parallel query")
         val nnq = NearestNeighbourQuery("vectorfield", es.vector, None, es.distance, es.k, false, es.options)
         val tracker = new OperationTracker()
-        val po = QueryOp.timedProgressive(es.entity.entityname, nnq, None, new AllProgressivePathChooser(), timelimit)(tracker).get
+        val po = QueryOp.timedParallel(es.entity.entityname, nnq, None, new AllParallelPathChooser(), timelimit)(tracker).get
 
         Then("we should have a match at least in the first element")
         val results = po.results.get.map(r => (r.getAs[Distance](AttributeNames.distanceColumnName), r.getAs[Long]("tid"))).collect() //get here TID of metadata

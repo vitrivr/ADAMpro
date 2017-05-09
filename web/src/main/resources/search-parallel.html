@@ -43,13 +43,13 @@
 
             <li style="border-left: white 1px solid; padding-left: 20px; padding-right: 20px; font-weight: bold;"><i class="material-icons left" style="margin-right:5px;">search</i>SEARCH</li>
             <li><a href="search-compound.html">Compound</a></li>
-            <li><a href="search-progressive.html">Progressive</a></li>
+            <li><a href="search-parallel.html">Parallel</a></li>
 
         </ul>
     </div>
 </nav>
 
-<div class='container' style='width:90%'><div class='row'><h1 style='font-size:40pt;'>Progressive<span style='font-size:20pt; padding-left: 20px'>Search</span></h1></div>
+<div class='container' style='width:90%'><div class='row'><h1 style='font-size:40pt;'>Parallel<span style='font-size:20pt; padding-left: 20px'>Search</span></h1></div>
 
 <div class="row">
     <div id="centityname" class="input-field col s2"></div>
@@ -138,7 +138,7 @@ $("#btnSubmit").click(function () {
 
     var params = {};
     params.id = guid();
-    params.operation = "progressive";
+    params.operation = "parallel";
 
     params.options = {};
     params.options.entityname = $("#entityname").val();
@@ -152,7 +152,7 @@ $("#btnSubmit").click(function () {
     }
 
 
-    searchProgressive(params.id, params, function () {
+    searchParallel(params.id, params, function () {
         successHandler(series);
     }, function (data, intervallId) {
         dataPollIntervalId = intervallId;
