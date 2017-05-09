@@ -88,7 +88,7 @@ class VAIndex(override val indexname: IndexName)(@transient override implicit va
       .withColumn("ap_lbound", distUDF(lboundsBc)(col("ap_cells")))
       .withColumn("ap_ubound", distUDF(uboundsBc)(col("ap_cells"))) //note that this is computed lazy!
 
-    val pk = this.pk.name
+    val pk = this.pk.name.toString
 
     val res = tmp
       .mapPartitions(p => {
