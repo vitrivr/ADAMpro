@@ -259,6 +259,7 @@ case class Entity(entityname: EntityName)(@transient implicit val ac: AdamContex
       if (getData().isDefined) {
         count = Some(getData().get.count())
         SparkStartup.catalogOperator.updateEntityOption(entityname, Entity.COUNT_KEY, count.get.toString)
+        SparkStartup.catalogOperator.updateEntityOption(entityname, Entity.APPROX_COUNT_KEY, count.get.toString)
       }
     }
 
@@ -329,6 +330,8 @@ case class Entity(entityname: EntityName)(@transient implicit val ac: AdamContex
       var insertion = ac.sqlContext.createDataFrame(
         rdd, StructType(StructField(AttributeNames.internalIdColumnName + "-tmp", LongType) +: data.schema.fields))
 
+      val insertionSize = insertion.count()
+
       insertion = insertion.withColumn(AttributeNames.internalIdColumnName, tupleidUDF(col(AttributeNames.internalIdColumnName + "-tmp"))).drop(AttributeNames.internalIdColumnName + "-tmp")
 
       //AUTOTYPE attributes
@@ -373,6 +376,11 @@ case class Entity(entityname: EntityName)(@transient implicit val ac: AdamContex
 
         incrementNumberOfInserts()
         markStale()
+
+        val apxCountOld = SparkStartup.catalogOperator.getEntityOption(entityname, Some(Entity.APPROX_COUNT_KEY)).get.getOrElse(Entity.APPROX_COUNT_KEY, "0").toInt
+        SparkStartup.catalogOperator.updateEntityOption(entityname, Entity.APPROX_COUNT_KEY, (apxCountOld + insertionSize).toString)
+
+
       } finally {
         lock.unlockWrite(stamp)
       }
@@ -539,6 +547,11 @@ case class Entity(entityname: EntityName)(@transient implicit val ac: AdamContex
     lb.append("attributes" -> schema(fullSchema = false).map(field => field.name).mkString(","))
     lb.append("indexes" -> SparkStartup.catalogOperator.listIndexes(Some(entityname)).get.mkString(","))
 
+    val apxCount = SparkStartup.catalogOperator.getEntityOption(entityname, Some(Entity.APPROX_COUNT_KEY)).get.get(Entity.APPROX_COUNT_KEY)
+    if(apxCount.isDefined){
+      lb.append("apxCount" -> apxCount.get)
+    }
+
     try {
       lb.append("partitions" -> getFeatureDataFast.map(_.rdd.getNumPartitions.toString).getOrElse("none"))
     } catch {
@@ -579,6 +592,8 @@ object Entity extends Logging {
   type AttributeName = AttributeNameHolder
 
   private val COUNT_KEY = "ntuples"
+  private val APPROX_COUNT_KEY = "ntuplesapprox"
+
   private val N_INSERTS = "ninserts"
   private val N_INSERTS_VACUUMING = "ninsertsvac"
   private val MAX_INSERTS_VACUUMING = "maxinserts"
@@ -638,6 +653,7 @@ object Entity extends Logging {
 
       SparkStartup.catalogOperator.createEntity(entityname, attributes)
       SparkStartup.catalogOperator.updateEntityOption(entityname, COUNT_KEY, "0")
+      SparkStartup.catalogOperator.updateEntityOption(entityname, APPROX_COUNT_KEY, "0")
 
       creationAttributes.groupBy(_.storagehandler).foreach {
         case (handler, handlerAttributes) =>
