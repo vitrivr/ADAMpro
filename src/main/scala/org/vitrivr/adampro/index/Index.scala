@@ -36,6 +36,12 @@ import scala.util.{Failure, Success, Try}
 //TODO: make indexes singleton? lock on index?
 abstract class Index(val indexname: IndexName)(@transient implicit val ac: AdamContext) extends Serializable with Logging {
 
+
+  /**
+    * Gets the entityname corresponding to the given index.
+    */
+  val entityname = SparkStartup.catalogOperator.getEntityName(indexname).get
+
   /**
     *
     */
@@ -45,11 +51,6 @@ abstract class Index(val indexname: IndexName)(@transient implicit val ac: AdamC
     * Gets the entity corresponding to the given index.
     */
   lazy val entity = Entity.load(entityname)
-
-  /**
-    * Gets the entityname corresponding to the given index.
-    */
-  val entityname = SparkStartup.catalogOperator.getEntityName(indexname).get
 
   /**
     * Gets the indexed attribute.

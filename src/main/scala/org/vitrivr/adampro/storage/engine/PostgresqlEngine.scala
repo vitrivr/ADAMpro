@@ -40,6 +40,18 @@ class PostgresqlEngine(private val url: String, private val user: String, privat
     this(props.get("url").get, props.get("user").get, props.get("password").get, props.getOrElse("schema", "public"))(ac)
   }
 
+  val props = {
+    val props = new Properties()
+    props.put("url", url)
+    props.put("user", user)
+    props.put("password", password)
+    props.put("driver", "org.postgresql.Driver")
+    props.put("currentSchema", schema)
+    props
+  }
+
+  val propsMap = props.keySet().toArray.map(key => key.toString -> props.get(key).toString).toMap
+
   @transient private val ds = new ComboPooledDataSource
   ds.setDriverClass("org.postgresql.Driver")
   ds.setJdbcUrl(url)
@@ -71,18 +83,6 @@ class PostgresqlEngine(private val url: String, private val user: String, privat
       connection.close()
     }
   }
-
-  val props = {
-    val props = new Properties()
-    props.put("url", url)
-    props.put("user", user)
-    props.put("password", password)
-    props.put("driver", "org.postgresql.Driver")
-    props.put("currentSchema", schema)
-    props
-  }
-
-  val propsMap = props.keySet().toArray.map(key => key.toString -> props.get(key).toString).toMap
 
   /**
     * Create the entity.
