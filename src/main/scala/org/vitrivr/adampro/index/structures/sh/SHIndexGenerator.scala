@@ -21,7 +21,7 @@ import org.vitrivr.adampro.query.distance.{DistanceFunction, EuclideanDistance}
   * Ivan Giangreco
   * August 2015
   */
-class SHIndexGenerator(nbits: Option[Int], trainingSize: Int)(@transient implicit val ac: AdamContext) extends IndexGenerator {
+class SHIndexGenerator(nbits_total: Option[Int], trainingSize: Int)(@transient implicit val ac: AdamContext) extends IndexGenerator {
   override val indextypename: IndexTypeName = IndexTypes.SHINDEX
 
   /**
@@ -55,17 +55,17 @@ class SHIndexGenerator(nbits: Option[Int], trainingSize: Int)(@transient implici
   private def train(trainData: Seq[IndexingTaskTuple]): SHIndexMetaData = {
     log.trace("SH started training")
 
-    val dTrainData = trainData.map(x => x.ap_indexable.map(x => x.toDouble).toArray)
-    val dataMatrix = DenseMatrix(dTrainData.toList: _*)
+    val doubleTrainData = trainData.map(x => x.ap_indexable.map(x => x.toDouble).toArray)
+    val dataMatrix = DenseMatrix(doubleTrainData.toList: _*)
 
-    val nfeatures = dTrainData.head.length
+    val ndims = doubleTrainData.head.length
 
     //TODO: error in creation because dimensionality is wrong?
 
-    val numComponents = math.min(nfeatures, nbits.getOrElse(nfeatures * 2))
+    val numComponents = math.min(ndims, nbits_total.getOrElse(ndims * 2))
 
     // pca
-    val covs = cov(dataMatrix, true)
+    val covs = cov(dataMatrix, center = true)
     val eig = eigSym(covs)
     val cols = ((eig.eigenvalues.length - numComponents) until (eig.eigenvalues.length))
     val eigv = eig.eigenvectors(::, cols)
@@ -83,7 +83,7 @@ class SHIndexGenerator(nbits: Option[Int], trainingSize: Int)(@transient implici
     val projected = (dataMatrix.*(reorderEigv))
 
     // number of bits to use
-    val bits = nbits.getOrElse(nfeatures * 2)
+    val nbits = nbits_total.getOrElse(ndims * 2)
 
     // fit uniform distribution
     val minProj = breeze.linalg.min(projected(::, *)).t.toDenseVector.map(Vector.conv_double2vb)
@@ -94,10 +94,10 @@ class SHIndexGenerator(nbits: Option[Int], trainingSize: Int)(@transient implici
     val maxRange = ranges.max
 
     val eigenfuncs = ranges.zipWithIndex.flatMap { case (range, ndim) =>
-      val nmodes = shareOfBits(bits, range, maxRange) //number of modes for dimension
+      val nmodes = shareOfBits(nbits, range, maxRange) //number of modes for dimension
       (1 to nmodes).map(k => (SHUtils.simplifiedEigenvalue(k, range), ndim, k, range)) //enumerate eigenfunctions
     } .sortBy(_._1) //sort by eigenvalues
-      .take(bits) //take only limited number of eigenfunctions
+      .take(nbits) //take only limited number of eigenfunctions
       .map(x => (x._2, x._3, x._4)) //dim, k, range
       .toArray
 
