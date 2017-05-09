@@ -28,14 +28,14 @@ class VAIndex(override val indexname: IndexName)(@transient override implicit va
 
   val meta = metadata.get.asInstanceOf[VAIndexMetaData]
 
-  override val indextypename: IndexTypeName = meta.signatureGenerator match {
+  override lazy val indextypename: IndexTypeName = meta.signatureGenerator match {
     case fsg: FixedSignatureGenerator => IndexTypes.VAFINDEX
     case vsg: VariableSignatureGenerator => IndexTypes.VAVINDEX
   }
 
-  override val lossy: Boolean = false
-  override val confidence = 1.toFloat
-  override val score : Float = if(indextypename.equals(IndexTypes.VAFINDEX)){
+  override lazy val lossy: Boolean = false
+  override lazy val confidence = 1.toFloat
+  override lazy val score : Float = if(indextypename.equals(IndexTypes.VAFINDEX)){
     0.9.toFloat //slightly less weight if fixed variable
   } else {
     1.toFloat
