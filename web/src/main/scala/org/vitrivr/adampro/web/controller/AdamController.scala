@@ -59,7 +59,7 @@ class AdamController(rpcClient: RPCClient) extends Controller with Logging {
     }
 
     val res = if (attribute.isEmpty) {
-      rpcClient.entityDetails(entityname.get).map(EntityDetailResponse(200, entityname.get, "", _))
+      rpcClient.entityDetails(entityname.get, Map("count" -> "false")).map(EntityDetailResponse(200, entityname.get, "", _))
     } else {
       rpcClient.entityAttributeDetails(entityname.get, attribute.get).map(EntityDetailResponse(200, entityname.get, attribute.get, _))
     }
