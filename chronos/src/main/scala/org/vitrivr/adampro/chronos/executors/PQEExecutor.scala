@@ -113,44 +113,17 @@ class PQEExecutor(job: EvaluationJob, setStatus: (Double) => (Boolean), inputDir
       Thread.sleep(1000)
     }
 
-    ress.foreach { case (res, time) =>
-      if (res.isSuccess) {
-        lb += (res.get.source + "_confidence" -> res.get.confidence)
-        lb += (res.get.source + "_source" -> res.get.source)
-        lb += (res.get.source + "_adamprotime" -> res.get.time)
-        lb += (res.get.source + "_measuredtime" -> time)
-        lb += (res.get.source + "_results" -> {
-          res.get.results.map(res => (res.get("ap_id") + "," + res.get("ap_distance"))).mkString("(", "),(", ")")
+    ress.zipWithIndex.foreach { case (res, idx) =>
+      if (res._1.isSuccess) {
+        lb += (idx + "_confidence" -> res._1.get.confidence)
+        lb += (idx + "_source" -> (res._1.get.info.getOrElse("scantype", "") + " " +  res._1.get.info.getOrElse("indextype", "")))
+        lb += (idx + "_adamprotime" -> res._1.get.time)
+        lb += (idx + "_measuredtime" -> res._1.get.time)
+        lb += (idx + "_results" -> {
+          res._1.get.results.map(r => (r.get("ap_id") + "," + r.get("ap_distance"))).mkString("(", "),(", ")")
         })
       } else {
-        lb += (res.get.source + "_failure" -> res.failed.get.getMessage)
-      }
-    }
-
-
-    if (job.measurement_resultquality) {
-      //perform sequential query
-      val opt = collection.mutable.Map() ++ qo.options
-      opt -= "hints"
-      opt += "hints" -> "sequential"
-      val gtruth = client.doQuery(qo.copy(operation = "sequential", options = opt.toMap))
-
-      if (gtruth.isSuccess) {
-        val gtruthPKs = gtruth.get.map(_.results.map(_.get("ap_id"))).head.map(_.get)
-
-        ress.foreach { case (res, time) =>
-          if (res.isSuccess) {
-
-            val resPKs = res.get.results.map(_.get("ap_id").get)
-
-            val agreements = gtruthPKs.intersect(resPKs).length
-            //simple hits/total
-            val quality = (agreements / qo.options.get("k").get.toDouble)
-            lb += (res.get.source + "_resultquality" -> quality.toString)
-          } else {
-            lb += (res.get.source + "_resultquality" -> gtruth.failed.get.getMessage)
-          }
-        }
+        lb += (res._1.get.source + "_failure" -> res._1.failed.get.getMessage)
       }
     }
 
@@ -182,39 +155,18 @@ class PQEExecutor(job: EvaluationJob, setStatus: (Double) => (Boolean), inputDir
     }
 
 
+    //get overview for plotting
+    val times = results.map { case (runid, result) => result.get("totaltime").getOrElse("-1") }
+    val quality = results.map { case (runid, result) => result.get("resultquality").getOrElse("-1") }
+
     prop.setProperty("summary_data_vector_dimensions", job.data_vector_dimensions.toString)
     prop.setProperty("summary_data_tuples", job.data_tuples.toString)
 
     prop.setProperty("summary_execution_name", job.execution_name)
-    prop.setProperty("summary_execution_subtype", job.execution_subexecution.map(_._1).mkString(", "))
+    prop.setProperty("summary_execution_subtype", job.execution_subtype)
 
-
-    //get overview for plotting
-    val summary = results.zipWithIndex.map {
-      case (result, runid) => {
-        val times = result._2.filter(_._1.endsWith("_measuredtime")).map { case (desc, time) => (desc.replace("_measuredtime", ""), time.toLong) }.toMap
-        val qualities = result._2.filter(_._1.endsWith("_resultquality")).map { case (desc, res) => (desc.replace("_resultquality", ""), res.toDouble) }.toMap
-
-        val descLb = new ListBuffer[String]()
-        val timeLb = new ListBuffer[Long]()
-        val qualityLb = new ListBuffer[Double]()
-
-        val ress = times.keys.map { key =>
-          descLb += key
-          timeLb += times.get(key).get
-          qualityLb += qualities.get(key).getOrElse(-1.0)
-        }
-
-
-        prop.setProperty("summary_desc_" + runid, descLb.mkString(","))
-        prop.setProperty("summary_totaltime_" + runid, timeLb.mkString(","))
-        prop.setProperty("summary_resultquality_" + runid, qualityLb.mkString(","))
-
-      }
-    }
-
-    prop.setProperty("summary_runs", summary.length.toString)
-
+    prop.setProperty("summary_totaltime", times.mkString(","))
+    prop.setProperty("summary_resultquality", quality.mkString(","))
     prop
   }
 }

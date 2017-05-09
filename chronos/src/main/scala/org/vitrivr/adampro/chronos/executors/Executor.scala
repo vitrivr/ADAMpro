@@ -134,6 +134,10 @@ abstract class Executor(val job: EvaluationJob, setStatus: (Double) => (Boolean)
 
     lb.append("hints" -> job.execution_hint)
 
+    if(job.execution_subtype != null && job.execution_subtype.length > 0){
+      lb.append("subtype" -> job.execution_subtype)
+    }
+
     RPCQueryObject(Helpers.generateString(10), job.execution_name, lb.toMap, None)
   }
 
