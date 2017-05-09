@@ -632,6 +632,41 @@ class RPCClient(channel: ManagedChannel,
   }
 
   /**
+    * Perform a progressive search.
+    *
+    * @param qo        search request
+    * @param next      function for next result
+    * @param completed function for final result
+    * @return
+    */
+  def doProgressiveQuery(qo: RPCQueryObject, next: (Try[RPCQueryResults]) => (Unit), completed: (String) => (Unit)): Try[Seq[RPCQueryResults]] = {
+    execute("progressive query operation") {
+      val so = new StreamObserver[QueryResultsMessage]() {
+        override def onError(throwable: Throwable): Unit = {
+          log.error("error in progressive querying", throwable)
+        }
+
+        override def onCompleted(): Unit = {
+          completed(qo.id)
+        }
+
+        override def onNext(qr: QueryResultsMessage): Unit = {
+          log.info("new progressive results arrived")
+
+          if (qr.ack.get.code == AckMessage.Code.OK && qr.responses.nonEmpty) {
+            next(Success(new RPCQueryResults(qr.responses.head)))
+          } else {
+            next(Failure(new Exception(qr.ack.get.message)))
+          }
+        }
+      }
+
+      searcher.doProgressiveQuery(qo.getQueryMessage, so)
+      Success(null)
+    }
+  }
+
+  /**
     * Perform a parallel search.
     *
     * @param qo        search request

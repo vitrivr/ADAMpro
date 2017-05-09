@@ -124,12 +124,12 @@ object QueryOp extends GenericOp {
     * @param entityname  name of entity
     * @param nnq         information for nearest neighbour query
     * @param pathChooser parallel query path chooser
-    * @param onComplete  operation to perform as soon as one index returns results
+    * @param onNext  operation to perform as soon as one index returns results
     * @param options     options applied when evaluating query
     * @return a tracker for the parallel query
     */
-  def parallel[U](entityname: EntityName, nnq: NearestNeighbourQuery, bq: Option[BooleanQuery], pathChooser: ParallelPathChooser, onComplete: Try[ProgressiveObservation] => U, options: Option[QueryEvaluationOptions] = None)(tracker : OperationTracker)(implicit ac: AdamContext): Try[ParallelQueryStatusTracker] = {
-    Success(ParallelQueryHandler.parallelQuery(entityname, nnq, bq, pathChooser, onComplete, options, None)(tracker))
+  def parallel[U](entityname: EntityName, nnq: NearestNeighbourQuery, bq: Option[BooleanQuery], pathChooser: ParallelPathChooser, onNext: Try[ProgressiveObservation] => U, options: Option[QueryEvaluationOptions] = None)(tracker : OperationTracker)(implicit ac: AdamContext): Try[ParallelQueryStatusTracker] = {
+    Success(ParallelQueryHandler.parallelQuery(entityname, nnq, bq, pathChooser, onNext, options, None)(tracker))
   }
 
 

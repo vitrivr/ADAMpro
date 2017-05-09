@@ -686,6 +686,53 @@ function searchParallel(id, params, successHandler, updateHandler, errorHandler)
     });
 }
 
+/**
+ *
+ * @param params
+ * @param successHandler
+ * @param updateHandler
+ * @param errorHandler
+ */
+function searchProgressive(id, params, successHandler, updateHandler, errorHandler) {
+    startTask();
+
+    $.ajax(ADAM_CLIENT_HOST + "/search/progressive", {
+        data: JSON.stringify(params),
+        contentType: 'application/json',
+        type: 'POST',
+        success: function (data) {
+            successHandler(data);
+
+            var dataPollIntervalId = setInterval(function () {
+                $.ajax(ADAM_CLIENT_HOST + "/query/progressive/temp?id=" + id, {
+                    contentType: 'application/json',
+                    type: 'GET',
+                    success: function (data) {
+                        if (data.status === "finished") {
+                            stopTask();
+                        } else if (data.status === "error") {
+                            errorHandler(dataPollIntervalId);
+                            raiseError(data.results.source);
+                            stopTask();
+                        }
+                        updateHandler(data, dataPollIntervalId);
+                    },
+                    error: function () {
+                        errorHandler();
+                        raiseError();
+                        stopTask();
+                    }
+                });
+            }, 500);
+        },
+        error: function () {
+            errorHandler();
+            raiseError();
+            stopTask();
+        }
+    });
+}
+
 
 
 function storageHandlerList(handler){

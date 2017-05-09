@@ -3,8 +3,9 @@ package org.vitrivr.adampro.rpc
 import io.grpc.stub.StreamObserver
 import org.vitrivr.adampro.api.{EntityOp, IndexOp, QueryOp}
 import org.vitrivr.adampro.exception.{GeneralAdamException, QueryNotCachedException}
+import org.vitrivr.adampro.grpc.grpc.QueryMessage.InformationLevel
 import org.vitrivr.adampro.grpc.grpc.{AdamSearchGrpc, _}
-import org.vitrivr.adampro.helpers.tracker.OperationTracker
+import org.vitrivr.adampro.helpers.tracker.{OperationTracker, ResultTracker}
 import org.vitrivr.adampro.main.{AdamContext, SparkStartup}
 import org.vitrivr.adampro.query.QueryHints
 import org.vitrivr.adampro.query.optimizer.OptimizerOp
@@ -195,7 +196,7 @@ class SearchRPC extends AdamSearchGrpc.AdamSearch with Logging {
     time("rpc call for parallel query operation") {
       try {
         //track on next
-        val onComplete =
+        val onNext =
           (tpo: Try[ProgressiveObservation]) => {
             if (tpo.isSuccess) {
               val po = tpo.get
@@ -229,7 +230,7 @@ class SearchRPC extends AdamSearchGrpc.AdamSearch with Logging {
 
         //TODO: change here, so that we do not need to rely on "getEntity"
         val tracker = new OperationTracker()
-        val pqtracker = QueryOp.parallel(request.from.get.getEntity, nnq, bq, pathChooser, onComplete, evaluationOptions)(tracker)
+        val pqtracker = QueryOp.parallel(request.from.get.getEntity, nnq, bq, pathChooser, onNext, evaluationOptions)(tracker)
 
         //track on completed
         while (!pqtracker.get.isCompleted) {
@@ -259,7 +260,7 @@ class SearchRPC extends AdamSearchGrpc.AdamSearch with Logging {
     time("rpc call for progressive query operation") {
       try {
         //track on next
-        val onComplete =
+        val onNext =
           (tpo: Try[ProgressiveObservation]) => {
             if (tpo.isSuccess) {
               val po = tpo.get
@@ -272,28 +273,13 @@ class SearchRPC extends AdamSearchGrpc.AdamSearch with Logging {
             }
           }
 
-        val pathChooser = if (request.hints.isEmpty) {
-          new SimpleParallelPathChooser()
-        } else {
-          new QueryHintsParallelPathChooser(request.hints.map(QueryHints.withName(_).get))
-        }
+        val informationLevel = RPCHelperMethods.prepareInformationLevel(request.information).head
+        val tracker = new OperationTracker(Some(ResultTracker(onNext, informationLevel)))
 
-        val nnq = if (request.nnq.isDefined) {
-          RPCHelperMethods.prepareNNQ(request.nnq.get).get
-        } else {
-          throw new GeneralAdamException("nearest neighbour query necessary for progressive query")
-        }
-        val bq = if (request.bq.isDefined) {
-          Some(RPCHelperMethods.prepareBQ(request.bq.get).get)
-        } else {
-          None
-        }
+        val res = executeQuery(request, tracker)
+        responseObserver.onCompleted()
 
-        val evaluationOptions = RPCHelperMethods.prepareEvaluationOptions(request)
-
-        val tracker = new OperationTracker() //TODO: adjust tracker
-        Future.successful(executeQuery(request, tracker))
-
+        tracker.cleanAll()
       } catch {
         case e: Exception => {
           e.printStackTrace()

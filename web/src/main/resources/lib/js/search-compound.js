@@ -128,67 +128,6 @@ $("#btnAddOperation").click(function () {
 });
 
 
-//submit operation
-$("#btnSubmit").click(function () {
-    $("#resultbox").hide();
-
-    var handler = function(data) {$.each(data.details.intermediate_responses, function (idx, val) {
-        if (val.id.length > 0) {
-            $("#" + val.id + " > .res").html("execution time: " + val.time + "ms" + "<br/>" + "results: " + val.results.length);
-
-            //tune here max results to display
-            var slicedData = val.results.slice(0, Math.min(500, val.results.length));
-            $("#" + val.id).data("results", slicedData);
-            $("#" + val.id).click(function(){
-                $("#resultbox").show();
-
-                var results = $("#" + val.id).data("results");
-                var tabid = "tab-" + val.id;
-
-                var innerhtml = '';
-
-                if (results != null && results.length > 0) {
-                    innerhtml += '<table id="' + tabid + '" class="striped highlight">';
-                    innerhtml += '<thead><tr>';
-
-                    $.each(results[0], function (key, value) {
-                        innerhtml += "<th>" + key + "</th>"
-                    });
-
-                    innerhtml += '</tr></thead>';
-                    innerhtml += '<tbody>';
-
-
-                    $.each(results, function (key, value) {
-                        innerhtml += "<tr>";
-                        $.each(value, function (attributekey, attributevalue) {
-                            if(attributekey == "adamprodistance"){
-                                innerhtml += "<td class='dt-body-right'>" + attributevalue + "</td>"
-                            } else {
-                                innerhtml += "<td>" + attributevalue + "</td>"
-                            }
-                        });
-                        innerhtml += "</tr>";
-                    });
-
-                    innerhtml += '</tbody>';
-
-                    innerhtml += '</table>';
-                }
-
-                $("#results").html(innerhtml);
-
-                makeDatatable(tabid);
-            });
-        }
-    });
-    }
-
-    startStopwatch();
-    searchCompound(evaluate("box-start"), handler);
-});
-
-
 //evaluate canvas
 function evaluate (id) {
     var operation = $("#" + id).data("operation");

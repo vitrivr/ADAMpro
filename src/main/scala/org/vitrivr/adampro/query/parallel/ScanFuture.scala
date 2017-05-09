@@ -30,11 +30,10 @@ class ScanFuture[U](expression: QueryExpression, filter : Option[DataFrame], onC
     case res =>
       pqtracker.synchronized {
 
-        val information = expression.information()
-        val typename = information.source
-        val info = information.info
+        val info = expression.information()
+        val typename = info.source
 
-        val observation = ProgressiveObservation(pqtracker.status, res, confidence.getOrElse(0), typename.getOrElse(""), info, t1, System.currentTimeMillis())
+        val observation = ProgressiveObservation(pqtracker.status, res, confidence.getOrElse(0), typename.getOrElse(""), info.toMap, t1, System.currentTimeMillis())
         if (!pqtracker.isCompleted) {
           onComplete(Success(observation))
         }

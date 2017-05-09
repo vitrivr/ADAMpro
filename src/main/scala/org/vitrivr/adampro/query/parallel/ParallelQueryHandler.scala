@@ -29,12 +29,12 @@ object ParallelQueryHandler extends Logging {
     * @param nnq         information for nearest neighbour query
     * @param bq          information for boolean query
     * @param pathChooser parallel query path chooser
-    * @param onComplete  function to execute on complete
+    * @param onNext  function to execute on next
     * @param options     options applied when evaluating query
     * @param id          query id
     * @return
     */
-  def parallelQuery[U](entityname: EntityName, nnq: NearestNeighbourQuery, bq: Option[BooleanQuery], pathChooser: ParallelPathChooser, onComplete: Try[ProgressiveObservation] => U, options: Option[QueryEvaluationOptions], id: Option[String])(tracker : OperationTracker)(implicit ac: AdamContext): ParallelQueryStatusTracker = {
+  def parallelQuery[U](entityname: EntityName, nnq: NearestNeighbourQuery, bq: Option[BooleanQuery], pathChooser: ParallelPathChooser, onNext: Try[ProgressiveObservation] => U, options: Option[QueryEvaluationOptions], id: Option[String])(tracker : OperationTracker)(implicit ac: AdamContext): ParallelQueryStatusTracker = {
     val filter = if (bq.isDefined) {
       new BooleanFilterScanExpression(entityname)(bq.get, None)(None)(ac).prepareTree().evaluate(options)(tracker)
     } else {
@@ -48,7 +48,7 @@ object ParallelQueryHandler extends Logging {
       log.debug("removed " + (distinctPaths.length - paths.length) + " paths for parallel querying, which were duplicates")
     }
 
-    parallelQuery(distinctPaths, filter, onComplete, options, id)(tracker)
+    parallelQuery(distinctPaths, filter, onNext, options, id)(tracker)
   }
 
 
@@ -57,12 +57,12 @@ object ParallelQueryHandler extends Logging {
     * as they are available. When a precise result is returned, the whole query is stopped.
     *
     * @param exprs      query expressions to execute
-    * @param onComplete function to execute on complete
+    * @param onNext function to execute on complete
     * @param options    options applied when evaluating query
     * @param id         query id
     * @return a tracker for the parallel query
     */
-  private def parallelQuery[U](exprs: Seq[QueryExpression], filter: Option[DataFrame], onComplete: Try[ProgressiveObservation] => U, options: Option[QueryEvaluationOptions], id: Option[String])(tracker : OperationTracker)(implicit ac: AdamContext): ParallelQueryStatusTracker = {
+  private def parallelQuery[U](exprs: Seq[QueryExpression], filter: Option[DataFrame], onNext: Try[ProgressiveObservation] => U, options: Option[QueryEvaluationOptions], id: Option[String])(tracker : OperationTracker)(implicit ac: AdamContext): ParallelQueryStatusTracker = {
     val pqtracker = new ParallelQueryStatusTracker(id.getOrElse(""))
     log.debug("performing parallel query with " + exprs.length + " paths: " + exprs.map(expr => expr.info.scantype.getOrElse("<missing scantype>") + " (" + expr.info.source.getOrElse("<missing source>") + ")").mkString(", "))
 
@@ -70,7 +70,7 @@ object ParallelQueryHandler extends Logging {
       throw new GeneralAdamException("no paths for parallel query set; possible causes: is the entity or the attribute existing?")
     }
 
-    val scanFutures = exprs.map(expr => new ScanFuture(expr, filter, onComplete, pqtracker)(tracker))
+    val scanFutures = exprs.map(expr => new ScanFuture(expr, filter, onNext, pqtracker)(tracker))
     pqtracker
   }
 

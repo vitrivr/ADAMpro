@@ -43,6 +43,7 @@
 
             <li style="border-left: white 1px solid; padding-left: 20px; padding-right: 20px; font-weight: bold;"><i class="material-icons left" style="margin-right:5px;">search</i>SEARCH</li>
             <li><a href="search-compound.html">Compound</a></li>
+            <li><a href="search-progressive.html">Progressive</a></li>
             <li><a href="search-parallel.html">Parallel</a></li>
 
         </ul>
@@ -107,7 +108,7 @@ $(document).ready(function () {
     $('select').material_select();
 });
 
-var indextypes = [""].concat(getIndexTypes().reverse());
+var indextypes = ["", "sequential"].concat(getIndexTypes().reverse());
 
 var chartUpdatingIntervalId = 0;
 var dataPollIntervalId = 0;
@@ -147,8 +148,8 @@ $("#btnSubmit").click(function () {
     if ($("#k").val().length > 0) {
         params.options.k = $("#k").val();
     }
-    if ($("#indextype").val().length > 0) {
-        params.options.hints = $("#indextype").val().join();
+    if (hints.length > 0) {
+        params.options.hints = hints.join();
     }
 
 
@@ -190,7 +191,7 @@ function setupChart(id) {
                     var series = this.series[0];
                     chartUpdatingIntervalId = setInterval(function () {
                         var x = (new Date()).getTime();
-                        series.addPoint({x: x, y: 0, fillColor: 'transparent', enabled: false, radius: 0}, true, true);
+                        series.addPoint({x: x, y: 0, color: 'transparent', enabled: false, radius: 0}, true, true);
                     }, 1000);
                 }
             }
@@ -277,7 +278,7 @@ function setupChart(id) {
                     data.push({
                         x: x,
                         y: 0,
-                        fillColor: 'transparent',
+                        color: 'transparent',
                         enabled: false,
                         radius: 0,
                         enableMouseTracking: false
@@ -293,7 +294,7 @@ function setupChart(id) {
 
 
 function successHandler(series) {
-    series.addPoint({x: (new Date()).getTime(), y: 0, source: "start", fillColor: "#f4511e", radius: 10}, true, true);
+    series.addPoint({x: (new Date()).getTime(), y: 0, source: "start", color: "#f4511e", radius: 10}, true, true);
 };
 
 function updateHandler(startTime, series, data) {
@@ -306,7 +307,7 @@ function updateHandler(startTime, series, data) {
             confidence: data.results.confidence,
             time: Math.abs(startTime - x),
             results: data.results.results.length,
-            fillColor: "#26a69a",
+            color: "#26a69a",
             radius: 10,
             events: {
                 click: function () {

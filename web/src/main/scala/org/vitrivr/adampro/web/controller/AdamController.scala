@@ -326,11 +326,38 @@ class AdamController(rpcClient: RPCClient) extends Controller with Logging {
     response.ok.json(SearchParallelStartResponse(request.id))
   }
 
+  /**
+    *
+    */
+  post("/search/progressive") { request: SearchRequest =>
+    val res = rpcClient.doProgressiveQuery(request.toRPCQueryObject, processProgressiveResults(request.id), completedProgressiveResults)
+
+    progTempResults.synchronized {
+      if (!progTempResults.contains(request.id)) {
+        val queue = mutable.Queue[SearchParallelIntermediaryResponse]()
+        progTempResults.put(request.id, queue)
+      } else {
+        log.error("query id is already being used")
+      }
+    }
+
+    response.ok.json(SearchParallelStartResponse(request.id))
+  }
+
 
   private def processProgressiveResults(id: String)(res: Try[RPCQueryResults]): Unit = {
     if (res.isSuccess) {
       val results = res.get
-      progTempResults.get(id).get += SearchParallelIntermediaryResponse(id, results.confidence, results.info.getOrElse("indextype", ""), results.time, results.results, ProgressiveQueryStatus.RUNNING)
+
+      val source = if(results.info.get("scantype").isDefined && results.info.get("scantype") == "sequential"){
+        "sequential"
+      } else if(results.info.get("scantype").isDefined && results.info.get("scantype") == "sequential" == "indexscan"){
+        results.info.get("indextype").getOrElse("")
+      } else {
+        results.info.get("scantype").getOrElse("<unknown>")
+      }
+
+      progTempResults.get(id).get += SearchParallelIntermediaryResponse(id, results.confidence, source, results.time, results.results, ProgressiveQueryStatus.RUNNING)
     } else {
       log.error("error in progressive results processing", res.failed.get)
       completedProgressiveResults(id, res.failed.get.getMessage, ProgressiveQueryStatus.ERROR)
@@ -354,6 +381,21 @@ class AdamController(rpcClient: RPCClient) extends Controller with Logging {
     progTempResults.remove(id)
   }
 
+  /**
+    *
+    */
+  get("/query/progressive/temp") { request: Request =>
+    val id = request.params.get("id").get
+
+    progTempResults.synchronized {
+      if (progTempResults.get(id).isDefined && !progTempResults.get(id).get.isEmpty) {
+        val result = progTempResults.get(id).get.dequeue()
+        response.ok.json(SearchParallelResponse(result, result.status.toString))
+      } else {
+        response.ok
+      }
+    }
+  }
 
   /**
     *

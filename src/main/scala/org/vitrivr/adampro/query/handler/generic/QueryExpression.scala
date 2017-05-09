@@ -11,9 +11,8 @@ import org.vitrivr.adampro.query.information.InformationLevels._
 import org.vitrivr.adampro.query.progressive.{ProgressiveObservation, ProgressiveQueryStatus}
 import org.vitrivr.adampro.utils.Logging
 
-import scala.concurrent.ExecutionContext.Implicits.global
+import scala.collection.mutable
 import scala.collection.mutable.ListBuffer
-import scala.concurrent.Future
 import scala.concurrent.duration.Duration
 import scala.util.{Failure, Success}
 
@@ -93,19 +92,11 @@ abstract class QueryExpression(id: Option[String]) extends Serializable with Log
 
 
       if (results.isDefined) {
-        val status = if (_children.isEmpty) {
-          ProgressiveQueryStatus.FINISHED
-        } else {
-          ProgressiveQueryStatus.RUNNING
-        }
-
-        Future {
-          tracker.addObservation(Success(ProgressiveObservation(status, results, info.confidence.getOrElse(0.toFloat), info.source.getOrElse(""), info.info, t1, t2)))
-        }
+        tracker.addObservation(this, Success(ProgressiveObservation(ProgressiveQueryStatus.RUNNING, results, info.confidence.getOrElse(0.toFloat), info.source.getOrElse(""), info.toMap(), t1, t2)))
       }
     } catch {
       case e: Exception =>
-        tracker.addObservation(Failure(e))
+        tracker.addObservation(this, Failure(e))
         throw e
     }
 
@@ -230,5 +221,27 @@ case class ExpressionDetails(source: Option[String], scantype: Option[String], i
     sb.append("\n")
 
     sb.toString
+  }
+
+  def toMap(): Map[String, String] = {
+    val _info = mutable.Map[String, String]()
+
+    if (source.isDefined) {
+      _info += "source" -> source.get
+    }
+
+    if(scantype.isDefined){
+      _info += "scantype" -> scantype.get
+    }
+
+    if(id.isDefined){
+      _info += "confidence" -> id.get
+    }
+
+    if(confidence.isDefined){
+      _info += "confidence" -> confidence.get.toString
+    }
+
+    (_info.toMap ++ info)
   }
 }

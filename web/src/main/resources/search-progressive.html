@@ -50,16 +50,11 @@
     </div>
 </nav>
 
-<div class='container' style='width:90%'><div class='row'><h1 style='font-size:40pt;'>Compound<span style='font-size:20pt; padding-left: 20px'>Search</span></h1></div>
+<div class='container' style='width:90%'><div class='row'><h1 style='font-size:40pt;'>Progressive<span style='font-size:20pt; padding-left: 20px'>Search</span></h1></div>
 
 <div class="row" style="margin-bottom: 0px;">
-    <div class="input-field col s3">
-        <select id="informationlevel">
-            <option value="all">all information</option>
-            <option value="all_noprovenance">all results, no provenance</option>
-            <option selected="selected" value="minimal">final result only</option>
-        </select>
-        <label>level of information</label>
+    <div class="input-field col s3" style="display:none">
+        <input type='hidden' id="informationlevel" value="minimal">
     </div>
 
     <div class="col s3">
@@ -155,6 +150,9 @@
 
 </div>
 
+<div id="container" style="min-width: 400px; height: 400px; margin: 0 auto"></div>
+
+
 <div id="resultbox" class="material-table" style="display:none">
     <div class="s12"><h5>Results</h5></div>
     <div id="results" class="s12"></div>
@@ -166,6 +164,8 @@
 <script src="./lib/js/materialize-datatable.js"></script>
 <script src="./lib/js/stopwatch.js"></script>
 <script src="./lib/js/search-compound.js"></script>
+<script src="https://code.highcharts.com/highcharts.js"></script>
+<script src="https://code.highcharts.com/modules/exporting.js"></script>
 <script>
 $(document).ready(function () {
     entityListGetSelect("centityname");
@@ -200,65 +200,238 @@ $(document).ready(function () {
     $('select').material_select();
 });
 
-//submit operation
-$("#btnSubmit").click(function () {
-    $("#resultbox").hide();
+var chartUpdatingIntervalId = 0;
+var dataPollIntervalId = 0;
 
-    var handler = function(data) {$.each(data.details.intermediate_responses, function (idx, val) {
-        if (val.id.length > 0) {
-            $("#" + val.id + " > .res").html("execution time: " + val.time + "ms" + "<br/>" + "results: " + val.results.length);
+var indextypes = ["", ""];
 
-            //tune here max results to display
-            var slicedData = val.results.slice(0, Math.min(500, val.results.length));
-            $("#" + val.id).data("results", slicedData);
-            $("#" + val.id).click(function(){
-                $("#resultbox").show();
-
-                var results = $("#" + val.id).data("results");
-                var tabid = "tab-" + val.id;
-
-                var innerhtml = '';
-
-                if (results != null && results.length > 0) {
-                    innerhtml += '<table id="' + tabid + '" class="striped highlight">';
-                    innerhtml += '<thead><tr>';
-
-                    $.each(results[0], function (key, value) {
-                        innerhtml += "<th>" + key + "</th>"
-                    });
-
-                    innerhtml += '</tr></thead>';
-                    innerhtml += '<tbody>';
-
-
-                    $.each(results, function (key, value) {
-                        innerhtml += "<tr>";
-                        $.each(value, function (attributekey, attributevalue) {
-                            if(attributekey == "adamprodistance"){
-                                innerhtml += "<td class='dt-body-right'>" + attributevalue + "</td>"
-                            } else {
-                                innerhtml += "<td>" + attributevalue + "</td>"
-                            }
-                        });
-                        innerhtml += "</tr>";
-                    });
-
-                    innerhtml += '</tbody>';
-
-                    innerhtml += '</table>';
-                }
-
-                $("#results").html(innerhtml);
-
-                makeDatatable(tabid);
-            });
+function setupChart(id) {
+    Highcharts.setOptions({
+        global: {
+            useUTC: false
         }
     });
+
+    var chart = $("#" + id).highcharts();
+    if (chart) {
+        chart.destroy();
     }
 
+    $("#" + id).highcharts({
+        chart: {
+            type: 'scatter',
+            zoomType: 'xy',
+            style: {
+                fontFamily: 'Roboto',
+                fontSize: "11px"
+            },
+            animation: Highcharts.svg, // don't animate in old IE
+            marginRight: 10,
+            events: {
+                load: function () {
+                    var series = this.series[0];
+                    chartUpdatingIntervalId = setInterval(function () {
+                        var x = (new Date()).getTime();
+                        series.addPoint({x: x, y: 0, color: 'transparent', enabled: false, radius: 0}, true, true);
+                    }, 1000);
+                }
+            }
+        },
+        xAxis: {
+            type: 'datetime',
+            tickPixelInterval: 100
+        },
+        title: {
+            text: null
+        },
+        yAxis: {
+            title: {
+                text: null
+            },
+            categories: indextypes,
+            crosshair: true,
+            min: 0,
+            max: indextypes.length - 1
+        },
+        plotOptions: {
+            line: {
+                states: {
+                    hover: {}
+                }
+            },
+            series: {
+                marker: {
+                    states: {
+                        hover: {
+                            enabled: false,
+                        }
+                    }
+                },
+                stickyTracking: false,
+                animation: {
+                    duration: 400
+                },
+                states: {
+                    hover: {
+                        enabled: false
+                    }
+                }
+            }
+        },
+        legend: {
+            enabled: false
+        },
+        exporting: {
+            enabled: false
+        },
+        tooltip: {
+            backgroundColor: "white",
+            borderColor: "#ababab",
+            borderRadius: 8,
+            shadow: false,
+            style: {
+                opacity: 0.8
+            },
+            formatter: function () {
+                if (this.point.source && this.point.time) {
+                    var html = this.point.source.toUpperCase() + '<br/>';
+                    html += 'execution time: ' + this.point.time + 'ms' + '<br/>';
+                    html += 'results: ' + this.point.results;
+                    return html;
+                } else if (this.point.source === 'start' || this.point.source == 'end') {
+                    var html = this.point.source;
+                    return html;
+                } else {
+                    return false;
+                }
+            }
+        },
+        series: [{
+            name: 'Progressive Querying',
+            data: (function () {
+                // generate an array of random data
+                var data = [];
+                var time = (new Date()).getTime();
+                var i;
+
+                for (i = -20; i <= 0; i += 1) {
+                    var x = time + i * 1000;
+                    data.push({
+                        x: x,
+                        y: 0,
+                        color: 'transparent',
+                        enabled: false,
+                        radius: 0,
+                        enableMouseTracking: false
+                    });
+                }
+                return data;
+            }())
+        }]
+    });
+
+    return $("#" + id).highcharts();
+}
+
+
+function successHandler(series) {
+    series.addPoint({x: (new Date()).getTime(), y: 1, source: "start", color: "#f4511e", radius: 10}, true, true);
+};
+
+function updateHandler(startTime, series, data) {
+    if (data.status === "running") {
+        var x = (new Date()).getTime();
+        series.addPoint({
+            x: x,
+            y: 1,
+            source: data.results.source,
+            confidence: data.results.confidence,
+            time: Math.abs(startTime - x),
+            results: data.results.results.length,
+            color: "#26a69a",
+            radius: 10,
+            events: {
+                click: function () {
+                    $("#resultbox").show();
+
+                    var results = data.results.results;
+
+                    var tabid = "tab-" + guid();
+
+                    var innerhtml = '';
+
+                    if (results != null && results.length > 0) {
+                        innerhtml += '<table id="' + tabid + '" class="striped highlight">';
+                        innerhtml += '<thead><tr>';
+
+                        $.each(results[0], function (key, value) {
+                            innerhtml += "<th>" + key + "</th>"
+                        });
+
+                        innerhtml += '</tr></thead>';
+                        innerhtml += '<tbody>';
+
+
+                        $.each(results, function (key, value) {
+                            innerhtml += "<tr>";
+                            $.each(value, function (attributekey, attributevalue) {
+                                if(attributekey == "adamprodistance"){
+                                    innerhtml += "<td class='dt-body-right'>" + attributevalue + "</td>"
+                                } else {
+                                    innerhtml += "<td>" + attributevalue + "</td>"
+                                }
+                            });
+                            innerhtml += "</tr>";
+                        });
+
+                        innerhtml += '</tbody>';
+
+                        innerhtml += '</table>';
+                    }
+
+                    $("#results").html(innerhtml);
+
+                    makeDatatable(tabid);
+                }
+            }
+        }, true, true);
+    } else if (data.status === "finished") {
+        stopUpdating();
+    }
+};
+
+function stopUpdating() {
+    clearInterval(dataPollIntervalId);
+    clearInterval(chartUpdatingIntervalId);
+    stopStopwatch();
+}
+
+
+//submit operation
+$("#btnSubmit").click(function () {
+    var id = guid();
+
+    var chart = setupChart("container");
+    var series = chart.series[0];
+    var startTime = (new Date()).getTime();
+
     startStopwatch();
-    searchCompound(evaluate("box-start"), handler);
+
+    var params = evaluate("box-start");
+    params.id = id;
+
+
+    searchProgressive(id, params, function () {
+        successHandler(series);
+    }, function (data, intervallId) {
+        dataPollIntervalId = intervallId;
+        updateHandler(startTime, series, data);
+    }, function (intervallId) {
+        dataPollIntervalId = intervallId;
+        stopUpdating();
+    });
 });
+
 </script>
 
 </div>
