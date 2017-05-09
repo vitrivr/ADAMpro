@@ -50,7 +50,7 @@ private[va] object EquifrequentMarksGenerator extends MarksGenerator with Serial
     }
 
     (0 until dimensionality).map({ dim =>
-      if (maxMarks(dim) > 1) {
+      if (maxMarks(dim) > 2) {
         val hist = dimData(dim).histogram
 
         val marks = new Array[VectorBase](maxMarks(dim) - 1)
@@ -70,7 +70,7 @@ private[va] object EquifrequentMarksGenerator extends MarksGenerator with Serial
 
         marks.toSeq
       } else {
-        Seq()
+        Seq(min(dim), max(dim))
       }
     })
   }

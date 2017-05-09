@@ -126,7 +126,7 @@ class VAIndex(override val indexname: IndexName)(@transient override implicit va
     * @return
     */
   private[this] def computeBounds(q: MathVector, marks: => Marks, @inline distance: MinkowskiDistance): (Bounds, Bounds) = {
-    val lbounds, ubounds = Array.tabulate(marks.length)(i => Array.ofDim[Distance](marks(i).length - 1))
+    val lbounds, ubounds = Array.tabulate(marks.length)(i => Array.ofDim[Distance](math.max(0, marks(i).length - 1)))
 
     var i = 0
     while (i < marks.length) {

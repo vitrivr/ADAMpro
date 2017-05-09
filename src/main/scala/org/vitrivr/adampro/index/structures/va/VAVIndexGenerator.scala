@@ -72,7 +72,7 @@ class VAVIndexGenerator(nbits_total: Option[Int], nbits_dim : Option[Int], marks
     val sumVariance = variance.sum
 
     // compute shares of bits
-    val bitsPerDim = variance.map(variance => (variance / sumVariance * nbits).toInt)
+    val bitsPerDim = variance.map(variance => 1 + (variance / sumVariance * (nbits - ndims)).toInt)
 
     val signatureGenerator = new VariableSignatureGenerator(bitsPerDim)
     val marks = marksGenerator.getMarks(trainData, bitsPerDim.map(x => 1 << x))
