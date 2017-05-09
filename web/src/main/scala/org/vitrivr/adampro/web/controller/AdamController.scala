@@ -349,12 +349,12 @@ class AdamController(rpcClient: RPCClient) extends Controller with Logging {
     if (res.isSuccess) {
       val results = res.get
 
-      val source = if(results.info.get("scantype").isDefined && results.info.get("scantype") == "sequential"){
+      val source = if(results.info.get("scantype").isDefined && results.info("scantype") == "sequential"){
         "sequential"
-      } else if(results.info.get("scantype").isDefined && results.info.get("scantype") == "sequential" == "indexscan"){
-        results.info.get("indextype").getOrElse("")
+      } else if(results.info.get("scantype").isDefined && results.info("scantype") == "indexscan"){
+        results.info.getOrElse("indextype", "")
       } else {
-        results.info.get("scantype").getOrElse("<unknown>")
+        results.info.getOrElse("scantype", "<uknown>")
       }
 
       progTempResults.get(id).get += SearchParallelIntermediaryResponse(id, results.confidence, source, results.time, results.results, ProgressiveQueryStatus.RUNNING)
