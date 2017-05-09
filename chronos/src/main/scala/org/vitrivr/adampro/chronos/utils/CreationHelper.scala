@@ -31,7 +31,7 @@ object CreationHelper {
     try {
       val entityname = if (client.entityExists(generateEntityname(job)).get && job.data_enforcecreation) {
         //generate a new entity with a random name
-        Helpers.generateString(10)
+        ENTITY_NAME_PREFIX + Helpers.generateString(10).replace("-", "m")
       } else {
         //get entity based on creation attributes
         generateEntityname(job)
