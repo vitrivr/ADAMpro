@@ -1,8 +1,11 @@
 package org.vitrivr.adampro.helpers.tracker
 
 import org.apache.spark.broadcast.Broadcast
+import org.apache.spark.sql.DataFrame
+import org.vitrivr.adampro.query.progressive.ProgressiveObservation
 
 import scala.collection.mutable.ListBuffer
+import scala.util.Try
 
 /**
   * ADAMpro
@@ -10,7 +13,7 @@ import scala.collection.mutable.ListBuffer
   * Ivan Giangreco
   * March 2017
   */
-case class OperationTracker() {
+case class OperationTracker(onComplete : Option[(Try[ProgressiveObservation]) => Unit] = None) {
   private val bcLb = new ListBuffer[Broadcast[_]]()
 
   /**
@@ -31,5 +34,15 @@ case class OperationTracker() {
     }
 
     bcLb.clear()
+  }
+
+  /**
+    *
+    * @param observation
+    */
+  def addResult(observation : Try[ProgressiveObservation]) : Unit = {
+    if(onComplete.isDefined){
+      onComplete.get(observation)
+    }
   }
 }

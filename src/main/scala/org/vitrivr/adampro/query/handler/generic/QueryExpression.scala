@@ -2,16 +2,20 @@ package org.vitrivr.adampro.query.handler.generic
 
 import java.util.concurrent.TimeUnit
 
-import org.vitrivr.adampro.config.AttributeNames
-import org.vitrivr.adampro.main.{AdamContext, SparkStartup}
-import org.vitrivr.adampro.query.information.InformationLevels._
-import org.vitrivr.adampro.utils.Logging
 import org.apache.spark.sql.types.IntegerType
 import org.apache.spark.sql.{DataFrame, Row}
+import org.vitrivr.adampro.config.AttributeNames
 import org.vitrivr.adampro.helpers.tracker.OperationTracker
+import org.vitrivr.adampro.main.{AdamContext, SparkStartup}
+import org.vitrivr.adampro.query.information.InformationLevels._
+import org.vitrivr.adampro.query.progressive.{ProgressiveObservation, ProgressiveQueryStatus}
+import org.vitrivr.adampro.utils.Logging
 
+import scala.concurrent.ExecutionContext.Implicits.global
 import scala.collection.mutable.ListBuffer
+import scala.concurrent.Future
 import scala.concurrent.duration.Duration
+import scala.util.{Failure, Success}
 
 /**
   * adampro
@@ -47,12 +51,12 @@ abstract class QueryExpression(id: Option[String]) extends Serializable with Log
     * @param silent log warning if already prepared
     * @return
     */
-  def prepareTree(silent : Boolean = false): QueryExpression = {
+  def prepareTree(silent: Boolean = false): QueryExpression = {
     if (!prepared) {
       prepared = true
       _children = _children.map(_.prepareTree())
     } else {
-      if(!silent){
+      if (!silent) {
         log.warn("expression was already prepared, still preparing children")
       }
       _children = _children.map(_.prepareTree())
@@ -66,25 +70,44 @@ abstract class QueryExpression(id: Option[String]) extends Serializable with Log
     *
     * @return
     */
-  def evaluate(options : Option[QueryEvaluationOptions] = None)(tracker : OperationTracker)(implicit ac: AdamContext): Option[DataFrame] = {
-    if (!prepared) {
-      log.warn("expression should be prepared before running")
+  def evaluate(options: Option[QueryEvaluationOptions] = None)(tracker: OperationTracker)(implicit ac: AdamContext): Option[DataFrame] = {
+    try {
+      if (!prepared) {
+        log.warn("expression should be prepared before running")
+      }
+
+      val t1 = System.currentTimeMillis
+      log.trace(QUERY_MARKER, "before evaluating query")
+      results = run(options, filter)(tracker)
+      log.trace(QUERY_MARKER, "evaluated query")
+      run = true
+      val t2 = System.currentTimeMillis
+
+      val time = t2 - t1
+
+      if (ac.config.logQueryExecutionTime && info.source.isDefined) {
+        SparkStartup.logOperator.addQuery(this)
+      }
+
+      info.time = Duration(time, TimeUnit.MILLISECONDS)
+
+
+      if (results.isDefined) {
+        val status = if (_children.isEmpty) {
+          ProgressiveQueryStatus.FINISHED
+        } else {
+          ProgressiveQueryStatus.RUNNING
+        }
+
+        Future {
+          tracker.addResult(Success(ProgressiveObservation(status, results, info.confidence.getOrElse(0.toFloat), info.source.getOrElse(""), info.info, t1, t2)))
+        }
+      }
+    } catch {
+      case e: Exception =>
+        tracker.addResult(Failure(e))
+        throw e
     }
-
-    val t1 = System.currentTimeMillis
-    log.trace(QUERY_MARKER, "before evaluating query")
-    results = run(options, filter)(tracker)
-    log.trace(QUERY_MARKER, "evaluated query")
-    run = true
-    val t2 = System.currentTimeMillis
-
-    val time = t2 - t1
-
-    if(ac.config.logQueryExecutionTime && info.source.isDefined){
-      SparkStartup.logOperator.addQuery(this)
-    }
-
-    info.time = Duration(time, TimeUnit.MILLISECONDS)
 
     results
   }
@@ -95,7 +118,7 @@ abstract class QueryExpression(id: Option[String]) extends Serializable with Log
     * @param filter filter to apply to data
     * @return
     */
-  protected def run(options : Option[QueryEvaluationOptions], filter: Option[DataFrame])(tracker : OperationTracker)(implicit ac: AdamContext): Option[DataFrame]
+  protected def run(options: Option[QueryEvaluationOptions], filter: Option[DataFrame])(tracker: OperationTracker)(implicit ac: AdamContext): Option[DataFrame]
 
 
   /**
@@ -185,7 +208,7 @@ abstract class QueryExpression(id: Option[String]) extends Serializable with Log
   }
 }
 
-case class ExpressionDetails(source: Option[String], scantype: Option[String], id: Option[String], confidence: Option[Float], info : Map[String, String] = Map()) {
+case class ExpressionDetails(source: Option[String], scantype: Option[String], id: Option[String], confidence: Option[Float], info: Map[String, String] = Map()) {
   var time: Duration = Duration.Zero
   var results: Option[DataFrame] = None
 

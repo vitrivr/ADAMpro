@@ -98,7 +98,7 @@ class SearchRPC extends AdamSearchGrpc.AdamSearch with Logging {
     *
     * @param request
     */
-  private def executeQuery(request: QueryMessage): QueryResultsMessage = {
+  private def executeQuery(request: QueryMessage, tracker : OperationTracker = new OperationTracker()): QueryResultsMessage = {
     time("rpc call for query operation") {
       val logId = Random.alphanumeric.take(5).mkString
       log.trace(QUERY_MARKER, "start " + logId)
@@ -118,7 +118,6 @@ class SearchRPC extends AdamSearchGrpc.AdamSearch with Logging {
 
       log.trace(QUERY_MARKER, "before query op " + logId)
 
-      val tracker = new OperationTracker()
       val res = QueryOp.expression(expression.get, evaluationOptions)(tracker)
 
       log.trace(QUERY_MARKER, "after query op " + logId)
@@ -240,6 +239,60 @@ class SearchRPC extends AdamSearchGrpc.AdamSearch with Logging {
           responseObserver.onCompleted()
           tracker.cleanAll()
         }
+      } catch {
+        case e: Exception => {
+          e.printStackTrace()
+          log.error(e.getMessage)
+          responseObserver.onNext(QueryResultsMessage(ack = Some(AckMessage(code = AckMessage.Code.ERROR, message = e.getMessage))))
+        }
+      }
+    }
+  }
+
+  /**
+    *
+    * @param request
+    * @param responseObserver
+    */
+  override def doAdvancingQuery(request: QueryMessage, responseObserver: StreamObserver[QueryResultsMessage]): Unit = {
+    time("rpc call for advancing query operation") {
+      try {
+        //track on next
+        val onComplete =
+          (tpo: Try[ProgressiveObservation]) => {
+            if (tpo.isSuccess) {
+              val po = tpo.get
+              responseObserver.onNext(
+                QueryResultsMessage(Some(AckMessage(AckMessage.Code.OK)),
+                  Seq(RPCHelperMethods.prepareResults(request.queryid, po.confidence, po.t2 - po.t1, po.source, po.info, po.results))))
+            } else {
+              responseObserver.onNext(
+                QueryResultsMessage(Some(AckMessage(AckMessage.Code.ERROR, tpo.failed.get.getMessage))))
+            }
+          }
+
+        val pathChooser = if (request.hints.isEmpty) {
+          new SimpleProgressivePathChooser()
+        } else {
+          new QueryHintsProgressivePathChooser(request.hints.map(QueryHints.withName(_).get))
+        }
+
+        val nnq = if (request.nnq.isDefined) {
+          RPCHelperMethods.prepareNNQ(request.nnq.get).get
+        } else {
+          throw new GeneralAdamException("nearest neighbour query necessary for progressive query")
+        }
+        val bq = if (request.bq.isDefined) {
+          Some(RPCHelperMethods.prepareBQ(request.bq.get).get)
+        } else {
+          None
+        }
+
+        val evaluationOptions = RPCHelperMethods.prepareEvaluationOptions(request)
+
+        val tracker = new OperationTracker() //TODO: adjust tracker
+        Future.successful(executeQuery(request, tracker))
+
       } catch {
         case e: Exception => {
           e.printStackTrace()
