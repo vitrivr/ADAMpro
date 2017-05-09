@@ -16,7 +16,7 @@ import scala.util.Try
   * Ivan Giangreco
   * April 2017
   */
-class PQEExecutor(job: EvaluationJob, setStatus: (Double) => (Boolean), inputDirectory: File, outputDirectory: File) extends Executor(job, setStatus, inputDirectory, outputDirectory) {
+class PAEExecutor(job: EvaluationJob, setStatus: (Double) => (Boolean), inputDirectory: File, outputDirectory: File) extends Executor(job, setStatus, inputDirectory, outputDirectory) {
   /**
     * Runs evaluation.
     */
@@ -75,6 +75,45 @@ class PQEExecutor(job: EvaluationJob, setStatus: (Double) => (Boolean), inputDir
   }
 
   /**
+    * Gets single query.
+    *
+    * @param k
+    * @param sparseQuery
+    * @return
+    */
+  override protected def getQuery(entityname: String, k: Int, sparseQuery: Boolean): RPCQueryObject = {
+    val lb = new ListBuffer[(String, String)]()
+
+    lb.append("entityname" -> entityname)
+
+    lb.append("attribute" -> job.data_attributename.getOrElse(FEATURE_VECTOR_ATTRIBUTENAME))
+
+    lb.append("k" -> k.toString)
+
+    lb.append("distance" -> job.query_distance)
+
+    if (job.query_weighted) {
+      lb.append("weights" -> generateFeatureVector(job.data_vector_dimensions, job.data_vector_sparsity, job.data_vector_min, job.data_vector_max).mkString(","))
+    }
+
+    lb.append("query" -> generateFeatureVector(job.data_vector_dimensions, job.data_vector_sparsity, job.data_vector_min, job.data_vector_max).mkString(","))
+
+    if (sparseQuery) {
+      lb.append("sparsequery" -> "true")
+    }
+
+    if (job.execution_withsequential) {
+      lb.append("indexonly" -> "false")
+    }
+
+    lb.append("informationlevel" -> "minimal")
+
+    lb.append("hints" -> job.execution_subexecution.map(_._1.toLowerCase).mkString(","))
+
+    RPCQueryObject(Helpers.generateString(10), job.execution_name, lb.toMap, None)
+  }
+
+  /**
     * Executes a query.
     *
     * @param qo
@@ -97,8 +136,8 @@ class PQEExecutor(job: EvaluationJob, setStatus: (Double) => (Boolean), inputDir
     val t1 = System.currentTimeMillis
     var t2 = System.currentTimeMillis - 1 //returning -1 on error
 
-    //do progressive query
-    client.doProgressiveQuery(qo,
+    //do parallel query
+    client.doParallelQuery(qo,
       next = (res) => ({
         val t3 = System.currentTimeMillis() - t1
         ress += ((res, t3))

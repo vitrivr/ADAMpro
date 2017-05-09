@@ -48,6 +48,7 @@ class ChronosAgent(ipAddressOrHostname: String, environment: String) extends Abs
 
     val executor = ejob.general_mode match {
       case "eqe" => new EQEExecutor(ejob, setProgress(job)(_), inputDirectory, outputDirectory)
+      case "pae" => new PAEExecutor(ejob, setProgress(job)(_), inputDirectory, outputDirectory)
       case "pqe" => new PQEExecutor(ejob, setProgress(job)(_), inputDirectory, outputDirectory)
       case "see" => new SEEExecutor(ejob, setProgress(job)(_), inputDirectory, outputDirectory)
       case "sen" => new SENExecutor(ejob, setProgress(job)(_), inputDirectory, outputDirectory)
