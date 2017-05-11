@@ -11,7 +11,7 @@ import org.vitrivr.adampro.datatypes.vector.Vector._
   * August 2015
   */
 @SerialVersionUID(100L)
-class Hasher(val functions: Array[LSHashFunction]) extends Serializable {
+class Hasher(val hhashf: Array[LSHashFunction]) extends Serializable {
   //possibly related to http://stackoverflow.com/questions/16386252/scala-deserialization-class-not-found
   //here we have to use an array, rather than a Seq or a List!
 
@@ -27,10 +27,10 @@ class Hasher(val functions: Array[LSHashFunction]) extends Serializable {
   /**
     *
     * @param v feature vector to hash
-    * @return
+    * @return result of combining all hash functions
     */
   def apply(v: MathVector, m: Int): Int = {
-    val hjs = functions.map(f => f.hash(v))
+    val hjs = hhashf.map(f => f.hash(v))
     util.Arrays.hashCode(hjs) % m //we use hashCode as an hash-combining function
   }
 }

@@ -37,7 +37,7 @@ class LSHIndex(override val indexname: IndexName)(@transient override implicit v
 
     val numOfQueries = options.getOrElse("numOfQ", "3").toInt
 
-    val signatureGeneratorBc = ac.sc.broadcast( new LSHSignatureGenerator(meta.hashTables, meta.m))
+    val signatureGeneratorBc = ac.sc.broadcast( new LSHSignatureGenerator(meta.ghashf, meta.m))
     tracker.addBroadcast(signatureGeneratorBc)
 
     import MovableFeature.conv_math2mov

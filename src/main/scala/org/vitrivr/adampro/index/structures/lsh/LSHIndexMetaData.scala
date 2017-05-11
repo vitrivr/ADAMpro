@@ -10,4 +10,4 @@ import org.vitrivr.adampro.query.distance.DistanceFunction
  * September 2015
  */
 private[lsh]
-case class LSHIndexMetaData(hashTables : Array[Hasher], radius : Float, distance : DistanceFunction, m : Int) extends Serializable
+case class LSHIndexMetaData(ghashf : Array[Hasher], radius : Float, distance : DistanceFunction, m : Int) extends Serializable

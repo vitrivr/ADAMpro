@@ -28,7 +28,7 @@ class LSHIndexGenerator(numHashTables: Int, numHashes: Int, m: Int, distance: Di
     log.trace("LSH started indexing")
 
     val meta = train(getSample(math.max(trainingSize, MINIMUM_NUMBER_OF_TUPLE), attribute)(data))
-    val signatureGenerator = new LSHSignatureGenerator(meta.hashTables, meta.m)
+    val signatureGenerator = new LSHSignatureGenerator(meta.ghashf, meta.m)
 
     val signatureUDF = udf((c: DenseSparkVector) => {
       signatureGenerator.toSignature(Vector.conv_dspark2vec(c)).serialize
