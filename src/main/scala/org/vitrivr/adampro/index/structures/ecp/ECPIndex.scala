@@ -10,7 +10,7 @@ import org.vitrivr.adampro.index.Index.{IndexName, IndexTypeName}
 import org.vitrivr.adampro.index._
 import org.vitrivr.adampro.index.structures.IndexTypes
 import org.vitrivr.adampro.main.AdamContext
-import org.vitrivr.adampro.query.distance.DistanceFunction
+import org.vitrivr.adampro.query.distance.{Distance, DistanceFunction}
 import org.vitrivr.adampro.query.query.NearestNeighbourQuery
 
 
@@ -42,24 +42,26 @@ class ECPIndex(override val indexname: IndexName)(@transient override implicit v
     log.debug("scanning eCP index " + indexname)
 
     //for every leader, check its distance to the query-vector, then sort by distance.
-    val centroids = meta.leaders.map(l => {
-      (l, meta.distance(q, l.vector))
+    val leaders = meta.leaders.map(l => {
+      (l, distance(q, l.vector))
     }).sortBy(_._2)
 
-    //take so many centroids up to the moment where the result-length is over k (therefore + 1)
-    val numberOfCentroidsToUse = centroids.map(_._1.count).scanLeft(0.toLong)(_ + _).takeWhile(_ < k).length + 1
-    val idsBc = ac.sc.broadcast(centroids.take(numberOfCentroidsToUse).map(_._1.id))
+    //take so many leaders up to the moment where the result-length is over k (therefore + 1)
+    val numberOfLeadersToUse = leaders.map(_._1.count).scanLeft(0.toLong)(_ + _).takeWhile(_ < k).length + 1
+    val idsBc = ac.sc.broadcast(leaders.take(numberOfLeadersToUse).map(_._1.id))
+    val leadersBc = ac.sc.broadcast(leaders.take(numberOfLeadersToUse).map(x => (x._1.id, x._2)).toMap)
     tracker.addBroadcast(idsBc)
-    log.trace("centroids prepared")
+    tracker.addBroadcast(leadersBc)
+    log.trace("leaders prepared")
 
     val distUDF = udf((idx : Int) => {
-      centroids(idx)._2
+      leadersBc.value.getOrElse(idx, Distance.maxValue)
     })
 
-    //iterate over all centroids until the result-count is over k
+    //iterate over all leaders until the result-count is over k
     import org.apache.spark.sql.functions._
     val results = data.filter(col(AttributeNames.featureIndexColumnName) isin (idsBc.value : _*))
-      .withColumn(AttributeNames.distanceColumnName, distUDF(col(AttributeNames.featureIndexColumnName)).cast(DataTypes.FloatType))
+      .withColumn(AttributeNames.distanceColumnName, distUDF(col(AttributeNames.featureIndexColumnName)))
 
     results
   }
