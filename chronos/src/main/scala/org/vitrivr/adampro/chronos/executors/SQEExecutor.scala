@@ -78,7 +78,7 @@ class SQEExecutor(job: EvaluationJob, setStatus: (Double) => (Boolean), inputDir
     *
     * @return
     */
-  private def getQueries(indexes: Seq[String]): Seq[RPCQueryObject] = {
+  private def getQueries(indexes: Seq[String], options : Seq[(String, String)] = Seq()): Seq[RPCQueryObject] = {
     val lb = new ListBuffer[RPCQueryObject]()
 
     val additionals = if (job.measurement_firstrun) {
@@ -88,7 +88,7 @@ class SQEExecutor(job: EvaluationJob, setStatus: (Double) => (Boolean), inputDir
     }
 
     job.query_k.flatMap { k =>
-      val denseQueries = (0 to job.query_n + additionals).map { i => getQuery(indexes, k, false) }
+      val denseQueries = (0 to job.query_n + additionals).map { i => getQuery(indexes, k, false, options) }
 
       denseQueries
     }
@@ -96,13 +96,15 @@ class SQEExecutor(job: EvaluationJob, setStatus: (Double) => (Boolean), inputDir
 
 
   /**
-    * Gets single query.
+    * Gets single query
     *
+    * @param indexes
     * @param k
     * @param sparseQuery
+    * @param options
     * @return
     */
-  private def getQuery(indexes: Seq[String], k: Int, sparseQuery: Boolean): RPCQueryObject = {
+  protected def getQuery(indexes: Seq[String], k: Int, sparseQuery: Boolean, options : Seq[(String, String)] = Seq()): RPCQueryObject = {
     val lb = new ListBuffer[(String, String)]()
 
     lb.append("indexes" -> indexes.mkString(","))
@@ -135,6 +137,6 @@ class SQEExecutor(job: EvaluationJob, setStatus: (Double) => (Boolean), inputDir
       lb.append("subtype" -> job.execution_subtype)
     }
 
-    RPCQueryObject(Helpers.generateString(10), job.execution_name, lb.toMap, None)
+    RPCQueryObject(Helpers.generateString(10), job.execution_name, (options ++ lb).toMap, None)
   }
 }

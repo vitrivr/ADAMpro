@@ -75,13 +75,15 @@ class PAEExecutor(job: EvaluationJob, setStatus: (Double) => (Boolean), inputDir
   }
 
   /**
-    * Gets single query.
+    * Gets single query
     *
+    * @param entityname
     * @param k
     * @param sparseQuery
+    * @param options
     * @return
     */
-  override protected def getQuery(entityname: String, k: Int, sparseQuery: Boolean): RPCQueryObject = {
+  protected def getQuery(entityname: String, k: Int, sparseQuery: Boolean, options : Seq[(String, String)] = Seq()): RPCQueryObject = {
     val lb = new ListBuffer[(String, String)]()
 
     lb.append("entityname" -> entityname)
@@ -110,7 +112,7 @@ class PAEExecutor(job: EvaluationJob, setStatus: (Double) => (Boolean), inputDir
 
     lb.append("hints" -> job.execution_subexecution.map(_._1.toLowerCase).mkString(","))
 
-    RPCQueryObject(Helpers.generateString(10), job.execution_name, lb.toMap, None)
+    RPCQueryObject(Helpers.generateString(10), job.execution_name, (options ++ lb).toMap, None)
   }
 
   /**

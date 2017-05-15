@@ -51,9 +51,15 @@ class SENExecutor(job: EvaluationJob, setStatus: (Double) => (Boolean), inputDir
         } else indexnames.get.foreach(indexname => client.indexPartition(indexname, i.get, None, true, true))
       }
 
+
+      val options = ListBuffer[(String, String)]()
+      if(indexnames.get.length == 1){
+        options += "indexname" -> indexnames.get.head
+      }
+
       //collect queries
       logger.info("generating queries to execute on " + entityname.get)
-      val queries = getQueries(entityname.get)
+      val queries = getQueries(entityname.get, options.toList)
 
       val queryProgressAddition = (1 - getStatus) / queries.size.toFloat
 

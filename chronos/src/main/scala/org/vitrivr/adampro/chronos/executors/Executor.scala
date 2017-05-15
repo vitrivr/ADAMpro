@@ -81,7 +81,7 @@ abstract class Executor(val job: EvaluationJob, setStatus: (Double) => (Boolean)
     *
     * @return
     */
-  protected def getQueries(entityname: String): Seq[RPCQueryObject] = {
+  protected def getQueries(entityname: String, options : Seq[(String, String)] = Seq()): Seq[RPCQueryObject] = {
     val lb = new ListBuffer[RPCQueryObject]()
 
     val additionals = if (job.measurement_firstrun) {
@@ -91,7 +91,7 @@ abstract class Executor(val job: EvaluationJob, setStatus: (Double) => (Boolean)
     }
 
     job.query_k.flatMap { k =>
-      val denseQueries = (0 to job.query_n + additionals).map { i => getQuery(entityname, k, false) }
+      val denseQueries = (0 to job.query_n + additionals).map { i => getQuery(entityname, k, false, options) }
 
       denseQueries
     }
@@ -99,13 +99,15 @@ abstract class Executor(val job: EvaluationJob, setStatus: (Double) => (Boolean)
 
 
   /**
-    * Gets single query.
+    * Gets single query
     *
+    * @param entityname
     * @param k
     * @param sparseQuery
+    * @param options
     * @return
     */
-  protected def getQuery(entityname: String, k: Int, sparseQuery: Boolean): RPCQueryObject = {
+  protected def getQuery(entityname: String, k: Int, sparseQuery: Boolean, options : Seq[(String, String)] = Seq()): RPCQueryObject = {
     val lb = new ListBuffer[(String, String)]()
 
     lb.append("entityname" -> entityname)
@@ -138,7 +140,7 @@ abstract class Executor(val job: EvaluationJob, setStatus: (Double) => (Boolean)
       lb.append("subtype" -> job.execution_subtype)
     }
 
-    RPCQueryObject(Helpers.generateString(10), job.execution_name, lb.toMap, None)
+    RPCQueryObject(Helpers.generateString(10), job.execution_name, (options ++ lb).toMap, None)
   }
 
 

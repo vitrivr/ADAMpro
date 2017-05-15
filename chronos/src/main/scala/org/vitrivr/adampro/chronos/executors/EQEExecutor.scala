@@ -120,7 +120,7 @@ class EQEExecutor(job: EvaluationJob, setStatus: (Double) => (Boolean), inputDir
     * @param sparseQuery
     * @return
     */
-  override protected def getQuery(entityname: String, k: Int, sparseQuery: Boolean): RPCQueryObject = {
+  override protected def getQuery(entityname: String, k: Int, sparseQuery: Boolean, options : Seq[(String, String)] = Seq()): RPCQueryObject = {
     val lb = new ListBuffer[(String, String)]()
 
     lb.append("entityname" -> entityname)
@@ -152,6 +152,6 @@ class EQEExecutor(job: EvaluationJob, setStatus: (Double) => (Boolean), inputDir
 
     lb.append("hints" -> job.execution_hint)
 
-    RPCQueryObject(Helpers.generateString(10), job.execution_name, lb.toMap, None)
+    RPCQueryObject(Helpers.generateString(10), job.execution_name, (options ++ lb).toMap, None)
   }
 }

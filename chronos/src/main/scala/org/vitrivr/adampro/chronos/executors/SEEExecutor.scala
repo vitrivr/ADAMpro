@@ -27,8 +27,8 @@ class SEEExecutor(job: EvaluationJob, setStatus: (Double) => (Boolean), inputDir
     assert(job.data_entityname.isDefined  && client.entityExists(job.data_entityname.get).get)
     val entityname = job.data_entityname.get
 
-    val indexes = CreationHelper.createIndexes(client, job, entityname)
-    assert(indexes.isSuccess)
+    val indexnames = CreationHelper.createIndexes(client, job, entityname)
+    assert(indexnames.isSuccess)
 
     updateStatus(0.25)
 
@@ -44,13 +44,18 @@ class SEEExecutor(job: EvaluationJob, setStatus: (Double) => (Boolean), inputDir
       if (i.isDefined) {
         //TODO: add partition column to job
         if (RepartitionMessage.Partitioner.values.find(p => p.name == job.access_index_partitioner).isDefined) {
-          indexes.get.foreach(indexname => client.indexPartition(indexname, i.get, None, true, true, job.access_index_partitioner))
-        } else indexes.get.foreach(indexname => client.indexPartition(indexname, i.get, None, true, true))
+          indexnames.get.foreach(indexname => client.indexPartition(indexname, i.get, None, true, true, job.access_index_partitioner))
+        } else indexnames.get.foreach(indexname => client.indexPartition(indexname, i.get, None, true, true))
+      }
+
+      val options = ListBuffer[(String, String)]()
+      if(indexnames.get.length == 1){
+        options += "indexname" -> indexnames.get.head
       }
 
       //collect queries
       logger.info("generating queries to execute on " + entityname)
-      val queries = getQueries(entityname)
+      val queries = getQueries(entityname, options)
 
       val queryProgressAddition = (1 - getStatus) / queries.size.toFloat
 
