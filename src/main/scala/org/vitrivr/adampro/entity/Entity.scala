@@ -377,6 +377,8 @@ case class Entity(entityname: EntityName)(@transient implicit val ac: AdamContex
         incrementNumberOfInserts()
         markStale()
 
+        //TODO: insert also into index
+
         val apxCountOld = SparkStartup.catalogOperator.getEntityOption(entityname, Some(Entity.APPROX_COUNT_KEY)).get.getOrElse(Entity.APPROX_COUNT_KEY, "0").toInt
         SparkStartup.catalogOperator.updateEntityOption(entityname, Entity.APPROX_COUNT_KEY, (apxCountOld + insertionSize).toString)
 
