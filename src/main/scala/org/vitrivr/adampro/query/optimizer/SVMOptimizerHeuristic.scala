@@ -248,10 +248,10 @@ private[optimizer] class SVMOptimizerHeuristic(defaultNRuns: Int = 100)(@transie
     val lb = new ListBuffer[Double]()
     val meta = index.meta
 
-    lb += math.max(1.0, meta.hashTables.length / 100.0)
+    lb += math.max(1.0, meta.ghashf.length / 100.0)
     lb += math.max(1.0, meta.m / 1000.0)
     lb += math.max(1.0, meta.radius / 10.0)
-    lb += math.max(1.0, meta.hashTables.head.functions.size / 100.0)
+    lb += math.max(1.0, meta.ghashf.head.hhashf.size / 100.0)
 
     lb.toSeq
   }
