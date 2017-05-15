@@ -491,7 +491,9 @@ object Index extends Logging {
     * @param indextypename index type to use for indexing
     * @return
     */
-  def exists(entityname: EntityName, attribute: String, indextypename: IndexTypeName)(implicit ac: AdamContext): Boolean = SparkStartup.catalogOperator.existsIndex(entityname, attribute, indextypename).get
+  def exists(entityname: EntityName, attribute: String, indextypename: IndexTypeName, acceptStale : Boolean)(implicit ac: AdamContext): Boolean = {
+    SparkStartup.catalogOperator.existsIndex(entityname, attribute, indextypename, acceptStale).get
+  }
 
   /**
     * Lists indexes.

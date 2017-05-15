@@ -514,11 +514,12 @@ class RPCClient(channel: ManagedChannel,
     * @param entityname name of entity
     * @param attribute  nmae of attribute
     * @param indextype  type of index
+    * @param acceptStale accept also stale indexes
     * @return
     */
-  def indexExists(entityname: String, attribute: String, indextype: String): Try[Boolean] = {
+  def indexExists(entityname: String, attribute: String, indextype: String, acceptStale : Boolean = false): Try[Boolean] = {
     execute("index exists operation") {
-      val res = definerBlocking.existsIndex(IndexMessage(entityname, attribute, getIndexType(indextype)))
+      val res = definerBlocking.existsIndex(IndexExistsMessage(entityname, attribute, getIndexType(indextype), acceptStale = acceptStale))
       if (res.ack.get.code == AckMessage.Code.OK) {
         return Success(res.exists)
       } else {

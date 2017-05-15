@@ -35,7 +35,7 @@ class SQEExecutor(job: EvaluationJob, setStatus: (Double) => (Boolean), inputDir
 
     //collect queries
     logger.info("generating queries to execute on " + indexnames.get.mkString(", "))
-    val queries = getQueries(indexnames.get)
+    val queries = getSQEQueries(indexnames.get)
 
     val queryProgressAddition = (1 - getStatus) / queries.size.toFloat
 
@@ -78,7 +78,7 @@ class SQEExecutor(job: EvaluationJob, setStatus: (Double) => (Boolean), inputDir
     *
     * @return
     */
-  private def getQueries(indexes: Seq[String], options : Seq[(String, String)] = Seq()): Seq[RPCQueryObject] = {
+  protected def getSQEQueries(indexes: Seq[String], options : Seq[(String, String)] = Seq()): Seq[RPCQueryObject] = {
     val lb = new ListBuffer[RPCQueryObject]()
 
     val additionals = if (job.measurement_firstrun) {
@@ -88,7 +88,7 @@ class SQEExecutor(job: EvaluationJob, setStatus: (Double) => (Boolean), inputDir
     }
 
     job.query_k.flatMap { k =>
-      val denseQueries = (0 to job.query_n + additionals).map { i => getQuery(indexes, k, false, options) }
+      val denseQueries = (0 to job.query_n + additionals).map { i => getSQEQuery(indexes, k, false, options) }
 
       denseQueries
     }
@@ -104,7 +104,7 @@ class SQEExecutor(job: EvaluationJob, setStatus: (Double) => (Boolean), inputDir
     * @param options
     * @return
     */
-  protected def getQuery(indexes: Seq[String], k: Int, sparseQuery: Boolean, options : Seq[(String, String)] = Seq()): RPCQueryObject = {
+  protected def getSQEQuery(indexes: Seq[String], k: Int, sparseQuery: Boolean, options : Seq[(String, String)] = Seq()): RPCQueryObject = {
     val lb = new ListBuffer[(String, String)]()
 
     lb.append("indexes" -> indexes.mkString(","))

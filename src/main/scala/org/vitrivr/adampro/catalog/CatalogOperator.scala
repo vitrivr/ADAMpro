@@ -505,12 +505,18 @@ class CatalogOperator(internalsPath: String) extends Logging {
     * @param entityname name of index
     * @param attribute  name of attribute
     * @param indextypename
+    * @param acceptStale
     * @return
     */
-  def existsIndex(entityname: EntityName, attribute: String, indextypename: IndexTypeName): Try[Boolean] = {
+  def existsIndex(entityname: EntityName, attribute: String, indextypename: IndexTypeName, acceptStale: Boolean): Try[Boolean] = {
     execute("exists index") {
-      val query = _indexes.filter(_.entityname === entityname.toString).filter(_.attributename === attribute).filter(_.indextypename === indextypename.toString).length.result
-      Await.result(DB.run(query), MAX_WAITING_TIME) > 0
+      var query = _indexes.filter(_.entityname === entityname.toString).filter(_.attributename === attribute).filter(_.indextypename === indextypename.toString)
+
+      if (!acceptStale) {
+        query = query.filter(_.isUpToDate)
+      }
+
+      Await.result(DB.run(query.length.result), MAX_WAITING_TIME) > 0
     }
   }
 

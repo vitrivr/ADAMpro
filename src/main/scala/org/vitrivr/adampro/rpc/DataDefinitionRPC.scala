@@ -326,9 +326,11 @@ class DataDefinitionRPC extends AdamDefinitionGrpc.AdamDefinition with Logging {
     * @param request
     * @return
     */
-  override def existsIndex(request: IndexMessage): Future[ExistsMessage] = {
+  override def existsIndex(request: IndexExistsMessage): Future[ExistsMessage] = {
     log.debug("rpc call for index exists operation")
-    val res = IndexOp.exists(request.entity)
+
+    val indextypename = IndexTypes.withIndextype(request.indextype)
+    val res = IndexOp.exists(request.entity, request.attribute, indextypename.get, request.acceptStale)
 
     if (res.isSuccess) {
       Future.successful(ExistsMessage(Some(AckMessage(code = AckMessage.Code.OK)), res.get))

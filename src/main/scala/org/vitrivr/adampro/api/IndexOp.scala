@@ -126,11 +126,12 @@ object IndexOp extends GenericOp {
     * @param entityname    name of entity
     * @param attribute     name of attribute
     * @param indextypename index type to use for indexing
+    * @param acceptStale accept also stale indexes
     * @return
     */
-  def exists(entityname: EntityName, attribute: String, indextypename: IndexTypeName)(implicit ac: AdamContext): Try[Boolean] = {
+  def exists(entityname: EntityName, attribute: String, indextypename: IndexTypeName, acceptStale : Boolean)(implicit ac: AdamContext): Try[Boolean] = {
     execute("check index for " + entityname + "(" + attribute + ")" + " of type " + indextypename + " exists operation") {
-      Success(Index.exists(entityname, attribute, indextypename))
+      Success(Index.exists(entityname, attribute, indextypename, acceptStale))
     }
   }
 
