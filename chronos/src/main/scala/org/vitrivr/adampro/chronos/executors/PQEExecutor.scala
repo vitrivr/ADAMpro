@@ -120,7 +120,7 @@ class PQEExecutor(job: EvaluationJob, setStatus: (Double) => (Boolean), inputDir
         lb += (idx + "_adamprotime" -> res._1.get.time)
         lb += (idx + "_measuredtime" -> res._1.get.time)
         lb += (idx + "_results" -> {
-          res._1.get.results.map(r => (r.get("ap_id") + "," + r.get("ap_distance"))).mkString("(", "),(", ")")
+          res._1.get.results.map(r => (r.get("ap_id").getOrElse("-") + "," + r.get("ap_distance").getOrElse("-1"))).mkString("(", "),(", ")")
         })
       } else {
         lb += (res._1.get.source + "_failure" -> res._1.failed.get.getMessage)

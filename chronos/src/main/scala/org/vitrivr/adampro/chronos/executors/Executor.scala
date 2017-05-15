@@ -231,7 +231,7 @@ abstract class Executor(val job: EvaluationJob, setStatus: (Double) => (Boolean)
 
       //results
       lb += ("results" -> {
-        res.get.head.results.map(res => (res.get("ap_id") + "," + res.get("ap_distance"))).mkString("(", "),(", ")")
+        res.get.head.results.map(res => (res.get("ap_id").getOrElse("-") + "," + res.get("ap_distance").getOrElse("-1"))).mkString("(", "),(", ")")
       })
 
       //result quality

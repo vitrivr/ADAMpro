@@ -159,7 +159,7 @@ class PAEExecutor(job: EvaluationJob, setStatus: (Double) => (Boolean), inputDir
         lb += (res.get.source + "_adamprotime" -> res.get.time)
         lb += (res.get.source + "_measuredtime" -> time)
         lb += (res.get.source + "_results" -> {
-          res.get.results.map(res => (res.get("ap_id") + "," + res.get("ap_distance"))).mkString("(", "),(", ")")
+          res.get.results.map(res => (res.get("ap_id").getOrElse("-") + "," + res.get("ap_distance").getOrElse("-1"))).mkString("(", "),(", ")")
         })
       } else {
         lb += (res.get.source + "_failure" -> res.failed.get.getMessage)
