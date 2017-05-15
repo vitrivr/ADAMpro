@@ -432,6 +432,8 @@ case class Entity(entityname: EntityName)(@transient implicit val ac: AdamContex
       newData = newData.filter("NOT " + predicate.sqlString)
     }
 
+    //TODO: delete also from index
+
     val handlers = newData.schema.fields
       .map(field => schema(Some(Seq(field.name)), fullSchema = false)).filterNot(_.isEmpty).map(_.head)
       .groupBy(_.storagehandler)
