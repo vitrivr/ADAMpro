@@ -5,7 +5,7 @@ import java.util.Properties
 
 import org.vitrivr.adampro.chronos.EvaluationJob
 import org.vitrivr.adampro.chronos.utils.{CreationHelper, Helpers}
-import org.vitrivr.adampro.rpc.datastructures.RPCQueryObject
+import org.vitrivr.adampro.rpc.datastructures.RPCComplexQueryObject
 
 import scala.collection.mutable.ListBuffer
 
@@ -78,8 +78,8 @@ class SQEExecutor(job: EvaluationJob, setStatus: (Double) => (Boolean), inputDir
     *
     * @return
     */
-  protected def getSQEQueries(indexes: Seq[String], options : Seq[(String, String)] = Seq()): Seq[RPCQueryObject] = {
-    val lb = new ListBuffer[RPCQueryObject]()
+  protected def getSQEQueries(indexes: Seq[String], options : Seq[(String, String)] = Seq()): Seq[RPCComplexQueryObject] = {
+    val lb = new ListBuffer[RPCComplexQueryObject]()
 
     val additionals = if (job.measurement_firstrun) {
       1
@@ -104,7 +104,7 @@ class SQEExecutor(job: EvaluationJob, setStatus: (Double) => (Boolean), inputDir
     * @param options
     * @return
     */
-  protected def getSQEQuery(indexes: Seq[String], k: Int, sparseQuery: Boolean, options : Seq[(String, String)] = Seq()): RPCQueryObject = {
+  protected def getSQEQuery(indexes: Seq[String], k: Int, sparseQuery: Boolean, options : Seq[(String, String)] = Seq()): RPCComplexQueryObject = {
     val lb = new ListBuffer[(String, String)]()
 
     lb.append("indexes" -> indexes.mkString(","))
@@ -137,6 +137,6 @@ class SQEExecutor(job: EvaluationJob, setStatus: (Double) => (Boolean), inputDir
       lb.append("subtype" -> job.execution_subtype)
     }
 
-    RPCQueryObject(Helpers.generateString(10), job.execution_name, (options ++ lb).toMap, None)
+    RPCComplexQueryObject(Helpers.generateString(10), (options ++ lb).toMap, job.execution_name, None)
   }
 }

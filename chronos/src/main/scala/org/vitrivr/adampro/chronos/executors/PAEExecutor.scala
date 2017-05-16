@@ -5,7 +5,7 @@ import java.util.Properties
 
 import org.vitrivr.adampro.chronos.EvaluationJob
 import org.vitrivr.adampro.chronos.utils.{CreationHelper, Helpers}
-import org.vitrivr.adampro.rpc.datastructures.{RPCQueryObject, RPCQueryResults}
+import org.vitrivr.adampro.rpc.datastructures.{RPCComplexQueryObject, RPCQueryResults}
 
 import scala.collection.mutable.ListBuffer
 import scala.util.Try
@@ -83,7 +83,7 @@ class PAEExecutor(job: EvaluationJob, setStatus: (Double) => (Boolean), inputDir
     * @param options
     * @return
     */
-  override protected def getQuery(entityname: String, k: Int, sparseQuery: Boolean, options : Seq[(String, String)] = Seq()): RPCQueryObject = {
+  override protected def getQuery(entityname: String, k: Int, sparseQuery: Boolean, options : Seq[(String, String)] = Seq()): RPCComplexQueryObject = {
     val lb = new ListBuffer[(String, String)]()
 
     lb.append("entityname" -> entityname)
@@ -112,7 +112,7 @@ class PAEExecutor(job: EvaluationJob, setStatus: (Double) => (Boolean), inputDir
 
     lb.append("hints" -> job.execution_subexecution.map(_._1.toLowerCase).mkString(","))
 
-    RPCQueryObject(Helpers.generateString(10), job.execution_name, (options ++ lb).toMap, None)
+    RPCComplexQueryObject(Helpers.generateString(10), (options ++ lb).toMap, job.execution_name, None)
   }
 
   /**
@@ -120,7 +120,7 @@ class PAEExecutor(job: EvaluationJob, setStatus: (Double) => (Boolean), inputDir
     *
     * @param qo
     */
-  override protected def executeQuery(qo: RPCQueryObject): Map[String, String] = {
+  override protected def executeQuery(qo: RPCComplexQueryObject): Map[String, String] = {
     val lb = new ListBuffer[(String, Any)]()
     val ress = new ListBuffer[(Try[RPCQueryResults], Long)]()
 
@@ -131,7 +131,7 @@ class PAEExecutor(job: EvaluationJob, setStatus: (Double) => (Boolean), inputDir
     lb += ("queryid" -> qo.id)
     lb += ("operation" -> qo.operation)
     lb += ("options" -> qo.options.mkString)
-    lb += ("debugQuery" -> qo.getQueryMessage.toString())
+    lb += ("debugQuery" -> qo.buildQueryMessage.toString())
 
 
     var isCompleted = false

@@ -1,6 +1,6 @@
 package org.vitrivr.adampro.web.datastructures
 
-import org.vitrivr.adampro.rpc.datastructures.{RPCQueryObject, RPCQueryResults}
+import org.vitrivr.adampro.rpc.datastructures.{RPCComplexQueryObject, RPCQueryResults}
 import org.vitrivr.adampro.web.controller.ProgressiveQueryStatus
 
 /**
@@ -12,8 +12,8 @@ import org.vitrivr.adampro.web.controller.ProgressiveQueryStatus
 private[web] object Search {}
 
 private[web] case class SearchRequest(var id: String, var operation: String, var options: Map[String, String], var targets: Option[Seq[SearchRequest]]) {
-  def toRPCQueryObject : RPCQueryObject = {
-    RPCQueryObject(id, operation, options, targets.map(_.map(_.toRPCQueryObject)))
+  def toRPCQueryObject : RPCComplexQueryObject = {
+    RPCComplexQueryObject(id, options, operation, targets.map(_.map(_.toRPCQueryObject)))
   }
 }
 

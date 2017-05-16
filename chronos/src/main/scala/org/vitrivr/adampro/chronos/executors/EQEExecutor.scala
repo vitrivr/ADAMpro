@@ -5,7 +5,7 @@ import java.util.Properties
 
 import org.vitrivr.adampro.chronos.EvaluationJob
 import org.vitrivr.adampro.chronos.utils.{CreationHelper, Helpers}
-import org.vitrivr.adampro.rpc.datastructures.RPCQueryObject
+import org.vitrivr.adampro.rpc.datastructures.RPCComplexQueryObject
 
 import scala.collection.mutable.ListBuffer
 
@@ -73,13 +73,13 @@ class EQEExecutor(job: EvaluationJob, setStatus: (Double) => (Boolean), inputDir
           .filter(_._2.isDefined)
           .filterNot(x => x._1 == "sequential")
           .foreach { case (indextype, scoring) =>
-            val tmpQo = new RPCQueryObject(qo.id, "index", qo.options ++ Seq("indexname" -> scoring.get._1), qo.targets)
+            val tmpQo = new RPCComplexQueryObject(qo.id, qo.options ++ Seq("indexname" -> scoring.get._1), "index", qo.targets)
             val tmpResult = executeQuery(tmpQo) ++ Seq("scanscore" -> scoring.get._3.toString)
             results += (runid + "-loosers-" + indextype -> tmpResult)
           }
 
         if(job.execution_subexecution.map(_._1).contains("sequential")){
-          val tmpQo = new RPCQueryObject(qo.id, "sequential", qo.options, qo.targets)
+          val tmpQo = new RPCComplexQueryObject(qo.id, qo.options, "sequential", qo.targets)
           val tmpResult = executeQuery(tmpQo) ++ Seq("scanscore" -> scoring.get("sequential").map(_._3).getOrElse(-1).toString)
           results += (runid + "-loosers-" + "sequential" -> tmpResult)
         }
@@ -120,7 +120,7 @@ class EQEExecutor(job: EvaluationJob, setStatus: (Double) => (Boolean), inputDir
     * @param sparseQuery
     * @return
     */
-  override protected def getQuery(entityname: String, k: Int, sparseQuery: Boolean, options : Seq[(String, String)] = Seq()): RPCQueryObject = {
+  override protected def getQuery(entityname: String, k: Int, sparseQuery: Boolean, options : Seq[(String, String)] = Seq()): RPCComplexQueryObject = {
     val lb = new ListBuffer[(String, String)]()
 
     lb.append("entityname" -> entityname)
@@ -152,6 +152,6 @@ class EQEExecutor(job: EvaluationJob, setStatus: (Double) => (Boolean), inputDir
 
     lb.append("hints" -> job.execution_hint)
 
-    RPCQueryObject(Helpers.generateString(10), job.execution_name, (options ++ lb).toMap, None)
+    RPCComplexQueryObject(Helpers.generateString(10), (options ++ lb).toMap, job.execution_name, None)
   }
 }

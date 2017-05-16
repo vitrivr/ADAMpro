@@ -7,7 +7,7 @@ import java.util.logging.Logger
 import org.vitrivr.adampro.chronos.EvaluationJob
 import org.vitrivr.adampro.chronos.utils.Helpers
 import org.vitrivr.adampro.rpc.RPCClient
-import org.vitrivr.adampro.rpc.datastructures.{RPCQueryObject, RPCQueryResults}
+import org.vitrivr.adampro.rpc.datastructures.{RPCComplexQueryObject, RPCQueryResults}
 
 import scala.collection.mutable.ListBuffer
 import scala.util.{Random, Try}
@@ -81,8 +81,8 @@ abstract class Executor(val job: EvaluationJob, setStatus: (Double) => (Boolean)
     *
     * @return
     */
-  protected def getQueries(entityname: String, options : Seq[(String, String)] = Seq()): Seq[RPCQueryObject] = {
-    val lb = new ListBuffer[RPCQueryObject]()
+  protected def getQueries(entityname: String, options : Seq[(String, String)] = Seq()): Seq[RPCComplexQueryObject] = {
+    val lb = new ListBuffer[RPCComplexQueryObject]()
 
     val additionals = if (job.measurement_firstrun) {
       1
@@ -107,7 +107,7 @@ abstract class Executor(val job: EvaluationJob, setStatus: (Double) => (Boolean)
     * @param options
     * @return
     */
-  protected def getQuery(entityname: String, k: Int, sparseQuery: Boolean, options : Seq[(String, String)] = Seq()): RPCQueryObject = {
+  protected def getQuery(entityname: String, k: Int, sparseQuery: Boolean, options : Seq[(String, String)] = Seq()): RPCComplexQueryObject = {
     val lb = new ListBuffer[(String, String)]()
 
     lb.append("entityname" -> entityname)
@@ -140,7 +140,7 @@ abstract class Executor(val job: EvaluationJob, setStatus: (Double) => (Boolean)
       lb.append("subtype" -> job.execution_subtype)
     }
 
-    RPCQueryObject(Helpers.generateString(10), job.execution_name, (options ++ lb).toMap, None)
+    RPCComplexQueryObject(Helpers.generateString(10), (options ++ lb).toMap, job.execution_name, None)
   }
 
 
@@ -201,7 +201,7 @@ abstract class Executor(val job: EvaluationJob, setStatus: (Double) => (Boolean)
     *
     * @param qo
     */
-  protected def executeQuery(qo: RPCQueryObject): Map[String, String] = {
+  protected def executeQuery(qo: RPCComplexQueryObject): Map[String, String] = {
     val lb = new ListBuffer[(String, Any)]()
 
     lb ++= (job.getAllParameters())
@@ -211,7 +211,7 @@ abstract class Executor(val job: EvaluationJob, setStatus: (Double) => (Boolean)
     lb += ("queryid" -> qo.id)
     lb += ("operation" -> qo.operation)
     lb += ("options" -> qo.options.mkString)
-    lb += ("debugQuery" -> qo.getQueryMessage.toString())
+    lb += ("debugQuery" -> qo.buildQueryMessage.toString())
 
     val t1 = System.currentTimeMillis
 
