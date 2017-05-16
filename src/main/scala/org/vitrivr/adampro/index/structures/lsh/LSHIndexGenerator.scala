@@ -59,6 +59,8 @@ class LSHIndexGenerator(numHashTables: Int, numHashes: Int, m: Int, distance: Di
     }.toSeq
     val radius = radiuses.sum / radiuses.length
 
+    //possibly choose w = 4 for Minkowski distances (see Datar et al.: Locality-sensitive hashing scheme based on p-stable distributions)
+
     val hashFamily = distance match {
       case ManhattanDistance => () => new ManhattanHashFunction(dims, radius.toFloat, m)
       case EuclideanDistance => () => new EuclideanHashFunction(dims, radius.toFloat, m)
