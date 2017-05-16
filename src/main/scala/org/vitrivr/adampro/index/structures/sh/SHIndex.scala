@@ -6,11 +6,11 @@ import org.vitrivr.adampro.datatypes.bitstring.BitString
 import org.vitrivr.adampro.datatypes.vector.Vector._
 import org.vitrivr.adampro.datatypes.vector.MovableFeature
 import org.vitrivr.adampro.helpers.tracker.OperationTracker
-import org.vitrivr.adampro.index.{Index}
+import org.vitrivr.adampro.index.Index
 import org.vitrivr.adampro.index.Index.{IndexName, IndexTypeName}
 import org.vitrivr.adampro.index.structures.IndexTypes
 import org.vitrivr.adampro.main.AdamContext
-import org.vitrivr.adampro.query.distance.{DistanceFunction, MinkowskiDistance}
+import org.vitrivr.adampro.query.distance.{Distance, DistanceFunction, MinkowskiDistance}
 import org.vitrivr.adampro.query.query.NearestNeighbourQuery
 
 
@@ -65,7 +65,7 @@ class SHIndex(override val indexname: IndexName)(@transient override implicit va
     })
 
     val res = data
-      .withColumn(AttributeNames.distanceColumnName, distUDF(data(AttributeNames.featureIndexColumnName)))
+      .withColumn(AttributeNames.distanceColumnName, distUDF(data(AttributeNames.featureIndexColumnName)).cast(Distance.SparkDistance))
       .orderBy(AttributeNames.distanceColumnName)
       .limit(k)
 

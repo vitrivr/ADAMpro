@@ -1,7 +1,7 @@
 package org.vitrivr.adampro.index.structures.lsh
 
 import org.apache.spark.sql.DataFrame
-import org.apache.spark.sql.functions.col
+import org.apache.spark.sql.functions.{col, lit, udf}
 import org.vitrivr.adampro.config.AttributeNames
 import org.vitrivr.adampro.datatypes.bitstring.BitString
 import org.vitrivr.adampro.datatypes.vector.Vector._
@@ -12,7 +12,7 @@ import org.vitrivr.adampro.index.Index.{IndexName, IndexTypeName}
 import org.vitrivr.adampro.index.structures.IndexTypes
 import org.vitrivr.adampro.index.structures.lsh.signature.LSHSignatureGenerator
 import org.vitrivr.adampro.main.AdamContext
-import org.vitrivr.adampro.query.distance.DistanceFunction
+import org.vitrivr.adampro.query.distance.{Distance, DistanceFunction}
 import org.vitrivr.adampro.query.query.NearestNeighbourQuery
 
 
@@ -47,7 +47,6 @@ class LSHIndex(override val indexname: IndexName)(@transient override implicit v
     val queriesBc = ac.sc.broadcast(List.fill(numOfQueries)((1.0, signatureGeneratorBc.value.toBuckets(q.move(meta.radius)))) ::: List((1.0, originalQuery)))
     tracker.addBroadcast(queriesBc)
 
-    import org.apache.spark.sql.functions.udf
     val distUDF = udf((c: Array[Byte]) => {
       var i = 0
       var score = 0
@@ -78,6 +77,7 @@ class LSHIndex(override val indexname: IndexName)(@transient override implicit v
     val res = data
       .withColumn(AttributeNames.distanceColumnName, distUDF(data(AttributeNames.featureIndexColumnName)))
       .filter(col(AttributeNames.distanceColumnName) > 0)
+      .withColumn(AttributeNames.distanceColumnName, lit(Distance.zeroValue))
 
     res
   }

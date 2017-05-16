@@ -9,7 +9,7 @@ import org.vitrivr.adampro.index.Index
 import org.vitrivr.adampro.index.Index.{IndexName, IndexTypeName}
 import org.vitrivr.adampro.index.structures.IndexTypes
 import org.vitrivr.adampro.main.AdamContext
-import org.vitrivr.adampro.query.distance.{DistanceFunction, MinkowskiDistance}
+import org.vitrivr.adampro.query.distance.{Distance, DistanceFunction, MinkowskiDistance}
 import org.vitrivr.adampro.query.query.NearestNeighbourQuery
 import org.vitrivr.adampro.datatypes.vector.Vector._
 import org.vitrivr.adampro.helpers.tracker.OperationTracker
@@ -57,7 +57,7 @@ class PQIndex(override val indexname: IndexName)(@transient override implicit va
     })
 
     val res = data
-      .withColumn(AttributeNames.distanceColumnName, distUDF(data(AttributeNames.featureIndexColumnName)).cast(DataTypes.FloatType))
+      .withColumn(AttributeNames.distanceColumnName, distUDF(data(AttributeNames.featureIndexColumnName)).cast(Distance.SparkDistance))
       .sort(AttributeNames.distanceColumnName)
       .limit(k)
 

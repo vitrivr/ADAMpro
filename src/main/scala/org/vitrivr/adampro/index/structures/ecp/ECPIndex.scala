@@ -61,7 +61,7 @@ class ECPIndex(override val indexname: IndexName)(@transient override implicit v
     //iterate over all leaders until the result-count is over k
     import org.apache.spark.sql.functions._
     val results = data.filter(col(AttributeNames.featureIndexColumnName) isin (idsBc.value : _*))
-      .withColumn(AttributeNames.distanceColumnName, distUDF(col(AttributeNames.featureIndexColumnName)))
+      .withColumn(AttributeNames.distanceColumnName, distUDF(col(AttributeNames.featureIndexColumnName)).cast(Distance.SparkDistance))
 
     results
   }

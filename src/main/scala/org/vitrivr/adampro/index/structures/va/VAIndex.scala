@@ -100,7 +100,7 @@ class VAIndex(override val indexname: IndexName)(@transient override implicit va
         localRh.offer(current, pk)
       }
 
-      localRh.results.map(x => ResultElement(x.ap_id, x.ap_lower)).iterator
+      localRh.results.map(x => ResultElement(x.ap_id, x.ap_lower, x.ap_upper, (x.ap_lower +  x.ap_upper) / 2.0)).iterator
     }).toDF()
 
     //the most correct solution would be to re-do at this point the result handler with the pre-selected results again
