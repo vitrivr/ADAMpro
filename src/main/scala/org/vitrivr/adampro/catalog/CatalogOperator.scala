@@ -510,8 +510,8 @@ class CatalogOperator(internalsPath: String) extends Logging {
     */
   def existsIndex(entityname: EntityName, attribute: String, indextypename: IndexTypeName, acceptStale: Boolean): Try[Boolean] = {
     execute("exists index") {
-      var query = _indexes.filter(_.entityname === entityname.toString).filter(_.attributename === attribute).filter(_.indextypename === indextypename.toString)
-
+      var query = _indexes.filter(_.entityname === entityname.toString).filter(_.attributename === attribute).filter(_.indextypename === indextypename.name)
+      
       if (!acceptStale) {
         query = query.filter(_.isUpToDate)
       }
