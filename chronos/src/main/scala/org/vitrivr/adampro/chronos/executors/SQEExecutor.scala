@@ -5,7 +5,7 @@ import java.util.Properties
 
 import org.vitrivr.adampro.chronos.EvaluationJob
 import org.vitrivr.adampro.chronos.utils.{CreationHelper, Helpers}
-import org.vitrivr.adampro.rpc.datastructures.RPCComplexQueryObject
+import org.vitrivr.adampro.rpc.datastructures.{RPCComplexQueryObject, RPCGenericQueryObject, RPCStochasticScanQueryObject}
 
 import scala.collection.mutable.ListBuffer
 
@@ -35,7 +35,7 @@ class SQEExecutor(job: EvaluationJob, setStatus: (Double) => (Boolean), inputDir
 
     //collect queries
     logger.info("generating queries to execute on " + indexnames.get.mkString(", "))
-    val queries = getSQEQueries(indexnames.get)
+    val queries = getSQEQueries(entityname.get, indexnames.get)
 
     val queryProgressAddition = (1 - getStatus) / queries.size.toFloat
 
@@ -78,8 +78,8 @@ class SQEExecutor(job: EvaluationJob, setStatus: (Double) => (Boolean), inputDir
     *
     * @return
     */
-  protected def getSQEQueries(indexes: Seq[String], options : Seq[(String, String)] = Seq()): Seq[RPCComplexQueryObject] = {
-    val lb = new ListBuffer[RPCComplexQueryObject]()
+  protected def getSQEQueries(entityname : String, indexnames: Seq[String], options : Seq[(String, String)] = Seq()): Seq[RPCGenericQueryObject] = {
+    val lb = new ListBuffer[RPCGenericQueryObject]()
 
     val additionals = if (job.measurement_firstrun) {
       1
@@ -88,7 +88,7 @@ class SQEExecutor(job: EvaluationJob, setStatus: (Double) => (Boolean), inputDir
     }
 
     job.query_k.flatMap { k =>
-      val denseQueries = (0 to job.query_n + additionals).map { i => getSQEQuery(indexes, k, false, options) }
+      val denseQueries = (0 to job.query_n + additionals).map { i => getSQEQuery(entityname, indexnames, k, false, options) }
 
       denseQueries
     }
@@ -98,16 +98,21 @@ class SQEExecutor(job: EvaluationJob, setStatus: (Double) => (Boolean), inputDir
   /**
     * Gets single query
     *
-    * @param indexes
+    * @param entityname
+    * @param indexnames
     * @param k
     * @param sparseQuery
     * @param options
     * @return
     */
-  protected def getSQEQuery(indexes: Seq[String], k: Int, sparseQuery: Boolean, options : Seq[(String, String)] = Seq()): RPCComplexQueryObject = {
+  protected def getSQEQuery(entityname : String, indexnames: Seq[String], k: Int, sparseQuery: Boolean, options : Seq[(String, String)] = Seq()): RPCGenericQueryObject = {
+    val id = Helpers.generateString(10)
+
     val lb = new ListBuffer[(String, String)]()
 
-    lb.append("indexes" -> indexes.mkString(","))
+    lb.append("entityname" -> entityname)
+
+    lb.append("indexnames" -> indexnames.mkString(","))
 
     lb.append("attribute" -> job.data_attributename.getOrElse(FEATURE_VECTOR_ATTRIBUTENAME))
 
@@ -137,6 +142,6 @@ class SQEExecutor(job: EvaluationJob, setStatus: (Double) => (Boolean), inputDir
       lb.append("subtype" -> job.execution_subtype)
     }
 
-    RPCComplexQueryObject(Helpers.generateString(10), (options ++ lb).toMap, job.execution_name, None)
+    RPCStochasticScanQueryObject(id, (options ++ lb).toMap)
   }
 }

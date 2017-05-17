@@ -7,7 +7,9 @@ import org.vitrivr.adampro.grpc.grpc.{FromMessage, QueryMessage}
   * Ivan Giangreco
   * May 2017
   */
-case class RPCIndexScanQueryObject(id : String, options : Map[String, String]) extends RPCGenericQueryObject(id, options){
+case class RPCIndexScanQueryObject(override val id : String, override val options : Map[String, String]) extends RPCGenericQueryObject(id, options){
+  override val operation = "index"
+
   override protected def setQueryMessage(qm: QueryMessage): QueryMessage = {
     if(opindexname.isDefined){
       qm.withFrom(FromMessage().withIndex(opindexname.get)).withNnq(nnq.get)

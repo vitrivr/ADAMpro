@@ -5,7 +5,7 @@ import java.util.Properties
 
 import org.vitrivr.adampro.chronos.EvaluationJob
 import org.vitrivr.adampro.chronos.utils.{CreationHelper, Helpers}
-import org.vitrivr.adampro.rpc.datastructures.{RPCComplexQueryObject, RPCQueryResults}
+import org.vitrivr.adampro.rpc.datastructures.{RPCComplexQueryObject, RPCGenericQueryObject, RPCQueryResults, RPCSequentialScanQueryObject}
 
 import scala.collection.mutable.ListBuffer
 import scala.util.Try
@@ -120,7 +120,7 @@ class PAEExecutor(job: EvaluationJob, setStatus: (Double) => (Boolean), inputDir
     *
     * @param qo
     */
-  override protected def executeQuery(qo: RPCComplexQueryObject): Map[String, String] = {
+  override protected def executeQuery(qo: RPCGenericQueryObject): Map[String, String] = {
     val lb = new ListBuffer[(String, Any)]()
     val ress = new ListBuffer[(Try[RPCQueryResults], Long)]()
 
@@ -141,8 +141,13 @@ class PAEExecutor(job: EvaluationJob, setStatus: (Double) => (Boolean), inputDir
     //do parallel query
     client.doParallelQuery(qo,
       next = (res) => ({
-        val t3 = System.currentTimeMillis() - t1
-        ress += ((res, t3))
+        if(res.isSuccess){
+          val t3 = System.currentTimeMillis() - t1
+          ress += ((res, t3))
+        } else {
+          logger.warning("error in executing parallel querying: " + res.failed.get.getMessage)
+          isCompleted = true
+        }
       }),
       completed = (id) => ({
         isCompleted = true
@@ -174,7 +179,7 @@ class PAEExecutor(job: EvaluationJob, setStatus: (Double) => (Boolean), inputDir
       val opt = collection.mutable.Map() ++ qo.options
       opt -= "hints"
       opt += "hints" -> "sequential"
-      val gtruth = client.doQuery(qo.copy(operation = "sequential", options = opt.toMap))
+      val gtruth = client.doQuery(RPCSequentialScanQueryObject(qo.id, opt.toMap))
 
       if (gtruth.isSuccess) {
         val gtruthPKs = gtruth.get.map(_.results.map(_.get("ap_id"))).head.map(_.get)

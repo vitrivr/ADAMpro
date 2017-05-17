@@ -12,8 +12,7 @@ import scala.collection.mutable.ListBuffer
   * Ivan Giangreco
   * May 2017
   */
-abstract class RPCGenericQueryObject(id: String, options: Map[String, String]) {
-
+abstract class RPCGenericQueryObject(val id: String, val options: Map[String, String]) {
   /**
     *
     * @return
@@ -39,7 +38,7 @@ abstract class RPCGenericQueryObject(id: String, options: Map[String, String]) {
     *
     * @return
     */
-  private[datastructures] def prepare(): RPCGenericQueryObject = {
+  def prepare(): RPCGenericQueryObject = {
     this
   }
 
@@ -49,6 +48,13 @@ abstract class RPCGenericQueryObject(id: String, options: Map[String, String]) {
     * @return
     */
   protected def setQueryMessage(qm: QueryMessage): QueryMessage
+
+  /**
+    *
+    * @return
+    */
+  def operation : String
+
 
   /**
     *

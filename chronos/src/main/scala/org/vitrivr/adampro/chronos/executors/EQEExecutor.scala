@@ -5,7 +5,7 @@ import java.util.Properties
 
 import org.vitrivr.adampro.chronos.EvaluationJob
 import org.vitrivr.adampro.chronos.utils.{CreationHelper, Helpers}
-import org.vitrivr.adampro.rpc.datastructures.RPCComplexQueryObject
+import org.vitrivr.adampro.rpc.datastructures._
 
 import scala.collection.mutable.ListBuffer
 
@@ -73,13 +73,13 @@ class EQEExecutor(job: EvaluationJob, setStatus: (Double) => (Boolean), inputDir
           .filter(_._2.isDefined)
           .filterNot(x => x._1 == "sequential")
           .foreach { case (indextype, scoring) =>
-            val tmpQo = new RPCComplexQueryObject(qo.id, qo.options ++ Seq("indexname" -> scoring.get._1), "index", qo.targets)
+            val tmpQo = new RPCIndexScanQueryObject(qo.id, qo.options ++ Seq("indexname" -> scoring.get._1))
             val tmpResult = executeQuery(tmpQo) ++ Seq("scanscore" -> scoring.get._3.toString)
             results += (runid + "-loosers-" + indextype -> tmpResult)
           }
 
         if(job.execution_subexecution.map(_._1).contains("sequential")){
-          val tmpQo = new RPCComplexQueryObject(qo.id, qo.options, "sequential", qo.targets)
+          val tmpQo = new RPCSequentialScanQueryObject(qo.id, qo.options)
           val tmpResult = executeQuery(tmpQo) ++ Seq("scanscore" -> scoring.get("sequential").map(_._3).getOrElse(-1).toString)
           results += (runid + "-loosers-" + "sequential" -> tmpResult)
         }
@@ -120,15 +120,14 @@ class EQEExecutor(job: EvaluationJob, setStatus: (Double) => (Boolean), inputDir
     * @param sparseQuery
     * @return
     */
-  override protected def getQuery(entityname: String, k: Int, sparseQuery: Boolean, options : Seq[(String, String)] = Seq()): RPCComplexQueryObject = {
+  override protected def getQuery(entityname: String, k: Int, sparseQuery: Boolean, options : Seq[(String, String)] = Seq()): RPCGenericQueryObject = {
+    val id = Helpers.generateString(10)
+
     val lb = new ListBuffer[(String, String)]()
 
     lb.append("entityname" -> entityname)
-
     lb.append("attribute" -> job.data_attributename.getOrElse(FEATURE_VECTOR_ATTRIBUTENAME))
-
     lb.append("k" -> k.toString)
-
     lb.append("distance" -> job.query_distance)
 
     if (job.query_weighted) {
@@ -152,6 +151,8 @@ class EQEExecutor(job: EvaluationJob, setStatus: (Double) => (Boolean), inputDir
 
     lb.append("hints" -> job.execution_hint)
 
-    RPCComplexQueryObject(Helpers.generateString(10), (options ++ lb).toMap, job.execution_name, None)
+    lb.append(("nofallback" -> "true"))
+
+    RPCEmpiricalScanQueryObject(id, (options ++ lb).toMap)
   }
 }

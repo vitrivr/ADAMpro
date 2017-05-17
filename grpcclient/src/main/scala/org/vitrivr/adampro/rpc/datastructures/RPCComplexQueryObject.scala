@@ -8,7 +8,7 @@ import org.vitrivr.adampro.grpc.grpc._
   * Ivan Giangreco
   * May 2017
   */
-case class RPCComplexQueryObject(id : String, options : Map[String, String], var operation : String, var targets: Option[Seq[RPCGenericQueryObject]]) extends RPCGenericQueryObject(id, options){
+case class RPCComplexQueryObject(override val id : String, override val options : Map[String, String], override val operation : String, var targets: Option[Seq[RPCGenericQueryObject]]) extends RPCGenericQueryObject(id, options){
   protected def entityname = options.get("entityname").get
   protected def hints() = options.get("hints").map(_.split(",").toSeq).getOrElse(Seq()).filterNot(_.length == 0)
 
@@ -23,13 +23,13 @@ case class RPCComplexQueryObject(id : String, options : Map[String, String], var
         FromMessage().withExpression(targets.get.head.asInstanceOf[RPCComplexQueryObject].seqm)
       }
 
-    qm.withFrom(from)
+    qm.withFrom(from).withNnq(nnq.get)
   }
 
   /**
     *
     */
-  override private[datastructures] def prepare(): RPCGenericQueryObject = {
+  override def prepare(): RPCGenericQueryObject = {
     var sqm = super.prepare()
 
     if ((operation == "index" || operation == "sequential" || operation == "external") && targets.isDefined && !targets.get.isEmpty) {

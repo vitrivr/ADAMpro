@@ -5,7 +5,7 @@ import java.util.Properties
 
 import org.vitrivr.adampro.chronos.EvaluationJob
 import org.vitrivr.adampro.chronos.utils.{CreationHelper, Helpers}
-import org.vitrivr.adampro.rpc.datastructures.{RPCComplexQueryObject, RPCQueryResults}
+import org.vitrivr.adampro.rpc.datastructures.{RPCComplexQueryObject, RPCGenericQueryObject, RPCQueryResults}
 
 import scala.collection.mutable.ListBuffer
 import scala.util.Try
@@ -79,7 +79,7 @@ class PQEExecutor(job: EvaluationJob, setStatus: (Double) => (Boolean), inputDir
     *
     * @param qo
     */
-  override protected def executeQuery(qo: RPCComplexQueryObject): Map[String, String] = {
+  override protected def executeQuery(qo: RPCGenericQueryObject): Map[String, String] = {
     val lb = new ListBuffer[(String, Any)]()
     val ress = new ListBuffer[(Try[RPCQueryResults], Long)]()
 

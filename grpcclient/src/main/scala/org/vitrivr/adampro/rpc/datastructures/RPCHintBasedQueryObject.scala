@@ -8,7 +8,9 @@ import org.vitrivr.adampro.grpc.grpc.{FromMessage, QueryMessage}
   * Ivan Giangreco
   * May 2017
   */
-case class RPCHintBasedQueryObject(id : String, options : Map[String, String]) extends RPCGenericQueryObject(id, options){
+case class RPCHintBasedQueryObject(override val id : String, override val options : Map[String, String]) extends RPCGenericQueryObject(id, options){
+  override val operation = "hint"
+
   override protected def setQueryMessage(qm: QueryMessage): QueryMessage = qm.withFrom(FromMessage().withEntity(entityname)).withHints(hints).withNnq(nnq.get)
 
   protected def entityname = options.get("entityname").get

@@ -13,7 +13,7 @@ import org.vitrivr.adampro.grpc.grpc.AdaptScanMethodsMessage.QueryCollection.{LO
 import org.vitrivr.adampro.grpc.grpc.DistanceMessage.DistanceType
 import org.vitrivr.adampro.grpc.grpc.RepartitionMessage.PartitionOptions
 import org.vitrivr.adampro.grpc.grpc.{AttributeType, _}
-import org.vitrivr.adampro.rpc.datastructures.{RPCAttributeDefinition, RPCComplexQueryObject, RPCQueryResults, RPCSimulationQueryObject}
+import org.vitrivr.adampro.rpc.datastructures._
 import org.vitrivr.adampro.utils.Logging
 
 import scala.util.{Failure, Success, Try}
@@ -621,9 +621,9 @@ class RPCClient(channel: ManagedChannel,
     * @param qo search request
     * @return
     */
-  def doQuery(qo: RPCComplexQueryObject): Try[Seq[RPCQueryResults]] = {
+  def doQuery(qo: RPCGenericQueryObject): Try[Seq[RPCQueryResults]] = {
     execute("compound query operation") {
-      val res = searcherBlocking.doQuery(qo.buildQueryMessage)
+      val res = searcherBlocking.doQuery(qo.prepare.buildQueryMessage)
       if (res.ack.get.code.isOk) {
         return Success(res.responses.map(new RPCQueryResults(_)))
       } else {
@@ -640,7 +640,7 @@ class RPCClient(channel: ManagedChannel,
     * @param completed function for final result
     * @return
     */
-  def doProgressiveQuery(qo: RPCComplexQueryObject, next: (Try[RPCQueryResults]) => (Unit), completed: (String) => (Unit)): Try[Seq[RPCQueryResults]] = {
+  def doProgressiveQuery(qo: RPCGenericQueryObject, next: (Try[RPCQueryResults]) => (Unit), completed: (String) => (Unit)): Try[Seq[RPCQueryResults]] = {
     execute("progressive query operation") {
       val so = new StreamObserver[QueryResultsMessage]() {
         override def onError(throwable: Throwable): Unit = {
@@ -662,7 +662,7 @@ class RPCClient(channel: ManagedChannel,
         }
       }
 
-      searcher.doProgressiveQuery(qo.buildQueryMessage, so)
+      searcher.doProgressiveQuery(qo.prepare.buildQueryMessage, so)
       Success(null)
     }
   }
@@ -675,7 +675,7 @@ class RPCClient(channel: ManagedChannel,
     * @param completed function for final result
     * @return
     */
-  def doParallelQuery(qo: RPCComplexQueryObject, next: (Try[RPCQueryResults]) => (Unit), completed: (String) => (Unit)): Try[Seq[RPCQueryResults]] = {
+  def doParallelQuery(qo: RPCGenericQueryObject, next: (Try[RPCQueryResults]) => (Unit), completed: (String) => (Unit)): Try[Seq[RPCQueryResults]] = {
     execute("parallel query operation") {
       val so = new StreamObserver[QueryResultsMessage]() {
         override def onError(throwable: Throwable): Unit = {
@@ -697,12 +697,12 @@ class RPCClient(channel: ManagedChannel,
         }
       }
 
-      searcher.doParallelQuery(qo.buildQueryMessage, so)
+      searcher.doParallelQuery(qo.prepare.buildQueryMessage, so)
       Success(null)
     }
   }
 
-  def getScoredQueryExecutionPaths(qo: RPCComplexQueryObject, optimizername: String = "svm"): Try[Seq[(String, String, Double)]] = {
+  def getScoredQueryExecutionPaths(qo: RPCGenericQueryObject, optimizername: String = "svm"): Try[Seq[(String, String, Double)]] = {
     execute("collecting scored query execution paths operation") {
 
       val optimizer  = optimizername match {

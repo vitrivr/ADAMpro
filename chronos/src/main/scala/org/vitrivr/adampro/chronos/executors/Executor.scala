@@ -7,7 +7,7 @@ import java.util.logging.Logger
 import org.vitrivr.adampro.chronos.EvaluationJob
 import org.vitrivr.adampro.chronos.utils.Helpers
 import org.vitrivr.adampro.rpc.RPCClient
-import org.vitrivr.adampro.rpc.datastructures.{RPCComplexQueryObject, RPCQueryResults}
+import org.vitrivr.adampro.rpc.datastructures._
 
 import scala.collection.mutable.ListBuffer
 import scala.util.{Random, Try}
@@ -81,8 +81,8 @@ abstract class Executor(val job: EvaluationJob, setStatus: (Double) => (Boolean)
     *
     * @return
     */
-  protected def getQueries(entityname: String, options : Seq[(String, String)] = Seq()): Seq[RPCComplexQueryObject] = {
-    val lb = new ListBuffer[RPCComplexQueryObject]()
+  protected def getQueries(entityname: String, options : Seq[(String, String)] = Seq()): Seq[RPCGenericQueryObject] = {
+    val lb = new ListBuffer[RPCGenericQueryObject]()
 
     val additionals = if (job.measurement_firstrun) {
       1
@@ -107,7 +107,9 @@ abstract class Executor(val job: EvaluationJob, setStatus: (Double) => (Boolean)
     * @param options
     * @return
     */
-  protected def getQuery(entityname: String, k: Int, sparseQuery: Boolean, options : Seq[(String, String)] = Seq()): RPCComplexQueryObject = {
+  protected def getQuery(entityname: String, k: Int, sparseQuery: Boolean, options : Seq[(String, String)] = Seq()): RPCGenericQueryObject = {
+    val id = Helpers.generateString(10)
+
     val lb = new ListBuffer[(String, String)]()
 
     lb.append("entityname" -> entityname)
@@ -140,7 +142,14 @@ abstract class Executor(val job: EvaluationJob, setStatus: (Double) => (Boolean)
       lb.append("subtype" -> job.execution_subtype)
     }
 
-    RPCComplexQueryObject(Helpers.generateString(10), (options ++ lb).toMap, job.execution_name, None)
+    lb.append(("nofallback" -> "true"))
+
+    if(job.execution_hint == "sequential"){
+      RPCSequentialScanQueryObject(id, (options ++ lb).toMap)
+    } else {
+      //index scan
+      RPCIndexScanQueryObject(id, (options ++ lb).toMap)
+    }
   }
 
 
@@ -201,7 +210,7 @@ abstract class Executor(val job: EvaluationJob, setStatus: (Double) => (Boolean)
     *
     * @param qo
     */
-  protected def executeQuery(qo: RPCComplexQueryObject): Map[String, String] = {
+  protected def executeQuery(qo: RPCGenericQueryObject): Map[String, String] = {
     val lb = new ListBuffer[(String, Any)]()
 
     lb ++= (job.getAllParameters())
@@ -242,7 +251,7 @@ abstract class Executor(val job: EvaluationJob, setStatus: (Double) => (Boolean)
         val opt = collection.mutable.Map() ++ qo.options
         opt -= "hints"
         opt += "hints" -> "sequential"
-        val gtruth = client.doQuery(qo.copy(options = opt.toMap))
+        val gtruth = client.doQuery(RPCSequentialScanQueryObject(qo.id, opt.toMap))
 
         if (gtruth.isSuccess) {
           val gtruthPKs = gtruth.get.map(_.results.map(_.get("ap_id"))).head.map(_.get)
