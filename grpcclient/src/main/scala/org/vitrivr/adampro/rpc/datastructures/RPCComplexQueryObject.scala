@@ -14,8 +14,9 @@ case class RPCComplexQueryObject(override val id : String, override val options 
 
 
   override protected def setQueryMessage(qm: QueryMessage): QueryMessage = {
-    val from =
-      if (options.get("entityname").isDefined) {
+    var aqm = qm
+
+    val from = if (options.get("entityname").isDefined) {
         FromMessage().withEntity(entityname)
       } else if (targets.isEmpty || targets.get.isEmpty) {
         FromMessage().withExpression(seqm)
@@ -23,7 +24,13 @@ case class RPCComplexQueryObject(override val id : String, override val options 
         FromMessage().withExpression(targets.get.head.asInstanceOf[RPCComplexQueryObject].seqm)
       }
 
-    qm.withFrom(from).withNnq(nnq.get)
+    aqm = aqm.withFrom(from)
+
+    if(nnq.isDefined){
+      aqm = qm.withNnq(nnq.get)
+    }
+
+    aqm
   }
 
   /**

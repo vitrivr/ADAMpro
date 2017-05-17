@@ -14,7 +14,7 @@ case class RPCIndexScanQueryObject(override val id : String, override val option
     if(opindexname.isDefined){
       qm.withFrom(FromMessage().withIndex(opindexname.get)).withNnq(nnq.get)
     } else if(opentityname.isDefined && ophints.isDefined){
-      qm.withFrom(FromMessage().withEntity(opentityname.get)).withNnq(nnq.get).withHints(ophints.get)
+      qm.withFrom(FromMessage().withEntity(opentityname.get)).withNnq(nnq.get).withHints(ophints.get).withNoFallback(nofallback)
     } else {
       throw new Exception("either indexname or entityname and hints has to be defined")
     }
@@ -23,5 +23,6 @@ case class RPCIndexScanQueryObject(override val id : String, override val option
   protected def opentityname = options.get("entityname")
   protected def opindexname = options.get("indexname")
   protected def ophints = options.get("hints").map(_.split(","))
+  protected def nofallback = options.get("nofallback").map(_.toBoolean).getOrElse(false)
 
 }

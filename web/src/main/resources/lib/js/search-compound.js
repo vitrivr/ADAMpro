@@ -140,6 +140,9 @@ function evaluate (id) {
 
     params.options = {};
     params.options.subtype = $("#" + id).data("subtype");
+    params.options.hints = $("#" + id).data("subtype");
+
+    params.options.nofallback = "true";
 
     params.options.indexonly = "true";
 
