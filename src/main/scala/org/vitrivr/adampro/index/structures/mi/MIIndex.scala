@@ -41,7 +41,7 @@ import org.vitrivr.adampro.query.query.NearestNeighbourQuery
     //maximum position difference, MPD, access just pairs whose position difference is below a threshold
     val max_pos_diff = options.mapValues(_.toInt).getOrElse("max_pos_diff", ki)
 
-    //take closest ks reference points
+    //take closest ks refe rence points
     val q_knp = meta.refs.sortBy(ref => distance(ref.ap_indexable, q)).take(ks)
 
     log.trace("reference points prepared")

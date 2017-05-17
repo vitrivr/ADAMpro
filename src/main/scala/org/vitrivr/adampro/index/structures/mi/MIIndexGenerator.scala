@@ -1,8 +1,10 @@
 package org.vitrivr.adampro.index.structures.mi
 
 import org.apache.spark.annotation.Experimental
-import org.apache.spark.sql.types._
+import org.apache.spark.rdd.RDD
 import org.apache.spark.sql.{DataFrame, Row}
+import org.apache.spark.sql.functions.udf
+import org.apache.spark.sql.types.{ArrayType, IntegerType, StructField, StructType}
 import org.vitrivr.adampro.config.AttributeNames
 import org.vitrivr.adampro.datatypes.TupleID
 import org.vitrivr.adampro.datatypes.TupleID._
@@ -21,7 +23,7 @@ import org.vitrivr.adampro.query.distance.DistanceFunction
   * Ivan Giangreco
   * June 2016
   */
-@Experimental class MIIndexGenerator(p_ki: Option[Int], p_ks: Option[Int], distance: DistanceFunction, nrefs: Option[Int])(@transient implicit val ac: AdamContext) extends IndexGenerator {
+@Experimental class MIIndexGenerator(p_ki: Option[Int], p_ks: Option[Int], distance: DistanceFunction, nrefs: Int)(@transient implicit val ac: AdamContext) extends IndexGenerator {
   override val indextypename: IndexTypeName = IndexTypes.MIINDEX
 
   /**
@@ -29,12 +31,13 @@ import org.vitrivr.adampro.query.distance.DistanceFunction
     * @param data raw data to index
     * @return
     */
-  override def index(data: DataFrame, attribute: String)(tracker : OperationTracker): (DataFrame, Serializable) = {
+  override def index(data: DataFrame, attribute: String)(tracker: OperationTracker): (DataFrame, Serializable) = {
     log.trace("LSH started indexing")
 
-    val sample = getSample(math.max(nrefs.getOrElse(math.ceil(2 * math.sqrt(data.count())).toInt), MINIMUM_NUMBER_OF_TUPLE), attribute)(data)
+    val sample = getSample(math.max(nrefs, MINIMUM_NUMBER_OF_TUPLE), attribute)(data)
 
-    val refsBc = ac.sc.broadcast(sample.zipWithIndex.map { case (idt, idx) => IndexingTaskTuple(idx.toLong, idt.ap_indexable) })
+    val refs = sample.zipWithIndex.map { case (idt, idx) => IndexingTaskTuple(idx.toLong, idt.ap_indexable) }
+    val refsBc = ac.sc.broadcast(refs)
     tracker.addBroadcast(refsBc)
 
     val ki = p_ki.getOrElse(math.min(100, refsBc.value.length))
@@ -42,33 +45,30 @@ import org.vitrivr.adampro.query.distance.DistanceFunction
     assert(ks <= ki)
     log.trace("MI index chosen " + refsBc.value.length + " reference points")
 
-    case class ReferencePointAssignment(tid: TupleID, refid: TupleID, score: Int)
 
-    val indexed = data.rdd
-      .map(r => IndexingTaskTuple(r.getAs(AttributeNames.internalIdColumnName), Vector.conv_dspark2vec(r.getAs[DenseSparkVector](attribute))))
-      .flatMap(datum => {
-        refsBc.value
-          .sortBy(ref => distance.apply(datum.ap_indexable, ref.ap_indexable)) //sort refs by distance
-          .zipWithIndex //give rank (score)
-          .map { case (ref, idx) => ReferencePointAssignment(datum.ap_id, ref.ap_id, idx) } //obj, postingListId, score
-          .take(ki) //limit to number of nearest pivots used when indexing
-      }).groupBy(_.refid) //group by id of pivot (create posting list)
-      .mapValues(vals => vals.toSeq.sortBy(_.score)) //order by score
-      .mapValues(vals => (vals.map(_.tid), vals.map(_.score))) //postingListId, scoreList
-      .map(x => Row(x._1, x._2._1, x._2._2))
-
-
-    //TODO: possibly change structure to fit better Spark and return a ReferencePointAssignment rather than a true posting list
-    /*val indexed = data.rdd.flatMap(r => {
+    val referencesUDF = udf((c: DenseSparkVector) => {
       refsBc.value
-        .sortBy(ref => distance.apply(Vector.conv_dspark2vec(r.getAs[DenseSparkVector](attribute)), ref.ap_indexable)) //sort refs by distance
+        .sortBy(ref => distance.apply(Vector.conv_dspark2vec(c), ref.ap_indexable)) //sort refs by distance
         .zipWithIndex //give rank (score)
-        .map { case (ref, idx) => ReferencePointAssignment(r.getAs(AttributeNames.internalIdColumnName), ref.ap_id, idx) } //obj, postingListId, score
-        .take(ki) //limit to number of nearest pivots used when indexing
-    }).map(x => Row(x.refid, x.tid, x.score))*/
+        .take(ki)
+        .map(x => (x._1.ap_id, x._2)) //refid, score
+    })
 
+    import org.apache.spark.sql.functions.{col, explode}
 
-    log.trace("MI finished indexing")
+    val rdd = data.withColumn(AttributeNames.featureIndexColumnName, referencesUDF(data(attribute)))
+      .withColumn(AttributeNames.featureIndexColumnName, explode(col(AttributeNames.featureIndexColumnName)))
+      .select(col(AttributeNames.internalIdColumnName),
+        col(AttributeNames.featureIndexColumnName).getField("_1") as AttributeNames.featureIndexColumnName + "-id", //refid
+        col(AttributeNames.featureIndexColumnName).getField("_2") as AttributeNames.featureIndexColumnName + "-score" //score
+      ).rdd
+      .groupBy(_.getAs[TupleID](AttributeNames.featureIndexColumnName + "-id"))
+      .mapValues { vals =>
+        val list = vals.toList
+          .sortBy(_.getAs[Int](AttributeNames.featureIndexColumnName + "-score")) //order by score
+        (list.map(_.getAs[TupleID](AttributeNames.internalIdColumnName)), list.map(_.getAs[Int](AttributeNames.featureIndexColumnName + "-score")))
+      }.map(x => Row(x._1, x._2._1, x._2._2))
+
 
     val schema = StructType(Seq(
       StructField(MIIndex.REFERENCE_OBJ_NAME, TupleID.SparkTupleID, nullable = false),
@@ -76,10 +76,13 @@ import org.vitrivr.adampro.query.distance.DistanceFunction
       StructField(MIIndex.SCORE_LIST_NAME, new ArrayType(IntegerType, false), nullable = false)
     ))
 
-    val df = ac.sqlContext.createDataFrame(indexed, schema)
+    val indexed = ac.sqlContext.createDataFrame(rdd, schema)
+
+
+    log.trace("MI finished indexing")
     val meta = MIIndexMetaData(ki, ks, refsBc.value)
 
-    (df, meta)
+    (indexed, meta)
   }
 }
 
@@ -94,9 +97,13 @@ class MIIndexGeneratorFactory extends IndexGeneratorFactory {
     val ks = properties.get("ks").map(_.toInt)
 
     val nrefs = if (properties.contains("nrefs")) {
-      properties.get("nrefs").map(_.toInt)
+      properties.get("nrefs").get.toInt
     } else {
-      if(properties.contains("n")) { Some(math.ceil(2 * math.sqrt( properties.get("n").get.toInt )).toInt) } else { None } //slightly hacking...
+      if (properties.contains("n")) {
+        math.ceil(2 * math.sqrt(properties.get("n").get.toInt)).toInt
+      } else {
+        6000 //assuming we have around 10M elements
+      }
     }
 
     new MIIndexGenerator(ki, ks, distance, nrefs)
