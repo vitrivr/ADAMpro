@@ -95,7 +95,7 @@ object Transferer extends Logging {
         SparkStartup.catalogOperator.updateAttributeStorageHandler(entity.entityname, attribute.name, newHandlerName)
       }
 
-      entity.markStale()
+      entity.markSoftStale()
 
       data.unpersist(true)
 

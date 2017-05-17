@@ -65,7 +65,7 @@ object EntityPartitioner {
             }
         }
 
-        entity.markStale()
+        entity.markSoftStale()
 
         Success(entity)
       case _ => Failure(new GeneralAdamException("partitioning mode unknown"))

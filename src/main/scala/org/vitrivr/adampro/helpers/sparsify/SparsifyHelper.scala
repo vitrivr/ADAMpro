@@ -80,7 +80,7 @@ object SparsifyHelper {
         throw status.failed.get
       }
 
-      entity.markStale()
+      entity.markSoftStale()
 
       Success(entity)
     } catch {

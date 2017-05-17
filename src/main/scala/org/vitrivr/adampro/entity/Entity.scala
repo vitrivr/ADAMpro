@@ -474,24 +474,30 @@ case class Entity(entityname: EntityName)(@transient implicit val ac: AdamContex
     SparkStartup.catalogOperator.listIndexes(Some(entityname)).get.map(index => Index.load(index))
   }
 
-
   /**
-    * Marks the data stale (e.g., if new data has been inserted to entity).
+    * Marks the entity stale, but without changes to the data.
     */
-  def markStale(): Unit = {
+  def markSoftStale(): Unit = {
     mostRecentVersion.add(1)
 
     _schema = None
     _data.map(_.unpersist())
     _data = None
 
-    indexes.map(_.map(_.markStale()))
-
     ac.entityLRUCache.invalidate(entityname)
 
-    SparkStartup.catalogOperator.deleteEntityOption(entityname, Entity.COUNT_KEY)
-
     currentVersion = mostRecentVersion.value
+  }
+
+
+  /**
+    * Marks the data stale (e.g., if new data has been inserted to entity).
+    */
+  def markStale(): Unit = {
+    markSoftStale()
+
+    indexes.map(_.map(_.markStale()))
+    SparkStartup.catalogOperator.deleteEntityOption(entityname, Entity.COUNT_KEY)
   }
 
 
