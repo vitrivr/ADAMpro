@@ -1,13 +1,9 @@
 package org.vitrivr.adampro.index.structures.mi
 
 import org.apache.spark.annotation.Experimental
-import org.apache.spark.rdd.RDD
-import org.apache.spark.sql.{DataFrame, Row}
+import org.apache.spark.sql.{DataFrame}
 import org.apache.spark.sql.functions.udf
-import org.apache.spark.sql.types.{ArrayType, IntegerType, StructField, StructType}
 import org.vitrivr.adampro.config.AttributeNames
-import org.vitrivr.adampro.datatypes.TupleID
-import org.vitrivr.adampro.datatypes.TupleID._
 import org.vitrivr.adampro.datatypes.vector.Vector
 import org.vitrivr.adampro.datatypes.vector.Vector._
 import org.vitrivr.adampro.helpers.tracker.OperationTracker
@@ -45,42 +41,22 @@ import org.vitrivr.adampro.query.distance.DistanceFunction
     assert(ks <= ki)
     log.trace("MI index chosen " + refsBc.value.length + " reference points")
 
+    val signatureGeneratorBc = ac.sc.broadcast(new MISignatureGenerator(ki, refs.length))
+    tracker.addBroadcast(signatureGeneratorBc)
 
     val referencesUDF = udf((c: DenseSparkVector) => {
-      refsBc.value
+      val references = refsBc.value
         .sortBy(ref => distance.apply(Vector.conv_dspark2vec(c), ref.ap_indexable)) //sort refs by distance
-        .zipWithIndex //give rank (score)
         .take(ki)
-        .map(x => (x._1.ap_id, x._2)) //refid, score
+        .map(x => (x.ap_id)) //refid
+
+      signatureGeneratorBc.value.toSignature(references).serialize
     })
 
-    import org.apache.spark.sql.functions.{col, explode}
-
-    val rdd = data.withColumn(AttributeNames.featureIndexColumnName, referencesUDF(data(attribute)))
-      .withColumn(AttributeNames.featureIndexColumnName, explode(col(AttributeNames.featureIndexColumnName)))
-      .select(col(AttributeNames.internalIdColumnName),
-        col(AttributeNames.featureIndexColumnName).getField("_1") as AttributeNames.featureIndexColumnName + "-id", //refid
-        col(AttributeNames.featureIndexColumnName).getField("_2") as AttributeNames.featureIndexColumnName + "-score" //score
-      ).rdd
-      .groupBy(_.getAs[TupleID](AttributeNames.featureIndexColumnName + "-id"))
-      .mapValues { vals =>
-        val list = vals.toList
-          .sortBy(_.getAs[Int](AttributeNames.featureIndexColumnName + "-score")) //order by score
-        (list.map(_.getAs[TupleID](AttributeNames.internalIdColumnName)), list.map(_.getAs[Int](AttributeNames.featureIndexColumnName + "-score")))
-      }.map(x => Row(x._1, x._2._1, x._2._2))
-
-
-    val schema = StructType(Seq(
-      StructField(MIIndex.REFERENCE_OBJ_NAME, TupleID.SparkTupleID, nullable = false),
-      StructField(MIIndex.POSTING_LIST_NAME, new ArrayType(data.schema.fields.apply(0).dataType, false), nullable = false),
-      StructField(MIIndex.SCORE_LIST_NAME, new ArrayType(IntegerType, false), nullable = false)
-    ))
-
-    val indexed = ac.sqlContext.createDataFrame(rdd, schema)
-
+    val indexed = data.withColumn(AttributeNames.featureIndexColumnName, referencesUDF(data(attribute)))
 
     log.trace("MI finished indexing")
-    val meta = MIIndexMetaData(ki, ks, refsBc.value)
+    val meta = MIIndexMetaData(ki, ks, refs)
 
     (indexed, meta)
   }
