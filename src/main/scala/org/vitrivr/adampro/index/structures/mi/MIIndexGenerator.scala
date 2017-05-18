@@ -1,7 +1,7 @@
 package org.vitrivr.adampro.index.structures.mi
 
 import org.apache.spark.annotation.Experimental
-import org.apache.spark.sql.{DataFrame}
+import org.apache.spark.sql.DataFrame
 import org.apache.spark.sql.functions.udf
 import org.vitrivr.adampro.config.AttributeNames
 import org.vitrivr.adampro.datatypes.vector.Vector
@@ -30,14 +30,14 @@ import org.vitrivr.adampro.query.distance.DistanceFunction
   override def index(data: DataFrame, attribute: String)(tracker: OperationTracker): (DataFrame, Serializable) = {
     log.trace("LSH started indexing")
 
-    val sample = getSample(math.max(nrefs, MINIMUM_NUMBER_OF_TUPLE), attribute)(data)
+    val sample = getSample(nrefs, attribute)(data)
 
     val refs = sample.zipWithIndex.map { case (idt, idx) => IndexingTaskTuple(idx.toLong, idt.ap_indexable) }
     val refsBc = ac.sc.broadcast(refs)
     tracker.addBroadcast(refsBc)
 
-    val ki = p_ki.getOrElse(math.min(100, refsBc.value.length))
-    val ks = p_ks.getOrElse(math.min(100, refsBc.value.length))
+    val ki = p_ki.getOrElse(math.min(100, refsBc.value.length)) //value based on Amato et al. (2008)
+    val ks = p_ks.getOrElse(math.min(50, refsBc.value.length)) //value based on Amato et al. (2008)
     assert(ks <= ki)
     log.trace("MI index chosen " + refsBc.value.length + " reference points")
 
@@ -74,12 +74,10 @@ class MIIndexGeneratorFactory extends IndexGeneratorFactory {
 
     val nrefs = if (properties.contains("nrefs")) {
       properties.get("nrefs").get.toInt
+    } else if (properties.contains("n")) {
+      math.max(200, math.ceil(2 * math.sqrt(properties.get("n").get.toInt)).toInt)
     } else {
-      if (properties.contains("n")) {
-        math.ceil(2 * math.sqrt(properties.get("n").get.toInt)).toInt
-      } else {
-        6000 //assuming we have around 10M elements
-      }
+      200 //value based on Amato et al. (2008)
     }
 
     new MIIndexGenerator(ki, ks, distance, nrefs)

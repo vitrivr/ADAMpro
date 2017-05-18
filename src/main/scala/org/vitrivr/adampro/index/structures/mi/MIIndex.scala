@@ -41,8 +41,7 @@ import org.vitrivr.adampro.query.query.NearestNeighbourQuery
     val signatureGeneratorBc = ac.sc.broadcast( new MISignatureGenerator(meta.ki, meta.refs.length))
     tracker.addBroadcast(signatureGeneratorBc)
 
-    //maximum position difference, MPD, access just pairs whose position difference is below a threshold
-    val max_pos_diff = options.mapValues(_.toInt).getOrElse("max_pos_diff", ki)
+    val max_pos_diff = ki + 1
 
     //take closest ks reference points
     val qrefs = meta.refs.sortBy(ref => distance(q, ref.ap_indexable)).take(ks).map(_.ap_id).zipWithIndex
