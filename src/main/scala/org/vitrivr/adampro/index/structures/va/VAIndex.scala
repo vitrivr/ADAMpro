@@ -5,7 +5,7 @@ import org.apache.spark.sql.DataFrame
 import org.vitrivr.adampro.config.AttributeNames
 import org.vitrivr.adampro.datatypes.bitstring.BitString
 import org.vitrivr.adampro.datatypes.vector.Vector._
-import org.vitrivr.adampro.index.{Index, ResultElement}
+import org.vitrivr.adampro.index.{Index}
 import org.vitrivr.adampro.index.Index.{IndexName, IndexTypeName}
 import org.vitrivr.adampro.index.structures.IndexTypes
 import org.vitrivr.adampro.index.structures.va.VAIndex.{Bounds, Marks}
@@ -15,6 +15,7 @@ import org.vitrivr.adampro.query.distance.Distance._
 import org.vitrivr.adampro.query.distance.{DistanceFunction, MinkowskiDistance}
 import org.vitrivr.adampro.query.query.NearestNeighbourQuery
 import org.apache.spark.sql.functions._
+import org.vitrivr.adampro.datatypes.TupleID.TupleID
 import org.vitrivr.adampro.helpers.tracker.OperationTracker
 
 /**
@@ -39,6 +40,17 @@ class VAIndex(override val indexname: IndexName)(@transient override implicit va
     0.9.toFloat //slightly less weight if fixed variable
   } else {
     1.toFloat
+  }
+
+  /**
+    *
+    * @param ap_id
+    * @param ap_lower
+    * @param ap_upper
+    * @param ap_distance
+    */
+  case class ResultElement(ap_id: TupleID, ap_lower : Distance, ap_upper : Distance, ap_distance : Distance) extends Serializable with Ordered[ResultElement] {
+    def compare(that: ResultElement): Int = this.ap_distance.compare(that.ap_distance)
   }
 
 
