@@ -552,8 +552,12 @@ class RPCClient(channel: ManagedChannel,
     */
   def indexDrop(indexname: String): Try[Void] = {
     execute("drop index operation") {
-      definerBlocking.dropIndex(IndexNameMessage(indexname))
-      Success(null)
+      val res = definerBlocking.dropIndex(IndexNameMessage(indexname))
+      if (res.code.isOk) {
+        Success(null)
+      } else {
+        throw new Exception("dropping index not possible: " + res.message)
+      }
     }
   }
 

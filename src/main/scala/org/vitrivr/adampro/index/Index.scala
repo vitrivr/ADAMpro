@@ -2,26 +2,24 @@ package org.vitrivr.adampro.index
 
 import com.google.common.hash.{BloomFilter, Funnel, PrimitiveSink}
 import org.apache.spark.sql.functions._
-import org.apache.spark.sql.{DataFrame, Encoders, SaveMode}
+import org.apache.spark.sql.{DataFrame, SaveMode}
 import org.apache.spark.storage.StorageLevel
-import org.vitrivr.adampro.catalog.CatalogOperator
-import org.vitrivr.adampro.config.{AdamConfig, AttributeNames}
+import org.vitrivr.adampro.config.AttributeNames
 import org.vitrivr.adampro.datatypes.AttributeTypes.VECTORTYPE
 import org.vitrivr.adampro.datatypes.vector.Vector._
 import org.vitrivr.adampro.entity.Entity
 import org.vitrivr.adampro.entity.Entity._
-import org.vitrivr.adampro.exception.{EntityNotExistingException, IndexNotExistingException, IndexNotProperlyDefinedException}
+import org.vitrivr.adampro.exception.{IndexNotExistingException, IndexNotProperlyDefinedException}
+import org.vitrivr.adampro.helpers.tracker.OperationTracker
+import org.vitrivr.adampro.index.Index.{IndexName, IndexTypeName}
+import org.vitrivr.adampro.index.IndexPartitioner.log
 import org.vitrivr.adampro.index.partition.Partitioning.PartitionID
 import org.vitrivr.adampro.index.partition._
-import org.vitrivr.adampro.index.Index.{IndexName, IndexTypeName}
 import org.vitrivr.adampro.index.structures.IndexTypes
-import org.vitrivr.adampro.main.{AdamContext, SparkStartup, Startup}
+import org.vitrivr.adampro.main.{AdamContext, SparkStartup}
 import org.vitrivr.adampro.query.distance.DistanceFunction
 import org.vitrivr.adampro.query.query.NearestNeighbourQuery
 import org.vitrivr.adampro.utils.Logging
-import org.vitrivr.adampro.datatypes.vector.Vector
-import org.vitrivr.adampro.helpers.tracker.OperationTracker
-import org.vitrivr.adampro.index.IndexPartitioner.log
 
 import scala.collection.mutable.ListBuffer
 import scala.concurrent.Future
@@ -197,7 +195,7 @@ abstract class Index(val indexname: IndexName)(@transient implicit val ac: AdamC
     * @param filter pre-filter
     * @return
     */
-  def scan(nnq: NearestNeighbourQuery, filter: Option[DataFrame])(tracker : OperationTracker)(implicit ac: AdamContext): DataFrame = {
+  def scan(nnq: NearestNeighbourQuery, filter: Option[DataFrame])(tracker: OperationTracker)(implicit ac: AdamContext): DataFrame = {
     log.debug("scan index")
     scan(nnq.q, nnq.distance, nnq.options, nnq.k, filter, nnq.partitions, nnq.queryID)(tracker)
   }
@@ -214,7 +212,7 @@ abstract class Index(val indexname: IndexName)(@transient implicit val ac: AdamC
     * @param queryID  optional query id
     * @return a set of candidate tuple ids, possibly together with a tentative score (the number of tuples will be greater than k)
     */
-  def scan(q: MathVector, distance: DistanceFunction, options: Map[String, String] = Map(), k: Int, filter: Option[DataFrame], partitions: Option[Set[PartitionID]], queryID: Option[String] = None)(tracker : OperationTracker)(implicit ac: AdamContext): DataFrame = {
+  def scan(q: MathVector, distance: DistanceFunction, options: Map[String, String] = Map(), k: Int, filter: Option[DataFrame], partitions: Option[Set[PartitionID]], queryID: Option[String] = None)(tracker: OperationTracker)(implicit ac: AdamContext): DataFrame = {
     log.debug("started scanning index")
 
     if (isStale) {
@@ -272,7 +270,7 @@ abstract class Index(val indexname: IndexName)(@transient implicit val ac: AdamC
     * @param k        number of elements to retrieve (of the k nearest neighbor search), possibly more than k elements are returned
     * @return a set of candidate tuple ids, possibly together with a tentative score (the number of tuples will be greater than k)
     */
-  protected def scan(data: DataFrame, q: MathVector, distance: DistanceFunction, options: Map[String, String], k: Int)(tracker : OperationTracker): DataFrame
+  protected def scan(data: DataFrame, q: MathVector, distance: DistanceFunction, options: Map[String, String], k: Int)(tracker: OperationTracker): DataFrame
 
 
   /**
@@ -333,7 +331,7 @@ abstract class Index(val indexname: IndexName)(@transient implicit val ac: AdamC
 
       override def isStale = current.isStale
 
-      protected def scan(data: DataFrame, q: MathVector, distance: DistanceFunction, options: Map[String, String], k: Int)(tracker : OperationTracker): DataFrame = current.scan(data, q, distance, options, k)(tracker)
+      protected def scan(data: DataFrame, q: MathVector, distance: DistanceFunction, options: Map[String, String], k: Int)(tracker: OperationTracker): DataFrame = current.scan(data, q, distance, options, k)(tracker)
     }
 
     index
@@ -389,7 +387,7 @@ object Index extends Logging {
     * @param ac
     * @return
     */
-  def createIndex(entity: Entity, attribute: String, indextypename: IndexTypeName, distance: DistanceFunction, properties: Map[String, String] = Map())(tracker : OperationTracker)(implicit ac: AdamContext): Try[Index] = {
+  def createIndex(entity: Entity, attribute: String, indextypename: IndexTypeName, distance: DistanceFunction, properties: Map[String, String] = Map())(tracker: OperationTracker)(implicit ac: AdamContext): Try[Index] = {
     try {
       val indexGenerator = indextypename.indexGeneratorFactoryClass.newInstance().getIndexGenerator(distance, properties + ("n" -> entity.count.toString))
       createIndex(entity, attribute, indexGenerator)(tracker)
@@ -409,7 +407,7 @@ object Index extends Logging {
     * @param indexgenerator generator to create index
     * @return index
     */
-  def createIndex(entity: Entity, attribute: String, indexgenerator: IndexGenerator)(tracker : OperationTracker)(implicit ac: AdamContext): Try[Index] = {
+  def createIndex(entity: Entity, attribute: String, indexgenerator: IndexGenerator)(tracker: OperationTracker)(implicit ac: AdamContext): Try[Index] = {
     try {
       if (!entity.schema().map(_.name).contains(attribute)) {
         return Failure(new IndexNotProperlyDefinedException("attribute " + attribute + " not existing in entity " + entity.entityname + entity.schema(fullSchema = false).map(_.name).mkString("(", ",", ")")))
@@ -444,7 +442,7 @@ object Index extends Logging {
     * @param indexgenerator generator to create index
     * @return index
     */
-  private def createIndex(indexname: String, entity: Entity, attribute: String, indexgenerator: IndexGenerator)(tracker : OperationTracker)(implicit ac: AdamContext): Try[Index] = {
+  private def createIndex(indexname: String, entity: Entity, attribute: String, indexgenerator: IndexGenerator)(tracker: OperationTracker)(implicit ac: AdamContext): Try[Index] = {
     try {
       val indexableData = entity.getAttributeData(attribute).get
         .select(AttributeNames.internalIdColumnName, attribute)
@@ -491,7 +489,7 @@ object Index extends Logging {
     * @param indextypename index type to use for indexing
     * @return
     */
-  def exists(entityname: EntityName, attribute: String, indextypename: IndexTypeName, acceptStale : Boolean)(implicit ac: AdamContext): Boolean = {
+  def exists(entityname: EntityName, attribute: String, indextypename: IndexTypeName, acceptStale: Boolean)(implicit ac: AdamContext): Boolean = {
     SparkStartup.catalogOperator.existsIndex(entityname, attribute, indextypename, acceptStale).get
   }
 
@@ -561,9 +559,15 @@ object Index extends Logging {
         return Failure(IndexNotExistingException.withIndexname(indexname))
       }
 
-      Index.load(indexname).get.drop()
-      ac.indexLRUCache.invalidate(indexname)
-
+      try {
+        Index.load(indexname).get.drop()
+        ac.indexLRUCache.invalidate(indexname)
+      } catch {
+        case e: Exception =>
+          //possibly if index could not be loaded, we should still be able to drop the index
+          Index.getStorage().get.drop(indexname)
+          SparkStartup.catalogOperator.dropIndex(indexname)
+      }
       Success(null)
     } catch {
       case e: Exception => Failure(e)
