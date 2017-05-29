@@ -44,18 +44,6 @@ class VAIndex(override val indexname: IndexName)(@transient override implicit va
 
   /**
     *
-    * @param ap_id
-    * @param ap_lower
-    * @param ap_upper
-    * @param ap_distance
-    */
-  case class ResultElement(ap_id: TupleID, ap_lower : Distance, ap_upper : Distance, ap_distance : Distance) extends Serializable with Ordered[ResultElement] {
-    def compare(that: ResultElement): Int = this.ap_distance.compare(that.ap_distance)
-  }
-
-
-  /**
-    *
     * @param data     rdd to scan
     * @param q        query vector
     * @param distance distance funciton
@@ -112,7 +100,7 @@ class VAIndex(override val indexname: IndexName)(@transient override implicit va
         localRh.offer(current, pk)
       }
 
-      localRh.results.map(x => ResultElement(x.ap_id, x.ap_lower, x.ap_upper, (x.ap_lower +  x.ap_upper) / 2.0)).iterator
+      localRh.results.iterator
     }).toDF()
 
     //the most correct solution would be to re-do at this point the result handler with the pre-selected results again

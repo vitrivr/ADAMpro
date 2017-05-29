@@ -6,6 +6,7 @@ import it.unimi.dsi.fastutil.doubles.{DoubleComparator, DoubleComparators, Doubl
 import it.unimi.dsi.fastutil.objects.ObjectHeapPriorityQueue
 import org.apache.spark.sql.Row
 import org.vitrivr.adampro.datatypes.TupleID._
+import org.vitrivr.adampro.query.distance.Distance
 import org.vitrivr.adampro.query.distance.Distance.Distance
 import org.vitrivr.adampro.utils.Logging
 
@@ -68,7 +69,7 @@ private[va] class VAResultHandler(k: Int) extends Logging with Serializable {
     * @param upper
     */
   private def enqueueAndAddToCandidates(tid: TupleID, lower: Distance, upper: Distance): Unit = {
-    enqueueAndAddToCandidates(VAResultElement(tid, lower, upper))
+    enqueueAndAddToCandidates(VAResultElement(tid, lower, upper, (lower + upper) / 2.0))
   }
 
   /**
@@ -103,6 +104,3 @@ private[va] class VAResultHandler(k: Int) extends Logging with Serializable {
   }
 
 }
-
-case class VAResultElement(ap_id: TupleID, ap_lower: Distance, ap_upper: Distance) extends Serializable {}
-
