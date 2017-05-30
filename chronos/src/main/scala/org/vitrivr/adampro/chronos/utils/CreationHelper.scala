@@ -130,7 +130,7 @@ object CreationHelper {
           if (client.indexExists(entityname, attributename, indextype).get) {
             logger.info(indextype + " index for " + entityname + " (" + attributename + ") " + "exists already")
             indexCreatedNewly = false
-            client.indexList(entityname).get.filter(_._2 == attributename).filter(_._3 == indextype).map(_._1)
+            client.indexList(entityname).get.filter(_._2 == attributename).filter(_._3.name == indextype).map(_._1)
           } else {
             logger.info("creating " + indextype + " index for " + entityname)
             indexCreatedNewly = true
@@ -141,7 +141,7 @@ object CreationHelper {
         if (client.indexExists(entityname, attributename, job.execution_subtype).get) {
           logger.info(job.execution_subtype + " index for " + entityname + " (" + attributename + ") " + "exists already")
           indexCreatedNewly = false
-          client.indexList(entityname).get.filter(_._2 == attributename).filter(_._3 == job.execution_subtype).map(_._1)
+          client.indexList(entityname).get.filter(_._2 == attributename).filter(_._3.name == job.execution_subtype).map(_._1)
         } else {
           logger.info("creating " + job.execution_subtype + " index for " + entityname)
           indexCreatedNewly = true
