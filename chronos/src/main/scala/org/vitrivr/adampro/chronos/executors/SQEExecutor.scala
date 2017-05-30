@@ -47,7 +47,7 @@ class SQEExecutor(job: EvaluationJob, setStatus: (Double) => (Boolean), inputDir
         var result = executeQuery(qo)
         logger.info("executed query for " + entityname.get + " (runid: " + runid + ")")
 
-        if (job.measurement_firstrun && idx == 0) {
+        if (job.measurement_firstrun && idx < NFIRST_RUN_QUERIES) {
           //ignore first run
         } else {
           results += (runid -> result)
@@ -82,13 +82,13 @@ class SQEExecutor(job: EvaluationJob, setStatus: (Double) => (Boolean), inputDir
     val lb = new ListBuffer[RPCGenericQueryObject]()
 
     val additionals = if (job.measurement_firstrun) {
-      1
+      NFIRST_RUN_QUERIES
     } else {
       0
     }
 
     job.query_k.flatMap { k =>
-      val denseQueries = (0 to job.query_n + additionals).map { i => getSQEQuery(entityname, indexnames, k, false, options) }
+      val denseQueries = (0 until (job.query_n + additionals)).map { i => getSQEQuery(entityname, indexnames, k, false, options) }
 
       denseQueries
     }

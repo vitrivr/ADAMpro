@@ -86,7 +86,7 @@ class EQEExecutor(job: EvaluationJob, setStatus: (Double) => (Boolean), inputDir
 
         logger.info("executed query for " + entityname.get + " (runid: " + runid + ")")
 
-        if (job.measurement_firstrun && idx == 0) {
+        if (job.measurement_firstrun && idx < NFIRST_RUN_QUERIES) {
           //ignore first run
         } else {
           results += (runid + "-winner" -> result)

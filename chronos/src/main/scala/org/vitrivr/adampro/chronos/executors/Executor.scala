@@ -19,6 +19,8 @@ import scala.util.{Random, Try}
   * April 2017
   */
 abstract class Executor(val job: EvaluationJob, setStatus: (Double) => (Boolean), inputDirectory: File, outputDirectory: File) {
+  val NFIRST_RUN_QUERIES = 3
+
   val logger: Logger = Logger.getLogger(this.getClass.getName)
 
 
@@ -85,13 +87,13 @@ abstract class Executor(val job: EvaluationJob, setStatus: (Double) => (Boolean)
     val lb = new ListBuffer[RPCGenericQueryObject]()
 
     val additionals = if (job.measurement_firstrun) {
-      1
+      NFIRST_RUN_QUERIES
     } else {
       0
     }
 
     job.query_k.flatMap { k =>
-      val denseQueries = (0 to job.query_n + additionals).map { i => getQuery(entityname, k, false, options) }
+      val denseQueries = (0 until (job.query_n + additionals)).map { i => getQuery(entityname, k, false, options) }
 
       denseQueries
     }
