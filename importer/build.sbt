@@ -10,7 +10,8 @@ libraryDependencies ++= Seq(
   "io.grpc" % "grpc-netty" % "1.2.0",
   "io.grpc" % "grpc-protobuf" % "1.2.0",
   "io.grpc" % "grpc-stub" % "1.2.0",
-  "org.slf4j" % "slf4j-simple" % "1.7.21"
+  "org.slf4j" % "slf4j-simple" % "1.7.21",
+  "commons-io" % "commons-io" % "2.5"
 )
 
 unmanagedBase <<= baseDirectory { base => base / ".." / "lib" }

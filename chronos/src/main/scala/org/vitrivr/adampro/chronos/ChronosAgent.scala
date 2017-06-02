@@ -36,14 +36,37 @@ class ChronosAgent(ipAddressOrHostname: String, environment: String) extends Abs
     */
   override def getSupportedSystemNames: Array[String] = Array("adampro")
 
+
+  /**
+    *
+    * @param job
+    * @param status
+    */
+  private def setProgress(job: ChronosJob)(status: Double): Boolean = {
+    this.setProgress(job, math.floor(status * 100).toByte)
+  }
+
   /**
     *
     * @param job
     * @param inputDirectory
     * @param outputDirectory
+    * @param properties
+    * @param o
     * @return
     */
-  override def execute(job: ChronosJob, inputDirectory: File, outputDirectory: File): Properties = {
+  override def prepare(job: ChronosJob, inputDirectory: File, outputDirectory: File, properties: Properties, o: scala.Any): AnyRef = new Object()
+
+  /**
+    *
+    * @param job
+    * @param inputDirectory
+    * @param outputDirectory
+    * @param properties
+    * @param o
+    * @return
+    */
+  override def execute(job: ChronosJob, inputDirectory: File, outputDirectory: File, properties: Properties, o: scala.Any): AnyRef = {
     val ejob = new EvaluationJob(job)
 
     val executor = ejob.general_mode match {
@@ -58,17 +81,49 @@ class ChronosAgent(ipAddressOrHostname: String, environment: String) extends Abs
     runningJobs += job.id -> executor
     val results = executor.run()
     runningJobs -= job.id
+
+    properties.putAll(results)
     results
   }
 
   /**
     *
     * @param job
-    * @param status
+    * @param inputDirectory
+    * @param outputDirectory
+    * @param properties
+    * @param o
+    * @return
     */
-  private def setProgress(job: ChronosJob)(status: Double): Boolean = {
-    this.setProgress(job, math.floor(status * 100).toByte)
-  }
+  override def analyze(job: ChronosJob, inputDirectory: File, outputDirectory: File, properties: Properties, o: scala.Any): AnyRef = new Object()
+
+  /**
+    *
+    * @param job
+    * @param inputDirectory
+    * @param outputDirectory
+    * @param properties
+    * @param o
+    * @return
+    */
+  override def warmUp(job: ChronosJob, inputDirectory: File, outputDirectory: File, properties: Properties, o: scala.Any): AnyRef = new Object()
+
+  /**
+    *
+    * @param job
+    */
+  override def failed(job: ChronosJob): Unit = {}
+
+  /**
+    *
+    * @param job
+    * @param inputDirectory
+    * @param outputDirectory
+    * @param properties
+    * @param o
+    * @return
+    */
+  override def clean(job: ChronosJob, inputDirectory: File, outputDirectory: File, properties: Properties, o: scala.Any): AnyRef = new Object()
 }
 
 object ChronosAgent {
