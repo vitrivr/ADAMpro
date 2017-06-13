@@ -21,7 +21,7 @@ class PostGisTestSuite extends AdamTestBase {
   def ntuples() = Random.nextInt(500)
   val fieldTypes = Seq(AttributeTypes.GEOMETRYTYPE)
 
-  assert(ac.storageHandlerRegistry.value.contains(handlerName))
+  assert(ac.storageHandlerRegistry.contains(handlerName))
 
   scenario("create an entity") {
     val tuplesInsert = ntuples()

@@ -60,7 +60,7 @@ object SparkStartup extends Logging {
   val logOperator = new LogOperator(mainContext.config.internalsPath)
   val catalogOperator = new CatalogOperator(mainContext.config.internalsPath)
 
-  mainContext.config.engines.zipWithIndex.foreach { case(engine, priority) => mainContext.storageHandlerRegistry.value.register(engine, mainContext.config.engines.length - priority)(mainContext) }
+  mainContext.config.engines.zipWithIndex.foreach { case(engine, priority) => mainContext.storageHandlerRegistry.register(engine, mainContext.config.engines.length - priority)(mainContext) }
   OptimizerRegistry.loadDefault()(mainContext)
 
   if(isLocal(InetAddress.getByName(mainContext.sc.getConf.get("spark.driver.host")))){

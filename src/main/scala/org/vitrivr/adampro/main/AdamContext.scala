@@ -29,7 +29,7 @@ trait AdamContext extends Serializable {
   def sc : SparkContext
   def sqlContext : SQLContext
 
-  val storageHandlerRegistry = sc.broadcast(new StorageHandlerRegistry())
+  val storageHandlerRegistry = new StorageHandlerRegistry()
 
   val entityLRUCache = new EntityLRUCache()(this)
   val entityVersion = mutable.Map[String, LongAccumulator]()

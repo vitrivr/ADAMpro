@@ -677,7 +677,7 @@ object Entity extends Logging {
     } catch {
       case e: Exception =>
         //drop everything created in handlers
-        ac.storageHandlerRegistry.value.handlers.values.foreach {
+        ac.storageHandlerRegistry.handlers.values.foreach {
           handler =>
             try {
               handler.drop(entityname)

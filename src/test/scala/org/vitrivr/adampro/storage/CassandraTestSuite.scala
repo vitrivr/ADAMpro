@@ -18,7 +18,7 @@ class CassandraTestSuite  extends AdamTestBase {
   def ntuples() = Random.nextInt(500)
   val attributetypes = Seq(AttributeTypes.VECTORTYPE)
 
-  assert(ac.storageHandlerRegistry.value.contains(handlerName))
+  assert(ac.storageHandlerRegistry.contains(handlerName))
 
   scenario("create an entity") {
     val tuplesInsert = ntuples()

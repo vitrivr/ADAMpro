@@ -17,7 +17,7 @@ class SolrHandlerTestSuite extends AdamTestBase {
   val handlerName = "solr"
   def ntuples() = Random.nextInt(500)
 
-  assert(ac.storageHandlerRegistry.value.contains(handlerName))
+  assert(ac.storageHandlerRegistry.contains(handlerName))
 
   scenario("create an entity") {
     val tuplesInsert = ntuples()

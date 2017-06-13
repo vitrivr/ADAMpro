@@ -31,8 +31,8 @@ object Transferer extends Logging {
       val schema = entity.schema()
       assert(attributes.forall(schema.map(_.name).contains(_)))
 
-      assert(ac.storageHandlerRegistry.value.get(newHandlerName).isDefined)
-      val storagehandler = ac.storageHandlerRegistry.value.get(newHandlerName).get
+      assert(ac.storageHandlerRegistry.get(newHandlerName).isDefined)
+      val storagehandler = ac.storageHandlerRegistry.get(newHandlerName).get
 
       val attributetypes = schema.filter(x => attributes.contains(x.name)).map(_.attributeType).distinct
       assert(attributetypes.forall(storagehandler.supports.contains(_)))
@@ -67,7 +67,7 @@ object Transferer extends Logging {
 
       //what happens with the old data handler
       schema.filterNot(_.pk).filterNot(_.storagehandlername == newHandlerName).groupBy(_.storagehandlername).foreach{ case(handlername, handlerAttributes) =>
-        val handler = ac.storageHandlerRegistry.value.get(handlername).get
+        val handler = ac.storageHandlerRegistry.get(handlername).get
 
         log.trace("handler " + handlername + " had still attributes " + handlerAttributes.map(_.name).mkString(", "))
 
