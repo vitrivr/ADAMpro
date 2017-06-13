@@ -7,7 +7,7 @@ adampro {
     port = "5890"
   }
 
-  engines = ["index", "parquet", "postgres", "solr"]
+  engines = ["index", "parquet", "postgres", "leveldb", "solr"]
 }
 
 storage {
@@ -33,5 +33,10 @@ storage {
   solr {
     engine = "SolrEngine"
     url = "http://HOSTNAME:8983/solr"
+  }
+
+  leveldb {
+    engine = "LevelDbEngine"
+    path = "/adampro/data/data/leveldb/"
   }
 }
