@@ -64,6 +64,35 @@ private[va] class VAResultHandler(k: Int) extends Logging with Serializable {
 
   /**
     *
+    * @param res
+    * @param pk
+    * @return
+    */
+  def offer(res: VAResultElement, pk: String): Boolean = {
+    if (elementsLeft > 0) {
+      //we have not yet inserted k elements, no checks therefore
+      elementsLeft -= 1
+      enqueueAndAddToCandidates(res.ap_id, res.ap_lower, res.ap_upper)
+      return true
+    } else {
+      this.synchronized {
+        //we have already k elements, therefore check if new element is better
+        //peek is the upper bound
+        val peek =  upperBoundQueue.first()
+        if (peek >= res.ap_lower) {
+          //if peek is larger than lower, then dequeue worst element and insert new element
+          upperBoundQueue.dequeue()
+          enqueueAndAddToCandidates(res.ap_id, res.ap_lower,  res.ap_upper)
+          return true
+        } else {
+          return false
+        }
+      }
+    }
+  }
+
+    /**
+    *
     * @param tid
     * @param lower
     * @param upper

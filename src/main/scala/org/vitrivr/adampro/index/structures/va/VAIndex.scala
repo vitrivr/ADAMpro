@@ -90,21 +90,30 @@ class VAIndex(override val indexname: IndexName)(@transient override implicit va
 
     val pk = this.pk.name.toString
 
-    val res = tmp
-      .mapPartitions(p => {
-      //in here  we compute for each partition the k nearest neighbours and collect the results
-      val localRh = new VAResultHandler(k)
+    //local filtering
+    val localRes = tmp
+      .mapPartitions(pIt => {
+        //in here  we compute for each partition the k nearest neighbours and collect the results
+        val localRh = new VAResultHandler(k)
 
-      while (p.hasNext) {
-        val current = p.next()
-        localRh.offer(current, pk)
-      }
+        while (pIt.hasNext) {
+          val current = pIt.next()
+          localRh.offer(current, pk)
+        }
 
-      localRh.results.iterator
-    }).toDF()
+        localRh.results.sortBy(x => -x.ap_upper).iterator
+      })
 
-    //the most correct solution would be to re-do at this point the result handler with the pre-selected results again
-    //but in most cases this will be less efficient than just considering all candidates
+    // global refinement
+    val globalRh = new VAResultHandler(k)
+    val gIt = localRes.toLocalIterator()
+
+    while (gIt.hasNext) {
+      val current = gIt.next()
+      globalRh.offer(current, pk)
+    }
+
+    val res = ac.sqlContext.createDataset(globalRh.results).toDF()
 
     res
   }
