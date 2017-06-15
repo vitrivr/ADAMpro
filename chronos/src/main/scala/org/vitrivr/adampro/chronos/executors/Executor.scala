@@ -259,6 +259,10 @@ abstract class Executor(val job: EvaluationJob, setStatus: (Double) => (Boolean)
           val gtruthPKs = gtruth.get.map(_.results.map(_.get("ap_id"))).head.map(_.get)
           val resPKs = res.get.map(_.results.map(_.get("ap_id"))).head.map(_.get)
 
+          lb += ("gtresults" -> {
+            res.get.head.results.map(res => (res.get("ap_id").getOrElse("-") + "," + res.get("ap_distance").getOrElse("-1"))).mkString("(", "),(", ")")
+          })
+
           val agreements = gtruthPKs.intersect(resPKs).length
           //simple hits/total
           val quality = (agreements / qo.options.get("k").get.toDouble)
