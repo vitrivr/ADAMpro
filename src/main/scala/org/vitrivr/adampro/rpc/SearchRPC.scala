@@ -68,8 +68,14 @@ class SearchRPC extends AdamSearchGrpc.AdamSearch with Logging {
     */
   override def cacheEntity(request: EntityNameMessage): Future[AckMessage] = {
     time("rpc call to cache entity") {
-      log.error("caching entity not yet implemented")
-      Future.successful(AckMessage(code = AckMessage.Code.ERROR, message = "not implemented yet"))
+      val res = EntityOp.cache(request.entity)
+
+      if (res.isSuccess) {
+        Future.successful(AckMessage(code = AckMessage.Code.OK, request.entity))
+      } else {
+        log.error(res.failed.get.getMessage, res.failed.get)
+        Future.successful(AckMessage(code = AckMessage.Code.ERROR, message = res.failed.get.getMessage))
+      }
     }
   }
 
