@@ -13,14 +13,18 @@ import org.vitrivr.adampro.query.distance.DistanceFunction
 import org.vitrivr.adampro.datatypes.vector.Vector
 import org.vitrivr.adampro.helpers.tracker.OperationTracker
 
+import scala.util.Random
+
 /**
   * adamtwo
   *
   * Ivan Giangreco
   * October 2015
   */
-class ECPIndexGenerator(centroidBasedLeaders: Boolean, distance: DistanceFunction, trainingSize: Option[Int])(@transient implicit val ac: AdamContext) extends IndexGenerator {
+class ECPIndexGenerator(centroidBasedLeaders: Boolean, distance: DistanceFunction, nrefs: Option[Int])(@transient implicit val ac: AdamContext) extends IndexGenerator {
   override val indextypename: IndexTypeName = IndexTypes.ECPINDEX
+
+  private val MAX_NUM_OF_LEADERS = 200
 
   /**
     *
@@ -30,19 +34,20 @@ class ECPIndexGenerator(centroidBasedLeaders: Boolean, distance: DistanceFunctio
   override def index(data: DataFrame, attribute : String)(tracker : OperationTracker): (DataFrame, Serializable) = {
     log.trace("eCP index started indexing")
 
-    val sample = getSample(math.max(math.sqrt(data.count()).toInt, MINIMUM_NUMBER_OF_TUPLE), attribute)(data)
-    val leadersBc = ac.sc.broadcast(sample.zipWithIndex.map { case (vector, idx) => IndexingTaskTuple(idx.toLong, vector.ap_indexable) }) //use own ids, not id of data
+    val nleaders = math.min(math.max(nrefs.getOrElse(math.sqrt(data.count()).toInt), MINIMUM_NUMBER_OF_TUPLE), MAX_NUM_OF_LEADERS)
+    val sample = getSample(nleaders, attribute)(data)
+    val leadersBc = ac.sc.broadcast(sample.zipWithIndex.map { case (vector, idx) => IndexingTaskTuple(idx, vector.ap_indexable) }) //use own ids, not id of data
     tracker.addBroadcast(leadersBc)
 
     log.trace("eCP index chosen " + sample.length + " leaders")
 
     val minIdUDF = udf((c: DenseSparkVector) => {
       leadersBc.value.map({ l =>
-        (l.ap_id, distance.apply(Vector.conv_dspark2vec(c), l.ap_indexable))
+        (l.ap_id.toByte, distance.apply(Vector.conv_dspark2vec(c), l.ap_indexable))
       }).minBy(_._2)._1
     })
 
-    val indexed = data.withColumn(AttributeNames.featureIndexColumnName, minIdUDF(data(attribute)))
+    val indexed = data.withColumn(AttributeNames.featureIndexColumnName, minIdUDF(data(attribute))).persist()
 
     import ac.spark.implicits._
 
@@ -65,10 +70,9 @@ class ECPIndexGenerator(centroidBasedLeaders: Boolean, distance: DistanceFunctio
         .map(x => ECPLeader(x._1, Vector.conv_draw2vec(x._2._1), x._2._2))
         .collect.toSeq
     } else {
-      val counts = indexed.groupBy(AttributeNames.featureIndexColumnName).count()
-        .map { r => (r.getAs[TupleID](AttributeNames.featureIndexColumnName), r.getAs[Long]("count")) }.collect().toMap
+      val counts = indexed.stat.countMinSketch(col(AttributeNames.featureIndexColumnName), nleaders, nleaders, Random.nextInt)
 
-      leadersBc.value.map(x => ECPLeader(x.ap_id, x.ap_indexable, counts.getOrElse(x.ap_id, 0)))
+      leadersBc.value.map(x => ECPLeader(x.ap_id, x.ap_indexable, counts.estimateCount(x.ap_id.toInt)))
     }
 
     val meta = ECPIndexMetaData(leaders, distance)
@@ -85,6 +89,14 @@ class ECPIndexGeneratorFactory extends IndexGeneratorFactory {
   def getIndexGenerator(distance: DistanceFunction, properties: Map[String, String] = Map[String, String]())(implicit ac: AdamContext): IndexGenerator = {
     val trainingSize = properties.get("ntraining").map(_.toInt)
 
+    val nrefs = if (properties.contains("ntraining")) {
+      Some(properties.get("ntraining").get.toInt)
+    } else if (properties.contains("n")) {
+      Some(math.sqrt(properties.get("n").get.toInt).toInt)
+    } else {
+      None
+    }
+
     val leaderTypeDescription = properties.getOrElse("leadertype", "simple")
     val leaderType = leaderTypeDescription.toLowerCase match {
       //possibly extend with other types and introduce enum
@@ -92,7 +104,7 @@ class ECPIndexGeneratorFactory extends IndexGeneratorFactory {
       case "simple" => false
     }
 
-    new ECPIndexGenerator(leaderType, distance, trainingSize)
+    new ECPIndexGenerator(leaderType, distance, nrefs)
   }
 
   /**
