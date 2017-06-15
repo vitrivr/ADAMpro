@@ -227,7 +227,7 @@ object RandomDataOp extends GenericOp {
     * @param max
     * @return
     */
-  private def generateDenseFeatureVector(dimensions: Int, sparsity: Float, min: VectorBase, max: VectorBase, distribution : Option[String]) = {
+  private def generateDenseFeatureVector(dimensions: Int, sparsity: Float, min: VectorBase, max: VectorBase, distribution: Option[String]) = {
     if (dimensions == 0) {
       throw new GeneralAdamException("please choose to create vectors with more than zero dimensions")
     }
@@ -282,7 +282,7 @@ object RandomDataOp extends GenericOp {
     * @param max
     * @return
     */
-  private def generateSparseFeatureVector(dimensions: Int, sparsity: Float, min: VectorBase, max: VectorBase, distribution : Option[String]) = {
+  private def generateSparseFeatureVector(dimensions: Int, sparsity: Float, min: VectorBase, max: VectorBase, distribution: Option[String]) = {
     if (dimensions == 0) {
       throw new GeneralAdamException("please choose to create vectors with more than zero dimensions")
     }
@@ -317,7 +317,26 @@ object RandomDataOp extends GenericOp {
     *
     * @return
     */
-  private def generateVectorBase(min: VectorBase, max: VectorBase, distribution : Option[String]) = Vector.nextRandom() * (max - min) + min
+  private def generateVectorBase(min: VectorBase, max: VectorBase, distribution: Option[String]) = {
+    distribution.getOrElse("uniform") match {
+      case "gaussian" => {
+        val x = Vector.conv_double2vb((Vector.nextRandom(Some("gaussian")) * (max - min) / 3.0) + (max - min) / 2.0)
+
+        if (x > max) {
+          max
+        } else if (x < min) {
+          min
+        } else {
+          x
+        }
+      }
+      case "uniform" => Vector.nextRandom() * (max - min) + min
+      case _ =>  Vector.nextRandom() * (max - min) + min
+    }
+
+
+
+  }
 
   /**
     *
