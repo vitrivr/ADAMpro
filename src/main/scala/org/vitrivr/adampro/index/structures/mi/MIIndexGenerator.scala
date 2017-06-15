@@ -28,7 +28,7 @@ import org.vitrivr.adampro.query.distance.DistanceFunction
     * @return
     */
   override def index(data: DataFrame, attribute: String)(tracker: OperationTracker): (DataFrame, Serializable) = {
-    log.trace("LSH started indexing")
+    log.trace("MI started indexing")
 
     val sample = getSample(nrefs, attribute)(data)
 
