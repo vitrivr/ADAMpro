@@ -88,10 +88,8 @@ case class Entity(entityname: EntityName)(@transient implicit val ac: AdamContex
 
   /**
     * Reads entity data and caches.
-    *
-    * @param persist persist dataframe to memory
     */
-  private def readData(persist: Boolean = true): Unit = {
+  private def readData(): Unit = {
     val handlerData = schema(fullSchema = false).groupBy(_.storagehandler).map { case (handler, attributes) =>
       val status = handler.read(entityname, attributes.+:(pk))
 
@@ -110,17 +108,6 @@ case class Entity(entityname: EntityName)(@transient implicit val ac: AdamContex
       }
     } else {
       _data = None
-    }
-
-    if (_data.isDefined && persist) {
-      import scala.concurrent.ExecutionContext.Implicits.global
-      val future = Future[DataFrame] {
-        _data.get.persist(StorageLevel.MEMORY_ONLY_SER)
-      }
-      future.onComplete {
-        case Success(cachedDF) => _data = Some(cachedDF)
-        case Failure(e) => log.error("could not cache data")
-      }
     }
   }
 
