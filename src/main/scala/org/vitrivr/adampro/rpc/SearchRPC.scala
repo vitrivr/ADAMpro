@@ -188,7 +188,7 @@ class SearchRPC extends AdamSearchGrpc.AdamSearch with Logging {
     */
   override def doBatchQuery(request: BatchedQueryMessage): Future[BatchedQueryResultsMessage] = {
     time("rpc call for batched query operation") {
-      Future.successful(BatchedQueryResultsMessage(request.queries.map(executeQuery(_))))
+      Future.successful(BatchedQueryResultsMessage(request.queries.par.map(executeQuery(_)).toList))
     }
   }
 
