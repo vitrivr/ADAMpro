@@ -53,7 +53,7 @@ case class SequentialScanExpression(private val entity: Entity)(private val nnq:
     }
 
     val df = entity.getData().get
-    var bf : BloomFilter = null
+    /*var bf : BloomFilter = null
 
     //prepare filter
     if (filter.isDefined) {
@@ -70,9 +70,32 @@ case class SequentialScanExpression(private val entity: Entity)(private val nnq:
         bf = filterExprBf
       }
 
+    }*/
+
+
+    val prefilter = if(filter.isDefined && filterExpr.isDefined){
+      filterExpr.get.filter = filter
+
+      val filterVals = filter.get.select(entity.pk.name)
+      val filterExprVals = filterExpr.get.evaluate(options)(tracker).get.select(entity.pk.name)
+
+      Some(filterVals.intersect(filterExprVals))
+    } else if(filter.isDefined ){
+      Some(filter.get.select(entity.pk.name))
+    } else if(filterExpr.isDefined){
+      Some(filterExpr.get.evaluate(options)(tracker).get.select(entity.pk.name))
+    } else {
+      None
     }
 
-    var result = if (filter.isDefined || filterExpr.isDefined) {
+    var result = if(prefilter.isDefined){
+      Some(df.join(prefilter.get, df.col(entity.pk.name) === prefilter.get.col(entity.pk.name), "leftsemi"))
+    } else {
+      Some(df)
+    }
+
+
+    /*var result = if (filter.isDefined || filterExpr.isDefined) {
       val bfBc = ac.sc.broadcast(bf)
       tracker.addBroadcast(bfBc)
 
@@ -80,7 +103,7 @@ case class SequentialScanExpression(private val entity: Entity)(private val nnq:
       Some(df.filter(filterUdf(col(entity.pk.name))))
     } else {
       Some(df)
-    }
+    }*/
 
     //adjust output
     if (result.isDefined && options.isDefined && options.get.storeSourceProvenance) {
