@@ -188,9 +188,7 @@ object AggregationExpression {
       }
 
       val op = this.options.getOrElse("fuzzy", "standard") match {
-        case "standard" => udf((d1: Distance.Distance, d2: Distance.Distance) => math.max(d1, d2))
-        case "algebraic" => udf((d1: Distance.Distance, d2: Distance.Distance) => d1 + d2 - d1 * d2)
-        case "bounded" => udf((d1: Distance.Distance, d2: Distance.Distance) => math.min(1, d1 + d2))
+        case "standard" => udf((d1: Distance.Distance, d2: Distance.Distance) => math.min(d1, d2))
         case _ => log.warn("could not match fuzzy union option"); udf((d1: Distance.Distance, d2: Distance.Distance) => math.max(d1, d2))
       }
 
@@ -303,9 +301,7 @@ object AggregationExpression {
       }
 
       val op = this.options.getOrElse("fuzzy", "standard") match {
-        case "standard" => udf((d1: Distance.Distance, d2: Distance.Distance) => math.min(d1, d2))
-        case "algebraic" => udf((d1: Distance.Distance, d2: Distance.Distance) => d1 * d2)
-        case "bounded" => udf((d1: Distance.Distance, d2: Distance.Distance) => math.max(0, d1 + d2 - 1))
+        case "standard" => udf((d1: Distance.Distance, d2: Distance.Distance) => math.max(d1, d2))
         case _ => log.warn("could not match fuzzy intersect option"); udf((d1: Distance.Distance, d2: Distance.Distance) => math.min(d1, d2))
       }
 
