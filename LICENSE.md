@@ -1,6 +1,6 @@
 The MIT License (MIT)
 
-Copyright (c) 2016 Databases and Information Systems Research Group
+Copyright (c) 2017 Ivan Giangreco, Databases and Information Systems Research Group, University of Basel
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
