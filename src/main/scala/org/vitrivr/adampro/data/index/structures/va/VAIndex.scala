@@ -2,6 +2,7 @@ package org.vitrivr.adampro.data.index.structures.va
 
 import org.apache.spark.broadcast.Broadcast
 import org.apache.spark.sql.DataFrame
+import org.apache.spark.sql.functions._
 import org.vitrivr.adampro.config.AttributeNames
 import org.vitrivr.adampro.data.datatypes.bitstring.BitString
 import org.vitrivr.adampro.data.datatypes.vector.Vector._
@@ -10,12 +11,10 @@ import org.vitrivr.adampro.data.index.Index.{IndexName, IndexTypeName}
 import org.vitrivr.adampro.data.index.structures.IndexTypes
 import org.vitrivr.adampro.data.index.structures.va.VAIndex.{Bounds, Marks}
 import org.vitrivr.adampro.data.index.structures.va.signature.{FixedSignatureGenerator, VariableSignatureGenerator}
+import org.vitrivr.adampro.process.SharedComponentContext
 import org.vitrivr.adampro.query.distance.Distance._
 import org.vitrivr.adampro.query.distance.{DistanceFunction, MinkowskiDistance}
 import org.vitrivr.adampro.query.query.RankingQuery
-import org.apache.spark.sql.functions._
-import org.vitrivr.adampro.data.datatypes.TupleID.TupleID
-import org.vitrivr.adampro.process.SharedComponentContext
 import org.vitrivr.adampro.query.tracker.QueryTracker
 
 /**
@@ -36,7 +35,7 @@ class VAIndex(override val indexname: IndexName)(@transient override implicit va
 
   override lazy val lossy: Boolean = false
   override lazy val confidence = 1.toFloat
-  override lazy val score : Float = if(indextypename.equals(IndexTypes.VAFINDEX)){
+  override lazy val score: Float = if (indextypename.equals(IndexTypes.VAFINDEX)) {
     0.9.toFloat //slightly less weight if fixed variable
   } else {
     1.toFloat
@@ -51,7 +50,7 @@ class VAIndex(override val indexname: IndexName)(@transient override implicit va
     * @param k        number of elements to retrieve (of the k nearest neighbor search), possibly more than k elements are returned
     * @return a set of candidate tuple ids, possibly together with a tentative score (the number of tuples will be greater than k)
     */
-  override def scan(data: DataFrame, q: MathVector, distance: DistanceFunction, options: Map[String, String], k: Int)(tracker : QueryTracker): DataFrame = {
+  override def scan(data: DataFrame, q: MathVector, distance: DistanceFunction, options: Map[String, String], k: Int)(tracker: QueryTracker): DataFrame = {
     log.debug("scanning VA-File index " + indexname)
 
     val signatureGeneratorBc = ac.sc.broadcast(meta.signatureGenerator)
@@ -70,7 +69,7 @@ class VAIndex(override val indexname: IndexName)(@transient override implicit va
 
     //compute the approximate distance given the cells
     val distUDF = (boundsBc: Broadcast[Bounds]) => udf((cells: Seq[Int]) => {
-      var bound : Distance = 0
+      var bound: Distance = 0
 
       var idx = 0
       while (idx < cells.length) {
@@ -103,6 +102,12 @@ class VAIndex(override val indexname: IndexName)(@transient override implicit va
 
         localRh.results.sortBy(x => -x.ap_upper).iterator
       })
+
+    /*import ac.spark.implicits._
+    val minUpperPart = localRes
+      .mapPartitions(pIt => Seq(pIt.maxBy(_.ap_upper)).iterator).agg(min("ap_upper")).collect()(0).getDouble(0)
+
+    val res = localRes.filter(_.ap_lower <= minUpperPart).toDF()*/
 
     // global refinement
     val globalRh = new VAResultHandler(k)
