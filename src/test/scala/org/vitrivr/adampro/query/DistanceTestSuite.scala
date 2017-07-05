@@ -3,7 +3,7 @@ package org.vitrivr.adampro.query
 import org.vitrivr.adampro.AdamTestBase
 import org.vitrivr.adampro.query.distance._
 import org.scalatest.concurrent.ScalaFutures
-import org.vitrivr.adampro.datatypes.vector.Vector
+import org.vitrivr.adampro.data.datatypes.vector.Vector
 
 /**
   * ADAMpro

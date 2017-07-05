@@ -12,11 +12,11 @@ import org.apache.spark.sql.{DataFrame, Row, SaveMode}
 import org.iq80.leveldb.impl.Iq80DBFactory._
 import org.iq80.leveldb.{DB, Options}
 import org.vitrivr.adampro.config.AdamConfig
-import org.vitrivr.adampro.datatypes.AttributeTypes
-import org.vitrivr.adampro.entity.AttributeDefinition
-import org.vitrivr.adampro.entity.Entity.EntityName
-import org.vitrivr.adampro.exception.GeneralAdamException
-import org.vitrivr.adampro.main.SharedComponentContext
+import org.vitrivr.adampro.data.datatypes.AttributeTypes
+import org.vitrivr.adampro.data.entity.AttributeDefinition
+import org.vitrivr.adampro.data.entity.Entity.EntityName
+import org.vitrivr.adampro.utils.exception.GeneralAdamException
+import org.vitrivr.adampro.process.SharedComponentContext
 import org.vitrivr.adampro.query.query.Predicate
 
 import scala.collection.convert.decorateAsScala._

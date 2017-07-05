@@ -1,7 +1,7 @@
 package org.vitrivr.adampro.query.distance
 
 import breeze.stats.mean
-import org.vitrivr.adampro.datatypes.vector.Vector._
+import org.vitrivr.adampro.data.datatypes.vector.Vector._
 import org.vitrivr.adampro.query.distance.Distance._
 import org.vitrivr.adampro.utils.Logging
 

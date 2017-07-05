@@ -5,7 +5,7 @@ import java.util.Properties
 
 import org.vitrivr.adampro.chronos.EvaluationJob
 import org.vitrivr.adampro.chronos.utils.{CreationHelper, Helpers}
-import org.vitrivr.adampro.rpc.datastructures.{RPCComplexQueryObject, RPCGenericQueryObject, RPCQueryResults, RPCSequentialScanQueryObject}
+import org.vitrivr.adampro.communication.datastructures.{RPCComplexQueryObject, RPCGenericQueryObject, RPCQueryResults, RPCSequentialScanQueryObject}
 
 import scala.collection.mutable.ListBuffer
 import scala.util.Try

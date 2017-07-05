@@ -6,16 +6,16 @@ import org.apache.spark.sql.types._
 import org.apache.spark.sql.{DataFrame, Row, types}
 import org.scalatest.concurrent.{Eventually, IntegrationPatience}
 import org.scalatest.{FeatureSpec, GivenWhenThen}
-import org.vitrivr.adampro.api.EntityOp
+import org.vitrivr.adampro.communication.api.EntityOp
 import org.vitrivr.adampro.config.AdamConfig
-import org.vitrivr.adampro.datatypes.AttributeTypes
-import org.vitrivr.adampro.datatypes.vector.Vector.MathVector
-import org.vitrivr.adampro.entity.{AttributeDefinition, Entity}
-import org.vitrivr.adampro.main.{SharedComponentContext, SparkStartup}
+import org.vitrivr.adampro.data.datatypes.AttributeTypes
+import org.vitrivr.adampro.data.datatypes.vector.Vector.MathVector
+import org.vitrivr.adampro.data.entity.{AttributeDefinition, Entity}
 import org.vitrivr.adampro.query.distance.{ManhattanDistance, MinkowskiDistance}
 import org.vitrivr.adampro.query.query.Predicate
 import org.vitrivr.adampro.utils.Logging
-import org.vitrivr.adampro.datatypes.vector.Vector
+import org.vitrivr.adampro.data.datatypes.vector.Vector
+import org.vitrivr.adampro.process.{SharedComponentContext, SparkStartup}
 
 import scala.util.Random
 

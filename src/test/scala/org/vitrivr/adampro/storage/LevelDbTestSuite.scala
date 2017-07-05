@@ -1,9 +1,9 @@
 package org.vitrivr.adampro.storage
 
 import org.vitrivr.adampro.AdamTestBase
-import org.vitrivr.adampro.api.{EntityOp, RandomDataOp}
-import org.vitrivr.adampro.datatypes.AttributeTypes
-import org.vitrivr.adampro.entity.{AttributeDefinition, Entity}
+import org.vitrivr.adampro.communication.api.{EntityOp, RandomDataOp}
+import org.vitrivr.adampro.data.datatypes.AttributeTypes
+import org.vitrivr.adampro.data.entity.{AttributeDefinition, Entity}
 
 import scala.util.Random
 
@@ -18,7 +18,7 @@ class LevelDbTestSuite  extends AdamTestBase {
   def ntuples() = Random.nextInt(500)
   val attributetypes = Seq(AttributeTypes.VECTORTYPE)
 
-  assert(ac.storageHandlerRegistry.contains(handlerName))
+  assert(ac.storageManager.contains(handlerName))
 
   scenario("create an entity") {
     val tuplesInsert = ntuples()

@@ -2,6 +2,7 @@ package org.vitrivr.adampro.main
 
 import org.apache
 import org.apache.spark
+import org.vitrivr.adampro.process.SparkStartup
 
 /**
  * adamtwo

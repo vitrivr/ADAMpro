@@ -3,8 +3,8 @@ package org.vitrivr.adampro.storage.engine
 import org.apache.spark.sql.{Row, SaveMode}
 import org.apache.spark.sql.types.{StructField, StructType}
 import org.vitrivr.adampro.config.AdamConfig
-import org.vitrivr.adampro.entity.AttributeDefinition
-import org.vitrivr.adampro.main.SharedComponentContext
+import org.vitrivr.adampro.data.entity.AttributeDefinition
+import org.vitrivr.adampro.process.SharedComponentContext
 
 import scala.util.{Success, Try}
 

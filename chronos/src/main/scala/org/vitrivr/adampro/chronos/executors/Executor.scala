@@ -6,8 +6,8 @@ import java.util.logging.Logger
 
 import org.vitrivr.adampro.chronos.EvaluationJob
 import org.vitrivr.adampro.chronos.utils.Helpers
-import org.vitrivr.adampro.rpc.RPCClient
-import org.vitrivr.adampro.rpc.datastructures._
+import org.vitrivr.adampro.communication.RPCClient
+import org.vitrivr.adampro.communication.datastructures._
 
 import scala.collection.mutable.ListBuffer
 import scala.util.{Random, Try}

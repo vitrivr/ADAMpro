@@ -12,6 +12,23 @@ trait Logging {
   protected final val QUERY_MARKER = MarkerFactory.getMarker("QUERY_MARKER")
   @transient private var log_ : Logger = null
 
+
+  /**
+    *
+    * @param thunk
+    * @tparam T
+    * @return
+    */
+  def time[T](desc: String)(thunk: => T): T = {
+    val t1 = System.currentTimeMillis
+    log.trace(desc + " : " + "started at " + t1)
+    val x = thunk
+    val t2 = System.currentTimeMillis
+    log.trace(desc + " : " + "started at " + t1 + " finished at " + t2)
+    log.debug(desc + " : " + (t2 - t1) + " msecs")
+    x
+  }
+
   /**
     *
     * @return

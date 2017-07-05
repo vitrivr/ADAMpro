@@ -4,20 +4,20 @@ import java.util.concurrent.TimeUnit
 
 import org.scalatest.concurrent.ScalaFutures
 import org.vitrivr.adampro.AdamTestBase
-import org.vitrivr.adampro.api._
+import org.vitrivr.adampro.communication.api._
 import org.vitrivr.adampro.config.AttributeNames
-import org.vitrivr.adampro.datatypes.TupleID.TupleID
-import org.vitrivr.adampro.datatypes.vector.Vector
-import org.vitrivr.adampro.helpers.tracker.OperationTracker
-import org.vitrivr.adampro.index.Index._
-import org.vitrivr.adampro.index.structures.IndexTypes
+import org.vitrivr.adampro.data.datatypes.TupleID.TupleID
+import org.vitrivr.adampro.data.datatypes.vector.Vector
+import org.vitrivr.adampro.query.tracker.QueryTracker
+import org.vitrivr.adampro.data.index.Index._
+import org.vitrivr.adampro.data.index.structures.IndexTypes
 import org.vitrivr.adampro.query.distance.Distance.Distance
 import org.vitrivr.adampro.query.distance.{Distance, EuclideanDistance}
-import org.vitrivr.adampro.query.handler.internal.AggregationExpression.{ExpressionEvaluationOrder, FuzzyIntersectExpression, IntersectExpression}
-import org.vitrivr.adampro.query.handler.internal.{CompoundQueryExpression, IndexScanExpression, StochasticIndexQueryExpression}
-import org.vitrivr.adampro.query.parallel.AllParallelPathChooser
-import org.vitrivr.adampro.query.progressive.ProgressiveObservation
-import org.vitrivr.adampro.query.query.{BooleanQuery, NearestNeighbourQuery, Predicate}
+import org.vitrivr.adampro.query.ast.internal.AggregationExpression.{ExpressionEvaluationOrder, FuzzyIntersectExpression, IntersectExpression}
+import org.vitrivr.adampro.query.ast.internal.{CompoundQueryExpression, IndexScanExpression, StochasticIndexQueryExpression}
+import org.vitrivr.adampro.query.execution.parallel.AllParallelPathChooser
+import org.vitrivr.adampro.query.execution.ProgressiveObservation
+import org.vitrivr.adampro.query.query.{FilteringQuery, RankingQuery, Predicate}
 
 import scala.concurrent.duration.Duration
 import scala.util.Try
@@ -40,8 +40,8 @@ class QueryTestSuite extends AdamTestBase with ScalaFutures {
     scenario("perform a sequential query") {
       withQueryEvaluationSet { es =>
         When("performing a kNN query")
-        val nnq = NearestNeighbourQuery("vectorfield", es.vector, None, es.distance, es.k, false, es.options)
-        val tracker = new OperationTracker()
+        val nnq = RankingQuery("vectorfield", es.vector, None, es.distance, es.k, false, es.options)
+        val tracker = new QueryTracker()
         val results = QueryOp.sequential(es.entity.entityname, nnq, None)(tracker).get.get
           .map(r => (r.getAs[Distance](AttributeNames.distanceColumnName), r.getAs[Long]("tid"))).collect() //get here TID of metadata
           .sortBy(_._1).toSeq
@@ -60,8 +60,8 @@ class QueryTestSuite extends AdamTestBase with ScalaFutures {
       withQueryEvaluationSet { es =>
         When("performing a kNN query")
         val weights = Vector.conv_draw2vec(Seq.fill(es.vector.length)(Vector.zeroValue))
-        val nnq = NearestNeighbourQuery("vectorfield", es.vector, Some(weights), es.distance, es.k, false, es.options)
-        val tracker = new OperationTracker()
+        val nnq = RankingQuery("vectorfield", es.vector, Some(weights), es.distance, es.k, false, es.options)
+        val tracker = new QueryTracker()
         val results = QueryOp.sequential(es.entity.entityname, nnq, None)(tracker).get.get
           .map(r => (r.getAs[Distance](AttributeNames.distanceColumnName), r.getAs[Long]("tid"))).collect() //get here TID of metadata
           .sortBy(_._1).toSeq
@@ -80,8 +80,8 @@ class QueryTestSuite extends AdamTestBase with ScalaFutures {
       assert(index.isSuccess)
 
       When("performing a kNN query")
-      val nnq = NearestNeighbourQuery("vectorfield", es.vector, None, es.distance, es.k, false, es.options)
-      val tracker = new OperationTracker()
+      val nnq = RankingQuery("vectorfield", es.vector, None, es.distance, es.k, false, es.options)
+      val tracker = new QueryTracker()
       val results = QueryOp.index(index.get.indexname, nnq, None)(tracker).get.get
         .map(r => (r.getAs[Distance](AttributeNames.distanceColumnName), r.getAs[Long]("tid"))).collect() //get here TID of metadata
         .sortBy(_._1).toSeq
@@ -148,8 +148,8 @@ class QueryTestSuite extends AdamTestBase with ScalaFutures {
         assert(index.isSuccess)
 
         When("performing a kNN query")
-        val nnq = NearestNeighbourQuery("vectorfield", es.vector, None, EuclideanDistance, es.k, false, es.options)
-        val tracker = new OperationTracker()
+        val nnq = RankingQuery("vectorfield", es.vector, None, EuclideanDistance, es.k, false, es.options)
+        val tracker = new QueryTracker()
         val results = QueryOp.index(index.get.indexname, nnq, None)(tracker).get.get
           .map(r => (r.getAs[Distance](AttributeNames.distanceColumnName), r.getAs[Long]("tid"))).collect() //get here TID of metadata
           .sortBy(_._1).toSeq
@@ -191,8 +191,8 @@ class QueryTestSuite extends AdamTestBase with ScalaFutures {
         val index = IndexOp.create(es.entity.entityname, "vectorfield", IndexTypes.VAFINDEX, es.distance)()
 
         When("performing a kNN query")
-        val nnq = NearestNeighbourQuery("vectorfield", es.vector, None, es.distance, es.k, false, es.options)
-        val tracker = new OperationTracker()
+        val nnq = RankingQuery("vectorfield", es.vector, None, es.distance, es.k, false, es.options)
+        val tracker = new QueryTracker()
         val results = QueryOp.entityIndex(es.entity.entityname, IndexTypes.VAFINDEX, nnq, None)(tracker).get.get
           .map(r => (r.getAs[Distance](AttributeNames.distanceColumnName), r.getAs[Long]("tid"))).collect() //get here TID of metadata
           .sortBy(_._1).toSeq
@@ -233,9 +233,9 @@ class QueryTestSuite extends AdamTestBase with ScalaFutures {
         assert(index.isSuccess)
 
         When("performing a kNN query")
-        val nnq = NearestNeighbourQuery("vectorfield", es.vector, None, es.distance, es.k, false, es.options)
-        val bq = BooleanQuery(es.where)
-        val tracker = new OperationTracker()
+        val nnq = RankingQuery("vectorfield", es.vector, None, es.distance, es.k, false, es.options)
+        val bq = FilteringQuery(es.where)
+        val tracker = new QueryTracker()
         val results = QueryOp.index(index.get.indexname, nnq, Option(bq))(tracker).get.get
           .map(r => (r.getAs[Distance](AttributeNames.distanceColumnName), r.getAs[Long]("tid"))).collect() //get here TID of metadata
           .sortBy(_._1).toSeq
@@ -267,8 +267,8 @@ class QueryTestSuite extends AdamTestBase with ScalaFutures {
         }
         val whereStmt = Seq(new Predicate("tid", Some("="), tids))
 
-        val bq = BooleanQuery(whereStmt)
-        val tracker = new OperationTracker()
+        val bq = FilteringQuery(whereStmt)
+        val tracker = new QueryTracker()
 
         val results = QueryOp.booleanQuery(es.entity.entityname, Option(bq))(tracker).get.get
           .map(r => r.getAs[Long]("tid")).collect() //get here TID of metadata
@@ -317,8 +317,8 @@ class QueryTestSuite extends AdamTestBase with ScalaFutures {
         }
 
         When("performing a kNN parallel query")
-        val nnq = NearestNeighbourQuery("vectorfield", es.vector, None, es.distance, es.k, false, es.options)
-        val tracker = new OperationTracker()
+        val nnq = RankingQuery("vectorfield", es.vector, None, es.distance, es.k, false, es.options)
+        val tracker = new QueryTracker()
         val pqtracker = QueryOp.parallel(es.entity.entityname, nnq, None, new AllParallelPathChooser(), processResults)(tracker).get
 
         whenReady(pqtracker) { result =>
@@ -344,8 +344,8 @@ class QueryTestSuite extends AdamTestBase with ScalaFutures {
         val timelimit = Duration(10, TimeUnit.SECONDS)
 
         When("performing a kNN parallel query")
-        val nnq = NearestNeighbourQuery("vectorfield", es.vector, None, es.distance, es.k, false, es.options)
-        val tracker = new OperationTracker()
+        val nnq = RankingQuery("vectorfield", es.vector, None, es.distance, es.k, false, es.options)
+        val tracker = new QueryTracker()
         val po = QueryOp.timedParallel(es.entity.entityname, nnq, None, new AllParallelPathChooser(), timelimit)(tracker).get
 
         Then("we should have a match at least in the first element")
@@ -377,8 +377,8 @@ class QueryTestSuite extends AdamTestBase with ScalaFutures {
 
         When("performing a kNN query of two indices and performing the intersect")
         //nnq has numOfQ  = 0 to avoid that by the various randomized q's the results get different
-        val nnq = NearestNeighbourQuery("vectorfield", es.vector, None, es.distance, es.k, true, es.options ++ Map("numOfQ" -> "0"), None)
-        val tracker = new OperationTracker()
+        val nnq = RankingQuery("vectorfield", es.vector, None, es.distance, es.k, true, es.options ++ Map("numOfQ" -> "0"), None)
+        val tracker = new QueryTracker()
 
         val pqqh = new IndexScanExpression(pqidx.get.indexname)(nnq, None)(None)(ac)
         val vhqh = new IndexScanExpression(vaidx.get.indexname)(nnq, None)(None)(ac)
@@ -416,8 +416,8 @@ class QueryTestSuite extends AdamTestBase with ScalaFutures {
 
         When("performing a kNN query of two indices and performing the intersect")
         //nnq has numOfQ  = 0 to avoid that by the various randomized q's the results get different
-        val nnq = NearestNeighbourQuery("vectorfield", es.vector, None, es.distance, es.k, true, es.options ++ Map("numOfQ" -> "0"), None)
-        val tracker = new OperationTracker()
+        val nnq = RankingQuery("vectorfield", es.vector, None, es.distance, es.k, true, es.options ++ Map("numOfQ" -> "0"), None)
+        val tracker = new QueryTracker()
 
         val va1qh = new IndexScanExpression(vaidx1.get.indexname)(nnq, None)(None)(ac)
         val va2qh = new IndexScanExpression(vaidx2.get.indexname)(nnq, None)(None)(ac)
@@ -457,8 +457,8 @@ class QueryTestSuite extends AdamTestBase with ScalaFutures {
 
       When("performing a kNN query of two indices and performing the intersect")
       //nnq has numOfQ  = 0 to avoid that by the various randomized q's the results get different
-      val nnq = NearestNeighbourQuery("vectorfield", es.vector, None, es.distance, es.k, true, es.options ++ Map("numOfQ" -> "0"), None)
-      val tracker = new OperationTracker()
+      val nnq = RankingQuery("vectorfield", es.vector, None, es.distance, es.k, true, es.options ++ Map("numOfQ" -> "0"), None)
+      val tracker = new QueryTracker()
 
       val va1qh = new IndexScanExpression(vaidx1.get.indexname)(nnq, None)(None)(ac)
       val va2qh = new IndexScanExpression(vaidx2.get.indexname)(nnq, None)(None)(ac)
@@ -498,8 +498,8 @@ class QueryTestSuite extends AdamTestBase with ScalaFutures {
         val index = IndexOp.generateAll(es.entity.entityname, "vectorfield", es.distance)()
 
         When("performing a kNN query")
-        val nnq = NearestNeighbourQuery("vectorfield", es.vector, None, es.distance, es.k, false, es.options)
-        val tracker = new OperationTracker()
+        val nnq = RankingQuery("vectorfield", es.vector, None, es.distance, es.k, false, es.options)
+        val tracker = new QueryTracker()
 
         val indexscans = es.entity.indexes.map(index => IndexScanExpression(index.get)(nnq)()(ac))
 

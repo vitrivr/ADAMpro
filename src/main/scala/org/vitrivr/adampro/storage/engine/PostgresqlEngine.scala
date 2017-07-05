@@ -3,14 +3,14 @@ package org.vitrivr.adampro.storage.engine
 import java.sql.Connection
 import java.util.Properties
 
-import org.vitrivr.adampro.datatypes.AttributeTypes
-import org.vitrivr.adampro.datatypes.AttributeTypes.AttributeType
-import org.vitrivr.adampro.entity.AttributeDefinition
-import org.vitrivr.adampro.main.SharedComponentContext
+import org.vitrivr.adampro.data.datatypes.AttributeTypes
+import org.vitrivr.adampro.data.datatypes.AttributeTypes.AttributeType
+import org.vitrivr.adampro.data.entity.AttributeDefinition
 import org.vitrivr.adampro.query.query.Predicate
 import com.mchange.v2.c3p0.ComboPooledDataSource
 import org.apache.spark.sql.types.{StructField, StructType}
 import org.apache.spark.sql.{DataFrame, Row, SaveMode}
+import org.vitrivr.adampro.process.SharedComponentContext
 import spire.syntax.field
 
 import scala.util.{Failure, Success, Try}

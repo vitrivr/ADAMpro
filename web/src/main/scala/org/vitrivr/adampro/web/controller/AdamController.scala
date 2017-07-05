@@ -2,8 +2,8 @@ package org.vitrivr.adampro.web.controller
 
 import com.twitter.finagle.http.Request
 import com.twitter.finatra.http.Controller
-import org.vitrivr.adampro.rpc.RPCClient
-import org.vitrivr.adampro.rpc.datastructures.{RPCAttributeDefinition, RPCQueryResults}
+import org.vitrivr.adampro.communication.RPCClient
+import org.vitrivr.adampro.communication.datastructures.{RPCAttributeDefinition, RPCQueryResults}
 import org.vitrivr.adampro.utils.Logging
 import org.vitrivr.adampro.web.datastructures._
 

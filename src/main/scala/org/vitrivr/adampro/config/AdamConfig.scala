@@ -37,7 +37,7 @@ class AdamConfig extends Serializable with Logging {
 
   import scala.collection.JavaConversions._
 
-  val engines = config.getStringList("adampro.engines").toIterator.toSeq
+  val engines = config.getStringList("adampro.engines").toIterator.toIndexedSeq
 
   val grpcPort = config.getInt("adampro.grpc.port")
 

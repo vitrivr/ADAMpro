@@ -3,10 +3,9 @@ package org.vitrivr.adampro.storage.engine
 import java.io.File
 
 import org.vitrivr.adampro.config.AdamConfig
-import org.vitrivr.adampro.datatypes.AttributeTypes
-import org.vitrivr.adampro.entity.AttributeDefinition
-import org.vitrivr.adampro.exception.GeneralAdamException
-import org.vitrivr.adampro.main.SharedComponentContext
+import org.vitrivr.adampro.data.datatypes.AttributeTypes
+import org.vitrivr.adampro.data.entity.AttributeDefinition
+import org.vitrivr.adampro.utils.exception.GeneralAdamException
 import org.vitrivr.adampro.query.query.Predicate
 import org.vitrivr.adampro.utils.Logging
 import org.apache.commons.io.FileUtils
@@ -14,6 +13,7 @@ import org.apache.hadoop.conf.Configuration
 import org.apache.hadoop.fs.{FileSystem, Path}
 import org.apache.spark.sql.types.{StructField, StructType}
 import org.apache.spark.sql.{DataFrame, Row, SaveMode}
+import org.vitrivr.adampro.process.SharedComponentContext
 
 import scala.util.{Failure, Success, Try}
 

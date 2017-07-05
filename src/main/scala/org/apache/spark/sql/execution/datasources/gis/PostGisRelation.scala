@@ -7,7 +7,7 @@ import org.apache.spark.sql._
 import org.apache.spark.sql.execution.datasources.jdbc.{JDBCOptions, JDBCRelation, JdbcUtils}
 import org.apache.spark.sql.jdbc.{JdbcDialect, JdbcDialects, JdbcType}
 import org.apache.spark.sql.types._
-import org.vitrivr.adampro.datatypes.gis.{GeographyWrapper, GeometryWrapper}
+import org.vitrivr.adampro.data.datatypes.gis.{GeographyWrapper, GeometryWrapper}
 import org.vitrivr.adampro.utils.Logging
 
 import scala.util.control.NonFatal

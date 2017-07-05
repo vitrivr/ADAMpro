@@ -3,8 +3,8 @@ package org.vitrivr.adampro.chronos.utils
 import java.util.logging.Logger
 
 import org.vitrivr.adampro.chronos.EvaluationJob
-import org.vitrivr.adampro.rpc.RPCClient
-import org.vitrivr.adampro.rpc.datastructures.RPCAttributeDefinition
+import org.vitrivr.adampro.communication.RPCClient
+import org.vitrivr.adampro.communication.datastructures.RPCAttributeDefinition
 
 import scala.collection.mutable.ListBuffer
 import scala.util.{Failure, Success, Try}

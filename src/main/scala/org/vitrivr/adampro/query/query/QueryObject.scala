@@ -1,12 +1,12 @@
 package org.vitrivr.adampro.query.query
 
-import org.vitrivr.adampro.catalog.CatalogOperator
-import org.vitrivr.adampro.datatypes.vector.Vector._
-import org.vitrivr.adampro.entity.Entity
-import org.vitrivr.adampro.entity.Entity.AttributeName
-import org.vitrivr.adampro.index.partition.Partitioning.PartitionID
-import org.vitrivr.adampro.index.Index
-import org.vitrivr.adampro.main.{SharedComponentContext, SparkStartup}
+import org.vitrivr.adampro.shared.catalog.CatalogManager
+import org.vitrivr.adampro.data.datatypes.vector.Vector._
+import org.vitrivr.adampro.data.entity.Entity
+import org.vitrivr.adampro.data.entity.Entity.AttributeName
+import org.vitrivr.adampro.data.index.partition.Partitioning.PartitionID
+import org.vitrivr.adampro.data.index.Index
+import org.vitrivr.adampro.process.SharedComponentContext
 import org.vitrivr.adampro.query.distance.DistanceFunction
 
 /**
@@ -26,14 +26,14 @@ abstract class QueryObject(queryID: Option[String] = Some(java.util.UUID.randomU
   * @param where a where 'clause' in form of (String, String), if the first string ends with '!=' or 'IN' the
   *              operator is used in the query, otherwise a '=' is added in between; AND-ing is assumed
   */
-case class BooleanQuery(
+case class FilteringQuery(
                          where: Seq[Predicate],
                          queryID: Option[String] = Some(java.util.UUID.randomUUID().toString))
   extends QueryObject(queryID) {
 
   override def equals(that: Any): Boolean = {
     that match {
-      case that: BooleanQuery =>
+      case that: FilteringQuery =>
         this.where.equals(that.where)
       case _ =>
         false
@@ -86,7 +86,7 @@ case class Predicate(attribute : String, operator : Option[String], values : Seq
   * @param partitions partitions to query (if not set all partitions are queried)
   * @param options    options to pass to handler
   */
-case class NearestNeighbourQuery(
+case class RankingQuery(
                                   attribute: AttributeName,
                                   q: MathVector,
                                   weights: Option[MathVector],
@@ -107,11 +107,11 @@ case class NearestNeighbourQuery(
 
       //check if feature data exists and dimensionality is correct
       val featureData = if (entity.getFeatureData.isDefined) {
-        var ndims = SparkStartup.catalogOperator.getAttributeOption(entity.entityname, attribute, Some("ndims")).get.get("ndims")
+        var ndims = ac.catalogManager.getAttributeOption(entity.entityname, attribute, Some("ndims")).get.get("ndims")
 
         if(ndims.isEmpty){
           ndims = Some(entity.getFeatureData.get.select(attribute).head().getAs[DenseSparkVector](attribute).length.toString)
-          SparkStartup.catalogOperator.updateAttributeOption(entity.entityname, attribute, "ndims", ndims.get)
+          ac.catalogManager.updateAttributeOption(entity.entityname, attribute, "ndims", ndims.get)
         }
 
         ndims.get.toInt == q.length
@@ -133,7 +133,7 @@ case class NearestNeighbourQuery(
 
   override def equals(that: Any): Boolean = {
     that match {
-      case that: NearestNeighbourQuery =>
+      case that: RankingQuery =>
         this.attribute.equals(that.attribute) &&
           this.q.equals(that.q) &&
           this.weights.isDefined == that.weights.isDefined &&

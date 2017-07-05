@@ -9,7 +9,7 @@ import org.apache.commons.io.FileUtils
 import org.slf4j.LoggerFactory
 import org.vitrivr.adampro.grpc.grpc.InsertMessage.TupleInsertMessage
 import org.vitrivr.adampro.grpc.grpc._
-import org.vitrivr.adampro.rpc.RPCClient
+import org.vitrivr.adampro.communication.RPCClient
 
 import scala.collection.immutable.HashSet
 import scala.collection.mutable

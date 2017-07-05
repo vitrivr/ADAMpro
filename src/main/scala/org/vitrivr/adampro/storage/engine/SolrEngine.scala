@@ -7,11 +7,11 @@ import org.apache.solr.common.SolrInputDocument
 import org.apache.spark.sql.types.{FloatType, StructField, StructType}
 import org.apache.spark.sql.{DataFrame, Row, SaveMode}
 import org.vitrivr.adampro.config.AttributeNames
-import org.vitrivr.adampro.datatypes.AttributeTypes
-import org.vitrivr.adampro.datatypes.AttributeTypes.AttributeType
-import org.vitrivr.adampro.entity.AttributeDefinition
-import org.vitrivr.adampro.entity.Entity.AttributeName
-import org.vitrivr.adampro.main.SharedComponentContext
+import org.vitrivr.adampro.data.datatypes.AttributeTypes
+import org.vitrivr.adampro.data.datatypes.AttributeTypes.AttributeType
+import org.vitrivr.adampro.data.entity.AttributeDefinition
+import org.vitrivr.adampro.data.entity.Entity.AttributeName
+import org.vitrivr.adampro.process.SharedComponentContext
 import org.vitrivr.adampro.query.query.Predicate
 import org.vitrivr.adampro.utils.Logging
 

@@ -1,15 +1,15 @@
 package org.vitrivr.adampro.storage
 
 import org.vitrivr.adampro.AdamTestBase
-import org.vitrivr.adampro.api.{IndexOp, QueryOp}
+import org.vitrivr.adampro.communication.api.{IndexOp, QueryOp}
 import org.vitrivr.adampro.config.AttributeNames
-import org.vitrivr.adampro.helpers.tracker.OperationTracker
-import org.vitrivr.adampro.index.partition.PartitionMode
-import org.vitrivr.adampro.index.Index
-import org.vitrivr.adampro.index.structures.IndexTypes
+import org.vitrivr.adampro.query.tracker.QueryTracker
+import org.vitrivr.adampro.data.index.partition.PartitionMode
+import org.vitrivr.adampro.data.index.Index
+import org.vitrivr.adampro.data.index.structures.IndexTypes
 import org.vitrivr.adampro.query.distance.Distance.Distance
 import org.vitrivr.adampro.query.distance.{Distance, EuclideanDistance}
-import org.vitrivr.adampro.query.query.NearestNeighbourQuery
+import org.vitrivr.adampro.query.query.RankingQuery
 
 /**
   * adampro
@@ -36,8 +36,8 @@ class PartitionTestSuite extends AdamTestBase {
         When("performing a repartitioning with replacement")
         IndexOp.partition(index.get.indexname, nPartitions, None, Some("tid"), PartitionMode.REPLACE_EXISTING)
 
-        val partnnq = NearestNeighbourQuery("vectorfield", es.vector, None, es.distance, es.k, false, Map[String, String](), Some(Set(0)))
-        val tracker = new OperationTracker()
+        val partnnq = RankingQuery("vectorfield", es.vector, None, es.distance, es.k, false, Map[String, String](), Some(Set(0)))
+        val tracker = new QueryTracker()
 
         val partresults = QueryOp.index(index.get.indexname, partnnq, None)(tracker).get.get
           .map(r => (r.getAs[Distance](AttributeNames.distanceColumnName), r.getAs[Long]("tid"))).collect()
@@ -61,8 +61,8 @@ class PartitionTestSuite extends AdamTestBase {
 
         When("performing a repartitioning with replacement")
         val partindex = IndexOp.partition(index.get.indexname, nPartitions, None, Some("tid"), PartitionMode.CREATE_TEMP)
-        val partnnq = NearestNeighbourQuery("vectorfield", es.vector, None, es.distance, es.k, false, Map[String, String](), Some(Set(0)))
-        val tracker = new OperationTracker()
+        val partnnq = RankingQuery("vectorfield", es.vector, None, es.distance, es.k, false, Map[String, String](), Some(Set(0)))
+        val tracker = new QueryTracker()
 
         val partresults = QueryOp.index(partindex.get.indexname, partnnq, None)(tracker).get.get
           .map(r => (r.getAs[Distance](AttributeNames.distanceColumnName), r.getAs[Long]("tid"))).collect()
@@ -72,7 +72,7 @@ class PartitionTestSuite extends AdamTestBase {
         assert(partresults.map(x => x._2 % nPartitions).distinct.length == 1)
 
         When("clearing the cache")
-        ac.indexLRUCache.empty()
+        ac.cacheManager.emptyIndex()
 
         Then("the index should be gone")
         val loadedIndex = Index.load(partindex.get.indexname)
@@ -92,10 +92,10 @@ class PartitionTestSuite extends AdamTestBase {
 
         When("performing a repartitioning, creating new")
         val partindex = IndexOp.partition(index.get.indexname, nPartitions, None, Some("tid"), PartitionMode.CREATE_NEW)
-        val partnnq = NearestNeighbourQuery("vectorfield", es.vector, None, es.distance, es.k, false, Map[String, String](), Some(Set(0)))
-        val tracker = new OperationTracker()
+        val partnnq = RankingQuery("vectorfield", es.vector, None, es.distance, es.k, false, Map[String, String](), Some(Set(0)))
+        val tracker = new QueryTracker()
 
-        ac.indexLRUCache.empty()
+        ac.cacheManager.emptyIndex()
 
         Then("we should be able to load the index")
         val loadedIndex = Index.load(partindex.get.indexname)
@@ -124,10 +124,10 @@ class PartitionTestSuite extends AdamTestBase {
 
         When("performing a repartitioning, creating new")
         val partindex = IndexOp.partition(index.get.indexname, nPartitions, None, Some("tid"), PartitionMode.CREATE_NEW)
-        val partnnq = NearestNeighbourQuery("vectorfield", es.vector, None, es.distance, es.k, false, Map[String, String](), Some(Set(0)))
-        val tracker = new OperationTracker()
+        val partnnq = RankingQuery("vectorfield", es.vector, None, es.distance, es.k, false, Map[String, String](), Some(Set(0)))
+        val tracker = new QueryTracker()
 
-        ac.indexLRUCache.empty()
+        ac.cacheManager.emptyIndex()
 
         Then("we should be able to load the index")
         val loadedIndex = Index.load(partindex.get.indexname)

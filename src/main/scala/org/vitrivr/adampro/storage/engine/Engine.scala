@@ -1,11 +1,11 @@
 package org.vitrivr.adampro.storage.engine
 
-import org.vitrivr.adampro.datatypes.AttributeTypes.AttributeType
-import org.vitrivr.adampro.entity.AttributeDefinition
-import org.vitrivr.adampro.main.SharedComponentContext
+import org.vitrivr.adampro.data.datatypes.AttributeTypes.AttributeType
+import org.vitrivr.adampro.data.entity.AttributeDefinition
 import org.vitrivr.adampro.query.query.Predicate
 import org.vitrivr.adampro.utils.Logging
 import org.apache.spark.sql.{DataFrame, SaveMode}
+import org.vitrivr.adampro.process.SharedComponentContext
 
 import scala.util.Try
 

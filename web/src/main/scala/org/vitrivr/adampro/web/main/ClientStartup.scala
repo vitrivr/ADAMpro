@@ -1,7 +1,7 @@
 package org.vitrivr.adampro.web.main
 
 import org.vitrivr.adampro.web.controller.{WebServer, AdamController}
-import org.vitrivr.adampro.rpc.RPCClient
+import org.vitrivr.adampro.communication.RPCClient
 
 /**
   * adamtwo

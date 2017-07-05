@@ -15,7 +15,7 @@ import org.apache.spark.sql.jdbc.{JdbcDialect, JdbcDialects, JdbcType}
 import org.apache.spark.sql.sources._
 import org.apache.spark.sql.types.{DataType, MetadataBuilder, StringType, StructType}
 import org.apache.spark.sql.{DataFrame, SQLContext, SaveMode}
-import org.vitrivr.adampro.datatypes.gis.{GeographyWrapper, GeometryWrapper}
+import org.vitrivr.adampro.data.datatypes.gis.{GeographyWrapper, GeometryWrapper}
 
 class DataSource extends CreatableRelationProvider with DataSourceRegister with RelationProvider with Serializable {
   override def shortName(): String = "postgis"

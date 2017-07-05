@@ -1,12 +1,12 @@
 package org.vitrivr.adampro.storage
 
 import org.vitrivr.adampro.AdamTestBase
-import org.vitrivr.adampro.api.{EntityOp, QueryOp, RandomDataOp}
-import org.vitrivr.adampro.datatypes.AttributeTypes
-import org.vitrivr.adampro.entity.{AttributeDefinition, Entity}
-import org.vitrivr.adampro.helpers.tracker.OperationTracker
-import org.vitrivr.adampro.query.handler.external.GenericExternalScanExpression
-import org.vitrivr.adampro.query.query.BooleanQuery
+import org.vitrivr.adampro.communication.api.{EntityOp, QueryOp, RandomDataOp}
+import org.vitrivr.adampro.data.datatypes.AttributeTypes
+import org.vitrivr.adampro.data.entity.{AttributeDefinition, Entity}
+import org.vitrivr.adampro.query.tracker.QueryTracker
+import org.vitrivr.adampro.query.ast.external.GenericExternalScanExpression
+import org.vitrivr.adampro.query.query.FilteringQuery
 
 import scala.util.Random
 
@@ -21,7 +21,7 @@ class PostGisTestSuite extends AdamTestBase {
   def ntuples() = Random.nextInt(500)
   val fieldTypes = Seq(AttributeTypes.GEOMETRYTYPE)
 
-  assert(ac.storageHandlerRegistry.contains(handlerName))
+  assert(ac.storageManager.contains(handlerName))
 
   scenario("create an entity") {
     val tuplesInsert = ntuples()
@@ -53,7 +53,7 @@ class PostGisTestSuite extends AdamTestBase {
 
       val query = "(ST_Distance('LINESTRING(-122.33 47.606, 0.0 51.5)'::geography, 'POINT(-21.96 64.15)':: geography))::int"
       val ncollect = 10
-      val tracker = new OperationTracker()
+      val tracker = new QueryTracker()
 
       val results = QueryOp.compoundQuery(GenericExternalScanExpression(entityname, "postgis", Map("query" -> query, "limit" -> ncollect.toString))(ac))(tracker).get.get
 

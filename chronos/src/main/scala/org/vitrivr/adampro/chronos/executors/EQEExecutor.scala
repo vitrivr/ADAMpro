@@ -5,7 +5,7 @@ import java.util.Properties
 
 import org.vitrivr.adampro.chronos.EvaluationJob
 import org.vitrivr.adampro.chronos.utils.{CreationHelper, Helpers}
-import org.vitrivr.adampro.rpc.datastructures._
+import org.vitrivr.adampro.communication.datastructures._
 
 import scala.collection.mutable.ListBuffer
 
