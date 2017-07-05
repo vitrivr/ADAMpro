@@ -104,8 +104,8 @@ class PAEExecutor(job: EvaluationJob, setStatus: (Double) => (Boolean), inputDir
       lb.append("sparsequery" -> "true")
     }
 
-    if (job.execution_withsequential) {
-      lb.append("indexonly" -> "false")
+    if (!job.execution_withsequential) {
+      lb.append("indexonly" -> "true")
     }
 
     lb.append("informationlevel" -> "minimal")

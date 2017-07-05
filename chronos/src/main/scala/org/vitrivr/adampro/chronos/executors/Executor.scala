@@ -132,8 +132,8 @@ abstract class Executor(val job: EvaluationJob, setStatus: (Double) => (Boolean)
       lb.append("sparsequery" -> "true")
     }
 
-    if (job.execution_withsequential) {
-      lb.append("indexonly" -> "false")
+    if (!job.execution_withsequential) {
+      lb.append("indexonly" -> "true")
     }
 
     lb.append("informationlevel" -> "minimal")
