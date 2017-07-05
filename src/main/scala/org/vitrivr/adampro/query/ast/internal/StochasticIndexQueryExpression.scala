@@ -39,7 +39,7 @@ case class StochasticIndexQueryExpression(private val exprs: Seq[IndexScanExpres
     exprs.map(_.filter = filter)
     val results = exprs.map(expr => {
       //make sure that index only is queried and not a sequential scan too!
-      expr.evaluate(options)(tracker)
+      expr.execute(options)(tracker)
     })
 
     var result = results.filter(_.isDefined).map(_.get).reduce[DataFrame] { case (a, b) => a.select(entity.pk.name, AttributeNames.distanceColumnName).unionAll(b.select(entity.pk.name, AttributeNames.distanceColumnName)) }
@@ -61,8 +61,8 @@ case class StochasticIndexQueryExpression(private val exprs: Seq[IndexScanExpres
   })
 
 
-  override def prepareTree(silent : Boolean = false): QueryExpression = {
-    super.prepareTree(silent)
+  override def rewrite(silent : Boolean = false): QueryExpression = {
+    super.rewrite(silent)
     if (!nnq.indexOnly) {
       val expr = new SequentialScanExpression(entity)(nnq, id)(Some(this)) //add sequential scan if not only scanning index
       expr.prepared = true

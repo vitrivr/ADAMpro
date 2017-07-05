@@ -36,11 +36,11 @@ case class TimedScanExpression(private val exprs: Seq[QueryExpression], private 
     ac.sc.setJobGroup(id.getOrElse(""), "timed parallel query", interruptOnCancel = true)
 
     val prefilter = if (filter.isDefined && filterExpr.isDefined) {
-      Some(filter.get.join(filterExpr.get.evaluate(options)(tracker).get))
+      Some(filter.get.join(filterExpr.get.execute(options)(tracker).get))
     } else if (filter.isDefined) {
       filter
     } else if (filterExpr.isDefined){
-      filterExpr.get.evaluate(options)(tracker)
+      filterExpr.get.execute(options)(tracker)
     } else {
       None
     }

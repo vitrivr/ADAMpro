@@ -65,11 +65,11 @@ object BooleanFilterExpression extends Logging {
       }*/
 
       val ids = if (filter.isDefined && filterExpr.isDefined) {
-        Some(filter.get.select(entity.pk.name).intersect(filterExpr.get.evaluate(options)(tracker).get.select(entity.pk.name)))
+        Some(filter.get.select(entity.pk.name).intersect(filterExpr.get.execute(options)(tracker).get.select(entity.pk.name)))
       } else if(filter.isDefined){
         Some(filter.get.select(entity.pk.name))
       } else if(filterExpr.isDefined){
-        Some(filterExpr.get.evaluate(options)(tracker).get.select(entity.pk.name))
+        Some(filterExpr.get.execute(options)(tracker).get.select(entity.pk.name))
       } else {
         None
       }
@@ -112,7 +112,7 @@ object BooleanFilterExpression extends Logging {
 
       ac.sc.setJobGroup(id.getOrElse(""), "boolean filter scan", interruptOnCancel = true)
 
-      var result = expr.evaluate(options)(tracker)
+      var result = expr.execute(options)(tracker)
 
       if (filter.isDefined) {
         result = result.map(_.join(filter.get))

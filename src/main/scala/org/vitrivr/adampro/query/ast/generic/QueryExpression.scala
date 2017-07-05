@@ -50,15 +50,15 @@ abstract class QueryExpression(id: Option[String]) extends Serializable with Log
     * @param silent log warning if already prepared
     * @return
     */
-  def prepareTree(silent: Boolean = false): QueryExpression = {
+  def rewrite(silent: Boolean = false): QueryExpression = {
     if (!prepared) {
       prepared = true
-      _children = _children.map(_.prepareTree())
+      _children = _children.map(_.rewrite())
     } else {
       if (!silent) {
         log.warn("expression was already prepared, still preparing children")
       }
-      _children = _children.map(_.prepareTree())
+      _children = _children.map(_.rewrite())
     }
 
     this
@@ -69,7 +69,7 @@ abstract class QueryExpression(id: Option[String]) extends Serializable with Log
     *
     * @return
     */
-  def evaluate(options: Option[QueryEvaluationOptions] = None)(tracker: QueryTracker)(implicit ac: SharedComponentContext): Option[DataFrame] = {
+  def execute(options: Option[QueryEvaluationOptions] = None)(tracker: QueryTracker)(implicit ac: SharedComponentContext): Option[DataFrame] = {
     try {
       if (!prepared) {
         log.warn("expression should be prepared before running")

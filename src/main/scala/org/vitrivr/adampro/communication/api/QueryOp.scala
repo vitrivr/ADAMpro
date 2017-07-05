@@ -34,9 +34,9 @@ object QueryOp extends GenericOp {
   def expression(q: QueryExpression, options: Option[QueryEvaluationOptions] = None)(tracker : QueryTracker)(implicit ac: SharedComponentContext): Try[Option[DataFrame]] = {
     execute("query execution operation") {
       log.trace(QUERY_MARKER, "query operation")
-      val prepared = q.prepareTree()
+      val prepared = q.rewrite()
       log.trace(QUERY_MARKER, "prepared tree")
-      val res = prepared.evaluate(options)(tracker)
+      val res = prepared.execute(options)(tracker)
       log.trace(QUERY_MARKER, "evaluated query")
 
       Success(res)
@@ -64,7 +64,7 @@ object QueryOp extends GenericOp {
 
       scan = Some(new SequentialScanExpression(entityname)(nnq, None)(scan)(ac))
 
-      return Success(scan.get.prepareTree().evaluate(options)(tracker))
+      return Success(scan.get.rewrite().execute(options)(tracker))
     }
   }
 
@@ -89,7 +89,7 @@ object QueryOp extends GenericOp {
 
       scan = Some(IndexScanExpression(index)(nnq, None)(scan)(ac))
 
-      Success(scan.get.prepareTree().evaluate(options)(tracker))
+      Success(scan.get.rewrite().execute(options)(tracker))
     }
   }
 
@@ -113,7 +113,7 @@ object QueryOp extends GenericOp {
 
       scan = Some(new IndexScanExpression(entityname, indextypename)(nnq, None)(scan)(ac))
 
-      Success(scan.get.prepareTree().evaluate(options)(tracker))
+      Success(scan.get.rewrite().execute(options)(tracker))
     }
   }
 
@@ -159,7 +159,7 @@ object QueryOp extends GenericOp {
     */
   def compoundQuery(expr: QueryExpression, options: Option[QueryEvaluationOptions] = None)(tracker : QueryTracker)(implicit ac: SharedComponentContext): Try[Option[DataFrame]] = {
     execute("compound query operation") {
-      Success(CompoundQueryExpression(expr).evaluate(options)(tracker))
+      Success(CompoundQueryExpression(expr).execute(options)(tracker))
     }
   }
 
@@ -179,7 +179,7 @@ object QueryOp extends GenericOp {
         scan = Some(new BooleanFilterScanExpression(entityname)(bq.get, None)(scan)(ac))
       }
 
-      return Success(scan.get.evaluate(options)(tracker))
+      return Success(scan.get.execute(options)(tracker))
     }
   }
 }

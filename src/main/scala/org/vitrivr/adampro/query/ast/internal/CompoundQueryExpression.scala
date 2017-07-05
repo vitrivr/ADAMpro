@@ -21,7 +21,7 @@ case class CompoundQueryExpression(private val expr : QueryExpression, id: Optio
     ac.sc.setJobGroup(id.getOrElse(""), "compound query", interruptOnCancel = true)
 
     expr.filter = filter
-    expr.evaluate(options)(tracker)
+    expr.execute(options)(tracker)
   }
 
   override def equals(that: Any): Boolean =

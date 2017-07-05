@@ -64,11 +64,11 @@ case class IndexScanExpression(val index: Index)(val nnq: RankingQuery, id: Opti
 
     val prefilter = if (filter.isDefined && filterExpr.isDefined) {
       val pk = index.entity.get.pk
-      Some(filter.get.select(pk.name).join(filterExpr.get.evaluate(options)(tracker).get, pk.name))
+      Some(filter.get.select(pk.name).join(filterExpr.get.execute(options)(tracker).get, pk.name))
     } else if (filter.isDefined) {
       filter
     } else if (filterExpr.isDefined) {
-      filterExpr.get.evaluate(options)(tracker)
+      filterExpr.get.execute(options)(tracker)
     } else {
       None
     }
@@ -86,8 +86,8 @@ case class IndexScanExpression(val index: Index)(val nnq: RankingQuery, id: Opti
     Some(res)
   }
 
-  override def prepareTree(silent : Boolean = false): QueryExpression = {
-    super.prepareTree(silent)
+  override def rewrite(silent : Boolean = false): QueryExpression = {
+    super.rewrite(silent)
     if (!nnq.indexOnly) {
       val expr = new SequentialScanExpression(index.entityname)(nnq, id)(Some(this)) //add sequential scan if not only scanning index
       expr.prepared = true

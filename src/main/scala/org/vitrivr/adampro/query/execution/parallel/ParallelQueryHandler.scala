@@ -36,7 +36,7 @@ object ParallelQueryHandler extends Logging {
     */
   def parallelQuery[U](entityname: EntityName, nnq: RankingQuery, bq: Option[FilteringQuery], pathChooser: ParallelPathChooser, onNext: Try[ProgressiveObservation] => U, options: Option[QueryEvaluationOptions], id: Option[String])(tracker : QueryTracker)(implicit ac: SharedComponentContext): ParallelQueryStatusTracker = {
     val filter = if (bq.isDefined) {
-      new BooleanFilterScanExpression(entityname)(bq.get, None)(None)(ac).prepareTree().evaluate(options)(tracker)
+      new BooleanFilterScanExpression(entityname)(bq.get, None)(None)(ac).rewrite().execute(options)(tracker)
     } else {
       None
     }
@@ -88,7 +88,7 @@ object ParallelQueryHandler extends Logging {
     */
   def timedParallelQuery[U](entityname: EntityName, nnq: RankingQuery, bq: Option[FilteringQuery], pathChooser: ParallelPathChooser, timelimit: Duration, options: Option[QueryEvaluationOptions], id: Option[String])(tracker : QueryTracker)(implicit ac: SharedComponentContext): ProgressiveObservation = {
     val filter = if (bq.isDefined) {
-      new BooleanFilterScanExpression(entityname)(bq.get, None)(None)(ac).prepareTree().evaluate(options)(tracker)
+      new BooleanFilterScanExpression(entityname)(bq.get, None)(None)(ac).rewrite().execute(options)(tracker)
     } else {
       None
     }

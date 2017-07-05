@@ -24,7 +24,7 @@ class ScanFuture[U](expression: QueryExpression, filter : Option[DataFrame], onC
   val t1 = System.currentTimeMillis()
 
   val future = Future {
-    expression.prepareTree().evaluate(options)(tracker)
+    expression.rewrite().execute(options)(tracker)
   }
   future.onSuccess({
     case res =>

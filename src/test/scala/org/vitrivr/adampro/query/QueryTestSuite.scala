@@ -384,12 +384,12 @@ class QueryTestSuite extends AdamTestBase with ScalaFutures {
         val vhqh = new IndexScanExpression(vaidx.get.indexname)(nnq, None)(None)(ac)
 
         val results = time {
-          new CompoundQueryExpression(new IntersectExpression(pqqh, vhqh)).prepareTree().evaluate()(tracker).get
+          new CompoundQueryExpression(new IntersectExpression(pqqh, vhqh)).rewrite().execute()(tracker).get
             .map(r => (r.getAs[TupleID](AttributeNames.internalIdColumnName))).collect().sorted
         }
 
-        val pqres = pqqh.evaluate()(tracker).get.map(r => r.getAs[TupleID](AttributeNames.internalIdColumnName)).collect()
-        val vhres = vhqh.evaluate()(tracker).get.map(r => r.getAs[TupleID](AttributeNames.internalIdColumnName)).collect()
+        val pqres = pqqh.execute()(tracker).get.map(r => r.getAs[TupleID](AttributeNames.internalIdColumnName)).collect()
+        val vhres = vhqh.execute()(tracker).get.map(r => r.getAs[TupleID](AttributeNames.internalIdColumnName)).collect()
 
         Then("we should have a match in the aggregated list")
         val gt = vhres.intersect(pqres).sorted
@@ -423,13 +423,13 @@ class QueryTestSuite extends AdamTestBase with ScalaFutures {
         val va2qh = new IndexScanExpression(vaidx2.get.indexname)(nnq, None)(None)(ac)
 
         val results = time {
-          CompoundQueryExpression(new IntersectExpression(va1qh, va2qh, ExpressionEvaluationOrder.Parallel)).prepareTree().evaluate()(tracker).get
+          CompoundQueryExpression(new IntersectExpression(va1qh, va2qh, ExpressionEvaluationOrder.Parallel)).rewrite().execute()(tracker).get
             .map(r => (r.getAs[TupleID](AttributeNames.internalIdColumnName))).collect().sorted
         }
 
         //results (note we truly compare the id-attribute here and not the metadata "tid"
-        val vh1res = va1qh.evaluate()(tracker).get.map(r => r.getAs[TupleID](AttributeNames.internalIdColumnName)).collect()
-        val vh2res = va2qh.evaluate()(tracker).get.map(r => r.getAs[TupleID](AttributeNames.internalIdColumnName)).collect()
+        val vh1res = va1qh.execute()(tracker).get.map(r => r.getAs[TupleID](AttributeNames.internalIdColumnName)).collect()
+        val vh2res = va2qh.execute()(tracker).get.map(r => r.getAs[TupleID](AttributeNames.internalIdColumnName)).collect()
 
         Then("we should have a match in the aggregated list")
         val gt = vh1res.intersect(vh2res).sorted
@@ -464,15 +464,15 @@ class QueryTestSuite extends AdamTestBase with ScalaFutures {
       val va2qh = new IndexScanExpression(vaidx2.get.indexname)(nnq, None)(None)(ac)
 
       val results = time {
-        CompoundQueryExpression(new FuzzyIntersectExpression(va1qh, va2qh, ExpressionEvaluationOrder.Parallel))(ac).prepareTree().evaluate()(tracker).get
+        CompoundQueryExpression(new FuzzyIntersectExpression(va1qh, va2qh, ExpressionEvaluationOrder.Parallel))(ac).rewrite().execute()(tracker).get
           .collect()
           .map(r => (r.getAs[TupleID](AttributeNames.internalIdColumnName), r.getAs[Distance.Distance](AttributeNames.distanceColumnName)))
           .sortBy(_._1)
       }
 
       //results (note we truly compare the id-attribute here and not the metadata "tid"
-      val vh1res: Array[(TupleID, Distance)] = va1qh.evaluate()(tracker)(ac).get.collect().map(r => (r.getAs[TupleID](AttributeNames.internalIdColumnName), r.getAs[Distance.Distance](AttributeNames.distanceColumnName)))
-      val vh2res: Array[(TupleID, Distance)] = va2qh.evaluate()(tracker)(ac).get.collect().map(r => (r.getAs[TupleID](AttributeNames.internalIdColumnName), r.getAs[Distance.Distance](AttributeNames.distanceColumnName)))
+      val vh1res: Array[(TupleID, Distance)] = va1qh.execute()(tracker)(ac).get.collect().map(r => (r.getAs[TupleID](AttributeNames.internalIdColumnName), r.getAs[Distance.Distance](AttributeNames.distanceColumnName)))
+      val vh2res: Array[(TupleID, Distance)] = va2qh.execute()(tracker)(ac).get.collect().map(r => (r.getAs[TupleID](AttributeNames.internalIdColumnName), r.getAs[Distance.Distance](AttributeNames.distanceColumnName)))
 
       Then("we should have a match in the aggregated list")
       val vh1map = vh1res.map(x => x._1 -> x._2).toMap
@@ -503,8 +503,8 @@ class QueryTestSuite extends AdamTestBase with ScalaFutures {
 
         val indexscans = es.entity.indexes.map(index => IndexScanExpression(index.get)(nnq)()(ac))
 
-        val results = StochasticIndexQueryExpression(indexscans)(nnq)()(ac).prepareTree()
-          .evaluate()(tracker)(ac).get.map(r => (r.getAs[Distance](AttributeNames.distanceColumnName), r.getAs[Long]("tid"))).collect() //get here TID of metadata
+        val results = StochasticIndexQueryExpression(indexscans)(nnq)()(ac).rewrite()
+          .execute()(tracker)(ac).get.map(r => (r.getAs[Distance](AttributeNames.distanceColumnName), r.getAs[Long]("tid"))).collect() //get here TID of metadata
           .sortBy(x => (x._1, x._2)).toSeq
 
         Then("we should retrieve the k nearest neighbors")

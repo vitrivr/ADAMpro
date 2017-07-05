@@ -309,7 +309,7 @@ class DataQuery extends AdamSearchGrpc.AdamSearch with Logging {
 
         val res = scans
           .map(ep => {
-            ep.expr.prepareTree()
+            ep.expr.rewrite()
 
             val score = ep.score
             val scan = ep.scan

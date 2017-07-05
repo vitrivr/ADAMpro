@@ -77,13 +77,13 @@ case class SequentialScanExpression(private val entity: Entity)(private val nnq:
       filterExpr.get.filter = filter
 
       val filterVals = filter.get.select(entity.pk.name)
-      val filterExprVals = filterExpr.get.evaluate(options)(tracker).get.select(entity.pk.name)
+      val filterExprVals = filterExpr.get.execute(options)(tracker).get.select(entity.pk.name)
 
       Some(filterVals.intersect(filterExprVals))
     } else if(filter.isDefined ){
       Some(filter.get.select(entity.pk.name))
     } else if(filterExpr.isDefined){
-      Some(filterExpr.get.evaluate(options)(tracker).get.select(entity.pk.name))
+      Some(filterExpr.get.execute(options)(tracker).get.select(entity.pk.name))
     } else {
       None
     }

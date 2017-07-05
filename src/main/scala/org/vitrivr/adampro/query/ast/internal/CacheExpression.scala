@@ -29,7 +29,7 @@ case class CacheExpression(private val expr: QueryExpression, private val cache:
       }
     }
 
-    val res = expr.evaluate(options)(tracker)
+    val res = expr.execute(options)(tracker)
     if (id.isDefined && cache.putInCache) {
       ac.cacheManager.put(id.get, res.get)
     }

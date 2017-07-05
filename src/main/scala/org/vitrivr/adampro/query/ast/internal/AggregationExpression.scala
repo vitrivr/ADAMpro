@@ -31,11 +31,11 @@ abstract class AggregationExpression(private val leftExpression: QueryExpression
 
   def aggregationName: String
 
-  override def prepareTree(silent: Boolean = false): QueryExpression = {
-    super.prepareTree()
+  override def rewrite(silent: Boolean = false): QueryExpression = {
+    super.rewrite()
 
-    left = left.prepareTree(silent = true) //expr needs to be replaced
-    right = right.prepareTree(silent = true)
+    left = left.rewrite(silent = true) //expr needs to be replaced
+    right = right.rewrite(silent = true)
     this
   }
 
@@ -71,11 +71,11 @@ abstract class AggregationExpression(private val leftExpression: QueryExpression
 
   private def asymmetric(first: QueryExpression, second: QueryExpression, options: Option[QueryEvaluationOptions], filter: Option[DataFrame] = None)(tracker: QueryTracker): DataFrame = {
     first.filter = filter
-    var firstResult = first.evaluate(options)(tracker).get
+    var firstResult = first.execute(options)(tracker).get
 
     val pk = firstResult.schema.fields.filterNot(_.name == AttributeNames.distanceColumnName).head.name
     second.filter = Some(firstResult.select(pk))
-    var secondResult = second.evaluate(options)(tracker).get
+    var secondResult = second.execute(options)(tracker).get
 
     var result = secondResult
 
@@ -101,9 +101,9 @@ abstract class AggregationExpression(private val leftExpression: QueryExpression
 
   private def symmetric(first: QueryExpression, second: QueryExpression, options: Option[QueryEvaluationOptions], filter: Option[DataFrame] = None)(tracker: QueryTracker): DataFrame = {
     first.filter = filter
-    val ffut = Future(first.evaluate(options)(tracker))
+    val ffut = Future(first.execute(options)(tracker))
     second.filter = filter
-    val sfut = Future(second.evaluate(options)(tracker))
+    val sfut = Future(second.execute(options)(tracker))
 
     val f = for (firstResult <- ffut; secondResult <- sfut)
       yield aggregate(firstResult.get, secondResult.get, firstResult.get.schema.fields.filterNot(_.name == AttributeNames.distanceColumnName).head.name, options)

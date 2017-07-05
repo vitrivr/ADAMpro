@@ -20,7 +20,7 @@ case class ProjectionExpression(private val projection: ProjectionField, private
 
   override protected def run(options : Option[QueryEvaluationOptions], filter: Option[DataFrame] = None)(tracker : QueryTracker)(implicit ac: SharedComponentContext): Option[DataFrame] = {
     log.debug("performing projection on data")
-    expr.evaluate(options)(tracker).map(projection.f)
+    expr.execute(options)(tracker).map(projection.f)
   }
 
   override def equals(that: Any): Boolean =

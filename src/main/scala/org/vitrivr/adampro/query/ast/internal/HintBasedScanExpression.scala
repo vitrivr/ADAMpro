@@ -31,12 +31,12 @@ case class HintBasedScanExpression(private val entityname: EntityName, private v
   override protected def run(options : Option[QueryEvaluationOptions], filter: Option[DataFrame] = None)(tracker : QueryTracker)(implicit ac: SharedComponentContext): Option[DataFrame] = {
     log.debug("evaluate hint-based expression, scanning " + expr.info.scantype)
     expr.filter = filter
-    expr.evaluate(options)(tracker)
+    expr.execute(options)(tracker)
   }
 
-  override def prepareTree(silent : Boolean = false): QueryExpression = {
-    super.prepareTree(silent)
-    expr = expr.prepareTree(silent = true) //expr needs to be replaced
+  override def rewrite(silent : Boolean = false): QueryExpression = {
+    super.rewrite(silent)
+    expr = expr.rewrite(silent = true) //expr needs to be replaced
     this
   }
 
