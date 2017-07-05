@@ -62,7 +62,7 @@ case class SequentialScanExpression(private val entity: Entity)(private val nnq:
 
     if (filterExpr.isDefined) {
       filterExpr.get.filter = filter
-      val filterExprBf = filterExpr.get.evaluate(options)(tracker).get.select(entity.pk.name).stat.bloomFilter(entity.pk.name, 2000, 0.05)
+      val filterExprBf = filterExpr.get.execute(options)(tracker).get.select(entity.pk.name).stat.bloomFilter(entity.pk.name, 2000, 0.05)
 
       if(bf != null){
         bf = bf.mergeInPlace(filterExprBf)
