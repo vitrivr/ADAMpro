@@ -1,16 +1,5 @@
 package org.vitrivr.adampro.query.execution
 
-import org.vitrivr.adampro.config.AdamConfig
-import org.vitrivr.adampro.process.SharedComponentContext
-import org.vitrivr.adampro.query.execution.parallel.ScanFuture
-import org.vitrivr.adampro.utils.Logging
-
-import scala.collection.mutable.ListBuffer
-import scala.concurrent.duration.Duration
-import scala.concurrent.{CanAwait, ExecutionContext, Future}
-import scala.util.{Success, Try}
-
-
 /**
   * adamtwo
   *

@@ -5,17 +5,13 @@ import java.nio.channels.OverlappingFileLockException
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.locks.StampedLock
 
-import org.apache.hadoop.hive.metastore.api.ThriftHiveMetastore.Processor.lock
 import org.apache.spark.sql.functions._
 import org.apache.spark.sql.types.{StructField, StructType}
 import org.apache.spark.sql.{DataFrame, Row, SaveMode}
 import org.iq80.leveldb.impl.Iq80DBFactory._
 import org.iq80.leveldb.{DB, Options}
-import org.vitrivr.adampro.config.AdamConfig
 import org.vitrivr.adampro.data.datatypes.AttributeTypes
 import org.vitrivr.adampro.data.entity.AttributeDefinition
-import org.vitrivr.adampro.data.entity.Entity.EntityName
-import org.vitrivr.adampro.utils.exception.GeneralAdamException
 import org.vitrivr.adampro.process.SharedComponentContext
 import org.vitrivr.adampro.query.query.Predicate
 
@@ -55,7 +51,7 @@ class LevelDbEngine(private val path: String)(@transient override implicit val a
     * @param storename
     * @return
     */
-  private def getPath(storename: String) = AdamConfig.cleanPath(path) + "/" + storename + ".leveldb"
+  private def getPath(storename: String) = ac.config.cleanPath(path) + "/" + storename + ".leveldb"
 
   /**
     *

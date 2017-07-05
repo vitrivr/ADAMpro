@@ -7,7 +7,6 @@ import org.apache.commons.io.FileUtils
 import org.apache.hadoop.conf.Configuration
 import org.apache.hadoop.fs.{FileSystem, Path}
 import org.apache.spark.sql.{DataFrame, SaveMode}
-import org.vitrivr.adampro.config.AdamConfig
 import org.vitrivr.adampro.data.datatypes.AttributeTypes
 import org.vitrivr.adampro.data.entity.AttributeDefinition
 import org.vitrivr.adampro.utils.exception.GeneralAdamException
@@ -41,9 +40,9 @@ class AvroEngine(@transient override implicit val ac: SharedComponentContext) ex
   def this(props: Map[String, String])(implicit ac: SharedComponentContext){
     this()(ac)
     if (props.get("hadoop").getOrElse("false").toBoolean) {
-      subengine = new AvroHadoopStorage(AdamConfig.cleanPath(props.get("basepath").get), props.get("datapath").get)
+      subengine = new AvroHadoopStorage(ac.config.cleanPath(props.get("basepath").get), props.get("datapath").get)
     } else {
-      subengine = new AvroLocalEngine(AdamConfig.cleanPath(props.get("path").get))
+      subengine = new AvroLocalEngine(ac.config.cleanPath(props.get("path").get))
     }
   }
 

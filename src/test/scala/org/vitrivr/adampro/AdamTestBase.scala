@@ -7,7 +7,6 @@ import org.apache.spark.sql.{DataFrame, Row, types}
 import org.scalatest.concurrent.{Eventually, IntegrationPatience}
 import org.scalatest.{FeatureSpec, GivenWhenThen}
 import org.vitrivr.adampro.communication.api.EntityOp
-import org.vitrivr.adampro.config.AdamConfig
 import org.vitrivr.adampro.data.datatypes.AttributeTypes
 import org.vitrivr.adampro.data.datatypes.vector.Vector.MathVector
 import org.vitrivr.adampro.data.entity.{AttributeDefinition, Entity}

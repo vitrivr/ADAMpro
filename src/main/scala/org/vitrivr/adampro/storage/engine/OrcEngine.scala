@@ -40,9 +40,9 @@ class OrcEngine(@transient override implicit val ac: SharedComponentContext) ext
   def this(props: Map[String, String])(implicit ac: SharedComponentContext) {
     this()(ac)
     if (props.get("hadoop").getOrElse("false").toBoolean) {
-      subengine = new OrcHadoopStorage(AdamConfig.cleanPath(props.get("basepath").get), props.get("datapath").get)
+      subengine = new OrcHadoopStorage(ac.config.cleanPath(props.get("basepath").get), props.get("datapath").get)
     } else {
-      subengine = new OrcLocalEngine(AdamConfig.cleanPath(props.get("path").get))
+      subengine = new OrcLocalEngine(ac.config.cleanPath(props.get("path").get))
     }
   }
 

@@ -24,7 +24,7 @@ trait SharedComponentContext extends Serializable {
   def sc : SparkContext
   def sqlContext : SQLContext
 
-  val config : AdamConfig = new AdamConfig()
+  val config = new AdamConfig()
 
   val catalogManager = CatalogManager.build()(this)
 

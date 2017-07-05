@@ -109,6 +109,14 @@ class AdamConfig extends Serializable with Logging {
       None
     }
   }
+
+  /**
+    * Cleans paths, e.g. replaces ~ by path to home folder
+    *
+    * @param s
+    * @return
+    */
+  def cleanPath(s: String): String = AdamConfig.cleanPath(s)
 }
 
 object AdamConfig {

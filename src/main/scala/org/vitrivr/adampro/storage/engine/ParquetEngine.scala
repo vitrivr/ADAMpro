@@ -2,7 +2,6 @@ package org.vitrivr.adampro.storage.engine
 
 import java.io.File
 
-import org.vitrivr.adampro.config.AdamConfig
 import org.vitrivr.adampro.data.datatypes.AttributeTypes
 import org.vitrivr.adampro.data.entity.AttributeDefinition
 import org.vitrivr.adampro.utils.exception.GeneralAdamException
@@ -41,9 +40,9 @@ class ParquetEngine()(@transient override implicit val ac: SharedComponentContex
   def this(props: Map[String, String])(implicit ac: SharedComponentContext) {
     this()(ac)
     if (props.get("hadoop").getOrElse("false").toBoolean) {
-      subengine = new ParquetHadoopStorage(AdamConfig.cleanPath(props.get("basepath").get), props.get("datapath").get)
+      subengine = new ParquetHadoopStorage(ac.config.cleanPath(props.get("basepath").get), props.get("datapath").get)
     } else {
-      subengine = new ParquetLocalEngine(AdamConfig.cleanPath(props.get("path").get))
+      subengine = new ParquetLocalEngine(ac.config.cleanPath(props.get("path").get))
     }
   }
 

@@ -90,7 +90,7 @@ class VAIndex(override val indexname: IndexName)(@transient override implicit va
     val pk = this.pk.name.toString
 
     //local filtering
-    val localRes = tmp
+    val localRes = tmp.coalesce(ac.config.defaultNumberOfPartitionsIndex)
       .mapPartitions(pIt => {
         //in here  we compute for each partition the k nearest neighbours and collect the results
         val localRh = new VAResultHandler(k)

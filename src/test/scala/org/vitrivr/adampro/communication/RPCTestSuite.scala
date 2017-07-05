@@ -1,7 +1,6 @@
 package org.vitrivr.adampro.communication
 
 import org.vitrivr.adampro.AdamTestBase
-import org.vitrivr.adampro.config.AdamConfig
 import org.vitrivr.adampro.data.datatypes.AttributeTypes
 import org.vitrivr.adampro.data.entity.{AttributeDefinition, Entity}
 import org.vitrivr.adampro.grpc.grpc.{AdamDefinitionGrpc, AdamSearchGrpc}
