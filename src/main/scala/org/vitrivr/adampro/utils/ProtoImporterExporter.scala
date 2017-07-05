@@ -14,7 +14,7 @@ import org.vitrivr.adampro.exception.GeneralAdamException
 import org.vitrivr.adampro.grpc.grpc
 import org.vitrivr.adampro.grpc.grpc.InsertMessage.TupleInsertMessage
 import org.vitrivr.adampro.grpc.grpc._
-import org.vitrivr.adampro.main.AdamContext
+import org.vitrivr.adampro.main.SharedComponentContext
 
 import scala.collection.mutable.ListBuffer
 import scala.concurrent.duration.Duration
@@ -27,7 +27,7 @@ import scala.util.{Failure, Success, Try}
   * Ivan Giangreco
   * November 2016
   */
-class ProtoImporterExporter()(@transient implicit val ac: AdamContext) extends Serializable with Logging {
+class ProtoImporterExporter()(@transient implicit val ac: SharedComponentContext) extends Serializable with Logging {
   private val BATCH_SIZE = 10000
 
   /**

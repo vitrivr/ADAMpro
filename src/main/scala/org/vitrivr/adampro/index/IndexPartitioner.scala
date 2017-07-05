@@ -8,7 +8,7 @@ import org.vitrivr.adampro.config.AttributeNames
 import org.vitrivr.adampro.entity.Entity.AttributeName
 import org.vitrivr.adampro.exception.GeneralAdamException
 import org.vitrivr.adampro.index.partition._
-import org.vitrivr.adampro.main.{AdamContext, SparkStartup}
+import org.vitrivr.adampro.main.{SharedComponentContext, SparkStartup}
 import org.vitrivr.adampro.utils.Logging
 
 import scala.util.{Failure, Success, Try}
@@ -32,7 +32,7 @@ object IndexPartitioner extends Logging {
     * @param options     Options for partitioner. See each partitioner for details
     * @return
     */
-  def apply(index: Index, nPartitions: Int, join: Option[DataFrame], attribute: Option[AttributeName], mode: PartitionMode.Value, partitioner: PartitionerChoice.Value = PartitionerChoice.SPARK, options: Map[String, String] = Map[String, String]())(implicit ac: AdamContext): Try[Index] = {
+  def apply(index: Index, nPartitions: Int, join: Option[DataFrame], attribute: Option[AttributeName], mode: PartitionMode.Value, partitioner: PartitionerChoice.Value = PartitionerChoice.SPARK, options: Map[String, String] = Map[String, String]())(implicit ac: SharedComponentContext): Try[Index] = {
     log.debug("Repartitioning Index: " + index.indexname + " with partitioner " + partitioner)
     var data = index.getData().get.join(index.entity.get.getData().get, index.pk.name)
 

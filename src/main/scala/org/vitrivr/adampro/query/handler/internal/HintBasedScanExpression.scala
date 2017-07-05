@@ -6,7 +6,7 @@ import org.vitrivr.adampro.entity.Entity._
 import org.vitrivr.adampro.exception.GeneralAdamException
 import org.vitrivr.adampro.index.Index
 import org.vitrivr.adampro.index.Index._
-import org.vitrivr.adampro.main.{AdamContext, SparkStartup}
+import org.vitrivr.adampro.main.{SharedComponentContext, SparkStartup}
 import org.vitrivr.adampro.query.QueryHints
 import org.vitrivr.adampro.query.handler.generic.{ExpressionDetails, QueryEvaluationOptions, QueryExpression}
 import org.vitrivr.adampro.query.handler.internal.AggregationExpression.EmptyExpression
@@ -24,12 +24,12 @@ import org.vitrivr.adampro.helpers.tracker.OperationTracker
   * Ivan Giangreco
   * May 2016
   */
-case class HintBasedScanExpression(private val entityname: EntityName, private val nnq: Option[NearestNeighbourQuery], private val bq: Option[BooleanQuery], private val hints: Seq[QueryHint], private val withFallback: Boolean = true, id: Option[String] = None)(filterExpr: Option[QueryExpression] = None)(@transient implicit val ac: AdamContext) extends QueryExpression(id) {
+case class HintBasedScanExpression(private val entityname: EntityName, private val nnq: Option[NearestNeighbourQuery], private val bq: Option[BooleanQuery], private val hints: Seq[QueryHint], private val withFallback: Boolean = true, id: Option[String] = None)(filterExpr: Option[QueryExpression] = None)(@transient implicit val ac: SharedComponentContext) extends QueryExpression(id) {
   var expr = HintBasedScanExpression.startPlanSearch(entityname, nnq, bq, hints, withFallback)(filterExpr)
   override val info = ExpressionDetails(expr.info.source, Some("Hint-Based Expression: " + expr.info.scantype), id, expr.info.confidence)
   _children ++= Seq(expr) ++ filterExpr.map(Seq(_)).getOrElse(Seq())
 
-  override protected def run(options : Option[QueryEvaluationOptions], filter: Option[DataFrame] = None)(tracker : OperationTracker)(implicit ac: AdamContext): Option[DataFrame] = {
+  override protected def run(options : Option[QueryEvaluationOptions], filter: Option[DataFrame] = None)(tracker : OperationTracker)(implicit ac: SharedComponentContext): Option[DataFrame] = {
     log.debug("evaluate hint-based expression, scanning " + expr.info.scantype)
     expr.filter = filter
     expr.evaluate(options)(tracker)
@@ -65,7 +65,7 @@ case class HintBasedScanExpression(private val entityname: EntityName, private v
 
 object HintBasedScanExpression extends Logging {
 
-  def startPlanSearch(entityname: EntityName, nnq: Option[NearestNeighbourQuery], bq: Option[BooleanQuery], hints: Seq[QueryHint], withFallback: Boolean = true)(expr: Option[QueryExpression] = None)(implicit ac: AdamContext): QueryExpression = {
+  def startPlanSearch(entityname: EntityName, nnq: Option[NearestNeighbourQuery], bq: Option[BooleanQuery], hints: Seq[QueryHint], withFallback: Boolean = true)(expr: Option[QueryExpression] = None)(implicit ac: SharedComponentContext): QueryExpression = {
     var plan = getPlan(entityname, nnq, bq, hints)(expr)
 
     if (plan.isEmpty) {
@@ -93,7 +93,7 @@ object HintBasedScanExpression extends Logging {
     * @param expr       filter expression
     * @return
     */
-  private def getPlan(entityname: EntityName, nnq: Option[NearestNeighbourQuery], bq: Option[BooleanQuery], hints: Seq[QueryHint])(expr: Option[QueryExpression] = None)(implicit ac: AdamContext): Option[QueryExpression] = {
+  private def getPlan(entityname: EntityName, nnq: Option[NearestNeighbourQuery], bq: Option[BooleanQuery], hints: Seq[QueryHint])(expr: Option[QueryExpression] = None)(implicit ac: SharedComponentContext): Option[QueryExpression] = {
     if (hints.isEmpty) {
       log.trace("no execution plan hint")
       return None

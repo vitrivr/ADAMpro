@@ -9,7 +9,7 @@ import org.vitrivr.adampro.exception.QueryNotConformException
 import org.vitrivr.adampro.helpers.tracker.OperationTracker
 import org.vitrivr.adampro.index.Index
 import org.vitrivr.adampro.index.Index._
-import org.vitrivr.adampro.main.AdamContext
+import org.vitrivr.adampro.main.SharedComponentContext
 import org.vitrivr.adampro.query.handler.generic.{ExpressionDetails, QueryEvaluationOptions, QueryExpression}
 import org.vitrivr.adampro.query.query.NearestNeighbourQuery
 import org.vitrivr.adampro.utils.Logging
@@ -20,7 +20,7 @@ import org.vitrivr.adampro.utils.Logging
   * Ivan Giangreco
   * May 2016
   */
-case class IndexScanExpression(val index: Index)(val nnq: NearestNeighbourQuery, id: Option[String] = None)(filterExpr: Option[QueryExpression] = None)(@transient implicit val ac: AdamContext) extends QueryExpression(id) {
+case class IndexScanExpression(val index: Index)(val nnq: NearestNeighbourQuery, id: Option[String] = None)(filterExpr: Option[QueryExpression] = None)(@transient implicit val ac: SharedComponentContext) extends QueryExpression(id) {
   override val info = ExpressionDetails(Some(index.indexname), Some("Index Scan Expression"), id, Some(index.confidence), Map("indextype" -> index.indextypename.name))
   val sourceDescription = {
     if (filterExpr.isDefined) {
@@ -32,11 +32,11 @@ case class IndexScanExpression(val index: Index)(val nnq: NearestNeighbourQuery,
 
   _children ++= filterExpr.map(Seq(_)).getOrElse(Seq())
 
-  def this(indexname: IndexName)(nnq: NearestNeighbourQuery, id: Option[String])(filterExpr: Option[QueryExpression])(implicit ac: AdamContext) {
+  def this(indexname: IndexName)(nnq: NearestNeighbourQuery, id: Option[String])(filterExpr: Option[QueryExpression])(implicit ac: SharedComponentContext) {
     this(Index.load(indexname).get)(nnq, id)(filterExpr)
   }
 
-  def this(entityname: EntityName, indextypename: IndexTypeName)(nnq: NearestNeighbourQuery, id: Option[String])(filterExpr: Option[QueryExpression])(implicit ac: AdamContext) {
+  def this(entityname: EntityName, indextypename: IndexTypeName)(nnq: NearestNeighbourQuery, id: Option[String])(filterExpr: Option[QueryExpression])(implicit ac: SharedComponentContext) {
     this(
       Entity.load(entityname).get.indexes
         .filter(_.isSuccess)
@@ -47,7 +47,7 @@ case class IndexScanExpression(val index: Index)(val nnq: NearestNeighbourQuery,
     )(nnq, id)(filterExpr)
   }
 
-  override protected def run(options : Option[QueryEvaluationOptions], filter: Option[DataFrame] = None)(tracker : OperationTracker)(implicit ac: AdamContext): Option[DataFrame] = {
+  override protected def run(options : Option[QueryEvaluationOptions], filter: Option[DataFrame] = None)(tracker : OperationTracker)(implicit ac: SharedComponentContext): Option[DataFrame] = {
     log.debug("performing index scan operation")
 
     ac.sc.setLocalProperty("spark.scheduler.pool", "index")
@@ -120,7 +120,7 @@ object IndexScanExpression extends Logging {
     * @param id    query id
     * @return
     */
-  def scan(index: Index)(filter: Option[DataFrame], nnq: NearestNeighbourQuery, id: Option[String] = None)(tracker : OperationTracker)(implicit ac: AdamContext): DataFrame = {
+  def scan(index: Index)(filter: Option[DataFrame], nnq: NearestNeighbourQuery, id: Option[String] = None)(tracker : OperationTracker)(implicit ac: SharedComponentContext): DataFrame = {
     index.scan(nnq, filter)(tracker)
   }
 }

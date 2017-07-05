@@ -6,7 +6,7 @@ import org.vitrivr.adampro.entity.Entity._
 import org.vitrivr.adampro.exception.GeneralAdamException
 import org.vitrivr.adampro.helpers.tracker.OperationTracker
 import org.vitrivr.adampro.index.Index
-import org.vitrivr.adampro.main.AdamContext
+import org.vitrivr.adampro.main.SharedComponentContext
 import org.vitrivr.adampro.query.QueryHints
 import org.vitrivr.adampro.query.QueryHints.{IndexQueryHint, QueryHint}
 import org.vitrivr.adampro.query.distance.EuclideanDistance
@@ -27,8 +27,8 @@ private[query] trait IndexCollection extends Logging with Serializable {
   *
   * @param entityname
   */
-private[optimizer] case class ExistingIndexCollection(entityname: EntityName, attribute: String)(@transient implicit val ac: AdamContext) extends IndexCollection {
-  def this(entityname: EntityName, attribute: String, params: Map[String, String])(implicit ac: AdamContext) {
+private[optimizer] case class ExistingIndexCollection(entityname: EntityName, attribute: String)(@transient implicit val ac: SharedComponentContext) extends IndexCollection {
+  def this(entityname: EntityName, attribute: String, params: Map[String, String])(implicit ac: SharedComponentContext) {
     this(entityname, attribute)
   }
 
@@ -40,8 +40,8 @@ private[optimizer] case class ExistingIndexCollection(entityname: EntityName, at
   *
   * @param entityname
   */
-private[optimizer] case class NewIndexCollection(entityname: EntityName, attribute: String, hints: Seq[QueryHint])(@transient implicit val ac: AdamContext) extends IndexCollection {
-  def this(entityname: EntityName, attribute: String, params: Map[String, String])(implicit ac: AdamContext) {
+private[optimizer] case class NewIndexCollection(entityname: EntityName, attribute: String, hints: Seq[QueryHint])(@transient implicit val ac: SharedComponentContext) extends IndexCollection {
+  def this(entityname: EntityName, attribute: String, params: Map[String, String])(implicit ac: SharedComponentContext) {
     this(entityname, attribute, params.get("hints").get.split(",").map(QueryHints.withName(_)).filter(_.isDefined).map(_.get))
   }
 
@@ -83,13 +83,13 @@ private[optimizer] case class NewIndexCollection(entityname: EntityName, attribu
   *
   * @param indexes
   */
-private[optimizer] case class ManualIndexCollection(indexes : Seq[Index])(@transient implicit val ac: AdamContext) extends IndexCollection {
+private[optimizer] case class ManualIndexCollection(indexes : Seq[Index])(@transient implicit val ac: SharedComponentContext) extends IndexCollection {
   override def getIndexes: Seq[Index] = indexes
 }
 
 object IndexCollectionFactory {
 
-  def apply(entityname: EntityName, attribute: String, ico: IndexCollectionOption, params: Map[String, String])(implicit ac: AdamContext): IndexCollection = {
+  def apply(entityname: EntityName, attribute: String, ico: IndexCollectionOption, params: Map[String, String])(implicit ac: SharedComponentContext): IndexCollection = {
     ico match {
       case NewIndexCollectionOption => new NewIndexCollection(entityname, attribute, params)
       case ExistingIndexCollectionOption => new ExistingIndexCollection(entityname, attribute, params)

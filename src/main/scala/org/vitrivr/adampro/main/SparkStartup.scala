@@ -16,7 +16,7 @@ import org.vitrivr.adampro.utils.Logging
   * August 2015
   */
 object SparkStartup extends Logging {
-  object Implicits extends AdamContext {
+  object Implicits extends SharedComponentContext {
     implicit lazy val ac = this
 
     private lazy val conf = {

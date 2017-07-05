@@ -5,7 +5,7 @@ import org.vitrivr.adampro.entity.Entity
 import org.vitrivr.adampro.entity.Entity.EntityName
 import org.vitrivr.adampro.exception.GeneralAdamException
 import org.vitrivr.adampro.helpers.tracker.OperationTracker
-import org.vitrivr.adampro.main.AdamContext
+import org.vitrivr.adampro.main.SharedComponentContext
 import org.vitrivr.adampro.query.handler.generic.{ExpressionDetails, QueryEvaluationOptions, QueryExpression}
 
 /**
@@ -14,7 +14,7 @@ import org.vitrivr.adampro.query.handler.generic.{ExpressionDetails, QueryEvalua
   * Ivan Giangreco
   * February 2017
   */
-case class GenericExternalScanExpression(entityname: EntityName, handlername : String, params: Map[String, String], id: Option[String] = None)(@transient implicit val ac: AdamContext) extends QueryExpression(id) {
+case class GenericExternalScanExpression(entityname: EntityName, handlername : String, params: Map[String, String], id: Option[String] = None)(@transient implicit val ac: SharedComponentContext) extends QueryExpression(id) {
   override val info = ExpressionDetails(None, Some("Generic External Scan Expression"), id, None)
 
   if (!ac.storageHandlerRegistry.contains(handlername)) {
@@ -27,7 +27,7 @@ case class GenericExternalScanExpression(entityname: EntityName, handlername : S
 
   private val entity = Entity.load(entityname).get
 
-  override protected def run(options : Option[QueryEvaluationOptions], filter: Option[DataFrame] = None)(tracker : OperationTracker)(implicit ac: AdamContext): Option[DataFrame] = {
+  override protected def run(options : Option[QueryEvaluationOptions], filter: Option[DataFrame] = None)(tracker : OperationTracker)(implicit ac: SharedComponentContext): Option[DataFrame] = {
     val attributes = entity.schema().filter(a => a.storagehandler.equals(handler))
     var status = handler.read(entityname, attributes, params = params)
 

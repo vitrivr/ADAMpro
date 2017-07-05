@@ -11,7 +11,7 @@ import org.vitrivr.adampro.index._
 import org.vitrivr.adampro.index.structures.IndexTypes
 import org.vitrivr.adampro.index.structures.va.marks.{EquidistantMarksGenerator, EquifrequentMarksGenerator, MarksGenerator}
 import org.vitrivr.adampro.index.structures.va.signature.FixedSignatureGenerator
-import org.vitrivr.adampro.main.AdamContext
+import org.vitrivr.adampro.main.SharedComponentContext
 import org.vitrivr.adampro.query.distance.{DistanceFunction, MinkowskiDistance}
 
 
@@ -24,7 +24,7 @@ import org.vitrivr.adampro.query.distance.{DistanceFunction, MinkowskiDistance}
   * VAF: this VA-File index will use for every dimension the same number of bits (original implementation)
   * note that using VAF, we may still use both the equidistant or the equifrequent marks generator
   */
-class VAFIndexGenerator(fixedNumBitsPerDimension: Option[Int], marksGenerator: MarksGenerator, trainingSize: Int, distance: MinkowskiDistance)(@transient implicit val ac: AdamContext) extends IndexGenerator {
+class VAFIndexGenerator(fixedNumBitsPerDimension: Option[Int], marksGenerator: MarksGenerator, trainingSize: Int, distance: MinkowskiDistance)(@transient implicit val ac: SharedComponentContext) extends IndexGenerator {
   override val indextypename: IndexTypeName = IndexTypes.VAFINDEX
 
 
@@ -89,7 +89,7 @@ class VAFIndexGeneratorFactory extends IndexGeneratorFactory {
     * @param distance   distance function
     * @param properties indexing properties
     */
-  def getIndexGenerator(distance: DistanceFunction, properties: Map[String, String] = Map[String, String]())(implicit ac: AdamContext): IndexGenerator = {
+  def getIndexGenerator(distance: DistanceFunction, properties: Map[String, String] = Map[String, String]())(implicit ac: SharedComponentContext): IndexGenerator = {
     if (!distance.isInstanceOf[MinkowskiDistance]) {
       throw new QueryNotConformException("VAF index only supports Minkowski distance")
     }

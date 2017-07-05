@@ -8,7 +8,7 @@ import org.vitrivr.adampro.datatypes.vector.Vector._
 import org.vitrivr.adampro.index.Index.IndexTypeName
 import org.vitrivr.adampro.index._
 import org.vitrivr.adampro.index.structures.IndexTypes
-import org.vitrivr.adampro.main.AdamContext
+import org.vitrivr.adampro.main.SharedComponentContext
 import org.vitrivr.adampro.query.distance.DistanceFunction
 import org.vitrivr.adampro.datatypes.vector.Vector
 import org.vitrivr.adampro.helpers.tracker.OperationTracker
@@ -21,7 +21,7 @@ import scala.util.Random
   * Ivan Giangreco
   * October 2015
   */
-class ECPIndexGenerator(centroidBasedLeaders: Boolean, distance: DistanceFunction, nrefs: Option[Int])(@transient implicit val ac: AdamContext) extends IndexGenerator {
+class ECPIndexGenerator(centroidBasedLeaders: Boolean, distance: DistanceFunction, nrefs: Option[Int])(@transient implicit val ac: SharedComponentContext) extends IndexGenerator {
   override val indextypename: IndexTypeName = IndexTypes.ECPINDEX
 
   private val MAX_NUM_OF_LEADERS = 200
@@ -86,7 +86,7 @@ class ECPIndexGeneratorFactory extends IndexGeneratorFactory {
     * @param distance   distance function
     * @param properties indexing properties
     */
-  def getIndexGenerator(distance: DistanceFunction, properties: Map[String, String] = Map[String, String]())(implicit ac: AdamContext): IndexGenerator = {
+  def getIndexGenerator(distance: DistanceFunction, properties: Map[String, String] = Map[String, String]())(implicit ac: SharedComponentContext): IndexGenerator = {
     val trainingSize = properties.get("ntraining").map(_.toInt)
 
     val nrefs = if (properties.contains("ntraining")) {

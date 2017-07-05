@@ -12,7 +12,7 @@ import org.vitrivr.adampro.config.AdamConfig
 import org.vitrivr.adampro.datatypes.AttributeTypes
 import org.vitrivr.adampro.entity.AttributeDefinition
 import org.vitrivr.adampro.exception.GeneralAdamException
-import org.vitrivr.adampro.main.AdamContext
+import org.vitrivr.adampro.main.SharedComponentContext
 import org.vitrivr.adampro.query.query.Predicate
 import org.vitrivr.adampro.utils.Logging
 
@@ -24,7 +24,7 @@ import scala.util.{Failure, Success, Try}
   * Ivan Giangreco
   * November 2016
   */
-class AvroEngine(@transient override implicit val ac: AdamContext) extends Engine()(ac) with Logging with Serializable {
+class AvroEngine(@transient override implicit val ac: SharedComponentContext) extends Engine()(ac) with Logging with Serializable {
   override val name = "avro"
 
   override def supports = Seq(AttributeTypes.AUTOTYPE, AttributeTypes.INTTYPE, AttributeTypes.LONGTYPE, AttributeTypes.FLOATTYPE, AttributeTypes.DOUBLETYPE, AttributeTypes.STRINGTYPE, AttributeTypes.TEXTTYPE, AttributeTypes.BOOLEANTYPE, AttributeTypes.VECTORTYPE)
@@ -39,7 +39,7 @@ class AvroEngine(@transient override implicit val ac: AdamContext) extends Engin
     *
     * @param props
     */
-  def this(props: Map[String, String])(implicit ac: AdamContext){
+  def this(props: Map[String, String])(implicit ac: SharedComponentContext){
     this()(ac)
     if (props.get("hadoop").getOrElse("false").toBoolean) {
       subengine = new AvroHadoopStorage(AdamConfig.cleanPath(props.get("basepath").get), props.get("datapath").get)
@@ -56,7 +56,7 @@ class AvroEngine(@transient override implicit val ac: AdamContext) extends Engin
     * @param params     creation parameters
     * @return options to store
     */
-  override def create(storename: String, attributes: Seq[AttributeDefinition], params: Map[String, String])(implicit ac: AdamContext): Try[Map[String, String]] = {
+  override def create(storename: String, attributes: Seq[AttributeDefinition], params: Map[String, String])(implicit ac: SharedComponentContext): Try[Map[String, String]] = {
     log.debug("avro create operation")
     Success(Map())
   }
@@ -67,7 +67,7 @@ class AvroEngine(@transient override implicit val ac: AdamContext) extends Engin
     * @param storename adapted entityname to store feature to
     * @return
     */
-  override def exists(storename: String)(implicit ac: AdamContext): Try[Boolean] = {
+  override def exists(storename: String)(implicit ac: SharedComponentContext): Try[Boolean] = {
     log.debug("avro exists operation")
     subengine.exists(storename)
   }
@@ -81,7 +81,7 @@ class AvroEngine(@transient override implicit val ac: AdamContext) extends Engin
     * @param params     reading parameters
     * @return
     */
-  override def read(storename: String, attributes: Seq[AttributeDefinition], predicates: Seq[Predicate], params: Map[String, String])(implicit ac: AdamContext): Try[DataFrame] = {
+  override def read(storename: String, attributes: Seq[AttributeDefinition], predicates: Seq[Predicate], params: Map[String, String])(implicit ac: SharedComponentContext): Try[DataFrame] = {
     log.debug("avro read operation")
 
     try {
@@ -109,7 +109,7 @@ class AvroEngine(@transient override implicit val ac: AdamContext) extends Engin
     * @param params     writing parameters
     * @return new options to store
     */
-  override def write(storename: String, df: DataFrame, attributes: Seq[AttributeDefinition], mode: SaveMode = SaveMode.Append, params: Map[String, String])(implicit ac: AdamContext): Try[Map[String, String]] = {
+  override def write(storename: String, df: DataFrame, attributes: Seq[AttributeDefinition], mode: SaveMode = SaveMode.Append, params: Map[String, String])(implicit ac: SharedComponentContext): Try[Map[String, String]] = {
     log.debug("avro write operation")
     val allowRepartitioning = params.getOrElse("allowRepartitioning", "false").toBoolean
 
@@ -143,7 +143,7 @@ class AvroEngine(@transient override implicit val ac: AdamContext) extends Engin
     * @param storename adapted entityname to store feature to
     * @return
     */
-  def drop(storename: String)(implicit ac: AdamContext): Try[Void] = {
+  def drop(storename: String)(implicit ac: SharedComponentContext): Try[Void] = {
     log.debug("avro drop operation")
     subengine.drop(storename)
   }
@@ -161,13 +161,13 @@ class AvroEngine(@transient override implicit val ac: AdamContext) extends Engin
   *
   */
 trait GenericAvroEngine extends Logging with Serializable {
-  def read(filename: String)(implicit ac: AdamContext): Try[DataFrame]
+  def read(filename: String)(implicit ac: SharedComponentContext): Try[DataFrame]
 
-  def write(filename: String, df: DataFrame, mode: SaveMode = SaveMode.Append)(implicit ac: AdamContext): Try[Void]
+  def write(filename: String, df: DataFrame, mode: SaveMode = SaveMode.Append)(implicit ac: SharedComponentContext): Try[Void]
 
-  def exists(path: String)(implicit ac: AdamContext): Try[Boolean]
+  def exists(path: String)(implicit ac: SharedComponentContext): Try[Boolean]
 
-  def drop(path: String)(implicit ac: AdamContext): Try[Void]
+  def drop(path: String)(implicit ac: SharedComponentContext): Try[Void]
 }
 
 
@@ -193,7 +193,7 @@ class AvroHadoopStorage(private val basepath: String, private val datapath: Stri
     * @param filename
     * @return
     */
-  def read(filename: String)(implicit ac: AdamContext): Try[DataFrame] = {
+  def read(filename: String)(implicit ac: SharedComponentContext): Try[DataFrame] = {
     try {
       if (!exists(filename).get) {
         throw new GeneralAdamException("no file found at " + fullHadoopPath)
@@ -212,7 +212,7 @@ class AvroHadoopStorage(private val basepath: String, private val datapath: Stri
     * @param mode
     * @return
     */
-  def write(filename: String, df: DataFrame, mode: SaveMode = SaveMode.Append)(implicit ac: AdamContext): Try[Void] = {
+  def write(filename: String, df: DataFrame, mode: SaveMode = SaveMode.Append)(implicit ac: SharedComponentContext): Try[Void] = {
     try {
       df.write.mode(mode).avro(fullHadoopPath + filename)
       Success(null)
@@ -227,7 +227,7 @@ class AvroHadoopStorage(private val basepath: String, private val datapath: Stri
     * @param filename
     * @return
     */
-  override def drop(filename: String)(implicit ac: AdamContext): Try[Void] = {
+  override def drop(filename: String)(implicit ac: SharedComponentContext): Try[Void] = {
     try {
       val hdfs = FileSystem.get(new Path(datapath).toUri, hadoopConf)
       val drop = hdfs.delete(new Path(datapath, filename), true)
@@ -248,7 +248,7 @@ class AvroHadoopStorage(private val basepath: String, private val datapath: Stri
     * @param filename
     * @return
     */
-  override def exists(filename: String)(implicit ac: AdamContext): Try[Boolean] = {
+  override def exists(filename: String)(implicit ac: SharedComponentContext): Try[Boolean] = {
     try {
       val hdfs = FileSystem.get(new Path(datapath).toUri, hadoopConf)
       val exists = hdfs.exists(new Path(datapath, filename))
@@ -290,7 +290,7 @@ class AvroLocalEngine(private val path: String) extends GenericAvroEngine with L
     * @param filename
     * @return
     */
-  def read(filename: String)(implicit ac: AdamContext): Try[DataFrame] = {
+  def read(filename: String)(implicit ac: SharedComponentContext): Try[DataFrame] = {
     try {
       if (!exists(filename).get) {
         throw new GeneralAdamException("no file found at " + path + filename)
@@ -309,7 +309,7 @@ class AvroLocalEngine(private val path: String) extends GenericAvroEngine with L
     * @param mode
     * @return
     */
-  def write(filename: String, df: DataFrame, mode: SaveMode = SaveMode.Append)(implicit ac: AdamContext): Try[Void] = {
+  def write(filename: String, df: DataFrame, mode: SaveMode = SaveMode.Append)(implicit ac: SharedComponentContext): Try[Void] = {
     try {
       df.write.mode(mode).avro(sparkPath + filename)
       Success(null)
@@ -324,7 +324,7 @@ class AvroLocalEngine(private val path: String) extends GenericAvroEngine with L
     * @param filename
     * @return
     */
-  override def drop(filename: String)(implicit ac: AdamContext): Try[Void] = {
+  override def drop(filename: String)(implicit ac: SharedComponentContext): Try[Void] = {
     try {
       FileUtils.deleteDirectory(new File(path, filename))
       Success(null)
@@ -338,7 +338,7 @@ class AvroLocalEngine(private val path: String) extends GenericAvroEngine with L
     * @param filename
     * @return
     */
-  override def exists(filename: String)(implicit ac: AdamContext): Try[Boolean] = {
+  override def exists(filename: String)(implicit ac: SharedComponentContext): Try[Boolean] = {
     try {
       Success(new File(path, filename).exists())
     } catch {

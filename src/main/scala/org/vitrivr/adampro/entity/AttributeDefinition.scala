@@ -4,7 +4,7 @@ import org.vitrivr.adampro.config.AttributeNames
 import org.vitrivr.adampro.datatypes.AttributeTypes.AttributeType
 import org.vitrivr.adampro.entity.Entity.AttributeName
 import org.vitrivr.adampro.exception.GeneralAdamException
-import org.vitrivr.adampro.main.AdamContext
+import org.vitrivr.adampro.main.SharedComponentContext
 import org.vitrivr.adampro.storage.StorageHandler
 
 import scala.collection.mutable.ListBuffer
@@ -21,11 +21,11 @@ import scala.collection.mutable.ListBuffer
   * @param params
   */
 case class AttributeDefinition(name: AttributeName, attributeType: AttributeType, storagehandlername: String, params: Map[String, String] = Map()) {
-  def this(name: AttributeName, attributetype: AttributeType, params: Map[String, String])(implicit ac: AdamContext) {
+  def this(name: AttributeName, attributetype: AttributeType, params: Map[String, String])(implicit ac: SharedComponentContext) {
     this(name, attributetype, ac.storageHandlerRegistry.get(attributetype).get.name, params)
   }
 
-  def this(name: AttributeName, attributetype: AttributeType)(implicit ac: AdamContext) {
+  def this(name: AttributeName, attributetype: AttributeType)(implicit ac: SharedComponentContext) {
     this(name, attributetype, ac.storageHandlerRegistry.get(attributetype).get.name, Map[String, String]())
   }
 
@@ -37,7 +37,7 @@ case class AttributeDefinition(name: AttributeName, attributeType: AttributeType
   /**
     * Returns the storage handler for the given attribute (it possibly uses a fallback, if no storagehandlername is specified by using the fieldtype)
     */
-  def storagehandler()(implicit ac: AdamContext): StorageHandler = {
+  def storagehandler()(implicit ac: SharedComponentContext): StorageHandler = {
     val handler = ac.storageHandlerRegistry.get(storagehandlername)
 
     if (handler.isDefined) {

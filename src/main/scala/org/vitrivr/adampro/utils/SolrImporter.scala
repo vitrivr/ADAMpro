@@ -3,7 +3,7 @@ package org.vitrivr.adampro.utils
 import org.vitrivr.adampro.api.EntityOp
 import org.vitrivr.adampro.datatypes.AttributeTypes
 import org.vitrivr.adampro.entity.AttributeDefinition
-import org.vitrivr.adampro.main.{AdamContext, SparkStartup}
+import org.vitrivr.adampro.main.{SharedComponentContext, SparkStartup}
 import org.apache.spark.sql.Row
 import org.apache.spark.sql.types._
 
@@ -15,7 +15,7 @@ import scala.reflect.io.File
   * Ivan Giangreco
   * July 2016
   */
-class SolrImporter(file : File)(implicit ac: AdamContext) {
+class SolrImporter(file : File)(implicit ac: SharedComponentContext) {
   def apply(): Unit ={
     val source = scala.io.Source.fromFile(file.toAbsolute.path)
 
@@ -48,7 +48,7 @@ class SolrImporter(file : File)(implicit ac: AdamContext) {
 }
 
 object SolrImporter {
-  def apply(path : String)(implicit ac: AdamContext): Unit = {
+  def apply(path : String)(implicit ac: SharedComponentContext): Unit = {
     new SolrImporter(File(path))(ac)()
   }
 

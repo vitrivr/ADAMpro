@@ -1,6 +1,6 @@
 package org.vitrivr.adampro.query.handler.internal
 
-import org.vitrivr.adampro.main.AdamContext
+import org.vitrivr.adampro.main.SharedComponentContext
 import org.vitrivr.adampro.query.handler.generic.{ExpressionDetails, QueryEvaluationOptions, QueryExpression}
 import org.apache.spark.sql.DataFrame
 import org.vitrivr.adampro.helpers.tracker.OperationTracker
@@ -11,11 +11,11 @@ import org.vitrivr.adampro.helpers.tracker.OperationTracker
   * Ivan Giangreco
   * May 2016
   */
-case class CompoundQueryExpression(private val expr : QueryExpression, id: Option[String] = None)(@transient implicit val ac: AdamContext) extends QueryExpression(id) {
+case class CompoundQueryExpression(private val expr : QueryExpression, id: Option[String] = None)(@transient implicit val ac: SharedComponentContext) extends QueryExpression(id) {
   override val info = ExpressionDetails(None, Some("Compound Query Expression"), id, None)
   _children ++= Seq(expr)
 
-  override protected def run(options : Option[QueryEvaluationOptions], filter: Option[DataFrame] = None)(tracker : OperationTracker)(implicit ac: AdamContext): Option[DataFrame] = {
+  override protected def run(options : Option[QueryEvaluationOptions], filter: Option[DataFrame] = None)(tracker : OperationTracker)(implicit ac: SharedComponentContext): Option[DataFrame] = {
     log.debug("evaluate compound query")
 
     ac.sc.setJobGroup(id.getOrElse(""), "compound query", interruptOnCancel = true)

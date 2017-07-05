@@ -11,7 +11,7 @@ import org.vitrivr.adampro.helpers.tracker.OperationTracker
 import org.vitrivr.adampro.index.Index.IndexTypeName
 import org.vitrivr.adampro.index._
 import org.vitrivr.adampro.index.structures.IndexTypes
-import org.vitrivr.adampro.main.AdamContext
+import org.vitrivr.adampro.main.SharedComponentContext
 import org.vitrivr.adampro.query.distance.{DistanceFunction, HammingDistance, MinkowskiDistance}
 
 import scala.collection.immutable.IndexedSeq
@@ -22,7 +22,7 @@ import scala.collection.immutable.IndexedSeq
   * Ivan Giangreco
   * April 2016
   */
-class PQIndexGenerator(nsq: Int, trainingSize: Int)(@transient implicit val ac: AdamContext) extends IndexGenerator {
+class PQIndexGenerator(nsq: Int, trainingSize: Int)(@transient implicit val ac: SharedComponentContext) extends IndexGenerator {
   override def indextypename: IndexTypeName = IndexTypes.PQINDEX
 
   /**
@@ -93,7 +93,7 @@ class PQIndexGeneratorFactory extends IndexGeneratorFactory {
     * @param distance   distance function
     * @param properties indexing properties
     */
-  def getIndexGenerator(distance: DistanceFunction, properties: Map[String, String] = Map[String, String]())(implicit ac: AdamContext): IndexGenerator = {
+  def getIndexGenerator(distance: DistanceFunction, properties: Map[String, String] = Map[String, String]())(implicit ac: SharedComponentContext): IndexGenerator = {
     if(!distance.isInstanceOf[MinkowskiDistance]){
       throw new QueryNotConformException("PQ index only supports Manhattan distance")
     }

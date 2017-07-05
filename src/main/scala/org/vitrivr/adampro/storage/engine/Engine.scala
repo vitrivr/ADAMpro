@@ -2,7 +2,7 @@ package org.vitrivr.adampro.storage.engine
 
 import org.vitrivr.adampro.datatypes.AttributeTypes.AttributeType
 import org.vitrivr.adampro.entity.AttributeDefinition
-import org.vitrivr.adampro.main.AdamContext
+import org.vitrivr.adampro.main.SharedComponentContext
 import org.vitrivr.adampro.query.query.Predicate
 import org.vitrivr.adampro.utils.Logging
 import org.apache.spark.sql.{DataFrame, SaveMode}
@@ -15,7 +15,7 @@ import scala.util.Try
   * Ivan Giangreco
   * September 2016
   */
-abstract class Engine()(@transient implicit val ac: AdamContext) extends Serializable with Logging {
+abstract class Engine()(@transient implicit val ac: SharedComponentContext) extends Serializable with Logging {
   val name: String
 
   def supports: Seq[AttributeType]
@@ -35,7 +35,7 @@ abstract class Engine()(@transient implicit val ac: AdamContext) extends Seriali
     * @param params     creation parameters
     * @return options to store
     */
-  def create(storename: String, attributes: Seq[AttributeDefinition], params: Map[String, String])(implicit ac: AdamContext): Try[Map[String, String]]
+  def create(storename: String, attributes: Seq[AttributeDefinition], params: Map[String, String])(implicit ac: SharedComponentContext): Try[Map[String, String]]
 
   /**
     * Check if entity exists.
@@ -43,7 +43,7 @@ abstract class Engine()(@transient implicit val ac: AdamContext) extends Seriali
     * @param storename adapted entityname to store feature to
     * @return
     */
-  def exists(storename: String)(implicit ac: AdamContext): Try[Boolean]
+  def exists(storename: String)(implicit ac: SharedComponentContext): Try[Boolean]
 
   /**
     * Read entity.
@@ -54,7 +54,7 @@ abstract class Engine()(@transient implicit val ac: AdamContext) extends Seriali
     * @param params     reading parameters
     * @return
     */
-  def read(storename: String, attributes: Seq[AttributeDefinition], predicates: Seq[Predicate], params: Map[String, String])(implicit ac: AdamContext): Try[DataFrame]
+  def read(storename: String, attributes: Seq[AttributeDefinition], predicates: Seq[Predicate], params: Map[String, String])(implicit ac: SharedComponentContext): Try[DataFrame]
 
   /**
     * Write entity.
@@ -66,7 +66,7 @@ abstract class Engine()(@transient implicit val ac: AdamContext) extends Seriali
     * @param params     writing parameters
     * @return new options to store
     */
-  def write(storename: String, df: DataFrame, attributes: Seq[AttributeDefinition], mode: SaveMode = SaveMode.Append, params: Map[String, String])(implicit ac: AdamContext): Try[Map[String, String]]
+  def write(storename: String, df: DataFrame, attributes: Seq[AttributeDefinition], mode: SaveMode = SaveMode.Append, params: Map[String, String])(implicit ac: SharedComponentContext): Try[Map[String, String]]
 
   /**
     * Drop the entity.
@@ -74,5 +74,5 @@ abstract class Engine()(@transient implicit val ac: AdamContext) extends Seriali
     * @param storename adapted entityname to store feature to
     * @return
     */
-  def drop(storename: String)(implicit ac: AdamContext): Try[Void]
+  def drop(storename: String)(implicit ac: SharedComponentContext): Try[Void]
 }

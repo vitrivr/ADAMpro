@@ -9,7 +9,7 @@ import org.vitrivr.adampro.datatypes.vector.Vector._
 import org.vitrivr.adampro.entity.Entity
 import org.vitrivr.adampro.entity.Entity.EntityName
 import org.vitrivr.adampro.exception.QueryNotConformException
-import org.vitrivr.adampro.main.AdamContext
+import org.vitrivr.adampro.main.SharedComponentContext
 import org.vitrivr.adampro.query.distance.Distance
 import org.vitrivr.adampro.query.handler.generic.{ExpressionDetails, QueryEvaluationOptions, QueryExpression}
 import org.vitrivr.adampro.query.query.NearestNeighbourQuery
@@ -25,7 +25,7 @@ import org.vitrivr.adampro.helpers.tracker.OperationTracker
   * Ivan Giangreco
   * May 2016
   */
-case class SequentialScanExpression(private val entity: Entity)(private val nnq: NearestNeighbourQuery, id: Option[String] = None)(filterExpr: Option[QueryExpression] = None)(@transient implicit val ac: AdamContext) extends QueryExpression(id) {
+case class SequentialScanExpression(private val entity: Entity)(private val nnq: NearestNeighbourQuery, id: Option[String] = None)(filterExpr: Option[QueryExpression] = None)(@transient implicit val ac: SharedComponentContext) extends QueryExpression(id) {
   override val info = ExpressionDetails(Some(entity.entityname), Some("Sequential Scan Expression"), id, None)
   val sourceDescription = {
     if (filterExpr.isDefined) {
@@ -37,11 +37,11 @@ case class SequentialScanExpression(private val entity: Entity)(private val nnq:
 
   _children ++= filterExpr.map(Seq(_)).getOrElse(Seq())
 
-  def this(entityname: EntityName)(nnq: NearestNeighbourQuery, id: Option[String])(filterExpr: Option[QueryExpression])(implicit ac: AdamContext) {
+  def this(entityname: EntityName)(nnq: NearestNeighbourQuery, id: Option[String])(filterExpr: Option[QueryExpression])(implicit ac: SharedComponentContext) {
     this(Entity.load(entityname).get)(nnq, id)(filterExpr)
   }
 
-  override protected def run(options : Option[QueryEvaluationOptions], filter: Option[DataFrame] = None)(tracker : OperationTracker)(implicit ac: AdamContext): Option[DataFrame] = {
+  override protected def run(options : Option[QueryEvaluationOptions], filter: Option[DataFrame] = None)(tracker : OperationTracker)(implicit ac: SharedComponentContext): Option[DataFrame] = {
     log.debug("perform sequential scan")
 
     ac.sc.setLocalProperty("spark.scheduler.pool", "sequential")
@@ -138,7 +138,7 @@ object SequentialScanExpression extends Logging {
     * @param nnq nearest neighbour query
     * @return
     */
-  def scan(df: DataFrame, nnq: NearestNeighbourQuery)(tracker : OperationTracker)(implicit ac: AdamContext): DataFrame = {
+  def scan(df: DataFrame, nnq: NearestNeighbourQuery)(tracker : OperationTracker)(implicit ac: SharedComponentContext): DataFrame = {
     val qBc = ac.sc.broadcast(nnq.q)
     tracker.addBroadcast(qBc)
     val wBc = ac.sc.broadcast(nnq.weights)

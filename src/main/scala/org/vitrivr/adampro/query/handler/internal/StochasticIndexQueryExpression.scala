@@ -1,7 +1,7 @@
 package org.vitrivr.adampro.query.handler.internal
 
 import org.vitrivr.adampro.config.AttributeNames
-import org.vitrivr.adampro.main.AdamContext
+import org.vitrivr.adampro.main.SharedComponentContext
 import org.vitrivr.adampro.query.handler.generic.{ExpressionDetails, QueryEvaluationOptions, QueryExpression}
 import org.vitrivr.adampro.query.query.NearestNeighbourQuery
 import org.apache.http.annotation.Experimental
@@ -18,7 +18,7 @@ import org.vitrivr.adampro.helpers.tracker.OperationTracker
   * Scans multiple indices and combines unprecise results.
   */
 @Experimental
-case class StochasticIndexQueryExpression(private val exprs: Seq[IndexScanExpression])(nnq: NearestNeighbourQuery, id: Option[String] = None)(filterExpr: Option[QueryExpression] = None)(@transient implicit val ac: AdamContext) extends QueryExpression(id) {
+case class StochasticIndexQueryExpression(private val exprs: Seq[IndexScanExpression])(nnq: NearestNeighbourQuery, id: Option[String] = None)(filterExpr: Option[QueryExpression] = None)(@transient implicit val ac: SharedComponentContext) extends QueryExpression(id) {
   override val info = ExpressionDetails(None, Some("Compound Query Index Scan Expression"), id, None)
   _children ++= filterExpr.map(Seq(_)).getOrElse(Seq())
   //expres is not added to children as they would be "prepared" for querying, resulting possibly in a sequential scan
@@ -31,7 +31,7 @@ case class StochasticIndexQueryExpression(private val exprs: Seq[IndexScanExpres
 
   val entity = exprs.head.index.entity.get
 
-  override protected def run(options : Option[QueryEvaluationOptions], filter: Option[DataFrame] = None)(tracker : OperationTracker)(implicit ac: AdamContext): Option[DataFrame] = {
+  override protected def run(options : Option[QueryEvaluationOptions], filter: Option[DataFrame] = None)(tracker : OperationTracker)(implicit ac: SharedComponentContext): Option[DataFrame] = {
     log.debug("evaluate compound query index scan")
 
     ac.sc.setJobGroup(id.getOrElse(""), "compound query index scan", interruptOnCancel = true)

@@ -4,7 +4,7 @@ import org.apache.spark.sql.DataFrame
 import org.vitrivr.adampro.entity.Entity.EntityName
 import org.vitrivr.adampro.exception.GeneralAdamException
 import org.vitrivr.adampro.helpers.tracker.OperationTracker
-import org.vitrivr.adampro.main.AdamContext
+import org.vitrivr.adampro.main.SharedComponentContext
 import org.vitrivr.adampro.query.handler.generic.{QueryEvaluationOptions, QueryExpression}
 import org.vitrivr.adampro.query.handler.internal.BooleanFilterExpression.BooleanFilterScanExpression
 import org.vitrivr.adampro.query.progressive._
@@ -34,7 +34,7 @@ object ParallelQueryHandler extends Logging {
     * @param id          query id
     * @return
     */
-  def parallelQuery[U](entityname: EntityName, nnq: NearestNeighbourQuery, bq: Option[BooleanQuery], pathChooser: ParallelPathChooser, onNext: Try[ProgressiveObservation] => U, options: Option[QueryEvaluationOptions], id: Option[String])(tracker : OperationTracker)(implicit ac: AdamContext): ParallelQueryStatusTracker = {
+  def parallelQuery[U](entityname: EntityName, nnq: NearestNeighbourQuery, bq: Option[BooleanQuery], pathChooser: ParallelPathChooser, onNext: Try[ProgressiveObservation] => U, options: Option[QueryEvaluationOptions], id: Option[String])(tracker : OperationTracker)(implicit ac: SharedComponentContext): ParallelQueryStatusTracker = {
     val filter = if (bq.isDefined) {
       new BooleanFilterScanExpression(entityname)(bq.get, None)(None)(ac).prepareTree().evaluate(options)(tracker)
     } else {
@@ -62,7 +62,7 @@ object ParallelQueryHandler extends Logging {
     * @param id         query id
     * @return a tracker for the parallel query
     */
-  private def parallelQuery[U](exprs: Seq[QueryExpression], filter: Option[DataFrame], onNext: Try[ProgressiveObservation] => U, options: Option[QueryEvaluationOptions], id: Option[String])(tracker : OperationTracker)(implicit ac: AdamContext): ParallelQueryStatusTracker = {
+  private def parallelQuery[U](exprs: Seq[QueryExpression], filter: Option[DataFrame], onNext: Try[ProgressiveObservation] => U, options: Option[QueryEvaluationOptions], id: Option[String])(tracker : OperationTracker)(implicit ac: SharedComponentContext): ParallelQueryStatusTracker = {
     val pqtracker = new ParallelQueryStatusTracker(id.getOrElse(""))
     log.debug("performing parallel query with " + exprs.length + " paths: " + exprs.map(expr => expr.info.scantype.getOrElse("<missing scantype>") + " (" + expr.info.source.getOrElse("<missing source>") + ")").mkString(", "))
 
@@ -86,7 +86,7 @@ object ParallelQueryHandler extends Logging {
     * @param id          query id
     * @return
     */
-  def timedParallelQuery[U](entityname: EntityName, nnq: NearestNeighbourQuery, bq: Option[BooleanQuery], pathChooser: ParallelPathChooser, timelimit: Duration, options: Option[QueryEvaluationOptions], id: Option[String])(tracker : OperationTracker)(implicit ac: AdamContext): ProgressiveObservation = {
+  def timedParallelQuery[U](entityname: EntityName, nnq: NearestNeighbourQuery, bq: Option[BooleanQuery], pathChooser: ParallelPathChooser, timelimit: Duration, options: Option[QueryEvaluationOptions], id: Option[String])(tracker : OperationTracker)(implicit ac: SharedComponentContext): ProgressiveObservation = {
     val filter = if (bq.isDefined) {
       new BooleanFilterScanExpression(entityname)(bq.get, None)(None)(ac).prepareTree().evaluate(options)(tracker)
     } else {
@@ -114,7 +114,7 @@ object ParallelQueryHandler extends Logging {
     * @param id        query id
     * @return the results available together with a confidence score
     */
-  def timedParallelQuery(exprs: Seq[QueryExpression], timelimit: Duration, filter: Option[DataFrame], options: Option[QueryEvaluationOptions], id: Option[String])(tracker : OperationTracker)(implicit ac: AdamContext): ProgressiveObservation = {
+  def timedParallelQuery(exprs: Seq[QueryExpression], timelimit: Duration, filter: Option[DataFrame], options: Option[QueryEvaluationOptions], id: Option[String])(tracker : OperationTracker)(implicit ac: SharedComponentContext): ProgressiveObservation = {
     log.debug("timed parallel query performs kNN query")
     val pqtracker = parallelQuery[Unit](exprs, filter, (observation: Try[ProgressiveObservation]) => (), options, id)(tracker)
 

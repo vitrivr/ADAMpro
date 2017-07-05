@@ -11,7 +11,7 @@ import org.vitrivr.adampro.helpers.tracker.OperationTracker
 import org.vitrivr.adampro.index.Index.IndexTypeName
 import org.vitrivr.adampro.index._
 import org.vitrivr.adampro.index.structures.IndexTypes
-import org.vitrivr.adampro.main.AdamContext
+import org.vitrivr.adampro.main.SharedComponentContext
 import org.vitrivr.adampro.query.distance.{DistanceFunction, EuclideanDistance}
 
 
@@ -21,7 +21,7 @@ import org.vitrivr.adampro.query.distance.{DistanceFunction, EuclideanDistance}
   * Ivan Giangreco
   * August 2015
   */
-class SHIndexGenerator(nbits_total: Option[Int], trainingSize: Int)(@transient implicit val ac: AdamContext) extends IndexGenerator {
+class SHIndexGenerator(nbits_total: Option[Int], trainingSize: Int)(@transient implicit val ac: SharedComponentContext) extends IndexGenerator {
   override val indextypename: IndexTypeName = IndexTypes.SHINDEX
 
   /**
@@ -127,7 +127,7 @@ class SHIndexGeneratorFactory extends IndexGeneratorFactory {
     * @param distance   distance function
     * @param properties indexing properties
     */
-  def getIndexGenerator(distance: DistanceFunction, properties: Map[String, String] = Map[String, String]())(implicit ac: AdamContext): IndexGenerator = {
+  def getIndexGenerator(distance: DistanceFunction, properties: Map[String, String] = Map[String, String]())(implicit ac: SharedComponentContext): IndexGenerator = {
     if (distance != EuclideanDistance) {
       throw new GeneralAdamException("SH index only supports Euclidean distance")
     }

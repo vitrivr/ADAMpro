@@ -5,7 +5,7 @@ import org.apache.spark.sql.SaveMode
 import org.vitrivr.adampro.catalog.CatalogOperator
 import org.vitrivr.adampro.config.AdamConfig
 import org.vitrivr.adampro.entity.Entity
-import org.vitrivr.adampro.main.{AdamContext, SparkStartup}
+import org.vitrivr.adampro.main.{SharedComponentContext, SparkStartup}
 import org.vitrivr.adampro.utils.Logging
 
 import scala.util.{Failure, Success, Try}
@@ -24,7 +24,7 @@ object Transferer extends Logging {
     * @param attributes
     * @param newHandlerName
     */
-  @Experimental def apply(entity: Entity, attributes: Seq[String], newHandlerName: String)(implicit ac: AdamContext): Try[Void] = {
+  @Experimental def apply(entity: Entity, attributes: Seq[String], newHandlerName: String)(implicit ac: SharedComponentContext): Try[Void] = {
     log.debug("transfering attributes " + attributes.mkString(", ") + " of entity " + entity.entityname + " to " + newHandlerName)
 
     try {

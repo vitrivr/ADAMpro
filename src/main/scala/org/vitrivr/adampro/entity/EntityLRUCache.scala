@@ -5,7 +5,7 @@ import java.util.concurrent.TimeUnit
 import com.google.common.cache.{CacheBuilder, CacheLoader}
 import org.vitrivr.adampro.entity.Entity.EntityName
 import org.vitrivr.adampro.exception.EntityNotExistingException
-import org.vitrivr.adampro.main.{AdamContext, SparkStartup}
+import org.vitrivr.adampro.main.{SharedComponentContext, SparkStartup}
 import org.vitrivr.adampro.utils.Logging
 
 import scala.util.{Failure, Success, Try}
@@ -16,7 +16,7 @@ import scala.util.{Failure, Success, Try}
   * Ivan Giangreco
   * April 2016
   */
-class EntityLRUCache()(@transient implicit val ac: AdamContext) extends Logging {
+class EntityLRUCache()(@transient implicit val ac: SharedComponentContext) extends Logging {
 
   private val maximumCacheSize = ac.config.maximumCacheSizeEntity
   private val expireAfterAccess = ac.config.expireAfterAccessEntity

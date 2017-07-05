@@ -4,7 +4,7 @@ import org.vitrivr.adampro.entity.Entity.EntityName
 import org.vitrivr.adampro.index.Index
 import org.vitrivr.adampro.index.Index._
 import org.vitrivr.adampro.index.structures.IndexTypes
-import org.vitrivr.adampro.main.AdamContext
+import org.vitrivr.adampro.main.SharedComponentContext
 import org.vitrivr.adampro.query.QueryHints.{QueryHint, SimpleQueryHint}
 import org.vitrivr.adampro.query.handler.generic.QueryExpression
 import org.vitrivr.adampro.query.handler.internal.{HintBasedScanExpression, IndexScanExpression, SequentialScanExpression}
@@ -29,7 +29,7 @@ trait ParallelPathChooser extends Logging {
   * Chooses from all index types one (with sequential scan after index scan) and sequential scan separately.
   *
   */
-class SimpleParallelPathChooser()(implicit ac: AdamContext) extends ParallelPathChooser {
+class SimpleParallelPathChooser()(implicit ac: SharedComponentContext) extends ParallelPathChooser {
   override def getPaths(entityname: EntityName, nnq: NearestNeighbourQuery): Seq[QueryExpression] = {
     IndexTypes.values
       .map(indextypename => Index.list(Some(entityname), Some(nnq.attribute), Some(indextypename)).filter(_.isSuccess).map(_.get)
@@ -47,7 +47,7 @@ class SimpleParallelPathChooser()(implicit ac: AdamContext) extends ParallelPath
   * Chooses all paths (index (without sequential scan) + sequential) for parallel query.
   *
   */
-class AllParallelPathChooser(implicit ac: AdamContext) extends ParallelPathChooser {
+class AllParallelPathChooser(implicit ac: SharedComponentContext) extends ParallelPathChooser {
   override def getPaths(entityname: EntityName, nnq: NearestNeighbourQuery): Seq[QueryExpression] = {
     Index.list(Some(entityname))
       .map(index => IndexScanExpression(index.get)(nnq, None)(None)(ac)).+:(new SequentialScanExpression(entityname)(nnq, None)(None)(ac))
@@ -59,7 +59,7 @@ class AllParallelPathChooser(implicit ac: AdamContext) extends ParallelPathChoos
   *
   * @param indextypenames names of indextypes
   */
-class IndexTypeParallelPathChooser(indextypenames: Seq[IndexTypeName])(implicit ac: AdamContext) extends ParallelPathChooser {
+class IndexTypeParallelPathChooser(indextypenames: Seq[IndexTypeName])(implicit ac: SharedComponentContext) extends ParallelPathChooser {
   override def getPaths(entityname: EntityName, nnq: NearestNeighbourQuery): Seq[QueryExpression] = {
     indextypenames
       .map(indextypename => Index.list(Some(entityname), Some(nnq.attribute), Some(indextypename)).filter(_.isSuccess).map(_.get)
@@ -74,7 +74,7 @@ class IndexTypeParallelPathChooser(indextypenames: Seq[IndexTypeName])(implicit 
   *
   * @param hints list of QueryHints, note that only Simple are accepted at the moment
   */
-class QueryHintsParallelPathChooser(hints: Seq[QueryHint])(implicit ac: AdamContext) extends ParallelPathChooser {
+class QueryHintsParallelPathChooser(hints: Seq[QueryHint])(implicit ac: SharedComponentContext) extends ParallelPathChooser {
   override def getPaths(entityname: EntityName, nnq: NearestNeighbourQuery): Seq[QueryExpression] = {
     if(hints.filter(x => !x.isInstanceOf[SimpleQueryHint]).length > 0){
       log.warn("only index query hints allowed in path chooser")
@@ -90,7 +90,7 @@ class QueryHintsParallelPathChooser(hints: Seq[QueryHint])(implicit ac: AdamCont
   *
   * @param indexnames names of indexes
   */
-class IndexnameSpecifiedParallelPathChooser(indexnames: Seq[IndexName])(implicit ac: AdamContext) extends ParallelPathChooser {
+class IndexnameSpecifiedParallelPathChooser(indexnames: Seq[IndexName])(implicit ac: SharedComponentContext) extends ParallelPathChooser {
   override def getPaths(entityname: EntityName, nnq: NearestNeighbourQuery): Seq[QueryExpression] = {
     //here we do not filter for query conformness, as the user has specified explicitly some index names
     //and should get an exception otherwise

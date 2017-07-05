@@ -4,7 +4,7 @@ import org.apache.spark.sql.{Row, SaveMode}
 import org.apache.spark.sql.types.{StructField, StructType}
 import org.vitrivr.adampro.config.AdamConfig
 import org.vitrivr.adampro.entity.AttributeDefinition
-import org.vitrivr.adampro.main.AdamContext
+import org.vitrivr.adampro.main.SharedComponentContext
 
 import scala.util.{Success, Try}
 
@@ -14,7 +14,7 @@ import scala.util.{Success, Try}
   * Ivan Giangreco
   * September 2016
   */
-class ParquetIndexEngine()(@transient override implicit val ac: AdamContext) extends ParquetEngine()(ac) {
+class ParquetIndexEngine()(@transient override implicit val ac: SharedComponentContext) extends ParquetEngine()(ac) {
   override val name = "parquetindex"
 
   override def supports = Seq()
@@ -25,7 +25,7 @@ class ParquetIndexEngine()(@transient override implicit val ac: AdamContext) ext
     *
     * @param props
     */
-  def this(props: Map[String, String])(implicit ac: AdamContext) {
+  def this(props: Map[String, String])(implicit ac: SharedComponentContext) {
     this()(ac)
     if (props.get("hadoop").getOrElse("false").toBoolean) {
       subengine = new ParquetHadoopStorage(AdamConfig.cleanPath(props.get("basepath").get), props.get("datapath").get)
@@ -41,7 +41,7 @@ class ParquetIndexEngine()(@transient override implicit val ac: AdamContext) ext
     * @param params     creation parameters
     * @return options to store
     */
-  override def create(storename: String, attributes: Seq[AttributeDefinition], params: Map[String, String])(implicit ac: AdamContext): Try[Map[String, String]] = {
+  override def create(storename: String, attributes: Seq[AttributeDefinition], params: Map[String, String])(implicit ac: SharedComponentContext): Try[Map[String, String]] = {
     log.debug("parquet create operation")
     Success(Map())
   }

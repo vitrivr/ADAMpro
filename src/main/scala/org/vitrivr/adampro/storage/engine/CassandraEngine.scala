@@ -7,7 +7,7 @@ import org.vitrivr.adampro.datatypes.AttributeTypes._
 import org.vitrivr.adampro.entity.AttributeDefinition
 import org.vitrivr.adampro.entity.Entity.EntityName
 import org.vitrivr.adampro.exception.GeneralAdamException
-import org.vitrivr.adampro.main.AdamContext
+import org.vitrivr.adampro.main.SharedComponentContext
 import org.vitrivr.adampro.query.query.Predicate
 import org.vitrivr.adampro.utils.Logging
 import com.datastax.driver.core.Session
@@ -22,7 +22,7 @@ import scala.util.{Random, Failure, Success, Try}
   * Ivan Giangreco
   * September 2016
   */
-class CassandraEngine(private val url: String, private val port: Int, private val user: String, private val password: String, protected val keyspace: String = "public")(@transient override implicit val ac: AdamContext) extends Engine()(ac) with Logging with Serializable {
+class CassandraEngine(private val url: String, private val port: Int, private val user: String, private val password: String, protected val keyspace: String = "public")(@transient override implicit val ac: SharedComponentContext) extends Engine()(ac) with Logging with Serializable {
   private val conn = CassandraConnector(hosts = Set(InetAddress.getByName(url)), port = port, authConf = PasswordAuthConf(user, password))
   private val connectionId =  Random.alphanumeric.take(10).mkString
 
@@ -43,7 +43,7 @@ class CassandraEngine(private val url: String, private val port: Int, private va
     *
     * @param props
     */
-  def this(props: Map[String, String])(implicit ac: AdamContext) {
+  def this(props: Map[String, String])(implicit ac: SharedComponentContext) {
     this(props.get("url").get, props.get("port").get.toInt, props.get("user").get, props.get("password").get, props.getOrElse("keyspace", "public"))(ac)
   }
 
@@ -101,7 +101,7 @@ class CassandraEngine(private val url: String, private val port: Int, private va
     * @param params     creation parameters
     * @return options to store
     */
-  override def create(storename: String, attributes: Seq[AttributeDefinition], params: Map[String, String])(implicit ac: AdamContext): Try[Map[String, String]] = {
+  override def create(storename: String, attributes: Seq[AttributeDefinition], params: Map[String, String])(implicit ac: SharedComponentContext): Try[Map[String, String]] = {
     try {
       val attributeString = attributes.map(attribute => {
         val name = attribute.name
@@ -150,7 +150,7 @@ class CassandraEngine(private val url: String, private val port: Int, private va
     * @param storename adapted entityname to store feature to
     * @return
     */
-  override def exists(storename: String)(implicit ac: AdamContext): Try[Boolean] = {
+  override def exists(storename: String)(implicit ac: SharedComponentContext): Try[Boolean] = {
     try {
       var exists = false
       conn.withSessionDo { session =>
@@ -177,7 +177,7 @@ class CassandraEngine(private val url: String, private val port: Int, private va
     * @param params     reading parameters
     * @return
     */
-  override def read(storename: String, attributes: Seq[AttributeDefinition], predicates: Seq[Predicate], params: Map[String, String])(implicit ac: AdamContext): Try[DataFrame] = {
+  override def read(storename: String, attributes: Seq[AttributeDefinition], predicates: Seq[Predicate], params: Map[String, String])(implicit ac: SharedComponentContext): Try[DataFrame] = {
     try {
       val df = ac.sqlContext.read
         .format("org.apache.spark.sql.cassandra")
@@ -213,7 +213,7 @@ class CassandraEngine(private val url: String, private val port: Int, private va
     * @param params     writing parameters
     * @return new options to store
     */
-  override def write(storename: String, df: DataFrame, attributes: Seq[AttributeDefinition], mode: SaveMode = SaveMode.Append, params: Map[String, String])(implicit ac: AdamContext): Try[Map[String, String]] = {
+  override def write(storename: String, df: DataFrame, attributes: Seq[AttributeDefinition], mode: SaveMode = SaveMode.Append, params: Map[String, String])(implicit ac: SharedComponentContext): Try[Map[String, String]] = {
     try {
       /*if (mode != SaveMode.Append) {
         throw new UnsupportedOperationException("only appending is supported")
@@ -238,7 +238,7 @@ class CassandraEngine(private val url: String, private val port: Int, private va
     * @param storename adapted entityname to store feature to
     * @return
     */
-  def drop(storename: String)(implicit ac: AdamContext): Try[Void] = {
+  def drop(storename: String)(implicit ac: SharedComponentContext): Try[Void] = {
     try {
       conn.withSessionDo { session =>
         session.execute("use " + keyspace)

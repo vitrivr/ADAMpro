@@ -16,7 +16,7 @@ import org.vitrivr.adampro.datatypes.AttributeTypes
 import org.vitrivr.adampro.entity.AttributeDefinition
 import org.vitrivr.adampro.entity.Entity.EntityName
 import org.vitrivr.adampro.exception.GeneralAdamException
-import org.vitrivr.adampro.main.AdamContext
+import org.vitrivr.adampro.main.SharedComponentContext
 import org.vitrivr.adampro.query.query.Predicate
 
 import scala.collection.convert.decorateAsScala._
@@ -29,7 +29,7 @@ import scala.util.{Failure, Success, Try}
   * Ivan Giangreco
   * June 2017
   */
-class LevelDbEngine(private val path: String)(@transient override implicit val ac: AdamContext) extends Engine()(ac) with Serializable {
+class LevelDbEngine(private val path: String)(@transient override implicit val ac: SharedComponentContext) extends Engine()(ac) with Serializable {
   override val name = "leveldb"
 
   override def supports = Seq(AttributeTypes.AUTOTYPE, AttributeTypes.INTTYPE, AttributeTypes.LONGTYPE, AttributeTypes.STRINGTYPE, AttributeTypes.VECTORTYPE)
@@ -46,7 +46,7 @@ class LevelDbEngine(private val path: String)(@transient override implicit val a
     *
     * @param props
     */
-  def this(props: Map[String, String])(implicit ac: AdamContext) {
+  def this(props: Map[String, String])(implicit ac: SharedComponentContext) {
     this(props.get("path").get)(ac)
   }
 
@@ -110,7 +110,7 @@ class LevelDbEngine(private val path: String)(@transient override implicit val a
     * @param params     creation parameters
     * @return options to store
     */
-  override def create(storename: String, attributes: Seq[AttributeDefinition], params: Map[String, String])(implicit ac: AdamContext): Try[Map[String, String]] = {
+  override def create(storename: String, attributes: Seq[AttributeDefinition], params: Map[String, String])(implicit ac: SharedComponentContext): Try[Map[String, String]] = {
     try {
       val options = new Options()
       options.createIfMissing(true)
@@ -134,7 +134,7 @@ class LevelDbEngine(private val path: String)(@transient override implicit val a
     * @param storename adapted entityname to store feature to
     * @return
     */
-  override def exists(storename: String)(implicit ac: AdamContext): Try[Boolean] = {
+  override def exists(storename: String)(implicit ac: SharedComponentContext): Try[Boolean] = {
     try {
       Success(new File(getPath(storename)).exists())
     } catch {
@@ -152,7 +152,7 @@ class LevelDbEngine(private val path: String)(@transient override implicit val a
     * @param params     reading parameters
     * @return
     */
-  def read(storename: String, attributes: Seq[AttributeDefinition], predicates: Seq[Predicate], params: Map[String, String])(implicit ac: AdamContext): Try[DataFrame] = {
+  def read(storename: String, attributes: Seq[AttributeDefinition], predicates: Seq[Predicate], params: Map[String, String])(implicit ac: SharedComponentContext): Try[DataFrame] = {
     try {
       val pk = attributes.filter(_.pk).head
 
@@ -214,7 +214,7 @@ class LevelDbEngine(private val path: String)(@transient override implicit val a
     * @param params     writing parameters
     * @return new options to store
     */
-  override def write(storename: String, df: DataFrame, attributes: Seq[AttributeDefinition], mode: SaveMode = SaveMode.Append, params: Map[String, String])(implicit ac: AdamContext): Try[Map[String, String]] = {
+  override def write(storename: String, df: DataFrame, attributes: Seq[AttributeDefinition], mode: SaveMode = SaveMode.Append, params: Map[String, String])(implicit ac: SharedComponentContext): Try[Map[String, String]] = {
     try {
       val (db, lock) = openConnection(storename)
       val stamp = lock.writeLock()
@@ -247,7 +247,7 @@ class LevelDbEngine(private val path: String)(@transient override implicit val a
     * @param storename adapted entityname to store feature to
     * @return
     */
-  override def drop(storename: String)(implicit ac: AdamContext): Try[Void] = {
+  override def drop(storename: String)(implicit ac: SharedComponentContext): Try[Void] = {
     try {
       factory.destroy(new File(getPath(storename)), new Options())
       Success(null)

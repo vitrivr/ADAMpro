@@ -6,7 +6,7 @@ import org.vitrivr.adampro.datatypes.vector.Vector._
 import org.vitrivr.adampro.entity.Entity
 import org.vitrivr.adampro.entity.Entity.EntityName
 import org.vitrivr.adampro.exception.GeneralAdamException
-import org.vitrivr.adampro.main.{AdamContext, SparkStartup}
+import org.vitrivr.adampro.main.{SharedComponentContext, SparkStartup}
 import org.vitrivr.adampro.query.distance.EuclideanDistance
 import org.vitrivr.adampro.query.query.NearestNeighbourQuery
 import org.vitrivr.adampro.utils.Logging
@@ -30,8 +30,8 @@ private[query] trait QueryCollection extends Logging with Serializable {
   * @param attribute
   * @param nqueries
   */
-private[optimizer] case class RandomQueryCollection(entityname: EntityName, attribute: String, nqueries: Int)(@transient implicit val ac: AdamContext) extends QueryCollection {
-  def this(entityname: EntityName, attribute: String, params: Map[String, String])(implicit ac: AdamContext) {
+private[optimizer] case class RandomQueryCollection(entityname: EntityName, attribute: String, nqueries: Int)(@transient implicit val ac: SharedComponentContext) extends QueryCollection {
+  def this(entityname: EntityName, attribute: String, params: Map[String, String])(implicit ac: SharedComponentContext) {
     this(entityname, attribute, params.get("nqueries").get.toInt)
   }
 
@@ -56,8 +56,8 @@ private[optimizer] case class RandomQueryCollection(entityname: EntityName, attr
   *
   * @param entityname
   */
-private[optimizer] case class LoggedQueryCollection(entityname: EntityName, attribute: String, nqueries : Option[Int] = None)(@transient implicit val ac: AdamContext) extends QueryCollection {
-  def this(entityname: EntityName, attribute: String, params: Map[String, String])(implicit ac: AdamContext) {
+private[optimizer] case class LoggedQueryCollection(entityname: EntityName, attribute: String, nqueries : Option[Int] = None)(@transient implicit val ac: SharedComponentContext) extends QueryCollection {
+  def this(entityname: EntityName, attribute: String, params: Map[String, String])(implicit ac: SharedComponentContext) {
     this(entityname, attribute, params.get("nqueries").map(_.toInt))
   }
 
@@ -77,7 +77,7 @@ private[optimizer] case class LoggedQueryCollection(entityname: EntityName, attr
 
 
 object QueryCollectionFactory {
-  def apply(entityname: EntityName, attribute: String, qco: QueryCollectionOption, params: Map[String, String])(implicit ac: AdamContext): QueryCollection = {
+  def apply(entityname: EntityName, attribute: String, qco: QueryCollectionOption, params: Map[String, String])(implicit ac: SharedComponentContext): QueryCollection = {
     qco match {
       case RandomQueryCollectionOption => new RandomQueryCollection(entityname, attribute, params)
       case LoggedQueryCollectionOption => new LoggedQueryCollection(entityname, attribute, params)

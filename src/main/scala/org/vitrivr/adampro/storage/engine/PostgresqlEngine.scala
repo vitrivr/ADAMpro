@@ -6,7 +6,7 @@ import java.util.Properties
 import org.vitrivr.adampro.datatypes.AttributeTypes
 import org.vitrivr.adampro.datatypes.AttributeTypes.AttributeType
 import org.vitrivr.adampro.entity.AttributeDefinition
-import org.vitrivr.adampro.main.AdamContext
+import org.vitrivr.adampro.main.SharedComponentContext
 import org.vitrivr.adampro.query.query.Predicate
 import com.mchange.v2.c3p0.ComboPooledDataSource
 import org.apache.spark.sql.types.{StructField, StructType}
@@ -21,7 +21,7 @@ import scala.util.{Failure, Success, Try}
   * Ivan Giangreco
   * June 2016
   */
-class PostgresqlEngine(private val url: String, private val user: String, private val password: String, private val schema: String = "public")(@transient override implicit val ac: AdamContext) extends Engine()(ac) with Serializable {
+class PostgresqlEngine(private val url: String, private val user: String, private val password: String, private val schema: String = "public")(@transient override implicit val ac: SharedComponentContext) extends Engine()(ac) with Serializable {
   //TODO: check if changing schema breaks tests!
 
   override val name = "postgresql"
@@ -36,7 +36,7 @@ class PostgresqlEngine(private val url: String, private val user: String, privat
     *
     * @param props
     */
-  def this(props: Map[String, String])(implicit ac: AdamContext) {
+  def this(props: Map[String, String])(implicit ac: SharedComponentContext) {
     this(props.get("url").get, props.get("user").get, props.get("password").get, props.getOrElse("schema", "public"))(ac)
   }
 
@@ -92,7 +92,7 @@ class PostgresqlEngine(private val url: String, private val user: String, privat
     * @param params     creation parameters
     * @return options to store
     */
-  override def create(storename: String, attributes: Seq[AttributeDefinition], params: Map[String, String])(implicit ac: AdamContext): Try[Map[String, String]] = {
+  override def create(storename: String, attributes: Seq[AttributeDefinition], params: Map[String, String])(implicit ac: SharedComponentContext): Try[Map[String, String]] = {
     log.debug("postgresql create operation")
     val connection = openConnection()
 
@@ -151,7 +151,7 @@ class PostgresqlEngine(private val url: String, private val user: String, privat
     * @param storename adapted entityname to store feature to
     * @return
     */
-  override def exists(storename: String)(implicit ac: AdamContext): Try[Boolean] = {
+  override def exists(storename: String)(implicit ac: SharedComponentContext): Try[Boolean] = {
     log.debug("postgresql exists operation")
     val connection = openConnection()
 
@@ -178,7 +178,7 @@ class PostgresqlEngine(private val url: String, private val user: String, privat
     * @param params     reading parameters
     * @return
     */
-  override def read(storename: String, attributes: Seq[AttributeDefinition], predicates: Seq[Predicate], params: Map[String, String])(implicit ac: AdamContext): Try[DataFrame] = {
+  override def read(storename: String, attributes: Seq[AttributeDefinition], predicates: Seq[Predicate], params: Map[String, String])(implicit ac: SharedComponentContext): Try[DataFrame] = {
     log.debug("postgresql read operation")
 
     try {
@@ -211,7 +211,7 @@ class PostgresqlEngine(private val url: String, private val user: String, privat
     * @param params     writing parameters
     * @return new options to store
     */
-  override def write(storename: String, df: DataFrame, attributes: Seq[AttributeDefinition], mode: SaveMode = SaveMode.Append, params: Map[String, String])(implicit ac: AdamContext): Try[Map[String, String]] = {
+  override def write(storename: String, df: DataFrame, attributes: Seq[AttributeDefinition], mode: SaveMode = SaveMode.Append, params: Map[String, String])(implicit ac: SharedComponentContext): Try[Map[String, String]] = {
     log.debug("postgresql write operation")
 
     try {
@@ -229,7 +229,7 @@ class PostgresqlEngine(private val url: String, private val user: String, privat
     * @param storename adapted entityname to store feature to
     * @return
     */
-  override def drop(storename: String)(implicit ac: AdamContext): Try[Void] = {
+  override def drop(storename: String)(implicit ac: SharedComponentContext): Try[Void] = {
     log.debug("postgresql drop operation")
     val connection = openConnection()
 

@@ -4,7 +4,7 @@ import org.vitrivr.adampro.api.QueryOp
 import org.vitrivr.adampro.entity.Entity
 import org.vitrivr.adampro.helpers.tracker.OperationTracker
 import org.vitrivr.adampro.index.Index
-import org.vitrivr.adampro.main.AdamContext
+import org.vitrivr.adampro.main.SharedComponentContext
 import org.vitrivr.adampro.query.query.NearestNeighbourQuery
 import org.vitrivr.adampro.utils.Logging
 
@@ -14,7 +14,7 @@ import org.vitrivr.adampro.utils.Logging
   * Ivan Giangreco
   * November 2016
   */
-private[optimizer] abstract class OptimizerHeuristic(protected val name : String, private val defaultNRuns : Int = 100)(@transient implicit val ac: AdamContext) extends Serializable with Logging {
+private[optimizer] abstract class OptimizerHeuristic(protected val name : String, private val defaultNRuns : Int = 100)(@transient implicit val ac: SharedComponentContext) extends Serializable with Logging {
 
   case class Measurement(tp : Int, precision: Double, recall: Double, time: Double){
     def toConfidence() : Confidence = Confidence(2 * (precision * recall) / (precision + recall))

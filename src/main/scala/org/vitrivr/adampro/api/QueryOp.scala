@@ -3,7 +3,7 @@ package org.vitrivr.adampro.api
 import org.vitrivr.adampro.entity.Entity._
 import org.vitrivr.adampro.index.Index
 import org.vitrivr.adampro.index.Index.{IndexName, IndexTypeName}
-import org.vitrivr.adampro.main.AdamContext
+import org.vitrivr.adampro.main.SharedComponentContext
 import org.vitrivr.adampro.query.handler.generic.{QueryEvaluationOptions, QueryExpression}
 import org.vitrivr.adampro.query.handler.internal.BooleanFilterExpression.BooleanFilterScanExpression
 import org.vitrivr.adampro.query.handler.internal._
@@ -31,7 +31,7 @@ object QueryOp extends GenericOp {
     * @param options options applied when evaluating query
     * @return
     */
-  def expression(q: QueryExpression, options: Option[QueryEvaluationOptions] = None)(tracker : OperationTracker)(implicit ac: AdamContext): Try[Option[DataFrame]] = {
+  def expression(q: QueryExpression, options: Option[QueryEvaluationOptions] = None)(tracker : OperationTracker)(implicit ac: SharedComponentContext): Try[Option[DataFrame]] = {
     execute("query execution operation") {
       log.trace(QUERY_MARKER, "query operation")
       val prepared = q.prepareTree()
@@ -53,7 +53,7 @@ object QueryOp extends GenericOp {
     * @param options    options applied when evaluating query
     * @return
     */
-  def sequential(entityname: EntityName, nnq: NearestNeighbourQuery, bq: Option[BooleanQuery], options: Option[QueryEvaluationOptions] = None)(tracker : OperationTracker)(implicit ac: AdamContext): Try[Option[DataFrame]] = {
+  def sequential(entityname: EntityName, nnq: NearestNeighbourQuery, bq: Option[BooleanQuery], options: Option[QueryEvaluationOptions] = None)(tracker : OperationTracker)(implicit ac: SharedComponentContext): Try[Option[DataFrame]] = {
     execute("sequential query operation") {
       var scan: Option[QueryExpression] = None
 
@@ -76,7 +76,7 @@ object QueryOp extends GenericOp {
     * @param options   options applied when evaluating query
     * @return
     */
-  def index(indexname: IndexName, nnq: NearestNeighbourQuery, bq: Option[BooleanQuery], options: Option[QueryEvaluationOptions] = None)(tracker : OperationTracker)(implicit ac: AdamContext): Try[Option[DataFrame]] = {
+  def index(indexname: IndexName, nnq: NearestNeighbourQuery, bq: Option[BooleanQuery], options: Option[QueryEvaluationOptions] = None)(tracker : OperationTracker)(implicit ac: SharedComponentContext): Try[Option[DataFrame]] = {
     execute("specified index query operation") {
       val index = Index.load(indexname).get
 
@@ -102,7 +102,7 @@ object QueryOp extends GenericOp {
     * @param options       options applied when evaluating query
     * @return
     */
-  def entityIndex(entityname: EntityName, indextypename: IndexTypeName, nnq: NearestNeighbourQuery, bq: Option[BooleanQuery], options: Option[QueryEvaluationOptions] = None)(tracker : OperationTracker)(implicit ac: AdamContext): Try[Option[DataFrame]] = {
+  def entityIndex(entityname: EntityName, indextypename: IndexTypeName, nnq: NearestNeighbourQuery, bq: Option[BooleanQuery], options: Option[QueryEvaluationOptions] = None)(tracker : OperationTracker)(implicit ac: SharedComponentContext): Try[Option[DataFrame]] = {
     execute("index query operation") {
       var scan: Option[QueryExpression] = None
 
@@ -128,7 +128,7 @@ object QueryOp extends GenericOp {
     * @param options     options applied when evaluating query
     * @return a tracker for the parallel query
     */
-  def parallel[U](entityname: EntityName, nnq: NearestNeighbourQuery, bq: Option[BooleanQuery], pathChooser: ParallelPathChooser, onNext: Try[ProgressiveObservation] => U, options: Option[QueryEvaluationOptions] = None)(tracker : OperationTracker)(implicit ac: AdamContext): Try[ParallelQueryStatusTracker] = {
+  def parallel[U](entityname: EntityName, nnq: NearestNeighbourQuery, bq: Option[BooleanQuery], pathChooser: ParallelPathChooser, onNext: Try[ProgressiveObservation] => U, options: Option[QueryEvaluationOptions] = None)(tracker : OperationTracker)(implicit ac: SharedComponentContext): Try[ParallelQueryStatusTracker] = {
     Success(ParallelQueryHandler.parallelQuery(entityname, nnq, bq, pathChooser, onNext, options, None)(tracker))
   }
 
@@ -144,7 +144,7 @@ object QueryOp extends GenericOp {
     * @param options     options applied when evaluating query
     * @return the results available together with a confidence score
     */
-  def timedParallel(entityname: EntityName, nnq: NearestNeighbourQuery, bq: Option[BooleanQuery], pathChooser: ParallelPathChooser, timelimit: Duration, options: Option[QueryEvaluationOptions] = None)(tracker : OperationTracker)(implicit ac: AdamContext): Try[ProgressiveObservation] = {
+  def timedParallel(entityname: EntityName, nnq: NearestNeighbourQuery, bq: Option[BooleanQuery], pathChooser: ParallelPathChooser, timelimit: Duration, options: Option[QueryEvaluationOptions] = None)(tracker : OperationTracker)(implicit ac: SharedComponentContext): Try[ProgressiveObservation] = {
     execute("timed parallel query operation") {
       Success(ParallelQueryHandler.timedParallelQuery(entityname, nnq, bq, pathChooser, timelimit, options, None)(tracker))
     }
@@ -157,7 +157,7 @@ object QueryOp extends GenericOp {
     * @param options options applied when evaluating query
     * @return
     */
-  def compoundQuery(expr: QueryExpression, options: Option[QueryEvaluationOptions] = None)(tracker : OperationTracker)(implicit ac: AdamContext): Try[Option[DataFrame]] = {
+  def compoundQuery(expr: QueryExpression, options: Option[QueryEvaluationOptions] = None)(tracker : OperationTracker)(implicit ac: SharedComponentContext): Try[Option[DataFrame]] = {
     execute("compound query operation") {
       Success(CompoundQueryExpression(expr).evaluate(options)(tracker))
     }
@@ -170,7 +170,7 @@ object QueryOp extends GenericOp {
     * @param bq         information for boolean query
     * @param options    options applied when evaluating query
     */
-  def booleanQuery(entityname: EntityName, bq: Option[BooleanQuery], options: Option[QueryEvaluationOptions] = None)(tracker : OperationTracker)(implicit ac: AdamContext): Try[Option[DataFrame]] = {
+  def booleanQuery(entityname: EntityName, bq: Option[BooleanQuery], options: Option[QueryEvaluationOptions] = None)(tracker : OperationTracker)(implicit ac: SharedComponentContext): Try[Option[DataFrame]] = {
     execute("boolean query operation") {
       var scan: Option[QueryExpression] = None
 

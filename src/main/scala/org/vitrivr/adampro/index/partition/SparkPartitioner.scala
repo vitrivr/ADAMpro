@@ -8,7 +8,7 @@ import org.vitrivr.adampro.entity.EntityNameHolder
 import org.vitrivr.adampro.exception.GeneralAdamException
 import org.vitrivr.adampro.index.Index
 import org.vitrivr.adampro.index.Index.IndexName
-import org.vitrivr.adampro.main.{AdamContext, SparkStartup}
+import org.vitrivr.adampro.main.{SharedComponentContext, SparkStartup}
 import org.vitrivr.adampro.utils.Logging
 
 import scala.util.Random
@@ -32,7 +32,7 @@ object SparkPartitioner extends CustomPartitioner with Logging with Serializable
     * @param nPartitions how many partitions shall be created
     * @return the partitioned DataFrame
     */
-  override def apply(data: DataFrame, attribute: Option[AttributeName], indexName: Option[IndexName], nPartitions: Int, options: Map[String, String] = Map[String, String]())(implicit ac: AdamContext): DataFrame = {
+  override def apply(data: DataFrame, attribute: Option[AttributeName], indexName: Option[IndexName], nPartitions: Int, options: Map[String, String] = Map[String, String]())(implicit ac: SharedComponentContext): DataFrame = {
     SparkStartup.catalogOperator.dropPartitioner(indexName.get)
     SparkStartup.catalogOperator.createPartitioner(indexName.get, nPartitions, null, SparkPartitioner)
 
@@ -59,7 +59,7 @@ object SparkPartitioner extends CustomPartitioner with Logging with Serializable
   /**
     * Drops just random partitions except the one where a hash partitioner would put the FeatureVector
     */
-  override def getPartitions(q: MathVector, dropPercentage: Double, indexName: EntityNameHolder)(implicit ac: AdamContext): Seq[Int] = {
+  override def getPartitions(q: MathVector, dropPercentage: Double, indexName: EntityNameHolder)(implicit ac: SharedComponentContext): Seq[Int] = {
     val noPart = SparkStartup.catalogOperator.getNumberOfPartitions(indexName).get
     val part = new HashPartitioner(noPart).getPartition(q)
     val parts = Random.shuffle(Seq.tabulate(noPart)(el => el)).filter(_ != part)

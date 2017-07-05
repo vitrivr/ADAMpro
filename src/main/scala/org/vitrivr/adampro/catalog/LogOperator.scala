@@ -11,7 +11,7 @@ import org.vitrivr.adampro.query.handler.internal.IndexScanExpression
 import org.vitrivr.adampro.query.query.NearestNeighbourQuery
 import org.vitrivr.adampro.utils.Logging
 import com.mchange.v2.c3p0.ComboPooledDataSource
-import org.vitrivr.adampro.main.AdamContext
+import org.vitrivr.adampro.main.SharedComponentContext
 import slick.dbio.NoStream
 import slick.driver.DerbyDriver.api._
 

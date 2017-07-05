@@ -5,7 +5,7 @@ import org.vitrivr.adampro.entity.Entity._
 import org.vitrivr.adampro.entity.{AttributeDefinition, Entity, EntityPartitioner}
 import org.vitrivr.adampro.index.partition.PartitionMode
 import org.vitrivr.adampro.helpers.sparsify.SparsifyHelper
-import org.vitrivr.adampro.main.AdamContext
+import org.vitrivr.adampro.main.SharedComponentContext
 import org.vitrivr.adampro.query.query.Predicate
 
 import scala.util.{Failure, Success, Try}
@@ -22,7 +22,7 @@ object EntityOp extends GenericOp {
     *
     * @return
     */
-  def list()(implicit ac: AdamContext): Try[Seq[EntityName]] = {
+  def list()(implicit ac: SharedComponentContext): Try[Seq[EntityName]] = {
     execute("list entities operation") {
       Success(Entity.list)
     }
@@ -36,7 +36,7 @@ object EntityOp extends GenericOp {
     * @param ifnotexists if set to true and the entity exists, the entity is just returned; otherwise an error is thrown
     * @return
     */
-  def create(entityname: EntityName, attributes: Seq[AttributeDefinition], ifnotexists: Boolean = false)(implicit ac: AdamContext): Try[Entity] = {
+  def create(entityname: EntityName, attributes: Seq[AttributeDefinition], ifnotexists: Boolean = false)(implicit ac: SharedComponentContext): Try[Entity] = {
     execute("create entity " + entityname + " operation") {
       Entity.create(entityname, attributes, ifnotexists)
     }
@@ -48,7 +48,7 @@ object EntityOp extends GenericOp {
     * @param entityname name of entity
     * @return
     */
-  def exists(entityname: EntityName)(implicit ac: AdamContext): Try[Boolean] = {
+  def exists(entityname: EntityName)(implicit ac: SharedComponentContext): Try[Boolean] = {
     execute("check entity " + entityname + " exists operation") {
       Success(Entity.exists(entityname))
     }
@@ -61,7 +61,7 @@ object EntityOp extends GenericOp {
     * @param entityname name of entity
     * @return
     */
-  def cache(entityname: EntityName)(implicit ac: AdamContext): Try[Void] = {
+  def cache(entityname: EntityName)(implicit ac: SharedComponentContext): Try[Void] = {
     execute("cache entity " + entityname + " operation") {
       val entity = Entity.load(entityname)
 
@@ -80,7 +80,7 @@ object EntityOp extends GenericOp {
     * @param entityname name of entity
     * @return
     */
-  def count(entityname: EntityName)(implicit ac: AdamContext): Try[Long] = {
+  def count(entityname: EntityName)(implicit ac: SharedComponentContext): Try[Long] = {
     execute("count tuples in entity " + entityname + " operation") {
       val entity = Entity.load(entityname)
 
@@ -98,7 +98,7 @@ object EntityOp extends GenericOp {
     * @param entityname name of entity
     * @return
     */
-  def sparsify(entityname: EntityName, attribute: String)(implicit ac: AdamContext): Try[Entity] = {
+  def sparsify(entityname: EntityName, attribute: String)(implicit ac: SharedComponentContext): Try[Entity] = {
     execute("compress tuples in entity " + entityname + " operation") {
       val entity = Entity.load(entityname)
 
@@ -117,7 +117,7 @@ object EntityOp extends GenericOp {
     * @param inserts    data frame containing all attributes to insert
     *
     */
-  def insert(entityname: EntityName, inserts: DataFrame)(implicit ac: AdamContext): Try[Void] = {
+  def insert(entityname: EntityName, inserts: DataFrame)(implicit ac: SharedComponentContext): Try[Void] = {
     execute("insert data into entity " + entityname + " operation") {
       val entity = Entity.load(entityname)
 
@@ -136,7 +136,7 @@ object EntityOp extends GenericOp {
     * @param predicates list of predicates
     *
     */
-  def delete(entityname: EntityName, predicates: Seq[Predicate])(implicit ac: AdamContext): Try[Int] = {
+  def delete(entityname: EntityName, predicates: Seq[Predicate])(implicit ac: SharedComponentContext): Try[Int] = {
     execute("delete data from " + entityname + " operation") {
       val entity = Entity.load(entityname)
 
@@ -154,7 +154,7 @@ object EntityOp extends GenericOp {
     * @param entityname name of entity
     *
     */
-  def vacuum(entityname: EntityName)(implicit ac: AdamContext): Try[Void] = {
+  def vacuum(entityname: EntityName)(implicit ac: SharedComponentContext): Try[Void] = {
     execute("vacuum entity " + entityname + " operation") {
       val entity = Entity.load(entityname)
 
@@ -175,7 +175,7 @@ object EntityOp extends GenericOp {
     * @param k          number of elements to show in preview
     * @return
     */
-  def preview(entityname: EntityName, k: Int = 100)(implicit ac: AdamContext): Try[DataFrame] = {
+  def preview(entityname: EntityName, k: Int = 100)(implicit ac: SharedComponentContext): Try[DataFrame] = {
     execute("preview entity " + entityname + " operation") {
       val entity = Entity.load(entityname)
 
@@ -196,7 +196,7 @@ object EntityOp extends GenericOp {
     * @param options    possible options for operation
     * @return
     */
-  def properties(entityname: EntityName, attribute: Option[String] = None, options: Map[String, String] = Map())(implicit ac: AdamContext): Try[Map[String, String]] = {
+  def properties(entityname: EntityName, attribute: Option[String] = None, options: Map[String, String] = Map())(implicit ac: SharedComponentContext): Try[Map[String, String]] = {
     execute("load properties of entity " + entityname + " operation") {
       val entity = Entity.load(entityname)
 
@@ -221,7 +221,7 @@ object EntityOp extends GenericOp {
     * @param mode        partition mode (e.g., create new index, replace current index, etc.)
     * @return
     */
-  def partition(entityname: EntityName, npartitions: Int, joins: Option[DataFrame], attribute: Option[AttributeName], mode: PartitionMode.Value)(implicit ac: AdamContext): Try[Entity] = {
+  def partition(entityname: EntityName, npartitions: Int, joins: Option[DataFrame], attribute: Option[AttributeName], mode: PartitionMode.Value)(implicit ac: SharedComponentContext): Try[Entity] = {
     execute("repartition entity " + entityname + " operation") {
       val entity = Entity.load(entityname)
 
@@ -240,7 +240,7 @@ object EntityOp extends GenericOp {
     * @param ifexists   returns no error if set to true and entity does not exist
     * @return
     */
-  def drop(entityname: EntityName, ifexists: Boolean = false)(implicit ac: AdamContext): Try[Void] = {
+  def drop(entityname: EntityName, ifexists: Boolean = false)(implicit ac: SharedComponentContext): Try[Void] = {
     execute("drop entity " + entityname + " operation") {
       Entity.drop(entityname, ifexists)
     }

@@ -15,7 +15,7 @@ import org.vitrivr.adampro.grpc._
 import org.vitrivr.adampro.grpc.grpc.DistanceMessage.DistanceType
 import org.vitrivr.adampro.grpc.grpc.Optimizer.{NAIVE_OPTIMIZER, SVM_OPTIMIZER}
 import org.vitrivr.adampro.grpc.grpc.{QueryMessage, _}
-import org.vitrivr.adampro.main.AdamContext
+import org.vitrivr.adampro.main.SharedComponentContext
 import org.vitrivr.adampro.query.distance._
 import org.vitrivr.adampro.query.handler.external.ExternalScanExpressions
 import org.vitrivr.adampro.query.handler.generic.{QueryEvaluationOptions, QueryExpression}
@@ -46,7 +46,7 @@ private[rpc] object RPCHelperMethods extends Logging {
     * @param qm
     * @return
     */
-  implicit def toExpression(qm: QueryMessage)(implicit ac: AdamContext): Try[QueryExpression] = {
+  implicit def toExpression(qm: QueryMessage)(implicit ac: SharedComponentContext): Try[QueryExpression] = {
     try {
       val queryid = prepareQueryId(qm.queryid)
 
@@ -143,7 +143,7 @@ private[rpc] object RPCHelperMethods extends Logging {
     * @param ehqm
     * @return
     */
-  implicit def toExpression(ehqm: ExternalHandlerQueryMessage)(implicit ac: AdamContext): Try[QueryExpression] = {
+  implicit def toExpression(ehqm: ExternalHandlerQueryMessage)(implicit ac: SharedComponentContext): Try[QueryExpression] = {
     try {
       val handler = ehqm.handler
       val entityname = ehqm.entity
@@ -161,7 +161,7 @@ private[rpc] object RPCHelperMethods extends Logging {
     * @param eqm
     * @return
     */
-  implicit def toExpression(eqm: ExpressionQueryMessage)(implicit ac: AdamContext): Try[QueryExpression] = {
+  implicit def toExpression(eqm: ExpressionQueryMessage)(implicit ac: SharedComponentContext): Try[QueryExpression] = {
     try {
       val order = eqm.order match {
         case ExpressionQueryMessage.OperationOrder.LEFTFIRST => ExpressionEvaluationOrder.LeftFirst
@@ -203,7 +203,7 @@ private[rpc] object RPCHelperMethods extends Logging {
     * @param seqm
     * @return
     */
-  implicit def toExpression(seqm: Option[SubExpressionQueryMessage])(implicit ac: AdamContext): Try[QueryExpression] = {
+  implicit def toExpression(seqm: Option[SubExpressionQueryMessage])(implicit ac: SharedComponentContext): Try[QueryExpression] = {
     try {
       if (seqm.isEmpty) {
         return Success(EmptyExpression())
@@ -237,7 +237,7 @@ private[rpc] object RPCHelperMethods extends Logging {
     * @param pm
     * @return
     */
-  def prepareProjectionExpression(pm: ProjectionMessage, qe: QueryExpression, queryid: Option[String])(implicit ac: AdamContext): Try[QueryExpression] = {
+  def prepareProjectionExpression(pm: ProjectionMessage, qe: QueryExpression, queryid: Option[String])(implicit ac: SharedComponentContext): Try[QueryExpression] = {
     try {
       val attributes = pm.getAttributes.attribute
 
@@ -398,7 +398,7 @@ private[rpc] object RPCHelperMethods extends Logging {
     * @param hints
     * @return
     */
-  def preparePaths(hints: Seq[String])(implicit ac: AdamContext) = if (hints.isEmpty) {
+  def preparePaths(hints: Seq[String])(implicit ac: SharedComponentContext) = if (hints.isEmpty) {
     new SimpleParallelPathChooser()
   } else {
     new QueryHintsParallelPathChooser(hints.map(QueryHints.withName(_).get))
@@ -440,7 +440,7 @@ private[rpc] object RPCHelperMethods extends Logging {
   /**
     *
     */
-  def prepareAttributes(attributes: Seq[AttributeDefinitionMessage])(implicit ac: AdamContext): Seq[AttributeDefinition] = {
+  def prepareAttributes(attributes: Seq[AttributeDefinitionMessage])(implicit ac: SharedComponentContext): Seq[AttributeDefinition] = {
     attributes.map(attribute => {
       val attributetype = getAdamType(attribute.attributetype)
 

@@ -15,7 +15,7 @@ import org.vitrivr.adampro.index.structures.IndexTypes
 import org.vitrivr.adampro.index.structures.va.marks.VAPlusMarksGenerator
 import org.vitrivr.adampro.index.structures.va.signature.VariableSignatureGenerator
 import org.vitrivr.adampro.index.{IndexGenerator, IndexGeneratorFactory, IndexingTaskTuple, ParameterInfo}
-import org.vitrivr.adampro.main.AdamContext
+import org.vitrivr.adampro.main.SharedComponentContext
 import org.vitrivr.adampro.query.distance.{DistanceFunction, MinkowskiDistance}
 
 /**
@@ -26,7 +26,7 @@ import org.vitrivr.adampro.query.distance.{DistanceFunction, MinkowskiDistance}
   *
   * see H. Ferhatosmanoglu, E. Tuncel, D. Agrawal, A. El Abbadi (2006): High dimensional nearest neighbor searching. Information Systems.
   */
-class VAPlusIndexGenerator(nbits: Option[Int], ndims : Option[Int], trainingSize: Int, distance: MinkowskiDistance)(@transient implicit val ac: AdamContext) extends IndexGenerator {
+class VAPlusIndexGenerator(nbits: Option[Int], ndims : Option[Int], trainingSize: Int, distance: MinkowskiDistance)(@transient implicit val ac: SharedComponentContext) extends IndexGenerator {
   override val indextypename: IndexTypeName = IndexTypes.VAPLUSINDEX
 
   /**
@@ -128,7 +128,7 @@ class VAPlusIndexGeneratorFactory extends IndexGeneratorFactory {
     * @param distance   distance function
     * @param properties indexing properties
     */
-  def getIndexGenerator(distance: DistanceFunction, properties: Map[String, String] = Map[String, String]())(implicit ac: AdamContext): IndexGenerator = {
+  def getIndexGenerator(distance: DistanceFunction, properties: Map[String, String] = Map[String, String]())(implicit ac: SharedComponentContext): IndexGenerator = {
     if (!distance.isInstanceOf[MinkowskiDistance]) {
       throw new QueryNotConformException("VAF index only supports Minkowski distance")
     }

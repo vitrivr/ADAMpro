@@ -17,7 +17,7 @@ import org.vitrivr.adampro.index.partition.{PartitionMode, PartitionerChoice}
 import org.vitrivr.adampro.helpers.storage.Transferer
 import org.vitrivr.adampro.helpers.tracker.OperationTracker
 import org.vitrivr.adampro.index.structures.IndexTypes
-import org.vitrivr.adampro.main.{AdamContext, SparkStartup}
+import org.vitrivr.adampro.main.{SharedComponentContext, SparkStartup}
 import org.vitrivr.adampro.query.query.Predicate
 import org.vitrivr.adampro.utils.{AdamImporter, Logging, ProtoImporterExporter}
 
@@ -30,7 +30,7 @@ import scala.concurrent.Future
   * March 2016
   */
 class DataDefinitionRPC extends AdamDefinitionGrpc.AdamDefinition with Logging {
-  implicit def ac: AdamContext = SparkStartup.mainContext
+  implicit def ac: SharedComponentContext = SparkStartup.mainContext
 
   /**
     *

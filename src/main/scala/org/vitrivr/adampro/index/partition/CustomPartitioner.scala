@@ -4,7 +4,7 @@ import org.apache.spark.sql.DataFrame
 import org.vitrivr.adampro.datatypes.vector.Vector._
 import org.vitrivr.adampro.entity.Entity.AttributeName
 import org.vitrivr.adampro.entity.EntityNameHolder
-import org.vitrivr.adampro.main.AdamContext
+import org.vitrivr.adampro.main.SharedComponentContext
 
 /**
   * ADAMpar.
@@ -33,8 +33,8 @@ abstract class CustomPartitioner {
     * @param nPartitions how many partitions shall be created
     * @return the partitioned DataFrame
     */
-  def apply(data: DataFrame, attribute: Option[AttributeName] = None, indexName: Option[EntityNameHolder] = None, nPartitions: Int, options: Map[String, String] = Map[String, String]())(implicit ac: AdamContext): DataFrame
+  def apply(data: DataFrame, attribute: Option[AttributeName] = None, indexName: Option[EntityNameHolder] = None, nPartitions: Int, options: Map[String, String] = Map[String, String]())(implicit ac: SharedComponentContext): DataFrame
 
   /** Returns the partitions to be queried for a given Featurevector */
-  def getPartitions(q: MathVector, dropPercentage: Double, indexName: EntityNameHolder)(implicit ac: AdamContext): Seq[Int]
+  def getPartitions(q: MathVector, dropPercentage: Double, indexName: EntityNameHolder)(implicit ac: SharedComponentContext): Seq[Int]
 }

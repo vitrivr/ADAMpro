@@ -7,7 +7,7 @@ import org.apache.spark.sql.types.{StructField, StructType}
 import org.vitrivr.adampro.datatypes.AttributeTypes
 import org.vitrivr.adampro.datatypes.AttributeTypes.AttributeType
 import org.vitrivr.adampro.entity.AttributeDefinition
-import org.vitrivr.adampro.main.AdamContext
+import org.vitrivr.adampro.main.SharedComponentContext
 import org.vitrivr.adampro.query.query.Predicate
 import org.apache.spark.sql.{DataFrame, Row, SaveMode}
 import spire.syntax.field
@@ -20,7 +20,7 @@ import scala.util.{Failure, Success, Try}
   * Ivan Giangreco
   * September 2016
   */
-class PostgisEngine(private val url: String, private val user: String, private val password: String)(@transient override implicit val ac: AdamContext) extends PostgresqlEngine(url, user, password, "public")(ac) {
+class PostgisEngine(private val url: String, private val user: String, private val password: String)(@transient override implicit val ac: SharedComponentContext) extends PostgresqlEngine(url, user, password, "public")(ac) {
   //TODO: gis functions only available in the public schema
 
   override val name: String = "postgis"
@@ -35,7 +35,7 @@ class PostgisEngine(private val url: String, private val user: String, private v
     *
     * @param props
     */
-  def this(props: Map[String, String])(implicit ac: AdamContext) {
+  def this(props: Map[String, String])(implicit ac: SharedComponentContext) {
     this(props.get("url").get, props.get("user").get, props.get("password").get)(ac)
   }
 
@@ -59,7 +59,7 @@ class PostgisEngine(private val url: String, private val user: String, private v
     * @param params     creation parameters
     * @return options to store
     */
-  override def create(storename: String, attributes: Seq[AttributeDefinition], params: Map[String, String])(implicit ac: AdamContext): Try[Map[String, String]] = {
+  override def create(storename: String, attributes: Seq[AttributeDefinition], params: Map[String, String])(implicit ac: SharedComponentContext): Try[Map[String, String]] = {
     log.debug("postgis create operation")
 
     super.create(storename, attributes, params)(ac)
@@ -115,7 +115,7 @@ class PostgisEngine(private val url: String, private val user: String, private v
     * @param params     reading parameters
     * @return
     */
-  override def read(storename: String, attributes: Seq[AttributeDefinition], predicates: Seq[Predicate], params: Map[String, String])(implicit ac: AdamContext): Try[DataFrame] = {
+  override def read(storename: String, attributes: Seq[AttributeDefinition], predicates: Seq[Predicate], params: Map[String, String])(implicit ac: SharedComponentContext): Try[DataFrame] = {
     log.debug("postgresql read operation")
 
     val query = params.getOrElse("query", "*")
@@ -152,7 +152,7 @@ class PostgisEngine(private val url: String, private val user: String, private v
     * @param params     writing parameters
     * @return new options to store
     */
-  override def write(storename: String, df: DataFrame, attributes: Seq[AttributeDefinition], mode: SaveMode = SaveMode.Append, params: Map[String, String])(implicit ac: AdamContext): Try[Map[String, String]] = {
+  override def write(storename: String, df: DataFrame, attributes: Seq[AttributeDefinition], mode: SaveMode = SaveMode.Append, params: Map[String, String])(implicit ac: SharedComponentContext): Try[Map[String, String]] = {
     log.debug("postgresql write operation")
 
     try {

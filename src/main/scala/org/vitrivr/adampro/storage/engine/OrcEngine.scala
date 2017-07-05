@@ -10,7 +10,7 @@ import org.vitrivr.adampro.config.AdamConfig
 import org.vitrivr.adampro.datatypes.AttributeTypes
 import org.vitrivr.adampro.entity.AttributeDefinition
 import org.vitrivr.adampro.exception.GeneralAdamException
-import org.vitrivr.adampro.main.AdamContext
+import org.vitrivr.adampro.main.SharedComponentContext
 import org.vitrivr.adampro.query.query.Predicate
 import org.vitrivr.adampro.utils.Logging
 
@@ -22,7 +22,7 @@ import scala.util.{Failure, Success, Try}
   * Ivan Giangreco
   * November 2016
   */
-class OrcEngine(@transient override implicit val ac: AdamContext) extends Engine()(ac) with Logging with Serializable {
+class OrcEngine(@transient override implicit val ac: SharedComponentContext) extends Engine()(ac) with Logging with Serializable {
   override val name = "orc"
 
   override def supports = Seq(AttributeTypes.AUTOTYPE, AttributeTypes.INTTYPE, AttributeTypes.LONGTYPE, AttributeTypes.FLOATTYPE, AttributeTypes.DOUBLETYPE, AttributeTypes.STRINGTYPE, AttributeTypes.TEXTTYPE, AttributeTypes.BOOLEANTYPE, AttributeTypes.GEOGRAPHYTYPE, AttributeTypes.GEOMETRYTYPE, AttributeTypes.VECTORTYPE, AttributeTypes.SPARSEVECTORTYPE)
@@ -37,7 +37,7 @@ class OrcEngine(@transient override implicit val ac: AdamContext) extends Engine
     *
     * @param props
     */
-  def this(props: Map[String, String])(implicit ac: AdamContext) {
+  def this(props: Map[String, String])(implicit ac: SharedComponentContext) {
     this()(ac)
     if (props.get("hadoop").getOrElse("false").toBoolean) {
       subengine = new OrcHadoopStorage(AdamConfig.cleanPath(props.get("basepath").get), props.get("datapath").get)
@@ -54,7 +54,7 @@ class OrcEngine(@transient override implicit val ac: AdamContext) extends Engine
     * @param params     creation parameters
     * @return options to store
     */
-  override def create(storename: String, attributes: Seq[AttributeDefinition], params: Map[String, String])(implicit ac: AdamContext): Try[Map[String, String]] = {
+  override def create(storename: String, attributes: Seq[AttributeDefinition], params: Map[String, String])(implicit ac: SharedComponentContext): Try[Map[String, String]] = {
     log.debug("orc create operation")
     Success(Map())
   }
@@ -65,7 +65,7 @@ class OrcEngine(@transient override implicit val ac: AdamContext) extends Engine
     * @param storename adapted entityname to store feature to
     * @return
     */
-  override def exists(storename: String)(implicit ac: AdamContext): Try[Boolean] = {
+  override def exists(storename: String)(implicit ac: SharedComponentContext): Try[Boolean] = {
     log.debug("orc exists operation")
     subengine.exists(storename)
   }
@@ -79,7 +79,7 @@ class OrcEngine(@transient override implicit val ac: AdamContext) extends Engine
     * @param params     reading parameters
     * @return
     */
-  override def read(storename: String, attributes: Seq[AttributeDefinition], predicates: Seq[Predicate], params: Map[String, String])(implicit ac: AdamContext): Try[DataFrame] = {
+  override def read(storename: String, attributes: Seq[AttributeDefinition], predicates: Seq[Predicate], params: Map[String, String])(implicit ac: SharedComponentContext): Try[DataFrame] = {
     log.debug("orc read operation")
 
     try {
@@ -107,7 +107,7 @@ class OrcEngine(@transient override implicit val ac: AdamContext) extends Engine
     * @param params     writing parameters
     * @return new options to store
     */
-  override def write(storename: String, df: DataFrame, attributes: Seq[AttributeDefinition], mode: SaveMode = SaveMode.Append, params: Map[String, String])(implicit ac: AdamContext): Try[Map[String, String]] = {
+  override def write(storename: String, df: DataFrame, attributes: Seq[AttributeDefinition], mode: SaveMode = SaveMode.Append, params: Map[String, String])(implicit ac: SharedComponentContext): Try[Map[String, String]] = {
     log.debug("orc write operation")
     val allowRepartitioning = params.getOrElse("allowRepartitioning", "false").toBoolean
 
@@ -141,7 +141,7 @@ class OrcEngine(@transient override implicit val ac: AdamContext) extends Engine
     * @param storename adapted entityname to store feature to
     * @return
     */
-  def drop(storename: String)(implicit ac: AdamContext): Try[Void] = {
+  def drop(storename: String)(implicit ac: SharedComponentContext): Try[Void] = {
     log.debug("orc drop operation")
     subengine.drop(storename)
   }
@@ -159,13 +159,13 @@ class OrcEngine(@transient override implicit val ac: AdamContext) extends Engine
   *
   */
 trait GenericOrcEngine extends Logging with Serializable {
-  def read(filename: String)(implicit ac: AdamContext): Try[DataFrame]
+  def read(filename: String)(implicit ac: SharedComponentContext): Try[DataFrame]
 
-  def write(filename: String, df: DataFrame, mode: SaveMode = SaveMode.Append)(implicit ac: AdamContext): Try[Void]
+  def write(filename: String, df: DataFrame, mode: SaveMode = SaveMode.Append)(implicit ac: SharedComponentContext): Try[Void]
 
-  def exists(path: String)(implicit ac: AdamContext): Try[Boolean]
+  def exists(path: String)(implicit ac: SharedComponentContext): Try[Boolean]
 
-  def drop(path: String)(implicit ac: AdamContext): Try[Void]
+  def drop(path: String)(implicit ac: SharedComponentContext): Try[Void]
 }
 
 
@@ -191,7 +191,7 @@ class OrcHadoopStorage(private val basepath: String, private val datapath: Strin
     * @param filename
     * @return
     */
-  def read(filename: String)(implicit ac: AdamContext): Try[DataFrame] = {
+  def read(filename: String)(implicit ac: SharedComponentContext): Try[DataFrame] = {
     try {
       if (!exists(filename).get) {
         throw new GeneralAdamException("no file found at " + fullHadoopPath)
@@ -210,7 +210,7 @@ class OrcHadoopStorage(private val basepath: String, private val datapath: Strin
     * @param mode
     * @return
     */
-  def write(filename: String, df: DataFrame, mode: SaveMode = SaveMode.Append)(implicit ac: AdamContext): Try[Void] = {
+  def write(filename: String, df: DataFrame, mode: SaveMode = SaveMode.Append)(implicit ac: SharedComponentContext): Try[Void] = {
     try {
       df.write.mode(mode).orc(fullHadoopPath + filename)
       Success(null)
@@ -225,7 +225,7 @@ class OrcHadoopStorage(private val basepath: String, private val datapath: Strin
     * @param filename
     * @return
     */
-  override def drop(filename: String)(implicit ac: AdamContext): Try[Void] = {
+  override def drop(filename: String)(implicit ac: SharedComponentContext): Try[Void] = {
     try {
       val hdfs = FileSystem.get(new Path(datapath).toUri, hadoopConf)
       val drop = hdfs.delete(new Path(datapath, filename), true)
@@ -246,7 +246,7 @@ class OrcHadoopStorage(private val basepath: String, private val datapath: Strin
     * @param filename
     * @return
     */
-  override def exists(filename: String)(implicit ac: AdamContext): Try[Boolean] = {
+  override def exists(filename: String)(implicit ac: SharedComponentContext): Try[Boolean] = {
     try {
       val hdfs = FileSystem.get(new Path(datapath).toUri, hadoopConf)
       val exists = hdfs.exists(new Path(datapath, filename))
@@ -288,7 +288,7 @@ class OrcLocalEngine(private val path: String) extends GenericOrcEngine with Log
     * @param filename
     * @return
     */
-  def read(filename: String)(implicit ac: AdamContext): Try[DataFrame] = {
+  def read(filename: String)(implicit ac: SharedComponentContext): Try[DataFrame] = {
     try {
       if (!exists(filename).get) {
         throw new GeneralAdamException("no file found at " + path + filename)
@@ -307,7 +307,7 @@ class OrcLocalEngine(private val path: String) extends GenericOrcEngine with Log
     * @param mode
     * @return
     */
-  def write(filename: String, df: DataFrame, mode: SaveMode = SaveMode.Append)(implicit ac: AdamContext): Try[Void] = {
+  def write(filename: String, df: DataFrame, mode: SaveMode = SaveMode.Append)(implicit ac: SharedComponentContext): Try[Void] = {
     try {
       df.write.mode(mode).orc(sparkPath + filename)
       Success(null)
@@ -322,7 +322,7 @@ class OrcLocalEngine(private val path: String) extends GenericOrcEngine with Log
     * @param filename
     * @return
     */
-  override def drop(filename: String)(implicit ac: AdamContext): Try[Void] = {
+  override def drop(filename: String)(implicit ac: SharedComponentContext): Try[Void] = {
     try {
       FileUtils.deleteDirectory(new File(path, filename))
       Success(null)
@@ -336,7 +336,7 @@ class OrcLocalEngine(private val path: String) extends GenericOrcEngine with Log
     * @param filename
     * @return
     */
-  override def exists(filename: String)(implicit ac: AdamContext): Try[Boolean] = {
+  override def exists(filename: String)(implicit ac: SharedComponentContext): Try[Boolean] = {
     try {
       Success(new File(path, filename).exists())
     } catch {

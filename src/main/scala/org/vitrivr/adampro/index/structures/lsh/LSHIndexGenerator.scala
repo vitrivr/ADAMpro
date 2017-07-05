@@ -12,11 +12,11 @@ import org.vitrivr.adampro.index._
 import org.vitrivr.adampro.index.structures.IndexTypes
 import org.vitrivr.adampro.index.structures.lsh.hashfunction.{EuclideanHashFunction, HammingHashFunction, Hasher, ManhattanHashFunction}
 import org.vitrivr.adampro.index.structures.lsh.signature.LSHSignatureGenerator
-import org.vitrivr.adampro.main.AdamContext
+import org.vitrivr.adampro.main.SharedComponentContext
 import org.vitrivr.adampro.query.distance.{DistanceFunction, EuclideanDistance, HammingDistance, ManhattanDistance}
 
 
-class LSHIndexGenerator(numHashTables: Int, numHashes: Int, m: Int, distance: DistanceFunction, trainingSize: Int)(@transient implicit val ac: AdamContext) extends IndexGenerator {
+class LSHIndexGenerator(numHashTables: Int, numHashes: Int, m: Int, distance: DistanceFunction, trainingSize: Int)(@transient implicit val ac: SharedComponentContext) extends IndexGenerator {
   override val indextypename: IndexTypeName = IndexTypes.LSHINDEX
 
   /**
@@ -81,7 +81,7 @@ class LSHIndexGeneratorFactory extends IndexGeneratorFactory {
     * @param distance   distance function
     * @param properties indexing properties
     */
-  def getIndexGenerator(distance: DistanceFunction, properties: Map[String, String] = Map[String, String]())(implicit ac: AdamContext): IndexGenerator = {
+  def getIndexGenerator(distance: DistanceFunction, properties: Map[String, String] = Map[String, String]())(implicit ac: SharedComponentContext): IndexGenerator = {
     if(distance != ManhattanDistance && distance != EuclideanDistance && distance != HammingDistance){
       throw new QueryNotConformException("LSH index only supports Manhattan, Euclidean and Hamming distance")
     }

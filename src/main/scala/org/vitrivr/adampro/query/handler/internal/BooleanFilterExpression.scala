@@ -3,7 +3,7 @@ package org.vitrivr.adampro.query.handler.internal
 import org.vitrivr.adampro.config.AttributeNames
 import org.vitrivr.adampro.entity.Entity
 import org.vitrivr.adampro.entity.Entity._
-import org.vitrivr.adampro.main.AdamContext
+import org.vitrivr.adampro.main.SharedComponentContext
 import org.vitrivr.adampro.query.handler.generic.{ExpressionDetails, QueryEvaluationOptions, QueryExpression}
 import org.vitrivr.adampro.query.query.BooleanQuery
 import org.vitrivr.adampro.utils.Logging
@@ -26,15 +26,15 @@ object BooleanFilterExpression extends Logging {
     * @param entity entity
     * @param bq     boolean query
     */
-  case class BooleanFilterScanExpression(private val entity: Entity)(private val bq: BooleanQuery, id: Option[String] = None)(filterExpr: Option[QueryExpression] = None)(@transient implicit val ac: AdamContext) extends QueryExpression(id) {
+  case class BooleanFilterScanExpression(private val entity: Entity)(private val bq: BooleanQuery, id: Option[String] = None)(filterExpr: Option[QueryExpression] = None)(@transient implicit val ac: SharedComponentContext) extends QueryExpression(id) {
     override val info = ExpressionDetails(Some(entity.entityname), Some("Table Boolean-Scan Expression"), id, None)
     _children ++= filterExpr.map(Seq(_)).getOrElse(Seq())
 
-    def this(entityname: EntityName)(bq: BooleanQuery, id: Option[String])(filterExpr: Option[QueryExpression])(implicit ac: AdamContext) {
+    def this(entityname: EntityName)(bq: BooleanQuery, id: Option[String])(filterExpr: Option[QueryExpression])(implicit ac: SharedComponentContext) {
       this(Entity.load(entityname).get)(bq, id)(filterExpr)(ac)
     }
 
-    override protected def run(options : Option[QueryEvaluationOptions], filter: Option[DataFrame] = None)(tracker : OperationTracker)(implicit ac: AdamContext): Option[DataFrame] = {
+    override protected def run(options : Option[QueryEvaluationOptions], filter: Option[DataFrame] = None)(tracker : OperationTracker)(implicit ac: SharedComponentContext): Option[DataFrame] = {
       log.debug("run boolean filter operation on entity")
 
       ac.sc.setJobGroup(id.getOrElse(""), "boolean filter scan", interruptOnCancel = true)
@@ -103,11 +103,11 @@ object BooleanFilterExpression extends Logging {
     *
     * @param bq boolean query
     */
-  case class BooleanFilterAdHocExpression(expr: QueryExpression, bq: BooleanQuery, id: Option[String] = None)(implicit ac: AdamContext) extends QueryExpression(id) {
+  case class BooleanFilterAdHocExpression(expr: QueryExpression, bq: BooleanQuery, id: Option[String] = None)(implicit ac: SharedComponentContext) extends QueryExpression(id) {
     override val info = ExpressionDetails(None, Some("Ad-Hoc Boolean-Scan Expression"), id, None)
     _children ++= Seq(expr)
 
-    override protected def run(options : Option[QueryEvaluationOptions], filter: Option[DataFrame] = None)(tracker : OperationTracker)(implicit ac: AdamContext): Option[DataFrame] = {
+    override protected def run(options : Option[QueryEvaluationOptions], filter: Option[DataFrame] = None)(tracker : OperationTracker)(implicit ac: SharedComponentContext): Option[DataFrame] = {
       log.debug("run boolean filter operation on data")
 
       ac.sc.setJobGroup(id.getOrElse(""), "boolean filter scan", interruptOnCancel = true)
@@ -147,7 +147,7 @@ object BooleanFilterExpression extends Logging {
     * @param bq boolean query
     * @return
     */
-  def filter(df: DataFrame, bq: BooleanQuery)(implicit ac: AdamContext): DataFrame = {
+  def filter(df: DataFrame, bq: BooleanQuery)(implicit ac: SharedComponentContext): DataFrame = {
     log.debug("filter using boolean query filter")
     var data = df
 

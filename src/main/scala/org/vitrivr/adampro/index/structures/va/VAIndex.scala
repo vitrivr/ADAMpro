@@ -10,7 +10,7 @@ import org.vitrivr.adampro.index.Index.{IndexName, IndexTypeName}
 import org.vitrivr.adampro.index.structures.IndexTypes
 import org.vitrivr.adampro.index.structures.va.VAIndex.{Bounds, Marks}
 import org.vitrivr.adampro.index.structures.va.signature.{FixedSignatureGenerator, VariableSignatureGenerator}
-import org.vitrivr.adampro.main.AdamContext
+import org.vitrivr.adampro.main.SharedComponentContext
 import org.vitrivr.adampro.query.distance.Distance._
 import org.vitrivr.adampro.query.distance.{DistanceFunction, MinkowskiDistance}
 import org.vitrivr.adampro.query.query.NearestNeighbourQuery
@@ -24,7 +24,7 @@ import org.vitrivr.adampro.helpers.tracker.OperationTracker
   * Ivan Giangreco
   * August 2015
   */
-class VAIndex(override val indexname: IndexName)(@transient override implicit val ac: AdamContext)
+class VAIndex(override val indexname: IndexName)(@transient override implicit val ac: SharedComponentContext)
   extends Index(indexname)(ac) {
 
   val meta = metadata.get.asInstanceOf[VAIndexMetaData]

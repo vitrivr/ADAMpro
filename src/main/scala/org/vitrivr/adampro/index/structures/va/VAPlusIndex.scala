@@ -7,7 +7,7 @@ import org.vitrivr.adampro.datatypes.vector.Vector._
 import org.vitrivr.adampro.helpers.tracker.OperationTracker
 import org.vitrivr.adampro.index.Index._
 import org.vitrivr.adampro.index.structures.IndexTypes
-import org.vitrivr.adampro.main.AdamContext
+import org.vitrivr.adampro.main.SharedComponentContext
 import org.vitrivr.adampro.query.distance.DistanceFunction
 
 /**
@@ -18,7 +18,7 @@ import org.vitrivr.adampro.query.distance.DistanceFunction
   *
   * see H. Ferhatosmanoglu, E. Tuncel, D. Agrawal, A. El Abbadi (2006): High dimensional nearest neighbor searching. Information Systems.
   */
-class VAPlusIndex(override val indexname: IndexName)(@transient override implicit val ac: AdamContext) extends VAIndex(indexname)(ac) {
+class VAPlusIndex(override val indexname: IndexName)(@transient override implicit val ac: SharedComponentContext) extends VAIndex(indexname)(ac) {
   override lazy val indextypename: IndexTypeName = IndexTypes.VAPLUSINDEX
 
   override lazy val lossy: Boolean = meta.asInstanceOf[VAPlusIndexMetaData].approximate

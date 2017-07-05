@@ -24,7 +24,7 @@ import scala.collection.mutable
   * April 2016
   */
 @implicitNotFound("Cannot find an implicit AdamContext, either import SparkStartup.Implicits._ or use a custom one")
-trait AdamContext extends Serializable {
+trait SharedComponentContext extends Serializable {
   val spark : SparkSession
   def sc : SparkContext
   def sqlContext : SQLContext

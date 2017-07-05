@@ -5,7 +5,7 @@ import java.sql.{Connection, DriverManager}
 import org.vitrivr.adampro.api.{EntityOp, IndexOp}
 import org.vitrivr.adampro.datatypes.AttributeTypes
 import org.vitrivr.adampro.entity.AttributeDefinition
-import org.vitrivr.adampro.main.AdamContext
+import org.vitrivr.adampro.main.SharedComponentContext
 import org.vitrivr.adampro.query.distance.NormBasedDistance
 import org.apache.spark.annotation.Experimental
 import org.apache.spark.sql.jdbc.AdamDialectRegistrar
@@ -35,7 +35,7 @@ class AdamImporter(url: String, user: String, password: String) extends Logging 
   private val attributeRenamingRules = Seq(("shotid" -> "id"), ("video" -> "multimediaobject"), ("startframe" -> "segmentstart"), ("endframe" -> "segmentend"), ("frames" -> "framecount"), ("seconds" -> "duration"), ("number" -> "sequencenumber"))
   private val attributeCasting = Seq(("id" -> DataTypes.StringType), ("multimediaobject" -> DataTypes.StringType))
 
-  def importTable(schemaname: String, tablename: String, newtablename: String)(implicit ac: AdamContext) {
+  def importTable(schemaname: String, tablename: String, newtablename: String)(implicit ac: SharedComponentContext) {
     try {
       log.info("importing table " + tablename)
 
@@ -138,7 +138,7 @@ class AdamImporter(url: String, user: String, password: String) extends Logging 
 }
 
 object AdamImporter {
-  def apply(host: String, database: String, username: String, password: String)(implicit ac: AdamContext): Try[Void] = {
+  def apply(host: String, database: String, username: String, password: String)(implicit ac: SharedComponentContext): Try[Void] = {
     try {
       val importer = new AdamImporter("jdbc:postgresql://" + host + "/" + database, username, password)
 

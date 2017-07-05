@@ -7,7 +7,7 @@ import org.vitrivr.adampro.entity.Entity.AttributeName
 import org.vitrivr.adampro.entity.EntityNameHolder
 import org.vitrivr.adampro.index.Index
 import org.vitrivr.adampro.index.Index.IndexName
-import org.vitrivr.adampro.main.{AdamContext, SparkStartup}
+import org.vitrivr.adampro.main.{SharedComponentContext, SparkStartup}
 import org.vitrivr.adampro.utils.Logging
 
 import scala.util.Random
@@ -41,7 +41,7 @@ object RandomPartitioner extends CustomPartitioner {
     * @param nPartitions how many partitions shall be created
     * @return the partitioned DataFrame
     */
-  override def apply(data: DataFrame, attribute: Option[AttributeName], indexName: Option[IndexName], nPartitions: Int, options: Map[String, String] = Map[String, String]())(implicit ac: AdamContext): DataFrame = {
+  override def apply(data: DataFrame, attribute: Option[AttributeName], indexName: Option[IndexName], nPartitions: Int, options: Map[String, String] = Map[String, String]())(implicit ac: SharedComponentContext): DataFrame = {
     import ac.spark.implicits._
 
     val schema = data.schema
@@ -54,7 +54,7 @@ object RandomPartitioner extends CustomPartitioner {
   /** Returns the partitions to be queried for a given Feature vector
     * Returns Random Partitions
     * */
-  override def getPartitions(q: MathVector, dropPercentage: Double, indexName: EntityNameHolder)(implicit ac: AdamContext): Seq[Int] = {
+  override def getPartitions(q: MathVector, dropPercentage: Double, indexName: EntityNameHolder)(implicit ac: SharedComponentContext): Seq[Int] = {
     val nPart = SparkStartup.catalogOperator.getNumberOfPartitions(indexName).get
     Random.shuffle(Seq.tabulate(nPart)(el => el)).drop((nPart * dropPercentage).toInt)
   }

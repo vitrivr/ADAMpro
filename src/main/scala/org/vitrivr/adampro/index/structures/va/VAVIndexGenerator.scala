@@ -12,7 +12,7 @@ import org.vitrivr.adampro.index.structures.IndexTypes
 import org.vitrivr.adampro.index.structures.va.marks.{EquidistantMarksGenerator, EquifrequentMarksGenerator, MarksGenerator}
 import org.vitrivr.adampro.index.structures.va.signature.VariableSignatureGenerator
 import org.vitrivr.adampro.index.{IndexGenerator, IndexGeneratorFactory, IndexingTaskTuple, ParameterInfo}
-import org.vitrivr.adampro.main.AdamContext
+import org.vitrivr.adampro.main.SharedComponentContext
 import org.vitrivr.adampro.query.distance.{DistanceFunction, MinkowskiDistance}
 
 /**
@@ -24,7 +24,7 @@ import org.vitrivr.adampro.query.distance.{DistanceFunction, MinkowskiDistance}
   * VAV: this VA-File index will have a training phase in which we learn the number of bits per dimension (new version of VA-File)
   * note that using VAF, we may still use both the equidistant or the equifrequent marks generator
   */
-class VAVIndexGenerator(nbits_total: Option[Int], nbits_dim : Option[Int], marksGenerator: MarksGenerator, trainingSize: Int, distance: MinkowskiDistance)(@transient implicit val ac: AdamContext) extends IndexGenerator {
+class VAVIndexGenerator(nbits_total: Option[Int], nbits_dim : Option[Int], marksGenerator: MarksGenerator, trainingSize: Int, distance: MinkowskiDistance)(@transient implicit val ac: SharedComponentContext) extends IndexGenerator {
   override val indextypename: IndexTypeName = IndexTypes.VAVINDEX
 
   assert(!(nbits_total.isDefined && nbits_dim.isDefined))
@@ -101,7 +101,7 @@ class VAVIndexGeneratorFactory extends IndexGeneratorFactory {
     * @param distance   distance function
     * @param properties indexing properties
     */
-  def getIndexGenerator(distance: DistanceFunction, properties: Map[String, String] = Map[String, String]())(implicit ac: AdamContext): IndexGenerator = {
+  def getIndexGenerator(distance: DistanceFunction, properties: Map[String, String] = Map[String, String]())(implicit ac: SharedComponentContext): IndexGenerator = {
     if (!distance.isInstanceOf[MinkowskiDistance]) {
       throw new QueryNotConformException("VAF index only supports Minkowski distance")
     }

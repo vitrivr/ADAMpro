@@ -11,7 +11,7 @@ import org.vitrivr.adampro.config.AdamConfig
 import org.vitrivr.adampro.datatypes.AttributeTypes
 import org.vitrivr.adampro.datatypes.vector.Vector.MathVector
 import org.vitrivr.adampro.entity.{AttributeDefinition, Entity}
-import org.vitrivr.adampro.main.{AdamContext, SparkStartup}
+import org.vitrivr.adampro.main.{SharedComponentContext, SparkStartup}
 import org.vitrivr.adampro.query.distance.{ManhattanDistance, MinkowskiDistance}
 import org.vitrivr.adampro.query.query.Predicate
 import org.vitrivr.adampro.utils.Logging
@@ -28,7 +28,7 @@ import scala.util.Random
   */
 class AdamTestBase extends FeatureSpec with GivenWhenThen with Eventually with IntegrationPatience with Logging {
   val startup = SparkStartup
-  implicit val ac: AdamContext = startup.mainContext
+  implicit val ac: SharedComponentContext = startup.mainContext
 
   /**
     * Precision

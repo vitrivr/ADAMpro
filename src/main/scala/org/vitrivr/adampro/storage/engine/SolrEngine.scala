@@ -11,7 +11,7 @@ import org.vitrivr.adampro.datatypes.AttributeTypes
 import org.vitrivr.adampro.datatypes.AttributeTypes.AttributeType
 import org.vitrivr.adampro.entity.AttributeDefinition
 import org.vitrivr.adampro.entity.Entity.AttributeName
-import org.vitrivr.adampro.main.AdamContext
+import org.vitrivr.adampro.main.SharedComponentContext
 import org.vitrivr.adampro.query.query.Predicate
 import org.vitrivr.adampro.utils.Logging
 
@@ -23,7 +23,7 @@ import scala.util.{Failure, Success, Try}
   * Ivan Giangreco
   * September 2016
   */
-class SolrEngine(private val url: String)(@transient override implicit val ac: AdamContext) extends Engine()(ac) with Logging with Serializable {
+class SolrEngine(private val url: String)(@transient override implicit val ac: SharedComponentContext) extends Engine()(ac) with Logging with Serializable {
   override val name: String = "solr"
 
   override def supports = Seq(AttributeTypes.AUTOTYPE, AttributeTypes.INTTYPE, AttributeTypes.LONGTYPE, AttributeTypes.FLOATTYPE, AttributeTypes.DOUBLETYPE, AttributeTypes.STRINGTYPE, AttributeTypes.TEXTTYPE, AttributeTypes.BOOLEANTYPE)
@@ -41,7 +41,7 @@ class SolrEngine(private val url: String)(@transient override implicit val ac: A
     *
     * @param props
     */
-  def this(props: Map[String, String])(implicit ac: AdamContext) {
+  def this(props: Map[String, String])(implicit ac: SharedComponentContext) {
     this(props.get("url").get)(ac)
   }
 
@@ -54,7 +54,7 @@ class SolrEngine(private val url: String)(@transient override implicit val ac: A
     * @param params     creation parameters
     * @return
     */
-  override def create(storename: String, attributes: Seq[AttributeDefinition], params: Map[String, String])(implicit ac: AdamContext): Try[Map[String, String]] = {
+  override def create(storename: String, attributes: Seq[AttributeDefinition], params: Map[String, String])(implicit ac: SharedComponentContext): Try[Map[String, String]] = {
     val client = new HttpSolrClient(url)
 
     try {
@@ -77,7 +77,7 @@ class SolrEngine(private val url: String)(@transient override implicit val ac: A
     * @param storename adapted entityname to store feature to
     * @return
     */
-  override def exists(storename: String)(implicit ac: AdamContext): Try[Boolean] = {
+  override def exists(storename: String)(implicit ac: SharedComponentContext): Try[Boolean] = {
     log.debug("solr exists operation")
 
     try {
@@ -133,7 +133,7 @@ class SolrEngine(private val url: String)(@transient override implicit val ac: A
     * @param params     reading parameters
     * @return
     */
-  override def read(storename: String, attributes: Seq[AttributeDefinition], predicates: Seq[Predicate], params: Map[String, String])(implicit ac: AdamContext): Try[DataFrame] = {
+  override def read(storename: String, attributes: Seq[AttributeDefinition], predicates: Seq[Predicate], params: Map[String, String])(implicit ac: SharedComponentContext): Try[DataFrame] = {
     try {
       val client = new HttpSolrClient(url + "/" + storename)
       val nameDicAttributenameToSolrname = attributes.map(attribute => attribute.name -> (attribute.name + getSuffix(attribute.attributeType))).toMap
@@ -252,7 +252,7 @@ class SolrEngine(private val url: String)(@transient override implicit val ac: A
     * @param params     writing parameters
     * @return new options to store
     */
-  override def write(storename: String, df: DataFrame, attributes: Seq[AttributeDefinition], mode: SaveMode = SaveMode.Append, params: Map[String, String])(implicit ac: AdamContext): Try[Map[String, String]] = {
+  override def write(storename: String, df: DataFrame, attributes: Seq[AttributeDefinition], mode: SaveMode = SaveMode.Append, params: Map[String, String])(implicit ac: SharedComponentContext): Try[Map[String, String]] = {
     val pk = attributes.filter(_.pk).head
 
     df.foreachPartition {
@@ -285,7 +285,7 @@ class SolrEngine(private val url: String)(@transient override implicit val ac: A
     * @param storename adapted entityname to store feature to
     * @return
     */
-  override def drop(storename: String)(implicit ac: AdamContext): Try[Void] = {
+  override def drop(storename: String)(implicit ac: SharedComponentContext): Try[Void] = {
     val client = new HttpSolrClient(url)
 
     client.deleteByQuery(storename.toString, "*:*")

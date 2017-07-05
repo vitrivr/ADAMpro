@@ -12,7 +12,7 @@ import org.vitrivr.adampro.datatypes.{AttributeTypes, TupleID}
 import org.vitrivr.adampro.entity.Entity.{AttributeName, EntityName}
 import org.vitrivr.adampro.exception.{EntityExistingException, EntityNotExistingException, EntityNotProperlyDefinedException, GeneralAdamException}
 import org.vitrivr.adampro.index.Index
-import org.vitrivr.adampro.main.{AdamContext, SparkStartup}
+import org.vitrivr.adampro.main.{SharedComponentContext, SparkStartup}
 import org.vitrivr.adampro.query.query.Predicate
 import org.vitrivr.adampro.storage.StorageHandler
 import org.vitrivr.adampro.storage.engine.ParquetEngine
@@ -28,7 +28,7 @@ import scala.util.{Failure, Success, Try}
   * Ivan Giangreco
   * October 2015
   */
-case class Entity(entityname: EntityName)(@transient implicit val ac: AdamContext) extends Serializable with Logging {
+case class Entity(entityname: EntityName)(@transient implicit val ac: SharedComponentContext) extends Serializable with Logging {
   private val mostRecentVersion = this.synchronized {
     if (!ac.entityVersion.contains(entityname)) {
       ac.entityVersion.+=(entityname.toString -> ac.sc.longAccumulator(entityname.toString + "-version"))
@@ -216,7 +216,7 @@ case class Entity(entityname: EntityName)(@transient implicit val ac: AdamContex
     * @param attribute attribute that is indexed
     * @return
     */
-  def getAttributeData(attribute: String)(implicit ac: AdamContext): Option[DataFrame] = getData(Some(Seq(pk.name, attribute)))
+  def getAttributeData(attribute: String)(implicit ac: SharedComponentContext): Option[DataFrame] = getData(Some(Seq(pk.name, attribute)))
 
   /**
     * Caches the data.
@@ -603,7 +603,7 @@ object Entity extends Logging {
     * @param entityname name of entity
     * @return
     */
-  def exists(entityname: EntityName)(implicit ac: AdamContext): Boolean = {
+  def exists(entityname: EntityName)(implicit ac: SharedComponentContext): Boolean = {
     val res = SparkStartup.catalogOperator.existsEntity(entityname)
 
     if (res.isFailure) {
@@ -621,7 +621,7 @@ object Entity extends Logging {
     * @param ifNotExists        if set to true and the entity exists, the entity is just returned; otherwise an error is thrown
     * @return
     */
-  def create(entityname: EntityName, creationAttributes: Seq[AttributeDefinition], ifNotExists: Boolean = false)(implicit ac: AdamContext): Try[Entity] = {
+  def create(entityname: EntityName, creationAttributes: Seq[AttributeDefinition], ifNotExists: Boolean = false)(implicit ac: SharedComponentContext): Try[Entity] = {
     try {
       //checks
       if (exists(entityname)) {
@@ -685,7 +685,7 @@ object Entity extends Logging {
     *
     * @return name of entities
     */
-  def list(implicit ac: AdamContext): Seq[EntityName] = SparkStartup.catalogOperator.listEntities().get
+  def list(implicit ac: SharedComponentContext): Seq[EntityName] = SparkStartup.catalogOperator.listEntities().get
 
 
   /**
@@ -694,7 +694,7 @@ object Entity extends Logging {
     * @param entityname name of entity
     * @return
     */
-  def load(entityname: EntityName, cache: Boolean = false)(implicit ac: AdamContext): Try[Entity] = {
+  def load(entityname: EntityName, cache: Boolean = false)(implicit ac: SharedComponentContext): Try[Entity] = {
     val entity = ac.entityLRUCache.get(entityname)
 
     if (cache) {
@@ -711,7 +711,7 @@ object Entity extends Logging {
     * @param entityname name of entity
     * @return
     */
-  private[entity] def loadEntityMetaData(entityname: EntityName)(implicit ac: AdamContext): Try[Entity] = {
+  private[entity] def loadEntityMetaData(entityname: EntityName)(implicit ac: SharedComponentContext): Try[Entity] = {
     if (!exists(entityname)) {
       return Failure(EntityNotExistingException.withEntityname(entityname))
     }
@@ -731,7 +731,7 @@ object Entity extends Logging {
     * @param ifExists   if set to true, no error is raised if entity does not exist
     * @return
     */
-  def drop(entityname: EntityName, ifExists: Boolean = false)(implicit ac: AdamContext): Try[Void] = {
+  def drop(entityname: EntityName, ifExists: Boolean = false)(implicit ac: SharedComponentContext): Try[Void] = {
     try {
       if (!exists(entityname)) {
         if (!ifExists) {

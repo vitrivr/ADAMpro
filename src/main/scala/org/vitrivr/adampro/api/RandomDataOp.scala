@@ -10,7 +10,7 @@ import org.vitrivr.adampro.datatypes.vector.Vector._
 import org.vitrivr.adampro.entity.Entity
 import org.vitrivr.adampro.entity.Entity.EntityName
 import org.vitrivr.adampro.exception.GeneralAdamException
-import org.vitrivr.adampro.main.AdamContext
+import org.vitrivr.adampro.main.SharedComponentContext
 
 import scala.collection.mutable.ListBuffer
 import scala.util.{Random, Success, Try}
@@ -32,7 +32,7 @@ object RandomDataOp extends GenericOp {
     * @param ntuples    size of collection to generate
     * @param params     parameters data generation
     */
-  def apply(entityname: EntityName, ntuples: Int, params: Map[String, String])(implicit ac: AdamContext): Try[Void] = {
+  def apply(entityname: EntityName, ntuples: Int, params: Map[String, String])(implicit ac: SharedComponentContext): Try[Void] = {
     execute("generate random data for " + entityname) {
 
       if (ntuples == 0) {

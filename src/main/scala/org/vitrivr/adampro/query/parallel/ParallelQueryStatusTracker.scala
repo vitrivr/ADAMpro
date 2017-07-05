@@ -1,6 +1,6 @@
 package org.vitrivr.adampro.query.parallel
 
-import org.vitrivr.adampro.main.AdamContext
+import org.vitrivr.adampro.main.SharedComponentContext
 import org.vitrivr.adampro.query.progressive.{ProgressiveObservation, ProgressiveQueryStatus}
 import org.vitrivr.adampro.utils.Logging
 
@@ -19,7 +19,7 @@ case class ParallelQueryIntermediateResults(future : ScanFuture[_], observation:
   val confidence = observation.confidence
 }
 
-class ParallelQueryStatusTracker(queryID: String)(implicit ac: AdamContext) extends Future[ParallelQueryIntermediateResults] with Logging {
+class ParallelQueryStatusTracker(queryID: String)(implicit ac: SharedComponentContext) extends Future[ParallelQueryIntermediateResults] with Logging {
   private val futures = ListBuffer[ScanFuture[_]]()
   private val runningStatusLock = new Object()
   @volatile private var runningStatus = ProgressiveQueryStatus.RUNNING

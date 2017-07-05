@@ -2,7 +2,7 @@ package org.vitrivr.adampro.storage
 
 import org.vitrivr.adampro.datatypes.AttributeTypes.AttributeType
 import org.vitrivr.adampro.exception.GeneralAdamException
-import org.vitrivr.adampro.main.AdamContext
+import org.vitrivr.adampro.main.SharedComponentContext
 import org.vitrivr.adampro.storage.engine.Engine
 import org.vitrivr.adampro.utils.Logging
 
@@ -80,7 +80,7 @@ class StorageHandlerRegistry extends Logging {
     * @param configname
     * @param priority
     */
-  def register(configname: String, priority: Int = 0)(implicit ac: AdamContext): Unit = {
+  def register(configname: String, priority: Int = 0)(implicit ac: SharedComponentContext): Unit = {
     try {
       val props: Map[String, String] = ac.config.getStorageProperties(configname)
 
@@ -89,7 +89,7 @@ class StorageHandlerRegistry extends Logging {
         throw new Exception("no suitable engine entry found in config for " + configname)
       }
 
-      val constructor = Class.forName(classOf[Engine].getPackage.getName + "." + engineName.get).getConstructor(classOf[Map[_, _]], classOf[AdamContext])
+      val constructor = Class.forName(classOf[Engine].getPackage.getName + "." + engineName.get).getConstructor(classOf[Map[_, _]], classOf[SharedComponentContext])
 
       val engine = constructor.newInstance(props, ac).asInstanceOf[Engine]
       val handler = new StorageHandler(engine, priority)

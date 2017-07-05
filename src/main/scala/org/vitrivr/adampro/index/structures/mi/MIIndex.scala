@@ -10,7 +10,7 @@ import org.vitrivr.adampro.helpers.tracker.OperationTracker
 import org.vitrivr.adampro.index.Index
 import org.vitrivr.adampro.index.Index._
 import org.vitrivr.adampro.index.structures.IndexTypes
-import org.vitrivr.adampro.main.AdamContext
+import org.vitrivr.adampro.main.SharedComponentContext
 import org.vitrivr.adampro.query.distance.{Distance, DistanceFunction}
 import org.vitrivr.adampro.query.query.NearestNeighbourQuery
 
@@ -20,7 +20,7 @@ import org.vitrivr.adampro.query.query.NearestNeighbourQuery
   * Ivan Giangreco
   * June 2016
   */
-@Experimental class MIIndex(override val indexname: IndexName)(@transient override implicit val ac: AdamContext)
+@Experimental class MIIndex(override val indexname: IndexName)(@transient override implicit val ac: SharedComponentContext)
   extends Index(indexname)(ac) {
 
   override val indextypename: IndexTypeName = IndexTypes.MIINDEX

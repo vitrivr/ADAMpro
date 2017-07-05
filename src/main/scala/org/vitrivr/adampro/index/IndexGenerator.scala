@@ -6,7 +6,7 @@ import org.vitrivr.adampro.config.AttributeNames
 import org.vitrivr.adampro.datatypes.TupleID._
 import org.vitrivr.adampro.datatypes.vector.Vector.DenseSparkVector
 import org.vitrivr.adampro.index.structures.IndexTypes
-import org.vitrivr.adampro.main.AdamContext
+import org.vitrivr.adampro.main.SharedComponentContext
 import org.vitrivr.adampro.query.distance.DistanceFunction
 import org.vitrivr.adampro.utils.Logging
 import org.vitrivr.adampro.datatypes.vector.Vector
@@ -83,7 +83,7 @@ trait IndexGenerator extends Serializable with Logging {
 
 
 trait IndexGeneratorFactory extends Serializable with Logging {
-  def getIndexGenerator(distance: DistanceFunction, properties: Map[String, String] = Map[String, String]())(implicit ac: AdamContext): IndexGenerator
+  def getIndexGenerator(distance: DistanceFunction, properties: Map[String, String] = Map[String, String]())(implicit ac: SharedComponentContext): IndexGenerator
 
   def parametersInfo: Seq[ParameterInfo]
 }

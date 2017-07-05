@@ -6,7 +6,7 @@ import org.vitrivr.adampro.exception.{GeneralAdamException, QueryNotCachedExcept
 import org.vitrivr.adampro.grpc.grpc.QueryMessage.InformationLevel
 import org.vitrivr.adampro.grpc.grpc.{AdamSearchGrpc, _}
 import org.vitrivr.adampro.helpers.tracker.{OperationTracker, ResultTracker}
-import org.vitrivr.adampro.main.{AdamContext, SparkStartup}
+import org.vitrivr.adampro.main.{SharedComponentContext, SparkStartup}
 import org.vitrivr.adampro.query.QueryHints
 import org.vitrivr.adampro.query.optimizer.OptimizerOp
 import org.vitrivr.adampro.query.parallel.{QueryHintsParallelPathChooser, SimpleParallelPathChooser}
@@ -23,7 +23,7 @@ import scala.util.{Random, Try}
   * March 2016
   */
 class SearchRPC extends AdamSearchGrpc.AdamSearch with Logging {
-  implicit def ac: AdamContext = SparkStartup.mainContext
+  implicit def ac: SharedComponentContext = SparkStartup.mainContext
 
   /**
     *

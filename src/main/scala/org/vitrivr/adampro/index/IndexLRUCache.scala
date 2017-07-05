@@ -7,7 +7,7 @@ import org.vitrivr.adampro.catalog.CatalogOperator
 import org.vitrivr.adampro.config.AdamConfig
 import org.vitrivr.adampro.exception.IndexNotExistingException
 import org.vitrivr.adampro.index.Index.IndexName
-import org.vitrivr.adampro.main.{AdamContext, SparkStartup}
+import org.vitrivr.adampro.main.{SharedComponentContext, SparkStartup}
 import org.vitrivr.adampro.utils.Logging
 
 import scala.util.{Failure, Success, Try}
@@ -18,7 +18,7 @@ import scala.util.{Failure, Success, Try}
   * Ivan Giangreco
   * April 2016
   */
-class IndexLRUCache()(@transient implicit val ac: AdamContext) extends Logging {
+class IndexLRUCache()(@transient implicit val ac: SharedComponentContext) extends Logging {
 
   private val maximumCacheSize = ac.config.maximumCacheSizeIndex
   private val expireAfterAccess = ac.config.expireAfterAccessIndex

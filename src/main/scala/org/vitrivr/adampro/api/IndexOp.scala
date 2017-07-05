@@ -11,7 +11,7 @@ import org.vitrivr.adampro.index.Index._
 import org.vitrivr.adampro.index.structures.IndexTypes
 import org.vitrivr.adampro.index.structures.IndexTypes.IndexType
 import org.vitrivr.adampro.index.{Index, IndexPartitioner}
-import org.vitrivr.adampro.main.{AdamContext, SparkStartup}
+import org.vitrivr.adampro.main.{SharedComponentContext, SparkStartup}
 import org.vitrivr.adampro.query.distance.DistanceFunction
 
 import scala.util.{Failure, Success, Try}
@@ -29,7 +29,7 @@ object IndexOp extends GenericOp {
     *
     * @param entityname name of entity
     */
-  def list(entityname: EntityName)(implicit ac: AdamContext): Try[Seq[(IndexName, String, IndexTypeName)]] = {
+  def list(entityname: EntityName)(implicit ac: SharedComponentContext): Try[Seq[(IndexName, String, IndexTypeName)]] = {
     execute("list indexes for " + entityname) {
       Success(Entity.load(entityname).get.indexes.filter(_.isSuccess).map(_.get).map(index => (index.indexname, index.attribute, index.indextypename)))
     }
@@ -39,7 +39,7 @@ object IndexOp extends GenericOp {
     * Lists all indexes.
     *
     */
-  def list()(implicit ac: AdamContext): Try[Seq[(IndexName, String, IndexTypeName)]] = {
+  def list()(implicit ac: SharedComponentContext): Try[Seq[(IndexName, String, IndexTypeName)]] = {
     execute("list all indexes") {
       val indexes = SparkStartup.catalogOperator.listIndexes()
 
@@ -62,7 +62,7 @@ object IndexOp extends GenericOp {
     * @param distance      distance function to use
     * @param properties    further index specific properties
     */
-  def create(entityname: EntityName, attribute: String, indextypename: IndexTypeName, distance: DistanceFunction, properties: Map[String, String] = Map())(tracker : OperationTracker = new OperationTracker())(implicit ac: AdamContext): Try[Index] = {
+  def create(entityname: EntityName, attribute: String, indextypename: IndexTypeName, distance: DistanceFunction, properties: Map[String, String] = Map())(tracker : OperationTracker = new OperationTracker())(implicit ac: SharedComponentContext): Try[Index] = {
     execute("create index for " + entityname) {
       val res = Index.createIndex(Entity.load(entityname).get, attribute, indextypename, distance, properties)(tracker)
       tracker.cleanAll()
@@ -78,7 +78,7 @@ object IndexOp extends GenericOp {
     * @param distance   distance function to use
     * @param properties further index specific properties
     */
-  def generateAll(entityname: EntityName, attribute: String, distance: DistanceFunction, properties: Map[String, String] = Map())(tracker : OperationTracker = new OperationTracker())(implicit ac: AdamContext): Try[Seq[IndexName]] = {
+  def generateAll(entityname: EntityName, attribute: String, distance: DistanceFunction, properties: Map[String, String] = Map())(tracker : OperationTracker = new OperationTracker())(implicit ac: SharedComponentContext): Try[Seq[IndexName]] = {
     execute("create missing indexes for " + entityname) {
       val existingIndexTypes = list(entityname).get.map(_._3)
       val allIndexTypes = IndexTypes.values
@@ -113,7 +113,7 @@ object IndexOp extends GenericOp {
     * @param indexname name of index
     * @return
     */
-  def exists(indexname: IndexName)(implicit ac: AdamContext): Try[Boolean] = {
+  def exists(indexname: IndexName)(implicit ac: SharedComponentContext): Try[Boolean] = {
     execute("check index " + indexname + " exists operation") {
       Success(Index.exists(indexname))
     }
@@ -129,7 +129,7 @@ object IndexOp extends GenericOp {
     * @param acceptStale accept also stale indexes
     * @return
     */
-  def exists(entityname: EntityName, attribute: String, indextypename: IndexTypeName, acceptStale : Boolean)(implicit ac: AdamContext): Try[Boolean] = {
+  def exists(entityname: EntityName, attribute: String, indextypename: IndexTypeName, acceptStale : Boolean)(implicit ac: SharedComponentContext): Try[Boolean] = {
     execute("check index for " + entityname + "(" + attribute + ")" + " of type " + indextypename + " exists operation") {
       Success(Index.exists(entityname, attribute, indextypename, acceptStale))
     }
@@ -142,7 +142,7 @@ object IndexOp extends GenericOp {
     * @param indexname name of index
     * @return
     */
-  def cache(indexname: IndexName)(implicit ac: AdamContext): Try[Index] = {
+  def cache(indexname: IndexName)(implicit ac: SharedComponentContext): Try[Index] = {
     execute("cache index " + indexname + " operation") {
       Index.load(indexname, cache = true)
     }
@@ -154,7 +154,7 @@ object IndexOp extends GenericOp {
     * @param indexname name of index
     * @param options   possible options for operation
     */
-  def properties(indexname: IndexName, options: Map[String, String] = Map())(implicit ac: AdamContext): Try[Map[String, String]] = {
+  def properties(indexname: IndexName, options: Map[String, String] = Map())(implicit ac: SharedComponentContext): Try[Map[String, String]] = {
     execute("get properties for " + indexname) {
       val index = Index.load(indexname)
 
@@ -177,7 +177,7 @@ object IndexOp extends GenericOp {
     * @param partitioner partitioner to use
     * @return
     */
-  def partition(indexname: IndexName, nPartitions: Int, joins: Option[DataFrame], attribute: Option[AttributeName], mode: PartitionMode.Value, partitioner: PartitionerChoice.Value = PartitionerChoice.SPARK, options: Map[String, String] = Map[String, String]())(implicit ac: AdamContext): Try[Index] = {
+  def partition(indexname: IndexName, nPartitions: Int, joins: Option[DataFrame], attribute: Option[AttributeName], mode: PartitionMode.Value, partitioner: PartitionerChoice.Value = PartitionerChoice.SPARK, options: Map[String, String] = Map[String, String]())(implicit ac: SharedComponentContext): Try[Index] = {
     execute("repartition index " + indexname + " operation") {
       IndexPartitioner(Index.load(indexname).get, nPartitions, joins, attribute, mode, partitioner, options)
     }
@@ -189,7 +189,7 @@ object IndexOp extends GenericOp {
     * @param indexname name of index
     * @return
     */
-  def drop(indexname: IndexName)(implicit ac: AdamContext): Try[Void] = {
+  def drop(indexname: IndexName)(implicit ac: SharedComponentContext): Try[Void] = {
     execute("drop index " + indexname + " operation") {
       Index.drop(indexname)
     }

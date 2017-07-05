@@ -14,7 +14,7 @@ import org.vitrivr.adampro.index.structures.pq.PQIndex
 import org.vitrivr.adampro.index.structures.sh.SHIndex
 import org.vitrivr.adampro.index.structures.va.{VAIndex, VAPlusIndex, VAPlusIndexMetaData}
 import org.vitrivr.adampro.index.{Index, IndexingTaskTuple}
-import org.vitrivr.adampro.main.{AdamContext, SparkStartup}
+import org.vitrivr.adampro.main.{SharedComponentContext, SparkStartup}
 import org.vitrivr.adampro.ml.{PegasosSVM, TrainingSample}
 import org.vitrivr.adampro.query.query.NearestNeighbourQuery
 
@@ -26,7 +26,7 @@ import scala.collection.mutable.ListBuffer
   * Ivan Giangreco
   * November 2016
   */
-private[optimizer] class SVMOptimizerHeuristic(defaultNRuns: Int = 100)(@transient implicit override val ac: AdamContext) extends OptimizerHeuristic("svm", defaultNRuns) {
+private[optimizer] class SVMOptimizerHeuristic(defaultNRuns: Int = 100)(@transient implicit override val ac: SharedComponentContext) extends OptimizerHeuristic("svm", defaultNRuns) {
   /**
     *
     * @param indexes

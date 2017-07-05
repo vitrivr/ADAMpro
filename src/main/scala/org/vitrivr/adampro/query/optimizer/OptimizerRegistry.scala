@@ -1,7 +1,7 @@
 package org.vitrivr.adampro.query.optimizer
 
 import org.vitrivr.adampro.exception.GeneralAdamException
-import org.vitrivr.adampro.main.AdamContext
+import org.vitrivr.adampro.main.SharedComponentContext
 import org.vitrivr.adampro.utils.Logging
 
 import scala.collection.mutable
@@ -45,7 +45,7 @@ class OptimizerRegistry() extends Logging {
 }
 
 object OptimizerRegistry {
-  def loadDefault()(implicit ac: AdamContext): Unit ={
+  def loadDefault()(implicit ac: SharedComponentContext): Unit ={
     ac.optimizerRegistry.value.register("naive", new NaiveOptimizerHeuristic())
     ac.optimizerRegistry.value.register("svm", new SVMOptimizerHeuristic())
   }

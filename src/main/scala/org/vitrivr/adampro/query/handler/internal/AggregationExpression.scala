@@ -6,7 +6,7 @@ import org.apache.spark.sql.functions.{udf, _}
 import org.apache.spark.sql.{DataFrame, Row}
 import org.vitrivr.adampro.config.AttributeNames
 import org.vitrivr.adampro.helpers.tracker.OperationTracker
-import org.vitrivr.adampro.main.AdamContext
+import org.vitrivr.adampro.main.SharedComponentContext
 import org.vitrivr.adampro.query.Result
 import org.vitrivr.adampro.query.distance.Distance
 import org.vitrivr.adampro.query.handler.generic.{ExpressionDetails, QueryEvaluationOptions, QueryExpression}
@@ -22,7 +22,7 @@ import scala.concurrent.{Await, Future}
   * Ivan Giangreco
   * April 2016
   */
-abstract class AggregationExpression(private val leftExpression: QueryExpression, private val rightExpression: QueryExpression, order: ExpressionEvaluationOrder.Order = ExpressionEvaluationOrder.Parallel, options: Map[String, String] = Map(), id: Option[String] = None)(@transient implicit val ac: AdamContext) extends QueryExpression(id) {
+abstract class AggregationExpression(private val leftExpression: QueryExpression, private val rightExpression: QueryExpression, order: ExpressionEvaluationOrder.Order = ExpressionEvaluationOrder.Parallel, options: Map[String, String] = Map(), id: Option[String] = None)(@transient implicit val ac: SharedComponentContext) extends QueryExpression(id) {
   var left = leftExpression
   var right = rightExpression
   _children ++= Seq(left, right)
@@ -39,7 +39,7 @@ abstract class AggregationExpression(private val leftExpression: QueryExpression
     this
   }
 
-  override protected def run(options: Option[QueryEvaluationOptions], filter: Option[DataFrame] = None)(tracker: OperationTracker)(implicit ac: AdamContext): Option[DataFrame] = {
+  override protected def run(options: Option[QueryEvaluationOptions], filter: Option[DataFrame] = None)(tracker: OperationTracker)(implicit ac: SharedComponentContext): Option[DataFrame] = {
     log.debug("run aggregation operation " + aggregationName + " between " + left.getClass.getName + " and " + right.getClass.getName + "  ordered " + order.toString)
 
     ac.sc.setJobGroup(id.getOrElse(""), "aggregation", interruptOnCancel = true)
@@ -134,7 +134,7 @@ object AggregationExpression {
     * @param r       right expression
     * @param options options
     */
-  case class UnionExpression(l: QueryExpression, r: QueryExpression, options: Map[String, String] = Map(), id: Option[String] = None)(implicit ac: AdamContext) extends AggregationExpression(l, r, ExpressionEvaluationOrder.Parallel, options, id) {
+  case class UnionExpression(l: QueryExpression, r: QueryExpression, options: Map[String, String] = Map(), id: Option[String] = None)(implicit ac: SharedComponentContext) extends AggregationExpression(l, r, ExpressionEvaluationOrder.Parallel, options, id) {
     override def aggregationName = "UNION"
 
     override protected def aggregate(leftResult: DataFrame, rightResult: DataFrame, pk: String, qeoptions: Option[QueryEvaluationOptions]): DataFrame = {
@@ -173,7 +173,7 @@ object AggregationExpression {
     * @param r       right expression
     * @param options operation options
     */
-  case class FuzzyUnionExpression(l: QueryExpression, r: QueryExpression, options: Map[String, String] = Map(), id: Option[String] = None)(implicit ac: AdamContext) extends AggregationExpression(l, r, ExpressionEvaluationOrder.Parallel, options, id) {
+  case class FuzzyUnionExpression(l: QueryExpression, r: QueryExpression, options: Map[String, String] = Map(), id: Option[String] = None)(implicit ac: SharedComponentContext) extends AggregationExpression(l, r, ExpressionEvaluationOrder.Parallel, options, id) {
     override def aggregationName = "FUZZYUNION"
 
     override protected def aggregate(leftResult: DataFrame, rightResult: DataFrame, pk: String, qeoptions: Option[QueryEvaluationOptions]): DataFrame = {
@@ -245,7 +245,7 @@ object AggregationExpression {
     * @param order   execution order
     * @param options options
     */
-  case class IntersectExpression(l: QueryExpression, r: QueryExpression, order: ExpressionEvaluationOrder.Order = ExpressionEvaluationOrder.Parallel, options: Map[String, String] = Map(), id: Option[String] = None)(implicit ac: AdamContext) extends AggregationExpression(l, r, order, options, id) {
+  case class IntersectExpression(l: QueryExpression, r: QueryExpression, order: ExpressionEvaluationOrder.Order = ExpressionEvaluationOrder.Parallel, options: Map[String, String] = Map(), id: Option[String] = None)(implicit ac: SharedComponentContext) extends AggregationExpression(l, r, order, options, id) {
     override def aggregationName = "INTERSECT"
 
     override protected def aggregate(leftResult: DataFrame, rightResult: DataFrame, pk: String, qeoptions: Option[QueryEvaluationOptions]): DataFrame = {
@@ -286,7 +286,7 @@ object AggregationExpression {
     * @param order   execution order
     * @param options options
     */
-  case class FuzzyIntersectExpression(l: QueryExpression, r: QueryExpression, order: ExpressionEvaluationOrder.Order = ExpressionEvaluationOrder.Parallel, options: Map[String, String] = Map(), id: Option[String] = None)(implicit ac: AdamContext) extends AggregationExpression(l, r, order, options, id) {
+  case class FuzzyIntersectExpression(l: QueryExpression, r: QueryExpression, order: ExpressionEvaluationOrder.Order = ExpressionEvaluationOrder.Parallel, options: Map[String, String] = Map(), id: Option[String] = None)(implicit ac: SharedComponentContext) extends AggregationExpression(l, r, order, options, id) {
     override def aggregationName = "FUZZYINTERSECT"
 
     override protected def aggregate(leftResult: DataFrame, rightResult: DataFrame, pk: String, qeoptions: Option[QueryEvaluationOptions]): DataFrame = {
@@ -357,7 +357,7 @@ object AggregationExpression {
     * @param order   execution order
     * @param options options
     */
-  case class ExceptExpression(l: QueryExpression, r: QueryExpression, order: ExpressionEvaluationOrder.Order = ExpressionEvaluationOrder.Parallel, options: Map[String, String] = Map(), id: Option[String] = None)(implicit ac: AdamContext) extends AggregationExpression(l, r, order, options, id) {
+  case class ExceptExpression(l: QueryExpression, r: QueryExpression, order: ExpressionEvaluationOrder.Order = ExpressionEvaluationOrder.Parallel, options: Map[String, String] = Map(), id: Option[String] = None)(implicit ac: SharedComponentContext) extends AggregationExpression(l, r, order, options, id) {
     override def aggregationName = "EXCEPT"
 
     override protected def aggregate(leftResult: DataFrame, rightResult: DataFrame, pk: String, qeoptions: Option[QueryEvaluationOptions]): DataFrame = {
@@ -397,7 +397,7 @@ object AggregationExpression {
   case class EmptyExpression(id: Option[String] = None) extends QueryExpression(id) {
     override val info = ExpressionDetails(None, Some("Empty Expression"), id, None)
 
-    override protected def run(options: Option[QueryEvaluationOptions], filter: Option[DataFrame] = None)(tracker: OperationTracker)(implicit ac: AdamContext): Option[DataFrame] = {
+    override protected def run(options: Option[QueryEvaluationOptions], filter: Option[DataFrame] = None)(tracker: OperationTracker)(implicit ac: SharedComponentContext): Option[DataFrame] = {
       val rdd = ac.sc.emptyRDD[Row]
       Some(ac.sqlContext.createDataFrame(rdd, Result.resultSchema))
     }

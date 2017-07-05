@@ -1,7 +1,7 @@
 package org.vitrivr.adampro.query.progressive
 
 import org.vitrivr.adampro.config.AdamConfig
-import org.vitrivr.adampro.main.AdamContext
+import org.vitrivr.adampro.main.SharedComponentContext
 import org.vitrivr.adampro.query.parallel.ScanFuture
 import org.vitrivr.adampro.utils.Logging
 

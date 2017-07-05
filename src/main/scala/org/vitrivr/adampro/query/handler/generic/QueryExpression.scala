@@ -6,7 +6,7 @@ import org.apache.spark.sql.types.IntegerType
 import org.apache.spark.sql.{DataFrame, Row}
 import org.vitrivr.adampro.config.AttributeNames
 import org.vitrivr.adampro.helpers.tracker.OperationTracker
-import org.vitrivr.adampro.main.{AdamContext, SparkStartup}
+import org.vitrivr.adampro.main.{SharedComponentContext, SparkStartup}
 import org.vitrivr.adampro.query.information.InformationLevels._
 import org.vitrivr.adampro.query.progressive.{ProgressiveObservation, ProgressiveQueryStatus}
 import org.vitrivr.adampro.utils.Logging
@@ -69,7 +69,7 @@ abstract class QueryExpression(id: Option[String]) extends Serializable with Log
     *
     * @return
     */
-  def evaluate(options: Option[QueryEvaluationOptions] = None)(tracker: OperationTracker)(implicit ac: AdamContext): Option[DataFrame] = {
+  def evaluate(options: Option[QueryEvaluationOptions] = None)(tracker: OperationTracker)(implicit ac: SharedComponentContext): Option[DataFrame] = {
     try {
       if (!prepared) {
         log.warn("expression should be prepared before running")
@@ -109,7 +109,7 @@ abstract class QueryExpression(id: Option[String]) extends Serializable with Log
     * @param filter filter to apply to data
     * @return
     */
-  protected def run(options: Option[QueryEvaluationOptions], filter: Option[DataFrame])(tracker: OperationTracker)(implicit ac: AdamContext): Option[DataFrame]
+  protected def run(options: Option[QueryEvaluationOptions], filter: Option[DataFrame])(tracker: OperationTracker)(implicit ac: SharedComponentContext): Option[DataFrame]
 
 
   /**
@@ -118,7 +118,7 @@ abstract class QueryExpression(id: Option[String]) extends Serializable with Log
     * @param levels degree of detail in collecting information
     * @return
     */
-  def information(levels: Seq[InformationLevel])(implicit ac: AdamContext): ListBuffer[ExpressionDetails] = {
+  def information(levels: Seq[InformationLevel])(implicit ac: SharedComponentContext): ListBuffer[ExpressionDetails] = {
     var withResults: Boolean = true
     var maxDepth: Int = Int.MaxValue
 
@@ -138,7 +138,7 @@ abstract class QueryExpression(id: Option[String]) extends Serializable with Log
     *
     * @return
     */
-  def information()(implicit ac: AdamContext): ExpressionDetails = {
+  def information()(implicit ac: SharedComponentContext): ExpressionDetails = {
     information(0, 0, Seq(), withResults = true).head
   }
 
@@ -151,7 +151,7 @@ abstract class QueryExpression(id: Option[String]) extends Serializable with Log
     * @param lb           list buffer to write information to
     * @return
     */
-  private def information(currentDepth: Int = 0, maxDepth: Int = Int.MaxValue, levels: Seq[InformationLevel], withResults: Boolean, lb: ListBuffer[ExpressionDetails] = new ListBuffer[ExpressionDetails]())(implicit ac: AdamContext): ListBuffer[ExpressionDetails] = {
+  private def information(currentDepth: Int = 0, maxDepth: Int = Int.MaxValue, levels: Seq[InformationLevel], withResults: Boolean, lb: ListBuffer[ExpressionDetails] = new ListBuffer[ExpressionDetails]())(implicit ac: SharedComponentContext): ListBuffer[ExpressionDetails] = {
     if (!run) {
       log.warn("expression should be run before trying to receive information")
     }

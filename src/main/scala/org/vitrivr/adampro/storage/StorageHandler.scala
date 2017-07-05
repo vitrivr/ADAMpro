@@ -3,7 +3,7 @@ package org.vitrivr.adampro.storage
 import org.vitrivr.adampro.entity.AttributeDefinition
 import org.vitrivr.adampro.entity.Entity._
 import org.vitrivr.adampro.exception.GeneralAdamException
-import org.vitrivr.adampro.main.{AdamContext, SparkStartup}
+import org.vitrivr.adampro.main.{SharedComponentContext, SparkStartup}
 import org.vitrivr.adampro.query.query.Predicate
 import org.vitrivr.adampro.storage.engine.Engine
 import org.vitrivr.adampro.utils.Logging
@@ -51,7 +51,7 @@ class StorageHandler(val engine: Engine, val priority : Int = 0) extends Seriali
     *
     * @param entityname
     */
-  protected def getStorename(entityname: EntityName)(implicit ac: AdamContext): String = {
+  protected def getStorename(entityname: EntityName)(implicit ac: SharedComponentContext): String = {
     val tablename = SparkStartup.catalogOperator.getEntityOption(entityname, Some(ENTITY_OPTION_NAME)).get.get(ENTITY_OPTION_NAME)
 
     if (tablename.isEmpty) {
@@ -69,7 +69,7 @@ class StorageHandler(val engine: Engine, val priority : Int = 0) extends Seriali
     * @param params
     * @return
     */
-  def create(entityname: EntityName, attributes: Seq[AttributeDefinition], params: Map[String, String] = Map())(implicit ac: AdamContext): Try[Void] = {
+  def create(entityname: EntityName, attributes: Seq[AttributeDefinition], params: Map[String, String] = Map())(implicit ac: SharedComponentContext): Try[Void] = {
     execute("create") {
       var storename = cleanStorename(entityname)
 
@@ -100,7 +100,7 @@ class StorageHandler(val engine: Engine, val priority : Int = 0) extends Seriali
     * @param params
     * @return
     */
-  def read(entityname: EntityName, attributes: Seq[AttributeDefinition], predicates: Seq[Predicate] = Seq(), params: Map[String, String] = Map())(implicit ac: AdamContext): Try[DataFrame] = {
+  def read(entityname: EntityName, attributes: Seq[AttributeDefinition], predicates: Seq[Predicate] = Seq(), params: Map[String, String] = Map())(implicit ac: SharedComponentContext): Try[DataFrame] = {
     execute("read") {
       val storename = getStorename(entityname)
       val options = SparkStartup.catalogOperator.getStorageEngineOption(name, storename).get
@@ -119,7 +119,7 @@ class StorageHandler(val engine: Engine, val priority : Int = 0) extends Seriali
     * @param params
     * @return
     */
-  def write(entityname: EntityName, df: DataFrame, attributes: Seq[AttributeDefinition], mode: SaveMode = SaveMode.Append, params: Map[String, String] = Map())(implicit ac: AdamContext): Try[Void] = {
+  def write(entityname: EntityName, df: DataFrame, attributes: Seq[AttributeDefinition], mode: SaveMode = SaveMode.Append, params: Map[String, String] = Map())(implicit ac: SharedComponentContext): Try[Void] = {
     execute("write") {
       val storename = getStorename(entityname)
       val options = SparkStartup.catalogOperator.getStorageEngineOption(name, storename).get
@@ -187,7 +187,7 @@ class StorageHandler(val engine: Engine, val priority : Int = 0) extends Seriali
     * @param params
     * @return
     */
-  def drop(entityname: EntityName, params: Map[String, String] = Map())(implicit ac: AdamContext): Try[Void] = {
+  def drop(entityname: EntityName, params: Map[String, String] = Map())(implicit ac: SharedComponentContext): Try[Void] = {
     execute("drop") {
       val res = engine.drop(getStorename(entityname))
 

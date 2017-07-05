@@ -6,7 +6,7 @@ import org.vitrivr.adampro.entity.Entity
 import org.vitrivr.adampro.entity.Entity.AttributeName
 import org.vitrivr.adampro.index.partition.Partitioning.PartitionID
 import org.vitrivr.adampro.index.Index
-import org.vitrivr.adampro.main.{AdamContext, SparkStartup}
+import org.vitrivr.adampro.main.{SharedComponentContext, SparkStartup}
 import org.vitrivr.adampro.query.distance.DistanceFunction
 
 /**
@@ -98,7 +98,7 @@ case class NearestNeighbourQuery(
                                   queryID: Option[String] = Some(java.util.UUID.randomUUID().toString))
   extends QueryObject(queryID) {
 
-  def isConform(entity: Entity)(implicit ac: AdamContext): Boolean = {
+  def isConform(entity: Entity)(implicit ac: SharedComponentContext): Boolean = {
     if (options.getOrElse("nochecks", "false").equals("true")) {
       true
     } else {

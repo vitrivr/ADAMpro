@@ -6,7 +6,7 @@ import org.vitrivr.adampro.datatypes.vector.{SparseVectorWrapper, SparseVectorWr
 import org.vitrivr.adampro.datatypes.vector.Vector.{DenseSparkVector, VectorBase}
 import org.vitrivr.adampro.entity.Entity
 import org.vitrivr.adampro.exception.GeneralAdamException
-import org.vitrivr.adampro.main.AdamContext
+import org.vitrivr.adampro.main.SharedComponentContext
 
 import scala.util.{Failure, Success, Try}
 
@@ -24,7 +24,7 @@ object SparsifyHelper {
     * @param attributename name of attribute
     * @return
     */
-  def apply(entity: Entity, attributename: String)(implicit ac: AdamContext): Try[Entity] = {
+  def apply(entity: Entity, attributename: String)(implicit ac: SharedComponentContext): Try[Entity] = {
     try {
       if (entity.getFeatureData.isEmpty) {
         return Failure(new GeneralAdamException("no feature data available for performing sparsifying"))

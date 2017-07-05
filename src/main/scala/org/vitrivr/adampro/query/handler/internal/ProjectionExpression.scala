@@ -1,6 +1,6 @@
 package org.vitrivr.adampro.query.handler.internal
 
-import org.vitrivr.adampro.main.AdamContext
+import org.vitrivr.adampro.main.SharedComponentContext
 import org.vitrivr.adampro.query.handler.generic.{ExpressionDetails, QueryEvaluationOptions, QueryExpression}
 import org.vitrivr.adampro.query.handler.internal.ProjectionExpression.ProjectionField
 import org.vitrivr.adampro.utils.Logging
@@ -14,11 +14,11 @@ import org.vitrivr.adampro.helpers.tracker.OperationTracker
   * Ivan Giangreco
   * May 2016
   */
-case class ProjectionExpression(private val projection: ProjectionField, private val expr: QueryExpression, id: Option[String] = None)(@transient implicit val ac: AdamContext) extends QueryExpression(id) {
+case class ProjectionExpression(private val projection: ProjectionField, private val expr: QueryExpression, id: Option[String] = None)(@transient implicit val ac: SharedComponentContext) extends QueryExpression(id) {
   override val info = ExpressionDetails(None, Some("Projection Expression"), id, None)
   _children ++= Seq(expr)
 
-  override protected def run(options : Option[QueryEvaluationOptions], filter: Option[DataFrame] = None)(tracker : OperationTracker)(implicit ac: AdamContext): Option[DataFrame] = {
+  override protected def run(options : Option[QueryEvaluationOptions], filter: Option[DataFrame] = None)(tracker : OperationTracker)(implicit ac: SharedComponentContext): Option[DataFrame] = {
     log.debug("performing projection on data")
     expr.evaluate(options)(tracker).map(projection.f)
   }
@@ -44,7 +44,7 @@ object ProjectionExpression extends Logging {
     def f(df: DataFrame): DataFrame
   }
 
-  case class FieldNameProjection(names: Seq[String])(implicit ac: AdamContext) extends ProjectionField {
+  case class FieldNameProjection(names: Seq[String])(implicit ac: SharedComponentContext) extends ProjectionField {
     override def f(df: DataFrame): DataFrame = {
       if (names.nonEmpty && names.head != "*") {
         import org.apache.spark.sql.functions.col
@@ -65,7 +65,7 @@ object ProjectionExpression extends Logging {
     }
   }
 
-  case class CountOperationProjection(implicit ac: AdamContext) extends ProjectionField {
+  case class CountOperationProjection(implicit ac: SharedComponentContext) extends ProjectionField {
     override def f(df: DataFrame): DataFrame = {
       ac.sqlContext.createDataFrame(ac.sc.makeRDD(Seq(Row(df.count()))), StructType(Seq(StructField("count", LongType))))
     }
@@ -79,7 +79,7 @@ object ProjectionExpression extends Logging {
     override def hashCode(): Int = 0
   }
 
-  case class ExistsOperationProjection(implicit ac: AdamContext) extends ProjectionField {
+  case class ExistsOperationProjection(implicit ac: SharedComponentContext) extends ProjectionField {
     override def f(df: DataFrame): DataFrame = {
       ac.sqlContext.createDataFrame(ac.sc.makeRDD(Seq(Row(df.count() > 1))), StructType(Seq(StructField("exists", BooleanType))))
     }
@@ -93,7 +93,7 @@ object ProjectionExpression extends Logging {
     override def hashCode(): Int = 1
   }
 
-  case class DistinctOperationProjection(implicit ac: AdamContext) extends ProjectionField {
+  case class DistinctOperationProjection(implicit ac: SharedComponentContext) extends ProjectionField {
     override def f(df: DataFrame): DataFrame = {
       df.distinct()
     }

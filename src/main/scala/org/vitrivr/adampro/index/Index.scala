@@ -16,7 +16,7 @@ import org.vitrivr.adampro.index.IndexPartitioner.log
 import org.vitrivr.adampro.index.partition.Partitioning.PartitionID
 import org.vitrivr.adampro.index.partition._
 import org.vitrivr.adampro.index.structures.IndexTypes
-import org.vitrivr.adampro.main.{AdamContext, SparkStartup}
+import org.vitrivr.adampro.main.{SharedComponentContext, SparkStartup}
 import org.vitrivr.adampro.query.distance.DistanceFunction
 import org.vitrivr.adampro.query.query.NearestNeighbourQuery
 import org.vitrivr.adampro.utils.Logging
@@ -32,7 +32,7 @@ import scala.util.{Failure, Success, Try}
   * August 2015
   */
 //TODO: make indexes singleton? lock on index?
-abstract class Index(val indexname: IndexName)(@transient implicit val ac: AdamContext) extends Serializable with Logging {
+abstract class Index(val indexname: IndexName)(@transient implicit val ac: SharedComponentContext) extends Serializable with Logging {
 
 
   /**
@@ -195,7 +195,7 @@ abstract class Index(val indexname: IndexName)(@transient implicit val ac: AdamC
     * @param filter pre-filter
     * @return
     */
-  def scan(nnq: NearestNeighbourQuery, filter: Option[DataFrame])(tracker: OperationTracker)(implicit ac: AdamContext): DataFrame = {
+  def scan(nnq: NearestNeighbourQuery, filter: Option[DataFrame])(tracker: OperationTracker)(implicit ac: SharedComponentContext): DataFrame = {
     log.debug("scan index")
     scan(nnq.q, nnq.distance, nnq.options, nnq.k, filter, nnq.partitions, nnq.queryID)(tracker)
   }
@@ -212,7 +212,7 @@ abstract class Index(val indexname: IndexName)(@transient implicit val ac: AdamC
     * @param queryID  optional query id
     * @return a set of candidate tuple ids, possibly together with a tentative score (the number of tuples will be greater than k)
     */
-  def scan(q: MathVector, distance: DistanceFunction, options: Map[String, String] = Map(), k: Int, filter: Option[DataFrame], partitions: Option[Set[PartitionID]], queryID: Option[String] = None)(tracker: OperationTracker)(implicit ac: AdamContext): DataFrame = {
+  def scan(q: MathVector, distance: DistanceFunction, options: Map[String, String] = Map(), k: Int, filter: Option[DataFrame], partitions: Option[Set[PartitionID]], queryID: Option[String] = None)(tracker: OperationTracker)(implicit ac: SharedComponentContext): DataFrame = {
     log.debug("started scanning index")
 
     if (isStale) {
@@ -351,7 +351,7 @@ object Index extends Logging {
   type IndexName = EntityName
   type IndexTypeName = IndexTypes.IndexType
 
-  private[index] def getStorage()(implicit ac: AdamContext) = ac.storageHandlerRegistry.get("parquetindex")
+  private[index] def getStorage()(implicit ac: SharedComponentContext) = ac.storageHandlerRegistry.get("parquetindex")
 
   /**
     * Creates an index that is unique and which follows the naming rules of indexes.
@@ -361,7 +361,7 @@ object Index extends Logging {
     * @param indextype  type of index
     * @return
     */
-  private[index] def createIndexName(entityname: EntityName, attribute: String, indextype: IndexTypeName)(implicit ac: AdamContext): String = {
+  private[index] def createIndexName(entityname: EntityName, attribute: String, indextype: IndexTypeName)(implicit ac: SharedComponentContext): String = {
     val indexes = SparkStartup.catalogOperator.listIndexes(Some(entityname), Some(attribute), Some(indextype)).get
 
     var indexname = ""
@@ -387,7 +387,7 @@ object Index extends Logging {
     * @param ac
     * @return
     */
-  def createIndex(entity: Entity, attribute: String, indextypename: IndexTypeName, distance: DistanceFunction, properties: Map[String, String] = Map())(tracker: OperationTracker)(implicit ac: AdamContext): Try[Index] = {
+  def createIndex(entity: Entity, attribute: String, indextypename: IndexTypeName, distance: DistanceFunction, properties: Map[String, String] = Map())(tracker: OperationTracker)(implicit ac: SharedComponentContext): Try[Index] = {
     try {
       val indexGenerator = indextypename.indexGeneratorFactoryClass.newInstance().getIndexGenerator(distance, properties + ("n" -> entity.count.toString))
       createIndex(entity, attribute, indexGenerator)(tracker)
@@ -407,7 +407,7 @@ object Index extends Logging {
     * @param indexgenerator generator to create index
     * @return index
     */
-  def createIndex(entity: Entity, attribute: String, indexgenerator: IndexGenerator)(tracker: OperationTracker)(implicit ac: AdamContext): Try[Index] = {
+  def createIndex(entity: Entity, attribute: String, indexgenerator: IndexGenerator)(tracker: OperationTracker)(implicit ac: SharedComponentContext): Try[Index] = {
     try {
       if (!entity.schema().map(_.name).contains(attribute)) {
         return Failure(new IndexNotProperlyDefinedException("attribute " + attribute + " not existing in entity " + entity.entityname + entity.schema(fullSchema = false).map(_.name).mkString("(", ",", ")")))
@@ -442,7 +442,7 @@ object Index extends Logging {
     * @param indexgenerator generator to create index
     * @return index
     */
-  private def createIndex(indexname: String, entity: Entity, attribute: String, indexgenerator: IndexGenerator)(tracker: OperationTracker)(implicit ac: AdamContext): Try[Index] = {
+  private def createIndex(indexname: String, entity: Entity, attribute: String, indexgenerator: IndexGenerator)(tracker: OperationTracker)(implicit ac: SharedComponentContext): Try[Index] = {
     try {
       val indexableData = entity.getAttributeData(attribute).get
         .select(AttributeNames.internalIdColumnName, attribute)
@@ -479,7 +479,7 @@ object Index extends Logging {
     * @param indexname name of index
     * @return
     */
-  def exists(indexname: IndexName)(implicit ac: AdamContext): Boolean = SparkStartup.catalogOperator.existsIndex(indexname).get
+  def exists(indexname: IndexName)(implicit ac: SharedComponentContext): Boolean = SparkStartup.catalogOperator.existsIndex(indexname).get
 
   /**
     * Checks whether index exists.
@@ -489,7 +489,7 @@ object Index extends Logging {
     * @param indextypename index type to use for indexing
     * @return
     */
-  def exists(entityname: EntityName, attribute: String, indextypename: IndexTypeName, acceptStale: Boolean)(implicit ac: AdamContext): Boolean = {
+  def exists(entityname: EntityName, attribute: String, indextypename: IndexTypeName, acceptStale: Boolean)(implicit ac: SharedComponentContext): Boolean = {
     SparkStartup.catalogOperator.existsIndex(entityname, attribute, indextypename, acceptStale).get
   }
 
@@ -501,7 +501,7 @@ object Index extends Logging {
     * @param indextypename name of index type
     * @return
     */
-  def list(entityname: Option[EntityName] = None, attribute: Option[String] = None, indextypename: Option[IndexTypeName] = None)(implicit ac: AdamContext): Seq[Try[Index]] = {
+  def list(entityname: Option[EntityName] = None, attribute: Option[String] = None, indextypename: Option[IndexTypeName] = None)(implicit ac: SharedComponentContext): Seq[Try[Index]] = {
     SparkStartup.catalogOperator.listIndexes(entityname, attribute, indextypename).get.map(load(_))
   }
 
@@ -511,7 +511,7 @@ object Index extends Logging {
     * @param indexname name of index
     * @return
     */
-  def load(indexname: IndexName, cache: Boolean = false)(implicit ac: AdamContext): Try[Index] = {
+  def load(indexname: IndexName, cache: Boolean = false)(implicit ac: SharedComponentContext): Try[Index] = {
     val index = ac.indexLRUCache.get(indexname)
 
     if (cache) {
@@ -527,7 +527,7 @@ object Index extends Logging {
     * @param indexname name of index
     * @return
     */
-  private[index] def loadIndexMetaData(indexname: IndexName)(implicit ac: AdamContext): Try[Index] = {
+  private[index] def loadIndexMetaData(indexname: IndexName)(implicit ac: SharedComponentContext): Try[Index] = {
     if (!exists(indexname)) {
       Failure(IndexNotExistingException.withIndexname(indexname))
     }
@@ -552,7 +552,7 @@ object Index extends Logging {
     * @param indexname name of index
     * @return true if index was dropped
     */
-  def drop(indexname: IndexName)(implicit ac: AdamContext): Try[Void] = {
+  def drop(indexname: IndexName)(implicit ac: SharedComponentContext): Try[Void] = {
     //TODO: tries to load index to drop; but what if index creation went wrong? -> cannot load index
     try {
       if (!exists(indexname)) {
@@ -580,7 +580,7 @@ object Index extends Logging {
     * @param entityname name of entity
     * @return
     */
-  def dropAll(entityname: EntityName)(implicit ac: AdamContext): Try[Void] = {
+  def dropAll(entityname: EntityName)(implicit ac: SharedComponentContext): Try[Void] = {
     val indexes = SparkStartup.catalogOperator.listIndexes(Some(entityname)).get
 
     indexes.foreach {

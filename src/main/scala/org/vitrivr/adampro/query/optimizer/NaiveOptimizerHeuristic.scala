@@ -4,7 +4,7 @@ import org.vitrivr.adampro.api.QueryOp
 import org.vitrivr.adampro.entity.Entity
 import org.vitrivr.adampro.helpers.tracker.OperationTracker
 import org.vitrivr.adampro.index.Index
-import org.vitrivr.adampro.main.{AdamContext, SparkStartup}
+import org.vitrivr.adampro.main.{SharedComponentContext, SparkStartup}
 import org.vitrivr.adampro.query.query.NearestNeighbourQuery
 
 /**
@@ -13,7 +13,7 @@ import org.vitrivr.adampro.query.query.NearestNeighbourQuery
   * Ivan Giangreco
   * September 2016
   */
-private[optimizer] class NaiveOptimizerHeuristic(defaultNRuns: Int = 100)(@transient implicit override val ac: AdamContext) extends OptimizerHeuristic("naive", defaultNRuns) {
+private[optimizer] class NaiveOptimizerHeuristic(defaultNRuns: Int = 100)(@transient implicit override val ac: SharedComponentContext) extends OptimizerHeuristic("naive", defaultNRuns) {
   /**
     *
     * @param indexes

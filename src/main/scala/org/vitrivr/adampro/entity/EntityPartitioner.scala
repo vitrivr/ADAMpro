@@ -5,7 +5,7 @@ import org.apache.spark.sql.{DataFrame, SaveMode}
 import org.vitrivr.adampro.entity.Entity.AttributeName
 import org.vitrivr.adampro.exception.{AttributeNotExistingException, GeneralAdamException}
 import org.vitrivr.adampro.index.partition.PartitionMode
-import org.vitrivr.adampro.main.AdamContext
+import org.vitrivr.adampro.main.SharedComponentContext
 
 import scala.util.{Failure, Success, Try}
 
@@ -26,7 +26,7 @@ object EntityPartitioner {
     * @param mode        mode of partitioning (replacing data, etc.)
     * @return
     */
-  def apply(entity: Entity, npartitions: Int, join: Option[DataFrame] = None, attribute: Option[AttributeName], mode: PartitionMode.Value = PartitionMode.REPLACE_EXISTING)(implicit ac: AdamContext): Try[Entity] = {
+  def apply(entity: Entity, npartitions: Int, join: Option[DataFrame] = None, attribute: Option[AttributeName], mode: PartitionMode.Value = PartitionMode.REPLACE_EXISTING)(implicit ac: SharedComponentContext): Try[Entity] = {
     //checks
     if (entity.handlers.filter(_.engine.repartitionable).isEmpty) {
       return Failure(new GeneralAdamException("no partitionable engine available in entity for performing repartitioning"))

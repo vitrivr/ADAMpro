@@ -11,7 +11,7 @@ import org.vitrivr.adampro.index.Index
 import org.vitrivr.adampro.index.Index.{IndexName, IndexTypeName}
 import org.vitrivr.adampro.index.structures.IndexTypes
 import org.vitrivr.adampro.index.structures.lsh.signature.LSHSignatureGenerator
-import org.vitrivr.adampro.main.AdamContext
+import org.vitrivr.adampro.main.SharedComponentContext
 import org.vitrivr.adampro.query.distance.{Distance, DistanceFunction}
 import org.vitrivr.adampro.query.query.NearestNeighbourQuery
 
@@ -22,7 +22,7 @@ import org.vitrivr.adampro.query.query.NearestNeighbourQuery
   * Ivan Giangreco
   * August 2015
   */
-class LSHIndex(override val indexname: IndexName)(@transient override implicit val ac: AdamContext)
+class LSHIndex(override val indexname: IndexName)(@transient override implicit val ac: SharedComponentContext)
   extends Index(indexname)(ac) {
 
   override val indextypename: IndexTypeName = IndexTypes.LSHINDEX

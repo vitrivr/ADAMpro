@@ -3,7 +3,7 @@ package org.vitrivr.adampro.query.optimizer
 import org.vitrivr.adampro.entity.Entity
 import org.vitrivr.adampro.entity.Entity.{AttributeName, EntityName}
 import org.vitrivr.adampro.index.Index
-import org.vitrivr.adampro.main.{AdamContext, SparkStartup}
+import org.vitrivr.adampro.main.{SharedComponentContext, SparkStartup}
 import org.vitrivr.adampro.query.handler.generic.QueryExpression
 import org.vitrivr.adampro.query.handler.internal.{IndexScanExpression, SequentialScanExpression}
 import org.vitrivr.adampro.query.query.NearestNeighbourQuery
@@ -30,7 +30,7 @@ object OptimizerOp {
     * @param ac
     * @return
     */
-  def scoredScans(optimizerName : String, entityname : EntityName, nnq: NearestNeighbourQuery)(filterExpr: Option[QueryExpression] = None)(implicit ac: AdamContext): Seq[ExecutionPath] = {
+  def scoredScans(optimizerName : String, entityname : EntityName, nnq: NearestNeighbourQuery)(filterExpr: Option[QueryExpression] = None)(implicit ac: SharedComponentContext): Seq[ExecutionPath] = {
     val optimizer = ac.optimizerRegistry.value.apply(optimizerName).get
 
     val indexes = SparkStartup.catalogOperator.listIndexes(Some(entityname), Some(nnq.attribute)).get.map(Index.load(_)).filter(_.isSuccess).map(_.get).groupBy(_.indextypename).mapValues(_.map(_.indexname))
@@ -63,7 +63,7 @@ object OptimizerOp {
     * @param ac
     * @return
     */
-  def getOptimalScan(optimizerName : String, entityname : EntityName, nnq: NearestNeighbourQuery)(filterExpr: Option[QueryExpression] = None)(implicit ac: AdamContext) : QueryExpression = {
+  def getOptimalScan(optimizerName : String, entityname : EntityName, nnq: NearestNeighbourQuery)(filterExpr: Option[QueryExpression] = None)(implicit ac: SharedComponentContext) : QueryExpression = {
     scoredScans(optimizerName, entityname, nnq)(filterExpr)(ac).sortBy(x => -x.score).head.expr
   }
 

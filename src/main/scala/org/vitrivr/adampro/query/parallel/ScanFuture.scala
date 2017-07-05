@@ -2,7 +2,7 @@ package org.vitrivr.adampro.query.parallel
 
 import org.apache.spark.sql.DataFrame
 import org.vitrivr.adampro.helpers.tracker.OperationTracker
-import org.vitrivr.adampro.main.AdamContext
+import org.vitrivr.adampro.main.SharedComponentContext
 import org.vitrivr.adampro.query.handler.generic.{QueryEvaluationOptions, QueryExpression}
 import org.vitrivr.adampro.query.progressive.ProgressiveObservation
 import org.vitrivr.adampro.utils.Logging
@@ -18,7 +18,7 @@ import scala.util.{Failure, Success, Try}
   * Ivan Giangreco
   * October 2015
   */
-class ScanFuture[U](expression: QueryExpression, filter : Option[DataFrame], onComplete: Try[ProgressiveObservation] => U, val pqtracker: ParallelQueryStatusTracker, options: Option[QueryEvaluationOptions] = None)(tracker : OperationTracker)(implicit ac: AdamContext) extends Logging{
+class ScanFuture[U](expression: QueryExpression, filter : Option[DataFrame], onComplete: Try[ProgressiveObservation] => U, val pqtracker: ParallelQueryStatusTracker, options: Option[QueryEvaluationOptions] = None)(tracker : OperationTracker)(implicit ac: SharedComponentContext) extends Logging{
   pqtracker.register(this)
 
   val t1 = System.currentTimeMillis()
