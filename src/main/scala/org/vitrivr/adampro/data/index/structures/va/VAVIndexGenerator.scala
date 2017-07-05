@@ -65,7 +65,7 @@ class VAVIndexGenerator(nbits_total: Option[Int], nbits_dim : Option[Int], marks
     val dataMatrix = DenseMatrix(doubleTrainData.toList: _*)
 
     val ndims = doubleTrainData.head.length
-    val nbits = math.min(ndims, nbits_total.getOrElse(ndims * nbits_dim.getOrElse(8)))
+    val nbits = math.max(ndims, nbits_total.getOrElse(ndims * nbits_dim.getOrElse(5)))
 
     // pca
     val variance = diag(cov(dataMatrix, center = true)).toArray

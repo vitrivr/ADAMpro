@@ -76,10 +76,10 @@ class VAPlusIndexGenerator(nbits: Option[Int], ndims : Option[Int], trainingSize
     */
   private def train(trainData: Seq[IndexingTaskTuple], data : DataFrame, attribute : String): VAPlusIndexMetaData = {
     log.trace("VA-File (variable) started training")
-    val dims = ndims.getOrElse(trainData.head.ap_indexable.size)
+    val dim = ndims.getOrElse(trainData.head.ap_indexable.size)
 
     import ac.spark.implicits._
-    val pca = new PCA(dims).fit(data.rdd.map(x => Vectors.dense(x.getAs[DenseSparkVector](attribute).toArray.map(_.toDouble))))
+    val pca = new PCA(dim).fit(data.rdd.map(x => Vectors.dense(x.getAs[DenseSparkVector](attribute).toArray.map(_.toDouble))))
 
 
     //data
@@ -91,9 +91,12 @@ class VAPlusIndexGenerator(nbits: Option[Int], ndims : Option[Int], trainingSize
     val variance = diag(cov(dataMatrix, center = true)).toArray
 
     var k = 0
-    var modes = Seq.fill(dims)(0).toArray
+    var modes = Seq.fill(dim)(0).toArray
 
-    while (k < nbits.getOrElse(dims * 8)) {
+    //based on results from paper and from Weber/Böhm (2000): Trading Quality for Time with Nearest Neighbor Search
+    val numOfBits = nbits.getOrElse(math.min(256, dim * math.max(5, math.ceil(5 + 0.5 * math.log(dim / 10) / math.log(2)).toInt)))
+
+    while (k < numOfBits) {
       val j = getMaxIndex(variance)
       modes(j) += 1
       variance(j) = variance(j) / 4.0
@@ -106,7 +109,7 @@ class VAPlusIndexGenerator(nbits: Option[Int], ndims : Option[Int], trainingSize
 
     log.trace("VA-File (variable) finished training")
 
-    new VAPlusIndexMetaData(marks, signatureGenerator, pca, dims > pca.k)
+    new VAPlusIndexMetaData(marks, signatureGenerator, pca, dim > pca.k)
   }
 
 
