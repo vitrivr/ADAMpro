@@ -37,7 +37,7 @@ class LRUCache[N, O](maximumCacheSize : Int, expireAfterAccess : Int) extends Lo
     * @return
     */
   def put(name : N, obj : O) : Unit = {
-    log.debug("putting object " + name + " manually into cache")
+    log.trace("putting object " + name + " manually into cache")
     cache.put(name.toString, obj.asInstanceOf[Object])
   }
 

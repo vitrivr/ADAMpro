@@ -1,16 +1,12 @@
 package org.vitrivr.adampro.query.ast.internal
 
-import org.vitrivr.adampro.shared.catalog.CatalogManager
-import org.vitrivr.adampro.data.entity.Entity
 import org.vitrivr.adampro.data.entity.Entity._
 import org.vitrivr.adampro.utils.exception.GeneralAdamException
 import org.vitrivr.adampro.data.index.Index
-import org.vitrivr.adampro.data.index.Index._
 import org.vitrivr.adampro.query.ast.generic.{ExpressionDetails, QueryEvaluationOptions, QueryExpression}
-import org.vitrivr.adampro.query.ast.internal.AggregationExpression.EmptyExpression
 import org.vitrivr.adampro.query.ast.internal.BooleanFilterExpression.BooleanFilterScanExpression
 import org.vitrivr.adampro.query.query.{FilteringQuery, QueryHints, RankingQuery}
-import org.vitrivr.adampro.query.planner.{QueryPlannerOp, PlannerRegistry, QueryPlanner}
+import org.vitrivr.adampro.query.planner.{QueryPlannerOp, PlannerRegistry}
 import org.vitrivr.adampro.utils.Logging
 import org.apache.spark.sql.DataFrame
 import org.vitrivr.adampro.process.SharedComponentContext
@@ -29,7 +25,7 @@ case class HintBasedScanExpression(private val entityname: EntityName, private v
   _children ++= Seq(expr) ++ filterExpr.map(Seq(_)).getOrElse(Seq())
 
   override protected def run(options : Option[QueryEvaluationOptions], filter: Option[DataFrame] = None)(tracker : QueryTracker)(implicit ac: SharedComponentContext): Option[DataFrame] = {
-    log.debug("evaluate hint-based expression, scanning " + expr.info.scantype)
+    log.trace("evaluate hint-based expression, scanning " + expr.info.scantype)
     expr.filter = filter
     expr.execute(options)(tracker)
   }
@@ -65,6 +61,7 @@ case class HintBasedScanExpression(private val entityname: EntityName, private v
 object HintBasedScanExpression extends Logging {
 
   def startPlanSearch(entityname: EntityName, nnq: Option[RankingQuery], bq: Option[FilteringQuery], hints: Seq[QueryHint], withFallback: Boolean = true)(expr: Option[QueryExpression] = None)(implicit ac: SharedComponentContext): QueryExpression = {
+    log.trace(QUERY_MARKER, "start hint based plan search")
     var plan = getPlan(entityname, nnq, bq, hints)(expr)
 
     if (plan.isEmpty) {
@@ -76,7 +73,8 @@ object HintBasedScanExpression extends Logging {
       }
     }
 
-    log.debug("using plan: " + plan.get.getClass.getName)
+    log.trace("using plan: " + plan.get.getClass.getName)
+    log.trace(QUERY_MARKER, "end hint based plan search")
 
     plan.get
 
@@ -119,7 +117,7 @@ object HintBasedScanExpression extends Logging {
 
             scan = Some(QueryPlannerOp.getOptimalScan(eqh.optimizerName, entityname, nnq.get)(scan)(ac))
 
-            log.debug("hint-based chose (empirical) " + scan.get.toString)
+            log.trace("hint-based chose (empirical) " + scan.get.toString)
 
             return scan
 

@@ -51,7 +51,7 @@ class VAIndex(override val indexname: IndexName)(@transient override implicit va
     * @return a set of candidate tuple ids, possibly together with a tentative score (the number of tuples will be greater than k)
     */
   override def scan(data: DataFrame, q: MathVector, distance: DistanceFunction, options: Map[String, String], k: Int)(tracker: QueryTracker): DataFrame = {
-    log.debug("scanning VA-File index " + indexname)
+    log.trace("scanning VA-File index")
 
     val signatureGeneratorBc = ac.sc.broadcast(meta.signatureGenerator)
     tracker.addBroadcast(signatureGeneratorBc)

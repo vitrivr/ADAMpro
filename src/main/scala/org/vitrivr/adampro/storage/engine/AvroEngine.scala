@@ -55,7 +55,7 @@ class AvroEngine(@transient override implicit val ac: SharedComponentContext) ex
     * @return options to store
     */
   override def create(storename: String, attributes: Seq[AttributeDefinition], params: Map[String, String])(implicit ac: SharedComponentContext): Try[Map[String, String]] = {
-    log.debug("avro create operation")
+    log.trace("avro create operation")
     Success(Map())
   }
 
@@ -66,7 +66,7 @@ class AvroEngine(@transient override implicit val ac: SharedComponentContext) ex
     * @return
     */
   override def exists(storename: String)(implicit ac: SharedComponentContext): Try[Boolean] = {
-    log.debug("avro exists operation")
+    log.trace("avro exists operation")
     subengine.exists(storename)
   }
 
@@ -80,7 +80,7 @@ class AvroEngine(@transient override implicit val ac: SharedComponentContext) ex
     * @return
     */
   override def read(storename: String, attributes: Seq[AttributeDefinition], predicates: Seq[Predicate], params: Map[String, String])(implicit ac: SharedComponentContext): Try[DataFrame] = {
-    log.debug("avro read operation")
+    log.trace("avro read operation")
 
     try {
       val res = subengine.read(storename)
@@ -108,7 +108,7 @@ class AvroEngine(@transient override implicit val ac: SharedComponentContext) ex
     * @return new options to store
     */
   override def write(storename: String, df: DataFrame, attributes: Seq[AttributeDefinition], mode: SaveMode = SaveMode.Append, params: Map[String, String])(implicit ac: SharedComponentContext): Try[Map[String, String]] = {
-    log.debug("avro write operation")
+    log.trace("avro write operation")
     val allowRepartitioning = params.getOrElse("allowRepartitioning", "false").toBoolean
 
     import org.apache.spark.sql.functions.{col, udf}
@@ -142,7 +142,7 @@ class AvroEngine(@transient override implicit val ac: SharedComponentContext) ex
     * @return
     */
   def drop(storename: String)(implicit ac: SharedComponentContext): Try[Void] = {
-    log.debug("avro drop operation")
+    log.trace("avro drop operation")
     subengine.drop(storename)
   }
 

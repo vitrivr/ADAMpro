@@ -23,7 +23,7 @@ object Transferer extends Logging {
     * @param newHandlerName
     */
   @Experimental def apply(entity: Entity, attributes: Seq[String], newHandlerName: String)(implicit ac: SharedComponentContext): Try[Void] = {
-    log.debug("transfering attributes " + attributes.mkString(", ") + " of entity " + entity.entityname + " to " + newHandlerName)
+    log.trace("transfering attributes " + attributes.mkString(", ") + " of entity " + entity.entityname + " to " + newHandlerName)
 
     try {
       val schema = entity.schema()

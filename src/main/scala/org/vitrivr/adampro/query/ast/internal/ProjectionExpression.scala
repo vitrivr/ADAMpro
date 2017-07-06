@@ -19,7 +19,7 @@ case class ProjectionExpression(private val projection: ProjectionField, private
   _children ++= Seq(expr)
 
   override protected def run(options : Option[QueryEvaluationOptions], filter: Option[DataFrame] = None)(tracker : QueryTracker)(implicit ac: SharedComponentContext): Option[DataFrame] = {
-    log.debug("performing projection on data")
+    log.trace("performing projection on data")
     expr.execute(options)(tracker).map(projection.f)
   }
 

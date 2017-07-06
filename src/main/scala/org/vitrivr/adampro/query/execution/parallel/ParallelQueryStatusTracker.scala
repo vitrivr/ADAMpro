@@ -31,7 +31,7 @@ class ParallelQueryStatusTracker(queryID: String)(implicit ac: SharedComponentCo
     * @param future
     */
   def register(future: ScanFuture[_]): Unit = {
-    log.debug("registered new scan future")
+    log.trace("registered new scan future")
     futures.synchronized(futures += future)
   }
 
@@ -50,7 +50,7 @@ class ParallelQueryStatusTracker(queryID: String)(implicit ac: SharedComponentCo
         // in evaluation mode we want to keep all results and do not stop, as to be able to measure how
         // much time each index would run
         if (math.abs(intermediateResult.observation.confidence - 1.0) < 0.000001) {
-          log.debug("confident results retrieved")
+          log.trace("confident results retrieved")
           stop(ProgressiveQueryStatus.FINISHED)
         }
       }
@@ -78,12 +78,12 @@ class ParallelQueryStatusTracker(queryID: String)(implicit ac: SharedComponentCo
   private def stop(newStatus: ProgressiveQueryStatus.Value): Unit = {
     if (runningStatus == ProgressiveQueryStatus.FINISHED) {
       //already finished
-      log.debug("requested stopping parallel query, but stopped already")
+      log.trace("requested stopping parallel query, but stopped already")
       return
     }
 
     futures.synchronized {
-      log.debug("stopping parallel query with status " + newStatus)
+      log.trace("stopping parallel query with status " + newStatus)
       ac.sc.cancelJobGroup(queryID)
       futures.clear()
     }

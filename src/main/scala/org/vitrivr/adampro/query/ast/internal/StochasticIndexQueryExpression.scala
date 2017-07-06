@@ -32,7 +32,7 @@ case class StochasticIndexQueryExpression(private val exprs: Seq[IndexScanExpres
   val entity = exprs.head.index.entity.get
 
   override protected def run(options : Option[QueryEvaluationOptions], filter: Option[DataFrame] = None)(tracker : QueryTracker)(implicit ac: SharedComponentContext): Option[DataFrame] = {
-    log.debug("evaluate compound query index scan")
+    log.trace("evaluate compound query index scan")
 
     ac.sc.setJobGroup(id.getOrElse(""), "compound query index scan", interruptOnCancel = true)
 

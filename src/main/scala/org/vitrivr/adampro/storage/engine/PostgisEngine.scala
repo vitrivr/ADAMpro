@@ -60,7 +60,7 @@ class PostgisEngine(private val url: String, private val user: String, private v
     * @return options to store
     */
   override def create(storename: String, attributes: Seq[AttributeDefinition], params: Map[String, String])(implicit ac: SharedComponentContext): Try[Map[String, String]] = {
-    log.debug("postgis create operation")
+    log.trace("postgis create operation")
 
     super.create(storename, attributes, params)(ac)
 
@@ -116,7 +116,7 @@ class PostgisEngine(private val url: String, private val user: String, private v
     * @return
     */
   override def read(storename: String, attributes: Seq[AttributeDefinition], predicates: Seq[Predicate], params: Map[String, String])(implicit ac: SharedComponentContext): Try[DataFrame] = {
-    log.debug("postgresql read operation")
+    log.trace("postgresql read operation")
 
     val query = params.getOrElse("query", "*")
     val limit = params.getOrElse("limit", "ALL")
@@ -153,7 +153,7 @@ class PostgisEngine(private val url: String, private val user: String, private v
     * @return new options to store
     */
   override def write(storename: String, df: DataFrame, attributes: Seq[AttributeDefinition], mode: SaveMode = SaveMode.Append, params: Map[String, String])(implicit ac: SharedComponentContext): Try[Map[String, String]] = {
-    log.debug("postgresql write operation")
+    log.trace("postgresql write operation")
 
     try {
       var data = df

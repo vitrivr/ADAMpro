@@ -64,6 +64,8 @@ object ECPPartitioner extends CustomPartitioner with Logging with Serializable {
     * @return the partitioned DataFrame
     */
   override def apply(data: DataFrame, attribute: Option[AttributeName], indexName: Option[IndexName], npartitions: Int, options: Map[String, String] = Map[String, String]())(implicit ac: SharedComponentContext): DataFrame = {
+    log.trace("start repartitioning index")
+
     import ac.spark.implicits._
 
     //loads the first ECPIndex
@@ -74,7 +76,6 @@ object ECPPartitioner extends CustomPartitioner with Logging with Serializable {
     }
     val joinDF = index.getData().get.withColumnRenamed(AttributeNames.featureIndexColumnName, AttributeNames.partitionKey)
     val joinedDF = data.join(joinDF, index.pk.name)
-    log.debug("repartitioning ")
 
     val indexmeta = ac.catalogManager.getIndexMeta(index.indexname).get.asInstanceOf[ECPIndexMetaData]
     val leaders = trainLeaders(indexmeta, npartitions)

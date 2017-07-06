@@ -25,7 +25,7 @@ private[va] object EquidistantMarksGenerator extends MarksGenerator with Seriali
     * @return
     */
   private[va] def getMarks(samples: Seq[IndexingTaskTuple], maxMarks: Seq[Int]): Marks = {
-    log.debug("get equidistant marks for VA-File")
+    log.trace("get equidistant marks for VA-File")
     val dimensionality = maxMarks.length
 
     val min = getMin(samples.map(_.ap_indexable)).toArray

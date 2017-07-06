@@ -17,7 +17,7 @@ import scala.concurrent.ExecutionContext
 class RPCStartup(port : Int) extends Thread with Logging {
   override def run(): Unit = {
     try {
-      log.debug("RPC server starting up")
+      log.trace("RPC server starting up")
 
       val server = new RPCServer(port)(scala.concurrent.ExecutionContext.global)
       server.start()

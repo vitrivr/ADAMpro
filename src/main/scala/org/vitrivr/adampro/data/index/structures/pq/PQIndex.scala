@@ -30,7 +30,7 @@ class PQIndex(override val indexname: IndexName)(@transient override implicit va
   val meta = metadata.get.asInstanceOf[PQIndexMetaData]
 
   override def scan(data : DataFrame, q : MathVector, distance : DistanceFunction, options : Map[String, String], k : Int)(tracker : QueryTracker): DataFrame = {
-    log.debug("scanning PQ index " + indexname)
+    log.trace("scanning PQ index")
 
     //precompute distance
     val distancesBc = ac.sc.broadcast(q.toArray

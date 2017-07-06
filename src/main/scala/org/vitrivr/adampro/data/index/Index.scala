@@ -85,6 +85,8 @@ abstract class Index(val indexname: IndexName)(@transient implicit val ac: Share
     *
     */
   def getData(): Option[DataFrame] = {
+    log.trace("load data of index")
+
     //cache data
     if (_data.isEmpty) {
       val data = Index.getStorage().get.read(indexname, Seq())
@@ -113,6 +115,9 @@ abstract class Index(val indexname: IndexName)(@transient implicit val ac: Share
         }
       }
     }
+
+    log.trace("return data of index")
+
 
     _data
   }
@@ -196,7 +201,6 @@ abstract class Index(val indexname: IndexName)(@transient implicit val ac: Share
     * @return
     */
   def scan(nnq: RankingQuery, filter: Option[DataFrame])(tracker: QueryTracker)(implicit ac: SharedComponentContext): DataFrame = {
-    log.debug("scan index")
     scan(nnq.q, nnq.distance, nnq.options, nnq.k, filter, nnq.partitions, nnq.queryID)(tracker)
   }
 
@@ -213,7 +217,7 @@ abstract class Index(val indexname: IndexName)(@transient implicit val ac: Share
     * @return a set of candidate tuple ids, possibly together with a tentative score (the number of tuples will be greater than k)
     */
   def scan(q: MathVector, distance: DistanceFunction, options: Map[String, String] = Map(), k: Int, filter: Option[DataFrame], partitions: Option[Set[PartitionID]], queryID: Option[String] = None)(tracker: QueryTracker)(implicit ac: SharedComponentContext): DataFrame = {
-    log.debug("started scanning index")
+    log.trace("started scanning index")
 
     if (isStale) {
       log.warn("index is stale but still used, please re-create " + indexname)
@@ -245,6 +249,8 @@ abstract class Index(val indexname: IndexName)(@transient implicit val ac: Share
       df = df.filter(filterUdf(col(pk.name)))
     }
 
+    log.trace("moving on to choosing partitions of index")
+
     //choose specific partition
     if (partitions.isDefined) {
       val rdd = df.rdd.mapPartitionsWithIndex((idx, iter) => if (partitions.get.contains(idx)) iter else Iterator(), preservesPartitioning = true)
@@ -256,6 +262,8 @@ abstract class Index(val indexname: IndexName)(@transient implicit val ac: Share
       val rdd = df.rdd.mapPartitionsWithIndex((idx, iter) => if (toKeep.find(_ == idx).isDefined) iter else Iterator(), preservesPartitioning = true)
       df = ac.sqlContext.createDataFrame(rdd, df.schema)
     }
+
+    log.trace("moving on to specific index")
 
     scan(df, q, distance, options, k)(tracker)
   }

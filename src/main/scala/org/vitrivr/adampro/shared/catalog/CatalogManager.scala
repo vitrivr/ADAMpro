@@ -109,8 +109,9 @@ class CatalogManager(internalsPath: String) extends Serializable with Logging {
     */
   private def execute[T](desc: String)(op: => T): Try[T] = {
     try {
-      log.trace("performed catalog operation: " + desc)
+      val t1 = System.currentTimeMillis()
       val res = op
+      log.trace("performed catalog operation (" + math.abs(System.currentTimeMillis() - t1) + " ms): " + desc)
       Success(res)
     } catch {
       case e: Exception =>
@@ -261,7 +262,7 @@ class CatalogManager(internalsPath: String) extends Serializable with Logging {
     * @return
     */
   def getAndUpdateAttributeOption(entityname: EntityName, attribute: String, key: String, z: String, op: (String) => (String)): Try[Map[String, String]] = {
-    execute("get attribute option") {
+    execute("get and update attribute option") {
       _attributeOptions.synchronized({
         val query = _attributeOptions.filter(_.entityname === entityname.toString).filter(_.attributename === attribute).filter(_.key === key).map(_.value).result
         val results = Await.result(DB.run(query), MAX_WAITING_TIME)

@@ -22,7 +22,7 @@ abstract class GenericOp extends Logging {
       }
 
       val t2 = System.currentTimeMillis
-      log.trace("performed operation '" + desc + "' in " + (t2 - t1) + " msecs")
+      log.trace("performed operation '" + desc + "' in " + (t2 - t1) + " ms")
       res
     } catch {
       case e: Exception =>

@@ -92,7 +92,7 @@ class PostgresqlEngine(private val url: String, private val user: String, privat
     * @return options to store
     */
   override def create(storename: String, attributes: Seq[AttributeDefinition], params: Map[String, String])(implicit ac: SharedComponentContext): Try[Map[String, String]] = {
-    log.debug("postgresql create operation")
+    log.trace("postgresql create operation")
     val connection = openConnection()
 
     try {
@@ -151,7 +151,7 @@ class PostgresqlEngine(private val url: String, private val user: String, privat
     * @return
     */
   override def exists(storename: String)(implicit ac: SharedComponentContext): Try[Boolean] = {
-    log.debug("postgresql exists operation")
+    log.trace("postgresql exists operation")
     val connection = openConnection()
 
     try {
@@ -178,7 +178,7 @@ class PostgresqlEngine(private val url: String, private val user: String, privat
     * @return
     */
   override def read(storename: String, attributes: Seq[AttributeDefinition], predicates: Seq[Predicate], params: Map[String, String])(implicit ac: SharedComponentContext): Try[DataFrame] = {
-    log.debug("postgresql read operation")
+    log.trace("postgresql read operation")
 
     try {
       //TODO: possibly adjust in here for partitioning
@@ -211,7 +211,7 @@ class PostgresqlEngine(private val url: String, private val user: String, privat
     * @return new options to store
     */
   override def write(storename: String, df: DataFrame, attributes: Seq[AttributeDefinition], mode: SaveMode = SaveMode.Append, params: Map[String, String])(implicit ac: SharedComponentContext): Try[Map[String, String]] = {
-    log.debug("postgresql write operation")
+    log.trace("postgresql write operation")
 
     try {
       df.write.mode(mode).jdbc(url, storename, props)
@@ -229,7 +229,7 @@ class PostgresqlEngine(private val url: String, private val user: String, privat
     * @return
     */
   override def drop(storename: String)(implicit ac: SharedComponentContext): Try[Void] = {
-    log.debug("postgresql drop operation")
+    log.trace("postgresql drop operation")
     val connection = openConnection()
 
     try {

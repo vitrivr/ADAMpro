@@ -40,7 +40,7 @@ abstract class AggregationExpression(private val leftExpression: QueryExpression
   }
 
   override protected def run(options: Option[QueryEvaluationOptions], filter: Option[DataFrame] = None)(tracker: QueryTracker)(implicit ac: SharedComponentContext): Option[DataFrame] = {
-    log.debug("run aggregation operation " + aggregationName + " between " + left.getClass.getName + " and " + right.getClass.getName + "  ordered " + order.toString)
+    log.trace("run aggregation operation " + aggregationName + " between " + left.getClass.getName + " and " + right.getClass.getName + "  ordered " + order.toString)
 
     ac.sc.setJobGroup(id.getOrElse(""), "aggregation", interruptOnCancel = true)
 

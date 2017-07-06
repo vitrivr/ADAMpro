@@ -55,7 +55,7 @@ class ParquetEngine()(@transient override implicit val ac: SharedComponentContex
     * @return options to store
     */
   override def create(storename: String, attributes: Seq[AttributeDefinition], params: Map[String, String])(implicit ac: SharedComponentContext): Try[Map[String, String]] = {
-    log.debug("parquet create operation")
+    log.trace("parquet create operation")
 
     val schema = StructType(attributes.map(attribute => StructField(attribute.name.toString, attribute.attributeType.datatype)))
     write(storename, ac.spark.createDataFrame(ac.sc.emptyRDD[Row], schema), attributes, SaveMode.ErrorIfExists, params)
@@ -68,7 +68,7 @@ class ParquetEngine()(@transient override implicit val ac: SharedComponentContex
     * @return
     */
   override def exists(storename: String)(implicit ac: SharedComponentContext): Try[Boolean] = {
-    log.debug("parquet exists operation")
+    log.trace("parquet exists operation")
     subengine.exists(storename)
   }
 
@@ -82,7 +82,7 @@ class ParquetEngine()(@transient override implicit val ac: SharedComponentContex
     * @return
     */
   override def read(storename: String, attributes: Seq[AttributeDefinition], predicates: Seq[Predicate], params: Map[String, String])(implicit ac: SharedComponentContext): Try[DataFrame] = {
-    log.debug("parquet read operation")
+    log.trace("parquet read operation")
     subengine.read(storename)
   }
 
@@ -97,7 +97,7 @@ class ParquetEngine()(@transient override implicit val ac: SharedComponentContex
     * @return new options to store
     */
   override def write(storename: String, df: DataFrame, attributes: Seq[AttributeDefinition], mode: SaveMode = SaveMode.Append, params: Map[String, String])(implicit ac: SharedComponentContext): Try[Map[String, String]] = {
-    log.debug("parquet write operation")
+    log.trace("parquet write operation")
     val allowRepartitioning = params.getOrElse("allowRepartitioning", "false").toBoolean
 
     import org.apache.spark.sql.functions.col
@@ -132,7 +132,7 @@ class ParquetEngine()(@transient override implicit val ac: SharedComponentContex
     * @return
     */
   def drop(storename: String)(implicit ac: SharedComponentContext): Try[Void] = {
-    log.debug("parquet drop operation")
+    log.trace("parquet drop operation")
     subengine.drop(storename)
   }
 

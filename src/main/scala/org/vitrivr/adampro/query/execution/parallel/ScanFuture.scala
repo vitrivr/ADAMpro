@@ -38,7 +38,7 @@ class ScanFuture[U](expression: QueryExpression, filter : Option[DataFrame], onC
           onComplete(Success(observation))
         }
 
-        log.debug("completed scanning of " + typename.getOrElse("<missing information>"))
+        log.trace("completed scanning of " + typename.getOrElse("<missing information>"))
 
         pqtracker.notifyCompletion(this, observation)
       }

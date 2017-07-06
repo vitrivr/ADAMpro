@@ -16,7 +16,7 @@ case class CompoundQueryExpression(private val expr : QueryExpression, id: Optio
   _children ++= Seq(expr)
 
   override protected def run(options : Option[QueryEvaluationOptions], filter: Option[DataFrame] = None)(tracker : QueryTracker)(implicit ac: SharedComponentContext): Option[DataFrame] = {
-    log.debug("evaluate compound query")
+    log.trace("evaluate compound query")
 
     ac.sc.setJobGroup(id.getOrElse(""), "compound query", interruptOnCancel = true)
 

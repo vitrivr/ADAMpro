@@ -1,11 +1,9 @@
 package org.vitrivr.adampro.query.ast.internal
 
-import org.apache.spark.broadcast.Broadcast
 import org.apache.spark.sql.DataFrame
 import org.apache.spark.sql.functions._
 import org.apache.spark.sql.types.StructType
 import org.vitrivr.adampro.config.AttributeNames
-import org.vitrivr.adampro.data.datatypes.vector.Vector._
 import org.vitrivr.adampro.data.entity.Entity
 import org.vitrivr.adampro.data.entity.Entity.EntityName
 import org.vitrivr.adampro.utils.exception.QueryNotConformException
@@ -13,9 +11,6 @@ import org.vitrivr.adampro.query.distance.Distance
 import org.vitrivr.adampro.query.ast.generic.{ExpressionDetails, QueryEvaluationOptions, QueryExpression}
 import org.vitrivr.adampro.query.query.RankingQuery
 import org.vitrivr.adampro.utils.Logging
-import org.apache.spark.util.sketch.BloomFilter
-import org.vitrivr.adampro.data.datatypes.TupleID
-import org.vitrivr.adampro.data.datatypes.TupleID.TupleID
 import org.vitrivr.adampro.process.SharedComponentContext
 import org.vitrivr.adampro.query.tracker.QueryTracker
 
@@ -42,7 +37,7 @@ case class SequentialScanExpression(private val entity: Entity)(private val nnq:
   }
 
   override protected def run(options : Option[QueryEvaluationOptions], filter: Option[DataFrame] = None)(tracker : QueryTracker)(implicit ac: SharedComponentContext): Option[DataFrame] = {
-    log.debug("perform sequential scan")
+    log.trace("perform sequential scan")
 
     ac.sc.setLocalProperty("spark.scheduler.pool", "sequential")
     ac.sc.setJobGroup(id.getOrElse(""), "sequential scan: " + entity.entityname.toString, interruptOnCancel = true)

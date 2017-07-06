@@ -47,6 +47,7 @@ private[communication] object MessageParser extends Logging {
     */
   implicit def toExpression(qm: QueryMessage)(implicit ac: SharedComponentContext): Try[QueryExpression] = {
     try {
+      log.trace(QUERY_MARKER, "start query message to expression")
       val queryid = prepareQueryId(qm.queryid)
 
       if(qm.from.isEmpty){

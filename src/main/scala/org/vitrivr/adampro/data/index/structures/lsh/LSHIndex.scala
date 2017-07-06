@@ -33,7 +33,7 @@ class LSHIndex(override val indexname: IndexName)(@transient override implicit v
 
 
   override def scan(data: DataFrame, q: MathVector, distance: DistanceFunction, options: Map[String, String], k: Int)(tracker : QueryTracker): DataFrame = {
-    log.debug("scanning LSH index " + indexname)
+    log.trace("scanning LSH index")
 
     val numOfQueries = options.getOrElse("numOfQ", "3").toInt
 

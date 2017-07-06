@@ -33,7 +33,7 @@ object IndexPartitioner extends Logging {
     * @return
     */
   def apply(index: Index, nPartitions: Int, join: Option[DataFrame], attribute: Option[AttributeName], mode: PartitionMode.Value, partitioner: PartitionerChoice.Value = PartitionerChoice.SPARK, options: Map[String, String] = Map[String, String]())(implicit ac: SharedComponentContext): Try[Index] = {
-    log.debug("Repartitioning Index: " + index.indexname + " with partitioner " + partitioner)
+    log.trace("repartitioning Index: " + index.indexname + " with partitioner " + partitioner)
     var data = index.getData().get.join(index.entity.get.getData().get, index.pk.name)
 
     //TODO: possibly consider replication

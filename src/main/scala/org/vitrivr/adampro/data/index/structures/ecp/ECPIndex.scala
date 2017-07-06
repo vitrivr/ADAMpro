@@ -39,7 +39,7 @@ class ECPIndex(override val indexname: IndexName)(@transient override implicit v
     * @return a set of candidate tuple ids, possibly together with a tentative score (the number of tuples will be greater than k)
     */
   override def scan(data: DataFrame, q: MathVector, distance: DistanceFunction, options: Map[String, String], k: Int)(tracker : QueryTracker): DataFrame = {
-    log.debug("scanning eCP index " + indexname)
+    log.trace("scanning eCP index")
 
     //for every leader, check its distance to the query-vector, then sort by distance.
     val leaders = meta.leaders.map(l => {

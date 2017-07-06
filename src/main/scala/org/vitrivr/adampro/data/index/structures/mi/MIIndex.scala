@@ -31,7 +31,7 @@ import org.vitrivr.adampro.query.query.RankingQuery
 
 
   override def scan(data: DataFrame, q: MathVector, distance: DistanceFunction, options: Map[String, String], k: Int)(tracker : QueryTracker): DataFrame = {
-    log.debug("scanning MI index " + indexname)
+    log.trace("scanning MI index")
 
     val ki = meta.ki
     //ks is the number of closest reference points to consider

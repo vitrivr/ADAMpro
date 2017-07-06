@@ -40,7 +40,7 @@ class ParquetIndexEngine()(@transient override implicit val ac: SharedComponentC
     * @return options to store
     */
   override def create(storename: String, attributes: Seq[AttributeDefinition], params: Map[String, String])(implicit ac: SharedComponentContext): Try[Map[String, String]] = {
-    log.debug("parquet create operation")
+    log.trace("parquet create operation")
     Success(Map())
   }
 }
