@@ -1,7 +1,7 @@
 package org.vitrivr.adampro.shared.catalog.catalogs
 
 import org.vitrivr.adampro.shared.catalog.CatalogManager
-import slick.driver.DerbyDriver.api._
+import slick.driver.H2Driver.api._
 
 /**
   * ADAMpro

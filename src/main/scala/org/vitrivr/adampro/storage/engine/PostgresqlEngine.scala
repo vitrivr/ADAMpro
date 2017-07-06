@@ -3,15 +3,14 @@ package org.vitrivr.adampro.storage.engine
 import java.sql.Connection
 import java.util.Properties
 
+import com.mchange.v2.c3p0.ComboPooledDataSource
 import org.vitrivr.adampro.data.datatypes.AttributeTypes
 import org.vitrivr.adampro.data.datatypes.AttributeTypes.AttributeType
 import org.vitrivr.adampro.data.entity.AttributeDefinition
 import org.vitrivr.adampro.query.query.Predicate
-import com.mchange.v2.c3p0.ComboPooledDataSource
 import org.apache.spark.sql.types.{StructField, StructType}
 import org.apache.spark.sql.{DataFrame, Row, SaveMode}
 import org.vitrivr.adampro.process.SharedComponentContext
-import spire.syntax.field
 
 import scala.util.{Failure, Success, Try}
 
@@ -52,7 +51,7 @@ class PostgresqlEngine(private val url: String, private val user: String, privat
 
   val propsMap = props.keySet().toArray.map(key => key.toString -> props.get(key).toString).toMap
 
-  @transient private val ds = new ComboPooledDataSource
+  @transient private val ds = new ComboPooledDataSource()
   ds.setDriverClass("org.postgresql.Driver")
   ds.setJdbcUrl(url)
   ds.setProperties(props)

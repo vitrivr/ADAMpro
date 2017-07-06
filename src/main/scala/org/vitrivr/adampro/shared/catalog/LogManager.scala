@@ -12,7 +12,7 @@ import org.vitrivr.adampro.query.query.RankingQuery
 import org.vitrivr.adampro.shared.catalog.catalogs._
 import org.vitrivr.adampro.utils.Logging
 import slick.dbio.NoStream
-import slick.driver.DerbyDriver.api._
+import slick.driver.H2Driver.api._
 
 import scala.collection.mutable.ListBuffer
 import scala.concurrent.Await
@@ -28,13 +28,12 @@ import scala.util.{Failure, Success, Try}
 class LogManager(internalsPath : String) extends Logging {
   private val MAX_WAITING_TIME: Duration = 100.seconds
 
-  private val ds = new ComboPooledDataSource
-  ds.setDriverClass("org.apache.derby.jdbc.EmbeddedDriver")
-  ds.setJdbcUrl("jdbc:derby:" + internalsPath + "/ap_logs" + "")
+  private val ds = new ComboPooledDataSource()
+  ds.setDriverClass("org.h2.Driver")
+  ds.setJdbcUrl("jdbc:h2:" + internalsPath + "/ap_catalog" + "")
 
   private val DB = Database.forDataSource(ds)
 
-  private[catalog] val SCHEMA = "adampro"
   private val _measurements = TableQuery[MeasurementLog]
   private val _queries = TableQuery[QueryLog]
 
@@ -47,19 +46,21 @@ class LogManager(internalsPath : String) extends Logging {
     * Initializes the catalog. Method is called at the beginning (see below).
     */
   private def init() {
-    val connection = Database.forURL("jdbc:derby:" + internalsPath + "/ap_logs" + ";create=true")
+    val connection = Database.forURL("jdbc:h2:" + internalsPath + "/ap_logs")
 
     try {
       val actions = new ListBuffer[DBIOAction[_, NoStream, _]]()
 
-      val schemaExists = Await.result(connection.run(sql"""SELECT COUNT(*) FROM SYS.SYSSCHEMAS WHERE SCHEMANAME = '#$SCHEMA'""".as[Int]), MAX_WAITING_TIME).headOption
+      val schema = CatalogManager.SCHEMA
+
+      val schemaExists = Await.result(connection.run(sql"""SELECT COUNT(*) FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_SCHEMA = '#$schema'""".as[Int]), MAX_WAITING_TIME).headOption
 
       if (schemaExists.isEmpty || schemaExists.get == 0) {
         //schema might not exist yet
-        actions += sqlu"""CREATE SCHEMA #$SCHEMA"""
+        Await.result(connection.run(DBIO.seq(sqlu"""CREATE SCHEMA IF NOT EXISTS #$schema;""").transactionally), MAX_WAITING_TIME)
       }
 
-      val tables = Await.result(connection.run(sql"""SELECT TABLENAME FROM SYS.SYSTABLES NATURAL JOIN SYS.SYSSCHEMAS WHERE SCHEMANAME = '#$SCHEMA'""".as[String]), MAX_WAITING_TIME).toSeq
+      val tables = Await.result(connection.run(sql"""SELECT TABLE_NAME FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_SCHEMA = '#$schema'""".as[String]), MAX_WAITING_TIME).toSeq
 
       LOGS.foreach { catalog =>
         if (!tables.contains(catalog.baseTableRow.tableName)) {

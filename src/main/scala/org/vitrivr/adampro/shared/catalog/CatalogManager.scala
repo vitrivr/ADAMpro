@@ -14,13 +14,12 @@ import org.vitrivr.adampro.data.index.structures.IndexTypes
 import org.vitrivr.adampro.process.SharedComponentContext
 import org.vitrivr.adampro.utils.Logging
 import slick.dbio.NoStream
-import slick.driver.DerbyDriver.api._
+import slick.driver.H2Driver.api._
 
 import scala.collection.mutable.ListBuffer
 import scala.concurrent.Await
 import scala.concurrent.duration._
 import scala.util.{Failure, Success, Try}
-
 
 /**
   * adamtwo
@@ -32,7 +31,7 @@ class CatalogManager(internalsPath: String) extends Serializable with Logging {
   private val MAX_WAITING_TIME: Duration = 100.seconds
 
   try {
-    Class.forName("org.apache.derby.jdbc.EmbeddedDriver").newInstance
+    Class.forName("org.h2.Driver").newInstance
   } catch {
     case e: Exception => {
       log.error("driver not available for catalog", e.getMessage)
@@ -40,9 +39,9 @@ class CatalogManager(internalsPath: String) extends Serializable with Logging {
     }
   }
 
-  private val ds = new ComboPooledDataSource
-  ds.setDriverClass("org.apache.derby.jdbc.EmbeddedDriver")
-  ds.setJdbcUrl("jdbc:derby:" + internalsPath + "/ap_catalog" + "")
+  private val ds = new ComboPooledDataSource()
+  ds.setDriverClass("org.h2.Driver")
+  ds.setJdbcUrl("jdbc:h2:" + internalsPath + "/ap_catalog" + "")
 
   private val DB = Database.forDataSource(ds)
 
@@ -65,21 +64,21 @@ class CatalogManager(internalsPath: String) extends Serializable with Logging {
     * Initializes the catalog. Method is called at the beginning (see below).
     */
   private def init() {
-    val connection = Database.forURL("jdbc:derby:" + internalsPath + "/ap_catalog" + ";create=true")
+    val connection = Database.forURL("jdbc:h2:" + internalsPath + "/ap_catalog")
 
     try {
       val actions = new ListBuffer[DBIOAction[_, NoStream, _]]()
 
       val schema = CatalogManager.SCHEMA
 
-      val schemaExists = Await.result(connection.run(sql"""SELECT COUNT(*) FROM SYS.SYSSCHEMAS WHERE SCHEMANAME = '#$schema'""".as[Int]), MAX_WAITING_TIME).headOption
+      val schemaExists = Await.result(connection.run(sql"""SELECT COUNT(*) FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_SCHEMA = '#$schema'""".as[Int]), MAX_WAITING_TIME).headOption
 
       if (schemaExists.isEmpty || schemaExists.get == 0) {
         //schema might not exist yet
-        actions += sqlu"""CREATE SCHEMA #$schema"""
+        Await.result(connection.run(DBIO.seq(sqlu"""CREATE SCHEMA IF NOT EXISTS #$schema;""").transactionally), MAX_WAITING_TIME)
       }
 
-      val tables = Await.result(connection.run(sql"""SELECT TABLENAME FROM SYS.SYSTABLES NATURAL JOIN SYS.SYSSCHEMAS WHERE SCHEMANAME = '#$schema'""".as[String]), MAX_WAITING_TIME).toSeq
+      val tables = Await.result(connection.run(sql"""SELECT TABLE_NAME FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_SCHEMA = '#$schema'""".as[String]), MAX_WAITING_TIME).toSeq
 
       CATALOGS.foreach { catalog =>
         if (!tables.contains(catalog.baseTableRow.tableName)) {
@@ -955,7 +954,7 @@ class CatalogManager(internalsPath: String) extends Serializable with Logging {
 }
 
 object CatalogManager {
-  private[catalog] val SCHEMA = "adampro"
+  private[catalog] val SCHEMA = "ADAMPRO"
 
   /**
     * Create catalog manager and fill it
