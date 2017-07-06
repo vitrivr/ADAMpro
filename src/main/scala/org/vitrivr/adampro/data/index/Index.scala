@@ -219,34 +219,21 @@ abstract class Index(val indexname: IndexName)(@transient implicit val ac: Share
   def scan(q: MathVector, distance: DistanceFunction, options: Map[String, String] = Map(), k: Int, filter: Option[DataFrame], partitions: Option[Set[PartitionID]], queryID: Option[String] = None)(tracker: QueryTracker)(implicit ac: SharedComponentContext): DataFrame = {
     log.trace("started scanning index")
 
-    if (isStale) {
-      log.warn("index is stale but still used, please re-create " + indexname)
+    import scala.concurrent.ExecutionContext.Implicits.global
+    Future {
+      if (isStale) {
+        log.warn("index is stale but still used, please re-create " + indexname)
+      }
     }
 
     var df = getData().get
 
+    log.trace("moving on to filtering in index")
+
     //apply pre-filter
-    val funnel = new Funnel[Any] {
-      override def funnel(t: Any, primitiveSink: PrimitiveSink): Unit =
-        t match {
-          case s: String => primitiveSink.putUnencodedChars(s)
-          case l: Long => primitiveSink.putLong(l)
-          case i: Int => primitiveSink.putInt(i)
-          case _ => primitiveSink.putUnencodedChars(t.toString)
-        }
-    }
-    val ids = BloomFilter.create[Any](funnel, 1000, 0.05)
-
     if (filter.isDefined) {
-      filter.get.select(pk.name).collect().map(_.getAs[Any](pk.name)).toSeq.foreach {
-        ids.put(_)
-      }
-
-      val idsBc = ac.sc.broadcast(ids)
-      tracker.addBroadcast(idsBc)
-      val filterUdf = udf((arg: Any) => idsBc.value.mightContain(arg))
-
-      df = df.filter(filterUdf(col(pk.name)))
+      log.trace("filter is defined")
+      df = df.join(filter.get, df.col(pk.name) === filter.get.col(pk.name), "leftsemi")
     }
 
     log.trace("moving on to choosing partitions of index")
