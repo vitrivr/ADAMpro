@@ -40,7 +40,7 @@ case class Entity(entityname: EntityName)(@transient implicit val ac: SharedComp
     *
     * @return
     */
-  val pk: AttributeDefinition = ac.catalogManager.getPrimaryKey(entityname).get
+  lazy val pk: AttributeDefinition = ac.catalogManager.getPrimaryKey(entityname).get
 
   private var _schema: Option[Seq[AttributeDefinition]] = None
 
@@ -464,7 +464,7 @@ case class Entity(entityname: EntityName)(@transient implicit val ac: SharedComp
   def markSoftStale(): Unit = {
     mostRecentVersion.add(1)
 
-    _schema = None
+    //_schema = None schema cannot be changed
     _data.map(_.unpersist())
     _data = None
 
@@ -491,7 +491,7 @@ case class Entity(entityname: EntityName)(@transient implicit val ac: SharedComp
   private def checkVersions(): Unit = {
     if (currentVersion < mostRecentVersion.value) {
 
-      _schema = None
+      //_schema = None schema cannot be changed
       _data.map(_.unpersist())
       _data = None
       ac.cacheManager.invalidateEntity(entityname)
