@@ -62,13 +62,15 @@ class VAIndex(override val indexname: IndexName)(@transient override implicit va
     val uboundsBc = ac.sc.broadcast(bounds._2)
     tracker.addBroadcast(uboundsBc)
 
+    log.trace("computing VA bounds done")
+
     //compute the cells
     val cellsUDF = udf((c: Array[Byte]) => {
       signatureGeneratorBc.value.toCells(BitString.fromByteArray(c))
     })
 
     //compute the approximate distance given the cells
-    val distUDF = (boundsBc: Broadcast[Bounds]) => udf((cells: Seq[Int]) => {
+    val distUDF = (boundsBc: Broadcast[Bounds]) => udf((cells: IndexedSeq[Int]) => {
       var bound: Distance = 0
 
       var idx = 0
@@ -100,8 +102,10 @@ class VAIndex(override val indexname: IndexName)(@transient override implicit va
           localRh.offer(current, pk)
         }
 
-        localRh.results.sortBy(x => -x.ap_upper).iterator
+        localRh.results.iterator
       })
+
+    log.trace("local VA scan done")
 
     /*import ac.spark.implicits._
     val minUpperPart = localRes
@@ -119,6 +123,8 @@ class VAIndex(override val indexname: IndexName)(@transient override implicit va
     }
 
     val res = ac.sqlContext.createDataset(globalRh.results).toDF()
+
+    log.trace("global VA scan done")
 
     res
   }
