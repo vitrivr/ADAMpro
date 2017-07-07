@@ -102,7 +102,7 @@ private[va] class VAResultHandler(k: Int) extends Logging with Serializable {
     */
   private def enqueueAndAddToCandidates(res: VAResultElement): Unit = {
     upperBoundQueue.enqueue(res.ap_upper)
-    lowerBoundResultElementQueue += res
+    lowerBoundResultElementQueue += (res)
   }
 
 
@@ -114,7 +114,7 @@ private[va] class VAResultHandler(k: Int) extends Logging with Serializable {
     val maxUpperBound = if(upperBoundQueue.isEmpty){
       Double.PositiveInfinity
     } else {
-      upperBoundQueue.first().toDouble
+      upperBoundQueue.firstDouble
     }
 
     lowerBoundResultElementQueue.filterNot(_.ap_lower > maxUpperBound)
