@@ -58,10 +58,10 @@ val baseLibs = Seq(
 
 //adampro core libs
 val coreLibs = Seq(
-  "org.apache.spark" %% "spark-core" % "2.1.1" % "provided" excludeAll ExclusionRule("org.apache.hadoop"), //make sure that you use the same spark version as in your deployment!
-  "org.apache.spark" %% "spark-sql" % "2.1.1"  % "provided",
-  "org.apache.spark" %% "spark-hive" % "2.1.1"  % "provided",
-  "org.apache.spark" %% "spark-mllib" % "2.1.1"  % "provided",
+  "org.apache.spark" %% "spark-core" % "2.2.0" % "provided" excludeAll ExclusionRule("org.apache.hadoop"), //make sure that you use the same spark version as in your deployment!
+  "org.apache.spark" %% "spark-sql" % "2.2.0"  % "provided",
+  "org.apache.spark" %% "spark-hive" % "2.2.0"  % "provided",
+  "org.apache.spark" %% "spark-mllib" % "2.2.0"  % "provided",
   "org.apache.hadoop" % "hadoop-client" % "2.7.3" excludeAll ExclusionRule("javax.servlet")  //make sure that you use the same hadoop version as in your deployment!
 ).map(
   _.excludeAll(
