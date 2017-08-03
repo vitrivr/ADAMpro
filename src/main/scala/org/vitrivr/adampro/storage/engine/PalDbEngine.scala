@@ -260,7 +260,7 @@ class PalDbEngine(private val path: String)(@transient override implicit val ac:
     */
   override def drop(storename: String)(implicit ac: SharedComponentContext): Try[Void] = {
     try {
-      FileUtils.deleteDirectory(new File(getPath(storename)))
+      FileUtils.forceDelete(new File(getPath(storename)))
       Success(null)
     } catch {
       case e: Exception => Failure(e)
