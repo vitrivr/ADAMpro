@@ -102,7 +102,8 @@ val tertiaryLibs = Seq(
   "net.postgis" % "postgis-jdbc" % "2.2.1",
   "com.databricks" %% "spark-avro" % "3.1.0",
   "org.iq80.leveldb" % "leveldb" % "0.9",
-  "com.linkedin.paldb" % "paldb" % "1.2.0"
+  "com.linkedin.paldb" % "paldb" % "1.2.0",
+  "org.alluxio" % "alluxio-core-client-fs" % "1.5.0"
 ).map(
   _.excludeAll(
     ExclusionRule("org.scala-lang"),

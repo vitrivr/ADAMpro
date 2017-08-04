@@ -13,14 +13,14 @@ adampro {
 storage {
   parquet {
     engine = "ParquetEngine"
-    hadoop = true
+    storage = "hadoop"
     basepath = "hdfs://MASTER_HOSTNAME:9000/"
     datapath = "/adampro/data/data/"
   }
 
   index {
     engine = "ParquetIndexEngine"
-    hadoop = true
+    storage = "hadoop"
     basepath = "hdfs://MASTER_HOSTNAME:9000/"
     datapath = "/adampro/data/index/"
   }

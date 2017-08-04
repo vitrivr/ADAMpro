@@ -25,10 +25,14 @@ class ParquetIndexEngine()(@transient override implicit val ac: SharedComponentC
     */
   def this(props: Map[String, String])(implicit ac: SharedComponentContext) {
     this()(ac)
-    if (props.get("hadoop").getOrElse("false").toBoolean) {
-      subengine = new ParquetHadoopStorage(AdamConfig.cleanPath(props.get("basepath").get), props.get("datapath").get)
+    if (!props.contains("storage")) {
+      subengine = new ParquetLocalStorage(AdamConfig.cleanPath(props.get("path").get))
     } else {
-      subengine = new ParquetLocalEngine(AdamConfig.cleanPath(props.get("path").get))
+      subengine = props.get("storage").get match {
+        case "hadoop" => new ParquetHadoopStorage(props.get("basepath").get, props.get("datapath").get)
+        case "alluxio" => new ParquetAlluxioStorage(props.get("scheme").get, props.get("authority").get, props.get("path").get)
+        case "local" => new ParquetLocalStorage(AdamConfig.cleanPath(props.get("path").get))
+      }
     }
   }
 
