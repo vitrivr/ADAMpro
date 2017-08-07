@@ -1,15 +1,13 @@
 package org.vitrivr.adampro.data.index
 
-import org.apache.spark.HashPartitioner
-import org.apache.spark.rdd.RDD
-import org.apache.spark.sql.{DataFrame, Row, SaveMode}
-import org.vitrivr.adampro.shared.catalog.CatalogManager
+import org.apache.spark.sql.{DataFrame, SaveMode}
 import org.vitrivr.adampro.config.AttributeNames
 import org.vitrivr.adampro.data.entity.Entity.AttributeName
-import org.vitrivr.adampro.utils.exception.GeneralAdamException
-import org.vitrivr.adampro.data.index.partition._
+import org.vitrivr.adampro.distribution.fragmentation.{PartitionMode, PartitionerChoice}
+import org.vitrivr.adampro.distribution.fragmentation.partitioner._
 import org.vitrivr.adampro.process.SharedComponentContext
 import org.vitrivr.adampro.utils.Logging
+import org.vitrivr.adampro.utils.exception.GeneralAdamException
 
 import scala.util.{Failure, Success, Try}
 
@@ -19,7 +17,7 @@ import scala.util.{Failure, Success, Try}
   * Ivan Giangreco
   * July 2016
   */
-object IndexPartitioner extends Logging {
+object IndexFragmenter extends Logging {
   /**
     * Partitions the index data.
     *

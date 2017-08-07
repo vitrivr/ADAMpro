@@ -4,13 +4,11 @@ import org.apache.spark.sql.DataFrame
 import org.vitrivr.adampro.data.entity.Entity
 import org.vitrivr.adampro.data.entity.Entity._
 import org.vitrivr.adampro.utils.exception.GeneralAdamException
-import org.vitrivr.adampro.grpc.grpc.IndexType
 import org.vitrivr.adampro.query.tracker.QueryTracker
-import org.vitrivr.adampro.data.index.partition.{PartitionMode, PartitionerChoice}
 import org.vitrivr.adampro.data.index.Index._
 import org.vitrivr.adampro.data.index.structures.IndexTypes
-import org.vitrivr.adampro.data.index.structures.IndexTypes.IndexType
-import org.vitrivr.adampro.data.index.{Index, IndexPartitioner}
+import org.vitrivr.adampro.data.index.{Index, IndexFragmenter}
+import org.vitrivr.adampro.distribution.fragmentation.{FragmenterManager, PartitionMode, PartitionerChoice}
 import org.vitrivr.adampro.process.SharedComponentContext
 import org.vitrivr.adampro.query.distance.DistanceFunction
 
@@ -179,7 +177,13 @@ object IndexOp extends GenericOp {
     */
   def partition(indexname: IndexName, nPartitions: Int, joins: Option[DataFrame], attribute: Option[AttributeName], mode: PartitionMode.Value, partitioner: PartitionerChoice.Value = PartitionerChoice.SPARK, options: Map[String, String] = Map[String, String]())(implicit ac: SharedComponentContext): Try[Index] = {
     execute("repartition index " + indexname + " operation") {
-      IndexPartitioner(Index.load(indexname).get, nPartitions, joins, attribute, mode, partitioner, options)
+      val index = Index.load(indexname)
+
+      if (index.isFailure) {
+        return Failure(index.failed.get)
+      }
+
+      FragmenterManager.fragment(index.get, nPartitions, joins, attribute, mode, partitioner, options)
     }
   }
 

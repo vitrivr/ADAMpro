@@ -2,8 +2,8 @@ package org.vitrivr.adampro.communication.api
 
 import org.apache.spark.sql.DataFrame
 import org.vitrivr.adampro.data.entity.Entity._
-import org.vitrivr.adampro.data.entity.{AttributeDefinition, Entity, EntityPartitioner, SparsifyHelper}
-import org.vitrivr.adampro.data.index.partition.PartitionMode
+import org.vitrivr.adampro.data.entity.{AttributeDefinition, Entity, EntityFragmenter, SparsifyHelper}
+import org.vitrivr.adampro.distribution.fragmentation.{FragmenterManager, PartitionMode}
 import org.vitrivr.adampro.process.SharedComponentContext
 import org.vitrivr.adampro.query.query.Predicate
 
@@ -225,7 +225,7 @@ object EntityOp extends GenericOp {
       val entity = Entity.load(entityname)
 
       if (entity.isSuccess) {
-        EntityPartitioner(Entity.load(entityname).get, npartitions, joins, attribute, mode)
+        FragmenterManager.fragment(entity.get, npartitions, joins, attribute, mode)
       } else {
         Failure(entity.failed.get)
       }

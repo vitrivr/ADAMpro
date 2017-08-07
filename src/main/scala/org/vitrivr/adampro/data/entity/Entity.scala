@@ -399,7 +399,7 @@ case class Entity(entityname: EntityName)(@transient implicit val ac: SharedComp
     val stamp = lock.writeLock()
 
     try {
-      EntityPartitioner(this, ac.config.defaultNumberOfPartitions, attribute = Some(pk.name))
+      EntityFragmenter(this, ac.config.defaultNumberOfPartitions, attribute = Some(pk.name))
       ac.catalogManager.updateEntityOption(entityname, Entity.N_INSERTS_VACUUMING, 0.toString)
     } finally {
       lock.unlock(stamp)

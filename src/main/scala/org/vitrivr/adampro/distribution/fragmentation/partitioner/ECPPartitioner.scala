@@ -1,4 +1,4 @@
-package org.vitrivr.adampro.data.index.partition
+package org.vitrivr.adampro.distribution.fragmentation.partitioner
 
 import org.vitrivr.adampro.config.AttributeNames
 import org.vitrivr.adampro.data.datatypes.vector.Vector._
@@ -15,6 +15,7 @@ import org.apache.spark.sql.{DataFrame, Row}
 import org.apache.spark.util.random.Sampling
 import org.vitrivr.adampro.data.entity.Entity.AttributeName
 import org.vitrivr.adampro.data.index.Index.IndexName
+import org.vitrivr.adampro.distribution.fragmentation.PartitionerChoice
 import org.vitrivr.adampro.process.SharedComponentContext
 
 /**

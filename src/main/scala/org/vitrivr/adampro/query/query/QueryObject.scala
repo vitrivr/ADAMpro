@@ -4,7 +4,7 @@ import org.vitrivr.adampro.shared.catalog.CatalogManager
 import org.vitrivr.adampro.data.datatypes.vector.Vector._
 import org.vitrivr.adampro.data.entity.Entity
 import org.vitrivr.adampro.data.entity.Entity.AttributeName
-import org.vitrivr.adampro.data.index.partition.Partitioning.PartitionID
+import org.vitrivr.adampro.distribution.fragmentation.Partitioning.PartitionID
 import org.vitrivr.adampro.data.index.Index
 import org.vitrivr.adampro.process.SharedComponentContext
 import org.vitrivr.adampro.query.distance.DistanceFunction

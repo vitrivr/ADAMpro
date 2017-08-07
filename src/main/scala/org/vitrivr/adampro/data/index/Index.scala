@@ -12,10 +12,10 @@ import org.vitrivr.adampro.data.entity.Entity._
 import org.vitrivr.adampro.utils.exception.{IndexNotExistingException, IndexNotProperlyDefinedException}
 import org.vitrivr.adampro.query.tracker.QueryTracker
 import org.vitrivr.adampro.data.index.Index.{IndexName, IndexTypeName}
-import org.vitrivr.adampro.data.index.IndexPartitioner.log
-import org.vitrivr.adampro.data.index.partition.Partitioning.PartitionID
-import org.vitrivr.adampro.data.index.partition._
+import IndexFragmenter.log
+import org.vitrivr.adampro.distribution.fragmentation.Partitioning.PartitionID
 import org.vitrivr.adampro.data.index.structures.IndexTypes
+import org.vitrivr.adampro.distribution.fragmentation.partitioner.SparkPartitioner
 import org.vitrivr.adampro.process.SharedComponentContext
 import org.vitrivr.adampro.query.distance.DistanceFunction
 import org.vitrivr.adampro.query.query.RankingQuery

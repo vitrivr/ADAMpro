@@ -4,9 +4,9 @@ import org.vitrivr.adampro.AdamTestBase
 import org.vitrivr.adampro.communication.api.{IndexOp, QueryOp}
 import org.vitrivr.adampro.config.AttributeNames
 import org.vitrivr.adampro.query.tracker.QueryTracker
-import org.vitrivr.adampro.data.index.partition.PartitionMode
 import org.vitrivr.adampro.data.index.Index
 import org.vitrivr.adampro.data.index.structures.IndexTypes
+import org.vitrivr.adampro.distribution.fragmentation.PartitionMode
 import org.vitrivr.adampro.query.distance.Distance.Distance
 import org.vitrivr.adampro.query.distance.{Distance, EuclideanDistance}
 import org.vitrivr.adampro.query.query.RankingQuery
