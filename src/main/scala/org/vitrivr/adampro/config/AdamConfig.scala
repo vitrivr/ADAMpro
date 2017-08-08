@@ -76,6 +76,14 @@ class AdamConfig extends Serializable with Logging {
 
   val logQueryExecutionTime = true
 
+
+  val approximateFiltering = if(config.hasPath("adampro.approximateFiltering")){
+    config.getBoolean("adampro.approximateFiltering")
+  } else {
+    false
+  }
+
+
   /**
     *
     * @param path

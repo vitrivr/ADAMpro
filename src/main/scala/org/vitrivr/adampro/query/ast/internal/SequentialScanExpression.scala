@@ -4,6 +4,7 @@ import org.apache.spark.sql.DataFrame
 import org.apache.spark.sql.functions._
 import org.apache.spark.sql.types.StructType
 import org.vitrivr.adampro.config.AttributeNames
+import org.vitrivr.adampro.data.datatypes.TupleID.TupleID
 import org.vitrivr.adampro.data.entity.Entity
 import org.vitrivr.adampro.data.entity.Entity.EntityName
 import org.vitrivr.adampro.utils.exception.QueryNotConformException
@@ -48,25 +49,6 @@ case class SequentialScanExpression(private val entity: Entity)(private val nnq:
     }
 
     val df = entity.getData().get
-    /*var bf : BloomFilter = null
-
-    //prepare filter
-    if (filter.isDefined) {
-      bf = filter.get.stat.bloomFilter(entity.pk.name, 2000, 0.05)
-    }
-
-    if (filterExpr.isDefined) {
-      filterExpr.get.filter = filter
-      val filterExprBf = filterExpr.get.execute(options)(tracker).get.select(entity.pk.name).stat.bloomFilter(entity.pk.name, 2000, 0.05)
-
-      if(bf != null){
-        bf = bf.mergeInPlace(filterExprBf)
-      } else {
-        bf = filterExprBf
-      }
-
-    }*/
-
 
     val prefilter = if(filter.isDefined && filterExpr.isDefined){
       filterExpr.get.filter = filter
@@ -83,22 +65,32 @@ case class SequentialScanExpression(private val entity: Entity)(private val nnq:
       None
     }
 
-    var result = if(prefilter.isDefined){
-      Some(df.join(prefilter.get, df.col(entity.pk.name) === prefilter.get.col(entity.pk.name), "leftsemi"))
+
+    var result = if(ac.config.approximateFiltering){
+      //Bloom filter: approximate filtering
+
+      if (prefilter.isDefined) {
+        val bf = prefilter.get.stat.bloomFilter(entity.pk.name, 5000, 0.05)
+
+        val bfBc = ac.sc.broadcast(bf)
+        tracker.addBroadcast(bfBc)
+
+        val filterUdf = udf((arg: TupleID) => if(arg != null) bfBc.value.mightContain(arg) else false)
+
+        Some(df.filter(filterUdf(col(entity.pk.name))))
+      } else {
+        Some(df)
+      }
+
     } else {
-      Some(df)
+      //Join: precise filtering
+
+      if(prefilter.isDefined){
+        Some(df.join(prefilter.get, df.col(entity.pk.name) === prefilter.get.col(entity.pk.name), "leftsemi"))
+      } else {
+        Some(df)
+      }
     }
-
-
-    /*var result = if (filter.isDefined || filterExpr.isDefined) {
-      val bfBc = ac.sc.broadcast(bf)
-      tracker.addBroadcast(bfBc)
-
-      val filterUdf = udf((arg: TupleID) => bfBc.value.mightContain(arg))
-      Some(df.filter(filterUdf(col(entity.pk.name))))
-    } else {
-      Some(df)
-    }*/
 
     //adjust output
     if (result.isDefined && options.isDefined && options.get.storeSourceProvenance) {
