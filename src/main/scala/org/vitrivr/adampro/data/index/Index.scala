@@ -346,7 +346,7 @@ object Index extends Logging {
   type IndexName = EntityName
   type IndexTypeName = IndexTypes.IndexType
 
-  private[index] def getStorage()(implicit ac: SharedComponentContext) = ac.storageManager.get("parquetindex")
+  private[index] def getStorage()(implicit ac: SharedComponentContext) = ac.storageManager.get("index")
 
   /**
     * Creates an index that is unique and which follows the naming rules of indexes.
