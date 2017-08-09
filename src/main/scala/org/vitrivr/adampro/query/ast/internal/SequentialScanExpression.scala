@@ -70,7 +70,7 @@ case class SequentialScanExpression(private val entity: Entity)(private val nnq:
       //Bloom filter: approximate filtering
 
       if (prefilter.isDefined) {
-        val bf = prefilter.get.stat.bloomFilter(entity.pk.name, 5000, 0.05)
+        val bf = prefilter.get.stat.bloomFilter(entity.pk.name, 2000, 0.05)
 
         val bfBc = ac.sc.broadcast(bf)
         tracker.addBroadcast(bfBc)
