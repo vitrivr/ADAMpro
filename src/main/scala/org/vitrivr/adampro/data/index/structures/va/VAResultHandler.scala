@@ -2,13 +2,13 @@ package org.vitrivr.adampro.data.index.structures.va
 
 import java.util.Comparator
 
-import it.unimi.dsi.fastutil.doubles.{DoubleComparator, DoubleComparators, DoubleHeapPriorityQueue}
+import it.unimi.dsi.fastutil.doubles.{DoubleArrayPriorityQueue, DoubleComparator, DoubleComparators, DoubleHeapPriorityQueue}
 import org.apache.spark.sql.Row
 import org.vitrivr.adampro.data.datatypes.TupleID._
 import org.vitrivr.adampro.query.distance.Distance.Distance
 import org.vitrivr.adampro.utils.Logging
 
-import scala.collection.mutable.ListBuffer
+import scala.collection.mutable.{ArrayBuffer, ListBuffer}
 
 /**
   * adamtwo
@@ -19,8 +19,8 @@ import scala.collection.mutable.ListBuffer
 private[va] class VAResultHandler(k: Int) extends Logging with Serializable {
   private var elementsLeft = k
 
-  private val upperBoundQueue = new DoubleHeapPriorityQueue(2 * k, DoubleComparators.OPPOSITE_COMPARATOR)
-  private val lowerBoundResultElementQueue = new ListBuffer[VAResultElement]()
+  private val upperBoundQueue = new DoubleArrayPriorityQueue(2 * k, DoubleComparators.OPPOSITE_COMPARATOR)
+  private val lowerBoundResultElementQueue = new ArrayBuffer[VAResultElement](5 * k)
 
   private class VAResultElementLowerBoundComparator(comparator: DoubleComparator) extends Comparator[VAResultElement] with Serializable {
     final def compare(a: VAResultElement, b: VAResultElement): Int = comparator.compare(a.ap_lower, b.ap_lower)
@@ -45,12 +45,12 @@ private[va] class VAResultHandler(k: Int) extends Logging with Serializable {
 
       //we have already k elements, therefore check if new element is better
       //peek is the upper bound
-      val peek = upperBoundQueue.first()
+      val peek = upperBoundQueue.firstDouble()
       if (peek >= lower) {
         //if peek is larger than lower, then dequeue worst element and insert new element
-        upperBoundQueue.dequeue()
+        upperBoundQueue.dequeueDouble()
         val upper = r.getAs[Distance]("ap_ubound")
-        val tid = r.getAs[TupleID](pk: String)
+        val tid = r.getAs[TupleID](pk)
         enqueueAndAddToCandidates(tid, lower, upper)
         return true
       } else {
@@ -74,10 +74,10 @@ private[va] class VAResultHandler(k: Int) extends Logging with Serializable {
     } else {
       //we have already k elements, therefore check if new element is better
       //peek is the upper bound
-      val peek = upperBoundQueue.first()
+      val peek = upperBoundQueue.firstDouble()
       if (peek >= res.ap_lower) {
         //if peek is larger than lower, then dequeue worst element and insert new element
-        upperBoundQueue.dequeue()
+        upperBoundQueue.dequeueDouble()
         enqueueAndAddToCandidates(res.ap_id, res.ap_lower, res.ap_upper)
         return true
       } else {
@@ -92,7 +92,7 @@ private[va] class VAResultHandler(k: Int) extends Logging with Serializable {
     * @param lower
     * @param upper
     */
-  private def enqueueAndAddToCandidates(tid: TupleID, lower: Distance, upper: Distance): Unit = {
+  @inline private def enqueueAndAddToCandidates(tid: TupleID, lower: Distance, upper: Distance): Unit = {
     enqueueAndAddToCandidates(VAResultElement(tid, lower, upper, (lower + upper) / 2.0))
   }
 
@@ -102,7 +102,7 @@ private[va] class VAResultHandler(k: Int) extends Logging with Serializable {
     */
   private def enqueueAndAddToCandidates(res: VAResultElement): Unit = {
     upperBoundQueue.enqueue(res.ap_upper)
-    lowerBoundResultElementQueue += (res)
+    lowerBoundResultElementQueue.append(res)
   }
 
 
@@ -111,13 +111,10 @@ private[va] class VAResultHandler(k: Int) extends Logging with Serializable {
     * @return
     */
   def results = {
-    val maxUpperBound = if(upperBoundQueue.isEmpty){
-      Double.PositiveInfinity
+    if(upperBoundQueue.isEmpty){
+      lowerBoundResultElementQueue
     } else {
-      upperBoundQueue.firstDouble
+      lowerBoundResultElementQueue.filterNot(_.ap_lower >  upperBoundQueue.firstDouble)
     }
-
-    lowerBoundResultElementQueue.filterNot(_.ap_lower > maxUpperBound)
   }
-
 }
