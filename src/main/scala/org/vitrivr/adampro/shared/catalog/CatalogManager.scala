@@ -16,7 +16,7 @@ import org.vitrivr.adampro.utils.Logging
 import slick.dbio.NoStream
 import slick.driver.H2Driver.api._
 
-import scala.collection.mutable.ListBuffer
+import scala.collection.mutable.ArrayBuffer
 import scala.concurrent.Await
 import scala.concurrent.duration._
 import scala.util.{Failure, Success, Try}
@@ -67,7 +67,7 @@ class CatalogManager(internalsPath: String) extends Serializable with Logging {
     val connection = Database.forURL("jdbc:h2:" + internalsPath + "/ap_catalog")
 
     try {
-      val actions = new ListBuffer[DBIOAction[_, NoStream, _]]()
+      val actions = new ArrayBuffer[DBIOAction[_, NoStream, _]]()
 
       val schema = CatalogManager.SCHEMA
 
@@ -133,7 +133,7 @@ class CatalogManager(internalsPath: String) extends Serializable with Logging {
         throw new EntityExistingException()
       }
 
-      val actions = new ListBuffer[DBIOAction[_, NoStream, _]]()
+      val actions = new ArrayBuffer[DBIOAction[_, NoStream, _]]()
 
       actions += _entitites.+=(entityname)
 
@@ -182,7 +182,7 @@ class CatalogManager(internalsPath: String) extends Serializable with Logging {
     */
   def updateEntityOption(entityname: EntityName, key: String, newValue: String): Try[Void] = {
     execute("update entity option") {
-      val actions = new ListBuffer[DBIOAction[_, NoStream, _]]()
+      val actions = new ArrayBuffer[DBIOAction[_, NoStream, _]]()
 
       //upsert
       actions += _entityOptions.filter(_.entityname === entityname.toString()).filter(_.key === key).delete
@@ -220,7 +220,7 @@ class CatalogManager(internalsPath: String) extends Serializable with Logging {
       val query = _attributes.filter(_.entityname === entityname.toString).filter(_.attributename === attributename).result
       val attribute = Await.result(DB.run(query), MAX_WAITING_TIME).head
 
-      val actions = new ListBuffer[DBIOAction[_, NoStream, _]]()
+      val actions = new ArrayBuffer[DBIOAction[_, NoStream, _]]()
 
       //update
       actions += _attributes.filter(_.entityname === entityname.toString).filter(_.attributename === attributename).map(_.handlername).update(newHandlerName)
@@ -267,7 +267,7 @@ class CatalogManager(internalsPath: String) extends Serializable with Logging {
         val query = _attributeOptions.filter(_.entityname === entityname.toString).filter(_.attributename === attribute).filter(_.key === key).map(_.value).result
         val results = Await.result(DB.run(query), MAX_WAITING_TIME)
 
-        val actions = new ListBuffer[DBIOAction[_, NoStream, _]]()
+        val actions = new ArrayBuffer[DBIOAction[_, NoStream, _]]()
 
         if (results.isEmpty) {
           actions += _attributeOptions.+=(entityname, attribute, key, z)
@@ -300,7 +300,7 @@ class CatalogManager(internalsPath: String) extends Serializable with Logging {
     */
   def updateAttributeOption(entityname: EntityName, attribute: String, key: String, newValue: String): Try[Void] = {
     execute("update attribute option") {
-      val actions = new ListBuffer[DBIOAction[_, NoStream, _]]()
+      val actions = new ArrayBuffer[DBIOAction[_, NoStream, _]]()
 
       //upsert
       actions += _attributeOptions.filter(_.entityname === entityname.toString).filter(_.attributename === attribute).filter(_.key === key).delete
@@ -357,7 +357,7 @@ class CatalogManager(internalsPath: String) extends Serializable with Logging {
     */
   def updateIndexOption(indexname: IndexName, key: String, newValue: String): Try[Void] = {
     execute("update index option") {
-      val actions = new ListBuffer[DBIOAction[_, NoStream, _]]()
+      val actions = new ArrayBuffer[DBIOAction[_, NoStream, _]]()
 
       //upsert
       actions += _indexOptions.filter(_.indexname === indexname.toString).filter(_.key === key).delete
@@ -545,7 +545,7 @@ class CatalogManager(internalsPath: String) extends Serializable with Logging {
       oos.close()
       bos.close()
 
-      val actions = new ListBuffer[DBIOAction[_, NoStream, _]]()
+      val actions = new ArrayBuffer[DBIOAction[_, NoStream, _]]()
 
       actions += _indexes.+=((indexname, entityname, attributename, indextypename.name, meta, true))
 
@@ -571,7 +571,7 @@ class CatalogManager(internalsPath: String) extends Serializable with Logging {
         }
       }
 
-      val actions = new ListBuffer[DBIOAction[_, NoStream, _]]()
+      val actions = new ArrayBuffer[DBIOAction[_, NoStream, _]]()
 
       actions += _indexes.filter(_.indexname === indexname.toString).delete
 
@@ -676,7 +676,7 @@ class CatalogManager(internalsPath: String) extends Serializable with Logging {
     */
   def makeIndexStale(indexname: IndexName): Try[Void] = {
     execute("make index stale") {
-      val actions = new ListBuffer[DBIOAction[_, NoStream, _]]()
+      val actions = new ArrayBuffer[DBIOAction[_, NoStream, _]]()
 
       actions += _indexes.filter(_.indexname === indexname.toString).map(_.isUpToDate).update(false)
 
@@ -732,7 +732,7 @@ class CatalogManager(internalsPath: String) extends Serializable with Logging {
     */
   def updateStorageEngineOption(engine: String, storename: String, key: String, newValue: String): Try[Void] = {
     execute("update storage engine option") {
-      val actions = new ListBuffer[DBIOAction[_, NoStream, _]]()
+      val actions = new ArrayBuffer[DBIOAction[_, NoStream, _]]()
 
       //upsert
       actions += _storeengineOptions.filter(_.engine === engine).filter(_.storename === storename).filter(_.key === key).delete
@@ -795,7 +795,7 @@ class CatalogManager(internalsPath: String) extends Serializable with Logging {
       poos.close()
       poos.close()
 
-      val actions: ListBuffer[DBIOAction[_, NoStream, _]] = new ListBuffer()
+      val actions: ArrayBuffer[DBIOAction[_, NoStream, _]] = new ArrayBuffer()
 
       actions += _partitioners.+=((indexname, noPartitions, meta, part))
 
@@ -883,7 +883,7 @@ class CatalogManager(internalsPath: String) extends Serializable with Logging {
       oos.close()
       bos.close()
 
-      val actions = new ListBuffer[DBIOAction[_, NoStream, _]]()
+      val actions = new ArrayBuffer[DBIOAction[_, NoStream, _]]()
 
       actions += _optimizerOptions.+=((optimizer, key, meta))
 
