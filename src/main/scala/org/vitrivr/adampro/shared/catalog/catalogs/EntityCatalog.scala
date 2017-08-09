@@ -18,4 +18,6 @@ private[catalog] class EntityCatalog(tag: Tag) extends Table[(String)](tag, Some
     * Special fields
     */
   def * = (entityname)
+
+  def idx = index("idx_entity_entityname", entityname)
 }

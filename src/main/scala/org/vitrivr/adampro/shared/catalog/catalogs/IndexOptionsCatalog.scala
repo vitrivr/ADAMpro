@@ -26,6 +26,9 @@ private[catalog] class IndexOptionsCatalog(tag: Tag) extends Table[(String, Stri
 
   def * = (indexname, key, value)
 
+  def idx = index("idx_indexoptions_entityname", indexname)
+  def idx2 = index("idx_indexoptions_key", key)
+
   def index = foreignKey("indexoptions_index_fk", indexname, TableQuery[IndexCatalog])(_.indexname, onUpdate=ForeignKeyAction.Restrict, onDelete=ForeignKeyAction.Cascade)
 }
 

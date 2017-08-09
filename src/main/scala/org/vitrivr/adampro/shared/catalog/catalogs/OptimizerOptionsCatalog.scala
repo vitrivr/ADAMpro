@@ -22,5 +22,8 @@ private[catalog] class OptimizerOptionsCatalog(tag: Tag) extends Table[(String, 
     */
   def pk = primaryKey("optimizeroptions_pk", (optimizer, key))
 
+  def idx = index("idx_optimizeroptions_entityname", optimizer)
+  def idx2 = index("idx_optimizeroptions_key", key)
+
   override def * = (optimizer, key, value)
 }

@@ -26,5 +26,7 @@ private[catalog] class PartitionerCatalog(tag: Tag) extends Table[(String, Int, 
     */
   override def * = (indexname, noPartitions, meta, partitioner)
 
+  def idx = index("idx_partitioner_indexname", indexname)
+
   def index = foreignKey("partitioner_index_fk", indexname, TableQuery[IndexCatalog])(_.indexname, onUpdate=ForeignKeyAction.Restrict, onDelete=ForeignKeyAction.Cascade)
 }

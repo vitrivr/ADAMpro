@@ -28,5 +28,9 @@ private[catalog] class AttributeOptionsCatalog(tag: Tag) extends Table[(String, 
 
   def * = (entityname, attributename, key, value)
 
+  def idx = index("idx_attributeoptions_entityname", entityname)
+  def idx2 = index("idx_attributeoptions_attributename", attributename)
+  def idx3 = index("idx_attributeoptions_key", key)
+
   def attribute = foreignKey("attributeoptions_attribute_fk", (entityname, attributename), TableQuery[AttributeCatalog])(t => (t.entityname, t.attributename), onUpdate=ForeignKeyAction.Restrict, onDelete=ForeignKeyAction.Cascade)
 }

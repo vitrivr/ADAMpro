@@ -24,6 +24,10 @@ private[catalog] class StorageEngineOptionsCatalog(tag: Tag) extends Table[(Stri
     */
   def pk = primaryKey("storageengine_pk", (engine, storename, key))
 
+  def idx = index("idx_storageengineoptions_engine", engine)
+  def idx2 = index("idx_storageengineoptions_storename", storename)
+  def idx3 = index("idx_storageengineoptions_key", key)
+
   def * = (engine, storename, key, value)
 }
 

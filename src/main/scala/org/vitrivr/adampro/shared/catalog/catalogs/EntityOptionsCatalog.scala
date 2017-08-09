@@ -26,6 +26,9 @@ private[catalog] class EntityOptionsCatalog(tag: Tag) extends Table[(String, Str
 
   def * = (entityname, key, value)
 
+  def idx = index("idx_entityoptions_entityname", entityname)
+  def idx2 = index("idx_entityoptions_key", key)
+
   def entity = foreignKey("entityoptions_entity_fk", entityname, TableQuery[EntityCatalog])(_.entityname, onUpdate=ForeignKeyAction.Restrict, onDelete=ForeignKeyAction.Cascade)
 }
 

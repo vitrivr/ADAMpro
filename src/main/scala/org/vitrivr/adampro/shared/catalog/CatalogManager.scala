@@ -412,8 +412,8 @@ class CatalogManager(internalsPath: String) extends Serializable with Logging {
     */
   def existsEntity(entityname: EntityName): Try[Boolean] = {
     execute("exists entity") {
-      val query = _entitites.filter(_.entityname === entityname.toString()).length.result
-      Await.result(DB.run(query), MAX_WAITING_TIME) > 0
+      val query = _entitites.filter(_.entityname === entityname.toString()).exists.result
+      Await.result(DB.run(query), MAX_WAITING_TIME)
     }
   }
 
@@ -495,8 +495,8 @@ class CatalogManager(internalsPath: String) extends Serializable with Logging {
     */
   def existsIndex(indexname: IndexName): Try[Boolean] = {
     execute("exists index") {
-      val query = _indexes.filter(_.indexname === indexname.toString).length.result
-      Await.result(DB.run(query), MAX_WAITING_TIME) > 0
+      val query = _indexes.filter(_.indexname === indexname.toString).exists.result
+      Await.result(DB.run(query), MAX_WAITING_TIME)
     }
   }
 
@@ -517,7 +517,7 @@ class CatalogManager(internalsPath: String) extends Serializable with Logging {
         query = query.filter(_.isUpToDate)
       }
 
-      Await.result(DB.run(query.length.result), MAX_WAITING_TIME) > 0
+      Await.result(DB.run(query.exists.result), MAX_WAITING_TIME)
     }
   }
 

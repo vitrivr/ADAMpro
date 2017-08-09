@@ -19,4 +19,6 @@ private[catalog] class OptionsCatalog(tag: Tag) extends Table[(String, Array[Byt
     * Special fields
     */
   override def * = (key, value)
+
+  def idx = index("idx_options_key", key)
 }
