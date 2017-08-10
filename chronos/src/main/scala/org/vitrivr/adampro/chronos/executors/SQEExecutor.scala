@@ -112,6 +112,8 @@ class SQEExecutor(job: EvaluationJob, setStatus: (Double) => (Boolean), inputDir
 
     lb.append("entityname" -> entityname)
 
+    lb.append("projection" -> "ap_id,ap_distance")
+
     lb.append("indexnames" -> indexnames.mkString(","))
 
     lb.append("attribute" -> job.data_attributename.getOrElse(FEATURE_VECTOR_ATTRIBUTENAME))
