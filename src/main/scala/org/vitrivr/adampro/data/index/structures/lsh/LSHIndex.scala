@@ -47,21 +47,23 @@ class LSHIndex(override val indexname: IndexName)(@transient override implicit v
     val queriesBc = ac.sc.broadcast(List.fill(numOfQueries)((1.0, signatureGeneratorBc.value.toBuckets(q.move(meta.radius)))) ::: List((1.0, originalQuery)))
     tracker.addBroadcast(queriesBc)
 
+    val maxScore = queriesBc.value.map(x => x._1 * x._2.length).sum
+
     val distUDF = udf((c: Array[Byte]) => {
       var i = 0
-      var score = 0
+      var score = 0.toDouble
       val buckets = signatureGeneratorBc.value.toBuckets(BitString.fromByteArray(c))
 
       while (i < queriesBc.value.length) {
         var j = 0
-        var sum = 0
+        var sum = 0.toDouble
 
         val weight = queriesBc.value(i)._1
         val query = queriesBc.value(i)._2
 
         while(j < buckets.length){
           if(buckets(j) == query(j)){
-            sum += 1
+            sum += weight
           }
 
           j += 1
@@ -71,13 +73,12 @@ class LSHIndex(override val indexname: IndexName)(@transient override implicit v
         i += 1
       }
 
-      score
+      score / maxScore
     })
 
     val res = data
       .withColumn(AttributeNames.distanceColumnName, distUDF(data(AttributeNames.featureIndexColumnName)))
       .filter(col(AttributeNames.distanceColumnName) > 0)
-      .withColumn(AttributeNames.distanceColumnName, lit(Distance.zeroValue))
 
     res
   }
