@@ -3,7 +3,7 @@ package org.vitrivr.adampro.data.entity
 import org.apache.spark.sql.functions.col
 import org.apache.spark.sql.{DataFrame, SaveMode}
 import org.vitrivr.adampro.data.entity.Entity.AttributeName
-import org.vitrivr.adampro.distribution.fragmentation.PartitionMode
+import org.vitrivr.adampro.distribution.partitioning.PartitionMode
 import org.vitrivr.adampro.process.SharedComponentContext
 import org.vitrivr.adampro.utils.exception.{AttributeNotExistingException, GeneralAdamException}
 
@@ -15,7 +15,7 @@ import scala.util.{Failure, Success, Try}
   * Ivan Giangreco
   * June 2016
   */
-object EntityFragmenter {
+object EntityPartitioner {
   /**
     * Partitions the entity data.
     *

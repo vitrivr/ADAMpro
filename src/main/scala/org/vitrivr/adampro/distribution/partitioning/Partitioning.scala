@@ -1,4 +1,4 @@
-package org.vitrivr.adampro.distribution.fragmentation
+package org.vitrivr.adampro.distribution.partitioning
 
 /**
   * ADAMpro

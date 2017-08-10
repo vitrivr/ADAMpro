@@ -7,8 +7,8 @@ import org.vitrivr.adampro.utils.exception.GeneralAdamException
 import org.vitrivr.adampro.query.tracker.QueryTracker
 import org.vitrivr.adampro.data.index.Index._
 import org.vitrivr.adampro.data.index.structures.IndexTypes
-import org.vitrivr.adampro.data.index.{Index, IndexFragmenter}
-import org.vitrivr.adampro.distribution.fragmentation.{FragmenterManager, PartitionMode, PartitionerChoice}
+import org.vitrivr.adampro.data.index.{Index, IndexPartitioner}
+import org.vitrivr.adampro.distribution.partitioning.{PartitioningManager, PartitionMode, PartitionerChoice}
 import org.vitrivr.adampro.process.SharedComponentContext
 import org.vitrivr.adampro.query.distance.DistanceFunction
 
@@ -183,7 +183,7 @@ object IndexOp extends GenericOp {
         return Failure(index.failed.get)
       }
 
-      FragmenterManager.fragment(index.get, nPartitions, joins, attribute, mode, partitioner, options)
+      PartitioningManager.fragment(index.get, nPartitions, joins, attribute, mode, partitioner, options)
     }
   }
 

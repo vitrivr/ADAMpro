@@ -1,4 +1,4 @@
-package org.vitrivr.adampro.distribution.fragmentation.partitioner
+package org.vitrivr.adampro.distribution.partitioning.partitioner
 
 import org.apache.spark.HashPartitioner
 import org.apache.spark.sql.DataFrame
@@ -7,7 +7,7 @@ import org.vitrivr.adampro.data.entity.Entity.AttributeName
 import org.vitrivr.adampro.data.entity.EntityNameHolder
 import org.vitrivr.adampro.data.index.Index
 import org.vitrivr.adampro.data.index.Index.IndexName
-import org.vitrivr.adampro.distribution.fragmentation.PartitionerChoice
+import org.vitrivr.adampro.distribution.partitioning.PartitionerChoice
 import org.vitrivr.adampro.process.SharedComponentContext
 import org.vitrivr.adampro.utils.Logging
 import org.vitrivr.adampro.utils.exception.GeneralAdamException

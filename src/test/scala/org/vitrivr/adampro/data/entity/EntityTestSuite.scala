@@ -10,7 +10,7 @@ import org.vitrivr.adampro.communication.api.EntityOp
 import org.vitrivr.adampro.config.AttributeNames
 import org.vitrivr.adampro.data.datatypes.AttributeTypes
 import org.vitrivr.adampro.data.datatypes.vector.Vector
-import org.vitrivr.adampro.distribution.fragmentation.PartitionMode
+import org.vitrivr.adampro.distribution.partitioning.PartitionMode
 import org.vitrivr.adampro.grpc.grpc.EntityNameMessage
 import org.vitrivr.adampro.query.query.Predicate
 

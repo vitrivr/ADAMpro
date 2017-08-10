@@ -7,7 +7,7 @@ import org.apache.spark.sql.types.{StructField, StructType}
 import org.vitrivr.adampro.communication.api._
 import org.vitrivr.adampro.data.entity.{AttributeNameHolder, Entity}
 import org.vitrivr.adampro.data.index.structures.IndexTypes
-import org.vitrivr.adampro.distribution.fragmentation.{PartitionMode, PartitionerChoice}
+import org.vitrivr.adampro.distribution.partitioning.{PartitionMode, PartitionerChoice}
 import org.vitrivr.adampro.grpc.grpc.AdaptScanMethodsMessage.{IndexCollection, QueryCollection}
 import org.vitrivr.adampro.grpc.grpc._
 import org.vitrivr.adampro.process.{SharedComponentContext, SparkStartup}

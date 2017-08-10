@@ -10,7 +10,7 @@ import org.vitrivr.adampro.data.entity.{AttributeDefinition, EntityNameHolder}
 import org.vitrivr.adampro.utils.exception._
 import org.vitrivr.adampro.data.index.Index.{IndexName, IndexTypeName}
 import org.vitrivr.adampro.data.index.structures.IndexTypes
-import org.vitrivr.adampro.distribution.fragmentation.partitioner.CustomPartitioner
+import org.vitrivr.adampro.distribution.partitioning.partitioner.CustomPartitioner
 import org.vitrivr.adampro.process.SharedComponentContext
 import org.vitrivr.adampro.utils.Logging
 import slick.dbio.NoStream
