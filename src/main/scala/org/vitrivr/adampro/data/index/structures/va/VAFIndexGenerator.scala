@@ -60,10 +60,10 @@ class VAFIndexGenerator(fixedNumBitsPerDimension: Option[Int], marksGenerator: M
     val dim = trainData.head.ap_indexable.length
 
     //formula based on results from Weber/Böhm (2000): Trading Quality for Time with Nearest Neighbor Search
-    val nbits = fixedNumBitsPerDimension.getOrElse(math.max(5, math.ceil(5 + 0.5 * math.log(dim / 10) / math.log(2))).toInt)
-    val nmarks = 1 << nbits
+    val nbitsPerDim = fixedNumBitsPerDimension.getOrElse(math.max(5, math.ceil(5 + 0.5 * math.log(dim / 10.toDouble) / math.log(2))).toInt)
+    val nmarks = (1 << nbitsPerDim) + 1
 
-    val signatureGenerator = new FixedSignatureGenerator(dim, nbits)
+    val signatureGenerator = new FixedSignatureGenerator(dim, nbitsPerDim)
     val marks = marksGenerator.getMarks(trainData, nmarks)
 
     log.trace("VA-File (fixed) finished training")

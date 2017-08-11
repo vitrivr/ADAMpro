@@ -26,12 +26,10 @@ private[va] object EquidistantMarksGenerator extends MarksGenerator with Seriali
     */
   private[va] def getMarks(samples: Seq[IndexingTaskTuple], maxMarks: Seq[Int]): Marks = {
     log.trace("get equidistant marks for VA-File")
-    val dimensionality = maxMarks.length
-
     val min = getMin(samples.map(_.ap_indexable)).toArray
     val max = getMax(samples.map(_.ap_indexable)).toArray
 
-    (min zip max).zipWithIndex.map { case (minmax, index) => Seq.tabulate(maxMarks(index))(_ * (minmax._2 - minmax._1) / maxMarks(index).toFloat + minmax._1).toList }
+    (min zip max).zipWithIndex.map { case (minmax, index) => Seq.tabulate(maxMarks(index) - 1)(_ * (minmax._2 - minmax._1) / (maxMarks(index) - 1).toFloat + minmax._1).toList ++ Seq(minmax._2) }
   }
 
   /**

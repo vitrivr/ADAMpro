@@ -118,16 +118,20 @@ class VAIndex(override val indexname: IndexName)(@transient override implicit va
 
     val res = localRes.filter(_.ap_lower <= minUpperPart).toDF()*/
 
-    // global refinement
-    val globalRh = new VAResultHandler(k)
-    val gIt = localRes.toLocalIterator()
+    val res = if (options.get("vaLocalOnly").map(_.toBoolean).getOrElse(false)) {
+      localRes.toDF()
+    } else {
+      // global refinement
+      val globalRh = new VAResultHandler(k)
+      val gIt = localRes.toLocalIterator()
 
-    while (gIt.hasNext) {
-      val current = gIt.next()
-      globalRh.offer(current, pk)
+      while (gIt.hasNext) {
+        val current = gIt.next()
+        globalRh.offer(current, pk)
+      }
+
+      ac.sqlContext.createDataset(globalRh.results).toDF()
     }
-
-    val res = ac.sqlContext.createDataset(globalRh.results).toDF()
 
     log.trace("global VA scan done")
 
@@ -164,8 +168,8 @@ class VAIndex(override val indexname: IndexName)(@transient override implicit va
       while (it.hasNext) {
         val dimMark = it.next()
 
-        lazy val d0fv1 = distance.element(dimMark(0), fvi)
-        lazy val d1fv1 = distance.element(dimMark(1), fvi)
+        val d0fv1 = distance.element(dimMark(0), fvi)
+        val d1fv1 = distance.element(dimMark(1), fvi)
 
         if (fvi < dimMark(0)) {
           lbounds(i)(j) = d0fv1
@@ -191,6 +195,7 @@ class VAIndex(override val indexname: IndexName)(@transient override implicit va
 
   /**
     * Compresses the bounds to a one-dim float array
+    *
     * @param bounds
     * @return
     */

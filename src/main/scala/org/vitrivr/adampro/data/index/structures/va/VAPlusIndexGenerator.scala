@@ -26,7 +26,7 @@ import org.vitrivr.adampro.query.distance.{DistanceFunction, MinkowskiDistance}
   *
   * see H. Ferhatosmanoglu, E. Tuncel, D. Agrawal, A. El Abbadi (2006): High dimensional nearest neighbor searching. Information Systems.
   */
-class VAPlusIndexGenerator(nbits: Option[Int], ndims : Option[Int], trainingSize: Int, distance: MinkowskiDistance)(@transient implicit val ac: SharedComponentContext) extends IndexGenerator {
+class VAPlusIndexGenerator(totalNumOfBits: Option[Int], ndims : Option[Int], trainingSize: Int, distance: MinkowskiDistance)(@transient implicit val ac: SharedComponentContext) extends IndexGenerator {
   override val indextypename: IndexTypeName = IndexTypes.VAPLUSINDEX
 
   /**
@@ -94,9 +94,9 @@ class VAPlusIndexGenerator(nbits: Option[Int], ndims : Option[Int], trainingSize
     var modes = Seq.fill(dim)(0).toArray
 
     //based on results from paper and from Weber/Böhm (2000): Trading Quality for Time with Nearest Neighbor Search
-    val numOfBits = nbits.getOrElse(math.min(256, dim * math.max(5, math.ceil(5 + 0.5 * math.log(dim / 10) / math.log(2)).toInt)))
+    val nbits = totalNumOfBits.getOrElse(math.min(256, dim * math.max(5, math.ceil(5 + 0.5 * math.log(dim / 10) / math.log(2)).toInt)))
 
-    while (k < numOfBits) {
+    while (k < nbits) {
       val j = getMaxIndex(variance)
       modes(j) += 1
       variance(j) = variance(j) / 4.0
