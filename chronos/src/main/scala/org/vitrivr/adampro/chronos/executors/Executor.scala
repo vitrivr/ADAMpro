@@ -116,7 +116,7 @@ abstract class Executor(val job: EvaluationJob, setStatus: (Double) => (Boolean)
 
     lb.append("entityname" -> entityname)
 
-    lb.append("projection" -> "ap_id,ap_distance")
+    //lb.append("projection" -> "ap_id,ap_distance")
 
     lb.append("attribute" -> job.data_attributename.getOrElse(FEATURE_VECTOR_ATTRIBUTENAME))
 
