@@ -14,9 +14,16 @@ import org.vitrivr.adampro.query.tracker.QueryTracker
   * Ivan Giangreco
   * May 2016
   */
-case class ProjectionExpression(private val projection: ProjectionField, private val expr: QueryExpression, id: Option[String] = None)(@transient implicit val ac: SharedComponentContext) extends QueryExpression(id) {
+case class ProjectionExpression(private val projection: ProjectionField, private val qExpr: QueryExpression, id: Option[String] = None)(@transient implicit val ac: SharedComponentContext) extends QueryExpression(id) {
   override val info = ExpressionDetails(None, Some("Projection Expression"), id, None)
-  _children ++= Seq(expr)
+  var expr = qExpr
+    _children ++= Seq(expr)
+
+  override def rewrite(silent : Boolean = false): QueryExpression = {
+    super.rewrite(silent)
+    expr = expr.rewrite(silent = true) //expr needs to be replaced
+    this
+  }
 
   override protected def run(options : Option[QueryEvaluationOptions], filter: Option[DataFrame] = None)(tracker : QueryTracker)(implicit ac: SharedComponentContext): Option[DataFrame] = {
     log.trace("performing projection on data")
