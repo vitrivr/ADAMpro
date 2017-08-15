@@ -9,6 +9,11 @@ import scala.util.Random
 case class TrainingSample(f: DenseVector[Double], time: Double)
 
 /**
+  * PegasosSVM
+  * <p>
+  * see S. Shalev-Shwartz, Y. Singer, N. Srebro, A. Cotter (2011). Pegasos: Primal Estimated sub-GrAdient SOlver for SVM.
+  *
+  *
   * ADAMpro
   *
   * Ivan Giangreco
