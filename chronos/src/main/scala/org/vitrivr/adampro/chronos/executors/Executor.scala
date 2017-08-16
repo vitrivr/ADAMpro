@@ -23,7 +23,6 @@ abstract class Executor(val job: EvaluationJob, setStatus: (Double) => (Boolean)
 
   val logger: Logger = Logger.getLogger(this.getClass.getName)
 
-
   //rpc client
   val client: RPCClient = RPCClient(job.adampro_url, job.adampro_port)
 

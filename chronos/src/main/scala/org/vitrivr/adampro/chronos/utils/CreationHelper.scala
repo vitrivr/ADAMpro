@@ -86,8 +86,10 @@ object CreationHelper {
   private def getAttributeDefinition(job: EvaluationJob): Seq[RPCAttributeDefinition] = {
     val lb = new ListBuffer[RPCAttributeDefinition]()
 
+    val storagehandler = job.data_storagehandler
+
     //vector
-    lb.append(RPCAttributeDefinition(job.data_attributename.getOrElse(FEATURE_VECTOR_ATTRIBUTENAME), "vector"))
+    lb.append(RPCAttributeDefinition(job.data_attributename.getOrElse(FEATURE_VECTOR_ATTRIBUTENAME), "vector", Some(storagehandler)))
 
     //metadata
     val metadata = Map("long" -> job.data_metadata_long, "int" -> job.data_metadata_int,
@@ -98,7 +100,7 @@ object CreationHelper {
 
     metadata.foreach { case (datatype, number) =>
       (0 until number).foreach { i =>
-        lb.append(RPCAttributeDefinition(datatype + "i", datatype, Some("parquet")))
+        lb.append(RPCAttributeDefinition(datatype + "i", datatype, Some(storagehandler)))
       }
     }
 
