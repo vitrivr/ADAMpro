@@ -11,26 +11,35 @@ import scala.util.Random
   * ADAMpro
   *
   * Ivan Giangreco
-  * September 2016
+  * August 2017
   */
-class CassandraTestSuite  extends AdamTestBase {
-  val handlerName = "cassandra"
+class SimpleStorageTestSuite extends AdamTestBase {
   def ntuples() = Random.nextInt(500)
   val attributetypes = Seq(AttributeTypes.VECTORTYPE)
 
-  assert(ac.storageManager.contains(handlerName))
 
-  scenario("create an entity") {
+  def storageTest(handlername : String) {
+    assert(ac.storageManager.contains(handlername))
+
     val tuplesInsert = ntuples()
 
     withEntityName { entityname =>
-      val attributes = attributetypes.map(field => AttributeDefinition(field.name + "field", field, storagehandlername = handlerName)) ++ Seq(AttributeDefinition("tid", AttributeTypes.LONGTYPE, storagehandlername = handlerName))
+      val attributes = attributetypes.map(field => AttributeDefinition(field.name + "field", field, storagehandlername = handlername)) ++ Seq(AttributeDefinition("tid", AttributeTypes.LONGTYPE, storagehandlername = handlername))
       EntityOp.create(entityname, attributes)
       RandomDataOp.apply(entityname, tuplesInsert, Map("fv-dimensions" -> 10.toString))
 
       val data = Entity.load(entityname).get.getData().get.collect()
 
-      assert(data.size == tuplesInsert)
+      assert(data.length == tuplesInsert)
     }
   }
+
+  scenario("alluxio storage test") { storageTest("alluxio") }
+
+  scenario("cassandra storage test") { storageTest("cassandra") }
+
+  scenario("leveldb storage test") { storageTest("leveldb") }
+
+  scenario("paldb storage test") { storageTest("paldb") }
+
 }
