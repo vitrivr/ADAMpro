@@ -44,4 +44,6 @@ class SimpleStorageTestSuite extends AdamTestBase {
 
   scenario("hbase storage test") { storageTest("hbase") }
 
+  scenario("compound storage test") { storageTest("compound") }
+
 }
