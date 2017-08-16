@@ -18,8 +18,8 @@ class MISignatureGenerator(ki : Int, nrefs : Int) extends Serializable{
     * @param f
     * @return
     */
-  def toSignature(f: Seq[TupleID]) : BitString[_] = {
-    signatureGenerator.toSignature(f.map(_.toInt))
+  def toSignature(f: Seq[Int]) : BitString[_] = {
+    signatureGenerator.toSignature(f)
   }
 
   /**
@@ -27,7 +27,7 @@ class MISignatureGenerator(ki : Int, nrefs : Int) extends Serializable{
     * @param b
     * @return
     */
-  def toBuckets(b : BitString[_]) = {
+  def toBuckets(b : BitString[_]) : IndexedSeq[Int] = {
     signatureGenerator.toCells(b)
   }
 }
