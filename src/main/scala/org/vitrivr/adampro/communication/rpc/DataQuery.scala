@@ -113,7 +113,10 @@ class DataQuery extends AdamSearchGrpc.AdamSearch with Logging {
       log.trace(QUERY_MARKER, "after query op " + logId)
 
       val message = if (res.isSuccess) {
-        val results = expression.get.information(informationLevel).map(res =>
+        val finalExpr = res.get._1
+        val finalResult = res.get._2
+
+        val results = res.get._1.information(informationLevel).map(res =>
           MessageParser.prepareResults(res.id.getOrElse(""), res.confidence.getOrElse(0), res.time.toMillis, res.source.getOrElse(""), Map(), res.results)
         )
 

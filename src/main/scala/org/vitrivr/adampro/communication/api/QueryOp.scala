@@ -31,7 +31,7 @@ object QueryOp extends GenericOp {
     * @param options options applied when evaluating query
     * @return
     */
-  def expression(q: QueryExpression, options: Option[QueryEvaluationOptions] = None)(tracker : QueryTracker)(implicit ac: SharedComponentContext): Try[Option[DataFrame]] = {
+  def expression(q: QueryExpression, options: Option[QueryEvaluationOptions] = None)(tracker : QueryTracker)(implicit ac: SharedComponentContext): Try[(QueryExpression, Option[DataFrame])] = {
     execute("query execution operation") {
       log.trace(QUERY_MARKER, "query operation")
       val prepared = q.rewrite()
@@ -39,7 +39,7 @@ object QueryOp extends GenericOp {
       val res = prepared.execute(options)(tracker)
       log.trace(QUERY_MARKER, "evaluated query")
 
-      Success(res)
+      Success(prepared, res)
     }
   }
 
@@ -150,18 +150,6 @@ object QueryOp extends GenericOp {
     }
   }
 
-  /**
-    * Performs a query which uses index compounding for pre-filtering.
-    *
-    * @param expr    query expression
-    * @param options options applied when evaluating query
-    * @return
-    */
-  def compoundQuery(expr: QueryExpression, options: Option[QueryEvaluationOptions] = None)(tracker : QueryTracker)(implicit ac: SharedComponentContext): Try[Option[DataFrame]] = {
-    execute("compound query operation") {
-      Success(CompoundQueryExpression(expr).execute(options)(tracker))
-    }
-  }
 
   /**
     * Performs a boolean query.

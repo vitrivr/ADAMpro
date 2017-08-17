@@ -90,14 +90,14 @@ class VAIndex(override val indexname: IndexName)(@transient override implicit va
 
     import ac.spark.implicits._
 
-    val tmp = data
+    val boundedData = data
       .withColumn("ap_lbound", cellsDistUDF(lbIndexBc, lbBoundsBc)(col(AttributeNames.featureIndexColumnName)))
       .withColumn("ap_ubound", cellsDistUDF(ubIndexBc, ubBoundsBc)(col(AttributeNames.featureIndexColumnName))) //note that this is computed lazy!
 
     val pk = this.pk.name.toString
 
     //local filtering
-    val localRes = tmp.coalesce(ac.config.defaultNumberOfPartitionsIndex)
+    val localRes = boundedData.coalesce(ac.config.defaultNumberOfPartitionsIndex)
       .mapPartitions(pIt => {
         //in here  we compute for each partition the k nearest neighbours and collect the results
         val localRh = new VAResultHandler(k)
