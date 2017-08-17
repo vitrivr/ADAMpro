@@ -132,9 +132,9 @@ case class Entity(entityname: EntityName)(@transient implicit val ac: SharedComp
     var filteredData = data
 
     //predicates
-    if (predicates.nonEmpty && filteredData.isEmpty) {
+    if (predicates.nonEmpty) {
       val handlerData = schema().filterNot(_.pk).groupBy(_.storagehandler).map { case (handler, attributes) =>
-        val predicate = predicates.filter(p => (p.attribute == pk.name || attributes.map(_.name).contains(p.attribute)))
+        val predicate = predicates.filter(p => (p.attribute == pk.name.toString || attributes.map(_.name).contains(p.attribute)))
         val status = handler.read(entityname, attributes, predicate.toList)
 
         if (status.isFailure) {
@@ -151,11 +151,11 @@ case class Entity(entityname: EntityName)(@transient implicit val ac: SharedComp
           filteredData = Some(handlerData.reduce(_.join(_, pk.name)).coalesce(ac.config.defaultNumberOfPartitions))
         }
       }
-    } else {
+    } /*else if(predicates.nonEmpty) {
       predicates.foreach { predicate =>
         filteredData = filteredData.map(data => data.filter(col(predicate.attribute).isin(predicate.values: _*)))
       }
-    }
+    }*/
 
     //handler
     if (handlerFilter.isDefined) {

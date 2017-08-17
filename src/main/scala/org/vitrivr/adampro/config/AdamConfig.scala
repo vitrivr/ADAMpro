@@ -83,6 +83,7 @@ class AdamConfig extends Serializable with Logging {
     false
   }
 
+  val manualPredicatePushdown = false
 
   /**
     *

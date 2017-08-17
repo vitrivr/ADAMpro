@@ -7,13 +7,13 @@ import org.vitrivr.adampro.config.AttributeNames
 import org.vitrivr.adampro.data.datatypes.TupleID.TupleID
 import org.vitrivr.adampro.data.entity.Entity
 import org.vitrivr.adampro.data.entity.Entity.EntityName
-import org.vitrivr.adampro.utils.exception.QueryNotConformException
-import org.vitrivr.adampro.query.distance.Distance
-import org.vitrivr.adampro.query.ast.generic.{ExpressionDetails, QueryEvaluationOptions, QueryExpression}
-import org.vitrivr.adampro.query.query.RankingQuery
-import org.vitrivr.adampro.utils.Logging
 import org.vitrivr.adampro.process.SharedComponentContext
+import org.vitrivr.adampro.query.ast.generic.{ExpressionDetails, QueryEvaluationOptions, QueryExpression}
+import org.vitrivr.adampro.query.distance.Distance
+import org.vitrivr.adampro.query.query.{Predicate, RankingQuery}
 import org.vitrivr.adampro.query.tracker.QueryTracker
+import org.vitrivr.adampro.utils.Logging
+import org.vitrivr.adampro.utils.exception.QueryNotConformException
 
 /**
   * adamtwo
@@ -37,7 +37,7 @@ case class SequentialScanExpression(private val entity: Entity)(private val nnq:
     this(Entity.load(entityname).get)(nnq, id)(filterExpr)
   }
 
-  override protected def run(options : Option[QueryEvaluationOptions], filter: Option[DataFrame] = None)(tracker : QueryTracker)(implicit ac: SharedComponentContext): Option[DataFrame] = {
+  override protected def run(options: Option[QueryEvaluationOptions], filter: Option[DataFrame] = None)(tracker: QueryTracker)(implicit ac: SharedComponentContext): Option[DataFrame] = {
     log.trace("perform sequential scan")
 
     ac.sc.setLocalProperty("spark.scheduler.pool", "sequential")
@@ -48,25 +48,23 @@ case class SequentialScanExpression(private val entity: Entity)(private val nnq:
       throw QueryNotConformException("query is not conform to entity")
     }
 
-    val df = entity.getData().get
-
-    val prefilter = if(filter.isDefined && filterExpr.isDefined){
+    val prefilter = if (filter.isDefined && filterExpr.isDefined) {
       filterExpr.get.filter = filter
 
       val filterVals = filter.get.select(entity.pk.name)
       val filterExprVals = filterExpr.get.execute(options)(tracker).get.select(entity.pk.name)
 
       Some(filterVals.intersect(filterExprVals))
-    } else if(filter.isDefined ){
+    } else if (filter.isDefined) {
       Some(filter.get.select(entity.pk.name))
-    } else if(filterExpr.isDefined){
+    } else if (filterExpr.isDefined) {
       Some(filterExpr.get.execute(options)(tracker).get.select(entity.pk.name))
     } else {
       None
     }
 
 
-    var result = if(ac.config.approximateFiltering){
+    var result = if (ac.config.approximateFiltering) {
       //Bloom filter: approximate filtering
 
       if (prefilter.isDefined) {
@@ -75,19 +73,30 @@ case class SequentialScanExpression(private val entity: Entity)(private val nnq:
         val bfBc = ac.sc.broadcast(bf)
         tracker.addBroadcast(bfBc)
 
-        val filterUdf = udf((arg: TupleID) => if(arg != null) bfBc.value.mightContain(arg) else false)
+        val filterUdf = udf((arg: TupleID) => if (arg != null) bfBc.value.mightContain(arg) else false)
 
-        Some(df.filter(filterUdf(col(entity.pk.name))))
+        Some(entity.getData().get.filter(filterUdf(col(entity.pk.name))))
       } else {
+        val df = entity.getData().get
+
         Some(df)
       }
 
     } else {
       //Join: precise filtering
 
-      if(prefilter.isDefined){
+      if (prefilter.isDefined) {
+        val df = if (ac.config.manualPredicatePushdown) {
+          val ids = prefilter.get.select(entity.pk.name).collect.map(_.getAs[TupleID](entity.pk.name))
+          entity.getData(predicates = Seq(Predicate(entity.pk.name, None, ids))).get
+        } else {
+          entity.getData().get
+        }
+
         Some(df.join(prefilter.get, df.col(entity.pk.name) === prefilter.get.col(entity.pk.name), "leftsemi"))
       } else {
+        val df = entity.getData().get
+
         Some(df)
       }
     }
@@ -125,13 +134,13 @@ object SequentialScanExpression extends Logging {
     * @param nnq nearest neighbour query
     * @return
     */
-  def scan(df: DataFrame, nnq: RankingQuery)(tracker : QueryTracker)(implicit ac: SharedComponentContext): DataFrame = {
+  def scan(df: DataFrame, nnq: RankingQuery)(tracker: QueryTracker)(implicit ac: SharedComponentContext): DataFrame = {
     val qBc = ac.sc.broadcast(nnq.q)
     tracker.addBroadcast(qBc)
     val wBc = ac.sc.broadcast(nnq.weights)
     tracker.addBroadcast(wBc)
 
-    val dfDistance = if(df.schema.apply(nnq.attribute).dataType.isInstanceOf[StructType]){
+    val dfDistance = if (df.schema.apply(nnq.attribute).dataType.isInstanceOf[StructType]) {
       //sparse vectors
       df.withColumn(AttributeNames.distanceColumnName, Distance.sparseVectorDistUDF(nnq, qBc, wBc)(df(nnq.attribute)))
     } else {
@@ -139,7 +148,7 @@ object SequentialScanExpression extends Logging {
       df.withColumn(AttributeNames.distanceColumnName, Distance.denseVectorDistUDF(nnq, qBc, wBc)(df(nnq.attribute)))
     }
 
-    import org.apache.spark.sql.functions.{col}
+    import org.apache.spark.sql.functions.col
     val res = dfDistance.orderBy(col(AttributeNames.distanceColumnName))
       .limit(nnq.k)
 
