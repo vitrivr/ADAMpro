@@ -4,10 +4,15 @@ import org.vitrivr.adampro.config.AttributeNames
 import org.vitrivr.adampro.query.ast.generic.{ExpressionDetails, QueryEvaluationOptions, QueryExpression}
 import org.vitrivr.adampro.query.query.RankingQuery
 import org.apache.http.annotation.Experimental
-import org.apache.spark.sql.DataFrame
+import org.apache.spark.sql.{DataFrame, Row}
 import org.apache.spark.sql.functions._
+import org.apache.spark.sql.types.{IntegerType, StructField, StructType}
+import org.vitrivr.adampro.data.datatypes.TupleID
+import org.vitrivr.adampro.data.datatypes.TupleID.TupleID
 import org.vitrivr.adampro.process.SharedComponentContext
 import org.vitrivr.adampro.query.tracker.QueryTracker
+
+import scala.util.Success
 
 /**
   * ADAMpro
@@ -40,13 +45,14 @@ case class StochasticIndexQueryExpression(private val exprs: Seq[IndexScanExpres
     val results = exprs.map(expr => {
       //make sure that index only is queried and not a sequential scan too!
       expr.execute(options)(tracker)
-    })
+    }).filter(_.isDefined).map(_.get.select(entity.pk.name).collect().map(_.getAs[TupleID](entity.pk.name)))
 
-    var result = results.filter(_.isDefined).map(_.get).reduce[DataFrame] { case (a, b) => a.select(entity.pk.name, AttributeNames.distanceColumnName).unionAll(b.select(entity.pk.name, AttributeNames.distanceColumnName)) }
-      .groupBy(entity.pk.name).agg(count("*").alias("adampro_result_appears_in_n_joins"))
-      .withColumn(AttributeNames.distanceColumnName, distUDF(col("adampro_result_appears_in_n_joins")))
+    val tuples = results.flatten.groupBy(x => x).mapValues(x => results.length - x.length).toList.sortBy(_._2)
+    val rdd = ac.sc.parallelize(tuples.map(x => Row(x._1.asInstanceOf[TupleID], x._2)))
 
-    result = result.select(entity.pk.name, AttributeNames.distanceColumnName)
+    val schema = StructType(Seq(StructField(entity.pk.name, TupleID.SparkTupleID), StructField(AttributeNames.distanceColumnName, IntegerType)))
+
+    var result = ac.sqlContext.createDataFrame(rdd, schema).orderBy(AttributeNames.distanceColumnName)
 
     if (options.isDefined && options.get.storeSourceProvenance) {
       result = result.withColumn(AttributeNames.sourceColumnName, lit(info.scantype.getOrElse("undefined")))
@@ -54,11 +60,6 @@ case class StochasticIndexQueryExpression(private val exprs: Seq[IndexScanExpres
 
     Some(result)
   }
-
-  val distUDF = udf((count: Int) => {
-    //TODO: possibly use indexDistance for more precise evaluation of distance
-    1 - (count / exprs.length).toFloat
-  })
 
 
   override def rewrite(silent : Boolean = false): QueryExpression = {
