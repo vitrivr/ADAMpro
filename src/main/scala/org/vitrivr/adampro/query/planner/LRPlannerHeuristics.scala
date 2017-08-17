@@ -6,7 +6,6 @@ import org.vitrivr.adampro.data.datatypes.TupleID._
 import org.vitrivr.adampro.data.datatypes.vector.Vector
 import org.vitrivr.adampro.data.datatypes.vector.Vector._
 import org.vitrivr.adampro.data.entity.Entity
-import org.vitrivr.adampro.query.tracker.QueryTracker
 import org.vitrivr.adampro.data.index.structures.ecp.ECPIndex
 import org.vitrivr.adampro.data.index.structures.lsh.LSHIndex
 import org.vitrivr.adampro.data.index.structures.mi.MIIndex
@@ -15,10 +14,11 @@ import org.vitrivr.adampro.data.index.structures.sh.SHIndex
 import org.vitrivr.adampro.data.index.structures.va.{VAIndex, VAPlusIndex, VAPlusIndexMetaData}
 import org.vitrivr.adampro.data.index.{Index, IndexingTaskTuple}
 import org.vitrivr.adampro.process.SharedComponentContext
-import org.vitrivr.adampro.utils.ml.{LinearRegression, PegasosSVM, TrainingSample}
 import org.vitrivr.adampro.query.query.RankingQuery
+import org.vitrivr.adampro.query.tracker.QueryTracker
+import org.vitrivr.adampro.utils.ml.{LinearRegression, TrainingSample}
 
-import scala.collection.mutable.ListBuffer
+import scala.collection.mutable.{ArrayBuffer, ListBuffer}
 
 /**
   * ADAMpro
@@ -26,14 +26,14 @@ import scala.collection.mutable.ListBuffer
   * Ivan Giangreco
   * November 2016
   */
-private[planner] class SVMPlannerHeuristics(defaultNRuns: Int = 100) extends PlannerHeuristics("svm", defaultNRuns) {
+private[planner] class LRPlannerHeuristics(defaultNRuns: Int = 100) extends PlannerHeuristics("lr", defaultNRuns) {
   /**
     *
     * @param indexes
     * @param queries
     * @param options
     */
-  override def trainIndexes(indexes: Seq[Index], queries: Seq[RankingQuery], options: Map[String, String] = Map())(implicit ac : SharedComponentContext): Unit = {
+  override def trainIndexes(indexes: Seq[Index], queries: Seq[RankingQuery], options: Map[String, String] = Map())(implicit ac: SharedComponentContext): Unit = {
     val entity = indexes.head.entity.get
     val tracker = new QueryTracker()
 
@@ -47,13 +47,11 @@ private[planner] class SVMPlannerHeuristics(defaultNRuns: Int = 100) extends Pla
 
     trainData.foreach { case (indextypename, trainDatum) =>
 
-      if (trainDatum.nonEmpty && !ac.catalogManager.containsOptimizerOptionMeta(name, "svm-index-" + indextypename.name).getOrElse(false)) {
-        ac.catalogManager.createOptimizerOption(name, "svm-index-" + indextypename.name, new PegasosSVM(trainDatum.head._1.length))
-      }
+      if (trainDatum.nonEmpty && !ac.catalogManager.containsOptimizerOptionMeta(name, "lr-index-" + indextypename.name).getOrElse(false)) {
+        LinearRegression.train(trainDatum.map { case (x, y) => TrainingSample(x, y.time) }, ac.config.optimizerPath + "/" + "lr-index-" + indextypename.name)
+        ac.catalogManager.createOptimizerOption(name, "lr-index-" + indextypename.name, null)
 
-      val svm = ac.catalogManager.getOptimizerOptionMeta(name, "svm-index-" + indextypename.name).get.asInstanceOf[PegasosSVM]
-      svm.train(trainDatum.map { case (x, y) => TrainingSample(x, y.time) })
-      ac.catalogManager.updateOptimizerOption(name, "svm-index-" + indextypename.name, svm)
+      }
     }
 
     tracker.cleanAll()
@@ -65,19 +63,16 @@ private[planner] class SVMPlannerHeuristics(defaultNRuns: Int = 100) extends Pla
     * @param queries
     * @param options
     */
-  override def trainEntity(entity: Entity, queries: Seq[RankingQuery], options: Map[String, String] = Map())(implicit ac : SharedComponentContext): Unit = {
+  override def trainEntity(entity: Entity, queries: Seq[RankingQuery], options: Map[String, String] = Map())(implicit ac: SharedComponentContext): Unit = {
     val trainDatum = queries.flatMap { nnq =>
       performMeasurement(entity, nnq, options.get("nruns").map(_.toInt)).map(measurement => (buildFeature(entity, nnq, measurement.toConfidence()), measurement))
     }
 
-    if (trainDatum.nonEmpty && !ac.catalogManager.containsOptimizerOptionMeta(name, "svm-entity").getOrElse(false)) {
-      ac.catalogManager.createOptimizerOption(name, "svm-entity", new PegasosSVM(trainDatum.head._1.length))
+    if (trainDatum.nonEmpty && !ac.catalogManager.containsOptimizerOptionMeta(name, "lr-entity").getOrElse(false)) {
+      ac.catalogManager.createOptimizerOption(name, "lr-entity", null)
     }
 
-    val svm = ac.catalogManager.getOptimizerOptionMeta(name, "svm-entity").get.asInstanceOf[PegasosSVM]
-    svm.train(trainDatum.map { case (x, y) => TrainingSample(x, y.time) })
-
-    ac.catalogManager.updateOptimizerOption(name, "svm-entity", svm)
+    LinearRegression.train(trainDatum.map { case (x, y) => TrainingSample(x, y.time) }, ac.config.optimizerPath + "/" + "lr-entity")
   }
 
   /**
@@ -85,10 +80,10 @@ private[planner] class SVMPlannerHeuristics(defaultNRuns: Int = 100) extends Pla
     * @param index
     * @param nnq
     */
-  override def test(index: Index, nnq: RankingQuery)(implicit ac : SharedComponentContext): Double = {
+  override def test(index: Index, nnq: RankingQuery)(implicit ac: SharedComponentContext): Double = {
     val confidence = nnq.options.get("confidence").map(_.toDouble).getOrElse(1.0)
 
-    getScore("svm-index-" + index.indextypename.name, buildFeature(index, nnq, Confidence(confidence)))(ac)
+    getScore("lr-index-" + index.indextypename.name, buildFeature(index, nnq, Confidence(confidence)))(ac)
   }
 
 
@@ -98,10 +93,10 @@ private[planner] class SVMPlannerHeuristics(defaultNRuns: Int = 100) extends Pla
     * @param nnq
     * @return
     */
-  override def test(entity: Entity, nnq: RankingQuery)(implicit ac : SharedComponentContext): Double = {
+  override def test(entity: Entity, nnq: RankingQuery)(implicit ac: SharedComponentContext): Double = {
     val confidence = nnq.options.get("confidence").map(_.toDouble).getOrElse(1.0)
 
-    getScore("svm-entity", buildFeature(entity, nnq, Confidence(confidence)))(ac)
+    getScore("lr-entity", buildFeature(entity, nnq, Confidence(confidence)))(ac)
   }
 
 
@@ -111,20 +106,14 @@ private[planner] class SVMPlannerHeuristics(defaultNRuns: Int = 100) extends Pla
     * @param f
     * @return
     */
-  private def getScore(key: String, f: DenseVector[Double])(implicit ac : SharedComponentContext): Double = {
+  private def getScore(key: String, f: DenseVector[Double])(implicit ac: SharedComponentContext): Double = {
     if (ac.catalogManager.containsOptimizerOptionMeta(name, key).getOrElse(false)) {
-      val metaOpt = ac.catalogManager.getOptimizerOptionMeta(name, key)
+      val lr = new LinearRegression(ac.config.optimizerPath + "/" + key)
+      val ypred = lr.test(f)
 
-      if (metaOpt.isSuccess) {
-        val svm = metaOpt.get.asInstanceOf[PegasosSVM]
-        val ypred = svm.test(f)
+      log.info("lr optimizer predicted " + ypred)
 
-        log.info("SVM optimizer predicted " + ypred)
-
-        1 / ypred // 1 / ypred as score is better the higher, but ypred gets worse the higher the value
-      } else {
-        0.toDouble
-      }
+      1 / ypred // 1 / ypred as score is better the higher, but ypred gets worse the higher the value
     } else {
       0.toDouble
     }

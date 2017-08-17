@@ -404,6 +404,7 @@ class RPCClient(channel: ManagedChannel,
       val optimizer = optimizername.getOrElse("svm") match {
         case "svm" => Optimizer.SVM_OPTIMIZER
         case "naive" => Optimizer.NAIVE_OPTIMIZER
+        case "lr" => Optimizer.LR_OPTIMIZER
         case _ => Optimizer.SVM_OPTIMIZER
       }
 
@@ -712,6 +713,7 @@ class RPCClient(channel: ManagedChannel,
       val optimizer  = optimizername match {
         case "svm" => Optimizer.SVM_OPTIMIZER
         case "naive" => Optimizer.NAIVE_OPTIMIZER
+        case "lr" => Optimizer.LR_OPTIMIZER
         case _ => throw new Exception("optimizer name is not known")
       }
 

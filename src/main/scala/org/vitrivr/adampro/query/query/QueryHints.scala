@@ -32,6 +32,7 @@ object QueryHints {
   case object EMPIRICAL_QUERY extends EmpiricalQueryHint()
   case object EMPIRICAL_SVM_QUERY extends EmpiricalQueryHint("svm")
   case object EMPIRICAL_NAIVE_QUERY extends EmpiricalQueryHint("naive")
+  case object EMPIRICAL_LR_QUERY extends EmpiricalQueryHint("lr")
   case object SCORED extends EmpiricalQueryHint("naive")
 
   val FALLBACK_HINTS : QueryHint = EXACT_QUERY
@@ -50,6 +51,7 @@ object QueryHints {
     case "inexact" => Some(INEXACT_QUERY)
     case "exact" => Some(EXACT_QUERY)
     case "empirical" => Some(EMPIRICAL_QUERY)
+    case "empirical_lr" => Some(EMPIRICAL_LR_QUERY)
     case "empirical_svm" => Some(EMPIRICAL_SVM_QUERY)
     case "empirical_naive" => Some(EMPIRICAL_NAIVE_QUERY)
     case "scored" => Some(SCORED)

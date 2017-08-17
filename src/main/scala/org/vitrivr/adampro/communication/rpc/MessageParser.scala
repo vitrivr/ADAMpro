@@ -13,7 +13,7 @@ import org.vitrivr.adampro.data.entity.AttributeDefinition
 import org.vitrivr.adampro.utils.exception.GeneralAdamException
 import org.vitrivr.adampro.grpc._
 import org.vitrivr.adampro.grpc.grpc.DistanceMessage.DistanceType
-import org.vitrivr.adampro.grpc.grpc.Optimizer.{NAIVE_OPTIMIZER, SVM_OPTIMIZER}
+import org.vitrivr.adampro.grpc.grpc.Optimizer.{LR_OPTIMIZER, NAIVE_OPTIMIZER, SVM_OPTIMIZER}
 import org.vitrivr.adampro.grpc.grpc.{QueryMessage, _}
 import org.vitrivr.adampro.process.SharedComponentContext
 import org.vitrivr.adampro.query.ast.external.ExternalScanExpressions
@@ -24,7 +24,7 @@ import org.vitrivr.adampro.query.ast.internal.ProjectionExpression._
 import org.vitrivr.adampro.query.ast.internal._
 import org.vitrivr.adampro.query.distance._
 import org.vitrivr.adampro.query.execution.parallel.{QueryHintsParallelPathChooser, SimpleParallelPathChooser}
-import org.vitrivr.adampro.query.query.InformationLevels.{InformationLevel}
+import org.vitrivr.adampro.query.query.InformationLevels.InformationLevel
 import org.vitrivr.adampro.query.query._
 import org.vitrivr.adampro.shared.cache.QueryCacheOptions
 import org.vitrivr.adampro.utils.Logging
@@ -571,6 +571,7 @@ private[communication] object MessageParser extends Logging {
   def getOptimizerName(optimizer : Optimizer) : String = optimizer match {
     case SVM_OPTIMIZER => "svm"
     case NAIVE_OPTIMIZER => "naive"
+    case LR_OPTIMIZER => "lr"
     case _ => throw new GeneralAdamException("optimizer unknown")
   }
 }

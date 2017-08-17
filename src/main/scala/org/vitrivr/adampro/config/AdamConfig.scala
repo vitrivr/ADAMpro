@@ -35,6 +35,9 @@ class AdamConfig extends Serializable with Logging {
   val internalsPath = AdamConfig.cleanPath(config.getString("adampro.internalsPath"))
   val schedulerFile = internalsPath + "/" + "scheduler.xml"
 
+  val optimizerPath = internalsPath + "/" + "optimizers"
+  new File(optimizerPath).mkdirs()
+
   import scala.collection.JavaConversions._
 
   val engines = config.getStringList("adampro.engines").toIterator.toIndexedSeq

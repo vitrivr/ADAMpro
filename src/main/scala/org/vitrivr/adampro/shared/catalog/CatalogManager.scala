@@ -876,12 +876,17 @@ class CatalogManager(internalsPath: String) extends Serializable with Logging {
     */
   def createOptimizerOption(optimizer: String, key: String, optimizermeta: Serializable): Try[Void] = {
     execute("create optimizer option") {
-      val bos = new ByteArrayOutputStream()
-      val oos = new ObjectOutputStream(bos)
-      oos.writeObject(optimizermeta)
-      val meta = bos.toByteArray
-      oos.close()
-      bos.close()
+      val meta = if (optimizermeta != null) {
+        val bos = new ByteArrayOutputStream()
+        val oos = new ObjectOutputStream(bos)
+        oos.writeObject(optimizermeta)
+        val meta = bos.toByteArray
+        oos.close()
+        bos.close()
+        meta
+      } else {
+        new Array[Byte](0)
+      }
 
       val actions = new ArrayBuffer[DBIOAction[_, NoStream, _]]()
 
@@ -959,6 +964,7 @@ object CatalogManager {
 
   /**
     * Create catalog manager and fill it
+    *
     * @return
     */
   def build()(implicit ac: SharedComponentContext): CatalogManager = new CatalogManager(ac.config.internalsPath)
