@@ -46,7 +46,8 @@ scalacOptions ++= Seq()
 //lib resolvers
 resolvers ++= Seq(
   "Sonatype Releases" at "https://oss.sonatype.org/content/repositories/releases/",
-  "Restlet Repositories" at "http://maven.restlet.org"
+  "Restlet Repositories" at "http://maven.restlet.org",
+  "Hortonworks Repositories" at "http://repo.hortonworks.com/content/repositories/releases/"
 )
 resolvers += Resolver.sonatypeRepo("snapshots")
 
