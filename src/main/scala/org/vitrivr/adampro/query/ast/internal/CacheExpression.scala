@@ -17,7 +17,7 @@ case class CacheExpression(private val expr: QueryExpression, private val cache:
   _children ++= Seq(expr)
 
   override protected def run(options : Option[QueryEvaluationOptions], filter: Option[DataFrame] = None)(tracker : QueryTracker)(implicit ac: SharedComponentContext): Option[DataFrame] = {
-    log.debug("run cache operation")
+    log.trace("run cache operation")
 
     ac.sc.setLocalProperty("spark.scheduler.pool", "slow")
     ac.sc.setJobGroup(id.getOrElse(""), "cache", interruptOnCancel = true)

@@ -23,5 +23,5 @@ private[va] trait SignatureGenerator extends Serializable {
     * @param signature signature to translate to cell ids
     * @return
     */
-  def toCells(signature: BitString[_]): Seq[Int]
+  def toCells(signature: BitString[_]): IndexedSeq[Int]
 }

@@ -55,7 +55,7 @@ class DataSource extends CreatableRelationProvider with DataSourceRegister with 
     val conn: Connection = getConnection(url, table, parameters)
 
     try {
-      var tableExists = JdbcUtils.tableExists(conn, url, table)
+      var tableExists = JdbcUtils.tableExists(conn, new JDBCOptions(url, table, Map()))
 
       if (mode == SaveMode.Ignore && tableExists) {
         //do nothing
@@ -72,7 +72,7 @@ class DataSource extends CreatableRelationProvider with DataSourceRegister with 
 
       // Create the table if the table didn't exist.
       if (!tableExists) {
-        val schema = JdbcUtils.schemaString(data.schema, url)
+        val schema = JdbcUtils.schemaString(data, url)
         val sql = s"CREATE TABLE $table ($schema)"
         val statement = conn.createStatement
         try {

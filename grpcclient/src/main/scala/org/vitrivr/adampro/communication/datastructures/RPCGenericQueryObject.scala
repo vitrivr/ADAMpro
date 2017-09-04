@@ -1,5 +1,6 @@
 package org.vitrivr.adampro.communication.datastructures
 
+import org.vitrivr.adampro.grpc.grpc.ProjectionMessage.AttributeNameMessage
 import org.vitrivr.adampro.grpc.grpc.QueryMessage.InformationLevel
 import org.vitrivr.adampro.grpc.grpc.QueryMessage.InformationLevel.{INFORMATION_FULL_TREE, INFORMATION_INTERMEDIATE_RESULTS, INFORMATION_LAST_STEP_ONLY, WITH_PROVENANCE_PARTITION_INFORMATION, WITH_PROVENANCE_SOURCE_INFORMATION}
 import org.vitrivr.adampro.grpc.grpc._
@@ -69,7 +70,8 @@ abstract class RPCGenericQueryObject(val id: String, val options: Map[String, St
     * @return
     */
   private[datastructures] def projection: ProjectionMessage = {
-    throw new Exception("not implemented yet")
+    val attributes = options.get("projection").get.split(",")
+    ProjectionMessage().withAttributes(AttributeNameMessage().withAttribute(attributes))
   }
 
 

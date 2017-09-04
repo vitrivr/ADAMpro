@@ -46,7 +46,8 @@ scalacOptions ++= Seq()
 //lib resolvers
 resolvers ++= Seq(
   "Sonatype Releases" at "https://oss.sonatype.org/content/repositories/releases/",
-  "Restlet Repositories" at "http://maven.restlet.org"
+  "Restlet Repositories" at "http://maven.restlet.org",
+  "Hortonworks Repositories" at "http://repo.hortonworks.com/content/repositories/releases/"
 )
 resolvers += Resolver.sonatypeRepo("snapshots")
 
@@ -58,10 +59,10 @@ val baseLibs = Seq(
 
 //adampro core libs
 val coreLibs = Seq(
-  "org.apache.spark" %% "spark-core" % "2.1.1" % "provided" excludeAll ExclusionRule("org.apache.hadoop"), //make sure that you use the same spark version as in your deployment!
-  "org.apache.spark" %% "spark-sql" % "2.1.1"  % "provided",
-  "org.apache.spark" %% "spark-hive" % "2.1.1"  % "provided",
-  "org.apache.spark" %% "spark-mllib" % "2.1.1"  % "provided",
+  "org.apache.spark" %% "spark-core" % "2.2.0" % "provided" excludeAll ExclusionRule("org.apache.hadoop"), //make sure that you use the same spark version as in your deployment!
+  "org.apache.spark" %% "spark-sql" % "2.2.0"  % "provided",
+  "org.apache.spark" %% "spark-hive" % "2.2.0"  % "provided",
+  "org.apache.spark" %% "spark-mllib" % "2.2.0"  % "provided",
   "org.apache.hadoop" % "hadoop-client" % "2.7.3" excludeAll ExclusionRule("javax.servlet")  //make sure that you use the same hadoop version as in your deployment!
 ).map(
   _.excludeAll(
@@ -77,7 +78,7 @@ val secondaryLibs = Seq(
   "org.scalanlp" %% "breeze-natives" % "0.13.1",
   "com.typesafe.slick" %% "slick" % "3.1.1",
   "com.mchange" % "c3p0" % "0.9.5.2",
-  "org.apache.derby" % "derby" % "10.13.1.1",
+  "com.h2database" % "h2" % "1.4.196",
   "it.unimi.dsi" % "fastutil" % "7.0.12",
   "commons-io" % "commons-io" % "2.5",
   "org.apache.commons" % "commons-lang3" % "3.4",
@@ -101,7 +102,11 @@ val tertiaryLibs = Seq(
   "com.datastax.spark" %% "spark-cassandra-connector" % "2.0.1",
   "net.postgis" % "postgis-jdbc" % "2.2.1",
   "com.databricks" %% "spark-avro" % "3.1.0",
-  "org.iq80.leveldb" % "leveldb" % "0.9"
+  "org.iq80.leveldb" % "leveldb" % "0.9",
+  "com.linkedin.paldb" % "paldb" % "1.2.0",
+  "org.alluxio" % "alluxio-core-client-fs" % "1.5.0",
+  "com.hortonworks" % "shc-core" % "1.1.1-2.1-s_2.11",
+  "org.apache.hbase" % "hbase-client" % "1.3.1"
 ).map(
   _.excludeAll(
     ExclusionRule("org.scala-lang"),

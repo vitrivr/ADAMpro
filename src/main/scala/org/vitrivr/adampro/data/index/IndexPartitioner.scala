@@ -1,15 +1,13 @@
 package org.vitrivr.adampro.data.index
 
-import org.apache.spark.HashPartitioner
-import org.apache.spark.rdd.RDD
-import org.apache.spark.sql.{DataFrame, Row, SaveMode}
-import org.vitrivr.adampro.shared.catalog.CatalogManager
+import org.apache.spark.sql.{DataFrame, SaveMode}
 import org.vitrivr.adampro.config.AttributeNames
 import org.vitrivr.adampro.data.entity.Entity.AttributeName
-import org.vitrivr.adampro.utils.exception.GeneralAdamException
-import org.vitrivr.adampro.data.index.partition._
+import org.vitrivr.adampro.distribution.partitioning.{PartitionMode, PartitionerChoice}
+import org.vitrivr.adampro.distribution.partitioning.partitioner._
 import org.vitrivr.adampro.process.SharedComponentContext
 import org.vitrivr.adampro.utils.Logging
+import org.vitrivr.adampro.utils.exception.GeneralAdamException
 
 import scala.util.{Failure, Success, Try}
 
@@ -33,7 +31,7 @@ object IndexPartitioner extends Logging {
     * @return
     */
   def apply(index: Index, nPartitions: Int, join: Option[DataFrame], attribute: Option[AttributeName], mode: PartitionMode.Value, partitioner: PartitionerChoice.Value = PartitionerChoice.SPARK, options: Map[String, String] = Map[String, String]())(implicit ac: SharedComponentContext): Try[Index] = {
-    log.debug("Repartitioning Index: " + index.indexname + " with partitioner " + partitioner)
+    log.trace("repartitioning Index: " + index.indexname + " with partitioner " + partitioner)
     var data = index.getData().get.join(index.entity.get.getData().get, index.pk.name)
 
     //TODO: possibly consider replication

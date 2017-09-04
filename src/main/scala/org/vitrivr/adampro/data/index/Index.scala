@@ -12,10 +12,10 @@ import org.vitrivr.adampro.data.entity.Entity._
 import org.vitrivr.adampro.utils.exception.{IndexNotExistingException, IndexNotProperlyDefinedException}
 import org.vitrivr.adampro.query.tracker.QueryTracker
 import org.vitrivr.adampro.data.index.Index.{IndexName, IndexTypeName}
-import org.vitrivr.adampro.data.index.IndexPartitioner.log
-import org.vitrivr.adampro.data.index.partition.Partitioning.PartitionID
-import org.vitrivr.adampro.data.index.partition._
+import IndexPartitioner.log
+import org.vitrivr.adampro.distribution.partitioning.Partitioning.PartitionID
 import org.vitrivr.adampro.data.index.structures.IndexTypes
+import org.vitrivr.adampro.distribution.partitioning.partitioner.SparkPartitioner
 import org.vitrivr.adampro.process.SharedComponentContext
 import org.vitrivr.adampro.query.distance.DistanceFunction
 import org.vitrivr.adampro.query.query.RankingQuery
@@ -85,6 +85,8 @@ abstract class Index(val indexname: IndexName)(@transient implicit val ac: Share
     *
     */
   def getData(): Option[DataFrame] = {
+    log.trace("load data of index")
+
     //cache data
     if (_data.isEmpty) {
       val data = Index.getStorage().get.read(indexname, Seq())
@@ -113,6 +115,9 @@ abstract class Index(val indexname: IndexName)(@transient implicit val ac: Share
         }
       }
     }
+
+    log.trace("return data of index")
+
 
     _data
   }
@@ -196,7 +201,6 @@ abstract class Index(val indexname: IndexName)(@transient implicit val ac: Share
     * @return
     */
   def scan(nnq: RankingQuery, filter: Option[DataFrame])(tracker: QueryTracker)(implicit ac: SharedComponentContext): DataFrame = {
-    log.debug("scan index")
     scan(nnq.q, nnq.distance, nnq.options, nnq.k, filter, nnq.partitions, nnq.queryID)(tracker)
   }
 
@@ -213,37 +217,26 @@ abstract class Index(val indexname: IndexName)(@transient implicit val ac: Share
     * @return a set of candidate tuple ids, possibly together with a tentative score (the number of tuples will be greater than k)
     */
   def scan(q: MathVector, distance: DistanceFunction, options: Map[String, String] = Map(), k: Int, filter: Option[DataFrame], partitions: Option[Set[PartitionID]], queryID: Option[String] = None)(tracker: QueryTracker)(implicit ac: SharedComponentContext): DataFrame = {
-    log.debug("started scanning index")
+    log.trace("started scanning index")
 
-    if (isStale) {
-      log.warn("index is stale but still used, please re-create " + indexname)
+    import scala.concurrent.ExecutionContext.Implicits.global
+    Future {
+      if (isStale) {
+        log.warn("index is stale but still used, please re-create " + indexname)
+      }
     }
 
     var df = getData().get
 
+    log.trace("moving on to filtering in index")
+
     //apply pre-filter
-    val funnel = new Funnel[Any] {
-      override def funnel(t: Any, primitiveSink: PrimitiveSink): Unit =
-        t match {
-          case s: String => primitiveSink.putUnencodedChars(s)
-          case l: Long => primitiveSink.putLong(l)
-          case i: Int => primitiveSink.putInt(i)
-          case _ => primitiveSink.putUnencodedChars(t.toString)
-        }
-    }
-    val ids = BloomFilter.create[Any](funnel, 1000, 0.05)
-
     if (filter.isDefined) {
-      filter.get.select(pk.name).collect().map(_.getAs[Any](pk.name)).toSeq.foreach {
-        ids.put(_)
-      }
-
-      val idsBc = ac.sc.broadcast(ids)
-      tracker.addBroadcast(idsBc)
-      val filterUdf = udf((arg: Any) => idsBc.value.mightContain(arg))
-
-      df = df.filter(filterUdf(col(pk.name)))
+      log.trace("filter is defined")
+      df = df.join(filter.get, df.col(pk.name) === filter.get.col(pk.name), "leftsemi")
     }
+
+    log.trace("moving on to choosing partitions of index")
 
     //choose specific partition
     if (partitions.isDefined) {
@@ -256,6 +249,8 @@ abstract class Index(val indexname: IndexName)(@transient implicit val ac: Share
       val rdd = df.rdd.mapPartitionsWithIndex((idx, iter) => if (toKeep.find(_ == idx).isDefined) iter else Iterator(), preservesPartitioning = true)
       df = ac.sqlContext.createDataFrame(rdd, df.schema)
     }
+
+    log.trace("moving on to specific index")
 
     scan(df, q, distance, options, k)(tracker)
   }
@@ -351,7 +346,7 @@ object Index extends Logging {
   type IndexName = EntityName
   type IndexTypeName = IndexTypes.IndexType
 
-  private[index] def getStorage()(implicit ac: SharedComponentContext) = ac.storageManager.get("parquetindex")
+  private[index] def getStorage()(implicit ac: SharedComponentContext) = ac.storageManager.get("index")
 
   /**
     * Creates an index that is unique and which follows the naming rules of indexes.

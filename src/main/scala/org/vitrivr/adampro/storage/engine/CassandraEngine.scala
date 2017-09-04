@@ -33,7 +33,7 @@ class CassandraEngine(private val url: String, private val port: Int, private va
 
   override val name = "cassandra"
 
-  override def supports = Seq(AttributeTypes.AUTOTYPE, AttributeTypes.INTTYPE, AttributeTypes.LONGTYPE, AttributeTypes.STRINGTYPE, AttributeTypes.VECTORTYPE)
+  override def supports = Seq(AttributeTypes.AUTOTYPE, AttributeTypes.INTTYPE, AttributeTypes.LONGTYPE, AttributeTypes.FLOATTYPE, AttributeTypes.DOUBLETYPE, AttributeTypes.BOOLEANTYPE, AttributeTypes.STRINGTYPE, AttributeTypes.VECTORTYPE)
 
   override def specializes = Seq(AttributeTypes.VECTORTYPE)
 
@@ -138,8 +138,8 @@ class CassandraEngine(private val url: String, private val port: Int, private va
     case LONGTYPE => "BIGINT"
     case FLOATTYPE => "FLOAT"
     case DOUBLETYPE => "DOUBLE"
-    case STRINGTYPE => "TEXT"
     case BOOLEANTYPE => "BOOLEAN"
+    case STRINGTYPE => "TEXT"
     case VECTORTYPE => "LIST<FLOAT>"
     case _ => throw new GeneralAdamException("attribute type " + attributetype.name + " is not supported in cassandra handler")
   }

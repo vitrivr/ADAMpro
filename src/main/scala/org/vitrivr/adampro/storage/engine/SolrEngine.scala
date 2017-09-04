@@ -78,7 +78,7 @@ class SolrEngine(private val url: String)(@transient override implicit val ac: S
     * @return
     */
   override def exists(storename: String)(implicit ac: SharedComponentContext): Try[Boolean] = {
-    log.debug("solr exists operation")
+    log.trace("solr exists operation")
 
     try {
       Success(CoreAdminRequest.getStatus(storename, new HttpSolrClient(url)).getCoreStatus(storename).get("instanceDir") != null)

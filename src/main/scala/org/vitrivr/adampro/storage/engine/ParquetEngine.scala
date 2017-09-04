@@ -2,16 +2,17 @@ package org.vitrivr.adampro.storage.engine
 
 import java.io.File
 
+import alluxio.client.file.FileSystemContext
 import org.vitrivr.adampro.data.datatypes.AttributeTypes
 import org.vitrivr.adampro.data.entity.AttributeDefinition
 import org.vitrivr.adampro.utils.exception.GeneralAdamException
 import org.vitrivr.adampro.query.query.Predicate
 import org.vitrivr.adampro.utils.Logging
 import org.apache.commons.io.FileUtils
-import org.apache.hadoop.conf.Configuration
-import org.apache.hadoop.fs.{FileSystem, Path}
+import org.apache.spark.annotation.Experimental
 import org.apache.spark.sql.types.{StructField, StructType}
 import org.apache.spark.sql.{DataFrame, Row, SaveMode}
+import org.vitrivr.adampro.config.AdamConfig
 import org.vitrivr.adampro.process.SharedComponentContext
 
 import scala.util.{Failure, Success, Try}
@@ -39,10 +40,14 @@ class ParquetEngine()(@transient override implicit val ac: SharedComponentContex
     */
   def this(props: Map[String, String])(implicit ac: SharedComponentContext) {
     this()(ac)
-    if (props.get("hadoop").getOrElse("false").toBoolean) {
-      subengine = new ParquetHadoopStorage(ac.config.cleanPath(props.get("basepath").get), props.get("datapath").get)
+    if (!props.contains("storage")) {
+      subengine = new ParquetLocalStorage(AdamConfig.cleanPath(props.get("path").get))
     } else {
-      subengine = new ParquetLocalEngine(ac.config.cleanPath(props.get("path").get))
+      subengine = props.get("storage").get match {
+        case "hadoop" => new ParquetHadoopStorage(props.get("basepath").get, props.get("datapath").get)
+        case "alluxio" => new ParquetAlluxioStorage(props.get("scheme").get, props.get("authority").get, props.get("path").get)
+        case "local" => new ParquetLocalStorage(AdamConfig.cleanPath(props.get("path").get))
+      }
     }
   }
 
@@ -55,7 +60,7 @@ class ParquetEngine()(@transient override implicit val ac: SharedComponentContex
     * @return options to store
     */
   override def create(storename: String, attributes: Seq[AttributeDefinition], params: Map[String, String])(implicit ac: SharedComponentContext): Try[Map[String, String]] = {
-    log.debug("parquet create operation")
+    log.trace("parquet create operation")
 
     val schema = StructType(attributes.map(attribute => StructField(attribute.name.toString, attribute.attributeType.datatype)))
     write(storename, ac.spark.createDataFrame(ac.sc.emptyRDD[Row], schema), attributes, SaveMode.ErrorIfExists, params)
@@ -68,7 +73,7 @@ class ParquetEngine()(@transient override implicit val ac: SharedComponentContex
     * @return
     */
   override def exists(storename: String)(implicit ac: SharedComponentContext): Try[Boolean] = {
-    log.debug("parquet exists operation")
+    log.trace("parquet exists operation")
     subengine.exists(storename)
   }
 
@@ -82,7 +87,7 @@ class ParquetEngine()(@transient override implicit val ac: SharedComponentContex
     * @return
     */
   override def read(storename: String, attributes: Seq[AttributeDefinition], predicates: Seq[Predicate], params: Map[String, String])(implicit ac: SharedComponentContext): Try[DataFrame] = {
-    log.debug("parquet read operation")
+    log.trace("parquet read operation")
     subengine.read(storename)
   }
 
@@ -97,7 +102,7 @@ class ParquetEngine()(@transient override implicit val ac: SharedComponentContex
     * @return new options to store
     */
   override def write(storename: String, df: DataFrame, attributes: Seq[AttributeDefinition], mode: SaveMode = SaveMode.Append, params: Map[String, String])(implicit ac: SharedComponentContext): Try[Map[String, String]] = {
-    log.debug("parquet write operation")
+    log.trace("parquet write operation")
     val allowRepartitioning = params.getOrElse("allowRepartitioning", "false").toBoolean
 
     import org.apache.spark.sql.functions.col
@@ -132,7 +137,7 @@ class ParquetEngine()(@transient override implicit val ac: SharedComponentContex
     * @return
     */
   def drop(storename: String)(implicit ac: SharedComponentContext): Try[Void] = {
-    log.debug("parquet drop operation")
+    log.trace("parquet drop operation")
     subengine.drop(storename)
   }
 
@@ -162,112 +167,7 @@ trait GenericParquetEngine extends Logging with Serializable {
 /**
   *
   */
-class ParquetHadoopStorage(private val basepath: String, private val datapath: String) extends GenericParquetEngine with Logging with Serializable {
-  @transient private val hadoopConf = new Configuration()
-  hadoopConf.set("fs.defaultFS", basepath)
-
-  if (!FileSystem.get(new Path("/").toUri, hadoopConf).exists(new Path(datapath))) {
-    FileSystem.get(new Path("/").toUri, hadoopConf).mkdirs(new Path(datapath))
-  }
-
-  //we assume:
-  // basepath (hdfs://...) ends on "/"
-  // datapath (/.../.../) is given absolutely and starts with "/" and ends with "/"
-  private val fullHadoopPath = basepath + datapath.substring(1)
-
-
-  /**
-    *
-    * @param filename
-    * @return
-    */
-  def read(filename: String)(implicit ac: SharedComponentContext): Try[DataFrame] = {
-    try {
-      if (!exists(filename).get) {
-        throw new GeneralAdamException("no file found at " + fullHadoopPath)
-      }
-
-      val df = Success(ac.sqlContext.read.parquet(fullHadoopPath + filename))
-
-      df
-    } catch {
-      case e : org.apache.spark.sql.AnalysisException => Failure(new GeneralAdamException("no data available for file at " + filename))
-      case e: Exception => Failure(e)
-    }
-  }
-
-  /**
-    *
-    * @param filename
-    * @param df
-    * @param mode
-    * @return
-    */
-  def write(filename: String, df: DataFrame, mode: SaveMode = SaveMode.Append)(implicit ac: SharedComponentContext): Try[Void] = {
-    try {
-      df.write.mode(mode).parquet(fullHadoopPath + filename)
-      Success(null)
-    } catch {
-      case e: Exception => Failure(e)
-    }
-  }
-
-
-  /**
-    *
-    * @param filename
-    * @return
-    */
-  override def drop(filename: String)(implicit ac: SharedComponentContext): Try[Void] = {
-    try {
-      val hdfs = FileSystem.get(new Path(datapath).toUri, hadoopConf)
-      val drop = hdfs.delete(new Path(datapath, filename), true)
-
-      if (drop) {
-        Success(null)
-      } else {
-        Failure(new Exception("unknown error in dropping file " + filename))
-      }
-    } catch {
-      case e: Exception => Failure(e)
-    }
-  }
-
-
-  /**
-    *
-    * @param filename
-    * @return
-    */
-  override def exists(filename: String)(implicit ac: SharedComponentContext): Try[Boolean] = {
-    try {
-      val hdfs = FileSystem.get(new Path(datapath).toUri, hadoopConf)
-      val exists = hdfs.exists(new Path(datapath, filename))
-      Success(exists)
-    } catch {
-      case e: Exception => Failure(e)
-    }
-  }
-
-  override def equals(other: Any): Boolean =
-    other match {
-      case that: ParquetHadoopStorage => this.basepath.equals(that.basepath) && this.datapath.equals(that.datapath)
-      case _ => false
-    }
-
-  override def hashCode(): Int = {
-    val prime = 31
-    var result = 1
-    result = prime * result + basepath.hashCode
-    result = prime * result + datapath.hashCode
-    result
-  }
-}
-
-/**
-  *
-  */
-class ParquetLocalEngine(private val path: String) extends GenericParquetEngine with Logging with Serializable {
+class ParquetLocalStorage(private val path: String) extends GenericParquetEngine with Logging with Serializable {
   val sparkPath = "file://" + path
   val datafolder = new File(path)
 
@@ -342,9 +242,223 @@ class ParquetLocalEngine(private val path: String) extends GenericParquetEngine 
 
   override def equals(other: Any): Boolean =
     other match {
-      case that: ParquetLocalEngine => this.path.equals(that.path)
+      case that: ParquetLocalStorage => this.path.equals(that.path)
       case _ => false
     }
 
   override def hashCode(): Int = path.hashCode
+}
+
+
+/**
+  *
+  * @param basepath
+  * @param datapath
+  */
+class ParquetHadoopStorage(private val basepath: String, private val datapath: String) extends GenericParquetEngine with Logging with Serializable {
+  import org.apache.hadoop.conf.Configuration
+  import org.apache.hadoop.fs.{FileSystem, Path}
+
+  @transient private val hadoopConf = new Configuration()
+  hadoopConf.set("fs.defaultFS", basepath)
+
+  if (!FileSystem.get(new Path("/").toUri, hadoopConf).exists(new Path(datapath))) {
+    FileSystem.get(new Path("/").toUri, hadoopConf).mkdirs(new Path(datapath))
+  }
+
+  //we assume:
+  // basepath (hdfs://...) ends on "/"
+  // datapath (/.../.../) is given absolutely and starts with "/" and ends with "/"
+  private val path = basepath + datapath.substring(1)
+
+
+  /**
+    *
+    * @param filename
+    * @return
+    */
+  def read(filename: String)(implicit ac: SharedComponentContext): Try[DataFrame] = {
+    try {
+      if (!exists(filename).get) {
+        throw new GeneralAdamException("no file found at " + path)
+      }
+
+      val df = Success(ac.sqlContext.read.parquet(path + filename))
+
+      df
+    } catch {
+      case e : org.apache.spark.sql.AnalysisException => Failure(new GeneralAdamException("no data available for file at " + filename))
+      case e: Exception => Failure(e)
+    }
+  }
+
+  /**
+    *
+    * @param filename
+    * @param df
+    * @param mode
+    * @return
+    */
+  def write(filename: String, df: DataFrame, mode: SaveMode = SaveMode.Append)(implicit ac: SharedComponentContext): Try[Void] = {
+    try {
+      df.write.mode(mode).parquet(path + filename)
+      Success(null)
+    } catch {
+      case e: Exception => Failure(e)
+    }
+  }
+
+
+  /**
+    *
+    * @param filename
+    * @return
+    */
+  override def drop(filename: String)(implicit ac: SharedComponentContext): Try[Void] = {
+    try {
+      val hdfs = FileSystem.get(new Path(datapath).toUri, hadoopConf)
+      val drop = hdfs.delete(new Path(datapath, filename), true)
+
+      if (drop) {
+        Success(null)
+      } else {
+        Failure(new Exception("unknown error in dropping file " + filename))
+      }
+    } catch {
+      case e: Exception => Failure(e)
+    }
+  }
+
+
+  /**
+    *
+    * @param filename
+    * @return
+    */
+  override def exists(filename: String)(implicit ac: SharedComponentContext): Try[Boolean] = {
+    try {
+      val hdfs = FileSystem.get(new Path(datapath).toUri, hadoopConf)
+      val exists = hdfs.exists(new Path(datapath, filename))
+      Success(exists)
+    } catch {
+      case e: Exception => Failure(e)
+    }
+  }
+
+  override def equals(other: Any): Boolean =
+    other match {
+      case that: ParquetHadoopStorage => this.basepath.equals(that.basepath) && this.datapath.equals(that.datapath)
+      case _ => false
+    }
+
+  override def hashCode(): Int = {
+    val prime = 31
+    var result = 1
+    result = prime * result + basepath.hashCode
+    result = prime * result + datapath.hashCode
+    result
+  }
+}
+
+
+/**
+  *
+  * @param scheme
+  * @param authority
+  * @param path
+  */
+@Experimental class ParquetAlluxioStorage(private val scheme: String, private val authority: String, private val path: String) extends GenericParquetEngine with Logging with Serializable {
+  import alluxio.AlluxioURI
+  import alluxio.client.file.FileSystem
+
+  //we assume:
+  // scheme is only a single word, not slashes, etc. (e.g., alluxio)
+  // authority contains host and port, no slashes (e.g., localhost:19999)
+  // path (/.../.../) is given absolutely and starts with "/" and ends with "/"
+  private lazy val fs = FileSystem.Factory.get
+
+  if(!fs.exists(new AlluxioURI(scheme, authority, path))){
+    fs.createDirectory(new AlluxioURI(scheme, authority, path))
+  }
+
+
+  /**
+    *
+    * @param filename
+    * @return
+    */
+  def read(filename: String)(implicit ac: SharedComponentContext): Try[DataFrame] = {
+    try {
+      if (!exists(filename).get) {
+        throw new GeneralAdamException("no file found at " + path + filename)
+      }
+
+      val df = Success(ac.sqlContext.read.parquet(scheme + "://" + authority + "/" + path.substring(1) + filename))
+
+      df
+    } catch {
+      case e: Exception => Failure(e)
+    }
+  }
+
+  /**
+    *
+    * @param filename
+    * @param df
+    * @param mode
+    * @return
+    */
+  def write(filename: String, df: DataFrame, mode: SaveMode = SaveMode.Append)(implicit ac: SharedComponentContext): Try[Void] = {
+    try {
+      df.write.mode(mode).parquet(scheme + "://" + authority + "/" + path.substring(1) + filename)
+      Success(null)
+    } catch {
+      case e: Exception => Failure(e)
+    }
+  }
+
+
+  /**
+    *
+    * @param filename
+    * @return
+    */
+  override def drop(filename: String)(implicit ac: SharedComponentContext): Try[Void] = {
+    try {
+      fs.delete(new AlluxioURI(scheme, authority, path + filename))
+
+      Success(null)
+    } catch {
+      case e: Exception => Failure(e)
+    }
+  }
+
+
+  /**
+    *
+    * @param filename
+    * @return
+    */
+  override def exists(filename: String)(implicit ac: SharedComponentContext): Try[Boolean] = {
+    try {
+      Success(fs.exists(new AlluxioURI(scheme, authority, path + filename)))
+    } catch {
+      case e: Exception => Failure(e)
+    }
+  }
+
+  override def equals(other: Any): Boolean =
+    other match {
+      case that: ParquetAlluxioStorage => this.scheme.equals(that.scheme) && this.authority.equals(that.authority) && this.path.equals(that.path)
+      case _ => false
+    }
+
+  override def hashCode(): Int = {
+    val prime = 31
+    var result = 1
+    result = prime * result + scheme.hashCode
+    result = prime * result + authority.hashCode
+    result = prime * result + path.hashCode
+    result
+  }
 }

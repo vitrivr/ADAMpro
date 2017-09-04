@@ -55,9 +55,9 @@ class PostGisTestSuite extends AdamTestBase {
       val ncollect = 10
       val tracker = new QueryTracker()
 
-      val results = QueryOp.compoundQuery(GenericExternalScanExpression(entityname, "postgis", Map("query" -> query, "limit" -> ncollect.toString))(ac))(tracker).get.get
+      val (expr, results) = QueryOp.expression(GenericExternalScanExpression(entityname, "postgis", Map("query" -> query, "limit" -> ncollect.toString))(ac))(tracker).get
 
-      val collected = results.collect()
+      val collected = results.get.collect()
       val count = collected.length
       assert(count == ncollect)
 

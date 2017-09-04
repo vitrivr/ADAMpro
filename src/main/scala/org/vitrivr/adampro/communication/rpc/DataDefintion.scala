@@ -6,9 +6,8 @@ import org.apache.spark.sql.Row
 import org.apache.spark.sql.types.{StructField, StructType}
 import org.vitrivr.adampro.communication.api._
 import org.vitrivr.adampro.data.entity.{AttributeNameHolder, Entity}
-import org.vitrivr.adampro.data.index.partition.{PartitionMode, PartitionerChoice}
 import org.vitrivr.adampro.data.index.structures.IndexTypes
-import org.vitrivr.adampro.utils.exception.GeneralAdamException
+import org.vitrivr.adampro.distribution.partitioning.{PartitionMode, PartitionerChoice}
 import org.vitrivr.adampro.grpc.grpc.AdaptScanMethodsMessage.{IndexCollection, QueryCollection}
 import org.vitrivr.adampro.grpc.grpc._
 import org.vitrivr.adampro.process.{SharedComponentContext, SparkStartup}
@@ -19,6 +18,7 @@ import org.vitrivr.adampro.query.query.Predicate
 import org.vitrivr.adampro.query.tracker.QueryTracker
 import org.vitrivr.adampro.storage.Transferer
 import org.vitrivr.adampro.utils.Logging
+import org.vitrivr.adampro.utils.exception.GeneralAdamException
 import org.vitrivr.adampro.utils.importer.{AdamImporter, ProtoImporterExporter}
 
 import scala.concurrent.Future
@@ -38,17 +38,18 @@ class DataDefintion extends AdamDefinitionGrpc.AdamDefinition with Logging {
     * @return
     */
   override def createEntity(request: CreateEntityMessage): Future[AckMessage] = {
-    log.debug("rpc call for create entity operation")
-    val entityname = request.entity
+    time("rpc call for create entity operation") {
+      val entityname = request.entity
 
-    val attributes = MessageParser.prepareAttributes(request.attributes)
-    val res = EntityOp.create(entityname, attributes)
+      val attributes = MessageParser.prepareAttributes(request.attributes)
+      val res = EntityOp.create(entityname, attributes)
 
-    if (res.isSuccess) {
-      Future.successful(AckMessage(code = AckMessage.Code.OK, res.get.entityname))
-    } else {
-      log.error(res.failed.get.getMessage, res.failed.get)
-      Future.successful(AckMessage(code = AckMessage.Code.ERROR, message = res.failed.get.getMessage))
+      if (res.isSuccess) {
+        Future.successful(AckMessage(code = AckMessage.Code.OK, res.get.entityname))
+      } else {
+        log.error(res.failed.get.getMessage, res.failed.get)
+        Future.successful(AckMessage(code = AckMessage.Code.ERROR, message = res.failed.get.getMessage))
+      }
     }
   }
 
@@ -69,14 +70,15 @@ class DataDefintion extends AdamDefinitionGrpc.AdamDefinition with Logging {
     * @return
     */
   override def existsEntity(request: EntityNameMessage): Future[ExistsMessage] = {
-    log.debug("rpc call for entity exists operation")
-    val res = EntityOp.exists(request.entity)
+    time("rpc call for entity exists operation") {
+      val res = EntityOp.exists(request.entity)
 
-    if (res.isSuccess) {
-      Future.successful(ExistsMessage(Some(AckMessage(code = AckMessage.Code.OK)), res.get))
-    } else {
-      log.error(res.failed.get.getMessage, res.failed.get)
-      Future.successful(ExistsMessage(Some(AckMessage(code = AckMessage.Code.ERROR, message = res.failed.get.getMessage))))
+      if (res.isSuccess) {
+        Future.successful(ExistsMessage(Some(AckMessage(code = AckMessage.Code.OK)), res.get))
+      } else {
+        log.error(res.failed.get.getMessage, res.failed.get)
+        Future.successful(ExistsMessage(Some(AckMessage(code = AckMessage.Code.ERROR, message = res.failed.get.getMessage))))
+      }
     }
   }
 
@@ -87,14 +89,15 @@ class DataDefintion extends AdamDefinitionGrpc.AdamDefinition with Logging {
     * @return
     */
   override def sparsifyEntity(request: SparsifyEntityMessage): Future[AckMessage] = {
-    log.debug("rpc call for compress operation")
-    val res = EntityOp.sparsify(request.entity, request.attribute)
+    time("rpc call for compress operation") {
+      val res = EntityOp.sparsify(request.entity, request.attribute)
 
-    if (res.isSuccess) {
-      Future.successful(AckMessage(code = AckMessage.Code.OK))
-    } else {
-      log.error(res.failed.get.getMessage, res.failed.get)
-      Future.successful(AckMessage(code = AckMessage.Code.ERROR, message = res.failed.get.getMessage))
+      if (res.isSuccess) {
+        Future.successful(AckMessage(code = AckMessage.Code.OK))
+      } else {
+        log.error(res.failed.get.getMessage, res.failed.get)
+        Future.successful(AckMessage(code = AckMessage.Code.ERROR, message = res.failed.get.getMessage))
+      }
     }
   }
 
@@ -105,14 +108,15 @@ class DataDefintion extends AdamDefinitionGrpc.AdamDefinition with Logging {
     * @return
     */
   override def count(request: EntityNameMessage): Future[AckMessage] = {
-    log.debug("rpc call for count entity operation")
-    val res = EntityOp.count(request.entity)
+    time("rpc call for count entity operation") {
+      val res = EntityOp.count(request.entity)
 
-    if (res.isSuccess) {
-      Future.successful(AckMessage(code = AckMessage.Code.OK, res.get.toString))
-    } else {
-      log.error(res.failed.get.getMessage, res.failed.get)
-      Future.successful(AckMessage(code = AckMessage.Code.ERROR, message = res.failed.get.getMessage))
+      if (res.isSuccess) {
+        Future.successful(AckMessage(code = AckMessage.Code.OK, res.get.toString))
+      } else {
+        log.error(res.failed.get.getMessage, res.failed.get)
+        Future.successful(AckMessage(code = AckMessage.Code.ERROR, message = res.failed.get.getMessage))
+      }
     }
   }
 
@@ -122,41 +126,41 @@ class DataDefintion extends AdamDefinitionGrpc.AdamDefinition with Logging {
     * @return
     */
   override def insert(request: InsertMessage): Future[AckMessage] = {
-    log.debug("rpc call for insert operation")
+    time("rpc call for insert operation") {
 
-    //TODO: remove code duplication with streamInsert
-    val entity = Entity.load(request.entity)
+      //TODO: remove code duplication with streamInsert
+      val entity = Entity.load(request.entity)
 
-    if (entity.isFailure) {
-      return Future.successful(AckMessage(code = AckMessage.Code.ERROR, message = "cannot load entity"))
-    }
+      if (entity.isFailure) {
+        return Future.successful(AckMessage(code = AckMessage.Code.ERROR, message = "cannot load entity"))
+      }
 
-    val schema = entity.get.schema(fullSchema = false)
+      val schema = entity.get.schema(fullSchema = false)
 
-    val rows = request.tuples.map(tuple => {
-      val data = schema.map(field => {
-        val datum = tuple.data.get(field.name).getOrElse(null)
-        if (datum != null) {
-          MessageParser.prepareDataTypeConverter(field.attributeType)(datum)
-        } else {
-          null
-        }
+      val rows = request.tuples.map(tuple => {
+        val data = schema.map(field => {
+          val datum = tuple.data.get(field.name).getOrElse(null)
+          if (datum != null) {
+            MessageParser.prepareDataTypeConverter(field.attributeType)(datum)
+          } else {
+            null
+          }
+        })
+        Row(data: _*)
       })
-      Row(data: _*)
-    })
 
-    val rdd = ac.sc.parallelize(rows)
-    val df = ac.sqlContext.createDataFrame(rdd, StructType(entity.get.schema(fullSchema = false).map(field => StructField(field.name, field.attributeType.datatype))))
+      val rdd = ac.sc.parallelize(rows)
+      val df = ac.sqlContext.createDataFrame(rdd, StructType(entity.get.schema(fullSchema = false).map(field => StructField(field.name, field.attributeType.datatype))))
 
-    val res = EntityOp.insert(entity.get.entityname, df)
+      val res = EntityOp.insert(entity.get.entityname, df)
 
-    if (res.isSuccess) {
-      Future.successful(AckMessage(code = AckMessage.Code.OK))
-    } else {
-      Future.successful(AckMessage(code = AckMessage.Code.ERROR, message = res.failed.get.getMessage))
+      if (res.isSuccess) {
+        Future.successful(AckMessage(code = AckMessage.Code.OK))
+      } else {
+        Future.successful(AckMessage(code = AckMessage.Code.ERROR, message = res.failed.get.getMessage))
+      }
     }
   }
-
 
   /**
     *
@@ -217,17 +221,18 @@ class DataDefintion extends AdamDefinitionGrpc.AdamDefinition with Logging {
     * @return
     */
   override def vacuumEntity(request: EntityNameMessage): Future[AckMessage] = {
-    log.debug("rpc call for vacuum operation")
+    time("rpc call for vacuum operation") {
 
-    val entityname = request.entity
+      val entityname = request.entity
 
-    val res = EntityOp.vacuum(entityname)
+      val res = EntityOp.vacuum(entityname)
 
-    if (res.isSuccess) {
-      Future.successful(AckMessage(code = AckMessage.Code.OK))
-    } else {
-      log.error(res.failed.get.getMessage, res.failed.get)
-      Future.successful(AckMessage(code = AckMessage.Code.ERROR, message = res.failed.get.getMessage))
+      if (res.isSuccess) {
+        Future.successful(AckMessage(code = AckMessage.Code.OK))
+      } else {
+        log.error(res.failed.get.getMessage, res.failed.get)
+        Future.successful(AckMessage(code = AckMessage.Code.ERROR, message = res.failed.get.getMessage))
+      }
     }
   }
 
@@ -238,37 +243,38 @@ class DataDefintion extends AdamDefinitionGrpc.AdamDefinition with Logging {
     * @return
     */
   override def delete(request: DeleteMessage): Future[AckMessage] = {
-    log.debug("rpc call for delete operation")
+    time("rpc call for delete operation") {
 
-    val predicates = request.predicates.map(bqm => {
-      val attribute = bqm.attribute
-      val op = if (bqm.op.isEmpty) {
-        None
-      } else {
-        Some(bqm.op)
-      }
-      val values = bqm.values.map(value => value.datatype.number match {
-        case DataMessage.BOOLEANDATA_FIELD_NUMBER => value.getBooleanData
-        case DataMessage.DOUBLEDATA_FIELD_NUMBER => value.getBooleanData
-        case DataMessage.FLOATDATA_FIELD_NUMBER => value.getBooleanData
-        case DataMessage.GEOGRAPHYDATA_FIELD_NUMBER => value.getGeographyData
-        case DataMessage.GEOMETRYDATA_FIELD_NUMBER => value.getGeometryData
-        case DataMessage.INTDATA_FIELD_NUMBER => value.getIntData
-        case DataMessage.LONGDATA_FIELD_NUMBER => value.getLongData
-        case DataMessage.STRINGDATA_FIELD_NUMBER => value.getStringData
-        case _ => throw new GeneralAdamException("search predicates can not be of any type")
+      val predicates = request.predicates.map(bqm => {
+        val attribute = bqm.attribute
+        val op = if (bqm.op.isEmpty) {
+          None
+        } else {
+          Some(bqm.op)
+        }
+        val values = bqm.values.map(value => value.datatype.number match {
+          case DataMessage.BOOLEANDATA_FIELD_NUMBER => value.getBooleanData
+          case DataMessage.DOUBLEDATA_FIELD_NUMBER => value.getBooleanData
+          case DataMessage.FLOATDATA_FIELD_NUMBER => value.getBooleanData
+          case DataMessage.GEOGRAPHYDATA_FIELD_NUMBER => value.getGeographyData
+          case DataMessage.GEOMETRYDATA_FIELD_NUMBER => value.getGeometryData
+          case DataMessage.INTDATA_FIELD_NUMBER => value.getIntData
+          case DataMessage.LONGDATA_FIELD_NUMBER => value.getLongData
+          case DataMessage.STRINGDATA_FIELD_NUMBER => value.getStringData
+          case _ => throw new GeneralAdamException("search predicates can not be of any type")
+        })
+
+        new Predicate(bqm.attribute, op, values)
       })
 
-      new Predicate(bqm.attribute, op, values)
-    })
+      val res = EntityOp.delete(request.entity, predicates)
 
-    val res = EntityOp.delete(request.entity, predicates)
-
-    if (res.isSuccess) {
-      Future.successful(AckMessage(code = AckMessage.Code.OK, message = res.get.toString))
-    } else {
-      log.error(res.failed.get.getMessage, res.failed.get)
-      Future.successful(AckMessage(code = AckMessage.Code.ERROR, message = res.failed.get.getMessage))
+      if (res.isSuccess) {
+        Future.successful(AckMessage(code = AckMessage.Code.OK, message = res.get.toString))
+      } else {
+        log.error(res.failed.get.getMessage, res.failed.get)
+        Future.successful(AckMessage(code = AckMessage.Code.ERROR, message = res.failed.get.getMessage))
+      }
     }
   }
 
@@ -279,30 +285,30 @@ class DataDefintion extends AdamDefinitionGrpc.AdamDefinition with Logging {
     * @return
     */
   override def index(request: IndexMessage): Future[AckMessage] = {
-    log.debug("rpc call for indexing operation")
-    val indextypename = IndexTypes.withIndextype(request.indextype)
+    time("rpc call for indexing operation") {
+      val indextypename = IndexTypes.withIndextype(request.indextype)
 
-    if (indextypename.isEmpty) {
-      return Future.successful(AckMessage(code = AckMessage.Code.ERROR, message = "index type not existing"))
+      if (indextypename.isEmpty) {
+        return Future.successful(AckMessage(code = AckMessage.Code.ERROR, message = "index type not existing"))
+      }
+
+      val distance = MessageParser.prepareDistance(request.distance)
+
+      val tracker = new QueryTracker()
+      val res = IndexOp.create(request.entity, request.attribute, indextypename.get, distance, request.options)(tracker)
+
+      val message = if (res.isSuccess) {
+        Future.successful(AckMessage(code = AckMessage.Code.OK, message = res.get.indexname))
+      } else {
+        log.error(res.failed.get.getMessage, res.failed.get)
+        Future.successful(AckMessage(code = AckMessage.Code.ERROR, message = res.failed.get.getMessage))
+      }
+
+      tracker.cleanAll()
+
+      message
     }
-
-    val distance = MessageParser.prepareDistance(request.distance)
-
-    val tracker = new QueryTracker()
-    val res = IndexOp.create(request.entity, request.attribute, indextypename.get, distance, request.options)(tracker)
-
-    val message = if (res.isSuccess) {
-      Future.successful(AckMessage(code = AckMessage.Code.OK, message = res.get.indexname))
-    } else {
-      log.error(res.failed.get.getMessage, res.failed.get)
-      Future.successful(AckMessage(code = AckMessage.Code.ERROR, message = res.failed.get.getMessage))
-    }
-
-    tracker.cleanAll()
-
-    message
   }
-
 
   /**
     *
@@ -310,14 +316,15 @@ class DataDefintion extends AdamDefinitionGrpc.AdamDefinition with Logging {
     * @return
     */
   override def dropEntity(request: EntityNameMessage): Future[AckMessage] = {
-    log.debug("rpc call for dropping entity operation")
-    val res = EntityOp.drop(request.entity)
+    time("rpc call for dropping entity operation") {
+      val res = EntityOp.drop(request.entity)
 
-    if (res.isSuccess) {
-      Future.successful(AckMessage(code = AckMessage.Code.OK))
-    } else {
-      log.error(res.failed.get.getMessage, res.failed.get)
-      Future.successful(AckMessage(code = AckMessage.Code.ERROR, message = res.failed.get.getMessage))
+      if (res.isSuccess) {
+        Future.successful(AckMessage(code = AckMessage.Code.OK))
+      } else {
+        log.error(res.failed.get.getMessage, res.failed.get)
+        Future.successful(AckMessage(code = AckMessage.Code.ERROR, message = res.failed.get.getMessage))
+      }
     }
   }
 
@@ -327,16 +334,17 @@ class DataDefintion extends AdamDefinitionGrpc.AdamDefinition with Logging {
     * @return
     */
   override def existsIndex(request: IndexExistsMessage): Future[ExistsMessage] = {
-    log.debug("rpc call for index exists operation")
+    time("rpc call for index exists operation") {
 
-    val indextypename = IndexTypes.withIndextype(request.indextype)
-    val res = IndexOp.exists(request.entity, request.attribute, indextypename.get, request.acceptStale)
+      val indextypename = IndexTypes.withIndextype(request.indextype)
+      val res = IndexOp.exists(request.entity, request.attribute, indextypename.get, request.acceptStale)
 
-    if (res.isSuccess) {
-      Future.successful(ExistsMessage(Some(AckMessage(code = AckMessage.Code.OK)), res.get))
-    } else {
-      log.error(res.failed.get.getMessage, res.failed.get)
-      Future.successful(ExistsMessage(Some(AckMessage(code = AckMessage.Code.ERROR, message = res.failed.get.getMessage))))
+      if (res.isSuccess) {
+        Future.successful(ExistsMessage(Some(AckMessage(code = AckMessage.Code.OK)), res.get))
+      } else {
+        log.error(res.failed.get.getMessage, res.failed.get)
+        Future.successful(ExistsMessage(Some(AckMessage(code = AckMessage.Code.ERROR, message = res.failed.get.getMessage))))
+      }
     }
   }
 
@@ -346,14 +354,15 @@ class DataDefintion extends AdamDefinitionGrpc.AdamDefinition with Logging {
     * @return
     */
   override def dropIndex(request: IndexNameMessage): Future[AckMessage] = {
-    log.debug("rpc call for dropping index operation")
-    val res = IndexOp.drop(request.index)
+    time("rpc call for dropping index operation") {
+      val res = IndexOp.drop(request.index)
 
-    if (res.isSuccess) {
-      Future.successful(AckMessage(code = AckMessage.Code.OK))
-    } else {
-      log.error(res.failed.get.getMessage, res.failed.get)
-      Future.successful(AckMessage(code = AckMessage.Code.ERROR, message = res.failed.get.getMessage))
+      if (res.isSuccess) {
+        Future.successful(AckMessage(code = AckMessage.Code.OK))
+      } else {
+        log.error(res.failed.get.getMessage, res.failed.get)
+        Future.successful(AckMessage(code = AckMessage.Code.ERROR, message = res.failed.get.getMessage))
+      }
     }
   }
 
@@ -363,19 +372,20 @@ class DataDefintion extends AdamDefinitionGrpc.AdamDefinition with Logging {
     * @return
     */
   override def listIndexes(request: EntityNameMessage): Future[IndexesMessage] = {
-    log.debug("rpc call for listing indexes")
+    time("rpc call for listing indexes") {
 
-    val res = if(request.entity != null && request.entity.nonEmpty){
-      IndexOp.list(request.entity)
-    } else {
-      IndexOp.list()
-    }
+      val res = if (request.entity != null && request.entity.nonEmpty) {
+        IndexOp.list(request.entity)
+      } else {
+        IndexOp.list()
+      }
 
-    if (res.isSuccess) {
-      Future.successful(IndexesMessage(Some(AckMessage(AckMessage.Code.OK)), res.get.map(r => IndexesMessage.IndexMessage(r._1, r._2, r._3.indextype))))
-    } else {
-      log.error(res.failed.get.getMessage, res.failed.get)
-      Future.successful(IndexesMessage(Some(AckMessage(code = AckMessage.Code.ERROR, message = res.failed.get.getMessage))))
+      if (res.isSuccess) {
+        Future.successful(IndexesMessage(Some(AckMessage(AckMessage.Code.OK)), res.get.map(r => IndexesMessage.IndexMessage(r._1, r._2, r._3.indextype))))
+      } else {
+        log.error(res.failed.get.getMessage, res.failed.get)
+        Future.successful(IndexesMessage(Some(AckMessage(code = AckMessage.Code.ERROR, message = res.failed.get.getMessage))))
+      }
     }
   }
 
@@ -385,15 +395,16 @@ class DataDefintion extends AdamDefinitionGrpc.AdamDefinition with Logging {
     * @return
     */
   override def generateRandomData(request: GenerateRandomDataMessage): Future[AckMessage] = {
-    log.debug("rpc call for creating random data")
+    time("rpc call for creating random data") {
 
-    val res = RandomDataOp(request.entity, request.ntuples, request.options)
+      val res = RandomDataOp(request.entity, request.ntuples, request.options)
 
-    if (res.isSuccess) {
-      Future.successful(AckMessage(code = AckMessage.Code.OK))
-    } else {
-      log.error(res.failed.get.getMessage, res.failed.get)
-      Future.successful(AckMessage(code = AckMessage.Code.ERROR, message = res.failed.get.getMessage))
+      if (res.isSuccess) {
+        Future.successful(AckMessage(code = AckMessage.Code.OK))
+      } else {
+        log.error(res.failed.get.getMessage, res.failed.get)
+        Future.successful(AckMessage(code = AckMessage.Code.ERROR, message = res.failed.get.getMessage))
+      }
     }
   }
 
@@ -403,14 +414,15 @@ class DataDefintion extends AdamDefinitionGrpc.AdamDefinition with Logging {
     * @return
     */
   override def listEntities(request: EmptyMessage): Future[EntitiesMessage] = {
-    log.debug("rpc call for listing entities")
-    val res = EntityOp.list()
+    time("rpc call for listing entities") {
+      val res = EntityOp.list()
 
-    if (res.isSuccess) {
-      Future.successful(EntitiesMessage(Some(AckMessage(AckMessage.Code.OK)), res.get.map(_.toString())))
-    } else {
-      log.error(res.failed.get.getMessage, res.failed.get)
-      Future.successful(EntitiesMessage(Some(AckMessage(code = AckMessage.Code.ERROR, message = res.failed.get.getMessage))))
+      if (res.isSuccess) {
+        Future.successful(EntitiesMessage(Some(AckMessage(AckMessage.Code.OK)), res.get.map(_.toString())))
+      } else {
+        log.error(res.failed.get.getMessage, res.failed.get)
+        Future.successful(EntitiesMessage(Some(AckMessage(code = AckMessage.Code.ERROR, message = res.failed.get.getMessage))))
+      }
     }
   }
 
@@ -420,14 +432,15 @@ class DataDefintion extends AdamDefinitionGrpc.AdamDefinition with Logging {
     * @return
     */
   override def getEntityProperties(request: EntityPropertiesMessage): Future[PropertiesMessage] = {
-    log.debug("rpc call for returning entity properties")
-    val res = EntityOp.properties(request.entity, options = request.options)
+    time("rpc call for returning entity properties") {
+      val res = EntityOp.properties(request.entity, options = request.options)
 
-    if (res.isSuccess) {
-      Future.successful(PropertiesMessage(Some(AckMessage(AckMessage.Code.OK)), request.entity, res.get))
-    } else {
-      log.error(res.failed.get.getMessage, res.failed.get)
-      Future.successful(PropertiesMessage(Some(AckMessage(AckMessage.Code.ERROR, res.failed.get.getMessage))))
+      if (res.isSuccess) {
+        Future.successful(PropertiesMessage(Some(AckMessage(AckMessage.Code.OK)), request.entity, res.get))
+      } else {
+        log.error(res.failed.get.getMessage, res.failed.get)
+        Future.successful(PropertiesMessage(Some(AckMessage(AckMessage.Code.ERROR, res.failed.get.getMessage))))
+      }
     }
   }
 
@@ -437,14 +450,15 @@ class DataDefintion extends AdamDefinitionGrpc.AdamDefinition with Logging {
     * @return
     */
   override def getAttributeProperties(request: AttributePropertiesMessage): Future[PropertiesMessage] = {
-    log.debug("rpc call for returning attribute properties")
-    val res = EntityOp.properties(request.entity, Some(request.attribute), options = request.options)
+    time("rpc call for returning attribute properties") {
+      val res = EntityOp.properties(request.entity, Some(request.attribute), options = request.options)
 
-    if (res.isSuccess) {
-      Future.successful(PropertiesMessage(Some(AckMessage(AckMessage.Code.OK)), request.entity, res.get))
-    } else {
-      log.error(res.failed.get.getMessage, res.failed.get)
-      Future.successful(PropertiesMessage(Some(AckMessage(AckMessage.Code.ERROR, res.failed.get.getMessage))))
+      if (res.isSuccess) {
+        Future.successful(PropertiesMessage(Some(AckMessage(AckMessage.Code.OK)), request.entity, res.get))
+      } else {
+        log.error(res.failed.get.getMessage, res.failed.get)
+        Future.successful(PropertiesMessage(Some(AckMessage(AckMessage.Code.ERROR, res.failed.get.getMessage))))
+      }
     }
   }
 
@@ -455,14 +469,15 @@ class DataDefintion extends AdamDefinitionGrpc.AdamDefinition with Logging {
     * @return
     */
   override def getIndexProperties(request: IndexPropertiesMessage): Future[PropertiesMessage] = {
-    log.debug("rpc call for returning index properties")
-    val res = IndexOp.properties(request.index, request.options)
+    time("rpc call for returning index properties") {
+      val res = IndexOp.properties(request.index, request.options)
 
-    if (res.isSuccess) {
-      Future.successful(PropertiesMessage(Some(AckMessage(AckMessage.Code.OK)), request.index, res.get))
-    } else {
-      log.error(res.failed.get.getMessage, res.failed.get)
-      Future.successful(PropertiesMessage(Some(AckMessage(AckMessage.Code.ERROR, res.failed.get.getMessage))))
+      if (res.isSuccess) {
+        Future.successful(PropertiesMessage(Some(AckMessage(AckMessage.Code.OK)), request.index, res.get))
+      } else {
+        log.error(res.failed.get.getMessage, res.failed.get)
+        Future.successful(PropertiesMessage(Some(AckMessage(AckMessage.Code.ERROR, res.failed.get.getMessage))))
+      }
     }
   }
 
@@ -472,36 +487,37 @@ class DataDefintion extends AdamDefinitionGrpc.AdamDefinition with Logging {
     * @return
     */
   override def repartitionIndexData(request: RepartitionMessage): Future[AckMessage] = {
-    log.debug("rpc call for repartitioning index")
+    time("rpc call for repartitioning index") {
 
-    val attribute = if (request.attributes.isEmpty) {
-      None
-    } else {
-      Some(AttributeNameHolder(request.attributes))
-    }
+      val attribute = if (request.attributes.isEmpty) {
+        None
+      } else {
+        Some(AttributeNameHolder(request.attributes))
+      }
 
-    val option = request.option match {
-      case RepartitionMessage.PartitionOptions.CREATE_NEW => PartitionMode.CREATE_NEW
-      case RepartitionMessage.PartitionOptions.CREATE_TEMP => PartitionMode.CREATE_TEMP
-      case RepartitionMessage.PartitionOptions.REPLACE_EXISTING => PartitionMode.REPLACE_EXISTING
-      case _ => PartitionMode.CREATE_NEW
-    }
+      val option = request.option match {
+        case RepartitionMessage.PartitionOptions.CREATE_NEW => PartitionMode.CREATE_NEW
+        case RepartitionMessage.PartitionOptions.CREATE_TEMP => PartitionMode.CREATE_TEMP
+        case RepartitionMessage.PartitionOptions.REPLACE_EXISTING => PartitionMode.REPLACE_EXISTING
+        case _ => PartitionMode.CREATE_NEW
+      }
 
-    //Note that default is spark
-    val partitioner = request.partitioner match {
-      case RepartitionMessage.Partitioner.SPARK => PartitionerChoice.SPARK
-      case RepartitionMessage.Partitioner.RANDOM => PartitionerChoice.RANDOM
-      case RepartitionMessage.Partitioner.ECP => PartitionerChoice.ECP
-      case _ => PartitionerChoice.SPARK
-    }
+      //Note that default is spark
+      val partitioner = request.partitioner match {
+        case RepartitionMessage.Partitioner.SPARK => PartitionerChoice.SPARK
+        case RepartitionMessage.Partitioner.RANDOM => PartitionerChoice.RANDOM
+        case RepartitionMessage.Partitioner.ECP => PartitionerChoice.ECP
+        case _ => PartitionerChoice.SPARK
+      }
 
-    val res = IndexOp.partition(request.entity, request.numberOfPartitions, None, attribute, option, partitioner, request.options)
+      val res = IndexOp.partition(request.entity, request.numberOfPartitions, None, attribute, option, partitioner, request.options)
 
-    if (res.isSuccess) {
-      Future.successful(AckMessage(AckMessage.Code.OK, res.get.indexname))
-    } else {
-      log.error(res.failed.get.getMessage, res.failed.get)
-      Future.successful(AckMessage(code = AckMessage.Code.ERROR, message = res.failed.get.getMessage))
+      if (res.isSuccess) {
+        Future.successful(AckMessage(AckMessage.Code.OK, res.get.indexname))
+      } else {
+        log.error(res.failed.get.getMessage, res.failed.get)
+        Future.successful(AckMessage(code = AckMessage.Code.ERROR, message = res.failed.get.getMessage))
+      }
     }
   }
 
@@ -511,28 +527,29 @@ class DataDefintion extends AdamDefinitionGrpc.AdamDefinition with Logging {
     * @return
     */
   override def repartitionEntityData(request: RepartitionMessage): Future[AckMessage] = {
-    log.debug("rpc call for repartitioning entity")
+    time("rpc call for repartitioning entity") {
 
-    val attribute = if (request.attributes.isEmpty) {
-      None
-    } else {
-      Some(request.attributes)
-    }
+      val attribute = if (request.attributes.isEmpty) {
+        None
+      } else {
+        Some(request.attributes)
+      }
 
-    val option = request.option match {
-      case RepartitionMessage.PartitionOptions.CREATE_NEW => PartitionMode.CREATE_NEW
-      case RepartitionMessage.PartitionOptions.CREATE_TEMP => PartitionMode.CREATE_TEMP
-      case RepartitionMessage.PartitionOptions.REPLACE_EXISTING => PartitionMode.REPLACE_EXISTING
-      case _ => PartitionMode.CREATE_NEW
-    }
+      val option = request.option match {
+        case RepartitionMessage.PartitionOptions.CREATE_NEW => PartitionMode.CREATE_NEW
+        case RepartitionMessage.PartitionOptions.CREATE_TEMP => PartitionMode.CREATE_TEMP
+        case RepartitionMessage.PartitionOptions.REPLACE_EXISTING => PartitionMode.REPLACE_EXISTING
+        case _ => PartitionMode.CREATE_NEW
+      }
 
-    val res = EntityOp.partition(request.entity, request.numberOfPartitions, None, attribute.map(AttributeNameHolder(_)), option)
+      val res = EntityOp.partition(request.entity, request.numberOfPartitions, None, attribute.map(AttributeNameHolder(_)), option)
 
-    if (res.isSuccess) {
-      Future.successful(AckMessage(AckMessage.Code.OK, res.get.entityname))
-    } else {
-      log.error(res.failed.get.getMessage, res.failed.get)
-      Future.successful(AckMessage(code = AckMessage.Code.ERROR, message = res.failed.get.getMessage))
+      if (res.isSuccess) {
+        Future.successful(AckMessage(AckMessage.Code.OK, res.get.entityname))
+      } else {
+        log.error(res.failed.get.getMessage, res.failed.get)
+        Future.successful(AckMessage(code = AckMessage.Code.ERROR, message = res.failed.get.getMessage))
+      }
     }
   }
 
@@ -542,44 +559,48 @@ class DataDefintion extends AdamDefinitionGrpc.AdamDefinition with Logging {
     * @param request
     * @return
     */
-  override def adaptScanMethods(request: AdaptScanMethodsMessage): Future[AckMessage] = {
-    log.debug("rpc call for benchmarking entity and index")
+  override def adaptScanMethods(request: AdaptScanMethodsMessage): Future[AckMessage]
 
-    val entity = Entity.load(request.entity)
-    assert(entity.isSuccess)
+  = {
+    time("rpc call for benchmarking entity and index") {
 
-    val ico = request.ic match {
-      case IndexCollection.EXISTING_INDEXES => ExistingIndexCollectionOption
-      case IndexCollection.NEW_INDEXES => NewIndexCollectionOption
-      case _ => null
-    }
-    val ic = IndexCollectionFactory(request.entity, request.attribute, ico, request.options)
+      val entity = Entity.load(request.entity)
+      assert(entity.isSuccess)
 
-
-    val qco = request.qc match {
-      case QueryCollection.LOGGED_QUERIES => LoggedQueryCollectionOption
-      case QueryCollection.RANDOM_QUERIES => RandomQueryCollectionOption
-      case _ => null
-    }
-    val qc = QueryCollectionFactory(request.entity, request.attribute, qco, request.options)
+      val ico = request.ic match {
+        case IndexCollection.EXISTING_INDEXES => ExistingIndexCollectionOption
+        case IndexCollection.NEW_INDEXES => NewIndexCollectionOption
+        case _ => null
+      }
+      val ic = IndexCollectionFactory(request.entity, request.attribute, ico, request.options)
 
 
-    val optimizers = request.optimizer match {
-      case Optimizer.SVM_OPTIMIZER => Seq(PlannerRegistry.apply("svm").get)
-      case Optimizer.NAIVE_OPTIMIZER =>  Seq(PlannerRegistry.apply("naive").get)
-      case _ => Seq(PlannerRegistry.apply("svm").get, PlannerRegistry.apply("naive").get)
-    }
+      val qco = request.qc match {
+        case QueryCollection.LOGGED_QUERIES => LoggedQueryCollectionOption
+        case QueryCollection.RANDOM_QUERIES => RandomQueryCollectionOption
+        case _ => null
+      }
+      val qc = QueryCollectionFactory(request.entity, request.attribute, qco, request.options)
 
-    val optResults = optimizers.map{
-      optimizer =>
-        optimizer.train(entity.get, ic, qc, request.options)
-    }
 
-    if (optResults.forall(_.isSuccess)) {
-      Future.successful(AckMessage(AckMessage.Code.OK, request.entity))
-    } else {
-      optResults.foreach{ res => log.error("error in training optimizer: " + res.failed.get.getMessage)}
-      Future.successful(AckMessage(code = AckMessage.Code.ERROR, message = optResults.filter(_.isFailure).map(_.failed.get.getMessage).mkString("; ")  ))
+      val optimizers = request.optimizer match {
+        case Optimizer.LR_OPTIMIZER => Seq(PlannerRegistry.apply("lr").get)
+        case Optimizer.SVM_OPTIMIZER => Seq(PlannerRegistry.apply("svm").get)
+        case Optimizer.NAIVE_OPTIMIZER => Seq(PlannerRegistry.apply("naive").get)
+        case _ => Seq(PlannerRegistry.apply("svm").get, PlannerRegistry.apply("naive").get)
+      }
+
+      val optResults = optimizers.map {
+        optimizer =>
+          optimizer.train(entity.get, ic, qc, request.options)
+      }
+
+      if (optResults.forall(_.isSuccess)) {
+        Future.successful(AckMessage(AckMessage.Code.OK, request.entity))
+      } else {
+        optResults.foreach { res => log.error("error in training optimizer: " + res.failed.get.getMessage) }
+        Future.successful(AckMessage(code = AckMessage.Code.ERROR, message = optResults.filter(_.isFailure).map(_.failed.get.getMessage).mkString("; ")))
+      }
     }
   }
 
@@ -589,22 +610,23 @@ class DataDefintion extends AdamDefinitionGrpc.AdamDefinition with Logging {
     * @return
     */
   override def generateAllIndexes(request: IndexMessage): Future[AckMessage] = {
-    log.debug("rpc call for generating all indexes")
+    time("rpc call for generating all indexes") {
 
-    val distance = MessageParser.prepareDistance(request.distance)
-    val tracker = new QueryTracker()
-    val res = IndexOp.generateAll(request.entity, request.attribute, distance)(tracker)
+      val distance = MessageParser.prepareDistance(request.distance)
+      val tracker = new QueryTracker()
+      val res = IndexOp.generateAll(request.entity, request.attribute, distance)(tracker)
 
-    val message = if (res.isSuccess) {
-      Future.successful(AckMessage(AckMessage.Code.OK, res.get.mkString(",")))
-    } else {
-      log.error(res.failed.get.getMessage, res.failed.get)
-      Future.successful(AckMessage(code = AckMessage.Code.ERROR, message = res.failed.get.getMessage))
+      val message = if (res.isSuccess) {
+        Future.successful(AckMessage(AckMessage.Code.OK, res.get.mkString(",")))
+      } else {
+        log.error(res.failed.get.getMessage, res.failed.get)
+        Future.successful(AckMessage(code = AckMessage.Code.ERROR, message = res.failed.get.getMessage))
+      }
+
+      tracker.cleanAll()
+
+      message
     }
-
-    tracker.cleanAll()
-
-    message
   }
 
   /**
@@ -613,13 +635,14 @@ class DataDefintion extends AdamDefinitionGrpc.AdamDefinition with Logging {
     * @return
     */
   @Experimental override def importData(request: ImportMessage): Future[AckMessage] = {
-    log.debug("rpc call for importing data from old ADAM")
-    val res = AdamImporter(request.host, request.database, request.username, request.password)
-    if (res.isSuccess) {
-      Future.successful(AckMessage(AckMessage.Code.OK))
-    } else {
-      log.error(res.failed.get.getMessage, res.failed.get)
-      Future.successful(AckMessage(code = AckMessage.Code.ERROR, message = res.failed.get.getMessage))
+    time("rpc call for importing data from old ADAM") {
+      val res = AdamImporter(request.host, request.database, request.username, request.password)
+      if (res.isSuccess) {
+        Future.successful(AckMessage(AckMessage.Code.OK))
+      } else {
+        log.error(res.failed.get.getMessage, res.failed.get)
+        Future.successful(AckMessage(code = AckMessage.Code.ERROR, message = res.failed.get.getMessage))
+      }
     }
   }
 
@@ -629,10 +652,10 @@ class DataDefintion extends AdamDefinitionGrpc.AdamDefinition with Logging {
     * @return
     */
   @Experimental override def protoImportData(request: ProtoImportMessage, responseObserver: StreamObserver[AckMessage]): Unit = {
-    log.debug("rpc call for importing data from proto files")
-    new ProtoImporterExporter().importData(request.path, createEntity, insert, responseObserver)
+    time("rpc call for importing data from proto files") {
+      new ProtoImporterExporter().importData(request.path, createEntity, insert, responseObserver)
+    }
   }
-
 
   /**
     *
@@ -640,24 +663,24 @@ class DataDefintion extends AdamDefinitionGrpc.AdamDefinition with Logging {
     * @return
     */
   @Experimental override def protoExportData(request: ProtoExportMessage): Future[AckMessage] = {
-    log.debug("rpc call for importing data from proto files")
+    time("rpc call for importing data from proto files") {
 
-    val entity = Entity.load(request.entity)
+      val entity = Entity.load(request.entity)
 
-    if (entity.isFailure) {
-      return Future.successful(AckMessage(code = AckMessage.Code.ERROR, message = "cannot load entity"))
-    }
+      if (entity.isFailure) {
+        return Future.successful(AckMessage(code = AckMessage.Code.ERROR, message = "cannot load entity"))
+      }
 
-    val res = new ProtoImporterExporter().exportData(request.path, entity.get)
+      val res = new ProtoImporterExporter().exportData(request.path, entity.get)
 
-    if (res.isSuccess) {
-      Future.successful(AckMessage(AckMessage.Code.OK))
-    } else {
-      log.error(res.failed.get.getMessage, res.failed.get)
-      Future.successful(AckMessage(code = AckMessage.Code.ERROR, message = res.failed.get.getMessage))
+      if (res.isSuccess) {
+        Future.successful(AckMessage(AckMessage.Code.OK))
+      } else {
+        log.error(res.failed.get.getMessage, res.failed.get)
+        Future.successful(AckMessage(code = AckMessage.Code.ERROR, message = res.failed.get.getMessage))
+      }
     }
   }
-
 
   /**
     *
@@ -665,11 +688,12 @@ class DataDefintion extends AdamDefinitionGrpc.AdamDefinition with Logging {
     * @return
     */
   override def listStorageHandlers(request: EmptyMessage): Future[StorageHandlersMessage] = {
-    log.debug("rpc call for listing storage handlers")
+    time("rpc call for listing storage handlers") {
 
-    val handlers = SparkStartup.mainContext.storageManager.handlers.filterNot(_._2.supports.isEmpty).map(handler => handler._1 -> handler._2.supports.map(MessageParser.getGrpcType(_)))
+      val handlers = SparkStartup.mainContext.storageManager.handlers.filterNot(_._2.supports.isEmpty).map(handler => handler._1 -> handler._2.supports.map(MessageParser.getGrpcType(_)))
 
-    Future.successful(StorageHandlersMessage(handlers.map(handler => StorageHandlerMessage(handler._1, handler._2)).toSeq))
+      Future.successful(StorageHandlersMessage(handlers.map(handler => StorageHandlerMessage(handler._1, handler._2)).toSeq))
+    }
   }
 
   /**
@@ -678,21 +702,22 @@ class DataDefintion extends AdamDefinitionGrpc.AdamDefinition with Logging {
     * @return
     */
   override def transferStorageHandler(request: TransferStorageHandlerMessage): Future[AckMessage] = {
-    log.debug("rpc call for transfering storage handler")
+    time("rpc call for transfering storage handler") {
 
-    val entity = Entity.load(request.entity)
+      val entity = Entity.load(request.entity)
 
-    if (entity.isFailure) {
-      return Future.successful(AckMessage(code = AckMessage.Code.ERROR, message = "cannot load entity"))
-    }
+      if (entity.isFailure) {
+        return Future.successful(AckMessage(code = AckMessage.Code.ERROR, message = "cannot load entity"))
+      }
 
-    val res = Transferer(entity.get, request.attributes, request.handler)
+      val res = Transferer(entity.get, request.attributes, request.handler)
 
-    if (res.isSuccess) {
-      Future.successful(AckMessage(AckMessage.Code.OK))
-    } else {
-      log.error(res.failed.get.getMessage, res.failed.get)
-      Future.successful(AckMessage(code = AckMessage.Code.ERROR, message = res.failed.get.getMessage))
+      if (res.isSuccess) {
+        Future.successful(AckMessage(AckMessage.Code.OK))
+      } else {
+        log.error(res.failed.get.getMessage, res.failed.get)
+        Future.successful(AckMessage(code = AckMessage.Code.ERROR, message = res.failed.get.getMessage))
+      }
     }
   }
 }

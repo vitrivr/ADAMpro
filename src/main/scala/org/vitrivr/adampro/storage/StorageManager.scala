@@ -96,7 +96,7 @@ class StorageManager extends Logging with Serializable {
       val engine = constructor.newInstance(props, ac).asInstanceOf[Engine]
       val handler = new StorageHandler(engine, priority)
 
-      val name = props.getOrElse("storagename", handler.name)
+      val name = props.getOrElse("storagename", configname)
 
       register(name, handler)
     } catch {

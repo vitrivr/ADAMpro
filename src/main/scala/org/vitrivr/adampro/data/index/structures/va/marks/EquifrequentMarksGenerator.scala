@@ -30,7 +30,7 @@ private[va] object EquifrequentMarksGenerator extends MarksGenerator with Serial
     * @return
     */
   private[va] def getMarks(samples: Seq[IndexingTaskTuple], maxMarks: Seq[Int]): Marks = {
-    log.debug("get equifrequent marks for VA-File")
+    log.trace("get equifrequent marks for VA-File")
 
     val sampleSize = samples.length
 
@@ -57,7 +57,7 @@ private[va] object EquifrequentMarksGenerator extends MarksGenerator with Serial
         var k = 0
         var sum = 0
         for (j <- 1 until (maxMarks(dim) - 1)) {
-          var n = (hist.sum - sum) / (maxMarks(dim) - j)
+          var n = (hist.sum - sum) / (maxMarks(dim) - 1 - j)
 
           while ((j % 2 == 1 && k < hist.length && n > 0) || (j % 2 == 0 && k < hist.length && n > hist(k))) {
             sum += hist(k)
@@ -68,7 +68,7 @@ private[va] object EquifrequentMarksGenerator extends MarksGenerator with Serial
           marks(j) = min(dim) + k.toFloat * (max(dim) - min(dim)) / SAMPLING_FREQUENCY.toFloat
         }
 
-        marks.toSeq
+        marks.toSeq ++ Seq(max(dim))
       } else {
         Seq(min(dim), max(dim))
       }

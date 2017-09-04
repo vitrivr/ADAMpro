@@ -1,7 +1,7 @@
 package org.vitrivr.adampro.shared.catalog.catalogs
 
 import org.vitrivr.adampro.shared.catalog.CatalogManager
-import slick.driver.DerbyDriver.api._
+import slick.driver.H2Driver.api._
 
 /**
   * ADAMpro
@@ -23,6 +23,10 @@ private[catalog] class StorageEngineOptionsCatalog(tag: Tag) extends Table[(Stri
     * Special fields
     */
   def pk = primaryKey("storageengine_pk", (engine, storename, key))
+
+  def idx = index("idx_storageengineoptions_engine", engine)
+  def idx2 = index("idx_storageengineoptions_storename", storename)
+  def idx3 = index("idx_storageengineoptions_key", key)
 
   def * = (engine, storename, key, value)
 }

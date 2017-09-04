@@ -48,7 +48,7 @@ import org.vitrivr.adampro.query.distance.DistanceFunction
       val references = refsBc.value
         .sortBy(ref => distance.apply(Vector.conv_dspark2vec(c), ref.ap_indexable)) //sort refs by distance
         .take(ki)
-        .map(x => (x.ap_id)) //refid
+        .map(x => (x.ap_id.toInt)) //refid
 
       signatureGeneratorBc.value.toSignature(references).serialize
     })

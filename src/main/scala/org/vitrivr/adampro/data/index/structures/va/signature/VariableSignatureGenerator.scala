@@ -58,7 +58,7 @@ class VariableSignatureGenerator (numberOfBitsPerDimension: Array[Int]) extends 
     * @param signature signature to translate to cell ids
    * @return
    */
-  @inline def toCells(signature: BitString[_]): Seq[Int] = {
+  @inline def toCells(signature: BitString[_]): IndexedSeq[Int] = {
     val lengths = numberOfBitsPerDimension
     assert(lengths.count(_ > 32) < 1)
 

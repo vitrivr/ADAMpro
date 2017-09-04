@@ -49,7 +49,7 @@ case class IndexScanExpression(val index: Index)(val nnq: RankingQuery, id: Opti
   }
 
   override protected def run(options : Option[QueryEvaluationOptions], filter: Option[DataFrame] = None)(tracker : QueryTracker)(implicit ac: SharedComponentContext): Option[DataFrame] = {
-    log.debug("performing index scan operation")
+    log.trace("performing index scan operation")
 
     ac.sc.setLocalProperty("spark.scheduler.pool", "index")
     ac.sc.setJobGroup(id.getOrElse(""), "index scan: " + index.indextypename.name, interruptOnCancel = true)

@@ -13,13 +13,11 @@ adampro {
 storage {
   index {
     engine = "ParquetIndexEngine"
-    hadoop = false
     path = "/adampro/data/shared/index/"
   }
   
   parquet {
     engine = "ParquetEngine"
-    hadoop = false
     path = "/adampro/data/shared/data/parquet/"
   }
 

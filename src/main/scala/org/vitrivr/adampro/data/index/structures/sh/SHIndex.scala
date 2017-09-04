@@ -39,7 +39,7 @@ class SHIndex(override val indexname: IndexName)(@transient override implicit va
     * @return a set of candidate tuple ids, possibly together with a tentative score (the number of tuples will be greater than k)
     */
   override def scan(data: DataFrame, q: MathVector, distance: DistanceFunction, options: Map[String, String], k: Int)(tracker : QueryTracker): DataFrame = {
-    log.debug("scanning SH index " + indexname)
+    log.trace("scanning SH index")
 
     val numOfQueries = options.getOrElse("numOfQ", "3").toInt
 

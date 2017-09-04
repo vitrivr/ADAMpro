@@ -9,18 +9,17 @@ import org.vitrivr.adampro.data.entity.Entity.EntityName
 import org.vitrivr.adampro.data.entity.{AttributeDefinition, EntityNameHolder}
 import org.vitrivr.adampro.utils.exception._
 import org.vitrivr.adampro.data.index.Index.{IndexName, IndexTypeName}
-import org.vitrivr.adampro.data.index.partition.CustomPartitioner
 import org.vitrivr.adampro.data.index.structures.IndexTypes
+import org.vitrivr.adampro.distribution.partitioning.partitioner.CustomPartitioner
 import org.vitrivr.adampro.process.SharedComponentContext
 import org.vitrivr.adampro.utils.Logging
 import slick.dbio.NoStream
-import slick.driver.DerbyDriver.api._
+import slick.driver.H2Driver.api._
 
-import scala.collection.mutable.ListBuffer
+import scala.collection.mutable.ArrayBuffer
 import scala.concurrent.Await
 import scala.concurrent.duration._
 import scala.util.{Failure, Success, Try}
-
 
 /**
   * adamtwo
@@ -32,7 +31,7 @@ class CatalogManager(internalsPath: String) extends Serializable with Logging {
   private val MAX_WAITING_TIME: Duration = 100.seconds
 
   try {
-    Class.forName("org.apache.derby.jdbc.EmbeddedDriver").newInstance
+    Class.forName("org.h2.Driver").newInstance
   } catch {
     case e: Exception => {
       log.error("driver not available for catalog", e.getMessage)
@@ -40,9 +39,9 @@ class CatalogManager(internalsPath: String) extends Serializable with Logging {
     }
   }
 
-  private val ds = new ComboPooledDataSource
-  ds.setDriverClass("org.apache.derby.jdbc.EmbeddedDriver")
-  ds.setJdbcUrl("jdbc:derby:" + internalsPath + "/ap_catalog" + "")
+  private val ds = new ComboPooledDataSource()
+  ds.setDriverClass("org.h2.Driver")
+  ds.setJdbcUrl("jdbc:h2:" + internalsPath + "/ap_catalog" + "")
 
   private val DB = Database.forDataSource(ds)
 
@@ -65,21 +64,21 @@ class CatalogManager(internalsPath: String) extends Serializable with Logging {
     * Initializes the catalog. Method is called at the beginning (see below).
     */
   private def init() {
-    val connection = Database.forURL("jdbc:derby:" + internalsPath + "/ap_catalog" + ";create=true")
+    val connection = Database.forURL("jdbc:h2:" + internalsPath + "/ap_catalog")
 
     try {
-      val actions = new ListBuffer[DBIOAction[_, NoStream, _]]()
+      val actions = new ArrayBuffer[DBIOAction[_, NoStream, _]]()
 
       val schema = CatalogManager.SCHEMA
 
-      val schemaExists = Await.result(connection.run(sql"""SELECT COUNT(*) FROM SYS.SYSSCHEMAS WHERE SCHEMANAME = '#$schema'""".as[Int]), MAX_WAITING_TIME).headOption
+      val schemaExists = Await.result(connection.run(sql"""SELECT COUNT(*) FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_SCHEMA = '#$schema'""".as[Int]), MAX_WAITING_TIME).headOption
 
       if (schemaExists.isEmpty || schemaExists.get == 0) {
         //schema might not exist yet
-        actions += sqlu"""CREATE SCHEMA #$schema"""
+        Await.result(connection.run(DBIO.seq(sqlu"""CREATE SCHEMA IF NOT EXISTS #$schema;""").transactionally), MAX_WAITING_TIME)
       }
 
-      val tables = Await.result(connection.run(sql"""SELECT TABLENAME FROM SYS.SYSTABLES NATURAL JOIN SYS.SYSSCHEMAS WHERE SCHEMANAME = '#$schema'""".as[String]), MAX_WAITING_TIME).toSeq
+      val tables = Await.result(connection.run(sql"""SELECT TABLE_NAME FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_SCHEMA = '#$schema'""".as[String]), MAX_WAITING_TIME).toSeq
 
       CATALOGS.foreach { catalog =>
         if (!tables.contains(catalog.baseTableRow.tableName)) {
@@ -110,8 +109,9 @@ class CatalogManager(internalsPath: String) extends Serializable with Logging {
     */
   private def execute[T](desc: String)(op: => T): Try[T] = {
     try {
-      log.trace("performed catalog operation: " + desc)
+      val t1 = System.currentTimeMillis()
       val res = op
+      log.trace("performed catalog operation (" + math.abs(System.currentTimeMillis() - t1) + " ms): " + desc)
       Success(res)
     } catch {
       case e: Exception =>
@@ -133,7 +133,7 @@ class CatalogManager(internalsPath: String) extends Serializable with Logging {
         throw new EntityExistingException()
       }
 
-      val actions = new ListBuffer[DBIOAction[_, NoStream, _]]()
+      val actions = new ArrayBuffer[DBIOAction[_, NoStream, _]]()
 
       actions += _entitites.+=(entityname)
 
@@ -182,7 +182,7 @@ class CatalogManager(internalsPath: String) extends Serializable with Logging {
     */
   def updateEntityOption(entityname: EntityName, key: String, newValue: String): Try[Void] = {
     execute("update entity option") {
-      val actions = new ListBuffer[DBIOAction[_, NoStream, _]]()
+      val actions = new ArrayBuffer[DBIOAction[_, NoStream, _]]()
 
       //upsert
       actions += _entityOptions.filter(_.entityname === entityname.toString()).filter(_.key === key).delete
@@ -220,7 +220,7 @@ class CatalogManager(internalsPath: String) extends Serializable with Logging {
       val query = _attributes.filter(_.entityname === entityname.toString).filter(_.attributename === attributename).result
       val attribute = Await.result(DB.run(query), MAX_WAITING_TIME).head
 
-      val actions = new ListBuffer[DBIOAction[_, NoStream, _]]()
+      val actions = new ArrayBuffer[DBIOAction[_, NoStream, _]]()
 
       //update
       actions += _attributes.filter(_.entityname === entityname.toString).filter(_.attributename === attributename).map(_.handlername).update(newHandlerName)
@@ -262,12 +262,12 @@ class CatalogManager(internalsPath: String) extends Serializable with Logging {
     * @return
     */
   def getAndUpdateAttributeOption(entityname: EntityName, attribute: String, key: String, z: String, op: (String) => (String)): Try[Map[String, String]] = {
-    execute("get attribute option") {
+    execute("get and update attribute option") {
       _attributeOptions.synchronized({
         val query = _attributeOptions.filter(_.entityname === entityname.toString).filter(_.attributename === attribute).filter(_.key === key).map(_.value).result
         val results = Await.result(DB.run(query), MAX_WAITING_TIME)
 
-        val actions = new ListBuffer[DBIOAction[_, NoStream, _]]()
+        val actions = new ArrayBuffer[DBIOAction[_, NoStream, _]]()
 
         if (results.isEmpty) {
           actions += _attributeOptions.+=(entityname, attribute, key, z)
@@ -300,7 +300,7 @@ class CatalogManager(internalsPath: String) extends Serializable with Logging {
     */
   def updateAttributeOption(entityname: EntityName, attribute: String, key: String, newValue: String): Try[Void] = {
     execute("update attribute option") {
-      val actions = new ListBuffer[DBIOAction[_, NoStream, _]]()
+      val actions = new ArrayBuffer[DBIOAction[_, NoStream, _]]()
 
       //upsert
       actions += _attributeOptions.filter(_.entityname === entityname.toString).filter(_.attributename === attribute).filter(_.key === key).delete
@@ -357,7 +357,7 @@ class CatalogManager(internalsPath: String) extends Serializable with Logging {
     */
   def updateIndexOption(indexname: IndexName, key: String, newValue: String): Try[Void] = {
     execute("update index option") {
-      val actions = new ListBuffer[DBIOAction[_, NoStream, _]]()
+      val actions = new ArrayBuffer[DBIOAction[_, NoStream, _]]()
 
       //upsert
       actions += _indexOptions.filter(_.indexname === indexname.toString).filter(_.key === key).delete
@@ -412,8 +412,8 @@ class CatalogManager(internalsPath: String) extends Serializable with Logging {
     */
   def existsEntity(entityname: EntityName): Try[Boolean] = {
     execute("exists entity") {
-      val query = _entitites.filter(_.entityname === entityname.toString()).length.result
-      Await.result(DB.run(query), MAX_WAITING_TIME) > 0
+      val query = _entitites.filter(_.entityname === entityname.toString()).exists.result
+      Await.result(DB.run(query), MAX_WAITING_TIME)
     }
   }
 
@@ -495,8 +495,8 @@ class CatalogManager(internalsPath: String) extends Serializable with Logging {
     */
   def existsIndex(indexname: IndexName): Try[Boolean] = {
     execute("exists index") {
-      val query = _indexes.filter(_.indexname === indexname.toString).length.result
-      Await.result(DB.run(query), MAX_WAITING_TIME) > 0
+      val query = _indexes.filter(_.indexname === indexname.toString).exists.result
+      Await.result(DB.run(query), MAX_WAITING_TIME)
     }
   }
 
@@ -517,7 +517,7 @@ class CatalogManager(internalsPath: String) extends Serializable with Logging {
         query = query.filter(_.isUpToDate)
       }
 
-      Await.result(DB.run(query.length.result), MAX_WAITING_TIME) > 0
+      Await.result(DB.run(query.exists.result), MAX_WAITING_TIME)
     }
   }
 
@@ -545,7 +545,7 @@ class CatalogManager(internalsPath: String) extends Serializable with Logging {
       oos.close()
       bos.close()
 
-      val actions = new ListBuffer[DBIOAction[_, NoStream, _]]()
+      val actions = new ArrayBuffer[DBIOAction[_, NoStream, _]]()
 
       actions += _indexes.+=((indexname, entityname, attributename, indextypename.name, meta, true))
 
@@ -571,7 +571,7 @@ class CatalogManager(internalsPath: String) extends Serializable with Logging {
         }
       }
 
-      val actions = new ListBuffer[DBIOAction[_, NoStream, _]]()
+      val actions = new ArrayBuffer[DBIOAction[_, NoStream, _]]()
 
       actions += _indexes.filter(_.indexname === indexname.toString).delete
 
@@ -676,7 +676,7 @@ class CatalogManager(internalsPath: String) extends Serializable with Logging {
     */
   def makeIndexStale(indexname: IndexName): Try[Void] = {
     execute("make index stale") {
-      val actions = new ListBuffer[DBIOAction[_, NoStream, _]]()
+      val actions = new ArrayBuffer[DBIOAction[_, NoStream, _]]()
 
       actions += _indexes.filter(_.indexname === indexname.toString).map(_.isUpToDate).update(false)
 
@@ -732,7 +732,7 @@ class CatalogManager(internalsPath: String) extends Serializable with Logging {
     */
   def updateStorageEngineOption(engine: String, storename: String, key: String, newValue: String): Try[Void] = {
     execute("update storage engine option") {
-      val actions = new ListBuffer[DBIOAction[_, NoStream, _]]()
+      val actions = new ArrayBuffer[DBIOAction[_, NoStream, _]]()
 
       //upsert
       actions += _storeengineOptions.filter(_.engine === engine).filter(_.storename === storename).filter(_.key === key).delete
@@ -795,7 +795,7 @@ class CatalogManager(internalsPath: String) extends Serializable with Logging {
       poos.close()
       poos.close()
 
-      val actions: ListBuffer[DBIOAction[_, NoStream, _]] = new ListBuffer()
+      val actions: ArrayBuffer[DBIOAction[_, NoStream, _]] = new ArrayBuffer()
 
       actions += _partitioners.+=((indexname, noPartitions, meta, part))
 
@@ -876,14 +876,19 @@ class CatalogManager(internalsPath: String) extends Serializable with Logging {
     */
   def createOptimizerOption(optimizer: String, key: String, optimizermeta: Serializable): Try[Void] = {
     execute("create optimizer option") {
-      val bos = new ByteArrayOutputStream()
-      val oos = new ObjectOutputStream(bos)
-      oos.writeObject(optimizermeta)
-      val meta = bos.toByteArray
-      oos.close()
-      bos.close()
+      val meta = if (optimizermeta != null) {
+        val bos = new ByteArrayOutputStream()
+        val oos = new ObjectOutputStream(bos)
+        oos.writeObject(optimizermeta)
+        val meta = bos.toByteArray
+        oos.close()
+        bos.close()
+        meta
+      } else {
+        new Array[Byte](0)
+      }
 
-      val actions = new ListBuffer[DBIOAction[_, NoStream, _]]()
+      val actions = new ArrayBuffer[DBIOAction[_, NoStream, _]]()
 
       actions += _optimizerOptions.+=((optimizer, key, meta))
 
@@ -955,10 +960,11 @@ class CatalogManager(internalsPath: String) extends Serializable with Logging {
 }
 
 object CatalogManager {
-  private[catalog] val SCHEMA = "adampro"
+  private[catalog] val SCHEMA = "ADAMPRO"
 
   /**
     * Create catalog manager and fill it
+    *
     * @return
     */
   def build()(implicit ac: SharedComponentContext): CatalogManager = new CatalogManager(ac.config.internalsPath)

@@ -48,6 +48,7 @@ object PlannerRegistry {
   val registry = new PlannerRegistry()
   registry.register("naive", new NaiveHeuristics())
   registry.register("svm", new SVMPlannerHeuristics())
+  registry.register("lr", new LRPlannerHeuristics())
 
   /**
     *

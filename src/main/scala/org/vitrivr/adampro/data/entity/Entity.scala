@@ -10,6 +10,7 @@ import org.vitrivr.adampro.data.datatypes.{AttributeTypes, TupleID}
 import org.vitrivr.adampro.data.entity.Entity.{AttributeName, EntityName}
 import org.vitrivr.adampro.data.index.Index
 import org.vitrivr.adampro.process.SharedComponentContext
+import org.vitrivr.adampro.query.ast.internal.HintBasedScanExpression.{QUERY_MARKER, log}
 import org.vitrivr.adampro.query.query.Predicate
 import org.vitrivr.adampro.storage.StorageHandler
 import org.vitrivr.adampro.storage.engine.ParquetEngine
@@ -40,7 +41,7 @@ case class Entity(entityname: EntityName)(@transient implicit val ac: SharedComp
     *
     * @return
     */
-  val pk: AttributeDefinition = ac.catalogManager.getPrimaryKey(entityname).get
+  lazy val pk: AttributeDefinition = ac.catalogManager.getPrimaryKey(entityname).get
 
   private var _schema: Option[Seq[AttributeDefinition]] = None
 
@@ -131,9 +132,9 @@ case class Entity(entityname: EntityName)(@transient implicit val ac: SharedComp
     var filteredData = data
 
     //predicates
-    if (predicates.nonEmpty && filteredData.isEmpty) {
+    if (predicates.nonEmpty) {
       val handlerData = schema().filterNot(_.pk).groupBy(_.storagehandler).map { case (handler, attributes) =>
-        val predicate = predicates.filter(p => (p.attribute == pk.name || attributes.map(_.name).contains(p.attribute)))
+        val predicate = predicates.filter(p => (p.attribute == pk.name.toString || attributes.map(_.name).contains(p.attribute)))
         val status = handler.read(entityname, attributes, predicate.toList)
 
         if (status.isFailure) {
@@ -150,11 +151,11 @@ case class Entity(entityname: EntityName)(@transient implicit val ac: SharedComp
           filteredData = Some(handlerData.reduce(_.join(_, pk.name)).coalesce(ac.config.defaultNumberOfPartitions))
         }
       }
-    } else {
+    } /*else if(predicates.nonEmpty) {
       predicates.foreach { predicate =>
         filteredData = filteredData.map(data => data.filter(col(predicate.attribute).isin(predicate.values: _*)))
       }
-    }
+    }*/
 
     //handler
     if (handlerFilter.isDefined) {
@@ -464,7 +465,7 @@ case class Entity(entityname: EntityName)(@transient implicit val ac: SharedComp
   def markSoftStale(): Unit = {
     mostRecentVersion.add(1)
 
-    _schema = None
+    //_schema = None schema cannot be changed
     _data.map(_.unpersist())
     _data = None
 
@@ -491,7 +492,7 @@ case class Entity(entityname: EntityName)(@transient implicit val ac: SharedComp
   private def checkVersions(): Unit = {
     if (currentVersion < mostRecentVersion.value) {
 
-      _schema = None
+      //_schema = None schema cannot be changed
       _data.map(_.unpersist())
       _data = None
       ac.cacheManager.invalidateEntity(entityname)
@@ -692,68 +693,72 @@ object Entity extends Logging {
     * @return
     */
   def load(entityname: EntityName, cache: Boolean = false)(implicit ac: SharedComponentContext): Try[Entity] = {
+    log.trace(QUERY_MARKER, "load entity")
+
     val entity = if (ac.cacheManager.containsEntity(entityname) && ac.cacheManager.getEntity(entityname).isSuccess) {
       ac.cacheManager.getEntity(entityname)
     } else {
-        val loadedEntity = Entity.loadEntityMetaData(entityname)(ac)
+      val loadedEntity = Entity.loadEntityMetaData(entityname)(ac)
 
-        if (loadedEntity.isSuccess) {
-          ac.cacheManager.put(entityname, loadedEntity.get)
+      if (loadedEntity.isSuccess) {
+        ac.cacheManager.put(entityname, loadedEntity.get)
 
-          if (cache) {
-            loadedEntity.get.cache()
-          }
+        if (cache) {
+          loadedEntity.get.cache()
         }
-
-        loadedEntity
       }
 
-      entity
+      loadedEntity
     }
 
+    log.trace(QUERY_MARKER, "loaded entity")
 
-    /**
-      * Loads the entityname metadata without loading the data itself yet.
-      *
-      * @param entityname name of entity
-      * @return
-      */
-    def loadEntityMetaData(entityname: EntityName)(implicit ac: SharedComponentContext): Try[Entity] = {
-      if (!exists(entityname)) {
-        return Failure(EntityNotExistingException.withEntityname(entityname))
-      }
+    entity
+  }
 
-      try {
-        Success(Entity(entityname)(ac))
-      } catch {
-        case e: Exception => Failure(e)
-      }
+
+  /**
+    * Loads the entityname metadata without loading the data itself yet.
+    *
+    * @param entityname name of entity
+    * @return
+    */
+  def loadEntityMetaData(entityname: EntityName)(implicit ac: SharedComponentContext): Try[Entity] = {
+    if (!exists(entityname)) {
+      return Failure(EntityNotExistingException.withEntityname(entityname))
     }
 
-
-    /**
-      * Drops an entity.
-      *
-      * @param entityname name of entity
-      * @param ifExists   if set to true, no error is raised if entity does not exist
-      * @return
-      */
-    def drop(entityname: EntityName, ifExists: Boolean = false)(implicit ac: SharedComponentContext): Try[Void] = {
-      try {
-        if (!exists(entityname)) {
-          if (!ifExists) {
-            return Failure(EntityNotExistingException.withEntityname(entityname))
-          } else {
-            return Success(null)
-          }
-        }
-
-        Entity.load(entityname).get.drop()
-        ac.cacheManager.invalidateEntity(entityname)
-
-        Success(null)
-      } catch {
-        case e: Exception => Failure(e)
-      }
+    try {
+      Success(Entity(entityname)(ac))
+    } catch {
+      case e: Exception => Failure(e)
     }
   }
+
+
+  /**
+    * Drops an entity.
+    *
+    * @param entityname name of entity
+    * @param ifExists   if set to true, no error is raised if entity does not exist
+    * @return
+    */
+  def drop(entityname: EntityName, ifExists: Boolean = false)(implicit ac: SharedComponentContext): Try[Void] = {
+    try {
+      if (!exists(entityname)) {
+        if (!ifExists) {
+          return Failure(EntityNotExistingException.withEntityname(entityname))
+        } else {
+          return Success(null)
+        }
+      }
+
+      Entity.load(entityname).get.drop()
+      ac.cacheManager.invalidateEntity(entityname)
+
+      Success(null)
+    } catch {
+      case e: Exception => Failure(e)
+    }
+  }
+}

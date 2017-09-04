@@ -1,4 +1,4 @@
-package org.vitrivr.adampro.data.index.partition
+package org.vitrivr.adampro.distribution.partitioning
 
 /**
   * ADAMpro

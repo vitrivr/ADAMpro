@@ -1,7 +1,7 @@
 package org.vitrivr.adampro.shared.catalog.catalogs
 
 import org.vitrivr.adampro.shared.catalog.CatalogManager
-import slick.driver.DerbyDriver.api._
+import slick.driver.H2Driver.api._
 
 /**
   * ADAMpro
@@ -25,6 +25,8 @@ private[catalog] class PartitionerCatalog(tag: Tag) extends Table[(String, Int, 
     * Special fields
     */
   override def * = (indexname, noPartitions, meta, partitioner)
+
+  def idx = index("idx_partitioner_indexname", indexname)
 
   def index = foreignKey("partitioner_index_fk", indexname, TableQuery[IndexCatalog])(_.indexname, onUpdate=ForeignKeyAction.Restrict, onDelete=ForeignKeyAction.Cascade)
 }

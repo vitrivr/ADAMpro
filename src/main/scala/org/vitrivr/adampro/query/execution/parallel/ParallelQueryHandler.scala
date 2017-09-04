@@ -45,7 +45,7 @@ object ParallelQueryHandler extends Logging {
     val distinctPaths = paths.distinct
 
     if (paths.length != distinctPaths.length) {
-      log.debug("removed " + (distinctPaths.length - paths.length) + " paths for parallel querying, which were duplicates")
+      log.trace("removed " + (distinctPaths.length - paths.length) + " paths for parallel querying, which were duplicates")
     }
 
     parallelQuery(distinctPaths, filter, onNext, options, id)(tracker)
@@ -64,7 +64,7 @@ object ParallelQueryHandler extends Logging {
     */
   private def parallelQuery[U](exprs: Seq[QueryExpression], filter: Option[DataFrame], onNext: Try[ProgressiveObservation] => U, options: Option[QueryEvaluationOptions], id: Option[String])(tracker : QueryTracker)(implicit ac: SharedComponentContext): ParallelQueryStatusTracker = {
     val pqtracker = new ParallelQueryStatusTracker(id.getOrElse(""))
-    log.debug("performing parallel query with " + exprs.length + " paths: " + exprs.map(expr => expr.info.scantype.getOrElse("<missing scantype>") + " (" + expr.info.source.getOrElse("<missing source>") + ")").mkString(", "))
+    log.trace("performing parallel query with " + exprs.length + " paths: " + exprs.map(expr => expr.info.scantype.getOrElse("<missing scantype>") + " (" + expr.info.source.getOrElse("<missing source>") + ")").mkString(", "))
 
     if (exprs.isEmpty) {
       throw new GeneralAdamException("no paths for parallel query set; possible causes: is the entity or the attribute existing?")
@@ -97,7 +97,7 @@ object ParallelQueryHandler extends Logging {
     val distinctPaths = paths.distinct
 
     if (paths.length != distinctPaths.length) {
-      log.debug("removed " + (distinctPaths.length - paths.length) + " paths for parallel querying, which were duplicates")
+      log.trace("removed " + (distinctPaths.length - paths.length) + " paths for parallel querying, which were duplicates")
     }
 
     timedParallelQuery(distinctPaths, timelimit, filter, options, id)(tracker)
@@ -115,7 +115,7 @@ object ParallelQueryHandler extends Logging {
     * @return the results available together with a confidence score
     */
   def timedParallelQuery(exprs: Seq[QueryExpression], timelimit: Duration, filter: Option[DataFrame], options: Option[QueryEvaluationOptions], id: Option[String])(tracker : QueryTracker)(implicit ac: SharedComponentContext): ProgressiveObservation = {
-    log.debug("timed parallel query performs kNN query")
+    log.trace("timed parallel query performs kNN query")
     val pqtracker = parallelQuery[Unit](exprs, filter, (observation: Try[ProgressiveObservation]) => (), options, id)(tracker)
 
     val timerFuture = Future {

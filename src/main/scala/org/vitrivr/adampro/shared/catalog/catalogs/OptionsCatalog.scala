@@ -1,7 +1,7 @@
 package org.vitrivr.adampro.shared.catalog.catalogs
 
 import org.vitrivr.adampro.shared.catalog.CatalogManager
-import slick.driver.DerbyDriver.api._
+import slick.driver.H2Driver.api._
 
 /**
   * ADAMpro
@@ -19,4 +19,6 @@ private[catalog] class OptionsCatalog(tag: Tag) extends Table[(String, Array[Byt
     * Special fields
     */
   override def * = (key, value)
+
+  def idx = index("idx_options_key", key)
 }

@@ -126,8 +126,13 @@ class EQEExecutor(job: EvaluationJob, setStatus: (Double) => (Boolean), inputDir
     val lb = new ListBuffer[(String, String)]()
 
     lb.append("entityname" -> entityname)
+
+    //lb.append("projection" -> "ap_id,ap_distance")
+
     lb.append("attribute" -> job.data_attributename.getOrElse(FEATURE_VECTOR_ATTRIBUTENAME))
+
     lb.append("k" -> k.toString)
+
     lb.append("distance" -> job.query_distance)
 
     if (job.query_weighted) {

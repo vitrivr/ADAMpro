@@ -11,6 +11,7 @@ import org.apache.spark.sql.{DataFrame, Row, SaveMode}
 import org.iq80.leveldb.impl.Iq80DBFactory._
 import org.iq80.leveldb.{DB, Options}
 import org.vitrivr.adampro.data.datatypes.AttributeTypes
+import org.vitrivr.adampro.data.datatypes.TupleID.TupleID
 import org.vitrivr.adampro.data.entity.AttributeDefinition
 import org.vitrivr.adampro.process.SharedComponentContext
 import org.vitrivr.adampro.query.query.Predicate
@@ -34,7 +35,7 @@ class LevelDbEngine(private val path: String)(@transient override implicit val a
 
   override val repartitionable = false
 
-  protected case class DBStatus(db: DB, lock: StampedLock)
+  private case class DBStatus(db: DB, lock: StampedLock)
   private val connections = new ConcurrentHashMap[String, DBStatus]()
 
 
@@ -167,7 +168,7 @@ class LevelDbEngine(private val path: String)(@transient override implicit val a
 
         val (db, lock) = openConnection(storename)
         val stamp = lock.readLock()
-        pkpredicates.foreach { id =>
+        pkpredicates.get.values.foreach { id =>
           lb += deserialize[Row](db.get(serialize(id))).get
         }
         lock.unlockRead(stamp)
@@ -217,7 +218,7 @@ class LevelDbEngine(private val path: String)(@transient override implicit val a
 
       val pk = attributes.filter(_.pk).head
 
-      val rowsIt = df.select(attributes.map(a => col(a.name)): _*).rdd.map(row => row.getAs[Any](pk.name) -> row).toLocalIterator
+      val rowsIt = df.select(attributes.map(a => col(a.name)): _*).rdd.map(row => row.getAs[TupleID](pk.name) -> row).toLocalIterator
 
       val batch = db.createWriteBatch()
       while (rowsIt.hasNext) {

@@ -33,9 +33,9 @@ class LSHIndex(override val indexname: IndexName)(@transient override implicit v
 
 
   override def scan(data: DataFrame, q: MathVector, distance: DistanceFunction, options: Map[String, String], k: Int)(tracker : QueryTracker): DataFrame = {
-    log.debug("scanning LSH index " + indexname)
+    log.trace("scanning LSH index")
 
-    val numOfQueries = options.getOrElse("numOfQ", "3").toInt
+    val nAdditionalQueries = options.getOrElse("numOfQ", "3").toInt
 
     val signatureGeneratorBc = ac.sc.broadcast( new LSHSignatureGenerator(meta.ghashf, meta.m))
     tracker.addBroadcast(signatureGeneratorBc)
@@ -44,39 +44,38 @@ class LSHIndex(override val indexname: IndexName)(@transient override implicit v
     val originalQuery = signatureGeneratorBc.value.toBuckets(q)
     //move the query around by the precomuted radius
     //TODO: possibly adjust weight of computed queries vs. true query
-    val queriesBc = ac.sc.broadcast(List.fill(numOfQueries)((1.0, signatureGeneratorBc.value.toBuckets(q.move(meta.radius)))) ::: List((1.0, originalQuery)))
-    tracker.addBroadcast(queriesBc)
+    val queries = List.fill(nAdditionalQueries)((1.0, signatureGeneratorBc.value.toBuckets(q.move(meta.radius)))) ::: List((1.0, originalQuery))
 
-    val distUDF = udf((c: Array[Byte]) => {
-      var i = 0
-      var score = 0
+    val nqueries = queries.length
+    val flattenedQueriesBc = ac.sc.broadcast(queries.map(_._2).flatten.toArray)
+    tracker.addBroadcast(flattenedQueriesBc)
+
+    val containsUDF = udf((c: Array[Byte]) => {
       val buckets = signatureGeneratorBc.value.toBuckets(BitString.fromByteArray(c))
 
-      while (i < queriesBc.value.length) {
-        var j = 0
-        var sum = 0
+      var found = false
 
-        val weight = queriesBc.value(i)._1
-        val query = queriesBc.value(i)._2
+      var i = 0
+      var j = 0
 
-        while(j < buckets.length){
-          if(buckets(j) == query(j)){
-            sum += 1
+      while (i < buckets.length && !found) {
+        j = 0
+        while(j < nqueries){
+          if(flattenedQueriesBc.value(i * nqueries + j) == buckets(i)){
+            found = true
           }
 
           j += 1
         }
 
-        score += sum
         i += 1
       }
 
-      score
+      found
     })
 
     val res = data
-      .withColumn(AttributeNames.distanceColumnName, distUDF(data(AttributeNames.featureIndexColumnName)))
-      .filter(col(AttributeNames.distanceColumnName) > 0)
+      .filter(containsUDF(col(AttributeNames.featureIndexColumnName)))
       .withColumn(AttributeNames.distanceColumnName, lit(Distance.zeroValue))
 
     res

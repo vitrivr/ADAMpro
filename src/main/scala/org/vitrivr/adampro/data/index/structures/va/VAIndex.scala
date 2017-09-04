@@ -9,13 +9,14 @@ import org.vitrivr.adampro.data.datatypes.vector.Vector._
 import org.vitrivr.adampro.data.index.Index
 import org.vitrivr.adampro.data.index.Index.{IndexName, IndexTypeName}
 import org.vitrivr.adampro.data.index.structures.IndexTypes
-import org.vitrivr.adampro.data.index.structures.va.VAIndex.{Bounds, Marks}
+import org.vitrivr.adampro.data.index.structures.va.VAIndex._
 import org.vitrivr.adampro.data.index.structures.va.signature.{FixedSignatureGenerator, VariableSignatureGenerator}
 import org.vitrivr.adampro.process.SharedComponentContext
 import org.vitrivr.adampro.query.distance.Distance._
 import org.vitrivr.adampro.query.distance.{DistanceFunction, MinkowskiDistance}
 import org.vitrivr.adampro.query.query.RankingQuery
 import org.vitrivr.adampro.query.tracker.QueryTracker
+
 
 /**
   * adamtwo
@@ -51,29 +52,36 @@ class VAIndex(override val indexname: IndexName)(@transient override implicit va
     * @return a set of candidate tuple ids, possibly together with a tentative score (the number of tuples will be greater than k)
     */
   override def scan(data: DataFrame, q: MathVector, distance: DistanceFunction, options: Map[String, String], k: Int)(tracker: QueryTracker): DataFrame = {
-    log.debug("scanning VA-File index " + indexname)
+    log.trace("scanning VA-File index")
 
     val signatureGeneratorBc = ac.sc.broadcast(meta.signatureGenerator)
     tracker.addBroadcast(signatureGeneratorBc)
 
+    //compute bounds
     val bounds = computeBounds(q, meta.marks, distance.asInstanceOf[MinkowskiDistance])
-    val lboundsBc = ac.sc.broadcast(bounds._1)
-    tracker.addBroadcast(lboundsBc)
-    val uboundsBc = ac.sc.broadcast(bounds._2)
-    tracker.addBroadcast(uboundsBc)
 
-    //compute the cells
-    val cellsUDF = udf((c: Array[Byte]) => {
-      signatureGeneratorBc.value.toCells(BitString.fromByteArray(c))
-    })
+    //compress and broadcast bounds
+    val (lbIndex, lbBounds) = compressBounds(bounds._1)
+    val lbIndexBc = ac.sc.broadcast(lbIndex)
+    tracker.addBroadcast(lbIndexBc)
+    val lbBoundsBc = ac.sc.broadcast(lbBounds)
+    tracker.addBroadcast(lbBoundsBc)
 
-    //compute the approximate distance given the cells
-    val distUDF = (boundsBc: Broadcast[Bounds]) => udf((cells: Seq[Int]) => {
+    val (ubIndex, ubBounds) = compressBounds(bounds._2)
+    val ubIndexBc = ac.sc.broadcast(ubIndex)
+    tracker.addBroadcast(ubIndexBc)
+    val ubBoundsBc = ac.sc.broadcast(ubBounds)
+    tracker.addBroadcast(ubBoundsBc)
+
+    log.trace("computing compressed VA bounds done")
+
+    val cellsDistUDF = (boundsIndexBc: Broadcast[CompressedBoundIndex], boundsBoundsBc: Broadcast[CompressedBoundBounds]) => udf((c: Array[Byte]) => {
+      val cells = signatureGeneratorBc.value.toCells(BitString.fromByteArray(c))
+
       var bound: Distance = 0
-
       var idx = 0
       while (idx < cells.length) {
-        bound += boundsBc.value(idx)(cells(idx))
+        bound += boundsBoundsBc.value(boundsIndexBc.value(idx) + cells(idx))
         idx += 1
       }
 
@@ -82,15 +90,14 @@ class VAIndex(override val indexname: IndexName)(@transient override implicit va
 
     import ac.spark.implicits._
 
-    val tmp = data
-      .withColumn("ap_cells", cellsUDF(data(AttributeNames.featureIndexColumnName)))
-      .withColumn("ap_lbound", distUDF(lboundsBc)(col("ap_cells")))
-      .withColumn("ap_ubound", distUDF(uboundsBc)(col("ap_cells"))) //note that this is computed lazy!
+    val boundedData = data
+      .withColumn("ap_lbound", cellsDistUDF(lbIndexBc, lbBoundsBc)(col(AttributeNames.featureIndexColumnName)))
+      .withColumn("ap_ubound", cellsDistUDF(ubIndexBc, ubBoundsBc)(col(AttributeNames.featureIndexColumnName))) //note that this is computed lazy!
 
     val pk = this.pk.name.toString
 
     //local filtering
-    val localRes = tmp.coalesce(ac.config.defaultNumberOfPartitionsIndex)
+    val localRes = boundedData.coalesce(ac.config.defaultNumberOfPartitionsIndex)
       .mapPartitions(pIt => {
         //in here  we compute for each partition the k nearest neighbours and collect the results
         val localRh = new VAResultHandler(k)
@@ -100,8 +107,10 @@ class VAIndex(override val indexname: IndexName)(@transient override implicit va
           localRh.offer(current, pk)
         }
 
-        localRh.results.sortBy(x => -x.ap_upper).iterator
+        localRh.results.iterator
       })
+
+    log.trace("local VA scan done")
 
     /*import ac.spark.implicits._
     val minUpperPart = localRes
@@ -109,16 +118,22 @@ class VAIndex(override val indexname: IndexName)(@transient override implicit va
 
     val res = localRes.filter(_.ap_lower <= minUpperPart).toDF()*/
 
-    // global refinement
-    val globalRh = new VAResultHandler(k)
-    val gIt = localRes.toLocalIterator()
+    val res = if (options.get("vaLocalOnly").map(_.toBoolean).getOrElse(false)) {
+      localRes.toDF()
+    } else {
+      // global refinement
+      val globalRh = new VAResultHandler(k)
+      val gIt = localRes.toLocalIterator()
 
-    while (gIt.hasNext) {
-      val current = gIt.next()
-      globalRh.offer(current, pk)
+      while (gIt.hasNext) {
+        val current = gIt.next()
+        globalRh.offer(current, pk)
+      }
+
+      ac.sqlContext.createDataset(globalRh.results).toDF()
     }
 
-    val res = ac.sqlContext.createDataset(globalRh.results).toDF()
+    log.trace("global VA scan done")
 
     res
   }
@@ -153,8 +168,8 @@ class VAIndex(override val indexname: IndexName)(@transient override implicit va
       while (it.hasNext) {
         val dimMark = it.next()
 
-        lazy val d0fv1 = distance.element(dimMark(0), fvi)
-        lazy val d1fv1 = distance.element(dimMark(1), fvi)
+        val d0fv1 = distance.element(dimMark(0), fvi)
+        val d1fv1 = distance.element(dimMark(1), fvi)
 
         if (fvi < dimMark(0)) {
           lbounds(i)(j) = d0fv1
@@ -176,10 +191,64 @@ class VAIndex(override val indexname: IndexName)(@transient override implicit va
 
     (lbounds, ubounds)
   }
+
+
+  /**
+    * Compresses the bounds to a one-dim float array
+    *
+    * @param bounds
+    * @return
+    */
+  private[this] def compressBounds(bounds: Bounds): CompressedBound = {
+    val lengths = bounds.map(_.length)
+    val totalLength = lengths.sum
+
+    val cumLengths = {
+      //compute cumulative sum of lengths
+
+      val _cumLengths = new Array[Int](lengths.length)
+
+      var i: Int = 0
+      var cumSum: Int = 0
+      while (i < lengths.length - 1) {
+        cumSum += lengths(i)
+        _cumLengths(i + 1) = cumSum
+
+        i += 1
+      }
+
+      _cumLengths
+    }
+
+
+    val newBounds = {
+      val _newBounds = new Array[Float](totalLength)
+
+
+      var i, j: Int = 0
+
+      while (i < lengths.length) {
+        j = 0
+        while (j < lengths(i)) {
+          _newBounds(cumLengths(i) + j) = bounds(i)(j).toFloat
+          j += 1
+        }
+        i += 1
+      }
+
+      _newBounds
+    }
+
+
+    (cumLengths, newBounds)
+  }
 }
 
 
 object VAIndex {
   type Marks = Seq[Seq[VectorBase]]
   type Bounds = Array[Array[Distance]]
+  type CompressedBound = (CompressedBoundIndex, CompressedBoundBounds)
+  type CompressedBoundIndex = Array[Int]
+  type CompressedBoundBounds = Array[Float]
 }

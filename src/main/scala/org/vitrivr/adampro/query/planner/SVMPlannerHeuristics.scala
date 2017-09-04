@@ -15,7 +15,7 @@ import org.vitrivr.adampro.data.index.structures.sh.SHIndex
 import org.vitrivr.adampro.data.index.structures.va.{VAIndex, VAPlusIndex, VAPlusIndexMetaData}
 import org.vitrivr.adampro.data.index.{Index, IndexingTaskTuple}
 import org.vitrivr.adampro.process.SharedComponentContext
-import org.vitrivr.adampro.utils.ml.{PegasosSVM, TrainingSample}
+import org.vitrivr.adampro.utils.ml.{LinearRegression, PegasosSVM, TrainingSample}
 import org.vitrivr.adampro.query.query.RankingQuery
 
 import scala.collection.mutable.ListBuffer
@@ -46,6 +46,7 @@ private[planner] class SVMPlannerHeuristics(defaultNRuns: Int = 100) extends Pla
     }.groupBy(_._1).mapValues(_.map(x => (x._2, x._3)))
 
     trainData.foreach { case (indextypename, trainDatum) =>
+
       if (trainDatum.nonEmpty && !ac.catalogManager.containsOptimizerOptionMeta(name, "svm-index-" + indextypename.name).getOrElse(false)) {
         ac.catalogManager.createOptimizerOption(name, "svm-index-" + indextypename.name, new PegasosSVM(trainDatum.head._1.length))
       }
@@ -75,6 +76,7 @@ private[planner] class SVMPlannerHeuristics(defaultNRuns: Int = 100) extends Pla
 
     val svm = ac.catalogManager.getOptimizerOptionMeta(name, "svm-entity").get.asInstanceOf[PegasosSVM]
     svm.train(trainDatum.map { case (x, y) => TrainingSample(x, y.time) })
+
     ac.catalogManager.updateOptimizerOption(name, "svm-entity", svm)
   }
 
@@ -167,7 +169,7 @@ private[planner] class SVMPlannerHeuristics(defaultNRuns: Int = 100) extends Pla
   private def buildFeature(confidence: Confidence): Seq[Double] = {
     val lb = new ListBuffer[Double]()
 
-    lb += math.max(1.0, confidence.confidence)
+    lb += math.min(1.0, confidence.confidence)
 
     lb.toSeq
   }
@@ -180,7 +182,7 @@ private[planner] class SVMPlannerHeuristics(defaultNRuns: Int = 100) extends Pla
   private def buildFeature(nnq: RankingQuery): Seq[Double] = {
     val lb = new ListBuffer[Double]()
 
-    lb += math.max(1.0, nnq.k / 100.0)
+    lb += math.min(1.0, nnq.k / 100.0)
 
     lb.toSeq
   }
@@ -195,8 +197,8 @@ private[planner] class SVMPlannerHeuristics(defaultNRuns: Int = 100) extends Pla
     val lb = new ListBuffer[Double]()
     val head = entity.getAttributeData(attribute).get.head()
 
-    lb += math.max(1.0, IndexingTaskTuple(head.getAs[TupleID](entity.pk.name), Vector.conv_draw2vec(head.getAs[DenseRawVector](attribute))).ap_indexable.length / 1000.0)
-    lb += math.max(1.0, entity.count / 1000000.0)
+    lb += math.min(1.0, IndexingTaskTuple(head.getAs[TupleID](entity.pk.name), Vector.conv_draw2vec(head.getAs[DenseRawVector](attribute))).ap_indexable.length / 1000.0)
+    lb += math.min(1.0, entity.count / 1000000.0)
 
     lb.toSeq
   }
@@ -209,7 +211,7 @@ private[planner] class SVMPlannerHeuristics(defaultNRuns: Int = 100) extends Pla
   private def buildFeature(index: Index): Seq[Double] = {
     val lb = new ListBuffer[Double]()
 
-    lb += math.max(1.0, index.count / 1000000.0)
+    lb += math.min(1.0, index.count / 1000000.0)
 
     lb ++= (index match {
       case idx: ECPIndex => buildFeature(idx)
@@ -234,7 +236,7 @@ private[planner] class SVMPlannerHeuristics(defaultNRuns: Int = 100) extends Pla
     val lb = new ListBuffer[Double]()
     val meta = index.meta
 
-    lb += math.max(1.0, meta.leaders.length / 10000.0)
+    lb += math.min(1.0, meta.leaders.length / 10000.0)
 
     lb.toSeq
   }
@@ -248,10 +250,10 @@ private[planner] class SVMPlannerHeuristics(defaultNRuns: Int = 100) extends Pla
     val lb = new ListBuffer[Double]()
     val meta = index.meta
 
-    lb += math.max(1.0, meta.ghashf.length / 100.0)
-    lb += math.max(1.0, meta.m / 1000.0)
-    lb += math.max(1.0, meta.radius / 10.0)
-    lb += math.max(1.0, meta.ghashf.head.hhashf.size / 100.0)
+    lb += math.min(1.0, meta.ghashf.length / 100.0)
+    lb += math.min(1.0, meta.m / 1000.0)
+    lb += math.min(1.0, meta.radius / 10.0)
+    lb += math.min(1.0, meta.ghashf.head.hhashf.size / 100.0)
 
     lb.toSeq
   }
@@ -265,9 +267,9 @@ private[planner] class SVMPlannerHeuristics(defaultNRuns: Int = 100) extends Pla
     val lb = new ListBuffer[Double]()
     val meta = index.meta
 
-    lb += math.max(1.0, meta.ki / 100.0)
-    lb += math.max(1.0, meta.ks / 100.0)
-    lb += math.max(1.0, meta.refs.length / 100.0)
+    lb += math.min(1.0, meta.ki / 100.0)
+    lb += math.min(1.0, meta.ks / 100.0)
+    lb += math.min(1.0, meta.refs.length / 100.0)
 
     lb.toSeq
   }
@@ -281,8 +283,8 @@ private[planner] class SVMPlannerHeuristics(defaultNRuns: Int = 100) extends Pla
     val lb = new ListBuffer[Double]()
     val meta = index.meta
 
-    lb += math.max(1.0, meta.models.length / 100.0)
-    lb += math.max(1.0, meta.nsq / 500.0)
+    lb += math.min(1.0, meta.models.length / 100.0)
+    lb += math.min(1.0, meta.nsq / 500.0)
 
     lb.toSeq
   }
@@ -296,7 +298,7 @@ private[planner] class SVMPlannerHeuristics(defaultNRuns: Int = 100) extends Pla
     val lb = new ListBuffer[Double]()
     val meta = index.meta
 
-    lb += math.max(1.0, meta.eigenfunctions.size / 100.0)
+    lb += math.min(1.0, meta.eigenfunctions.size / 100.0)
 
     lb.toSeq
   }
@@ -310,7 +312,7 @@ private[planner] class SVMPlannerHeuristics(defaultNRuns: Int = 100) extends Pla
     val lb = new ListBuffer[Double]()
     val meta = index.meta
 
-    lb += math.max(1.0, meta.marks.length / 500.0)
+    lb += math.min(1.0, meta.marks.length / 500.0)
 
     lb.toSeq
   }
@@ -324,8 +326,8 @@ private[planner] class SVMPlannerHeuristics(defaultNRuns: Int = 100) extends Pla
     val lb = new ListBuffer[Double]()
     val meta = index.meta.asInstanceOf[VAPlusIndexMetaData]
 
-    lb += math.max(1.0, meta.marks.length / 500.0)
-    lb += math.max(1.0, meta.pca.k / 100.0)
+    lb += math.min(1.0, meta.marks.length / 500.0)
+    lb += math.min(1.0, meta.pca.k / 100.0)
 
     lb.toSeq
   }

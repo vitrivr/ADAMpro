@@ -3,15 +3,14 @@ package org.vitrivr.adampro.storage.engine
 import java.sql.Connection
 import java.util.Properties
 
+import com.mchange.v2.c3p0.ComboPooledDataSource
 import org.vitrivr.adampro.data.datatypes.AttributeTypes
 import org.vitrivr.adampro.data.datatypes.AttributeTypes.AttributeType
 import org.vitrivr.adampro.data.entity.AttributeDefinition
 import org.vitrivr.adampro.query.query.Predicate
-import com.mchange.v2.c3p0.ComboPooledDataSource
 import org.apache.spark.sql.types.{StructField, StructType}
 import org.apache.spark.sql.{DataFrame, Row, SaveMode}
 import org.vitrivr.adampro.process.SharedComponentContext
-import spire.syntax.field
 
 import scala.util.{Failure, Success, Try}
 
@@ -52,7 +51,7 @@ class PostgresqlEngine(private val url: String, private val user: String, privat
 
   val propsMap = props.keySet().toArray.map(key => key.toString -> props.get(key).toString).toMap
 
-  @transient private val ds = new ComboPooledDataSource
+  @transient private val ds = new ComboPooledDataSource()
   ds.setDriverClass("org.postgresql.Driver")
   ds.setJdbcUrl(url)
   ds.setProperties(props)
@@ -93,7 +92,7 @@ class PostgresqlEngine(private val url: String, private val user: String, privat
     * @return options to store
     */
   override def create(storename: String, attributes: Seq[AttributeDefinition], params: Map[String, String])(implicit ac: SharedComponentContext): Try[Map[String, String]] = {
-    log.debug("postgresql create operation")
+    log.trace("postgresql create operation")
     val connection = openConnection()
 
     try {
@@ -152,7 +151,7 @@ class PostgresqlEngine(private val url: String, private val user: String, privat
     * @return
     */
   override def exists(storename: String)(implicit ac: SharedComponentContext): Try[Boolean] = {
-    log.debug("postgresql exists operation")
+    log.trace("postgresql exists operation")
     val connection = openConnection()
 
     try {
@@ -179,7 +178,7 @@ class PostgresqlEngine(private val url: String, private val user: String, privat
     * @return
     */
   override def read(storename: String, attributes: Seq[AttributeDefinition], predicates: Seq[Predicate], params: Map[String, String])(implicit ac: SharedComponentContext): Try[DataFrame] = {
-    log.debug("postgresql read operation")
+    log.trace("postgresql read operation")
 
     try {
       //TODO: possibly adjust in here for partitioning
@@ -212,7 +211,7 @@ class PostgresqlEngine(private val url: String, private val user: String, privat
     * @return new options to store
     */
   override def write(storename: String, df: DataFrame, attributes: Seq[AttributeDefinition], mode: SaveMode = SaveMode.Append, params: Map[String, String])(implicit ac: SharedComponentContext): Try[Map[String, String]] = {
-    log.debug("postgresql write operation")
+    log.trace("postgresql write operation")
 
     try {
       df.write.mode(mode).jdbc(url, storename, props)
@@ -230,7 +229,7 @@ class PostgresqlEngine(private val url: String, private val user: String, privat
     * @return
     */
   override def drop(storename: String)(implicit ac: SharedComponentContext): Try[Void] = {
-    log.debug("postgresql drop operation")
+    log.trace("postgresql drop operation")
     val connection = openConnection()
 
     try {

@@ -1,7 +1,7 @@
 package org.vitrivr.adampro.shared.catalog.catalogs
 
 import org.vitrivr.adampro.shared.catalog.CatalogManager
-import slick.driver.DerbyDriver.api._
+import slick.driver.H2Driver.api._
 
 /**
   * ADAMpro
@@ -18,4 +18,6 @@ private[catalog] class EntityCatalog(tag: Tag) extends Table[(String)](tag, Some
     * Special fields
     */
   def * = (entityname)
+
+  def idx = index("idx_entity_entityname", entityname)
 }

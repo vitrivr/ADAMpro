@@ -67,7 +67,7 @@ object RandomDataOp extends GenericOp {
           throw status.failed.get
         }
       }
-      log.debug("finished inserting")
+      log.trace("finished inserting")
       Success(null)
     }
   }

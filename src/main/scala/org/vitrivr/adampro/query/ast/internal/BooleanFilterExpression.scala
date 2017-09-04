@@ -35,7 +35,7 @@ object BooleanFilterExpression extends Logging {
     }
 
     override protected def run(options : Option[QueryEvaluationOptions], filter: Option[DataFrame] = None)(tracker : QueryTracker)(implicit ac: SharedComponentContext): Option[DataFrame] = {
-      log.debug("run boolean filter operation on entity")
+      log.trace("run boolean filter operation on entity")
 
       ac.sc.setJobGroup(id.getOrElse(""), "boolean filter scan", interruptOnCancel = true)
 
@@ -108,7 +108,7 @@ object BooleanFilterExpression extends Logging {
     _children ++= Seq(expr)
 
     override protected def run(options : Option[QueryEvaluationOptions], filter: Option[DataFrame] = None)(tracker : QueryTracker)(implicit ac: SharedComponentContext): Option[DataFrame] = {
-      log.debug("run boolean filter operation on data")
+      log.trace("run boolean filter operation on data")
 
       ac.sc.setJobGroup(id.getOrElse(""), "boolean filter scan", interruptOnCancel = true)
 
@@ -148,11 +148,11 @@ object BooleanFilterExpression extends Logging {
     * @return
     */
   def filter(df: DataFrame, bq: FilteringQuery)(implicit ac: SharedComponentContext): DataFrame = {
-    log.debug("filter using boolean query filter")
+    log.trace("filter using boolean query filter")
     var data = df
 
     val sqlString = bq.where.map(_.sqlString).mkString(" AND ")
-    log.debug("query metadata using where clause: " + sqlString)
+    log.trace("query metadata using where clause: " + sqlString)
     data = data.filter(sqlString)
 
     data

@@ -21,9 +21,9 @@ docker run --name adampro -p 5005:5005 -p 5890:5890 -p 9099:9099 -p 5432:5432 -p
 After the creation of the container, you can navigate to
 
 ```
-http://localhost:4040
+http://localhost:9099
 ```
-to open the ADAMpro UI. Furthermore, you can connect on port 5890 to make use of the database.
+to open the ADAMpro UI (and ``http://localhost:4040`` for the Spark UI). Furthermore, you can connect on port 5890 to make use of the database.
 
 We provide the OSVC data for [download](http://download-dbis.dmi.unibas.ch/ADAMpro/osvc.tar.gz).
 

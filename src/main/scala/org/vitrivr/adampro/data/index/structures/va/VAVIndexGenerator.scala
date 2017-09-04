@@ -24,10 +24,10 @@ import org.vitrivr.adampro.query.distance.{DistanceFunction, MinkowskiDistance}
   * VAV: this VA-File index will have a training phase in which we learn the number of bits per dimension (new version of VA-File)
   * note that using VAF, we may still use both the equidistant or the equifrequent marks generator
   */
-class VAVIndexGenerator(nbits_total: Option[Int], nbits_dim : Option[Int], marksGenerator: MarksGenerator, trainingSize: Int, distance: MinkowskiDistance)(@transient implicit val ac: SharedComponentContext) extends IndexGenerator {
+class VAVIndexGenerator(totalNumOfBits: Option[Int], fixedNumBitsPerDimension : Option[Int], marksGenerator: MarksGenerator, trainingSize: Int, distance: MinkowskiDistance)(@transient implicit val ac: SharedComponentContext) extends IndexGenerator {
   override val indextypename: IndexTypeName = IndexTypes.VAVINDEX
 
-  assert(!(nbits_total.isDefined && nbits_dim.isDefined))
+  assert(!(totalNumOfBits.isDefined && fixedNumBitsPerDimension.isDefined))
 
 
   /**
@@ -65,7 +65,7 @@ class VAVIndexGenerator(nbits_total: Option[Int], nbits_dim : Option[Int], marks
     val dataMatrix = DenseMatrix(doubleTrainData.toList: _*)
 
     val ndims = doubleTrainData.head.length
-    val nbits = math.max(ndims, nbits_total.getOrElse(ndims * nbits_dim.getOrElse(5)))
+    val nbits = math.max(ndims, totalNumOfBits.getOrElse(ndims * fixedNumBitsPerDimension.getOrElse(5)))
 
     // pca
     val variance = diag(cov(dataMatrix, center = true)).toArray

@@ -31,7 +31,7 @@ case class TimedScanExpression(private val exprs: Seq[QueryExpression], private 
     * @return
     */
   override protected def run(options : Option[QueryEvaluationOptions], filter: Option[DataFrame] = None)(tracker : QueryTracker)(implicit ac: SharedComponentContext): Option[DataFrame] = {
-    log.debug("perform time-limited evaluation")
+    log.trace("perform time-limited evaluation")
 
     ac.sc.setJobGroup(id.getOrElse(""), "timed parallel query", interruptOnCancel = true)
 

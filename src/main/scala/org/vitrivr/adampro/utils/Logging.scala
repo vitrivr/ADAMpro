@@ -25,7 +25,6 @@ trait Logging {
     val x = thunk
     val t2 = System.currentTimeMillis
     log.trace(desc + " : " + "started at " + t1 + " finished at " + t2)
-    log.debug(desc + " : " + (t2 - t1) + " msecs")
     x
   }
 

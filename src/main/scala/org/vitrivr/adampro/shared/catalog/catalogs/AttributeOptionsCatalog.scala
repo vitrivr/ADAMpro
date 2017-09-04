@@ -1,7 +1,7 @@
 package org.vitrivr.adampro.shared.catalog.catalogs
 
 import org.vitrivr.adampro.shared.catalog.CatalogManager
-import slick.driver.DerbyDriver.api._
+import slick.driver.H2Driver.api._
 
 /**
   * ADAMpro
@@ -27,6 +27,10 @@ private[catalog] class AttributeOptionsCatalog(tag: Tag) extends Table[(String, 
   def pk = primaryKey("attributeopt_pk", (entityname, attributename, key))
 
   def * = (entityname, attributename, key, value)
+
+  def idx = index("idx_attributeoptions_entityname", entityname)
+  def idx2 = index("idx_attributeoptions_attributename", attributename)
+  def idx3 = index("idx_attributeoptions_key", key)
 
   def attribute = foreignKey("attributeoptions_attribute_fk", (entityname, attributename), TableQuery[AttributeCatalog])(t => (t.entityname, t.attributename), onUpdate=ForeignKeyAction.Restrict, onDelete=ForeignKeyAction.Cascade)
 }
