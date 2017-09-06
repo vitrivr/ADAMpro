@@ -156,8 +156,6 @@ class PQEExecutor(job: EvaluationJob, setStatus: (Double) => (Boolean), inputDir
 
 
     //get overview for plotting
-    val times = results.map { case (runid, result) => result.get("totaltime").getOrElse("-1") }
-    val quality = results.map { case (runid, result) => result.get("resultquality").getOrElse("-1") }
 
     prop.setProperty("summary_data_vector_dimensions", job.data_vector_dimensions.toString)
     prop.setProperty("summary_data_tuples", job.data_tuples.toString)
@@ -165,8 +163,22 @@ class PQEExecutor(job: EvaluationJob, setStatus: (Double) => (Boolean), inputDir
     prop.setProperty("summary_execution_name", job.execution_name)
     prop.setProperty("summary_execution_subtype", job.execution_subtype)
 
+    val times = results.map { case (runid, result) => result.get("totaltime").getOrElse("-1") }
     prop.setProperty("summary_totaltime", times.mkString(","))
+
+    val quality = results.map { case (runid, result) => result.get("resultquality").getOrElse("-1") }
     prop.setProperty("summary_resultquality", quality.mkString(","))
+
+    //available metrics
+    val metrics = results.map{ case (runid, result) => result.keySet.filter(_.startsWith("resultquality-")) }.flatten.toSet
+    prop.setProperty("summary_resultquality_metrics", metrics.mkString(","))
+
+    metrics.foreach{ metric =>
+      val quality = results.map { case (runid, result) => result.get(metric).getOrElse("-1") }
+      prop.setProperty("summary_resultquality_" + metric.replace("resultquality-", ""), quality.mkString(","))
+    }
+
+
     prop
   }
 }

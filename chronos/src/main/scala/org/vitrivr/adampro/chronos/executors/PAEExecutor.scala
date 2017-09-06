@@ -184,17 +184,32 @@ class PAEExecutor(job: EvaluationJob, setStatus: (Double) => (Boolean), inputDir
       val gtruth = client.doQuery(RPCSequentialScanQueryObject(qo.id, opt.toMap))
 
       if (gtruth.isSuccess) {
-        val gtruthPKs = gtruth.get.map(_.results.map(_.get("ap_id"))).head.map(_.get)
 
         ress.foreach { case (res, time) =>
           if (res.isSuccess) {
 
-            val resPKs = res.get.results.map(_.get("ap_id").get)
+            lb += ("resultquality" -> getAverageOverlap(Seq(res.get), gtruth.get))
 
-            val agreements = gtruthPKs.intersect(resPKs).length
-            //simple hits/total
-            val quality = (agreements / qo.options.get("k").get.toDouble)
-            lb += (res.get.source + "_resultquality" -> quality.toString)
+            lb += ("resultquality-cr@1" -> getCompetitiveRecallAtK(Seq(res.get), gtruth.get, 1))
+            lb += ("resultquality-cr@10" -> getCompetitiveRecallAtK(Seq(res.get), gtruth.get, 10))
+            lb += ("resultquality-cr@20" -> getCompetitiveRecallAtK(Seq(res.get), gtruth.get, 20))
+            lb += ("resultquality-cr@50" -> getCompetitiveRecallAtK(Seq(res.get), gtruth.get, 50))
+            lb += ("resultquality-cr@100" -> getCompetitiveRecallAtK(Seq(res.get), gtruth.get, 100))
+            lb += ("resultquality-cr@"  + qo.options.get("k").get -> getCompetitiveRecallAtK(Seq(res.get), gtruth.get, qo.options.get("k").get.toInt))
+
+            lb += ("resultquality-avo" -> getAverageOverlap(Seq(res.get), gtruth.get))
+            lb += ("resultquality-avo1" -> getAverageOverlap(Seq(res.get), gtruth.get, Some(1)))
+            lb += ("resultquality-avo10" -> getAverageOverlap(Seq(res.get), gtruth.get, Some(10)))
+            lb += ("resultquality-avo100" -> getAverageOverlap(Seq(res.get), gtruth.get, Some(100)))
+
+            lb += ("resultquality-rbo0" -> getRBO(Seq(res.get), gtruth.get, 0))
+            lb += ("resultquality-rbo0.1" -> getRBO(Seq(res.get), gtruth.get, 0.1))
+            lb += ("resultquality-rbo0.2" -> getRBO(Seq(res.get), gtruth.get, 0.2))
+            lb += ("resultquality-rbo0.5" -> getRBO(Seq(res.get), gtruth.get, 0.5))
+            lb += ("resultquality-rbo0.8" -> getRBO(Seq(res.get), gtruth.get, 0.8))
+            lb += ("resultquality-rbo1.0" -> getRBO(Seq(res.get), gtruth.get, 1.0))
+
+
           } else {
             lb += (res.get.source + "_resultquality" -> gtruth.failed.get.getMessage)
           }
@@ -257,6 +272,14 @@ class PAEExecutor(job: EvaluationJob, setStatus: (Double) => (Boolean), inputDir
         prop.setProperty("summary_desc_" + runid, descLb.mkString(","))
         prop.setProperty("summary_totaltime_" + runid, timeLb.mkString(","))
         prop.setProperty("summary_resultquality_" + runid, qualityLb.mkString(","))
+
+        val metrics = results.map{ case (runid, result) => result.keySet.filter(_.startsWith("resultquality-")) }.flatten.toSet
+        prop.setProperty("summary_resultquality_metrics", metrics.mkString(","))
+
+        metrics.foreach{ metric =>
+          val quality = results.map { case (runid, result) => result.get(metric).getOrElse("-1") }
+          prop.setProperty("summary_resultquality_" + metric.replace("resultquality-", "")  + runid, quality.mkString(","))
+        }
 
       }
     }

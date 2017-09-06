@@ -82,7 +82,7 @@ abstract class Executor(val job: EvaluationJob, setStatus: (Double) => (Boolean)
     *
     * @return
     */
-  protected def getQueries(entityname: String, options : Seq[(String, String)] = Seq()): Seq[RPCGenericQueryObject] = {
+  protected def getQueries(entityname: String, options: Seq[(String, String)] = Seq()): Seq[RPCGenericQueryObject] = {
     val lb = new ListBuffer[RPCGenericQueryObject]()
 
     val additionals = if (job.measurement_firstrun) {
@@ -108,7 +108,7 @@ abstract class Executor(val job: EvaluationJob, setStatus: (Double) => (Boolean)
     * @param options
     * @return
     */
-  protected def getQuery(entityname: String, k: Int, sparseQuery: Boolean, options : Seq[(String, String)] = Seq()): RPCGenericQueryObject = {
+  protected def getQuery(entityname: String, k: Int, sparseQuery: Boolean, options: Seq[(String, String)] = Seq()): RPCGenericQueryObject = {
     val id = Helpers.generateString(10)
 
     val lb = new ListBuffer[(String, String)]()
@@ -141,13 +141,13 @@ abstract class Executor(val job: EvaluationJob, setStatus: (Double) => (Boolean)
 
     lb.append("hints" -> job.execution_hint)
 
-    if(job.execution_subtype != null && job.execution_subtype.length > 0){
+    if (job.execution_subtype != null && job.execution_subtype.length > 0) {
       lb.append("subtype" -> job.execution_subtype)
     }
 
     lb.append(("nofallback" -> "true"))
 
-    if(job.execution_hint == "sequential"){
+    if (job.execution_hint == "sequential") {
       RPCSequentialScanQueryObject(id, (options ++ lb).toMap)
     } else {
       //index scan
@@ -257,17 +257,31 @@ abstract class Executor(val job: EvaluationJob, setStatus: (Double) => (Boolean)
         val gtruth = client.doQuery(RPCSequentialScanQueryObject(qo.id, opt.toMap))
 
         if (gtruth.isSuccess) {
-          val gtruthPKs = gtruth.get.map(_.results.map(_.get("ap_id"))).head.map(_.get)
-          val resPKs = res.get.map(_.results.map(_.get("ap_id"))).head.map(_.get)
-
           lb += ("gtresults" -> {
             res.get.head.results.map(res => (res.get("ap_id").getOrElse("-") + "," + res.get("ap_distance").getOrElse("-1"))).mkString("(", "),(", ")")
           })
 
-          val agreements = gtruthPKs.intersect(resPKs).length
-          //simple hits/total
-          val quality = (agreements / qo.options.get("k").get.toDouble)
-          lb += ("resultquality" -> quality.toString)
+          lb += ("resultquality" -> getAverageOverlap(res.get, gtruth.get))
+
+          lb += ("resultquality-cr@1" -> getCompetitiveRecallAtK(res.get, gtruth.get, 1))
+          lb += ("resultquality-cr@10" -> getCompetitiveRecallAtK(res.get, gtruth.get, 10))
+          lb += ("resultquality-cr@20" -> getCompetitiveRecallAtK(res.get, gtruth.get, 20))
+          lb += ("resultquality-cr@50" -> getCompetitiveRecallAtK(res.get, gtruth.get, 50))
+          lb += ("resultquality-cr@100" -> getCompetitiveRecallAtK(res.get, gtruth.get, 100))
+          lb += ("resultquality-cr@"  + qo.options.get("k").get -> getCompetitiveRecallAtK(res.get, gtruth.get, qo.options.get("k").get.toInt))
+
+          lb += ("resultquality-avo" -> getAverageOverlap(res.get, gtruth.get))
+          lb += ("resultquality-avo1" -> getAverageOverlap(res.get, gtruth.get, Some(1)))
+          lb += ("resultquality-avo10" -> getAverageOverlap(res.get, gtruth.get, Some(10)))
+          lb += ("resultquality-avo100" -> getAverageOverlap(res.get, gtruth.get, Some(100)))
+
+          lb += ("resultquality-rbo0" -> getRBO(res.get, gtruth.get, 0))
+          lb += ("resultquality-rbo0.1" -> getRBO(res.get, gtruth.get, 0.1))
+          lb += ("resultquality-rbo0.2" -> getRBO(res.get, gtruth.get, 0.2))
+          lb += ("resultquality-rbo0.5" -> getRBO(res.get, gtruth.get, 0.5))
+          lb += ("resultquality-rbo0.8" -> getRBO(res.get, gtruth.get, 0.8))
+          lb += ("resultquality-rbo1.0" -> getRBO(res.get, gtruth.get, 1.0))
+
         } else {
           lb += ("resultquality" -> gtruth.failed.get.getMessage)
         }
@@ -278,6 +292,74 @@ abstract class Executor(val job: EvaluationJob, setStatus: (Double) => (Boolean)
 
     lb.toMap.mapValues(_.toString)
   }
+
+  /**
+    *
+    * @param res
+    * @param truth
+    * @param k
+    * @return
+    */
+  protected def getCompetitiveRecallAtK(res: Seq[RPCQueryResults], truth: Seq[RPCQueryResults], k: Int): Double = {
+    val truthPKs = truth.map(_.results.map(_.get("ap_id"))).head.map(_.get)
+    val resPKs = res.map(_.results.map(_.get("ap_id"))).head.map(_.get)
+
+    val agreements = truthPKs.intersect(resPKs).length
+    //simple hits/total
+    val quality = (agreements / k.toDouble)
+    quality
+  }
+
+
+  /**
+    *
+    * @param res
+    * @param truth
+    * @param p
+    * @return
+    */
+  protected def getRBO(res: Seq[RPCQueryResults], truth: Seq[RPCQueryResults], p : Double): Double = {
+    val truthPKs = truth.map(_.results.map(_.get("ap_id"))).head.map(_.get)
+    val resPKs = res.map(_.results.map(_.get("ap_id"))).head.map(_.get)
+
+    val s = math.min(resPKs.length, truthPKs.length)
+    val l = math.max(resPKs.length, truthPKs.length)
+
+    val intersects = (1 to math.max(resPKs.length, truthPKs.length)).map(i =>  (truthPKs.take(i) intersect resPKs.take(i)).length).map(_.toDouble)
+
+    val sum1 = intersects.zip(Stream.from(1).map(_.toDouble)).map{case(intersect,i) =>  (math.pow(p,i) / (i)) * intersect}.sum
+
+    val sum2 = ((s + 1) to l).map(i => intersects(i - 1) * (i - s)/(i * s).toDouble * math.pow(p, i)).sum
+
+    val sum3 = ((intersects(l - 1) - intersects(s - 1)) / l.toDouble + (intersects(s - 1)/s.toDouble)) * math.pow(p, l)
+
+    (1 - p) / p * (sum1 + sum2) + sum3
+  }
+
+
+  /**
+    *
+    * @param res
+    * @param truth
+    * @param kOpt
+    * @return
+    */
+  protected def getAverageOverlap(res: Seq[RPCQueryResults], truth: Seq[RPCQueryResults], kOpt : Option[Int] = None): Double = {
+    val k = kOpt.getOrElse(math.max(res.length, truth.length))
+
+    val truthPKs = truth.map(_.results.map(_.get("ap_id"))).head.map(_.get).take(k)
+    val resPKs = res.map(_.results.map(_.get("ap_id"))).head.map(_.get).take(k)
+
+    val s = math.min(resPKs.length, truthPKs.length)
+    val l = math.max(resPKs.length, truthPKs.length)
+
+    val intersects = (1 to math.max(resPKs.length, truthPKs.length)).map(i =>  (truthPKs.take(i) intersect resPKs.take(i)).length).map(_.toDouble)
+
+    val x =  (1 to l).map(i =>  2 * (intersects(i - 1) / (i.toDouble + math.min(i, s))))
+    (1 / l.toDouble) * x.sum
+  }
+
+
 
   /**
     *
@@ -306,6 +388,17 @@ abstract class Executor(val job: EvaluationJob, setStatus: (Double) => (Boolean)
 
     prop.setProperty("summary_totaltime", times.mkString(","))
     prop.setProperty("summary_resultquality", quality.mkString(","))
+
+
+    //available metrics
+    val metrics = results.map{ case (runid, result) => result.keySet.filter(_.startsWith("resultquality-")) }.flatten.toSet
+    prop.setProperty("summary_resultquality_metrics", metrics.mkString(","))
+
+    metrics.foreach{ metric =>
+      val quality = results.map { case (runid, result) => result.get(metric).getOrElse("-1") }
+      prop.setProperty("summary_resultquality_" + metric.replace("resultquality-", ""), quality.mkString(","))
+    }
+
     prop
   }
 
