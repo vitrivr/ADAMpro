@@ -391,12 +391,12 @@ abstract class Executor(val job: EvaluationJob, setStatus: (Double) => (Boolean)
 
 
     //available metrics
-    val metrics = results.map{ case (runid, result) => result.keySet.filter(_.startsWith("resultquality-")) }.flatten.toSet
+    val metrics = results.map{ case (runid, result) => result.keySet.filter(_.startsWith("resultquality-")) }.flatten.map(x => "summary_resultquality_" + x.replace("resultquality-", "")).toSet
     prop.setProperty("summary_resultquality_metrics", metrics.mkString(","))
 
     metrics.foreach{ metric =>
       val quality = results.map { case (runid, result) => result.get(metric).getOrElse("-1") }
-      prop.setProperty("summary_resultquality_" + metric.replace("resultquality-", ""), quality.mkString(","))
+      prop.setProperty(metric, quality.mkString(","))
     }
 
     prop
