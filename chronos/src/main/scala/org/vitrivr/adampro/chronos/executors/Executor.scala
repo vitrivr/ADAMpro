@@ -261,26 +261,54 @@ abstract class Executor(val job: EvaluationJob, setStatus: (Double) => (Boolean)
             res.get.head.results.map(res => (res.get("ap_id").getOrElse("-") + "," + res.get("ap_distance").getOrElse("-1"))).mkString("(", "),(", ")")
           })
 
-          lb += ("resultquality" -> getAverageOverlap(res.get, gtruth.get))
+          lb += ("resultquality" -> getAverageOverlap(res.get, gtruth.get, None))
 
-          lb += ("resultquality-cr@1" -> getCompetitiveRecallAtK(res.get, gtruth.get, 1))
-          lb += ("resultquality-cr@10" -> getCompetitiveRecallAtK(res.get, gtruth.get, 10))
-          lb += ("resultquality-cr@20" -> getCompetitiveRecallAtK(res.get, gtruth.get, 20))
-          lb += ("resultquality-cr@50" -> getCompetitiveRecallAtK(res.get, gtruth.get, 50))
-          lb += ("resultquality-cr@100" -> getCompetitiveRecallAtK(res.get, gtruth.get, 100))
-          lb += ("resultquality-cr@"  + qo.options.get("k").get -> getCompetitiveRecallAtK(res.get, gtruth.get, qo.options.get("k").get.toInt))
+          lb += ("resultquality-cr@1" -> getCompetitiveRecallAtK(res.get, gtruth.get, Some(1)))
+          lb += ("resultquality-cr@10" -> getCompetitiveRecallAtK(res.get, gtruth.get, Some(10)))
+          lb += ("resultquality-cr@20" -> getCompetitiveRecallAtK(res.get, gtruth.get, Some(20)))
+          lb += ("resultquality-cr@50" -> getCompetitiveRecallAtK(res.get, gtruth.get, Some(50)))
+          lb += ("resultquality-cr@100" -> getCompetitiveRecallAtK(res.get, gtruth.get, Some(100)))
+          lb += ("resultquality-cr@" + qo.options.get("k").get -> getCompetitiveRecallAtK(res.get, gtruth.get, Some(qo.options.get("k").get.toInt)))
 
-          lb += ("resultquality-avo" -> getAverageOverlap(res.get, gtruth.get))
+          lb += ("resultquality-avo" -> getAverageOverlap(res.get, gtruth.get, None))
           lb += ("resultquality-avo1" -> getAverageOverlap(res.get, gtruth.get, Some(1)))
           lb += ("resultquality-avo10" -> getAverageOverlap(res.get, gtruth.get, Some(10)))
           lb += ("resultquality-avo100" -> getAverageOverlap(res.get, gtruth.get, Some(100)))
 
-          lb += ("resultquality-rbo0" -> getRBO(res.get, gtruth.get, 0))
-          lb += ("resultquality-rbo0.1" -> getRBO(res.get, gtruth.get, 0.1))
-          lb += ("resultquality-rbo0.2" -> getRBO(res.get, gtruth.get, 0.2))
-          lb += ("resultquality-rbo0.5" -> getRBO(res.get, gtruth.get, 0.5))
-          lb += ("resultquality-rbo0.8" -> getRBO(res.get, gtruth.get, 0.8))
-          lb += ("resultquality-rbo1.0" -> getRBO(res.get, gtruth.get, 1.0))
+          lb += ("resultquality-rbo0.05" -> getRBO(res.get, gtruth.get, 0.05, None))
+          lb += ("resultquality-rbo0.1" -> getRBO(res.get, gtruth.get, 0.1, None))
+          lb += ("resultquality-rbo0.2" -> getRBO(res.get, gtruth.get, 0.2, None))
+          lb += ("resultquality-rbo0.5" -> getRBO(res.get, gtruth.get, 0.5, None))
+          lb += ("resultquality-rbo0.8" -> getRBO(res.get, gtruth.get, 0.8, None))
+          lb += ("resultquality-rbo0.98" -> getRBO(res.get, gtruth.get, 0.98, None))
+
+          lb += ("resultquality-rbo0.05@10" -> getRBO(res.get, gtruth.get, 0.05, Some(10)))
+          lb += ("resultquality-rbo0.1@10" -> getRBO(res.get, gtruth.get, 0.1, Some(10)))
+          lb += ("resultquality-rbo0.2@10" -> getRBO(res.get, gtruth.get, 0.2, Some(10)))
+          lb += ("resultquality-rbo0.5@10" -> getRBO(res.get, gtruth.get, 0.5, Some(10)))
+          lb += ("resultquality-rbo0.8@10" -> getRBO(res.get, gtruth.get, 0.8, Some(10)))
+          lb += ("resultquality-rbo0.98@10" -> getRBO(res.get, gtruth.get, 0.98, Some(10)))
+
+          lb += ("resultquality-rbo0.05@20" -> getRBO(res.get, gtruth.get, 0.05, Some(20)))
+          lb += ("resultquality-rbo0.1@20" -> getRBO(res.get, gtruth.get, 0.1, Some(20)))
+          lb += ("resultquality-rbo0.2@20" -> getRBO(res.get, gtruth.get, 0.2, Some(20)))
+          lb += ("resultquality-rbo0.5@20" -> getRBO(res.get, gtruth.get, 0.5, Some(20)))
+          lb += ("resultquality-rbo0.8@20" -> getRBO(res.get, gtruth.get, 0.8, Some(20)))
+          lb += ("resultquality-rbo0.98@20" -> getRBO(res.get, gtruth.get, 0.98, Some(20)))
+
+          lb += ("resultquality-rbo0.05@50" -> getRBO(res.get, gtruth.get, 0.05, Some(50)))
+          lb += ("resultquality-rbo0.1@50" -> getRBO(res.get, gtruth.get, 0.1, Some(50)))
+          lb += ("resultquality-rbo0.2@50" -> getRBO(res.get, gtruth.get, 0.2, Some(50)))
+          lb += ("resultquality-rbo0.5@50" -> getRBO(res.get, gtruth.get, 0.5, Some(50)))
+          lb += ("resultquality-rbo0.8@50" -> getRBO(res.get, gtruth.get, 0.8, Some(50)))
+          lb += ("resultquality-rbo0.98@50" -> getRBO(res.get, gtruth.get, 0.98, Some(50)))
+
+          lb += ("resultquality-rbo0.05@100" -> getRBO(res.get, gtruth.get, 0.05, Some(100)))
+          lb += ("resultquality-rbo0.1@100" -> getRBO(res.get, gtruth.get, 0.1, Some(100)))
+          lb += ("resultquality-rbo0.2@100" -> getRBO(res.get, gtruth.get, 0.2, Some(100)))
+          lb += ("resultquality-rbo0.5@100" -> getRBO(res.get, gtruth.get, 0.5, Some(100)))
+          lb += ("resultquality-rbo0.8@100" -> getRBO(res.get, gtruth.get, 0.8, Some(100)))
+          lb += ("resultquality-rbo0.98@100" -> getRBO(res.get, gtruth.get, 0.98, Some(100)))
 
         } else {
           lb += ("resultquality" -> gtruth.failed.get.getMessage)
@@ -293,6 +321,17 @@ abstract class Executor(val job: EvaluationJob, setStatus: (Double) => (Boolean)
     lb.toMap.mapValues(_.toString)
   }
 
+
+  private def getResults(res: Seq[RPCQueryResults], k: Option[Int]): Seq[String] = {
+    val resPKs = res.map(_.results.sortBy(r => r.getOrElse("ap_distance", "-1.0").toDouble).map(_.get("ap_id"))).head.map(_.get)
+
+    if (k.isDefined) {
+      resPKs.take(k.get)
+    } else {
+      resPKs
+    }
+  }
+
   /**
     *
     * @param res
@@ -300,14 +339,14 @@ abstract class Executor(val job: EvaluationJob, setStatus: (Double) => (Boolean)
     * @param k
     * @return
     */
-  protected def getCompetitiveRecallAtK(res: Seq[RPCQueryResults], truth: Seq[RPCQueryResults], k: Int): Double = {
-    val truthPKs = truth.map(_.results.map(_.get("ap_id"))).head.map(_.get)
-    val resPKs = res.map(_.results.map(_.get("ap_id"))).head.map(_.get)
+  protected def getCompetitiveRecallAtK(res: Seq[RPCQueryResults], truth: Seq[RPCQueryResults], k: Option[Int]): Double = {
+    val truthPKs = getResults(truth, k)
+    val resPKs = getResults(res, k)
 
     val agreements = truthPKs.intersect(resPKs).length
     //simple hits/total
-    val quality = (agreements / k.toDouble)
-    quality
+    val measure = (agreements / k.getOrElse(resPKs.length).toDouble)
+    measure
   }
 
 
@@ -316,24 +355,26 @@ abstract class Executor(val job: EvaluationJob, setStatus: (Double) => (Boolean)
     * @param res
     * @param truth
     * @param p
+    * @param k
     * @return
     */
-  protected def getRBO(res: Seq[RPCQueryResults], truth: Seq[RPCQueryResults], p : Double): Double = {
-    val truthPKs = truth.map(_.results.map(_.get("ap_id"))).head.map(_.get)
-    val resPKs = res.map(_.results.map(_.get("ap_id"))).head.map(_.get)
+  protected def getRBO(res: Seq[RPCQueryResults], truth: Seq[RPCQueryResults], p: Double, k: Option[Int]): Double = {
+    val truthPKs = getResults(truth, k)
+    val resPKs = getResults(res, k)
 
     val s = math.min(resPKs.length, truthPKs.length)
     val l = math.max(resPKs.length, truthPKs.length)
 
-    val intersects = (1 to math.max(resPKs.length, truthPKs.length)).map(i =>  (truthPKs.take(i) intersect resPKs.take(i)).length).map(_.toDouble)
+    val intersects = (1 to math.max(resPKs.length, truthPKs.length)).map(i => (truthPKs.take(i) intersect resPKs.take(i)).length).map(_.toDouble)
 
-    val sum1 = intersects.zip(Stream.from(1).map(_.toDouble)).map{case(intersect,i) =>  (math.pow(p,i) / (i)) * intersect}.sum
+    val sum1 = intersects.zip(Stream.from(1).map(_.toDouble)).map { case (intersect, i) => (math.pow(p, i) / (i)) * intersect }.sum
 
-    val sum2 = ((s + 1) to l).map(i => intersects(i - 1) * (i - s)/(i * s).toDouble * math.pow(p, i)).sum
+    val sum2 = ((s + 1) to l).map(i => intersects(i - 1) * (i - s) / (i * s).toDouble * math.pow(p, i)).sum
 
-    val sum3 = ((intersects(l - 1) - intersects(s - 1)) / l.toDouble + (intersects(s - 1)/s.toDouble)) * math.pow(p, l)
+    val sum3 = ((intersects(l - 1) - intersects(s - 1)) / l.toDouble + (intersects(s - 1) / s.toDouble)) * math.pow(p, l)
 
-    (1 - p) / p * (sum1 + sum2) + sum3
+    val measure = (1 - p) / p * (sum1 + sum2) + sum3
+    measure
   }
 
 
@@ -341,24 +382,22 @@ abstract class Executor(val job: EvaluationJob, setStatus: (Double) => (Boolean)
     *
     * @param res
     * @param truth
-    * @param kOpt
+    * @param k
     * @return
     */
-  protected def getAverageOverlap(res: Seq[RPCQueryResults], truth: Seq[RPCQueryResults], kOpt : Option[Int] = None): Double = {
-    val k = kOpt.getOrElse(math.max(res.length, truth.length))
-
-    val truthPKs = truth.map(_.results.map(_.get("ap_id"))).head.map(_.get).take(k)
-    val resPKs = res.map(_.results.map(_.get("ap_id"))).head.map(_.get).take(k)
+  protected def getAverageOverlap(res: Seq[RPCQueryResults], truth: Seq[RPCQueryResults], k : Option[Int]): Double = {
+    val truthPKs = getResults(truth, k)
+    val resPKs = getResults(res, k)
 
     val s = math.min(resPKs.length, truthPKs.length)
     val l = math.max(resPKs.length, truthPKs.length)
 
-    val intersects = (1 to math.max(resPKs.length, truthPKs.length)).map(i =>  (truthPKs.take(i) intersect resPKs.take(i)).length).map(_.toDouble)
+    val intersects = (1 to math.max(resPKs.length, truthPKs.length)).map(i => (truthPKs.take(i) intersect resPKs.take(i)).length).map(_.toDouble)
 
-    val x =  (1 to l).map(i =>  2 * (intersects(i - 1) / (i.toDouble + math.min(i, s))))
-    (1 / l.toDouble) * x.sum
+    val x = (1 to l).map(i => 2 * (intersects(i - 1) / (i.toDouble + math.min(i, s))))
+    val measure = (1 / l.toDouble) * x.sum
+    measure
   }
-
 
 
   /**
@@ -391,10 +430,10 @@ abstract class Executor(val job: EvaluationJob, setStatus: (Double) => (Boolean)
 
 
     //available metrics
-    val metrics = results.map{ case (runid, result) => result.keySet.filter(_.startsWith("resultquality-")) }.flatten.map(x => "summary_resultquality_" + x.replace("resultquality-", "")).toSet
+    val metrics = results.map { case (runid, result) => result.keySet.filter(_.startsWith("resultquality-")) }.flatten.map(x => "summary_resultquality_" + x.replace("resultquality-", "")).toSet
     prop.setProperty("summary_resultquality_metrics", metrics.mkString(","))
 
-    metrics.foreach{ metric =>
+    metrics.foreach { metric =>
       val quality = results.map { case (runid, result) => result.get(metric).getOrElse("-1") }
       prop.setProperty(metric, quality.mkString(","))
     }

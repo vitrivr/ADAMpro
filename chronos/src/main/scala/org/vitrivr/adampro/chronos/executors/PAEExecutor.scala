@@ -188,27 +188,54 @@ class PAEExecutor(job: EvaluationJob, setStatus: (Double) => (Boolean), inputDir
         ress.foreach { case (res, time) =>
           if (res.isSuccess) {
 
-            lb += ("resultquality" -> getAverageOverlap(Seq(res.get), gtruth.get))
+            lb += ("resultquality" -> getAverageOverlap(Seq(res.get), gtruth.get, None))
 
-            lb += ("resultquality-cr@1" -> getCompetitiveRecallAtK(Seq(res.get), gtruth.get, 1))
-            lb += ("resultquality-cr@10" -> getCompetitiveRecallAtK(Seq(res.get), gtruth.get, 10))
-            lb += ("resultquality-cr@20" -> getCompetitiveRecallAtK(Seq(res.get), gtruth.get, 20))
-            lb += ("resultquality-cr@50" -> getCompetitiveRecallAtK(Seq(res.get), gtruth.get, 50))
-            lb += ("resultquality-cr@100" -> getCompetitiveRecallAtK(Seq(res.get), gtruth.get, 100))
-            lb += ("resultquality-cr@"  + qo.options.get("k").get -> getCompetitiveRecallAtK(Seq(res.get), gtruth.get, qo.options.get("k").get.toInt))
+            lb += ("resultquality-cr@1" -> getCompetitiveRecallAtK(Seq(res.get), gtruth.get, Some(1)))
+            lb += ("resultquality-cr@10" -> getCompetitiveRecallAtK(Seq(res.get), gtruth.get, Some(10)))
+            lb += ("resultquality-cr@20" -> getCompetitiveRecallAtK(Seq(res.get), gtruth.get, Some(20)))
+            lb += ("resultquality-cr@50" -> getCompetitiveRecallAtK(Seq(res.get), gtruth.get, Some(50)))
+            lb += ("resultquality-cr@100" -> getCompetitiveRecallAtK(Seq(res.get), gtruth.get, Some(100)))
+            lb += ("resultquality-cr@" + qo.options.get("k").get -> getCompetitiveRecallAtK(Seq(res.get), gtruth.get, Some(qo.options.get("k").get.toInt)))
 
-            lb += ("resultquality-avo" -> getAverageOverlap(Seq(res.get), gtruth.get))
+            lb += ("resultquality-avo" -> getAverageOverlap(Seq(res.get), gtruth.get, None))
             lb += ("resultquality-avo1" -> getAverageOverlap(Seq(res.get), gtruth.get, Some(1)))
             lb += ("resultquality-avo10" -> getAverageOverlap(Seq(res.get), gtruth.get, Some(10)))
             lb += ("resultquality-avo100" -> getAverageOverlap(Seq(res.get), gtruth.get, Some(100)))
 
-            lb += ("resultquality-rbo0" -> getRBO(Seq(res.get), gtruth.get, 0))
-            lb += ("resultquality-rbo0.1" -> getRBO(Seq(res.get), gtruth.get, 0.1))
-            lb += ("resultquality-rbo0.2" -> getRBO(Seq(res.get), gtruth.get, 0.2))
-            lb += ("resultquality-rbo0.5" -> getRBO(Seq(res.get), gtruth.get, 0.5))
-            lb += ("resultquality-rbo0.8" -> getRBO(Seq(res.get), gtruth.get, 0.8))
-            lb += ("resultquality-rbo1.0" -> getRBO(Seq(res.get), gtruth.get, 1.0))
+            lb += ("resultquality-rbo0.05" -> getRBO(Seq(res.get), gtruth.get, 0.05, None))
+            lb += ("resultquality-rbo0.1" -> getRBO(Seq(res.get), gtruth.get, 0.1, None))
+            lb += ("resultquality-rbo0.2" -> getRBO(Seq(res.get), gtruth.get, 0.2, None))
+            lb += ("resultquality-rbo0.5" -> getRBO(Seq(res.get), gtruth.get, 0.5, None))
+            lb += ("resultquality-rbo0.8" -> getRBO(Seq(res.get), gtruth.get, 0.8, None))
+            lb += ("resultquality-rbo0.98" -> getRBO(Seq(res.get), gtruth.get, 0.98, None))
 
+            lb += ("resultquality-rbo0.05@10" -> getRBO(Seq(res.get), gtruth.get, 0.05, Some(10)))
+            lb += ("resultquality-rbo0.1@10" -> getRBO(Seq(res.get), gtruth.get, 0.1, Some(10)))
+            lb += ("resultquality-rbo0.2@10" -> getRBO(Seq(res.get), gtruth.get, 0.2, Some(10)))
+            lb += ("resultquality-rbo0.5@10" -> getRBO(Seq(res.get), gtruth.get, 0.5, Some(10)))
+            lb += ("resultquality-rbo0.8@10" -> getRBO(Seq(res.get), gtruth.get, 0.8, Some(10)))
+            lb += ("resultquality-rbo0.98@10" -> getRBO(Seq(res.get), gtruth.get, 0.98, Some(10)))
+
+            lb += ("resultquality-rbo0.05@20" -> getRBO(Seq(res.get), gtruth.get, 0.05, Some(20)))
+            lb += ("resultquality-rbo0.1@20" -> getRBO(Seq(res.get), gtruth.get, 0.1, Some(20)))
+            lb += ("resultquality-rbo0.2@20" -> getRBO(Seq(res.get), gtruth.get, 0.2, Some(20)))
+            lb += ("resultquality-rbo0.5@20" -> getRBO(Seq(res.get), gtruth.get, 0.5, Some(20)))
+            lb += ("resultquality-rbo0.8@20" -> getRBO(Seq(res.get), gtruth.get, 0.8, Some(20)))
+            lb += ("resultquality-rbo0.98@20" -> getRBO(Seq(res.get), gtruth.get, 0.98, Some(20)))
+
+            lb += ("resultquality-rbo0.05@50" -> getRBO(Seq(res.get), gtruth.get, 0.05, Some(50)))
+            lb += ("resultquality-rbo0.1@50" -> getRBO(Seq(res.get), gtruth.get, 0.1, Some(50)))
+            lb += ("resultquality-rbo0.2@50" -> getRBO(Seq(res.get), gtruth.get, 0.2, Some(50)))
+            lb += ("resultquality-rbo0.5@50" -> getRBO(Seq(res.get), gtruth.get, 0.5, Some(50)))
+            lb += ("resultquality-rbo0.8@50" -> getRBO(Seq(res.get), gtruth.get, 0.8, Some(50)))
+            lb += ("resultquality-rbo0.98@50" -> getRBO(Seq(res.get), gtruth.get, 0.98, Some(50)))
+
+            lb += ("resultquality-rbo0.05@100" -> getRBO(Seq(res.get), gtruth.get, 0.05, Some(100)))
+            lb += ("resultquality-rbo0.1@100" -> getRBO(Seq(res.get), gtruth.get, 0.1, Some(100)))
+            lb += ("resultquality-rbo0.2@100" -> getRBO(Seq(res.get), gtruth.get, 0.2, Some(100)))
+            lb += ("resultquality-rbo0.5@100" -> getRBO(Seq(res.get), gtruth.get, 0.5, Some(100)))
+            lb += ("resultquality-rbo0.8@100" -> getRBO(Seq(res.get), gtruth.get, 0.8, Some(100)))
+            lb += ("resultquality-rbo0.98@100" -> getRBO(Seq(res.get), gtruth.get, 0.98, Some(100)))
 
           } else {
             lb += (res.get.source + "_resultquality" -> gtruth.failed.get.getMessage)
