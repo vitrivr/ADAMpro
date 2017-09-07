@@ -430,13 +430,21 @@ abstract class Executor(val job: EvaluationJob, setStatus: (Double) => (Boolean)
 
 
     //available metrics
-    val metrics = results.map { case (runid, result) => result.keySet.filter(_.startsWith("resultquality-")) }.flatten.map(x => "summary_resultquality_" + x.replace("resultquality-", "")).toSet
-    prop.setProperty("summary_resultquality_metrics", metrics.mkString(","))
+    val metrics = results.map { case (runid, result) => result.keySet.filter(_.startsWith("resultquality-")) }.flatten.toSet
+
+    val summaryMetrics = ListBuffer[String]()
 
     metrics.foreach { metric =>
+      val summaryName = "summary_" + metric
       val quality = results.map { case (runid, result) => result.get(metric).getOrElse("-1") }
-      prop.setProperty(metric, quality.mkString(","))
+
+      prop.setProperty(summaryName, quality.mkString(","))
+
+      summaryMetrics += summaryName
     }
+
+    prop.setProperty("summary_resultquality_metrics", summaryMetrics.mkString(","))
+
 
     prop
   }
