@@ -643,7 +643,7 @@ object Entity extends Logging {
         return Failure(EntityNotProperlyDefinedException("Entity defined with duplicate fields; note that all attribute names have to be lower-case."))
       }
 
-      val pk = new AttributeDefinition(AttributeNames.internalIdColumnName, TupleID.AdamTupleID)
+      val pk = new AttributeDefinition(AttributeNames.internalIdColumnName, TupleID.AdamTupleID, "")
       val attributes = creationAttributes.+:(pk)
 
       ac.catalogManager.createEntity(entityname, attributes)

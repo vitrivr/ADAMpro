@@ -55,17 +55,17 @@ class StorageManager extends Logging with Serializable {
     *
     * @param attributetype
     */
-  def get(attributetype: AttributeType): Option[StorageHandler] = {
-    var result: Option[StorageHandler] = None
+  def get(attributetype: AttributeType): Option[(String, StorageHandler)] = {
+    var result: Option[(String, StorageHandler)] = None
 
     if (result.isEmpty) {
       //try fallback: specializes
-      result = handlers.values.filter(_.specializes.contains(attributetype)).toSeq.sortBy(_.priority).reverse.headOption
+      result = handlers.filter(x => x._2.specializes.contains(attributetype)).toSeq.sortBy(x => x._2.priority).reverse.headOption
     }
 
     if (result.isEmpty) {
       //try fallback: supports
-      result = handlers.values.filter(_.supports.contains(attributetype)).toSeq.sortBy(_.priority).reverse.headOption
+      result = handlers.filter(x => x._2.supports.contains(attributetype)).toSeq.sortBy(x => x._2.priority).reverse.headOption
     }
 
     if (result.isEmpty) {

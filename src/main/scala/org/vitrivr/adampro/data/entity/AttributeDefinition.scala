@@ -22,11 +22,11 @@ import scala.collection.mutable.ListBuffer
   */
 case class AttributeDefinition(name: AttributeName, attributeType: AttributeType, storagehandlername: String, params: Map[String, String] = Map()) {
   def this(name: AttributeName, attributetype: AttributeType, params: Map[String, String])(implicit ac: SharedComponentContext) {
-    this(name, attributetype, ac.storageManager.get(attributetype).get.name, params)
+    this(name, attributetype, ac.storageManager.get(attributetype).get._1, params)
   }
 
   def this(name: AttributeName, attributetype: AttributeType)(implicit ac: SharedComponentContext) {
-    this(name, attributetype, ac.storageManager.get(attributetype).get.name, Map[String, String]())
+    this(name, attributetype, ac.storageManager.get(attributetype).get._1, Map[String, String]())
   }
 
   /**
