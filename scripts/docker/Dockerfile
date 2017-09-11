@@ -29,8 +29,8 @@ RUN echo "deb https://dl.bintray.com/sbt/debian /" | tee -a /etc/apt/sources.lis
     apt-get -y remove openjdk-9-*
 
 # spark
-RUN curl http://d3kbcqa49mib13.cloudfront.net/spark-2.1.1-bin-hadoop2.7.tgz | tar -xz -C /usr/lib/; \
-    cd /usr/lib && ln -s spark-2.1.1-bin-hadoop2.7 spark
+RUN curl http://d3kbcqa49mib13.cloudfront.net/spark-2.2.0-bin-hadoop2.7.tgz | tar -xz -C /usr/lib/; \
+    cd /usr/lib && ln -s spark-2.2.0-bin-hadoop2.7 spark
 ENV SPARK_HOME /usr/lib/spark
 
 # spark notebook
