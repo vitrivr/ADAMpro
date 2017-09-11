@@ -133,7 +133,7 @@ case class Entity(entityname: EntityName)(@transient implicit val ac: SharedComp
 
     //predicates
     if (predicates.nonEmpty) {
-      val handlerData = schema().filterNot(_.pk).groupBy(_.storagehandler).map { case (handler, attributes) =>
+      val handlerData = schema(fullSchema = false).groupBy(_.storagehandler).map { case (handler, attributes) =>
         val predicate = predicates.filter(p => (p.attribute == pk.name.toString || attributes.map(_.name).contains(p.attribute)))
         val status = handler.read(entityname, attributes, predicate.toList)
 
@@ -376,7 +376,7 @@ case class Entity(entityname: EntityName)(@transient implicit val ac: SharedComp
       if (ninsertsvacuum > MAX_INSERTS_BEFORE_VACUUM || ninsertsvacuum % (MAX_INSERTS_BEFORE_VACUUM / 5) == 0 && getFeatureDataFast.isDefined && getFeatureDataFast.get.rdd.getNumPartitions > Entity.DEFAULT_MAX_PARTITIONS) {
         log.info("number of inserts necessitates now re-partitioning")
 
-        if (schema().filter(_.storagehandler.engine.isInstanceOf[ParquetEngine]).nonEmpty) {
+        if (schema(fullSchema = false).filter(_.storagehandler.engine.isInstanceOf[ParquetEngine]).nonEmpty) {
           //entity is partitionable
           vacuum()
         } else {
@@ -508,7 +508,7 @@ case class Entity(entityname: EntityName)(@transient implicit val ac: SharedComp
     Index.dropAll(entityname)
 
     try {
-      schema().filterNot(_.pk).groupBy(_.storagehandler)
+      schema(fullSchema = false).groupBy(_.storagehandler)
         .foreach { case (handler, attributes) =>
           try {
             handler.drop(entityname)
