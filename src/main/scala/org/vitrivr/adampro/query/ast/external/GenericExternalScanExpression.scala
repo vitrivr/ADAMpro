@@ -28,7 +28,7 @@ case class GenericExternalScanExpression(entityname: EntityName, handlername : S
   private val entity = Entity.load(entityname).get
 
   override protected def run(options : Option[QueryEvaluationOptions], filter: Option[DataFrame] = None)(tracker : QueryTracker)(implicit ac: SharedComponentContext): Option[DataFrame] = {
-    val attributes = entity.schema().filter(a => a.storagehandler.equals(handler))
+    val attributes = entity.schema(fullSchema = false).filter(a => a.storagehandler.equals(handler))
     var status = handler.read(entityname, attributes, params = params)
 
     if (status.isFailure) {
