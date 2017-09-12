@@ -25,9 +25,7 @@ class LireImporter(path : String, filetype : String, entityname : EntityName)(im
   def apply(): Unit ={
     val files = getAllFiles(path, filetype)
     val data = readFile(files : _*)
-
-    val x = data.count()
-
+    
     EntityOp.insert(entityname, data)
   }
 
