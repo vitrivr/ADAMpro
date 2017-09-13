@@ -44,7 +44,11 @@ class AdamConfig extends Serializable with Logging {
 
   val grpcPort = config.getInt("adampro.grpc.port")
 
-  var evaluation = false
+  var evaluation =  if (config.hasPath("adampro.evaluation")) {
+    config.getBoolean("adampro.evaluation")
+  } else {
+    false
+  }
 
   val loglevel = config.getString("adampro.loglevel")
 
@@ -66,9 +70,17 @@ class AdamConfig extends Serializable with Logging {
     None
   }
 
-  val defaultNumberOfPartitions = 8
+  val defaultNumberOfPartitions = if (config.hasPath("adampro.defaultPartitions")) {
+    config.getInt("adampro.defaultPartitions")
+  } else {
+    8
+  }
 
-  val defaultNumberOfPartitionsIndex = 4
+  val defaultNumberOfPartitionsIndex = if (config.hasPath("adampro.defaultPartitionsIndex")) {
+    config.getInt("adampro.defaultPartitionsIndex")
+  } else {
+    4
+  }
 
 
   val localNodes = if (config.hasPath("adampro.localNodes")) {
@@ -77,7 +89,11 @@ class AdamConfig extends Serializable with Logging {
     None
   }
 
-  val logQueryExecutionTime = true
+  val logQueryExecutionTime = if(config.hasPath("adampro.logQueryExecutionTime")){
+    config.getBoolean("adampro.logQueryExecutionTime")
+  } else {
+    false
+  }
 
 
   val approximateFiltering = if(config.hasPath("adampro.approximateFiltering")){
@@ -86,7 +102,11 @@ class AdamConfig extends Serializable with Logging {
     false
   }
 
-  val manualPredicatePushdown = false
+  val manualPredicatePushdown = if(config.hasPath("adampro.manualPredicatePushdown")){
+    config.getBoolean("adampro.manualPredicatePushdown")
+  } else {
+    false
+  }
 
   /**
     *
