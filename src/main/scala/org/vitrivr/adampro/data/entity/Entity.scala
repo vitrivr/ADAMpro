@@ -547,10 +547,12 @@ case class Entity(entityname: EntityName)(@transient implicit val ac: SharedComp
       lb.append("apxCount" -> apxCount.get)
     }
 
-    try {
-      lb.append("partitions" -> getFeatureDataFast.map(_.rdd.getNumPartitions.toString).getOrElse("none"))
-    } catch {
-      case e: Exception => log.warn("no partition information retrievable, possibly no data yet inserted")
+    if (!(options.contains("partitions") && options("partitions") == "false")) {
+      try {
+        lb.append("partitions" -> getFeatureDataFast.map(_.rdd.getNumPartitions.toString).getOrElse("none"))
+      } catch {
+        case e: Exception => log.warn("no partition information retrievable, possibly no data yet inserted")
+      }
     }
 
     if (!(options.contains("count") && options("count") == "false")) {
