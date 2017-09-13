@@ -23,10 +23,13 @@ class LireImporter(path : String, filetype : String, entityname : EntityName)(im
     *
     */
   def apply(): Unit ={
-    val files = getAllFiles(path, filetype)
-    val data = readFile(files : _*)
-    
-    EntityOp.insert(entityname, data)
+    val gfiles = getAllFiles(path, filetype)
+
+    gfiles.foreach{ files =>
+      val data = readFile(files : _*)
+
+      EntityOp.insert(entityname, data)
+    }
   }
 
 
@@ -37,7 +40,7 @@ class LireImporter(path : String, filetype : String, entityname : EntityName)(im
     */
   private def getAllFiles(path: String, filetype : String) = {
     import scala.collection.JavaConverters._
-    FileUtils.listFiles(new File(path), Array(filetype), true).asScala.toList.sortBy(_.getAbsolutePath.reverse).map(_.getAbsolutePath)
+    FileUtils.listFiles(new File(path), Array(filetype), true).asScala.toList.sortBy(_.getAbsolutePath.reverse).map(_.getAbsolutePath).sliding(100, 100)
   }
 
 
