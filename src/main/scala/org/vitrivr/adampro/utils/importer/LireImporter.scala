@@ -48,7 +48,7 @@ class LireImporter(path : String, filetype : String, entityname : EntityName)(im
 
   private def readFile(paths : String*) : DataFrame = {
     import ac.spark.implicits._
-    ac.spark.read.textFile(paths : _*).filter(_.contains("\t")).map(_.split("\t")).map(row => (row(0), row(1), row(2), row(3).split(" ").map(x => Try(x.toFloat).getOrElse(1.0)))).toDF("id", "featuretype", "length", "feature").select("id", "feature")
+    ac.spark.read.textFile(paths : _*).filter(_.contains("\t")).map(_.split("\t")).map(row => (row(0), row(1), row(2), row(3).split(" ").map(x => Try(x.toFloat).getOrElse(1.toFloat)))).toDF("id", "featuretype", "length", "feature").select("id", "feature")
   }
 
 
