@@ -41,16 +41,13 @@ import org.vitrivr.adampro.query.distance.DistanceFunction
     assert(ks <= ki)
     log.trace("MI index chosen " + refsBc.value.length + " reference points")
 
-    val signatureGeneratorBc = ac.sc.broadcast(new MISignatureGenerator(ki, refs.length))
-    tracker.addBroadcast(signatureGeneratorBc)
-
     val referencesUDF = udf((c: DenseSparkVector) => {
       val references = refsBc.value
         .sortBy(ref => distance.apply(Vector.conv_dspark2vec(c), ref.ap_indexable)) //sort refs by distance
         .take(ki)
         .map(x => (x.ap_id.toInt)) //refid
 
-      signatureGeneratorBc.value.toSignature(references).serialize
+      references.map(_.toShort)
     })
 
     val indexed = data.withColumn(AttributeNames.featureIndexColumnName, referencesUDF(data(attribute)))

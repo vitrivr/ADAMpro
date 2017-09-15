@@ -38,8 +38,6 @@ import org.vitrivr.adampro.query.tracker.QueryTracker
     val ks = options.mapValues(_.toInt).getOrElse("ks", meta.ks)
     assert(ks <= ki)
 
-    val signatureGeneratorBc = ac.sc.broadcast(new MISignatureGenerator(meta.ki, meta.refs.length))
-    tracker.addBroadcast(signatureGeneratorBc)
 
     val max_pos_diff = ki + 1
 
@@ -52,8 +50,7 @@ import org.vitrivr.adampro.query.tracker.QueryTracker
 
     log.trace("reference points prepared")
 
-    val distUDF = udf((c: Array[Byte]) => {
-      val refs = signatureGeneratorBc.value.toBuckets(BitString.fromByteArray(c))
+    val distUDF = udf((refs: Seq[Short]) => {
       //val refsMap = refs.zipWithIndex.map(x => x._1 -> x._2).toMap
 
       var sum = 0.toDouble

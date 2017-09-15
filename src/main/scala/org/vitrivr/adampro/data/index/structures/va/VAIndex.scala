@@ -54,9 +54,6 @@ class VAIndex(override val indexname: IndexName)(@transient override implicit va
   override def scan(data: DataFrame, q: MathVector, distance: DistanceFunction, options: Map[String, String], k: Int)(tracker: QueryTracker): DataFrame = {
     log.trace("scanning VA-File index")
 
-    val signatureGeneratorBc = ac.sc.broadcast(meta.signatureGenerator)
-    tracker.addBroadcast(signatureGeneratorBc)
-
     //compute bounds
     val bounds = computeBounds(q, meta.marks, distance.asInstanceOf[MinkowskiDistance])
 
@@ -75,9 +72,7 @@ class VAIndex(override val indexname: IndexName)(@transient override implicit va
 
     log.trace("computing compressed VA bounds done")
 
-    val cellsDistUDF = (boundsIndexBc: Broadcast[CompressedBoundIndex], boundsBoundsBc: Broadcast[CompressedBoundBounds]) => udf((c: Array[Byte]) => {
-      val cells = signatureGeneratorBc.value.toCells(BitString.fromByteArray(c))
-
+    val cellsDistUDF = (boundsIndexBc: Broadcast[CompressedBoundIndex], boundsBoundsBc: Broadcast[CompressedBoundBounds]) => udf((cells : Seq[Short]) => {
       var bound: Distance = 0
       var idx = 0
       while (idx < cells.length) {

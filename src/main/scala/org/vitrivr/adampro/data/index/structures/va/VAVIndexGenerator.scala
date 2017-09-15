@@ -41,8 +41,7 @@ class VAVIndexGenerator(totalNumOfBits: Option[Int], fixedNumBitsPerDimension : 
     val meta = train(getSample(math.max(trainingSize, MINIMUM_NUMBER_OF_TUPLE), attribute)(data))
 
     val cellUDF = udf((c: DenseSparkVector) => {
-      val cells = getCells(c, meta.marks)
-      meta.signatureGenerator.toSignature(cells).serialize
+      getCells(c, meta.marks).map(_.toShort)
     })
     val indexed = data.withColumn(AttributeNames.featureIndexColumnName, cellUDF(data(attribute)))
 
