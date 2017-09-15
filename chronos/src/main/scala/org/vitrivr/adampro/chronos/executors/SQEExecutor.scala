@@ -5,7 +5,7 @@ import java.util.Properties
 
 import org.vitrivr.adampro.chronos.EvaluationJob
 import org.vitrivr.adampro.chronos.utils.{CreationHelper, Helpers}
-import org.vitrivr.adampro.communication.datastructures.{RPCComplexQueryObject, RPCGenericQueryObject, RPCStochasticScanQueryObject}
+import org.vitrivr.adampro.communication.datastructures.{RPCGenericQueryObject, RPCStochasticScanQueryObject}
 
 import scala.collection.mutable.ListBuffer
 
@@ -78,7 +78,7 @@ class SQEExecutor(job: EvaluationJob, setStatus: (Double) => (Boolean), inputDir
     *
     * @return
     */
-  protected def getSQEQueries(entityname : String, indexnames: Seq[String], options : Seq[(String, String)] = Seq()): Seq[RPCGenericQueryObject] = {
+  protected def getSQEQueries(entityname: String, indexnames: Seq[String], options: Seq[(String, String)] = Seq()): Seq[RPCGenericQueryObject] = {
     val lb = new ListBuffer[RPCGenericQueryObject]()
 
     val additionals = if (job.measurement_firstrun) {
@@ -87,11 +87,13 @@ class SQEExecutor(job: EvaluationJob, setStatus: (Double) => (Boolean), inputDir
       0
     }
 
-    job.query_k.flatMap { k =>
-      val denseQueries = (0 until (job.query_n + additionals)).map { i => getSQEQuery(entityname, indexnames, k, false, options) }
+    indexnames.toSet.subsets().flatMap { indexes =>
+      job.query_k.flatMap { k =>
+        val denseQueries = (0 until (job.query_n + additionals)).map { i => getSQEQuery(entityname, indexnames, k, false, options) }
 
-      denseQueries
-    }
+        denseQueries
+      }
+    }.toSeq
   }
 
 
@@ -105,7 +107,7 @@ class SQEExecutor(job: EvaluationJob, setStatus: (Double) => (Boolean), inputDir
     * @param options
     * @return
     */
-  protected def getSQEQuery(entityname : String, indexnames: Seq[String], k: Int, sparseQuery: Boolean, options : Seq[(String, String)] = Seq()): RPCGenericQueryObject = {
+  protected def getSQEQuery(entityname: String, indexnames: Seq[String], k: Int, sparseQuery: Boolean, options: Seq[(String, String)] = Seq()): RPCGenericQueryObject = {
     val id = Helpers.generateString(10)
 
     val lb = new ListBuffer[(String, String)]()
