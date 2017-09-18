@@ -93,7 +93,7 @@ class VAPlusIndexGenerator(totalNumOfBits: Option[Int], ndims : Option[Int], tra
     var modes = Seq.fill(dim)(0).toArray
 
     //based on results from paper and from Weber/Böhm (2000): Trading Quality for Time with Nearest Neighbor Search
-    val nbits = totalNumOfBits.getOrElse(math.min(256, dim * math.max(5, math.ceil(5 + 0.5 * math.log(dim / 10) / math.log(2)).toInt)))
+    val nbits = totalNumOfBits.getOrElse(dim * math.max(5, math.ceil(5 + 0.5 * math.log(dim / 10) / math.log(2)).toInt))
 
     while (k < nbits) {
       val j = getMaxIndex(variance)
