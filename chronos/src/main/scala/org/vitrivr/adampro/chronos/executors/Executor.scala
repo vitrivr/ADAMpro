@@ -9,7 +9,9 @@ import org.vitrivr.adampro.chronos.utils.Helpers
 import org.vitrivr.adampro.communication.RPCClient
 import org.vitrivr.adampro.communication.datastructures._
 
+import scala.collection.mutable
 import scala.collection.mutable.ListBuffer
+import scala.io.Source
 import scala.util.{Random, Try}
 
 /**
@@ -127,7 +129,11 @@ abstract class Executor(val job: EvaluationJob, setStatus: (Double) => (Boolean)
       lb.append("weights" -> generateFeatureVector(job.data_vector_dimensions, job.data_vector_sparsity, job.data_vector_min, job.data_vector_max).mkString(","))
     }
 
-    lb.append("query" -> generateFeatureVector(job.data_vector_dimensions, job.data_vector_sparsity, job.data_vector_min, job.data_vector_max).mkString(","))
+    if (job.query_path.isDefined) {
+      lb.append("query" -> getFeatureVector(job.query_path.get).mkString(","))
+    } else {
+      lb.append("query" -> generateFeatureVector(job.data_vector_dimensions, job.data_vector_sparsity, job.data_vector_min, job.data_vector_max).mkString(","))
+    }
 
     if (sparseQuery) {
       lb.append("sparsequery" -> "true")
@@ -165,7 +171,7 @@ abstract class Executor(val job: EvaluationJob, setStatus: (Double) => (Boolean)
     * @param max
     * @return
     */
-  protected def generateFeatureVector(dimensions: Int, sparsity: Float, min: Float, max: Float) = {
+  protected def generateFeatureVector(dimensions: Int, sparsity: Float, min: Float, max: Float): Seq[Float] = {
     var fv: Array[Float] = (0 until dimensions).map(i => {
       var rval = Random.nextFloat * (max - min) + min
       //ensure that we do not have any zeros in vector, sparsify later
@@ -184,6 +190,28 @@ abstract class Executor(val job: EvaluationJob, setStatus: (Double) => (Boolean)
 
     fv.toSeq
   }
+
+
+  private var queryCache = mutable.Map[String, Seq[String]]()
+
+  /**
+    * Gets a feature vector.
+    *
+    * @param path
+    * @return
+    */
+  protected def getFeatureVector(path: String): Seq[Float] = {
+    if (!queryCache.contains(path)) {
+      queryCache += path -> Source.fromFile(path).getLines.toSeq
+    }
+
+
+    val queries = queryCache.get(path).get
+    val randomQueryIndex = Random.nextInt(queries.length)
+
+    queries(randomQueryIndex).split(",").map(_.toFloat)
+  }
+
 
   /**
     * Sparsifies a vector.
@@ -385,7 +413,7 @@ abstract class Executor(val job: EvaluationJob, setStatus: (Double) => (Boolean)
     * @param k
     * @return
     */
-  protected def getAverageOverlap(res: Seq[RPCQueryResults], truth: Seq[RPCQueryResults], k : Option[Int]): Double = {
+  protected def getAverageOverlap(res: Seq[RPCQueryResults], truth: Seq[RPCQueryResults], k: Option[Int]): Double = {
     val truthPKs = getResults(truth, k)
     val resPKs = getResults(res, k)
 

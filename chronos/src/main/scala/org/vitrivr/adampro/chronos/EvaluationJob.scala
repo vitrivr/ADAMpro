@@ -77,6 +77,14 @@ class EvaluationJob(job: ChronosJob) extends ChronosJob(job) {
   val query_distance: String = getAttribute(query, "distance")
   val query_weighted: Boolean = getBooleanAttribute(query, "weighted")
 
+  val query_path : Option[String] = {
+    if(getAttribute(query, "path", false).trim.length < 1){
+      None
+    } else {
+      Some(getAttribute(query, "path", false))
+    }
+  }
+
   //execution paths
   val execution_name: String = getAttribute(execution, "name")
   val execution_subtype: String = getAttribute(execution, "subtype")
