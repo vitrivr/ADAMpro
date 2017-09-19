@@ -11,7 +11,7 @@ libraryDependencies ++= Seq(
   "io.grpc" % "grpc-stub" % "1.2.0",
   "org.slf4j" % "slf4j-simple" % "1.7.21",
   "org.scala-lang.modules" %% "scala-xml" % "1.0.6",
-  "ch.unibas.dmi.dbis.chronos" % "chronos-agent" % "2.0.2"
+  "ch.unibas.dmi.dbis.chronos" % "chronos-agent" % "2.0.3"
 )
 
 unmanagedBase <<= baseDirectory { base => base / ".." / "lib" }
