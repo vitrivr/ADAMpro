@@ -5,6 +5,7 @@ import org.apache.spark.sql.SaveMode
 import org.vitrivr.adampro.data.entity.Entity
 import org.vitrivr.adampro.process.SharedComponentContext
 import org.vitrivr.adampro.utils.Logging
+import org.apache.spark.sql.functions.col
 
 import scala.util.{Failure, Success, Try}
 
@@ -43,7 +44,7 @@ object Transferer extends Logging {
       //data transfer
       val schemaAttributes = attributes.map(attribute => schema.filter(_.name == attribute).head)
       val attributesWithoutPK = schemaAttributes.filterNot(_.pk)
-      val attributesWithPK = attributesWithoutPK ++ Seq(entity.pk)
+      val attributesWithPK = attributesWithoutPK.+:(entity.pk)
 
       //all attributes that should be transfered + the ones that are already in place in this storagehandler
       val attributesForNewHandler = (attributesWithPK.map(_.name) ++ (schema.filter(_.storagehandlername == newHandlerName).map(_.name))).distinct
@@ -53,7 +54,6 @@ object Transferer extends Logging {
 
       //create first "file"/"table" in new handler
       if(schema.filter(_.storagehandlername == newHandlerName).isEmpty){
-        val attributesWithPK = attributesWithoutPK ++ Seq(entity.pk)
         storagehandler.create(entity.entityname, attributesWithPK)
 
         log.trace("create file/table with attributes " + attributesWithPK.map(_.name).mkString(",") + " for handler " + newHandlerName)
@@ -61,7 +61,6 @@ object Transferer extends Logging {
 
       //TODO: check status
       storagehandler.write(entity.entityname, data, attributesWithPK, SaveMode.Overwrite)
-
 
       //what happens with the old data handler
       schema.filterNot(_.pk).filterNot(_.storagehandlername == newHandlerName).groupBy(_.storagehandlername).foreach{ case(handlername, handlerAttributes) =>
