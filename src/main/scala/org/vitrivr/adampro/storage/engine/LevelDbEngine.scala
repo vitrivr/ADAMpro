@@ -16,7 +16,6 @@ import org.vitrivr.adampro.data.entity.AttributeDefinition
 import org.vitrivr.adampro.process.SharedComponentContext
 import org.vitrivr.adampro.query.query.Predicate
 
-import scala.collection.convert.decorateAsScala._
 import scala.collection.mutable.ListBuffer
 import scala.util.{Failure, Success, Try}
 
@@ -36,6 +35,7 @@ class LevelDbEngine(private val path: String)(@transient override implicit val a
   override val repartitionable = false
 
   private case class DBStatus(db: DB, lock: StampedLock)
+
   private val connections = new ConcurrentHashMap[String, DBStatus]()
 
 
@@ -66,13 +66,6 @@ class LevelDbEngine(private val path: String)(@transient override implicit val a
         val db = factory.open(new File(getPath(storename)), options)
         val lock = new StampedLock()
 
-        try{
-        } catch {
-          case e : OverlappingFileLockException =>
-            // factory.repair(new File(getPath(storename)), options)
-            // db = factory.open(new File(getPath(storename)), options)
-        }
-
         connections.putIfAbsent(storename, DBStatus(db, lock))
         (db, lock)
       } else {
@@ -91,7 +84,7 @@ class LevelDbEngine(private val path: String)(@transient override implicit val a
       if (connections.contains(storename)) {
         val ret = connections.get(storename)
 
-        if(!ret.lock.isWriteLocked  && !ret.lock.isReadLocked){
+        if (!ret.lock.isWriteLocked && !ret.lock.isReadLocked) {
           ret.db.close()
           connections.remove(storename)
         }
@@ -218,16 +211,21 @@ class LevelDbEngine(private val path: String)(@transient override implicit val a
 
       val pk = attributes.filter(_.pk).head
 
-      val rowsIt = df.select(attributes.map(a => col(a.name)): _*).rdd.map(row => row.getAs[TupleID](pk.name) -> row).toLocalIterator
+      val groupedIt = df.select(attributes.map(a => col(a.name)): _*).rdd.map(row => row.getAs[TupleID](pk.name) -> row).toLocalIterator.sliding(1000, 1000)
 
-      val batch = db.createWriteBatch()
-      while (rowsIt.hasNext) {
-        val row = rowsIt.next()
-        val pk = serialize(row._1)
-        val data = serialize(row._2)
-        batch.put(pk, data)
+      groupedIt.foreach { group =>
+        val rowsIt = group.iterator
+
+        val batch = db.createWriteBatch()
+        while (rowsIt.hasNext) {
+          val row = rowsIt.next()
+          val pk = serialize(row._1)
+          val data = serialize(row._2)
+          batch.put(pk, data)
+        }
+        db.write(batch)
       }
-      db.write(batch)
+
       lock.unlockWrite(stamp)
 
       Success(Map())
@@ -303,7 +301,7 @@ class LevelDbEngine(private val path: String)(@transient override implicit val a
     * @return
     */
   private def deserialize[T](bytes: Array[Byte]): Option[T] = {
-    if(bytes != null){
+    if (bytes != null) {
       val bis = new ByteArrayInputStream(bytes)
       val ois = new ObjectInputStream(bis)
       Some(ois.readObject.asInstanceOf[T])
