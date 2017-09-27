@@ -113,9 +113,7 @@ class VAIndex(override val indexname: IndexName)(@transient override implicit va
 
     val res = localRes.filter(_.ap_lower <= minUpperPart).toDF()*/
 
-    val res = if (options.get("vaLocalOnly").map(_.toBoolean).getOrElse(false)) {
-      localRes.toDF()
-    } else {
+    val res = if (options.get("vaGlobal").map(_.toBoolean).getOrElse(false)) {
       // global refinement
       val globalRh = new VAResultHandler(k)
       val gIt = localRes.toLocalIterator()
@@ -126,6 +124,8 @@ class VAIndex(override val indexname: IndexName)(@transient override implicit va
       }
 
       ac.sqlContext.createDataset(globalRh.results).toDF()
+    } else {
+      localRes.toDF()
     }
 
     log.trace("global VA scan done")
