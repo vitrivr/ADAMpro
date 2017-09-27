@@ -220,7 +220,7 @@ class CassandraEngine(private val url: String, private val port: Int, private va
       }*/
 
       df.write
-        .format("org.apache.spark.sql.cassandra")
+        .format("org.apache.spark.sql.cassandra").mode(mode)
         .options(Map("table" -> storename, "keyspace" -> keyspace, "cluster" -> connectionId))
         .save()
 
