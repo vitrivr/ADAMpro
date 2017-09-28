@@ -7,6 +7,7 @@ import org.vitrivr.adampro.chronos.EvaluationJob
 import org.vitrivr.adampro.chronos.utils.{CreationHelper, Helpers}
 import org.vitrivr.adampro.communication.datastructures.{RPCComplexQueryObject, RPCGenericQueryObject, RPCQueryResults, RPCSequentialScanQueryObject}
 
+import scala.collection.mutable
 import scala.collection.mutable.ListBuffer
 import scala.util.Try
 
@@ -188,54 +189,54 @@ class PAEExecutor(job: EvaluationJob, setStatus: (Double) => (Boolean), inputDir
         ress.foreach { case (res, time) =>
           if (res.isSuccess) {
 
-            lb += ("resultquality" -> getAverageOverlap(Seq(res.get), gtruth.get, None))
+            lb += (res.get.source + "_" + "resultquality-default" -> getAverageOverlap(Seq(res.get), gtruth.get, None))
 
-            lb += ("resultquality-cr@1" -> getCompetitiveRecallAtK(Seq(res.get), gtruth.get, Some(1)))
-            lb += ("resultquality-cr@10" -> getCompetitiveRecallAtK(Seq(res.get), gtruth.get, Some(10)))
-            lb += ("resultquality-cr@20" -> getCompetitiveRecallAtK(Seq(res.get), gtruth.get, Some(20)))
-            lb += ("resultquality-cr@50" -> getCompetitiveRecallAtK(Seq(res.get), gtruth.get, Some(50)))
-            lb += ("resultquality-cr@100" -> getCompetitiveRecallAtK(Seq(res.get), gtruth.get, Some(100)))
-            lb += ("resultquality-cr@" + qo.options.get("k").get -> getCompetitiveRecallAtK(Seq(res.get), gtruth.get, Some(qo.options.get("k").get.toInt)))
+            lb += (res.get.source + "_" +"resultquality-cr@1" -> getCompetitiveRecallAtK(Seq(res.get), gtruth.get, Some(1)))
+            lb += (res.get.source + "_" +"resultquality-cr@10" -> getCompetitiveRecallAtK(Seq(res.get), gtruth.get, Some(10)))
+            lb += (res.get.source + "_" +"resultquality-cr@20" -> getCompetitiveRecallAtK(Seq(res.get), gtruth.get, Some(20)))
+            lb += (res.get.source + "_" +"resultquality-cr@50" -> getCompetitiveRecallAtK(Seq(res.get), gtruth.get, Some(50)))
+            lb += (res.get.source + "_" +"resultquality-cr@100" -> getCompetitiveRecallAtK(Seq(res.get), gtruth.get, Some(100)))
+            lb += (res.get.source + "_" +"resultquality-cr@" + qo.options.get("k").get -> getCompetitiveRecallAtK(Seq(res.get), gtruth.get, Some(qo.options.get("k").get.toInt)))
 
-            lb += ("resultquality-avo" -> getAverageOverlap(Seq(res.get), gtruth.get, None))
-            lb += ("resultquality-avo1" -> getAverageOverlap(Seq(res.get), gtruth.get, Some(1)))
-            lb += ("resultquality-avo10" -> getAverageOverlap(Seq(res.get), gtruth.get, Some(10)))
-            lb += ("resultquality-avo100" -> getAverageOverlap(Seq(res.get), gtruth.get, Some(100)))
+            lb += (res.get.source + "_" +"resultquality-avo" -> getAverageOverlap(Seq(res.get), gtruth.get, None))
+            lb += (res.get.source + "_" +"resultquality-avo1" -> getAverageOverlap(Seq(res.get), gtruth.get, Some(1)))
+            lb += (res.get.source + "_" +"resultquality-avo10" -> getAverageOverlap(Seq(res.get), gtruth.get, Some(10)))
+            lb += (res.get.source + "_" +"resultquality-avo100" -> getAverageOverlap(Seq(res.get), gtruth.get, Some(100)))
 
-            lb += ("resultquality-rbo0.05" -> getRBO(Seq(res.get), gtruth.get, 0.05, None))
-            lb += ("resultquality-rbo0.1" -> getRBO(Seq(res.get), gtruth.get, 0.1, None))
-            lb += ("resultquality-rbo0.2" -> getRBO(Seq(res.get), gtruth.get, 0.2, None))
-            lb += ("resultquality-rbo0.5" -> getRBO(Seq(res.get), gtruth.get, 0.5, None))
-            lb += ("resultquality-rbo0.8" -> getRBO(Seq(res.get), gtruth.get, 0.8, None))
-            lb += ("resultquality-rbo0.98" -> getRBO(Seq(res.get), gtruth.get, 0.98, None))
+            lb += (res.get.source + "_" +"resultquality-rbo0.05" -> getRBO(Seq(res.get), gtruth.get, 0.05, None))
+            lb += (res.get.source + "_" +"resultquality-rbo0.1" -> getRBO(Seq(res.get), gtruth.get, 0.1, None))
+            lb += (res.get.source + "_" +"resultquality-rbo0.2" -> getRBO(Seq(res.get), gtruth.get, 0.2, None))
+            lb += (res.get.source + "_" +"resultquality-rbo0.5" -> getRBO(Seq(res.get), gtruth.get, 0.5, None))
+            lb += (res.get.source + "_" +"resultquality-rbo0.8" -> getRBO(Seq(res.get), gtruth.get, 0.8, None))
+            lb += (res.get.source + "_" +"resultquality-rbo0.98" -> getRBO(Seq(res.get), gtruth.get, 0.98, None))
 
-            lb += ("resultquality-rbo0.05@10" -> getRBO(Seq(res.get), gtruth.get, 0.05, Some(10)))
-            lb += ("resultquality-rbo0.1@10" -> getRBO(Seq(res.get), gtruth.get, 0.1, Some(10)))
-            lb += ("resultquality-rbo0.2@10" -> getRBO(Seq(res.get), gtruth.get, 0.2, Some(10)))
-            lb += ("resultquality-rbo0.5@10" -> getRBO(Seq(res.get), gtruth.get, 0.5, Some(10)))
-            lb += ("resultquality-rbo0.8@10" -> getRBO(Seq(res.get), gtruth.get, 0.8, Some(10)))
-            lb += ("resultquality-rbo0.98@10" -> getRBO(Seq(res.get), gtruth.get, 0.98, Some(10)))
+            lb += (res.get.source + "_" +"resultquality-rbo0.05@10" -> getRBO(Seq(res.get), gtruth.get, 0.05, Some(10)))
+            lb += (res.get.source + "_" +"resultquality-rbo0.1@10" -> getRBO(Seq(res.get), gtruth.get, 0.1, Some(10)))
+            lb += (res.get.source + "_" +"resultquality-rbo0.2@10" -> getRBO(Seq(res.get), gtruth.get, 0.2, Some(10)))
+            lb += (res.get.source + "_" +"resultquality-rbo0.5@10" -> getRBO(Seq(res.get), gtruth.get, 0.5, Some(10)))
+            lb += (res.get.source + "_" +"resultquality-rbo0.8@10" -> getRBO(Seq(res.get), gtruth.get, 0.8, Some(10)))
+            lb += (res.get.source + "_" +"resultquality-rbo0.98@10" -> getRBO(Seq(res.get), gtruth.get, 0.98, Some(10)))
 
-            lb += ("resultquality-rbo0.05@20" -> getRBO(Seq(res.get), gtruth.get, 0.05, Some(20)))
-            lb += ("resultquality-rbo0.1@20" -> getRBO(Seq(res.get), gtruth.get, 0.1, Some(20)))
-            lb += ("resultquality-rbo0.2@20" -> getRBO(Seq(res.get), gtruth.get, 0.2, Some(20)))
-            lb += ("resultquality-rbo0.5@20" -> getRBO(Seq(res.get), gtruth.get, 0.5, Some(20)))
-            lb += ("resultquality-rbo0.8@20" -> getRBO(Seq(res.get), gtruth.get, 0.8, Some(20)))
-            lb += ("resultquality-rbo0.98@20" -> getRBO(Seq(res.get), gtruth.get, 0.98, Some(20)))
+            lb += (res.get.source + "_" +"resultquality-rbo0.05@20" -> getRBO(Seq(res.get), gtruth.get, 0.05, Some(20)))
+            lb += (res.get.source + "_" +"resultquality-rbo0.1@20" -> getRBO(Seq(res.get), gtruth.get, 0.1, Some(20)))
+            lb += (res.get.source + "_" +"resultquality-rbo0.2@20" -> getRBO(Seq(res.get), gtruth.get, 0.2, Some(20)))
+            lb += (res.get.source + "_" +"resultquality-rbo0.5@20" -> getRBO(Seq(res.get), gtruth.get, 0.5, Some(20)))
+            lb += (res.get.source + "_" +"resultquality-rbo0.8@20" -> getRBO(Seq(res.get), gtruth.get, 0.8, Some(20)))
+            lb += (res.get.source + "_" +"resultquality-rbo0.98@20" -> getRBO(Seq(res.get), gtruth.get, 0.98, Some(20)))
 
-            lb += ("resultquality-rbo0.05@50" -> getRBO(Seq(res.get), gtruth.get, 0.05, Some(50)))
-            lb += ("resultquality-rbo0.1@50" -> getRBO(Seq(res.get), gtruth.get, 0.1, Some(50)))
-            lb += ("resultquality-rbo0.2@50" -> getRBO(Seq(res.get), gtruth.get, 0.2, Some(50)))
-            lb += ("resultquality-rbo0.5@50" -> getRBO(Seq(res.get), gtruth.get, 0.5, Some(50)))
-            lb += ("resultquality-rbo0.8@50" -> getRBO(Seq(res.get), gtruth.get, 0.8, Some(50)))
-            lb += ("resultquality-rbo0.98@50" -> getRBO(Seq(res.get), gtruth.get, 0.98, Some(50)))
+            lb += (res.get.source + "_" +"resultquality-rbo0.05@50" -> getRBO(Seq(res.get), gtruth.get, 0.05, Some(50)))
+            lb += (res.get.source + "_" +"resultquality-rbo0.1@50" -> getRBO(Seq(res.get), gtruth.get, 0.1, Some(50)))
+            lb += (res.get.source + "_" +"resultquality-rbo0.2@50" -> getRBO(Seq(res.get), gtruth.get, 0.2, Some(50)))
+            lb += (res.get.source + "_" +"resultquality-rbo0.5@50" -> getRBO(Seq(res.get), gtruth.get, 0.5, Some(50)))
+            lb += (res.get.source + "_" +"resultquality-rbo0.8@50" -> getRBO(Seq(res.get), gtruth.get, 0.8, Some(50)))
+            lb += (res.get.source + "_" +"resultquality-rbo0.98@50" -> getRBO(Seq(res.get), gtruth.get, 0.98, Some(50)))
 
-            lb += ("resultquality-rbo0.05@100" -> getRBO(Seq(res.get), gtruth.get, 0.05, Some(100)))
-            lb += ("resultquality-rbo0.1@100" -> getRBO(Seq(res.get), gtruth.get, 0.1, Some(100)))
-            lb += ("resultquality-rbo0.2@100" -> getRBO(Seq(res.get), gtruth.get, 0.2, Some(100)))
-            lb += ("resultquality-rbo0.5@100" -> getRBO(Seq(res.get), gtruth.get, 0.5, Some(100)))
-            lb += ("resultquality-rbo0.8@100" -> getRBO(Seq(res.get), gtruth.get, 0.8, Some(100)))
-            lb += ("resultquality-rbo0.98@100" -> getRBO(Seq(res.get), gtruth.get, 0.98, Some(100)))
+            lb += (res.get.source + "_" +"resultquality-rbo0.05@100" -> getRBO(Seq(res.get), gtruth.get, 0.05, Some(100)))
+            lb += (res.get.source + "_" +"resultquality-rbo0.1@100" -> getRBO(Seq(res.get), gtruth.get, 0.1, Some(100)))
+            lb += (res.get.source + "_" +"resultquality-rbo0.2@100" -> getRBO(Seq(res.get), gtruth.get, 0.2, Some(100)))
+            lb += (res.get.source + "_" +"resultquality-rbo0.5@100" -> getRBO(Seq(res.get), gtruth.get, 0.5, Some(100)))
+            lb += (res.get.source + "_" +"resultquality-rbo0.8@100" -> getRBO(Seq(res.get), gtruth.get, 0.8, Some(100)))
+            lb += (res.get.source + "_" +"resultquality-rbo0.98@100" -> getRBO(Seq(res.get), gtruth.get, 0.98, Some(100)))
 
           } else {
             lb += (res.get.source + "_resultquality" -> gtruth.failed.get.getMessage)
@@ -282,32 +283,37 @@ class PAEExecutor(job: EvaluationJob, setStatus: (Double) => (Boolean), inputDir
     //get overview for plotting
     val summary = results.zipWithIndex.map {
       case (result, runid) => {
-        val times = result._2.filter(_._1.endsWith("_measuredtime")).map { case (desc, time) => (desc.replace("_measuredtime", ""), time.toLong) }.toMap
-        val qualities = result._2.filter(_._1.endsWith("_resultquality")).map { case (desc, res) => (desc.replace("_resultquality", ""), res.toDouble) }.toMap
+        val times = result._2.filter(_._1.endsWith("_measuredtime")).map { case (desc, time) => (desc.replace("_measuredtime", ""), time.toLong) }
+
+        val qualities = result._2.filter(_._1.contains("resultquality-")).map { case (desc, res) => (desc.replace("resultquality-", ""), res.toDouble) }.groupBy(x => x._1.substring(0, x._1.lastIndexOf("_")))
+          .mapValues(_.map(x => (x._1.substring(x._1.lastIndexOf("_") + 1), x._2)))
 
         val descLb = new ListBuffer[String]()
         val timeLb = new ListBuffer[Long]()
         val qualityLb = new ListBuffer[Double]()
 
-        val ress = times.keys.map { key =>
+        val qualityMap = new mutable.HashMap[String, ListBuffer[Double]]()
+
+        times.keys.foreach { key =>
           descLb += key
           timeLb += times.get(key).get
-          qualityLb += qualities.get(key).getOrElse(-1.0)
+          qualityLb += qualities.get(key).get.get("default").get
+
+          qualities.get(key).get.foreach { case (measure, value) =>
+            qualityMap.getOrElseUpdate(measure, new ListBuffer[Double]()) += value
+          }
         }
 
 
         prop.setProperty("summary_desc_" + runid, descLb.mkString(","))
         prop.setProperty("summary_totaltime_" + runid, timeLb.mkString(","))
-        prop.setProperty("summary_resultquality_" + runid, qualityLb.mkString(","))
+        prop.setProperty("summary_quality_" + runid, qualityLb.mkString(", "))
 
-        val metrics = results.map{ case (runid, result) => result.keySet.filter(_.startsWith("resultquality-")) }.flatten.toSet
-        prop.setProperty("summary_resultquality_metrics", metrics.mkString(","))
-
-        metrics.foreach{ metric =>
-          val quality = results.map { case (runid, result) => result.get(metric).getOrElse("-1") }
-          prop.setProperty("summary_resultquality_" + metric.replace("resultquality-", "")  + runid, quality.mkString(","))
+        qualityMap.foreach{ case(key,value)  =>
+          prop.setProperty("summary_resultquality_" + key + "_" + runid, value.mkString(","))
         }
 
+        prop.setProperty("summary_resultquality_measures_" + runid, qualityMap.keys.mkString(","))
       }
     }
 
