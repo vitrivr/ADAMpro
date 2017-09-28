@@ -587,7 +587,7 @@ class DataDefintion extends AdamDefinitionGrpc.AdamDefinition with Logging {
         case Optimizer.LR_OPTIMIZER => Seq(PlannerRegistry.apply("lr").get)
         case Optimizer.SVM_OPTIMIZER => Seq(PlannerRegistry.apply("svm").get)
         case Optimizer.NAIVE_OPTIMIZER => Seq(PlannerRegistry.apply("naive").get)
-        case _ => Seq(PlannerRegistry.apply("svm").get, PlannerRegistry.apply("naive").get)
+        case _ => Seq(PlannerRegistry.apply("lr").get, PlannerRegistry.apply("naive").get)
       }
 
       val optResults = optimizers.map {
