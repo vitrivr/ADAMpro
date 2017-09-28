@@ -189,7 +189,7 @@ class PAEExecutor(job: EvaluationJob, setStatus: (Double) => (Boolean), inputDir
         ress.foreach { case (res, time) =>
           if (res.isSuccess) {
 
-            lb += (res.get.source + "_" + "resultquality-default" -> getAverageOverlap(Seq(res.get), gtruth.get, None))
+            lb += (res.get.source + "_" + "resultquality-default" -> getSimpleRecall(Seq(res.get), gtruth.get, None))
 
             lb += (res.get.source + "_" +"resultquality-cr@1" -> getCompetitiveRecallAtK(Seq(res.get), gtruth.get, Some(1)))
             lb += (res.get.source + "_" +"resultquality-cr@10" -> getCompetitiveRecallAtK(Seq(res.get), gtruth.get, Some(10)))

@@ -289,7 +289,7 @@ abstract class Executor(val job: EvaluationJob, setStatus: (Double) => (Boolean)
             res.get.head.results.map(res => (res.get("ap_id").getOrElse("-") + "," + res.get("ap_distance").getOrElse("-1"))).mkString("(", "),(", ")")
           })
 
-          lb += ("resultquality" -> getAverageOverlap(res.get, gtruth.get, None))
+          lb += ("resultquality" -> getSimpleRecall(res.get, gtruth.get, None))
 
           lb += ("resultquality-cr@1" -> getCompetitiveRecallAtK(res.get, gtruth.get, Some(1)))
           lb += ("resultquality-cr@10" -> getCompetitiveRecallAtK(res.get, gtruth.get, Some(10)))
@@ -364,6 +364,22 @@ abstract class Executor(val job: EvaluationJob, setStatus: (Double) => (Boolean)
     *
     * @param res
     * @param truth
+    * @return
+    */
+  protected def getSimpleRecall(res: Seq[RPCQueryResults], truth: Seq[RPCQueryResults], k: Option[Int]): Double = {
+    val truthPKs = getResults(truth, None)
+    val resPKs = getResults(res, None)
+
+    val agreements = truthPKs.intersect(resPKs).length
+
+    val measure = (agreements / k.getOrElse(truthPKs.length).toDouble)
+    measure
+  }
+
+  /**
+    *
+    * @param res
+    * @param truth
     * @param k
     * @return
     */
@@ -373,7 +389,7 @@ abstract class Executor(val job: EvaluationJob, setStatus: (Double) => (Boolean)
 
     val agreements = truthPKs.intersect(resPKs).length
     //simple hits/total
-    val measure = (agreements / k.getOrElse(resPKs.length).toDouble)
+    val measure = (agreements / k.getOrElse(truthPKs.length).toDouble)
     measure
   }
 
