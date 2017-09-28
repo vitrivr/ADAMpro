@@ -27,7 +27,7 @@ case class RPCComplexQueryObject(override val id : String, override val options 
     aqm = aqm.withFrom(from)
 
     if(nnq.isDefined){
-      aqm = qm.withNnq(nnq.get)
+      aqm = aqm.withNnq(nnq.get)
     }
 
     aqm
