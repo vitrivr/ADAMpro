@@ -158,7 +158,7 @@ private[planner] class LRPlannerHeuristics(defaultNRuns: Int = 100) extends Plan
   private def buildFeature(confidence: Confidence): Seq[Double] = {
     val lb = new ListBuffer[Double]()
 
-    lb += math.min(1.0, confidence.confidence)
+    //lb += math.min(1.0, confidence.confidence)
 
     lb.toSeq
   }
