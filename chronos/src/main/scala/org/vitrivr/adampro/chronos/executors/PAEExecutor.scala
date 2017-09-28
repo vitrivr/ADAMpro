@@ -167,7 +167,7 @@ class PAEExecutor(job: EvaluationJob, setStatus: (Double) => (Boolean), inputDir
         lb += (res.get.source + "_confidence" -> res.get.confidence)
         lb += (res.get.source + "_source" -> res.get.source)
         lb += (res.get.source + "_adamprotime" -> res.get.time)
-        lb += (res.get.source + "_measuredtime" -> time)
+        lb += (res.get.source + "_totaltime" -> time)
         lb += (res.get.source + "_results" -> {
           res.get.results.map(res => (res.get("ap_id").getOrElse("-") + "," + res.get("ap_distance").getOrElse("-1"))).mkString("(", "),(", ")")
         })
@@ -283,7 +283,7 @@ class PAEExecutor(job: EvaluationJob, setStatus: (Double) => (Boolean), inputDir
     //get overview for plotting
     val summary = results.zipWithIndex.map {
       case (result, runid) => {
-        val times = result._2.filter(_._1.endsWith("_measuredtime")).map { case (desc, time) => (desc.replace("_measuredtime", ""), time.toLong) }
+        val times = result._2.filter(_._1.endsWith("_totaltime")).map { case (desc, time) => (desc.replace("_totaltime", ""), time.toLong) }
 
         val qualities = result._2.filter(_._1.contains("resultquality-")).map { case (desc, res) => (desc.replace("resultquality-", ""), res.toDouble) }.groupBy(x => x._1.substring(0, x._1.lastIndexOf("_")))
           .mapValues(_.map(x => (x._1.substring(x._1.lastIndexOf("_") + 1), x._2)))
