@@ -259,8 +259,8 @@ class PAEExecutor(job: EvaluationJob, setStatus: (Double) => (Boolean), inputDir
     */
   override protected def prepareResults(results: ListBuffer[(String, Map[String, String])]) = {
     //fill properties
-    val prop = new Properties
-    prop.setProperty("evaluation_mode", job.general_mode)
+    val props = new Properties
+    props.setProperty("evaluation_mode", job.general_mode)
 
     results.foreach {
       case (runid, result) =>
@@ -268,16 +268,16 @@ class PAEExecutor(job: EvaluationJob, setStatus: (Double) => (Boolean), inputDir
           case (k, v) => (runid + "_" + k) -> v
         } //remap key
           .foreach {
-          case (k, v) => prop.setProperty(k, v)
+          case (k, v) => props.setProperty(k, v)
         } //set property
     }
 
 
-    prop.setProperty("summary_data_vector_dimensions", job.data_vector_dimensions.toString)
-    prop.setProperty("summary_data_tuples", job.data_tuples.toString)
+    props.setProperty("summary_data_vector_dimensions", job.data_vector_dimensions.toString)
+    props.setProperty("summary_data_tuples", job.data_tuples.toString)
 
-    prop.setProperty("summary_execution_name", job.execution_name)
-    prop.setProperty("summary_execution_subtype", job.execution_subexecution.map(_._1).mkString(", "))
+    props.setProperty("summary_execution_name", job.execution_name)
+    props.setProperty("summary_execution_subtype", job.execution_subexecution.map(_._1).mkString(", "))
 
 
     //get overview for plotting
@@ -305,20 +305,20 @@ class PAEExecutor(job: EvaluationJob, setStatus: (Double) => (Boolean), inputDir
         }
 
 
-        prop.setProperty("summary_desc_" + runid, descLb.mkString(","))
-        prop.setProperty("summary_totaltime_" + runid, timeLb.mkString(","))
-        prop.setProperty("summary_quality_" + runid, qualityLb.mkString(", "))
+        props.setProperty("summary_desc_" + runid, descLb.mkString(","))
+        props.setProperty("summary_totaltime_" + runid, timeLb.mkString(","))
+        props.setProperty("summary_quality_" + runid, qualityLb.mkString(", "))
 
         qualityMap.foreach{ case(key,value)  =>
-          prop.setProperty("summary_resultquality_" + key + "_" + runid, value.mkString(","))
+          props.setProperty("summary_resultquality_" + key + "_" + runid, value.mkString(","))
         }
 
-        prop.setProperty("summary_resultquality_measures_" + runid, qualityMap.keys.mkString(","))
+        props.setProperty("summary_resultquality_measures_" + runid, qualityMap.keys.mkString(","))
       }
     }
 
-    prop.setProperty("summary_runs", summary.length.toString)
+    props.setProperty("summary_runs", summary.length.toString)
 
-    prop
+    props
   }
 }
