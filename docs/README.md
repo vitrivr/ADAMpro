@@ -124,26 +124,11 @@ The parameters specified in here are passed directly to the storage engines; it 
 ## Code basis and Repository
 ADAMpro builds on [Apache Spark 2](http://spark.apache.org) and uses a large variety of libraries and packages, e.g. [Google Protocol Buffers](https://developers.google.com/protocol-buffers/) and [grpc](http://www.grpc.io/). The repository has the following structure:
 
-* `chronos` package for evaluating ADAMpro using the Uni Basel Chronos project
 * `conf` folder for configuration files; note that the conf folder is automatically included to the resources
 * `grpc` the proto file (included from the [proto sub-repository](https://github.com/vitrivr/ADAMpro-Protobuf))
 * `grpcclient` general grpc client code for communicating with the grpc server
-* `importer` client code for importing proto files to ADAMpro
 * `scripts` useful scripts for deploying running ADAMpro
 * `src` ADAMpro sources
-  * `api` rather static API used within ADAMpro
-  * `catalog` storing information on entities, indexes, etc.
-  * `config` for retrieving the ADAMpro configuration
-  * `datatypes` defines datatypes used throughout ADAMpro; we try to formulate most datatypes as variables, e.g. the datatype of the internally used `TupleID` or the datatype of `feature vectors` is specified here
-  * `entity` defines the information for an entity, caches, partitioners
-  * `helpers` general helpers
-  * `index` defines the information for an index, caches, partitioners and all available index structures in ADAMpro; note that for new index structures you should adhere to the given code structure and naming (i.e., using an `XYZIndex` class and `XYZIndexGenerator`) as index structures are loaded via reflections
-  * `main` contains the main classes
-  * `ml` contains machine learning classes
-  * `query` defines query execution classes, e.g., distance measures, query handlers, caches, progressive querying
-  * `rpc` implementation of the rpc protocol
-  * `storage` defines the storage engines available together with the registry
-  * `utils` general utils classes, mostly experimental/temporary code
 * `web` web UI of ADAMpro
 
 

@@ -12,4 +12,4 @@ http://link.springer.com/article/10.1007/s13222-015-0209-y
 Find code-related documentation in the [/docs folder](https://github.com/vitrivr/ADAMpro/tree/master/docs/README.md).
 
 
-ADAMpro is being developed in the course of the iMotion project (http://imotion-project.eu) at the Databases and Information Systems Research Group (http://dbis.cs.unibas.ch) at the University of Basel, Switzerland.
+ADAMpro is being developed in the course of the vitrivr (http://vitrivr.org) and the iMotion project (http://imotion-project.eu) at the Databases and Information Systems Research Group (http://dbis.cs.unibas.ch) at the University of Basel, Switzerland.
