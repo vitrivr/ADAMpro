@@ -23,8 +23,8 @@ lazy val grpcclient = project.
 lazy val web = project.dependsOn(grpcclient).
   settings(commonSettings: _*)
 
-lazy val importer = project.dependsOn(grpcclient).
-  settings(commonSettings: _*)
+
+
 
 
 //build
