@@ -405,7 +405,7 @@ class RPCClient(channel: ManagedChannel,
         case "svm" => Optimizer.SVM_OPTIMIZER
         case "naive" => Optimizer.NAIVE_OPTIMIZER
         case "lr" => Optimizer.LR_OPTIMIZER
-        case _ => Optimizer.SVM_OPTIMIZER
+        case _ => Optimizer.LR_OPTIMIZER
       }
 
       definerBlocking.adaptScanMethods(AdaptScanMethodsMessage(entityname, attribute, ic, qc, options, optimizer))
