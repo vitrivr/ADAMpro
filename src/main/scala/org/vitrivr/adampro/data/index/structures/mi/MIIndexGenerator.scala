@@ -72,7 +72,7 @@ class MIIndexGeneratorFactory extends IndexGeneratorFactory {
     val nrefs = if (properties.contains("nrefs")) {
       properties.get("nrefs").get.toInt
     } else if (properties.contains("n")) {
-      math.max(200, math.ceil(2 * math.sqrt(properties.get("n").get.toInt)).toInt)
+      math.min(200, math.ceil(2 * math.sqrt(properties.get("n").get.toInt)).toInt)
     } else {
       200 //value based on Amato et al. (2008)
     }
