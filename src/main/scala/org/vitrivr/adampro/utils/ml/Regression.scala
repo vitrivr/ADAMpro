@@ -41,7 +41,7 @@ class Regression(val path: String)(@transient implicit val ac: SharedComponentCo
 
     rdd.saveAsObjectFile(path + "/data/data_" + (System.currentTimeMillis() / 1000L).toString + DATA_SUFFIX)
 
-    val trainingData = new File(path + "/data/").listFiles.filter(_.isFile).filter(_.getName.endsWith(DATA_SUFFIX)).map { dataFile =>
+    val trainingData = new File(path + "/data/").listFiles.filter(_.getName.endsWith(DATA_SUFFIX)).map { dataFile =>
       ac.sc.objectFile[LabeledPoint](dataFile.getAbsolutePath)
     }.reduce(_ union _)
 
