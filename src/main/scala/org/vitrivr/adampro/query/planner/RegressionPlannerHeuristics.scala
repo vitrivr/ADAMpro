@@ -38,16 +38,17 @@ private[planner] class RegressionPlannerHeuristics(defaultNRuns: Int = 100) exte
     val tracker = new QueryTracker()
 
     val trainData = queries.flatMap { nnq =>
-      val rel = QueryOp.sequential(entity.entityname, nnq, None)(tracker).get.get.select(entity.pk.name).collect().map(_.getAs[Any](0)).toSet
+      //val rel = QueryOp.sequential(entity.entityname, nnq, None)(tracker).get.get.select(entity.pk.name).collect().map(_.getAs[Any](0)).toSet
 
       indexes.map { index =>
-        performMeasurement(index, nnq, options.get("nruns").map(_.toInt), rel).map(measurement => (index.indextypename, buildFeature(index, nnq, measurement.toConfidence()), measurement))
+        performMeasurement(index, nnq, options.get("nruns").map(_.toInt), Set()).map(measurement => (index.indextypename, buildFeature(index, nnq, measurement.toConfidence()), measurement))
       }.flatten
     }.groupBy(_._1).mapValues(_.map(x => (x._2, x._3)))
 
     trainData.foreach { case (indextypename, trainDatum) =>
-      if (trainDatum.nonEmpty) {
-        Regression.train(trainDatum.map { case (x, y) => TrainingSample(x, y.time) }, ac.config.optimizerPath + "/" + "lr-index-" + indextypename.name)
+      Regression.train(trainDatum.map { case (x, y) => TrainingSample(x, y.time) }, ac.config.optimizerPath + "/" + "lr-index-" + indextypename.name)
+
+      if (!ac.catalogManager.containsOptimizerOptionMeta(name, "lr-index-" + indextypename.name).get) {
         ac.catalogManager.createOptimizerOption(name, "lr-index-" + indextypename.name, null)
       }
     }
@@ -66,7 +67,7 @@ private[planner] class RegressionPlannerHeuristics(defaultNRuns: Int = 100) exte
       performMeasurement(entity, nnq, options.get("nruns").map(_.toInt)).map(measurement => (buildFeature(entity, nnq, measurement.toConfidence()), measurement))
     }
 
-    if (trainDatum.nonEmpty) {
+    if (!ac.catalogManager.containsOptimizerOptionMeta(name, "lr-entity").get) {
       ac.catalogManager.createOptimizerOption(name, "lr-entity", null)
     }
 
