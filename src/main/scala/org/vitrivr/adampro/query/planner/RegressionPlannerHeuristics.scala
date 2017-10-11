@@ -16,7 +16,7 @@ import org.vitrivr.adampro.data.index.{Index, IndexingTaskTuple}
 import org.vitrivr.adampro.process.SharedComponentContext
 import org.vitrivr.adampro.query.query.RankingQuery
 import org.vitrivr.adampro.query.tracker.QueryTracker
-import org.vitrivr.adampro.utils.ml.{LinearRegression, TrainingSample}
+import org.vitrivr.adampro.utils.ml.{Regression, TrainingSample}
 
 import scala.collection.mutable.{ArrayBuffer, ListBuffer}
 
@@ -26,7 +26,7 @@ import scala.collection.mutable.{ArrayBuffer, ListBuffer}
   * Ivan Giangreco
   * November 2016
   */
-private[planner] class LRPlannerHeuristics(defaultNRuns: Int = 100) extends PlannerHeuristics("lr", defaultNRuns) {
+private[planner] class RegressionPlannerHeuristics(defaultNRuns: Int = 100) extends PlannerHeuristics("lr", defaultNRuns) {
   /**
     *
     * @param indexes
@@ -47,7 +47,7 @@ private[planner] class LRPlannerHeuristics(defaultNRuns: Int = 100) extends Plan
 
     trainData.foreach { case (indextypename, trainDatum) =>
       if (trainDatum.nonEmpty) {
-        LinearRegression.train(trainDatum.map { case (x, y) => TrainingSample(x, y.time) }, ac.config.optimizerPath + "/" + "lr-index-" + indextypename.name)
+        Regression.train(trainDatum.map { case (x, y) => TrainingSample(x, y.time) }, ac.config.optimizerPath + "/" + "lr-index-" + indextypename.name)
         ac.catalogManager.createOptimizerOption(name, "lr-index-" + indextypename.name, null)
       }
     }
@@ -70,7 +70,7 @@ private[planner] class LRPlannerHeuristics(defaultNRuns: Int = 100) extends Plan
       ac.catalogManager.createOptimizerOption(name, "lr-entity", null)
     }
 
-    LinearRegression.train(trainDatum.map { case (x, y) => TrainingSample(x, y.time) }, ac.config.optimizerPath + "/" + "lr-entity")
+    Regression.train(trainDatum.map { case (x, y) => TrainingSample(x, y.time) }, ac.config.optimizerPath + "/" + "lr-entity")
   }
 
   /**
@@ -106,7 +106,7 @@ private[planner] class LRPlannerHeuristics(defaultNRuns: Int = 100) extends Plan
     */
   private def getScore(key: String, f: DenseVector[Double])(implicit ac: SharedComponentContext): Double = {
     if (ac.catalogManager.containsOptimizerOptionMeta(name, key).getOrElse(false)) {
-      val lr = new LinearRegression(ac.config.optimizerPath + "/" + key)
+      val lr = new Regression(ac.config.optimizerPath + "/" + key)
       val ypred = lr.test(f)
 
       log.info("lr optimizer predicted " + ypred)

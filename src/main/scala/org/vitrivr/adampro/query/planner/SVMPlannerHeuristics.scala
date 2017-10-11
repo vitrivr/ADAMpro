@@ -15,7 +15,7 @@ import org.vitrivr.adampro.data.index.structures.sh.SHIndex
 import org.vitrivr.adampro.data.index.structures.va.{VAIndex, VAPlusIndex, VAPlusIndexMetaData}
 import org.vitrivr.adampro.data.index.{Index, IndexingTaskTuple}
 import org.vitrivr.adampro.process.SharedComponentContext
-import org.vitrivr.adampro.utils.ml.{LinearRegression, PegasosSVM, TrainingSample}
+import org.vitrivr.adampro.utils.ml.{Regression, PegasosSVM, TrainingSample}
 import org.vitrivr.adampro.query.query.RankingQuery
 
 import scala.collection.mutable.ListBuffer
