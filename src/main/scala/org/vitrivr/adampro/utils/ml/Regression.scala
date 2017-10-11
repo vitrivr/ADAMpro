@@ -4,13 +4,13 @@ package org.vitrivr.adampro.utils.ml
 import java.io.File
 
 import breeze.linalg.DenseVector
-import org.apache.spark.mllib.classification.LogisticRegressionModel
-import org.apache.spark.mllib.classification.LogisticRegressionWithSGD
+import org.apache.commons.io.FileUtils
+
 import org.apache.spark.mllib.linalg.Vectors
 import org.apache.spark.mllib.regression._
-import org.apache.spark.mllib.tree.{GradientBoostedTrees, RandomForest}
+import org.apache.spark.mllib.tree.{DecisionTree, GradientBoostedTrees, RandomForest}
 import org.apache.spark.mllib.tree.configuration.BoostingStrategy
-import org.apache.spark.mllib.tree.model.{GradientBoostedTreesModel, RandomForestModel}
+import org.apache.spark.mllib.tree.model.{DecisionTreeModel, GradientBoostedTreesModel, RandomForestModel}
 import org.apache.spark.rdd.RDD
 import org.vitrivr.adampro.process.SharedComponentContext
 import org.vitrivr.adampro.utils.Logging
@@ -28,9 +28,9 @@ class Regression(val path: String)(@transient implicit val ac: SharedComponentCo
 
   val algorithms = Seq(
     new LinearRegression(modelPath("lin")),
-    new LogisticRegression(modelPath("log")),
     new RidgeRegression(modelPath("rig")),
     new LassoRegression(modelPath("lasso")),
+    new DecisionTreeRegression(modelPath("dt")),
     new RandomForestRegression(modelPath("rf")),
     new GBTRegression(modelPath("gbt"))
   )
@@ -67,8 +67,16 @@ object Regression {
   }
 
 
-  abstract class RegressionModelClass {
-    def train(input: RDD[LabeledPoint]) : Unit
+  abstract class RegressionModelClass(val path : String) {
+    def train(input: RDD[LabeledPoint]) : Unit = {
+      if(new File(path).exists()){ //remove old model
+        FileUtils.deleteDirectory(new File(path))
+      }
+
+      run(input)
+    }
+
+    protected def run(input: RDD[LabeledPoint]) : Unit
 
     def test(f: DenseVector[Double]) : Double
   }
@@ -78,10 +86,10 @@ object Regression {
     * @param path
     * @param ac
     */
-  case class LinearRegression(path: String)(@transient implicit val ac: SharedComponentContext) extends RegressionModelClass {
+  case class LinearRegression(override val path: String)(@transient implicit val ac: SharedComponentContext) extends RegressionModelClass(path) {
     var model: Option[LinearRegressionModel] =  None
 
-    override def train(input: RDD[LabeledPoint]) : Unit = {
+    override def run(input: RDD[LabeledPoint]) : Unit = {
       model = None
       new LinearRegressionWithSGD().run(input).save(ac.sc, path)
     }
@@ -95,38 +103,15 @@ object Regression {
     }
   }
 
-
   /**
     *
     * @param path
     * @param ac
     */
-  case class LogisticRegression(path: String)(@transient implicit val ac: SharedComponentContext) extends RegressionModelClass {
-    var model: Option[LogisticRegressionModel] =  None
-
-    override def train(input: RDD[LabeledPoint]) : Unit = {
-      model = None
-      new LogisticRegressionWithSGD().run(input).save(ac.sc, path)
-    }
-
-    override def test(f: DenseVector[Double]) : Double = {
-      if(model.isEmpty){
-        model = Some(LogisticRegressionModel.load(ac.sc, path))
-      }
-
-      model.get.predict(Vectors.dense(f.toArray))
-    }
-  }
-
-  /**
-    *
-    * @param path
-    * @param ac
-    */
-  case class RidgeRegression(path: String)(@transient implicit val ac: SharedComponentContext) extends RegressionModelClass {
+  case class RidgeRegression(override val path: String)(@transient implicit val ac: SharedComponentContext) extends RegressionModelClass(path) {
     var model: Option[RidgeRegressionModel] =  None
 
-    override def train(input: RDD[LabeledPoint]) : Unit = {
+    override def run(input: RDD[LabeledPoint]) : Unit = {
       model = None
       new RidgeRegressionWithSGD().run(input).save(ac.sc, path)
     }
@@ -145,10 +130,10 @@ object Regression {
     * @param path
     * @param ac
     */
-  case class LassoRegression(path: String)(@transient implicit val ac: SharedComponentContext) extends RegressionModelClass {
+  case class LassoRegression(override val path: String)(@transient implicit val ac: SharedComponentContext) extends RegressionModelClass(path) {
     var model: Option[LassoModel] =  None
 
-    override def train(input: RDD[LabeledPoint]) : Unit = {
+    override def run(input: RDD[LabeledPoint]) : Unit = {
       model = None
       new LassoWithSGD().run(input).save(ac.sc, path)
     }
@@ -167,10 +152,39 @@ object Regression {
     * @param path
     * @param ac
     */
-  case class RandomForestRegression(path: String)(@transient implicit val ac: SharedComponentContext) extends RegressionModelClass {
+  case class DecisionTreeRegression(override val path: String)(@transient implicit val ac: SharedComponentContext) extends RegressionModelClass(path) {
+    var model: Option[DecisionTreeModel] =  None
+
+    override def run(input: RDD[LabeledPoint]) : Unit = {
+      model = None
+
+      val categoricalFeaturesInfo = Map[Int, Int]()
+      val impurity = "variance"
+      val maxDepth = 5
+      val maxBins = 32
+
+      DecisionTree.trainRegressor(input, categoricalFeaturesInfo, impurity,
+        maxDepth, maxBins)
+    }
+
+    override def test(f: DenseVector[Double]) : Double = {
+      if(model.isEmpty){
+        model = Some(DecisionTreeModel.load(ac.sc, path))
+      }
+
+      model.get.predict(Vectors.dense(f.toArray))
+    }
+  }
+
+  /**
+    *
+    * @param path
+    * @param ac
+    */
+  case class RandomForestRegression(override val path: String)(@transient implicit val ac: SharedComponentContext) extends RegressionModelClass(path) {
     var model: Option[RandomForestModel] =  None
 
-    override def train(input: RDD[LabeledPoint]) : Unit = {
+    override def run(input: RDD[LabeledPoint]) : Unit = {
       model = None
 
       val categoricalFeaturesInfo = Map[Int, Int]()
@@ -199,10 +213,10 @@ object Regression {
     * @param path
     * @param ac
     */
-  case class GBTRegression(path: String)(@transient implicit val ac: SharedComponentContext) extends RegressionModelClass {
+  case class GBTRegression(override val path: String)(@transient implicit val ac: SharedComponentContext) extends RegressionModelClass(path) {
     var model: Option[GradientBoostedTreesModel] =  None
 
-    override def train(input: RDD[LabeledPoint]) : Unit = {
+    override def run(input: RDD[LabeledPoint]) : Unit = {
       model = None
 
       val boostingStrategy = BoostingStrategy.defaultParams("Regression")
