@@ -46,11 +46,9 @@ private[planner] class LRPlannerHeuristics(defaultNRuns: Int = 100) extends Plan
     }.groupBy(_._1).mapValues(_.map(x => (x._2, x._3)))
 
     trainData.foreach { case (indextypename, trainDatum) =>
-
-      if (trainDatum.nonEmpty && !ac.catalogManager.containsOptimizerOptionMeta(name, "lr-index-" + indextypename.name).getOrElse(false)) {
+      if (trainDatum.nonEmpty) {
         LinearRegression.train(trainDatum.map { case (x, y) => TrainingSample(x, y.time) }, ac.config.optimizerPath + "/" + "lr-index-" + indextypename.name)
         ac.catalogManager.createOptimizerOption(name, "lr-index-" + indextypename.name, null)
-
       }
     }
 
@@ -68,7 +66,7 @@ private[planner] class LRPlannerHeuristics(defaultNRuns: Int = 100) extends Plan
       performMeasurement(entity, nnq, options.get("nruns").map(_.toInt)).map(measurement => (buildFeature(entity, nnq, measurement.toConfidence()), measurement))
     }
 
-    if (trainDatum.nonEmpty && !ac.catalogManager.containsOptimizerOptionMeta(name, "lr-entity").getOrElse(false)) {
+    if (trainDatum.nonEmpty) {
       ac.catalogManager.createOptimizerOption(name, "lr-entity", null)
     }
 
