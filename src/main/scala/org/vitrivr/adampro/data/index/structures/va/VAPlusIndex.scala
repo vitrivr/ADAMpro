@@ -1,7 +1,7 @@
 package org.vitrivr.adampro.data.index.structures.va
 
-import org.apache.spark.mllib.linalg.Vectors
-import org.apache.spark.sql.DataFrame
+
+import org.apache.spark.sql.{DataFrame, Row}
 import org.vitrivr.adampro.data.datatypes.vector.Vector
 import org.vitrivr.adampro.data.datatypes.vector.Vector._
 import org.vitrivr.adampro.query.tracker.QueryTracker
@@ -9,6 +9,7 @@ import org.vitrivr.adampro.data.index.Index._
 import org.vitrivr.adampro.data.index.structures.IndexTypes
 import org.vitrivr.adampro.process.SharedComponentContext
 import org.vitrivr.adampro.query.distance.DistanceFunction
+import org.apache.spark.ml.linalg.{DenseVector, Vectors}
 
 /**
   * ADAMpro
@@ -34,7 +35,9 @@ class VAPlusIndex(override val indexname: IndexName)(@transient override implici
   }
 
   override def scan(data: DataFrame, q: MathVector, distance: DistanceFunction, options: Map[String, String], k: Int)(tracker : QueryTracker): DataFrame = {
-    val adjustedQuery = meta.asInstanceOf[VAPlusIndexMetaData].pca.transform(Vectors.dense(q.toArray.map(_.toDouble)))
-    super.scan(data, new DenseMathVector(adjustedQuery.toArray.map(Vector.conv_double2vb(_))), distance, options, k)(tracker)
+    val queries = ac.spark.createDataFrame(Seq(Tuple1(Vectors.dense(q.toArray.map(_.toDouble))))).toDF("queries")
+
+    val adjustedQuery: Array[Row] = meta.asInstanceOf[VAPlusIndexMetaData].pca.setInputCol("queries").setOutputCol("pcaQueries").transform(queries).collect()
+    super.scan(data, new DenseMathVector(adjustedQuery.head.getAs[DenseVector](0).values.map(Vector.conv_double2vb(_))), distance, options, k)(tracker)
   }
 }

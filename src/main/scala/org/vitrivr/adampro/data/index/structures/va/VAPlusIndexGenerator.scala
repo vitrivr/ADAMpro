@@ -1,12 +1,11 @@
 package org.vitrivr.adampro.data.index.structures.va
 
 import breeze.linalg._
-import org.apache.spark.mllib.feature.{PCA, PCAModel}
-import org.apache.spark.mllib.linalg.Vectors
+import org.apache.spark.ml.feature.PCA
 import org.apache.spark.sql.functions._
 import org.apache.spark.sql.{DataFrame, Dataset}
 import org.vitrivr.adampro.config.AttributeNames
-import org.vitrivr.adampro.data.datatypes.vector.Vector
+import org.apache.spark.ml.linalg.{DenseVector, Vectors}
 import org.vitrivr.adampro.data.datatypes.vector.Vector._
 import org.vitrivr.adampro.utils.exception.QueryNotConformException
 import org.vitrivr.adampro.query.tracker.QueryTracker
@@ -41,10 +40,12 @@ class VAPlusIndexGenerator(totalNumOfBits: Option[Int], ndims : Option[Int], tra
 
     val pcaBc = ac.sc.broadcast(meta.pca)
 
-    val cellUDF = udf((c: DenseSparkVector) => {
-      getCells(pcaBc.value.transform(Vectors.dense(c.toArray.map(_.toDouble))).toArray.map(Vector.conv_double2vb(_)), meta.marks).map(_.toShort)
+    val cellUDF = udf((c: DenseVector) => {
+      getCells(c.values, meta.marks).map(_.toShort)
     })
-    val indexed = data.withColumn(AttributeNames.featureIndexColumnName, cellUDF(data(attribute)))
+
+    val transformed = pcaBc.value.setInputCol(attribute).setOutputCol("ap_" + attribute + "pca").transform(data.withColumn(attribute, toVecUDF(data(attribute)))).drop(attribute).withColumnRenamed("ap_" + attribute + "pca", attribute)
+    val indexed = transformed.withColumn(AttributeNames.featureIndexColumnName, cellUDF(transformed(attribute)))
 
     log.trace("VA-File (plus) finished indexing")
 
@@ -79,9 +80,7 @@ class VAPlusIndexGenerator(totalNumOfBits: Option[Int], ndims : Option[Int], tra
     log.trace("VA-File (variable) started training")
     val dim = ndims.getOrElse(trainData.head.ap_indexable.size)
 
-    import ac.spark.implicits._
-    val pca = new PCA(dim).fit(data.rdd.map(x => Vectors.dense(x.getAs[DenseSparkVector](attribute).toArray.map(_.toDouble))))
-
+    val pca = new PCA().setInputCol(attribute + "_vec").setK(dim).fit(data.withColumn(attribute + "_vec", toVecUDF(data(attribute))))
 
     //data
     val dTrainData = trainData.map(x => x.ap_indexable.map(x => x.toDouble).toArray)
@@ -110,14 +109,19 @@ class VAPlusIndexGenerator(totalNumOfBits: Option[Int], ndims : Option[Int], tra
 
     log.trace("VA-File (variable) finished training")
 
-    new VAPlusIndexMetaData(marks, signatureGenerator, pca, dim > pca.k)
+    new VAPlusIndexMetaData(marks, signatureGenerator, pca, dim > pca.getK)
   }
+
+
+  val toVecUDF = udf((c: DenseSparkVector) => {
+    Vectors.dense(c.map(_.toDouble).toArray)
+  })
 
 
   /**
     *
     */
-  @inline private def getCells(f: Iterable[VectorBase], marks: Seq[Seq[VectorBase]]): Seq[Int] = {
+  @inline private def getCells(f: Iterable[Double], marks: Seq[Seq[VectorBase]]): Seq[Int] = {
     f.zip(marks).map {
       case (x, l) =>
         val index = l.toArray.indexWhere(p => p >= x, 1)

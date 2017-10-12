@@ -315,7 +315,7 @@ private[planner] class RegressionPlannerHeuristics(defaultNRuns: Int = 100) exte
     val meta = index.meta.asInstanceOf[VAPlusIndexMetaData]
 
     lb += math.min(1.0, meta.marks.length / 500.0)
-    lb += math.min(1.0, meta.pca.k / 100.0)
+    lb += math.min(1.0, meta.pca.getK / 100.0)
 
     lb.toSeq
   }
