@@ -39,8 +39,10 @@ class VAPlusIndexGenerator(totalNumOfBits: Option[Int], ndims : Option[Int], tra
 
     val meta = train(getSample(math.max(trainingSize, MINIMUM_NUMBER_OF_TUPLE), attribute)(data), data, attribute)
 
+    val pcaBc = ac.sc.broadcast(meta.pca)
+
     val cellUDF = udf((c: DenseSparkVector) => {
-      getCells(meta.pca.transform(Vectors.dense(c.toArray.map(_.toDouble))).toArray.map(Vector.conv_double2vb(_)), meta.marks).map(_.toShort)
+      getCells(pcaBc.value.transform(Vectors.dense(c.toArray.map(_.toDouble))).toArray.map(Vector.conv_double2vb(_)), meta.marks).map(_.toShort)
     })
     val indexed = data.withColumn(AttributeNames.featureIndexColumnName, cellUDF(data(attribute)))
 
