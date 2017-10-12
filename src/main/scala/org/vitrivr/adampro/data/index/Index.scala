@@ -287,13 +287,15 @@ abstract class Index(val indexname: IndexName)(@transient implicit val ac: Share
     lb.append("confidence" -> confidence.toString)
     lb.append("attribute" -> attribute)
     lb.append("stale" -> isStale.toString)
-    lb.append("partitions" -> getData().get.rdd.getNumPartitions.toString)
 
-    //TODO: possibly add flag for displaying or not
-    val partitionInfo = getData().get.rdd.mapPartitionsWithIndex((idx, f) => {
-      Iterator((idx, f.length))
-    })
-    lb.append("tuplesPerPartition" -> partitionInfo.collect().map { case (id, length) => "(" + id + "," + length + ")" }.mkString)
+    if (!(options.contains("partitions") && options("partitions") == "false")) {
+      lb.append("partitions" -> getData().get.rdd.getNumPartitions.toString)
+
+      val partitionInfo = getData().get.rdd.mapPartitionsWithIndex((idx, f) => {
+        Iterator((idx, f.length))
+      })
+      lb.append("tuplesPerPartition" -> partitionInfo.collect().map { case (id, length) => "(" + id + "," + length + ")" }.mkString)
+    }
 
     lb.toMap
   }
