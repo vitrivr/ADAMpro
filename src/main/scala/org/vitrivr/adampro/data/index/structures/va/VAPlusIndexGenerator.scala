@@ -77,7 +77,7 @@ class VAPlusIndexGenerator(totalNumOfBits: Option[Int], ndims : Option[Int], tra
     * @return
     */
   private def train(trainData: Seq[IndexingTaskTuple], data : DataFrame, attribute : String): VAPlusIndexMetaData = {
-    log.trace("VA-File (variable) started training")
+    log.trace("VA-File (plus) started training")
     val dim = ndims.getOrElse(trainData.head.ap_indexable.size)
 
     val pca = new PCA().setInputCol(attribute + "_vec").setK(dim).fit(data.withColumn(attribute + "_vec", toVecUDF(data(attribute))))
