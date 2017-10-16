@@ -50,8 +50,6 @@ class AdamConfig extends Serializable with Logging {
     false
   }
 
-  val loglevel = config.getString("adampro.loglevel")
-
   val maximumCacheSizeEntity = 1000
   val expireAfterAccessEntity = 60 //in minutes
 

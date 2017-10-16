@@ -94,7 +94,6 @@ When starting ADAMpro, you can provide a `adampro.conf` file in the same path as
 The configuration file can be used to specify configurations for running ADAMpro. The file [ADAMConfig.scala](https://github.com/vitrivr/ADAMpro/blob/master/src/main/scala/org/vitrivr/adampro/config/AdamConfig.scala) reads the configuration file and provides the configurations to the application.
 
 The file contains information on 
-- the log level, e.g., `loglevel = "INFO"`
 - the path to all the internal files (catalog, etc.), e.g., `internalsPath =  "/adampro/internals"`
 - the grpc port, e.g., `grpc {port = "5890"}`
 - the storage engines to use, e.g., `engines = ["parquet", "index", "postgres", "postgis", "cassandra", "solr"]`

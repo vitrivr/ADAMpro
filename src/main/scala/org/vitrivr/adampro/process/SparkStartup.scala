@@ -29,6 +29,7 @@ object SparkStartup extends Logging {
         .set("spark.network.timeout", "240s")
         .set("spark.sql.autoBroadcastJoinThreshold", (50 * 1024 * 1024).toString)
         .set("spark.sql.files.openCostInBytes", (256 * 1024 * 1024).toString) // see [SPARK-19629]
+        .set("spark.executor.extraJavaOptions", "-Dlog4j.configuration=log4j.xml")
 
 
       if (config.master.isDefined) {
@@ -46,8 +47,6 @@ object SparkStartup extends Logging {
     @transient implicit lazy val sc = spark.sparkContext
     //the following line has been added to to a bug related to SPARK-18883 and SPARK-15849
     sc.hadoopConfiguration.set("mapreduce.fileoutputcommitter.algorithm.version", "2")
-
-    sc.setLogLevel(config.loglevel)
 
     @transient implicit lazy val sqlContext = spark.sqlContext
   }
