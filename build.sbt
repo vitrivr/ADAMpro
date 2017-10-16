@@ -88,6 +88,7 @@ val secondaryLibs = Seq(
     ExclusionRule("org.scala-lang"),
     ExclusionRule("org.slf4j"),
     ExclusionRule("log4j"),
+    ExclusionRule("ch.qos.logback"),
     ExclusionRule("io.netty")
   )
 )
@@ -109,6 +110,7 @@ val tertiaryLibs = Seq(
     ExclusionRule("org.scala-lang"),
     ExclusionRule("org.slf4j"),
     ExclusionRule("log4j"),
+    ExclusionRule("ch.qos.logback"),
     ExclusionRule("io.netty")
   )
 )
@@ -122,6 +124,7 @@ val testLibs = Seq(
     ExclusionRule("org.scala-lang"),
     ExclusionRule("org.slf4j"),
     ExclusionRule("log4j"),
+    ExclusionRule("ch.qos.logback"),
     ExclusionRule("io.netty")
   )
 )
