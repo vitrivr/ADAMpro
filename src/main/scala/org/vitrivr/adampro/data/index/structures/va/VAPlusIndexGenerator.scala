@@ -105,7 +105,7 @@ class VAPlusIndexGenerator(totalNumOfBits: Option[Int], ndims : Option[Int], tra
 
     val signatureGenerator = new VariableSignatureGenerator(modes)
 
-    val marks = VAPlusMarksGenerator.getMarks(trainData, modes.map(x => math.max(1, 2 << (x - 1))).toSeq)
+    val marks = VAPlusMarksGenerator.getMarks(trainData, modes.map(x => math.min(math.max(1, 2 << (x - 1)), Short.MaxValue)).toSeq)
 
     log.trace("VA-File (variable) finished training")
 

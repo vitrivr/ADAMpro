@@ -76,7 +76,8 @@ class VAIndex(override val indexname: IndexName)(@transient override implicit va
       var bound: Distance = 0
       var idx = 0
       while (idx < cells.length) {
-        bound += boundsBoundsBc.value(boundsIndexBc.value(idx) + cells(idx))
+        val cellsIdx = if(cells(idx) < 0) {(Short.MaxValue + 1) * 2 + cells(idx)} else {cells(idx)}
+        bound += boundsBoundsBc.value(boundsIndexBc.value(idx) + cellsIdx)
         idx += 1
       }
 
