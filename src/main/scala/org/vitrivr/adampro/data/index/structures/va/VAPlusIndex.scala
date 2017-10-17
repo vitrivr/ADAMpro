@@ -38,6 +38,6 @@ class VAPlusIndex(override val indexname: IndexName)(@transient override implici
     val queries = ac.spark.createDataFrame(Seq(Tuple1(Vectors.dense(q.toArray.map(_.toDouble))))).toDF("queries")
 
     val adjustedQuery: Array[Row] = meta.asInstanceOf[VAPlusIndexMetaData].pca.setInputCol("queries").setOutputCol("pcaQueries").transform(queries).collect()
-    super.scan(data, new DenseMathVector(adjustedQuery.head.getAs[DenseVector](0).values.map(Vector.conv_double2vb(_))), distance, options, k)(tracker)
+    super.scan(data, new DenseMathVector(adjustedQuery.head.getAs[DenseVector]("pcaQueries").values.map(Vector.conv_double2vb(_))), distance, options, k)(tracker)
   }
 }
