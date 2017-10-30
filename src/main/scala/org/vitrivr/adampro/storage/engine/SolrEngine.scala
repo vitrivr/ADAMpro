@@ -37,12 +37,25 @@ class SolrEngine(private val url: String)(@transient override implicit val ac: S
 
   private val SOLR_MAX_RESULTS = 5000
 
+
   /**
     *
     * @param props
     */
   def this(props: Map[String, String])(implicit ac: SharedComponentContext) {
     this(props.get("url").get)(ac)
+  }
+
+
+  /**
+    *
+    * @param baseUrl
+    * @param storename
+    */
+  private def getClient(baseUrl: String, storename: Option[String] = None): HttpSolrClient = {
+    val url = baseUrl + storename.map("/" + _).getOrElse("")
+
+    new HttpSolrClient.Builder().withBaseSolrUrl(url).build()
   }
 
 
@@ -55,7 +68,7 @@ class SolrEngine(private val url: String)(@transient override implicit val ac: S
     * @return
     */
   override def create(storename: String, attributes: Seq[AttributeDefinition], params: Map[String, String])(implicit ac: SharedComponentContext): Try[Map[String, String]] = {
-    val client = new HttpSolrClient(url)
+    val client = getClient(url)
 
     try {
       val createReq = new CoreAdminRequest.Create()
@@ -81,7 +94,7 @@ class SolrEngine(private val url: String)(@transient override implicit val ac: S
     log.trace("solr exists operation")
 
     try {
-      Success(CoreAdminRequest.getStatus(storename, new HttpSolrClient(url)).getCoreStatus(storename).get("instanceDir") != null)
+      Success(CoreAdminRequest.getStatus(storename, getClient(url)).getCoreStatus(storename).get("instanceDir") != null)
     } catch {
       case e: Exception =>
         Failure(e)
@@ -135,7 +148,7 @@ class SolrEngine(private val url: String)(@transient override implicit val ac: S
     */
   override def read(storename: String, attributes: Seq[AttributeDefinition], predicates: Seq[Predicate], params: Map[String, String])(implicit ac: SharedComponentContext): Try[DataFrame] = {
     try {
-      val client = new HttpSolrClient(url + "/" + storename)
+      val client = getClient(url, Some(storename))
       val nameDicAttributenameToSolrname = attributes.map(attribute => attribute.name -> (attribute.name + getSuffix(attribute.attributeType))).toMap
       val nameDicSolrnameToAttributename = nameDicAttributenameToSolrname.map(_.swap)
 
@@ -152,7 +165,7 @@ class SolrEngine(private val url: String)(@transient override implicit val ac: S
       solrQuery.set("defType", "edismax")
 
       //set all other params
-      (params -("query", "fields")).foreach { case (param, value) =>
+      (params - ("query", "fields")).foreach { case (param, value) =>
         solrQuery.set(param, value)
       }
 
@@ -169,22 +182,22 @@ class SolrEngine(private val url: String)(@transient override implicit val ac: S
 
       import collection.JavaConverters._
       val rdd = ac.sqlContext.sparkContext.parallelize(results.subList(0, nresults).asScala.map(doc => {
-          val data = (nameDicSolrnameToAttributename.keys.toSeq ++ Seq("score")).map(solrname => {
-            val fieldData = doc.get(solrname)
+        val data = (nameDicSolrnameToAttributename.keys.toSeq ++ Seq("score")).map(solrname => {
+          val fieldData = doc.get(solrname)
 
-            if (fieldData != null) {
-              fieldData match {
-                case list: java.util.ArrayList[_] => if (list.size() > 0) {
-                  list.get(0)
-                }
-                case any => any
+          if (fieldData != null) {
+            fieldData match {
+              case list: java.util.ArrayList[_] => if (list.size() > 0) {
+                list.get(0)
               }
-            } else {
-              null
+              case any => any
             }
-          }).filter(_ != null).toSeq
-          Row(data: _*)
-        }))
+          } else {
+            null
+          }
+        }).filter(_ != null).toSeq
+        Row(data: _*)
+      }))
 
       val df = if (!results.isEmpty) {
         val tmpDoc = results.get(0)
@@ -257,7 +270,7 @@ class SolrEngine(private val url: String)(@transient override implicit val ac: S
 
     df.foreachPartition {
       it =>
-        val partClient = new HttpSolrClient(url + "/" + storename)
+        val partClient = getClient(url, Some(storename))
 
         it.foreach {
           row =>
@@ -286,13 +299,19 @@ class SolrEngine(private val url: String)(@transient override implicit val ac: S
     * @return
     */
   override def drop(storename: String)(implicit ac: SharedComponentContext): Try[Void] = {
-    val client = new HttpSolrClient(url)
-
+    val client = getClient(url, Some(storename))
     client.deleteByQuery(storename.toString, "*:*")
     client.commit(storename)
 
-    //deleting core is not easily possible, therefore we just delete the data
-
-    Success(null)
+    try {
+      val unloadReq = new CoreAdminRequest.Unload(true)
+      unloadReq.setDeleteDataDir(true)
+      unloadReq.setDeleteIndex(true)
+      unloadReq.setDeleteInstanceDir(true)
+      unloadReq.process(client)
+      Success(null)
+    } catch {
+      case e: Exception => Failure(e)
+    }
   }
 }
