@@ -1,9 +1,11 @@
 package org.vitrivr.adampro.query.ast.internal
 
+import org.apache
 import org.vitrivr.adampro.config.AttributeNames
 import org.vitrivr.adampro.query.ast.generic.{ExpressionDetails, QueryEvaluationOptions, QueryExpression}
 import org.vitrivr.adampro.query.query.RankingQuery
 import org.apache.http.annotation.Experimental
+import org.apache.spark
 import org.apache.spark.sql.{DataFrame, Row}
 import org.apache.spark.sql.functions._
 import org.apache.spark.sql.types.{IntegerType, StructField, StructType}
@@ -42,17 +44,23 @@ case class StochasticIndexQueryExpression(private val exprs: Seq[IndexScanExpres
     ac.sc.setJobGroup(id.getOrElse(""), "compound query index scan", interruptOnCancel = true)
 
     exprs.map(_.filter = filter)
-    val results = exprs.map(expr => {
+    val subresults = exprs.map(expr => {
       //make sure that index only is queried and not a sequential scan too!
       expr.execute(options)(tracker)
-    }).filter(_.isDefined).map(_.get.select(entity.pk.name).collect().map(_.getAs[TupleID](entity.pk.name)))
+    }).filter(_.isDefined).map(_.get.select(entity.pk.name))
 
-    val tuples = results.flatten.groupBy(x => x).mapValues(x => results.length - x.length).toList.sortBy(_._2)
-    val rdd = ac.sc.parallelize(tuples.map(x => Row(x._1.asInstanceOf[TupleID], x._2)))
+    var result = ac.spark.createDataFrame(ac.sc.emptyRDD[Row], StructType(StructField(entity.pk.name, TupleID.SparkTupleID) :: Nil))
 
-    val schema = StructType(Seq(StructField(entity.pk.name, TupleID.SparkTupleID), StructField(AttributeNames.distanceColumnName, IntegerType)))
+    for (subresult <- subresults) {
+      result = result.union(subresult)
+    }
 
-    var result = ac.sqlContext.createDataFrame(rdd, schema).orderBy(AttributeNames.distanceColumnName)
+    val nsubres = subresults.length.toDouble
+    val groupingExpr = col(entity.pk.name) % ac.config.defaultNumberOfPartitions as "group"
+
+    result = result.repartition(numPartitions = ac.config.defaultNumberOfPartitions, groupingExpr)
+      .groupBy(entity.pk.name).agg((lit(1.0) - (count(col(entity.pk.name)) / nsubres)) as AttributeNames.distanceColumnName)
+      .orderBy(AttributeNames.distanceColumnName)
 
     if (options.isDefined && options.get.storeSourceProvenance) {
       result = result.withColumn(AttributeNames.sourceColumnName, lit(info.scantype.getOrElse("undefined")))

@@ -492,7 +492,7 @@ class QueryTestSuite extends AdamTestBase with ScalaFutures {
   }
 
 
-  feature("compound index scan") {
+  feature("stochastic index scan") {
     scenario("perform a compound index scan query with various index types on the same entity") {
       withQueryEvaluationSet { es =>
         val index = IndexOp.generateAll(es.entity.entityname, "vectorfield", es.distance)()
