@@ -32,7 +32,7 @@ services:
         - 8080:8080
         - 9099:9099
       volumes:
-        - ./adampro.conf:/adampro/adampro.conf
+        - ./adampro-extended.conf:/adampro/adampro.conf
         - ./shared/:/adampro/data/shared
       networks:
         - vitrivrnw
@@ -60,7 +60,7 @@ services:
       ports:
         - 8081
       volumes:
-        - ./adampro.conf:/adampro/adampro.conf
+        - ./adampro-extended.conf:/adampro/adampro.conf
         - ./shared/:/adampro/data/shared
       networks:
         - vitrivrnw

@@ -58,9 +58,12 @@ EXPOSE 9099
 ENV ADAMPRO_MEMORY 2g
 ENV ADAMPRO_MASTER local[4]
 
+COPY adampro.conf ${ADAMPRO_HOME}/adampro.conf.template
+RUN chown root.root ${ADAMPRO_HOME}/adampro.conf; chmod 700 ${ADAMPRO_HOME}/adampro.conf
 COPY wait-for-it.sh ${ADAMPRO_HOME}/wait-for-it.sh
+RUN chown root.root ${ADAMPRO_HOME}/wait-for-it.sh; chmod 700 ${ADAMPRO_HOME}/wait-for-it.sh
 COPY bootstrap.sh ${ADAMPRO_HOME}/bootstrap.sh
-RUN chown root.root ${ADAMPRO_HOME}/wait-for-it.sh; chmod 700 ${ADAMPRO_HOME}/wait-for-it.sh; chown root.root ${ADAMPRO_HOME}/bootstrap.sh; chmod 700 ${ADAMPRO_HOME}/bootstrap.sh
+RUN chown root.root ${ADAMPRO_HOME}/bootstrap.sh; chmod 700 ${ADAMPRO_HOME}/bootstrap.sh
 
 ENTRYPOINT ["/adampro/bootstrap.sh"]
 
