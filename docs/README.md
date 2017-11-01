@@ -25,16 +25,6 @@ http://localhost:9099
 ```
 to open the ADAMpro UI (and ``http://localhost:4040`` for the Spark UI). Furthermore, you can connect on port 5890 to make use of the database.
 
-We provide the OSVC data for [download](http://download-dbis.dmi.unibas.ch/ADAMpro/osvc.tar.gz).
-
-Untar the folder and copy to `adampro/data`; then restart the container.
-
-```
-docker cp osvc.tar.gz adampro:/adampro/data
-docker exec adampro tar -C /adampro/data/ -xzf /adampro/data/osvc.tar.gz 
-docker restart adampro
-```
-
 Our Docker containers come with an update script located at `/adampro/update.sh`, which allows you to check out the newest version of the code from the repository and re-build the jars without creating a new container (and therefore loosing existing data). To run the update routine, run in your host system:
 
 ```
@@ -43,7 +33,11 @@ docker exec adampro /adampro/update.sh
 
 Note that the Docker container makes use of a number of environment variables which can be adjusted, e.g., for better performance. Note in particular `ADAMPRO_MEMORY` which is set to `2g`. A few other environment variables, e.g., `ADAMPRO_START_WEBUI`, can be used to denote whether certain parts of ADAMpro should be started or not.
 
-### Running ADAMpro locally
+Using the aforementioned options for creating the Docker container, will create a container which stores the data in files. Other Docker tags are available for containers which e.g., come with PostgreSQL and solr installed, or which use HDFS.
+
+
+
+### Running ADAMpro natively
 ADAMpro can be built using [sbt](http://www.scala-sbt.org/). We provide various sbt tasks to simplify the deployment and development.
 
 * `assembly` creates a fat jar with ADAMpro to submit to spark, run `sbt proto` first
@@ -157,24 +151,39 @@ For checking the performance of ADAMpro, also consider the creation of flame gra
 ## Deployment
 For introductory information see the [getting started](#getting-started) section in this documentation.
 
-### Distributed deployment without HDFS
-The distributed deployment without HDFS can be used if ADAMpro is being deployed on one single machine only (but still in a simulated distributed environment).
+### Self-contained Docker container
+We have presented how to start a minimal Docker container. For self-container containers which come with PostgreSQL and solr within the container, you may use
+```
+docker run --name adampro -p 5005:5005 -p 5890:5890 -p 9099:9099 -p 5432:5432 -p 9000:9000 -p 4040:4040 -d vitrivr/adampro:latest-selfcontained
+```
 
-Check out the ADAMpro repository. The folder `scripts/docker-min` contains a `docker-compose.yml` file which can be used with `docker-compose`. For this, move into the `docker-min` folder an run:
+Note: For demo purposes, this container can be filled with data. We provide the OSVC data for [download](http://download-dbis.dmi.unibas.ch/ADAMpro/osvc.tar.gz).
+
+Untar the folder and copy to `adampro/data`; then restart the container.
+
+```
+docker cp osvc.tar.gz adampro:/adampro/data
+docker exec adampro tar -C /adampro/data/ -xzf /adampro/data/osvc.tar.gz 
+docker restart adampro
+```
+
+### Deployment using docker-compose
+We provide a number of docker-compose scripts which can be used to setup the full environment. Check out the ADAMpro repository and go to the folder `scripts/docker` and run 
 ```
 docker-compose up
 ```
-This will start up a master and a single worker node. To add more workers (note that the number of masters is limited to 1), run the `scale` command and specify the number of workers you would like to deploy in total:
+This will start up a master and a single worker node and separate containers for PostgreSQL, Apache Cassandra and Apache solr able to communicate with each other. To add more workers (note that the number of masters is limited to 1), run the `scale` command and specify the number of workers you would like to deploy in total:
 ```
 docker-compose scale worker=5
 ```
+
 Note that this setup will not use Hadoop for creating a HDFS, but will rather just mount a folder to all Docker containers (both master and worker container). Therefore this deployment will only work if all containers run on one single machine.
 
 
 ### Distributed deployment with HDFS
 
 #### Using docker-compose
-The distributed deployment with HDFS can be used to run ADAMpro with data being distributed over HDFS. This can be helpful for truly distributed setups.
+The distributed deployment with HDFS can be used to run ADAMpro with data being distributed over HDFS (i.e., Docker possibly running over multiple physical machines). This can be helpful for truly distributed setups.
 
 The folder `scripts/docker-hdfs` contains a `docker-compose.yml`; move into the `docker-hdfs` folder an run:
 ```
