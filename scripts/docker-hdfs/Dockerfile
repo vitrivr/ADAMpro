@@ -1,9 +1,5 @@
 FROM vitrivr/adampro:latest
 
-ARG MASTER_NODE
-ENV MASTER_HOSTNAME $MASTER_NODE
-ENV ADAMPRO_MASTER spark://$MASTER_HOSTNAME:7077
-
 # ssh, dnsmasq
 RUN apt-get -y install ssh
 COPY id_rsa.pub /root/.ssh/id_rsa.pub

@@ -1,15 +1,14 @@
-version: '3'
+version: '3.3'
 
 services:
   master:
       build:
         context: .
-        args:
-          MASTER_NODE: master
       image: vitrivr/adampro-dist-hdfs
       entrypoint: "/adampro/bootstrap.sh -d --masternode"
       hostname: master
       environment:
+        ADAMPRO_MASTER: spark://master:7077
         ADAMPRO_DRIVER_MEMORY: 4g
         ADAMPRO_EXECUTOR_MEMORY: 2g
         SPARK_PUBLIC_DNS: localhost
@@ -47,6 +46,9 @@ services:
       image: vitrivr/adampro-dist-hdfs
       entrypoint: "/adampro/bootstrap.sh -d --workernode"
       environment:
+        ADAMPRO_MASTER: spark://master:7077
+        ADAMPRO_DRIVER_MEMORY: 4g
+        ADAMPRO_EXECUTOR_MEMORY: 2g
         SPARK_WORKER_INSTANCES: 1
         SPARK_PUBLIC_DNS: localhost
       links:

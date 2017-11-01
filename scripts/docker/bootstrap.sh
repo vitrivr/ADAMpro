@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # configuration
-sed s/HOSTNAME/$HOSTNAME/ $ADAM_HOME/code/scripts/docker/adampro.conf.template > $ADAM_HOME/adampro.conf
+sed s/HOSTNAME/$HOSTNAME/ $ADAMPRO_HOME/code/scripts/docker/adampro.conf.template > $ADAMPRO_HOME/adampro.conf
 
 # storage engines
 if [[( -z "$ADAMPRO_START_POSTGRES" ) || ( "$ADAMPRO_START_POSTGRES" == "true")]]; then
@@ -16,11 +16,11 @@ fi
 
 # run ADAMpro
 export SPARK_SUBMIT_OPTS=-agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=5005
-$SPARK_HOME/bin/spark-submit --master "$ADAMPRO_MASTER" --driver-memory "$ADAMPRO_MEMORY" --executor-memory "$ADAMPRO_MEMORY" --deploy-mode client --driver-java-options "-Dlog4j.configuration=file:$ADAM_HOME/log4j.xml" --conf "spark.executor.extraJavaOptions=-Dlog4j.configuration=file:$ADAM_HOME/log4j.xml" --driver-java-options "-XX:+UnlockCommercialFeatures -XX:+FlightRecorder" --conf "spark.executor.extraJavaOptions=-XX:+UnlockCommercialFeatures -XX:+FlightRecorder"  --conf "spark.sql.broadcastTimeout=3600" --class org.vitrivr.adampro.main.Startup $ADAM_HOME/ADAMpro-assembly-0.1.0.jar &
+$SPARK_HOME/bin/spark-submit --master "$ADAMPRO_MASTER" --driver-memory "$ADAMPRO_MEMORY" --executor-memory "$ADAMPRO_MEMORY" --deploy-mode client --driver-java-options "-Dlog4j.configuration=file:$ADAMPRO_HOME/log4j.xml" --conf "spark.executor.extraJavaOptions=-Dlog4j.configuration=file:$ADAMPRO_HOME/log4j.xml" --driver-java-options "-XX:+UnlockCommercialFeatures -XX:+FlightRecorder" --conf "spark.executor.extraJavaOptions=-XX:+UnlockCommercialFeatures -XX:+FlightRecorder"  --conf "spark.sql.broadcastTimeout=3600" --class org.vitrivr.adampro.main.Startup $ADAMPRO_HOME/ADAMpro-assembly-0.1.0.jar &
 
 # start web UI
 if [[ ( -z "$ADAMPRO_START_WEBUI" ) || ( "$ADAMPRO_START_WEBUI" == "true")]]; then
-    java -jar $ADAM_HOME/ADAMpro-web-assembly-0.1.0.jar &
+    java -jar $ADAMPRO_HOME/ADAMpro-web-assembly-0.1.0.jar &
 fi
 
 # start notebook

@@ -160,7 +160,7 @@ For introductory information see the [getting started](#getting-started) section
 ### Distributed deployment without HDFS
 The distributed deployment without HDFS can be used if ADAMpro is being deployed on one single machine only (but still in a simulated distributed environment).
 
-Check out the ADAMpro repository. The folder `scripts/docker-nohdfs` contains a `docker-compose.yml` file which can be used with `docker-compose`. For this, move into the `docker-nohdfs` folder an run:
+Check out the ADAMpro repository. The folder `scripts/docker-min` contains a `docker-compose.yml` file which can be used with `docker-compose`. For this, move into the `docker-min` folder an run:
 ```
 docker-compose up
 ```

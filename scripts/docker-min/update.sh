@@ -6,7 +6,7 @@ if [[ $EUID > 0 ]]; then # we can compare directly with this syntax.
   exit 1
 fi
 
-cd $ADAM_CODE
+cd $ADAMPRO_CODE
 
 # update the code
 git checkout $ADAMPRO_BRANCH
@@ -28,10 +28,10 @@ elif [ $LOCAL = $BASE ]; then
     sbt proto
     sbt assembly
     sbt web/assembly
-    rm -f ${ADAM_HOME}/log4j.xml
-    rm -f ${ADAM_HOME}/ADAMpro-assembly-0.1.0.jar ${ADAM_HOME}/ADAMpro-web-assembly-0.1.0.jar
-    cp $ADAM_CODE/conf/log4j.xml ${ADAM_HOME}/log4j.xml
-    cp $ADAM_CODE/target/scala-2.11/ADAMpro-assembly-0.1.0.jar ${ADAM_HOME}/ADAMpro-assembly-0.1.0.jar && cp $ADAM_CODE/web/target/scala-2.11/ADAMpro-web-assembly-0.1.0.jar ${ADAM_HOME}/ADAMpro-web-assembly-0.1.0.jar
+    rm -f ${ADAMPRO_HOME}/log4j.xml
+    rm -f ${ADAMPRO_HOME}/ADAMpro-assembly-0.1.0.jar ${ADAMPRO_HOME}/ADAMpro-web-assembly-0.1.0.jar
+    cp $ADAMPRO_CODE/conf/log4j.xml ${ADAMPRO_HOME}/log4j.xml
+    cp $ADAMPRO_CODE/target/scala-2.11/ADAMpro-assembly-0.1.0.jar ${ADAMPRO_HOME}/ADAMpro-assembly-0.1.0.jar && cp $ADAMPRO_CODE/web/target/scala-2.11/ADAMpro-web-assembly-0.1.0.jar ${ADAMPRO_HOME}/ADAMpro-web-assembly-0.1.0.jar
 
     reboot
 elif [ $REMOTE = $BASE ]; then

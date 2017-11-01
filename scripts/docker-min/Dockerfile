@@ -4,9 +4,9 @@ FROM ubuntu:16.04
 RUN apt-get -y update; apt-get -y install apt-transport-https bc curl vim apt-utils software-properties-common git
 
 # env variables
-ENV ADAM_HOME /adampro
-ENV ADAM_CODE ${ADAM_HOME}/code
-ENV ADAM_DATA ${ADAM_HOME}/data
+ENV ADAMPRO_HOME /adampro
+ENV ADAMPRO_CODE ${ADAMPRO_HOME}/code
+ENV ADAMPRO_DATA ${ADAMPRO_HOME}/data
 
 # updating JDK to version 8
 RUN add-apt-repository -y ppa:webupd8team/java && apt-get update; \
@@ -33,19 +33,19 @@ RUN curl http://d3kbcqa49mib13.cloudfront.net/spark-2.2.0-bin-hadoop2.7.tgz | ta
 ENV SPARK_HOME /usr/lib/spark
 
 # ADAMpro
-RUN mkdir -p ${ADAM_HOME}; chmod 777 ${ADAM_HOME}
+RUN mkdir -p ${ADAMPRO_HOME}; chmod 777 ${ADAMPRO_HOME}
 
 ENV ADAMPRO_GIT "https://github.com/vitrivr/ADAMpro.git"
 ENV ADAMPRO_BRANCH "dev_v.2.1"
 
 # careful: the next step is potentially cached by Docker!
-RUN git clone -b $ADAMPRO_BRANCH $ADAMPRO_GIT --recursive $ADAM_CODE
+RUN git clone -b $ADAMPRO_BRANCH $ADAMPRO_GIT --recursive $ADAMPRO_CODE
 
-RUN cd $ADAM_CODE && sbt proto && sbt assembly && sbt web/assembly; \
-    cp $ADAM_CODE/conf/log4j.xml ${ADAM_HOME}/log4j.xml; \
-    cp $ADAM_CODE/target/scala-2.11/ADAMpro-assembly-0.1.0.jar ${ADAM_HOME}/ADAMpro-assembly-0.1.0.jar && cp $ADAM_CODE/web/target/scala-2.11/ADAMpro-web-assembly-0.1.0.jar ${ADAM_HOME}/ADAMpro-web-assembly-0.1.0.jar
-COPY update.sh ${ADAM_HOME}/update.sh
-RUN chmod 700 ${ADAM_HOME}/update.sh
+RUN cd $ADAMPRO_CODE && sbt proto && sbt assembly && sbt web/assembly; \
+    cp $ADAMPRO_CODE/conf/log4j.xml ${ADAMPRO_HOME}/log4j.xml; \
+    cp $ADAMPRO_CODE/target/scala-2.11/ADAMpro-assembly-0.1.0.jar ${ADAMPRO_HOME}/ADAMpro-assembly-0.1.0.jar && cp $ADAMPRO_CODE/web/target/scala-2.11/ADAMpro-web-assembly-0.1.0.jar ${ADAMPRO_HOME}/ADAMpro-web-assembly-0.1.0.jar
+COPY update.sh ${ADAMPRO_HOME}/update.sh
+RUN chmod 700 ${ADAMPRO_HOME}/update.sh
 
 # port for spark UI
 EXPOSE 4040
@@ -55,15 +55,11 @@ EXPOSE 5890
 EXPOSE 9099
 
 # bootstrap
-ARG MASTER_NODE
-ENV MASTER_HOSTNAME $MASTER_NODE
-ENV ADAMPRO_MASTER spark://$MASTER_HOSTNAME:7077
-
 ENV ADAMPRO_START_WEBUI true
 ENV ADAMPRO_MEMORY 2g
 
-COPY wait-for-it.sh ${ADAM_HOME}/wait-for-it.sh
-COPY bootstrap.sh ${ADAM_HOME}/bootstrap.sh
-RUN chown root.root ${ADAM_HOME}/wait-for-it.sh; chmod 700 ${ADAM_HOME}/wait-for-it.sh; chown root.root ${ADAM_HOME}/bootstrap.sh; chmod 700 ${ADAM_HOME}/bootstrap.sh
+COPY wait-for-it.sh ${ADAMPRO_HOME}/wait-for-it.sh
+COPY bootstrap.sh ${ADAMPRO_HOME}/bootstrap.sh
+RUN chown root.root ${ADAMPRO_HOME}/wait-for-it.sh; chmod 700 ${ADAMPRO_HOME}/wait-for-it.sh; chown root.root ${ADAMPRO_HOME}/bootstrap.sh; chmod 700 ${ADAMPRO_HOME}/bootstrap.sh
 
 ENTRYPOINT ["/adampro/bootstrap.sh"]

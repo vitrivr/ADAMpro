@@ -1,1 +1,0 @@
-This folder may contain data that is used to populate the ADAMpro database.
