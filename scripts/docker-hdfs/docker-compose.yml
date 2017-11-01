@@ -2,9 +2,7 @@ version: '3.3'
 
 services:
   master:
-      build:
-        context: .
-      image: vitrivr/adampro-dist-hdfs
+      image: vitrivr/adampro:latest-hdfs
       entrypoint: "/adampro/bootstrap.sh -d --masternode"
       hostname: master
       environment:
@@ -39,11 +37,7 @@ services:
 
 
   worker:
-      build:
-        context: .
-        args:
-          MASTER_NODE: master
-      image: vitrivr/adampro-dist-hdfs
+      image: vitrivr/adampro:latest-hdfs
       entrypoint: "/adampro/bootstrap.sh -d --workernode"
       environment:
         ADAMPRO_MASTER: spark://master:7077

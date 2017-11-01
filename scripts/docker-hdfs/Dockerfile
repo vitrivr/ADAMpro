@@ -1,4 +1,4 @@
-FROM vitrivr/adampro:latest
+FROM vitrivr/adampro:latest-selfcontained
 
 # ssh, dnsmasq
 RUN apt-get -y install ssh

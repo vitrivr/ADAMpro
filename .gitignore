@@ -10,8 +10,7 @@ build
 src/generated
 *.csv
 lib/grpc-assembly-0.1-SNAPSHOT.jar
-scripts/docker/data/internals
-scripts/docker/data/data
-scripts/docker-min/shared/
+scripts/docker/shared/
+scripts/docker-selfcontained/data/
 tmp
 chronos

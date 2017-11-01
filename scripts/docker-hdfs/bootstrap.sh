@@ -35,17 +35,31 @@ if [[ $1 = "--masternode" || $2 = "--masternode" ]]; then
   service dnsmasq start
   $HADOOP_PREFIX/sbin/start-yarn.sh
   $HADOOP_PREFIX/sbin/start-dfs.sh
-
+  
   # storage engines
-  service postgresql stop
-  su --login - postgres --command "$POSTGRES_HOME/bin/pg_ctl -w start -D $PGDATA"
+  if [[( -z "$ADAMPRO_START_POSTGRES" ) || ( "$ADAMPRO_START_POSTGRES" == "true")]]; then
+      service postgresql stop
+      su --login - postgres --command "$POSTGRES_HOME/bin/pg_ctl -w start -D $PGDATA"
+  fi
+
+  # start solr
+  if [[ (-z "$ADAMPRO_START_SOLR" ) || ( "$ADAMPRO_START_SOLR" == "true")]]; then
+      solr start -noprompt &
+  fi
 
   # run ADAMpro
   $SPARK_HOME/sbin/start-master.sh
   $SPARK_HOME/bin/spark-submit --master "$ADAMPRO_MASTER" --driver-memory $ADAMPRO_DRIVER_MEMORY --executor-memory $ADAMPRO_EXECUTOR_MEMORY --deploy-mode client --driver-java-options "-Dlog4j.configuration=file:$ADAM_HOME/log4j.xml" --conf "spark.executor.extraJavaOptions=-Dlog4j.configuration=file:$ADAM_HOME/log4j.xml" --driver-java-options "-XX:+UnlockCommercialFeatures -XX:+FlightRecorder" --conf "spark.executor.extraJavaOptions=-XX:+UnlockCommercialFeatures -XX:+FlightRecorder" --class org.vitrivr.adampro.main.Startup $ADAM_HOME/ADAMpro-assembly-0.1.0.jar &
 
   # start web UI
-  java -jar $ADAM_HOME/ADAMpro-web-assembly-0.1.0.jar &
+  if [[ ( -z "$ADAMPRO_START_WEBUI" ) || ( "$ADAMPRO_START_WEBUI" == "true")]]; then
+      java -jar $ADAMPRO_HOME/ADAMpro-web-assembly-0.1.0.jar &
+  fi
+
+  # start notebook
+  if [[ ( -z "$ADAMPRO_START_NOTEBOOK" ) || ( "$ADAMPRO_START_NOTEBOOK" == "true")]]; then
+      $SPARK_NOTEBOOK_HOME/bin/spark-notebook -Dhttp.port=10088 &
+  fi
 fi
 
 

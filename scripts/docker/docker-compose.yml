@@ -2,10 +2,8 @@ version: '3.3'
 
 services:
   master:
-      build:
-        context: .
+      image: vitrivr/adampro:latest
       entrypoint: ["/adampro/wait-for-it.sh", "cassandra:9042", "--", "/adampro/bootstrap.sh", "-d", "--masternode"]
-      image: vitrivr/adampro-dist
       hostname: master
       depends_on:
         - cassandra
@@ -40,7 +38,7 @@ services:
         - vitrivrnw
 
   worker:
-      image: vitrivr/adampro-dist
+      image: vitrivr/adampro:latest
       entrypoint: ["/adampro/wait-for-it.sh", "master:7077", "--", "/adampro/bootstrap.sh", "-d", "--workernode"]
       environment:
         ADAMPRO_MASTER: spark://master:7077

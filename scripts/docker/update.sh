@@ -33,10 +33,7 @@ elif [ $LOCAL = $BASE ]; then
     cp $ADAMPRO_CODE/conf/log4j.xml ${ADAMPRO_HOME}/log4j.xml
     cp $ADAMPRO_CODE/target/scala-2.11/ADAMpro-assembly-0.1.0.jar ${ADAMPRO_HOME}/ADAMpro-assembly-0.1.0.jar && cp $ADAMPRO_CODE/web/target/scala-2.11/ADAMpro-web-assembly-0.1.0.jar ${ADAMPRO_HOME}/ADAMpro-web-assembly-0.1.0.jar
 
-    # reboot so that the new code is used
-    # su --login - postgres --command "$POSTGRES_HOME/bin/pg_ctl -w stop -D $PGDATA"
-    # solr stop -noprompt
-    # reboot
+    reboot
 elif [ $REMOTE = $BASE ]; then
     echo "Need to push: Something is wrong"
 
