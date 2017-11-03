@@ -547,7 +547,7 @@ case class Entity(entityname: EntityName)(@transient implicit val ac: SharedComp
       lb.append("apxCount" -> apxCount.get)
     }
 
-    if (!(options.contains("partitions") && options("partitions") == "false")) {
+    if (options.contains("partitions") && options("partitions") == "true") {
       try {
         lb.append("partitions" -> getFeatureDataFast.map(_.rdd.getNumPartitions.toString).getOrElse("none"))
       } catch {
@@ -555,7 +555,7 @@ case class Entity(entityname: EntityName)(@transient implicit val ac: SharedComp
       }
     }
 
-    if (!(options.contains("count") && options("count") == "false")) {
+    if (options.contains("count") && options("count") == "true") {
       lb.append("count" -> count.toString)
     }
 

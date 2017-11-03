@@ -288,7 +288,7 @@ abstract class Index(val indexname: IndexName)(@transient implicit val ac: Share
     lb.append("attribute" -> attribute)
     lb.append("stale" -> isStale.toString)
 
-    if (!(options.contains("partitions") && options("partitions") == "false")) {
+    if (options.contains("partitions") && options("partitions") == "true") {
       lb.append("partitions" -> getData().get.rdd.getNumPartitions.toString)
 
       val partitionInfo = getData().get.rdd.mapPartitionsWithIndex((idx, f) => {

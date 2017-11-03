@@ -140,20 +140,9 @@ function infoHandler(entityname) {
                 innerinnerinnerhtml += "<ul>";
 
                 value.split(",").forEach(function(element, index, array){
-                    indexDetails(element, function(attributeData){
-                        innerinnerinnerhtml += "<li>";
-                        innerinnerinnerhtml += element;
-                        innerinnerinnerhtml += " (";
-                        jQuery.each(attributeData.details, function(attributeKey, attributeValue){
-                            innerinnerinnerhtml += attributeKey;
-                            innerinnerinnerhtml += ":";
-                            innerinnerinnerhtml += attributeValue;
-                            innerinnerinnerhtml += "; ";
-                        });
-                        innerinnerinnerhtml += ")";
-                        innerinnerinnerhtml += "</li>";
-
-                    }, false)
+                    innerinnerinnerhtml += "<li>";
+                    innerinnerinnerhtml += element;
+                    innerinnerinnerhtml += "</li>";
                 });
 
                 innerinnerinnerhtml += "</ul>";
