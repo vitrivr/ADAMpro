@@ -10,7 +10,7 @@ import org.vitrivr.adampro.grpc.grpc._
   */
 case class RPCComplexQueryObject(override val id : String, override val options : Map[String, String], override val operation : String, var targets: Option[Seq[RPCGenericQueryObject]]) extends RPCGenericQueryObject(id, options){
   protected def entityname = options.get("entityname").get
-  protected def hints() = options.get("hints").map(_.split(",").toSeq).getOrElse(Seq()).filterNot(_.length == 0)
+  protected def hints() = options.get("hints").map(_.split(",").toSeq).getOrElse(Seq())
 
 
   override protected def setQueryMessage(qm: QueryMessage): QueryMessage = {
@@ -29,6 +29,8 @@ case class RPCComplexQueryObject(override val id : String, override val options 
     if(nnq.isDefined){
       aqm = aqm.withNnq(nnq.get)
     }
+
+    aqm = aqm.withHints(hints())
 
     aqm
   }

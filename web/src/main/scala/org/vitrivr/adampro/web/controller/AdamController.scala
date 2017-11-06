@@ -349,9 +349,9 @@ class AdamController(rpcClient: RPCClient) extends Controller with Logging {
     if (res.isSuccess) {
       val results = res.get
 
-      val source = if(results.info.get("scantype").isDefined && results.info("scantype") == "sequential"){
+      val source = if(results.info.get("scantype").isDefined && results.info("scantype").toLowerCase.contains("sequential")){
         "sequential"
-      } else if(results.info.get("scantype").isDefined && results.info("scantype") == "indexscan"){
+      } else if(results.info.get("scantype").isDefined && results.info("scantype").toLowerCase.contains("index")){
         results.info.getOrElse("indextype", "")
       } else {
         results.info.getOrElse("scantype", "<uknown>")
