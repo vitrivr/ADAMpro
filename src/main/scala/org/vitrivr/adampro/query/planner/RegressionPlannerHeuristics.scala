@@ -170,7 +170,7 @@ private[planner] class RegressionPlannerHeuristics(defaultNRuns: Int = 100) exte
   private def buildFeature(nnq: RankingQuery): Seq[Double] = {
     val lb = new ListBuffer[Double]()
 
-    lb += math.min(1.0, nnq.k / 100.0)
+    lb += math.min(1.0, nnq.k / 1000.0)
 
     lb.toSeq
   }
@@ -185,8 +185,8 @@ private[planner] class RegressionPlannerHeuristics(defaultNRuns: Int = 100) exte
     val lb = new ListBuffer[Double]()
     val head = entity.getAttributeData(attribute).get.head()
 
-    lb += math.min(1.0, IndexingTaskTuple(head.getAs[TupleID](entity.pk.name), Vector.conv_draw2vec(head.getAs[DenseRawVector](attribute))).ap_indexable.length / 1000.0)
-    lb += math.min(1.0, entity.count / 1000000.0)
+    lb += math.min(1.0, IndexingTaskTuple(head.getAs[TupleID](entity.pk.name), Vector.conv_draw2vec(head.getAs[DenseRawVector](attribute))).ap_indexable.length / 10000.0)
+    lb += math.min(1.0, entity.count / 500000000.0)
 
     lb.toSeq
   }
@@ -199,7 +199,7 @@ private[planner] class RegressionPlannerHeuristics(defaultNRuns: Int = 100) exte
   private def buildFeature(index: Index): Seq[Double] = {
     val lb = new ListBuffer[Double]()
 
-    lb += math.min(1.0, index.count / 1000000.0)
+    lb += math.min(1.0, index.count / 500000000.0)
 
     lb ++= (index match {
       case idx: ECPIndex => buildFeature(idx)
@@ -224,7 +224,7 @@ private[planner] class RegressionPlannerHeuristics(defaultNRuns: Int = 100) exte
     val lb = new ListBuffer[Double]()
     val meta = index.meta
 
-    lb += math.min(1.0, meta.leaders.length / 10000.0)
+    lb += math.min(1.0, meta.leaders.length / 100000.0)
 
     lb.toSeq
   }
@@ -238,10 +238,10 @@ private[planner] class RegressionPlannerHeuristics(defaultNRuns: Int = 100) exte
     val lb = new ListBuffer[Double]()
     val meta = index.meta
 
-    lb += math.min(1.0, meta.ghashf.length / 100.0)
-    lb += math.min(1.0, meta.m / 1000.0)
-    lb += math.min(1.0, meta.radius / 10.0)
-    lb += math.min(1.0, meta.ghashf.head.hhashf.size / 100.0)
+    lb += math.min(1.0, meta.ghashf.length / 1000.0)
+    lb += math.min(1.0, meta.m / 10000.0)
+    lb += math.min(1.0, meta.radius / 1000.0)
+    lb += math.min(1.0, meta.ghashf.head.hhashf.size / 10000.0)
 
     lb.toSeq
   }
@@ -255,9 +255,9 @@ private[planner] class RegressionPlannerHeuristics(defaultNRuns: Int = 100) exte
     val lb = new ListBuffer[Double]()
     val meta = index.meta
 
-    lb += math.min(1.0, meta.ki / 100.0)
-    lb += math.min(1.0, meta.ks / 100.0)
-    lb += math.min(1.0, meta.refs.length / 100.0)
+    lb += math.min(1.0, meta.ki / 10000.0)
+    lb += math.min(1.0, meta.ks / 10000.0)
+    lb += math.min(1.0, meta.refs.length / 1000.0)
 
     lb.toSeq
   }
@@ -271,7 +271,7 @@ private[planner] class RegressionPlannerHeuristics(defaultNRuns: Int = 100) exte
     val lb = new ListBuffer[Double]()
     val meta = index.meta
 
-    lb += math.min(1.0, meta.models.length / 100.0)
+    lb += math.min(1.0, meta.models.length / 10000.0)
     lb += math.min(1.0, meta.nsq / 500.0)
 
     lb.toSeq
@@ -286,7 +286,7 @@ private[planner] class RegressionPlannerHeuristics(defaultNRuns: Int = 100) exte
     val lb = new ListBuffer[Double]()
     val meta = index.meta
 
-    lb += math.min(1.0, meta.eigenfunctions.size / 100.0)
+    lb += math.min(1.0, meta.eigenfunctions.size / 10000.0)
 
     lb.toSeq
   }
@@ -300,7 +300,7 @@ private[planner] class RegressionPlannerHeuristics(defaultNRuns: Int = 100) exte
     val lb = new ListBuffer[Double]()
     val meta = index.meta
 
-    lb += math.min(1.0, meta.marks.length / 500.0)
+    lb += math.min(1.0, meta.marks.length / 50000.0)
 
     lb.toSeq
   }
@@ -314,8 +314,8 @@ private[planner] class RegressionPlannerHeuristics(defaultNRuns: Int = 100) exte
     val lb = new ListBuffer[Double]()
     val meta = index.meta.asInstanceOf[VAPlusIndexMetaData]
 
-    lb += math.min(1.0, meta.marks.length / 500.0)
-    lb += math.min(1.0, meta.pca.getK / 100.0)
+    lb += math.min(1.0, meta.marks.length / 50000.0)
+    lb += math.min(1.0, meta.pca.getK / 10000.0)
 
     lb.toSeq
   }
