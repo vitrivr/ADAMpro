@@ -108,7 +108,7 @@ private[planner] class RegressionPlannerHeuristics(defaultNRuns: Int = 100) exte
   private def getScore(key: String, f: DenseVector[Double])(implicit ac: SharedComponentContext): Double = {
     if (ac.catalogManager.containsOptimizerOptionMeta(name, key).getOrElse(false)) {
       val lr = new Regression(ac.config.optimizerPath + "/" + key)
-      val ypred = lr.test(f)
+      val ypred = lr.test(f, ac.config.optimizerAlgorithm)
 
       log.info("lr optimizer predicted " + ypred)
 

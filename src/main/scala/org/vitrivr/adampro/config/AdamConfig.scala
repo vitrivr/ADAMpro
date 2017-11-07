@@ -38,6 +38,12 @@ class AdamConfig extends Serializable with Logging {
   val optimizerPath = internalsPath + "/" + "optimizers"
   new File(optimizerPath).mkdirs()
 
+  val optimizerAlgorithm = if (config.hasPath("adampro.optimizer")) {
+    Some(config.getString("adampro.optimizer"))
+  } else {
+    None
+  }
+
   import scala.collection.JavaConversions._
 
   val engines = config.getStringList("adampro.engines").toIterator.toIndexedSeq

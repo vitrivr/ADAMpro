@@ -5,7 +5,6 @@ import java.io.File
 
 import breeze.linalg.DenseVector
 import org.apache.commons.io.FileUtils
-
 import org.apache.spark.mllib.linalg.Vectors
 import org.apache.spark.mllib.regression._
 import org.apache.spark.mllib.tree.{DecisionTree, GradientBoostedTrees, RandomForest}
@@ -26,15 +25,21 @@ import org.vitrivr.adampro.utils.ml.Regression._
 class Regression(val path: String)(@transient implicit val ac: SharedComponentContext) extends Logging with Serializable {
   def modelPath(name : String) = path + "/model/model_" + name + MODEL_SUFFIX
 
-  val algorithms = Seq(
-    new LinearRegression(modelPath("lin")),
-    new RidgeRegression(modelPath("rig")),
-    new LassoRegression(modelPath("lasso")),
-    new DecisionTreeRegression(modelPath("dt")),
-    new RandomForestRegression(modelPath("rf")),
-    new GBTRegression(modelPath("gbt"))
+  val DEFAULT_ALGORITHM = "lin"
+
+  val algorithms = Map(
+    "lin"  ->  new LinearRegression(modelPath("lin")),
+    "rig"  ->  new RidgeRegression(modelPath("rig")),
+    "lasso" -> new LassoRegression(modelPath("lasso")),
+    "dt"  ->  new DecisionTreeRegression(modelPath("dt")),
+    "rf"  ->  new RandomForestRegression(modelPath("rf")),
+    "gbt"  ->  new GBTRegression(modelPath("gbt"))
   )
 
+  /**
+    *
+    * @param data
+    */
   def train(data: Seq[TrainingSample]): Unit = {
     val labelledData = data.map(x => LabeledPoint(x.time, Vectors.dense(x.f.toArray)))
     val rdd = ac.sc.parallelize(labelledData)
@@ -45,16 +50,26 @@ class Regression(val path: String)(@transient implicit val ac: SharedComponentCo
       ac.sc.objectFile[LabeledPoint](dataFile.getAbsolutePath)
     }.reduce(_ union _)
 
-    algorithms.foreach { algo =>
+    algorithms.foreach { case(name, algo) =>
       algo.train(trainingData)
     }
   }
 
+  /**
+    *
+    * @param f
+    * @param algorithmName
+    * @return
+    */
+  def test(f: DenseVector[Double], algorithmName : Option[String]): Double = {
+    val algorithm = if(algorithmName.isEmpty || algorithms.get(algorithmName.get).isEmpty){
+      log.error("Algorithm for regression not correctly specified.")
+      algorithms.get(DEFAULT_ALGORITHM).get
+    } else {
+      algorithms.get(algorithmName.get).get
+    }
 
-  def test(f: DenseVector[Double]): Double = {
-    log.info(algorithms.map(x => (x.getClass.getSimpleName, x.test(f))).mkString("; "))
-
-    algorithms.head.test(f)
+    algorithm.test(f)
   }
 }
 
@@ -164,7 +179,7 @@ object Regression {
       val maxBins = 32
 
       DecisionTree.trainRegressor(input, categoricalFeaturesInfo, impurity,
-        maxDepth, maxBins)
+        maxDepth, maxBins).save(ac.sc, path)
     }
 
     override def test(f: DenseVector[Double]) : Double = {
