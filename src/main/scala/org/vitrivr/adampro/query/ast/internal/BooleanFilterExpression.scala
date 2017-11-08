@@ -40,6 +40,7 @@ object BooleanFilterExpression extends Logging {
       ac.sc.setJobGroup(id.getOrElse(""), "boolean filter scan", interruptOnCancel = true)
 
       var df =  entity.getData(predicates = bq.where)
+      df = df.map(BooleanFilterExpression.filter(_, bq))
 
       /*var ids = mutable.Set[Any]()
 
