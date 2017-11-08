@@ -1,0 +1,154 @@
+<!doctype html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
+    <meta name="viewport" content="width=device-width">
+
+    <title>ADAMpro</title>
+
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/materialize/0.97.6/css/materialize.min.css">
+    <link rel="stylesheet" href="./lib/css/app.css">
+    <link rel="stylesheet" href="./lib/css/materialize-datatable.css">
+
+    <script src="https://code.jquery.com/jquery-2.1.1.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/materialize/0.97.6/js/materialize.min.js"></script>
+    <script src="./lib/js/config.js"></script>
+    <script src="./lib/js/app.js"></script>
+</head>
+
+<body>
+<div id="progress" class="progress" style="margin:0px; display:none;">
+    <div class="indeterminate"></div>
+</div>
+
+<nav>
+    <div class="nav-wrapper blue-grey darken-3" style="padding: 0px 50px 0px 50px">
+        <a href="#!" class="brand-logo right" style="padding-right: 20px;">ADAMpro <img src="./lib/imgs/logo.png" style="height:40px; padding: 5px; margin-top: 10px;"/></a>
+        <ul class="hide-on-med-and-down left">
+
+            <li style="padding-left: 20px; padding-right: 20px; font-weight: bold;"><i class="material-icons left" style="margin-right:5px;">playlist_add</i>ENTITY</li>
+
+            <li><a href="entity-list.html">List</a></li>
+            <li><a href="entity-create.html">Create</a></li>
+            <li><a href="entity-fill.html">Fill</a></li>
+            <li><a href="entity-preview.html">Preview</a></li>
+            <li><a href="entity-repartition.html">Repartition</a></li>
+
+            <li style="border-left: white 1px solid; padding-left: 20px; padding-right: 20px; font-weight: bold;"><i class="material-icons left" style="margin-right:5px;">filter_list</i>INDEX</li>
+            <li><a href="index-create.html">Create</a></li>
+            <li><a href="index-repartition.html">Repartition</a></li>
+
+            <li style="border-left: white 1px solid; padding-left: 20px; padding-right: 20px; font-weight: bold;"><i class="material-icons left" style="margin-right:5px;">search</i>SEARCH</li>
+            <li><a href="search-compound.html">Manual</a></li>
+            <li><a href="search-progressive.html">Progressive</a></li>
+            <li><a href="search-parallel.html">Parallel</a></li>
+            <li><a href="search-json.html">json</a></li>
+
+        </ul>
+    </div>
+</nav>
+
+<div class='container' style='width:90%'><div class='row'><h1 style='font-size:40pt;'>json<span style='font-size:20pt; padding-left: 20px'>Search</span></h1></div>
+
+    <div class="row" style="margin-bottom: 0px;">
+        <div class="input-field col s11">
+            <textarea id="json" class="materialize-textarea" placeholder='{"from":{"entity":"my-entity"},"bq":{"where":[{"attribute":"my-attribute","values":[{"stringData":"my-value"}]}]}}
+'></textarea>
+            <label for="json">Query</label>
+        </div>
+
+
+
+        <div class="input-field col s1" style="text-align:right">
+            <button class="btn waves-effect waves-light red" name="action" id="btnSubmit">
+                Search
+            </button>
+        </div>
+    </div>
+
+    <div class="row" style="color: #cccccc; display: block; margin-bottom: 0px;">
+        <div id="stopwatch" style="float: right; font-size: 8pt; text-align:right;">
+
+        </div>
+    </div>
+
+    <div id="resultbox" class="material-table" style="display:none">
+        <div class="s12"><h5>Results</h5></div>
+        <div id="results" class="s12"></div>
+    </div>
+
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jsPlumb/2.0.7/jsPlumb.js"></script>
+    <script src="http://cdn.datatables.net/1.10.12/js/jquery.dataTables.min.js"></script>
+    <script src="./lib/js/materialize-datatable.js"></script>
+    <script src="./lib/js/stopwatch.js"></script>
+    <script>
+        $(document).ready(function () {
+            addStopwatch("stopwatch");
+            $('select').material_select();
+        });
+
+        //submit operation
+        $("#btnSubmit").click(function () {
+            $("#resultbox").hide();
+
+            var handler = function(data) {
+                $.each(data.details.intermediate_responses, function (idx, val) {
+                    //tune here max results to display
+                    var slicedData = val.results.slice(0, Math.min(500, val.results.length));
+                    $("#resultbox").show();
+
+                    var innerhtml = '';
+                    var results = slicedData;
+                    var tabid = 'tab-results';
+
+                    if (results != null && results.length > 0) {
+                        innerhtml += '<table id="' + tabid + '" class="striped highlight">';
+                        innerhtml += '<thead><tr>';
+
+                        $.each(results[0], function (key, value) {
+                            innerhtml += "<th>" + key + "</th>"
+                        });
+
+                        innerhtml += '</tr></thead>';
+                        innerhtml += '<tbody>';
+
+
+                        $.each(results, function (key, value) {
+                            innerhtml += "<tr>";
+                            $.each(value, function (attributekey, attributevalue) {
+                                if(attributekey == "adamprodistance"){
+                                    innerhtml += "<td class='dt-body-right'>" + attributevalue + "</td>"
+                                } else {
+                                    innerhtml += "<td>" + attributevalue + "</td>"
+                                }
+                            });
+                            innerhtml += "</tr>";
+                        });
+
+                        innerhtml += '</tbody>';
+
+                        innerhtml += '</table>';
+                    }
+
+                    $("#results").html(innerhtml);
+
+                    makeDatatable(tabid);
+            });
+            }
+
+            var params = {};
+            params.json = $("#json").val();
+
+            startStopwatch();
+            searchJson(params, handler);
+        });
+    </script>
+
+</div>
+
+</body>
+</html>

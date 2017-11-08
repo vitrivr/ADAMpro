@@ -3,7 +3,7 @@ package org.vitrivr.adampro.web.controller
 import com.twitter.finagle.http.Request
 import com.twitter.finatra.http.Controller
 import org.vitrivr.adampro.communication.RPCClient
-import org.vitrivr.adampro.communication.datastructures.{RPCAttributeDefinition, RPCQueryResults}
+import org.vitrivr.adampro.communication.datastructures.{RPCAttributeDefinition, RPCGenericQueryObject, RPCQueryResults}
 import org.vitrivr.adampro.utils.Logging
 import org.vitrivr.adampro.web.datastructures._
 
@@ -324,6 +324,20 @@ class AdamController(rpcClient: RPCClient) extends Controller with Logging {
     }
 
     response.ok.json(SearchParallelStartResponse(request.id))
+  }
+
+
+  /**
+    *
+    */
+  post("/search/json") { request: SearchRequestJson =>
+    val res = rpcClient.doQuery(request.json)
+
+    if (res.isSuccess) {
+      response.ok.json(new SearchCompoundResponse(200, new SearchResponse(res.get)))
+    } else {
+      response.ok.json(GeneralResponse(500, res.failed.get.getMessage))
+    }
   }
 
   /**

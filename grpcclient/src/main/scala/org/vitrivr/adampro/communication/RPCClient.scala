@@ -2,6 +2,7 @@ package org.vitrivr.adampro.communication
 
 import java.util.concurrent.TimeUnit
 
+import com.trueaccord.scalapb.json.JsonFormat
 import io.grpc.internal.DnsNameResolverProvider
 import io.grpc.netty.NettyChannelBuilder
 import io.grpc.stub.StreamObserver
@@ -725,6 +726,19 @@ class RPCClient(channel: ManagedChannel,
       }
     }
   }
+
+  def doQuery(json: String): Try[Seq[RPCQueryResults]] = {
+    execute("json query operation") {
+      val query = JsonFormat.fromJsonString[QueryMessage](json)
+      val res = searcherBlocking.doQuery(query)
+      if (res.ack.get.code.isOk) {
+        return Success(res.responses.map(new RPCQueryResults(_)))
+      } else {
+        throw new Exception(res.ack.get.message)
+      }
+    }
+  }
+
 
 
   /**

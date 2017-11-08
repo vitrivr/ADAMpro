@@ -733,6 +733,35 @@ function searchProgressive(id, params, successHandler, updateHandler, errorHandl
     });
 }
 
+/**
+ *
+ * @param params
+ * @param handler
+ */
+function searchJson(params, handler) {
+    startTask();
+
+    $.ajax(ADAM_CLIENT_HOST + "/search/json", {
+        data: JSON.stringify(params),
+        contentType: 'application/json',
+        type: 'POST',
+        success: function (data) {
+            if (data.code === 200) {
+                handler(data);
+            } else {
+                raiseError(data.message);
+            }
+            stopTask();
+            stopStopwatch();
+        },
+        error: function () {
+            raiseError();
+            stopTask();
+            stopStopwatch();
+        }
+    });
+}
+
 
 
 function storageHandlerList(handler){

@@ -17,6 +17,8 @@ private[web] case class SearchRequest(var id: String, var operation: String, var
   }
 }
 
+private[web] case class SearchRequestJson(json : String)
+
 private[web] case class SearchCompoundResponse(code: Int, details: SearchResponse)
 
 private[web] case class SearchResponse(intermediateResponses: Seq[RPCQueryResults]) {}
