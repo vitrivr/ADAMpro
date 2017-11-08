@@ -46,7 +46,7 @@ ENV ADAMPRO_START_SOLR true
 ENV ADAMPRO_START_WEBUI true
 ENV ADAMPRO_START_NOTEBOOK true
 
-COPY adampro.conf ${ADAMPRO_HOME}/adampro.conf.template
+COPY adampro.conf ${ADAMPRO_HOME}/adampro.conf
 RUN chown root.root ${ADAMPRO_HOME}/adampro.conf; chmod 700 ${ADAMPRO_HOME}/adampro.conf
 COPY bootstrap.sh ${ADAMPRO_HOME}/bootstrap.sh
 RUN chown root.root ${ADAMPRO_HOME}/bootstrap.sh; chmod 700 ${ADAMPRO_HOME}/bootstrap.sh
