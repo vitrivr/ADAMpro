@@ -64,42 +64,47 @@ case class SequentialScanExpression(private val entity: Entity)(private val nnq:
     }
 
 
-    var result = if (ac.config.approximateFiltering) {
-      //Bloom filter: approximate filtering
+    var result  = if(prefilter.isDefined){
+      lazy val ids = prefilter.get.select(entity.pk.name).collect.map(_.getAs[TupleID](entity.pk.name))
 
-      if (prefilter.isDefined) {
-        val bf = prefilter.get.stat.bloomFilter(entity.pk.name, 2000, 0.05)
-
-        val bfBc = ac.sc.broadcast(bf)
-        tracker.addBroadcast(bfBc)
-
-        val filterUdf = udf((arg: TupleID) => if (arg != null) bfBc.value.mightContain(arg) else false)
-
-        Some(entity.getData().get.filter(filterUdf(col(entity.pk.name))))
+      val df = if (ac.config.manualPredicatePushdown) {
+        entity.getData(predicates = Seq(Predicate(entity.pk.name, None, ids))).get
       } else {
-        val df = entity.getData().get
-
-        Some(df)
+        entity.getData().get
       }
 
-    } else {
-      //Join: precise filtering
+      ac.config.filteringMethod match {
+        case ac.config.FilteringMethod.BloomFilter => {
+          // Bloom
+          val bf = prefilter.get.stat.bloomFilter(entity.pk.name, 2000, 0.05)
 
-      if (prefilter.isDefined) {
-        val df = if (ac.config.manualPredicatePushdown) {
-          val ids = prefilter.get.select(entity.pk.name).collect.map(_.getAs[TupleID](entity.pk.name))
-          entity.getData(predicates = Seq(Predicate(entity.pk.name, None, ids))).get
-        } else {
-          entity.getData().get
+          val bfBc = ac.sc.broadcast(bf)
+          tracker.addBroadcast(bfBc)
+
+          val filterUdf = udf((arg: TupleID) => if (arg != null) bfBc.value.mightContain(arg) else false)
+          Some(df.filter(filterUdf(col(entity.pk.name))))
         }
 
-        Some(df.join(prefilter.get, df.col(entity.pk.name) === prefilter.get.col(entity.pk.name), "leftsemi"))
-      } else {
-        val df = entity.getData().get
+        case ac.config.FilteringMethod.IsInFilter => {
+          // Is in
+          Some(df.filter(col(entity.pk.name).isin(ids : _*)))
+        }
 
-        Some(df)
+        case ac.config.FilteringMethod.SemiJoin => {
+          // Semi join
+
+          Some(df.join(prefilter.get, df.col(entity.pk.name) === prefilter.get.col(entity.pk.name), "leftsemi"))
+        }
+
+        case _ => Some(df)
       }
+    } else {
+      val df = entity.getData().get
+
+      Some(df)
     }
+
+
 
     //adjust output
     if (result.isDefined && options.isDefined && options.get.storeSourceProvenance) {
