@@ -112,6 +112,23 @@ class AdamConfig extends Serializable with Logging {
     false
   }
 
+  object FilteringMethod extends Enumeration {
+    val BloomFilter, IsInFilter, SemiJoin = Value
+  }
+
+
+  val filteringMethod = if(config.hasPath("adampro.filteringMethod")){
+    config.getString("adampro.filteringMethod").toLowerCase match {
+      case "bloomfilter" => FilteringMethod.BloomFilter
+      case "isinfilter" => FilteringMethod.IsInFilter
+      case "semijoin" => FilteringMethod.SemiJoin
+      case _ => FilteringMethod.SemiJoin
+    }
+  } else {
+    FilteringMethod.SemiJoin
+  }
+
+
   /**
     *
     * @param path
