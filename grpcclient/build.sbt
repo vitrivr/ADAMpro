@@ -8,7 +8,7 @@ libraryDependencies ++= Seq(
   "org.slf4j" % "slf4j-simple" % "1.7.21",
   "com.trueaccord.scalapb" %% "scalapb-json4s" % "0.3.2",
   "com.fasterxml.jackson.core" % "jackson-databind" % "2.7.4",
-  "com.fasterxml.jackson.module" % "jackson-module-scala_2.10" % "2.7.4"
+  "com.fasterxml.jackson.module" %% "jackson-module-scala" % "2.7.4"
 )
 
 unmanagedBase <<= baseDirectory { base => base / ".." / "lib" }
