@@ -4,13 +4,13 @@ import org.vitrivr.adampro.communication.api.QueryOp
 import org.vitrivr.adampro.data.entity.Entity
 import org.vitrivr.adampro.data.index.Index
 import org.vitrivr.adampro.process.SharedComponentContext
+import org.vitrivr.adampro.query.ast.internal.{IndexScanExpression, SequentialScanExpression}
 import org.vitrivr.adampro.query.query.RankingQuery
 import org.vitrivr.adampro.query.tracker.QueryTracker
 import org.vitrivr.adampro.utils.Logging
 
 import scala.concurrent.duration.Duration
 import scala.concurrent.{Await, Future, TimeoutException}
-
 import scala.concurrent.ExecutionContext.Implicits.global
 
 /**
@@ -76,7 +76,7 @@ private[planner] abstract class PlannerHeuristics(protected val name: String, pr
           val t1 = System.currentTimeMillis
 
           val fut = Future {
-            QueryOp.sequential(entity.entityname, entityNNQ, None)(tracker).get.get.select(entity.pk.name).collect()
+            SequentialScanExpression(entity)(nnq, None)(None)(ac).execute()(tracker).get.select(entity.pk.name).collect()
           }
 
           val res = Await.result(fut, Duration(ac.config.maximumTimeToWaitInTraining, "seconds"))
@@ -106,7 +106,7 @@ private[planner] abstract class PlannerHeuristics(protected val name: String, pr
     * @return
     */
   protected def performMeasurement(index: Index, nnq: RankingQuery, nruns: Option[Int], rel: Set[Any])(implicit ac: SharedComponentContext): Seq[Measurement] = {
-    val indexOnlyNNQ = RankingQuery(nnq.attribute, nnq.q, nnq.weights, nnq.distance, nnq.k, true, nnq.options, None)
+    val indexOnlyNNQ = RankingQuery(nnq.attribute, nnq.q, nnq.weights, nnq.distance, nnq.k, false, nnq.options, None)
     val entityN = index.entity.get.count
     val tracker = new QueryTracker()
 
@@ -116,7 +116,7 @@ private[planner] abstract class PlannerHeuristics(protected val name: String, pr
           val t1 = System.currentTimeMillis
 
           val fut = Future {
-            QueryOp.index(index.indexname, indexOnlyNNQ, None)(tracker).get.get.select(index.entity.get.pk.name).collect()
+            IndexScanExpression(index)(nnq, None)(None)(ac).execute()(tracker).get.select(index.entity.get.pk.name).collect()
           }
 
           val res = Await.result(fut, Duration(ac.config.maximumTimeToWaitInTraining, "seconds"))
