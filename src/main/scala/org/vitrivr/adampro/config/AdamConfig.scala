@@ -56,6 +56,8 @@ class AdamConfig extends Serializable with Logging {
     false
   }
 
+  val maximumTimeToWaitInTraining = 1000 //in seconds
+
   val maximumCacheSizeEntity = 1000
   val expireAfterAccessEntity = 60 //in minutes
 
