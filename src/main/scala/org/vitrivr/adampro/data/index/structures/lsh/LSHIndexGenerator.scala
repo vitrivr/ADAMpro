@@ -86,12 +86,12 @@ class LSHIndexGeneratorFactory extends IndexGeneratorFactory {
       throw new QueryNotConformException("LSH index only supports Manhattan, Euclidean and Hamming distance")
     }
 
-    val numHashTables = properties.getOrElse("nhashtables", "256").toInt
-    val numHashes = properties.getOrElse("nhashes", "256").toInt
+    val numHashTables = properties.getOrElse("nhashtables", "64").toInt
+    val numHashes = properties.getOrElse("nhashes", "64").toInt
     val maxBuckets = if(distance == HammingDistance){
       2 //bucket for 0 and 1
     } else {
-      properties.getOrElse("nbuckets", "1024").toInt
+      properties.getOrElse("nbuckets", "256").toInt
     }
 
     val norm = properties.getOrElse("norm", "2").toInt
