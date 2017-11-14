@@ -6,6 +6,7 @@ import io.grpc.internal.DnsNameResolverProvider
 import io.grpc.netty.NettyChannelBuilder
 import io.grpc.stub.StreamObserver
 import io.grpc.{ManagedChannel, ManagedChannelBuilder}
+import org.vitrivr.adampro.communication.datastructures._
 import org.vitrivr.adampro.grpc.grpc.AdamDefinitionGrpc.{AdamDefinitionBlockingStub, AdamDefinitionStub}
 import org.vitrivr.adampro.grpc.grpc.AdamSearchGrpc.{AdamSearchBlockingStub, AdamSearchStub}
 import org.vitrivr.adampro.grpc.grpc.AdaptScanMethodsMessage.IndexCollection.{EXISTING_INDEXES, NEW_INDEXES}
@@ -13,9 +14,10 @@ import org.vitrivr.adampro.grpc.grpc.AdaptScanMethodsMessage.QueryCollection.{LO
 import org.vitrivr.adampro.grpc.grpc.DistanceMessage.DistanceType
 import org.vitrivr.adampro.grpc.grpc.RepartitionMessage.PartitionOptions
 import org.vitrivr.adampro.grpc.grpc.{AttributeType, _}
-import org.vitrivr.adampro.communication.datastructures._
 import org.vitrivr.adampro.utils.Logging
 
+import scala.concurrent.duration.Duration
+import scala.concurrent.{Await, TimeoutException}
 import scala.util.{Failure, Success, Try}
 
 /**
@@ -633,6 +635,34 @@ class RPCClient(channel: ManagedChannel,
         return Success(res.responses.map(new RPCQueryResults(_)))
       } else {
         throw new Exception(res.ack.get.message)
+      }
+    }
+  }
+
+  /**
+    * Perform a search.
+    *
+    * @param qo search request
+    * @param timeout timeout in seconds
+    * @return
+    */
+  def doQuery(qo: RPCGenericQueryObject, timeout: Long): Try[Seq[RPCQueryResults]] = {
+    execute("compound query operation") {
+      val fut = searcher.doQuery(qo.prepare.buildQueryMessage)
+
+      try {
+        val res = Await.result(fut, Duration.apply(timeout, "seconds"))
+
+        if (res.ack.get.code.isOk) {
+          return Success(res.responses.map(new RPCQueryResults(_)))
+        } else {
+          throw new Exception(res.ack.get.message)
+        }
+      } catch {
+        case e: TimeoutException => {
+          searcherBlocking.stopQuery(StopQueryMessage(qo.id))
+          throw e
+        }
       }
     }
   }

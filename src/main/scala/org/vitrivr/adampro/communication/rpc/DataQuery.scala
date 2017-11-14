@@ -332,4 +332,18 @@ class DataQuery extends AdamSearchGrpc.AdamSearch with Logging {
       }
     }
   }
+
+  override def stopQuery(request: StopQueryMessage): Future[AckMessage] = {
+    time("rpc call to stop query") {
+      ac.sc.cancelJobGroup(request.jobid)
+      Future.successful(AckMessage(code = AckMessage.Code.OK))
+    }
+  }
+
+  override def stopAllQueries(request: EmptyMessage): Future[AckMessage] = {
+    time("rpc call to stop all query") {
+      ac.sc.cancelAllJobs()
+      Future.successful(AckMessage(code = AckMessage.Code.OK))
+    }
+  }
 }
