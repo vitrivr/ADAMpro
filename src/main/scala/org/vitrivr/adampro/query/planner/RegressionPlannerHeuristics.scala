@@ -199,7 +199,7 @@ private[planner] class RegressionPlannerHeuristics(defaultNRuns: Int = 100) exte
   private def buildFeature(index: Index): Seq[Double] = {
     val lb = new ListBuffer[Double]()
 
-    lb += math.min(1.0, index.count / 500000000.0)
+    lb += math.min(1.0, index.entity.get.count / 500000000.0)
 
     lb ++= (index match {
       case idx: ECPIndex => buildFeature(idx)
