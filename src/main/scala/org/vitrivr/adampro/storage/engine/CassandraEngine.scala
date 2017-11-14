@@ -11,6 +11,7 @@ import org.vitrivr.adampro.query.query.Predicate
 import org.vitrivr.adampro.utils.Logging
 import com.datastax.driver.core.Session
 import com.datastax.spark.connector.cql.{CassandraConnector, PasswordAuthConf}
+import org.apache.spark.sql.functions.col
 import org.apache.spark.sql.{DataFrame, SaveMode}
 import org.vitrivr.adampro.process.SharedComponentContext
 
@@ -187,12 +188,14 @@ class CassandraEngine(private val url: String, private val port: Int, private va
       var data = df
 
       predicates.foreach{ predicate =>
-        val valueList = predicate.values.map(value => value match {
-          case _ : String => "'" + value + "'"
-          case _ => value.toString
-        })
+        data = predicate.values.sliding(500, 500).map{ ids =>
+          val valueList = ids.map(value => value match {
+            case _ : String => "'" + value + "'"
+            case _ => value.toString
+          })
 
-        data = data.where(predicate.attribute + " " + predicate.operator.getOrElse(" IN ") + " " + valueList.mkString("(", ",", ")"))
+          data.where(predicate.attribute + " " + predicate.operator.getOrElse(" IN ") + " " + valueList.mkString("(", ",", ")"))
+        }.reduce(_.union(_))
       }
 
       Success(data)
