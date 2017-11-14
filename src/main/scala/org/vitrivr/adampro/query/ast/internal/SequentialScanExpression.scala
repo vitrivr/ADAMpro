@@ -88,7 +88,7 @@ case class SequentialScanExpression(private val entity: Entity)(private val nnq:
         case ac.config.FilteringMethod.IsInFilter => {
           // Is in
 
-          val subdf = ids.sliding(5000, 5000).map{
+          val subdf = ids.sliding(500, 500).map{
             subids => df.filter(col(entity.pk.name).isin(subids : _*))
           }.reduce(_.union(_))
 
