@@ -67,18 +67,26 @@ case class SequentialScanExpression(private val entity: Entity)(private val nnq:
     var result  = if(prefilter.isDefined){
       lazy val ids = prefilter.get.select(entity.pk.name).collect.map(_.getAs[TupleID](entity.pk.name))
 
-      val df = if (ac.config.manualPredicatePushdown) {
+      val approxCount = prefilter.get.select(entity.pk.name).rdd.countApprox(1000).getFinalValue().low
+
+      val filterMethod = if(approxCount < 10000){
+        ac.config.filteringMethod
+      } else {
+        ac.config.FilteringMethod.SemiJoin
+      }
+
+      val df = if (ac.config.manualPredicatePushdown && approxCount < 10000) {
         log.trace("using manual predicate")
         entity.getData(predicates = Seq(Predicate(entity.pk.name, None, ids))).get
       } else {
         entity.getData().get
       }
 
-      ac.config.filteringMethod match {
+      filterMethod match {
         case ac.config.FilteringMethod.BloomFilter => {
           // Bloom
           log.trace("using Bloom filter")
-          val bf = prefilter.get.stat.bloomFilter(entity.pk.name, 2000, 0.05)
+          val bf = prefilter.get.stat.bloomFilter(entity.pk.name, 5000, 0.05)
 
           val bfBc = ac.sc.broadcast(bf)
           tracker.addBroadcast(bfBc)
