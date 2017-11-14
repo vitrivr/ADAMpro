@@ -68,6 +68,7 @@ case class SequentialScanExpression(private val entity: Entity)(private val nnq:
       lazy val ids = prefilter.get.select(entity.pk.name).collect.map(_.getAs[TupleID](entity.pk.name))
 
       val df = if (ac.config.manualPredicatePushdown) {
+        log.trace("using manual predicate")
         entity.getData(predicates = Seq(Predicate(entity.pk.name, None, ids))).get
       } else {
         entity.getData().get
@@ -76,6 +77,7 @@ case class SequentialScanExpression(private val entity: Entity)(private val nnq:
       ac.config.filteringMethod match {
         case ac.config.FilteringMethod.BloomFilter => {
           // Bloom
+          log.trace("using Bloom filter")
           val bf = prefilter.get.stat.bloomFilter(entity.pk.name, 2000, 0.05)
 
           val bfBc = ac.sc.broadcast(bf)
@@ -87,7 +89,7 @@ case class SequentialScanExpression(private val entity: Entity)(private val nnq:
 
         case ac.config.FilteringMethod.IsInFilter => {
           // Is in
-
+          log.trace("using is in filter")
           val subdf = ids.sliding(500, 500).map{
             subids => df.filter(col(entity.pk.name).isin(subids : _*))
           }.reduce(_.union(_))
@@ -97,11 +99,14 @@ case class SequentialScanExpression(private val entity: Entity)(private val nnq:
 
         case ac.config.FilteringMethod.SemiJoin => {
           // Semi join
-
+          log.trace("using semijoin filter")
           Some(df.join(prefilter.get, df.col(entity.pk.name) === prefilter.get.col(entity.pk.name), "leftsemi"))
         }
 
-        case _ => Some(df)
+        case _ => {
+          log.trace("using no filter")
+          Some(df)
+        }
       }
     } else {
       val df = entity.getData().get
