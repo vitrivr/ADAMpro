@@ -130,6 +130,12 @@ class AdamConfig extends Serializable with Logging {
     FilteringMethod.SemiJoin
   }
 
+  val vaGlobalRefinement = if(config.hasPath("adampro.VAGlobalRefinement")){
+    config.getBoolean("adampro.VAGlobalRefinement")
+  } else {
+    false
+  }
+
 
   /**
     *
