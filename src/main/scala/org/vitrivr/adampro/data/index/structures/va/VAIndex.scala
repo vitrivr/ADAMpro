@@ -117,7 +117,7 @@ class VAIndex(override val indexname: IndexName)(@transient override implicit va
     val res = if (ac.config.vaGlobalRefinement || options.get("vaGlobal").map(_.toBoolean).getOrElse(false)) {
       // global refinement
       val globalRh = new VAResultHandler(k)
-      val gIt = localRes.toLocalIterator()
+      val gIt = localRes.collect.iterator
 
       while (gIt.hasNext) {
         val current = gIt.next()
