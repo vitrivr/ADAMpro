@@ -67,7 +67,7 @@ case class SequentialScanExpression(private val entity: Entity)(private val nnq:
     var result  = if(prefilter.isDefined){
       lazy val ids = prefilter.get.select(entity.pk.name).collect.map(_.getAs[TupleID](entity.pk.name))
 
-      val approxCount = prefilter.get.select(entity.pk.name).rdd.countApprox(500, 0.6).getFinalValue().mean
+      val approxCount = prefilter.get.select(entity.pk.name).rdd.countApprox(500, 0.6).getFinalValue().low
 
       var filterMethod = if(approxCount < 5000){
         ac.config.filteringMethod
