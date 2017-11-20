@@ -45,7 +45,7 @@ private[planner] case class RandomQueryCollection(entityname: EntityName, attrib
       .sample(withReplacement = false, fraction = fraction)
       .collect()
       .map(r => r.getAs[Seq[VectorBase]](attribute))
-      .map(vec => RankingQuery(attribute, Vector.conv_draw2vec(vec), None, EuclideanDistance, 100, true))
+      .map(vec => RankingQuery(attribute, Vector.conv_draw2vec(vec), None, EuclideanDistance, 100, false))
 
     queries
   }

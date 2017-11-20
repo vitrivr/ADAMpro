@@ -1,7 +1,6 @@
 package org.vitrivr.adampro.query.planner
 
 import breeze.linalg.DenseVector
-import org.vitrivr.adampro.communication.api.QueryOp
 import org.vitrivr.adampro.data.datatypes.TupleID._
 import org.vitrivr.adampro.data.datatypes.vector.Vector
 import org.vitrivr.adampro.data.datatypes.vector.Vector._
@@ -41,6 +40,7 @@ private[planner] class RegressionPlannerHeuristics(defaultNRuns: Int = 100) exte
       //val rel = QueryOp.sequential(entity.entityname, nnq, None)(tracker).get.get.select(entity.pk.name).collect().map(_.getAs[Any](0)).toSet
 
       indexes.map { index =>
+        Index.load(index.indexname, true)
         performMeasurement(index, nnq, options.get("nruns").map(_.toInt), Set()).map(measurement => (index.indextypename, buildFeature(index, nnq, measurement.toConfidence()), measurement))
       }.flatten
     }.groupBy(_._1).mapValues(_.map(x => (x._2, x._3)))

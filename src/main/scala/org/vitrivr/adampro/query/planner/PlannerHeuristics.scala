@@ -65,16 +65,17 @@ private[planner] abstract class PlannerHeuristics(protected val name: String, pr
     * @return
     */
   protected def performMeasurement(entity: Entity, nnq: RankingQuery, nruns: Option[Int])(implicit ac: SharedComponentContext): Seq[Measurement] = {
-    val entityNNQ = RankingQuery(nnq.attribute, nnq.q, nnq.weights, nnq.distance, nnq.k, false, nnq.options, None)
     val tracker = new QueryTracker()
 
     val res = (0 until nruns.getOrElse(defaultNRuns)).map {
       i =>
         try {
           val t1 = System.currentTimeMillis
-          val fut = QueryOp.sequential(entity.entityname, entityNNQ, None)(tracker).get.get.select(entity.pk.name).rdd.collectAsync()
+          val fut = QueryOp.sequential(entity.entityname, nnq, None)(tracker).get.get.select(entity.pk.name).rdd.takeAsync(nnq.k)
           val res = Await.result(fut, Duration(150, "seconds"))
           val t2 = System.currentTimeMillis
+
+          ac.sc.cancelAllJobs()
 
           val recall = 1.toFloat
           val precision = 1.toFloat
@@ -100,16 +101,17 @@ private[planner] abstract class PlannerHeuristics(protected val name: String, pr
     * @return
     */
   protected def performMeasurement(index: Index, nnq: RankingQuery, nruns: Option[Int], rel: Set[Any])(implicit ac: SharedComponentContext): Seq[Measurement] = {
-    val entityN = index.entity.get.count
     val tracker = new QueryTracker()
 
     val res = (0 until nruns.getOrElse(defaultNRuns)).map {
       i =>
         try {
           val t1 = System.currentTimeMillis
-          val fut = QueryOp.index(index.indexname, nnq, None)(tracker).get.get.select(index.entity.get.pk.name).rdd.collectAsync()
+          val fut = QueryOp.index(index.indexname, nnq, None)(tracker).get.get.select(index.entity.get.pk.name).rdd.takeAsync(nnq.k)
           val res = Await.result(fut, Duration(150, "seconds"))
           val t2 = System.currentTimeMillis
+
+          ac.sc.cancelAllJobs()
 
           val ret = res.map(_.getAs[Any](0)).toSet
 
