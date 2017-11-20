@@ -220,7 +220,7 @@ class QueryTestSuite extends AdamTestBase with ScalaFutures {
       *
       */
     scenario("perform a vap index query") {
-      withQueryEvaluationSet { es => indexQuery(es, IndexTypes.VAPLUSINDEX, false) }
+      withQueryEvaluationSet { es => indexQuery(es, IndexTypes.VAPLUSINDEX, true) }
     }
 
     /**
