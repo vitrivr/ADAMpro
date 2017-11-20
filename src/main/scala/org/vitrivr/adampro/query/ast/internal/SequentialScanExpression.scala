@@ -43,6 +43,8 @@ case class SequentialScanExpression(private val entity: Entity)(private val nnq:
     ac.sc.setLocalProperty("spark.scheduler.pool", "sequential")
     ac.sc.setJobGroup(id.getOrElse(""), "sequential scan: " + entity.entityname.toString, interruptOnCancel = true)
 
+    val MAX_RES = 15000
+
     //check conformity
     if (!nnq.isConform(entity)) {
       throw QueryNotConformException("query is not conform to entity")
@@ -67,15 +69,15 @@ case class SequentialScanExpression(private val entity: Entity)(private val nnq:
     var result  = if(prefilter.isDefined){
       lazy val ids = prefilter.get.select(entity.pk.name).collect.map(_.getAs[TupleID](entity.pk.name))
 
-      val approxCount = prefilter.get.select(entity.pk.name).limit(10000 + 1).count()
+      val approxCount = prefilter.get.select(entity.pk.name).limit(MAX_RES + 1).count()
 
-      var filterMethod = if(approxCount < 10000){
+      var filterMethod = if(approxCount < MAX_RES){
         ac.config.filteringMethod
       } else {
         ac.config.FilteringMethod.SemiJoin
       }
 
-      val df = if (ac.config.manualPredicatePushdown && approxCount < 10000 && ids.length < 10000) {
+      val df = if (ac.config.manualPredicatePushdown && approxCount < MAX_RES && ids.length < MAX_RES) {
         log.trace("using manual predicate")
         entity.getData(predicates = Seq(Predicate(entity.pk.name, None, ids))).get
       } else {
@@ -86,7 +88,7 @@ case class SequentialScanExpression(private val entity: Entity)(private val nnq:
         case ac.config.FilteringMethod.BloomFilter => {
           // Bloom
           log.trace("using Bloom filter")
-          val bf = prefilter.get.stat.bloomFilter(entity.pk.name, 5000, 0.05)
+          val bf = prefilter.get.stat.bloomFilter(entity.pk.name, math.min(5000, approxCount), 0.05)
 
           val bfBc = ac.sc.broadcast(bf)
           tracker.addBroadcast(bfBc)
@@ -98,7 +100,7 @@ case class SequentialScanExpression(private val entity: Entity)(private val nnq:
         case ac.config.FilteringMethod.IsInFilter => {
           // Is in
           log.trace("using is in filter")
-          val subdf = ids.sliding(500, 500).map{
+          val subdf = ids.sliding(1000, 1000).map{
             subids => df.filter(col(entity.pk.name).isin(subids : _*))
           }.reduce(_.union(_))
 
