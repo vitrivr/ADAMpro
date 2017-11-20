@@ -43,8 +43,6 @@ case class SequentialScanExpression(private val entity: Entity)(private val nnq:
     ac.sc.setLocalProperty("spark.scheduler.pool", "sequential")
     ac.sc.setJobGroup(id.getOrElse(""), "sequential scan: " + entity.entityname.toString, interruptOnCancel = true)
 
-    val MAX_RES = 15000
-
     //check conformity
     if (!nnq.isConform(entity)) {
       throw QueryNotConformException("query is not conform to entity")
@@ -67,17 +65,20 @@ case class SequentialScanExpression(private val entity: Entity)(private val nnq:
 
 
     var result  = if(prefilter.isDefined){
+      val entityCount = entity.count
+      val maxRes = math.max((entityCount * 0.25).toInt, 10000)
+
       lazy val ids = prefilter.get.select(entity.pk.name).collect.map(_.getAs[TupleID](entity.pk.name))
 
-      val approxCount = prefilter.get.select(entity.pk.name).limit(MAX_RES + 1).count()
+      val approxCount = prefilter.get.select(entity.pk.name).limit(maxRes + 1).count()
 
-      var filterMethod = if(approxCount < MAX_RES){
+      var filterMethod = if(approxCount < maxRes){
         ac.config.filteringMethod
       } else {
         ac.config.FilteringMethod.SemiJoin
       }
 
-      val df = if (ac.config.manualPredicatePushdown && approxCount < MAX_RES && ids.length < MAX_RES) {
+      val df = if (ac.config.manualPredicatePushdown && approxCount < maxRes && ids.length < maxRes) {
         log.trace("using manual predicate")
         entity.getData(predicates = Seq(Predicate(entity.pk.name, None, ids))).get
       } else {
