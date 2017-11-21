@@ -66,7 +66,7 @@ case class SequentialScanExpression(private val entity: Entity)(private val nnq:
 
     var result  = if(prefilter.isDefined){
       val entityCount = entity.count
-      val maxRes = math.max((entityCount * 0.5).toInt, 10000)
+      val maxRes = math.min((entityCount * 0.5).toInt, 50000)
 
       lazy val ids = prefilter.get.select(entity.pk.name).collect.map(_.getAs[TupleID](entity.pk.name))
 
