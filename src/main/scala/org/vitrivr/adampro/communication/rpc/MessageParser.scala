@@ -512,54 +512,58 @@ private[communication] object MessageParser extends Logging {
     * @return
     */
   def prepareResults(queryid: String, confidence: Float, time: Long, source: String, info: Map[String, String], df: Option[DataFrame]): QueryResultInfoMessage = {
-    val results: Seq[QueryResultTupleMessage] = if (df.isDefined) {
-      val cols = df.get.schema
+    try {
+      val results: Seq[QueryResultTupleMessage] = if (df.isDefined) {
+        val cols = df.get.schema
 
-      df.get.limit(MAX_RESULTS).collect().map(row => {
-        val res = cols.map(col => {
-          try {
-            col.name -> {
-              if (row.getAs[Any](col.name) != null) {
-                col.dataType match {
-                  case BooleanType => DataMessage().withBooleanData(row.getAs[Boolean](col.name))
-                  case DoubleType => DataMessage().withDoubleData(row.getAs[Double](col.name))
-                  case FloatType => DataMessage().withFloatData(row.getAs[Float](col.name))
-                  case IntegerType => DataMessage().withIntData(row.getAs[Integer](col.name))
-                  case LongType => DataMessage().withLongData(row.getAs[Long](col.name))
-                  case StringType => DataMessage().withStringData(row.getAs[String](col.name))
-                  case x => {
+        df.get.limit(MAX_RESULTS).collect().map(row => {
+          val res = cols.map(col => {
+            try {
+              col.name -> {
+                if (row.getAs[Any](col.name) != null) {
+                  col.dataType match {
+                    case BooleanType => DataMessage().withBooleanData(row.getAs[Boolean](col.name))
+                    case DoubleType => DataMessage().withDoubleData(row.getAs[Double](col.name))
+                    case FloatType => DataMessage().withFloatData(row.getAs[Float](col.name))
+                    case IntegerType => DataMessage().withIntData(row.getAs[Integer](col.name))
+                    case LongType => DataMessage().withLongData(row.getAs[Long](col.name))
+                    case StringType => DataMessage().withStringData(row.getAs[String](col.name))
+                    case x => {
 
-                    if (DenseVectorWrapper.fitsType(x)) {
-                      val vec = row.getAs[DenseSparkVector](col.name)
-                      DataMessage().withVectorData(VectorMessage().withDenseVector(DenseVectorMessage(vec.map(_.toFloat))))
-                    } else if (SparseVectorWrapper.fitsType(x)) {
-                      val vec = SparseVectorWrapper.fromRow(row.getAs[SparseSparkVector](col.name))
-                      DataMessage().withVectorData(VectorMessage().withSparseVector(SparseVectorMessage(vec.index, vec.data.map(_.toFloat), vec.length)))
-                    } else if (GeometryWrapper.fitsType(x)) {
-                      DataMessage().withGeometryData(GeometryWrapper.fromRow(row.getAs(col.name)).desc)
-                    } else if (GeographyWrapper.fitsType(x)) {
-                      DataMessage().withGeographyData(GeographyWrapper.fromRow(row.getAs(col.name)).desc)
-                    } else {
-                      DataMessage().withStringData("")
+                      if (DenseVectorWrapper.fitsType(x)) {
+                        val vec = row.getAs[DenseSparkVector](col.name)
+                        DataMessage().withVectorData(VectorMessage().withDenseVector(DenseVectorMessage(vec.map(_.toFloat))))
+                      } else if (SparseVectorWrapper.fitsType(x)) {
+                        val vec = SparseVectorWrapper.fromRow(row.getAs[SparseSparkVector](col.name))
+                        DataMessage().withVectorData(VectorMessage().withSparseVector(SparseVectorMessage(vec.index, vec.data.map(_.toFloat), vec.length)))
+                      } else if (GeometryWrapper.fitsType(x)) {
+                        DataMessage().withGeometryData(GeometryWrapper.fromRow(row.getAs(col.name)).desc)
+                      } else if (GeographyWrapper.fitsType(x)) {
+                        DataMessage().withGeographyData(GeographyWrapper.fromRow(row.getAs(col.name)).desc)
+                      } else {
+                        DataMessage().withStringData("")
+                      }
                     }
                   }
+                } else {
+                  DataMessage()
                 }
-              } else {
-                DataMessage()
               }
+            } catch {
+              case e: Exception => col.name -> DataMessage().withStringData("")
             }
-          } catch {
-            case e: Exception => col.name -> DataMessage().withStringData("")
-          }
-        }).toMap
+          }).toMap
 
-        QueryResultTupleMessage(res)
-      })
-    } else {
-      Seq()
+          QueryResultTupleMessage(res)
+        })
+      } else {
+        Seq()
+      }
+
+      QueryResultInfoMessage(Some(AckMessage(AckMessage.Code.OK)), queryid, confidence, time, source, info, results)
+    } catch {
+      case e : Exception => QueryResultInfoMessage(Some(AckMessage(AckMessage.Code.ERROR, e.getMessage)))
     }
-
-    QueryResultInfoMessage(Some(AckMessage(AckMessage.Code.OK)), queryid, confidence, time, source, info, results)
   }
 
 
