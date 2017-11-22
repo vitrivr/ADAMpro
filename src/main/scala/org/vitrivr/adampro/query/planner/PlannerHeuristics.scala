@@ -72,7 +72,7 @@ private[planner] abstract class PlannerHeuristics(protected val name: String, pr
         try {
           val t1 = System.currentTimeMillis
           val fut = QueryOp.sequential(entity.entityname, nnq, None)(tracker).get.get.select(entity.pk.name).rdd.takeAsync(nnq.k)
-          val res = Await.result(fut, Duration(150, "seconds"))
+          val res = Await.result(fut, Duration(ac.config.maximumTimeToWaitInTraining, "seconds"))
           val t2 = System.currentTimeMillis
 
           ac.sc.cancelAllJobs()
@@ -108,7 +108,7 @@ private[planner] abstract class PlannerHeuristics(protected val name: String, pr
         try {
           val t1 = System.currentTimeMillis
           val fut = QueryOp.index(index.indexname, nnq, None)(tracker).get.get.select(index.entity.get.pk.name).rdd.takeAsync(nnq.k)
-          val res = Await.result(fut, Duration(150, "seconds"))
+          val res = Await.result(fut, Duration(ac.config.maximumTimeToWaitInTraining, "seconds"))
           val t2 = System.currentTimeMillis
 
           ac.sc.cancelAllJobs()
