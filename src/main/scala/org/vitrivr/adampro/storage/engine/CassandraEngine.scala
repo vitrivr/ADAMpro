@@ -32,6 +32,10 @@ class CassandraEngine(private val url: String, private val port: Int, private va
   ac.sqlContext.setConf(connectionId + "/" + "spark.cassandra.connection.username", user)
   ac.sqlContext.setConf(connectionId + "/" + "spark.cassandra.connection.password", password)
 
+  if(ac.config.maxQueryExecutionTime.isDefined){
+    ac.sqlContext.setConf("spark.cassandra.read.timeout_ms", ac.config.maxQueryExecutionTime.toString)
+  }
+
   override val name = "cassandra"
 
   override def supports = Seq(AttributeTypes.AUTOTYPE, AttributeTypes.INTTYPE, AttributeTypes.LONGTYPE, AttributeTypes.FLOATTYPE, AttributeTypes.DOUBLETYPE, AttributeTypes.BOOLEANTYPE, AttributeTypes.STRINGTYPE, AttributeTypes.VECTORTYPE)

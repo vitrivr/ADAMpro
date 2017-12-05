@@ -105,6 +105,12 @@ class AdamConfig extends Serializable with Logging {
     false
   }
 
+  val maxQueryExecutionTime = if(config.hasPath("adampro.maxQueryExecutionTime")){
+    Some(config.getLong("adampro.maxQueryExecutionTime"))
+  } else {
+    None
+  }
+
 
   val approximateFiltering = if(config.hasPath("adampro.approximateFiltering")){
     config.getBoolean("adampro.approximateFiltering")
