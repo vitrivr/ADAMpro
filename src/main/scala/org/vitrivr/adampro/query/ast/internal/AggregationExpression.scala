@@ -73,7 +73,7 @@ abstract class AggregationExpression(private val leftExpression: QueryExpression
     first.filter = filter
     var firstResult = first.execute(options)(tracker).get
 
-    val pk = firstResult.schema.fields.filterNot(_.name == AttributeNames.distanceColumnName).head.name
+    val pk = firstResult.schema.fields.filter(_.name.contains(AttributeNames.internalIdColumnName)).head.name
     second.filter = Some(firstResult.select(pk))
     var secondResult = second.execute(options)(tracker).get
 
@@ -106,7 +106,7 @@ abstract class AggregationExpression(private val leftExpression: QueryExpression
     val sfut = Future(second.execute(options)(tracker))
 
     val f = for (firstResult <- ffut; secondResult <- sfut)
-      yield aggregate(firstResult.get, secondResult.get, firstResult.get.schema.fields.filterNot(_.name == AttributeNames.distanceColumnName).head.name, options)
+      yield aggregate(firstResult.get, secondResult.get, firstResult.get.schema.fields .filter(_.name.contains(AttributeNames.internalIdColumnName)).head.name, options)
 
     var result = Await.result(f, Duration(100, TimeUnit.SECONDS))
 
