@@ -1,5 +1,6 @@
 package org.vitrivr.adampro.communication.datastructures
 
+import org.vitrivr.adampro.grpc.grpc.BooleanQueryMessage.WhereMessage
 import org.vitrivr.adampro.grpc.grpc.ProjectionMessage.AttributeNameMessage
 import org.vitrivr.adampro.grpc.grpc.QueryMessage.InformationLevel
 import org.vitrivr.adampro.grpc.grpc.QueryMessage.InformationLevel.{INFORMATION_FULL_TREE, INFORMATION_INTERMEDIATE_RESULTS, INFORMATION_LAST_STEP_ONLY, WITH_PROVENANCE_PARTITION_INFORMATION, WITH_PROVENANCE_SOURCE_INFORMATION}
@@ -29,6 +30,14 @@ abstract class RPCGenericQueryObject(val id: String, val options: Map[String, St
 
     if (options.contains("nofallback")) {
       qm.withNoFallback(options.get("nofallback").get.toBoolean)
+    }
+
+    if (options.contains("bq")) {
+      val bqMessage = bq
+
+      if(bqMessage.isDefined){
+        qm.withBq(bqMessage.get)
+      }
     }
 
     setQueryMessage(qm)
@@ -88,6 +97,35 @@ abstract class RPCGenericQueryObject(val id: String, val options: Map[String, St
       case "all_noprovenance" => Seq(INFORMATION_FULL_TREE, INFORMATION_INTERMEDIATE_RESULTS)
       case "minimal" => Seq(INFORMATION_LAST_STEP_ONLY)
       case _ => Seq(INFORMATION_LAST_STEP_ONLY)
+    }
+  }
+
+
+  private[datastructures] def bq: Option[BooleanQueryMessage] = {
+    val fields = options.get("bq").get.split(",")
+
+    val whereMessages = fields.map{ field =>
+      val attr = options.get("bq-" + field + "-attribute")
+      val op = options.get("bq-" + field + "-op")
+      val values = options.get("bq-" + field + "-values")
+
+      if(attr.isDefined && values.isDefined){
+        var baseMessage = WhereMessage().withAttribute(attr.get).withValues(values.get.split(",").map(DataMessage().withStringData(_)))
+
+        if(op.isDefined){
+          baseMessage = baseMessage.withOp(op.get)
+        }
+
+        Some(baseMessage)
+      } else {
+        None
+      }
+    }.filter(_.isDefined).map(_.get)
+
+    if(whereMessages.length > 0){
+      Some(BooleanQueryMessage().withWhere(whereMessages))
+    } else {
+      None
     }
   }
 
