@@ -29,14 +29,14 @@ abstract class RPCGenericQueryObject(val id: String, val options: Map[String, St
     }
 
     if (options.contains("nofallback")) {
-      qm.withNoFallback(options.get("nofallback").get.toBoolean)
+      qm = qm.withNoFallback(options.get("nofallback").get.toBoolean)
     }
 
     if (options.contains("bq")) {
       val bqMessage = bq
 
       if(bqMessage.isDefined){
-        qm.withBq(bqMessage.get)
+        qm = qm.withBq(bqMessage.get)
       }
     }
 
