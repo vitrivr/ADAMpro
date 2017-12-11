@@ -109,7 +109,7 @@ private[communication] object MessageParser extends Logging {
         var scan: Option[QueryExpression] = None
 
         if (bq.isDefined) {
-          scan = Some(new BooleanFilterScanExpression(entityname.get)(bq.get, queryid)(scan))
+          scan = Some(new BooleanFilterScanExpression(ac.catalogManager.getEntityName(indexname.get).get)(bq.get, queryid)(scan))
         }
 
         if (nnq.isDefined) {
