@@ -83,8 +83,10 @@ class ParallelQueryStatusTracker(queryID: String)(implicit ac: SharedComponentCo
     }
 
     futures.synchronized {
-      log.trace("stopping parallel query with status " + newStatus)
-      ac.sc.cancelJobGroup(queryID)
+      if (!ac.config.evaluation) {
+        log.trace("stopping parallel query with status " + newStatus)
+        ac.sc.cancelJobGroup(queryID)
+      }
       futures.clear()
     }
 

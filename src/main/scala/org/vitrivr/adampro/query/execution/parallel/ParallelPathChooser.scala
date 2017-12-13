@@ -34,7 +34,7 @@ trait ParallelPathChooser extends Logging {
   */
 class SimpleParallelPathChooser()(implicit ac: SharedComponentContext) extends ParallelPathChooser {
   override def getPaths(entityname: EntityName, rq: RankingQuery): Seq[QueryExpression] = {
-    val nnq = new RankingQuery(rq.attribute, rq.q, rq.weights, rq.distance, rq.k, true, rq.options, rq.partitions, rq.queryID)
+    val nnq = new RankingQuery(rq.attribute, rq.q, rq.weights, rq.distance, rq.k, false, rq.options, rq.partitions, rq.queryID)
 
     val scans = IndexTypes.values
       .map(indextypename => Index.list(Some(entityname), Some(nnq.attribute), Some(indextypename)).filter(_.isSuccess).map(_.get)
@@ -60,7 +60,7 @@ class SimpleParallelPathChooser()(implicit ac: SharedComponentContext) extends P
   */
 class AllParallelPathChooser(implicit ac: SharedComponentContext) extends ParallelPathChooser {
   override def getPaths(entityname: EntityName, rq: RankingQuery): Seq[QueryExpression] = {
-    val nnq = new RankingQuery(rq.attribute, rq.q, rq.weights, rq.distance, rq.k, true, rq.options, rq.partitions, rq.queryID)
+    val nnq = new RankingQuery(rq.attribute, rq.q, rq.weights, rq.distance, rq.k, false, rq.options, rq.partitions, rq.queryID)
 
     val scans = Index.list(Some(entityname))
       .map(index => IndexScanExpression(index.get)(nnq, None)(None)(ac))
@@ -80,7 +80,7 @@ class AllParallelPathChooser(implicit ac: SharedComponentContext) extends Parall
   */
 class IndexTypeParallelPathChooser(indextypenames: Seq[IndexTypeName])(implicit ac: SharedComponentContext) extends ParallelPathChooser {
   override def getPaths(entityname: EntityName, rq: RankingQuery): Seq[QueryExpression] = {
-    val nnq = new RankingQuery(rq.attribute, rq.q, rq.weights, rq.distance, rq.k, true, rq.options, rq.partitions, rq.queryID)
+    val nnq = new RankingQuery(rq.attribute, rq.q, rq.weights, rq.distance, rq.k, false, rq.options, rq.partitions, rq.queryID)
 
     val scans = indextypenames
       .map(indextypename => Index.list(Some(entityname), Some(nnq.attribute), Some(indextypename)).filter(_.isSuccess).map(_.get)
@@ -99,7 +99,7 @@ class IndexTypeParallelPathChooser(indextypenames: Seq[IndexTypeName])(implicit 
   */
 class QueryHintsParallelPathChooser(hints: Seq[QueryHint])(implicit ac: SharedComponentContext) extends ParallelPathChooser {
   override def getPaths(entityname: EntityName, rq: RankingQuery): Seq[QueryExpression] = {
-    val nnq = new RankingQuery(rq.attribute, rq.q, rq.weights, rq.distance, rq.k, true, rq.options, rq.partitions, rq.queryID)
+    val nnq = new RankingQuery(rq.attribute, rq.q, rq.weights, rq.distance, rq.k, false, rq.options, rq.partitions, rq.queryID)
 
     val scans = if(hints.filter(x => !x.isInstanceOf[SimpleQueryHint]).length > 0){
       log.warn("only index query hints allowed in path chooser")
@@ -108,11 +108,7 @@ class QueryHintsParallelPathChooser(hints: Seq[QueryHint])(implicit ac: SharedCo
       hints.map(hint => HintBasedScanExpression.startPlanSearch(entityname, Some(nnq), None, Seq(hint), false)()).filterNot(_ == null)
     }
 
-    if(!rq.indexOnly){
-      scans.+:(new SequentialScanExpression(entityname)(nnq, None)(None)(ac))
-    } else {
-      scans
-    }
+    scans
   }
 }
 
@@ -123,7 +119,7 @@ class QueryHintsParallelPathChooser(hints: Seq[QueryHint])(implicit ac: SharedCo
   */
 class IndexnameSpecifiedParallelPathChooser(indexnames: Seq[IndexName])(implicit ac: SharedComponentContext) extends ParallelPathChooser {
   override def getPaths(entityname: EntityName, rq: RankingQuery): Seq[QueryExpression] = {
-    val nnq = new RankingQuery(rq.attribute, rq.q, rq.weights, rq.distance, rq.k, true, rq.options, rq.partitions, rq.queryID)
+    val nnq = new RankingQuery(rq.attribute, rq.q, rq.weights, rq.distance, rq.k, false, rq.options, rq.partitions, rq.queryID)
 
     //here we do not filter for query conformness, as the user has specified explicitly some index names
     //and should get an exception otherwise

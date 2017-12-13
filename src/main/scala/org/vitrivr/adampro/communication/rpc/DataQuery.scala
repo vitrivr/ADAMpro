@@ -14,6 +14,7 @@ import org.vitrivr.adampro.utils.Logging
 
 import scala.concurrent.Future
 import scala.util.{Random, Try}
+import scala.concurrent.ExecutionContext.Implicits.global
 
 /**
   * adamtwo
@@ -191,9 +192,19 @@ class DataQuery extends AdamSearchGrpc.AdamSearch with Logging {
           (tpo: Try[ProgressiveObservation]) => {
             if (tpo.isSuccess) {
               val po = tpo.get
-              responseObserver.onNext(
-                QueryResultsMessage(Some(AckMessage(AckMessage.Code.OK)),
-                  Seq(MessageParser.prepareResults(request.queryid, po.confidence, po.t2 - po.t1, po.source, po.info, po.results))))
+              if(po.results.isDefined){
+                val future = po.results.get.limit(MessageParser.MAX_RESULTS).rdd.collectAsync()
+
+                future.onComplete({res =>
+                  val results = MessageParser.prepareResultsMessages(po.results.get.schema, res.get)
+                  val resultsMessage = MessageParser.prepareResultInfoMessage(request.queryid, po.confidence, po.t2 - po.t1, po.source, po.info, results)
+                  responseObserver.onNext(QueryResultsMessage(Some(AckMessage(AckMessage.Code.OK)),Seq(resultsMessage)))
+                })
+              } else {
+                responseObserver.onNext(
+                  QueryResultsMessage(Some(AckMessage(AckMessage.Code.OK)),
+                    Seq(MessageParser.prepareResults(request.queryid, po.confidence, po.t2 - po.t1, po.source, po.info, po.results))))
+              }
             } else {
               responseObserver.onNext(
                 QueryResultsMessage(Some(AckMessage(AckMessage.Code.ERROR, tpo.failed.get.getMessage))))

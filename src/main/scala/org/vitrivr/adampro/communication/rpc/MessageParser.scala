@@ -2,7 +2,7 @@ package org.vitrivr.adampro.communication.rpc
 
 import java.util.concurrent.TimeUnit
 
-import org.apache.spark.sql.DataFrame
+import org.apache.spark.sql.{DataFrame, Row}
 import org.apache.spark.sql.types._
 import org.vitrivr.adampro.data.datatypes.AttributeTypes
 import org.vitrivr.adampro.data.datatypes.AttributeTypes.{AttributeType, BOOLEANTYPE, DOUBLETYPE, FLOATTYPE, GEOGRAPHYTYPE, GEOMETRYTYPE, INTTYPE, LONGTYPE, SPARSEVECTORTYPE, STRINGTYPE, TEXTTYPE, VECTORTYPE}
@@ -515,8 +515,45 @@ private[communication] object MessageParser extends Logging {
     try {
       val results: Seq[QueryResultTupleMessage] = if (df.isDefined) {
         val cols = df.get.schema
+        prepareResultsMessages(cols, df.get.limit(MAX_RESULTS).collect())
+      } else {
+        Seq()
+      }
 
-        df.get.limit(MAX_RESULTS).collect().map(row => {
+      QueryResultInfoMessage(Some(AckMessage(AckMessage.Code.OK)), queryid, confidence, time, source, info, results)
+    } catch {
+      case e : Exception => QueryResultInfoMessage(Some(AckMessage(AckMessage.Code.ERROR, e.getMessage)))
+    }
+  }
+
+  /**
+    *
+    * @param queryid
+    * @param confidence
+    * @param time
+    * @param source
+    * @param info
+    * @param resultMessages
+    * @return
+    */
+  def prepareResultInfoMessage(queryid: String, confidence: Float, time: Long, source: String, info: Map[String, String], resultMessages : Seq[QueryResultTupleMessage]): QueryResultInfoMessage = {
+    try {
+      QueryResultInfoMessage(Some(AckMessage(AckMessage.Code.OK)), queryid, confidence, time, source, info, resultMessages)
+    } catch {
+      case e : Exception => QueryResultInfoMessage(Some(AckMessage(AckMessage.Code.ERROR, e.getMessage)))
+    }
+  }
+
+
+  /**
+    *
+    * @param cols
+    * @param rows
+    * @return
+    */
+  def prepareResultsMessages(cols : StructType, rows : Seq[Row]): Seq[QueryResultTupleMessage] = {
+      if (rows.nonEmpty) {
+        rows.map(row => {
           val res = cols.map(col => {
             try {
               col.name -> {
@@ -559,11 +596,6 @@ private[communication] object MessageParser extends Logging {
       } else {
         Seq()
       }
-
-      QueryResultInfoMessage(Some(AckMessage(AckMessage.Code.OK)), queryid, confidence, time, source, info, results)
-    } catch {
-      case e : Exception => QueryResultInfoMessage(Some(AckMessage(AckMessage.Code.ERROR, e.getMessage)))
-    }
   }
 
 
