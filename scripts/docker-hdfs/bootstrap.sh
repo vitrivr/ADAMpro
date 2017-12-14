@@ -3,9 +3,9 @@
 service ssh restart
 
 # configuration
-sed s/MASTER_HOSTNAME/$HOSTNAME/ ${ADAMPRO_HOME}/adampro.conf.template > $ADAMPRO_HOME/adampro.conf
-sed s/MASTER_HOSTNAME/$HOSTNAME/ $HADOOP_HOME/etc/hadoop/core-site.xml.template > $HADOOP_HOME/etc/hadoop/core-site.xml
-sed s/MASTER_HOSTNAME/$HOSTNAME/ $HADOOP_HOME/etc/hadoop/yarn-site.xml.template > $HADOOP_HOME/etc/hadoop/yarn-site.xml
+sed s/MASTER_HOSTNAME/$ADAMPRO_MASTER_HOSTNAME/ ${ADAMPRO_HOME}/adampro.conf.template > $ADAMPRO_HOME/adampro.conf
+sed s/MASTER_HOSTNAME/$ADAMPRO_MASTER_HOSTNAME/ $HADOOP_HOME/etc/hadoop/core-site.xml.template > $HADOOP_HOME/etc/hadoop/core-site.xml
+sed s/MASTER_HOSTNAME/$ADAMPRO_MASTER_HOSTNAME/ $HADOOP_HOME/etc/hadoop/yarn-site.xml.template > $HADOOP_HOME/etc/hadoop/yarn-site.xml
 
 # hadoop
 $HADOOP_HOME/etc/hadoop/hadoop-env.sh
@@ -49,8 +49,8 @@ if [[ $1 = "--masternode" || $2 = "--masternode" ]]; then
 
   # run ADAMpro
   $SPARK_HOME/sbin/start-master.sh
-  $SPARK_HOME/bin/spark-submit --master "$ADAMPRO_MASTER" --driver-memory $ADAMPRO_DRIVER_MEMORY --executor-memory $ADAMPRO_EXECUTOR_MEMORY --deploy-mode client --driver-java-options "-Dlog4j.configuration=file:$ADAMPRO_HOME/log4j.xml" --conf "spark.executor.extraJavaOptions=-Dlog4j.configuration=file:$ADAMPRO_HOME/log4j.xml" --driver-java-options "-XX:+UnlockCommercialFeatures -XX:+FlightRecorder" --conf "spark.executor.extraJavaOptions=-XX:+UnlockCommercialFeatures -XX:+FlightRecorder" --class org.vitrivr.adampro.main.Startup $ADAMPRO_HOME/ADAMpro-assembly-0.1.0.jar &
-
+  $SPARK_HOME/bin/spark-submit --master "$ADAMPRO_MASTER" --driver-memory $ADAMPRO_DRIVER_MEMORY --executor-memory $ADAMPRO_EXECUTOR_MEMORY --conf spark.driver.port=38000 --conf spark.blockManager.port=39000 --deploy-mode client --driver-java-options "-Dlog4j.configuration=file:$ADAMPRO_HOME/log4j.xml" --conf "spark.executor.extraJavaOptions=-Dlog4j.configuration=file:$ADAMPRO_HOME/log4j.xml" --driver-java-options "-XX:+UnlockCommercialFeatures -XX:+FlightRecorder" --conf "spark.executor.extraJavaOptions=-XX:+UnlockCommercialFeatures -XX:+FlightRecorder" --class org.vitrivr.adampro.main.Startup $ADAMPRO_HOME/ADAMpro-assembly-0.1.0.jar &
+:q:
   # start web UI
   if [[ ( -z "$ADAMPRO_START_WEBUI" ) || ( "$ADAMPRO_START_WEBUI" == "true")]]; then
       java -jar $ADAMPRO_HOME/ADAMpro-web-assembly-0.1.0.jar &
@@ -68,7 +68,7 @@ if [[ $1 = "--workernode" || $2 = "--workernode" ]]; then
 
   HN=`hostname`
   IP=`ifconfig eth0 | grep "inet addr" | awk -F: '{print $2}' | awk '{print $1}'`
-  ssh $ADAMPRO_MASTER_HOSTNAME "grep -q -F $HN /etc/hosts || ( echo $IP $HN >> /etc/hosts && service dnsmasq restart )"
+  ssh $ADAMPRO_MASTER_HOSTNAME -p 2122 "grep -q -F $HN /etc/hosts || ( echo $IP $HN >> /etc/hosts && service dnsmasq restart )"
 
   NN=`grep $ADAMPRO_MASTER_HOSTNAME /etc/hosts | awk '{print $1}'`
   grep $ADAMPRO_MASTER_HOSTNAME /etc/resolv.conf && echo nameserver $NN > /etc/resolv.conf
@@ -76,11 +76,11 @@ if [[ $1 = "--workernode" || $2 = "--workernode" ]]; then
   $HADOOP_PREFIX/sbin/yarn-daemons.sh start nodemanager
   $HADOOP_PREFIX/sbin/hadoop-daemon.sh start datanode
 
-  $SPARK_HOME/sbin/start-slave.sh $ADAMPRO_MASTER
+  $SPARK_HOME/sbin/start-slave.sh -m $ADAMPRO_EXECUTOR_MEMORY -p 38000 $ADAMPRO_MASTER
 fi
 
 if [[ $1 = "-d" || $2 = "-d" ]]; then
-  while true; do ssh $ADAMPRO_MASTER_HOSTNAME cat /etc/hosts | grep -v localhost | grep -v :: | grep -v $ADAMPRO_MASTER_HOSTNAME | grep -v `hostname` | while read line ; do grep "$line" /etc/hosts > /dev/null 2>&1 || (echo "$line" >> /etc/hosts); done ; sleep 60 ; done
+  while true; do ssh $ADAMPRO_MASTER_HOSTNAME -p 2122 cat /etc/hosts | grep -v localhost | grep -v :: | grep -v $ADAMPRO_MASTER_HOSTNAME | grep -v `hostname` | while read line ; do grep "$line" /etc/hosts > /dev/null 2>&1 || (echo "$line" >> /etc/hosts); done ; sleep 60 ; done
 fi
 
 if [[ $1 = "-bash" || $2 = "-bash" ]]; then
