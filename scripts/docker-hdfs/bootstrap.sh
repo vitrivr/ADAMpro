@@ -80,7 +80,7 @@ if [[ $1 = "--workernode" || $2 = "--workernode" ]]; then
 fi
 
 if [[ $1 = "-d" || $2 = "-d" ]]; then
-  while true; do ssh $ADAMPRO_MASTER_HOSTNAME cat /etc/hosts | grep -v localhost | grep -v :: | grep -v $MADAMPRO_MASTER_HOSTNAME | grep -v `hostname` | while read line ; do grep "$line" /etc/hosts > /dev/null 2>&1 || (echo "$line" >> /etc/hosts); done ; sleep 60 ; done
+  while true; do ssh $ADAMPRO_MASTER_HOSTNAME cat /etc/hosts | grep -v localhost | grep -v :: | grep -v $ADAMPRO_MASTER_HOSTNAME | grep -v `hostname` | while read line ; do grep "$line" /etc/hosts > /dev/null 2>&1 || (echo "$line" >> /etc/hosts); done ; sleep 60 ; done
 fi
 
 if [[ $1 = "-bash" || $2 = "-bash" ]]; then
