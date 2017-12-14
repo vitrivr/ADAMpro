@@ -3,9 +3,9 @@
 service ssh restart
 
 # configuration
-sed s/MASTER_HOSTNAME/$ADAMPRO_MASTER_HOSTNAME/ ${ADAMPRO_HOME}/adampro.conf.template > $ADAMPRO_HOME/adampro.conf
-sed s/MASTER_HOSTNAME/$ADAMPRO_MASTER_HOSTNAME/ $HADOOP_HOME/etc/hadoop/core-site.xml.template > $HADOOP_HOME/etc/hadoop/core-site.xml
-sed s/MASTER_HOSTNAME/$ADAMPRO_MASTER_HOSTNAME/ $HADOOP_HOME/etc/hadoop/yarn-site.xml.template > $HADOOP_HOME/etc/hadoop/yarn-site.xml
+sed s/MASTER_HOSTNAME/$HOSTNAME/ ${ADAMPRO_HOME}/adampro.conf.template > $ADAMPRO_HOME/adampro.conf
+sed s/MASTER_HOSTNAME/$HOSTNAME/ $HADOOP_HOME/etc/hadoop/core-site.xml.template > $HADOOP_HOME/etc/hadoop/core-site.xml
+sed s/MASTER_HOSTNAME/$HOSTNAME/ $HADOOP_HOME/etc/hadoop/yarn-site.xml.template > $HADOOP_HOME/etc/hadoop/yarn-site.xml
 
 # hadoop
 $HADOOP_HOME/etc/hadoop/hadoop-env.sh

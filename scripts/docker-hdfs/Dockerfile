@@ -51,6 +51,8 @@ RUN echo export JAVA_HOME=$JAVA_HOME >> $HADOOP_HOME/etc/hadoop/hadoop-env.sh &&
 RUN mkdir -p /hdfs/namenode && mkdir -p /hdfs/datanode && mkdir $HADOOP_HOME/logs
 
 RUN chmod 700 ${HADOOP_HOME}/etc/hadoop/hadoop-env.sh && chmod 700 ${HADOOP_HOME}/sbin/start-dfs.sh
+RUN sed s/MASTER_HOSTNAME/localhost/ ${HADOOP_HOME}/etc/hadoop/core-site.xml.template > ${HADOOP_HOME}/etc/hadoop/core-site.xml && \
+    sed s/MASTER_HOSTNAME/localhost/ ${HADOOP_HOME}/etc/hadoop/yarn-site.xml.template > ${HADOOP_HOME}/etc/hadoop/yarn-site.xml
 
 ENV HADOOP_FIRST_STARTUP /hdfs/startup.tmp
 RUN touch $HADOOP_FIRST_STARTUP
