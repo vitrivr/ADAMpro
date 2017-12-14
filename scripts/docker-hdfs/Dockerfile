@@ -1,5 +1,11 @@
 FROM vitrivr/adampro:latest-selfcontained
 
+# env variables
+ENV ADAMPRO_HOME /adampro
+ENV ADAMPRO_CODE ${ADAMPRO_HOME}/code
+ENV ADAMPRO_DATA ${ADAMPRO_HOME}/data
+ENV PGDATA ${ADAMPRO_DATA}/data/postgres
+
 # ssh, dnsmasq
 RUN apt-get -y install ssh
 COPY id_rsa.pub /root/.ssh/id_rsa.pub
