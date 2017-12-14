@@ -2,6 +2,7 @@ version: '3.3'
 
 services:
   master:
+      image: vitrivr/adampro:latest-hdfs
       entrypoint: "/adampro/bootstrap.sh -d --masternode"
       hostname: master
       environment:
@@ -37,6 +38,7 @@ services:
 
 
   worker:
+      image: vitrivr/adampro:latest-hdfs
       entrypoint: "/adampro/bootstrap.sh -d --workernode"
       environment:
         ADAMPRO_MASTER_HOSTNAME: master
