@@ -1,9 +1,6 @@
 FROM vitrivr/adampro:latest
 
 # env variables
-ENV ADAMPRO_HOME /adampro
-ENV ADAMPRO_CODE ${ADAMPRO_HOME}/code
-ENV ADAMPRO_DATA ${ADAMPRO_HOME}/data
 ENV PGDATA ${ADAMPRO_DATA}/data/postgres
 
 # spark notebook
