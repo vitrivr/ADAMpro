@@ -58,7 +58,7 @@ ENV HADOOP_FIRST_STARTUP /hdfs/startup.tmp
 RUN touch $HADOOP_FIRST_STARTUP
 
 # adampro
-COPY adampro.conf.template ${ADAM_HOME}/adampro.conf.template
+COPY adampro.conf.template ${ADAMPRO_HOME}/adampro.conf.template
 
 # hdfs ports
 EXPOSE 50010 50020 50070 50075 50090
@@ -70,8 +70,8 @@ EXPOSE 8030 8031 8032 8033 8040 8042 8088
 EXPOSE 49707 2122
 
 # bootstrap
-COPY bootstrap.sh ${ADAM_HOME}/bootstrap.sh
-RUN chmod 700 ${ADAM_HOME}/bootstrap.sh
+COPY bootstrap.sh ${ADAMPRO_HOME}/bootstrap.sh
+RUN chmod 700 ${ADAMPRO_HOME}/bootstrap.sh
 
 ENTRYPOINT ["/adampro/bootstrap.sh"]
 
