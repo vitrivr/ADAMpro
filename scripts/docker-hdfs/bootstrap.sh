@@ -3,9 +3,9 @@
 service ssh restart
 
 # configuration
-sed s/MASTER_HOSTNAME/$MASTER_HOSTNAME/ ${ADAMPRO_HOME}/adampro.conf.template > $ADAMPRO_HOME/adampro.conf
-sed s/MASTER_HOSTNAME/$MASTER_HOSTNAME/ $HADOOP_HOME/etc/hadoop/core-site.xml.template > $HADOOP_HOME/etc/hadoop/core-site.xml
-sed s/MASTER_HOSTNAME/$MASTER_HOSTNAME/ $HADOOP_HOME/etc/hadoop/yarn-site.xml.template > $HADOOP_HOME/etc/hadoop/yarn-site.xml
+sed s/MASTER_HOSTNAME/$ADAMPRO_MASTER_HOSTNAME/ ${ADAMPRO_HOME}/adampro.conf.template > $ADAMPRO_HOME/adampro.conf
+sed s/MASTER_HOSTNAME/$ADAMPRO_MASTER_HOSTNAME/ $HADOOP_HOME/etc/hadoop/core-site.xml.template > $HADOOP_HOME/etc/hadoop/core-site.xml
+sed s/MASTER_HOSTNAME/$ADAMPRO_MASTER_HOSTNAME/ $HADOOP_HOME/etc/hadoop/yarn-site.xml.template > $HADOOP_HOME/etc/hadoop/yarn-site.xml
 
 # hadoop
 $HADOOP_HOME/etc/hadoop/hadoop-env.sh
@@ -68,10 +68,10 @@ if [[ $1 = "--workernode" || $2 = "--workernode" ]]; then
 
   HN=`hostname`
   IP=`ifconfig eth0 | grep "inet addr" | awk -F: '{print $2}' | awk '{print $1}'`
-  ssh $MASTER_HOSTNAME "grep -q -F $HN /etc/hosts || ( echo $IP $HN >> /etc/hosts && service dnsmasq restart )"
+  ssh $ADAMPRO_MASTER_HOSTNAME "grep -q -F $HN /etc/hosts || ( echo $IP $HN >> /etc/hosts && service dnsmasq restart )"
 
-  NN=`grep $MASTER_HOSTNAME /etc/hosts | awk '{print $1}'`
-  grep $MASTER_HOSTNAME /etc/resolv.conf && echo nameserver $NN > /etc/resolv.conf
+  NN=`grep $ADAMPRO_MASTER_HOSTNAME /etc/hosts | awk '{print $1}'`
+  grep $ADAMPRO_MASTER_HOSTNAME /etc/resolv.conf && echo nameserver $NN > /etc/resolv.conf
 
   $HADOOP_PREFIX/sbin/yarn-daemons.sh start nodemanager
   $HADOOP_PREFIX/sbin/hadoop-daemon.sh start datanode
@@ -80,7 +80,7 @@ if [[ $1 = "--workernode" || $2 = "--workernode" ]]; then
 fi
 
 if [[ $1 = "-d" || $2 = "-d" ]]; then
-  while true; do ssh $MASTER_HOSTNAME cat /etc/hosts | grep -v localhost | grep -v :: | grep -v $MASTER_HOSTNAME | grep -v `hostname` | while read line ; do grep "$line" /etc/hosts > /dev/null 2>&1 || (echo "$line" >> /etc/hosts); done ; sleep 60 ; done
+  while true; do ssh $ADAMPRO_MASTER_HOSTNAME cat /etc/hosts | grep -v localhost | grep -v :: | grep -v $MADAMPRO_MASTER_HOSTNAME | grep -v `hostname` | while read line ; do grep "$line" /etc/hosts > /dev/null 2>&1 || (echo "$line" >> /etc/hosts); done ; sleep 60 ; done
 fi
 
 if [[ $1 = "-bash" || $2 = "-bash" ]]; then

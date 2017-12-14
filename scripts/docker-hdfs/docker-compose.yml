@@ -10,6 +10,7 @@ services:
         ADAMPRO_DRIVER_MEMORY: 4g
         ADAMPRO_EXECUTOR_MEMORY: 2g
         SPARK_PUBLIC_DNS: localhost
+        ADAMPRO_MASTER_HOSTNAME: master
       expose:
         - 7001
         - 7002
@@ -45,6 +46,7 @@ services:
         ADAMPRO_EXECUTOR_MEMORY: 2g
         SPARK_WORKER_INSTANCES: 1
         SPARK_PUBLIC_DNS: localhost
+        ADAMPRO_MASTER_HOSTNAME: master
       links:
         - master
       expose:
