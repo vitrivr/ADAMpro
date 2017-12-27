@@ -41,13 +41,15 @@ class ECPIndex(override val indexname: IndexName)(@transient override implicit v
   override def scan(data: DataFrame, q: MathVector, distance: DistanceFunction, options: Map[String, String], k: Int)(tracker : QueryTracker): DataFrame = {
     log.trace("scanning eCP index")
 
+    val numOfElements = options.getOrElse("timesK", "5").toInt * k
+
     //for every leader, check its distance to the query-vector, then sort by distance.
     val leaders = meta.leaders.map(l => {
       (l, distance(q, l.vector))
     }).sortBy(_._2)
 
     //take so many leaders up to the moment where the result-length is over k (therefore + 1)
-    val numberOfLeadersToUse = leaders.map(_._1.count).scanLeft(0.toLong)(_ + _).takeWhile(_ < k).length + 1
+    val numberOfLeadersToUse = leaders.map(_._1.count).scanLeft(0.toLong)(_ + _).takeWhile(_ < numOfElements).length + 1
     val idsBc = ac.sc.broadcast(leaders.take(numberOfLeadersToUse).map(_._1.id))
     val leadersBc = ac.sc.broadcast(leaders.take(numberOfLeadersToUse).map(x => (x._1.id, x._2)).toMap)
     tracker.addBroadcast(idsBc)

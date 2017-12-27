@@ -32,6 +32,8 @@ class PQIndex(override val indexname: IndexName)(@transient override implicit va
   override def scan(data : DataFrame, q : MathVector, distance : DistanceFunction, options : Map[String, String], k : Int)(tracker : QueryTracker): DataFrame = {
     log.trace("scanning PQ index")
 
+    val numOfElements = options.getOrElse("timesK", "5").toInt * k
+
     //precompute distance
     val distancesBc = ac.sc.broadcast(q.toArray
       .grouped(math.max(1, q.size / meta.nsq)).toSeq
@@ -59,7 +61,7 @@ class PQIndex(override val indexname: IndexName)(@transient override implicit va
     val res = data
       .withColumn(AttributeNames.distanceColumnName, distUDF(data(AttributeNames.featureIndexColumnName)).cast(Distance.SparkDistance))
       .sort(AttributeNames.distanceColumnName)
-      .limit(k)
+      .limit(numOfElements)
 
     res
   }

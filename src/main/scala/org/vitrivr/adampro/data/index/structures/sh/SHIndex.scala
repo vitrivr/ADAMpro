@@ -42,6 +42,7 @@ class SHIndex(override val indexname: IndexName)(@transient override implicit va
     log.trace("scanning SH index")
 
     val numOfQueries = options.getOrElse("numOfQ", "3").toInt
+    val numOfElements = options.getOrElse("timesK", "5").toInt * k
 
     import MovableFeature.conv_math2mov
     val originalQuery = SHUtils.hashFeature(q, meta)
@@ -67,7 +68,7 @@ class SHIndex(override val indexname: IndexName)(@transient override implicit va
     val res = data
       .withColumn(AttributeNames.distanceColumnName, distUDF(data(AttributeNames.featureIndexColumnName)).cast(Distance.SparkDistance))
       .orderBy(AttributeNames.distanceColumnName)
-      .limit(k)
+      .limit(numOfElements)
 
     //here we possibly loose some results, if distance is same for many elements
 
