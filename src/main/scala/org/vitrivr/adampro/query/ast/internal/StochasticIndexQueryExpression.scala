@@ -61,7 +61,7 @@ case class StochasticIndexQueryExpression(private val exprs: Seq[IndexScanExpres
     result = result.repartition(numPartitions = ac.config.defaultNumberOfPartitions, groupingExpr)
       .groupBy(entity.pk.name).agg((lit(1.0) - (count(col(entity.pk.name)) / nsubres)) as AttributeNames.distanceColumnName)
       .orderBy(AttributeNames.distanceColumnName)
-      .limit(5 * nnq.k)
+      .limit(math.min(50 * nnq.k, 5000))
 
     if (options.isDefined && options.get.storeSourceProvenance) {
       result = result.withColumn(AttributeNames.sourceColumnName, lit(info.scantype.getOrElse("undefined")))

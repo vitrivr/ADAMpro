@@ -102,7 +102,7 @@ private[communication] object MessageParser extends Logging {
         HintBasedScanExpression(entityname.get, nnq, bq, hints, !qm.noFallback, queryid)(None)(ac)
       } else if (qm.from.get.source.isIndexes) {
         val indexes = qm.from.get.getIndexes.indexes
-        val subNnq = RankingQuery(nnq.get.attribute, nnq.get.q, nnq.get.weights, nnq.get.distance, nnq.get.k * 2, true, nnq.get.options)
+        val subNnq = RankingQuery(nnq.get.attribute, nnq.get.q, nnq.get.weights, nnq.get.distance, nnq.get.k * 10, true, nnq.get.options)
 
         new StochasticIndexQueryExpression(indexes.map(index => new IndexScanExpression(index)(subNnq, queryid)(None)))(nnq.get, queryid)(None)
       } else if (indexname.isDefined) {
