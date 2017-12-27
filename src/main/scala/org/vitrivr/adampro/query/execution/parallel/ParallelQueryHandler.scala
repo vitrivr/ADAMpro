@@ -70,7 +70,11 @@ object ParallelQueryHandler extends Logging {
       throw new GeneralAdamException("no paths for parallel query set; possible causes: is the entity or the attribute existing?")
     }
 
-    val scanFutures = exprs.map(expr => new ScanFuture(expr, filter, onNext, pqtracker)(tracker))
+    val scanFutures = exprs.zipWithIndex.map{case(expr, prio) =>
+      {
+        new ScanFuture(expr, filter, onNext, pqtracker, Some(QueryEvaluationOptions(priority = prio)))(tracker)
+      }
+    }
     pqtracker
   }
 

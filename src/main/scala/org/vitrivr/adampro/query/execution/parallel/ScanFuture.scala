@@ -24,6 +24,7 @@ class ScanFuture[U](expression: QueryExpression, filter : Option[DataFrame], onC
   val t1 = System.currentTimeMillis()
 
   val future = Future {
+    ac.sc.setLocalProperty("spark.scheduler.pool", options.map(x => "pool" + x.priority).getOrElse(null))
     expression.rewrite().execute(options)(tracker)
   }
   future.onSuccess({
