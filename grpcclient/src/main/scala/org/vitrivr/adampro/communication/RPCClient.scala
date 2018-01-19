@@ -335,6 +335,28 @@ class RPCClient(channel: ManagedChannel,
   }
 
 
+
+  /**
+    * Transfer storage of entity.
+    *
+    * @param entityname      name of entity
+    * @param attributes      names of attribute
+    * @param newhandler       new storage handler
+    * @return
+    */
+  def entityTransferStorage(entityname: String, attributes : Seq[String], newhandler : String): Try[String] = {
+    execute("transfer storage of entity operation") {
+      val res = definerBlocking.transferStorageHandler(TransferStorageHandlerMessage(entityname, attributes, newhandler))
+
+      if (res.code == AckMessage.Code.OK) {
+        Success(res.message)
+      } else {
+        Failure(throw new Exception(res.message))
+      }
+    }
+  }
+
+
   /**
     * Read data of entity.
     *

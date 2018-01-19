@@ -24,6 +24,8 @@ private[web] case class EntityReadResponse(code: Int, entityname: String, detail
 
 private[web] case class EntityPartitionRequest(entityname: String, npartitions: Int, materialize: Boolean, replace: Boolean, attribute:String)
 
+private[web] case class EntityStorageRequest(entityname: String, attributes: Seq[String], newhandler : String)
+
 private[web] case class StorageHandlerResponse(code: Int, handlers : Map[String, Seq[String]])
 
 

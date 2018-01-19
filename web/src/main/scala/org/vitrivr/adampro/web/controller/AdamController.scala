@@ -250,6 +250,19 @@ class AdamController(rpcClient: RPCClient) extends Controller with Logging {
   /**
     *
     */
+  post("/entity/storage") { request: EntityStorageRequest =>
+    val res = rpcClient.entityTransferStorage(request.entityname, request.attributes, request.newhandler)
+
+    if (res.isSuccess) {
+      response.ok.json(GeneralResponse(200, res.get))
+    } else {
+      response.ok.json(GeneralResponse(500, res.failed.get.getMessage))
+    }
+  }
+
+  /**
+    *
+    */
   post("/index/add") { request: IndexCreateRequest =>
     val res = rpcClient.indexCreate(request.entityname, request.attribute, request.indextype, request.norm, request.options)
 

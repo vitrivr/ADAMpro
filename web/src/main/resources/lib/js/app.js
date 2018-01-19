@@ -312,6 +312,51 @@ function entityPartition(entityname, attribute, materialize, replace, npartition
 /**
  *
  * @param entityname
+ * @param attributes
+ * @param newhandler
+ */
+function entityStorage(entityname, attributes, newhandler) {
+    if (entityname === null || entityname.length == 0) {
+        raiseError("Please specify an entity."); return;
+    }
+
+    if (attributes === null || attributes.length == 0) {
+        raiseError("Please specify attributes to transfer."); return;
+    }
+
+    if (newhandler === null || newhandler.length == 0) {
+        raiseError("Please specify new handler."); return;
+    }
+
+    startTask();
+
+    var params = {};
+    params.entityname = entityname;
+    params.attributes = attributes.split(",");
+    params.newhandler = newhandler;
+
+    $.ajax(ADAM_CLIENT_HOST + "/entity/storage", {
+        data: JSON.stringify(params),
+        contentType: 'application/json',
+        type: 'POST',
+        success: function (data) {
+            if (data.code === 200) {
+                showAlert("Transferred storage of entity " + entityname + ".");
+            } else {
+                raiseError(data.message);
+            }
+            stopTask();
+        },
+        error: function () {
+            raiseError();
+            stopTask();
+        }
+    });
+}
+
+/**
+ *
+ * @param entityname
  * @param handler to handle the incoming data
  */
 function entityPreview(entityname, handler) {
