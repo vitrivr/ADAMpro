@@ -82,7 +82,7 @@ COPY data/ ${ADAMPRO_HOME}/data/
 RUN if [ -d $PGDATA ]; then chown -R postgres:postgres $PGDATA && chmod -R 700 $PGDATA; else mkdir -p $PGDATA; chown -R postgres:postgres $PGDATA; su --login - postgres --command "$POSTGRES_HOME/bin/initdb -D $PGDATA; $POSTGRES_HOME/bin/pg_ctl -w start -D $PGDATA; $POSTGRES_HOME/bin/createuser -s adampro; $POSTGRES_HOME/bin/createdb adampro; $POSTGRES_HOME/bin/pg_ctl -w stop -D $PGDATA"; fi; \
     echo "host    all             all             0.0.0.0/0               trust" >> $PGDATA/pg_hba.conf && echo "listen_addresses='*'" >> $PGDATA/postgresql.conf; \
     if [ -d $ADAMPRO_HOME/data/data/solr ]; then rm -r $SOLR_HOME/server/solr && ln -s $ADAMPRO_HOME/data/data/solr $SOLR_HOME/server/solr; else mv $SOLR_HOME/server/solr $ADAMPRO_HOME/data/data/ && ln -s $ADAMPRO_HOME/data/data/solr $SOLR_HOME/server/solr; fi
-RUN chown -R cassandra:cassandra $CASSANDRADATA && chmod 777 $CASSANDRADATA && ln -s $CASSANDRADATA /usr/lib/cassandra
+RUN mkdir -p $CASSANDRADATA && chown -R cassandra:cassandra $CASSANDRADATA && chmod 777 $CASSANDRADATA && ln -s $CASSANDRADATA /usr/lib/cassandra
 
 # port for postgresql
 EXPOSE 5432
