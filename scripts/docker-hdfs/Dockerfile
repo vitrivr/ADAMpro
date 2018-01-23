@@ -14,7 +14,7 @@ ADD ssh_config /root/.ssh/config
 RUN chmod 600 /root/.ssh/config && \
     chown root:root /root/.ssh/config
 
-RUN apt-get -y install dnsmasq snappy openssl net-tools --fix-missing && \
+RUN apt-get update && apt-get -y install dnsmasq snappy openssl net-tools --fix-missing && \
     echo user=root >> /etc/dnsmasq.conf && \
     echo bogus-priv >> /etc/dnsmasq.conf && \
     echo interface=eth0 >> /etc/dnsmasq.conf && \
