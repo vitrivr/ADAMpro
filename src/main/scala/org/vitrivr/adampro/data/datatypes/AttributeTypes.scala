@@ -3,7 +3,7 @@ package org.vitrivr.adampro.data.datatypes
 import org.apache.spark.sql.types
 import org.apache.spark.sql.types.{ArrayType, DataType}
 import org.vitrivr.adampro.data.datatypes.gis.{GeographyWrapper, GeometryWrapper}
-import org.vitrivr.adampro.data.datatypes.vector.{SparseVectorWrapper, Vector}
+import org.vitrivr.adampro.data.datatypes.vector.{Bit64VectorWrapper, SparseVectorWrapper, Vector}
 
 /**
   * adamtwo
@@ -38,7 +38,7 @@ object AttributeTypes {
 
   case object SPARSEVECTORTYPE extends AttributeType("sparsevector", SparseVectorWrapper.datatype, Some(SparseVectorWrapper))
 
-  case object BIT64VECTORTYPE extends AttributeType("bit64vector", types.LongType)
+  case object BIT64VECTORTYPE extends AttributeType("bit64vector", Bit64VectorWrapper.datatype, Some(Bit64VectorWrapper))
 
   case object BYTESVECTORTYPE extends AttributeType("bytesvector", types.BinaryType)
 

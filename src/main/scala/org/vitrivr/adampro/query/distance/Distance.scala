@@ -83,10 +83,10 @@ object Distance extends Logging {
   /**
     *
     */
-  val bit64VectorDistUDF = (nnq : RankingQuery, q : Broadcast[Long]) => udf((c: Long) => {
+  val bit64VectorDistUDF = (nnq : RankingQuery, q : Broadcast[Long]) => udf((c: Bit64SparkVector) => {
     try {
       if (c != null) {
-        java.lang.Long.bitCount(q.value ^ c).toDouble
+        java.lang.Long.bitCount(q.value ^ Vector.conv_spark2long(c)).toDouble
       } else {
         java.lang.Long.SIZE.toDouble
       }

@@ -5,7 +5,8 @@ import org.vitrivr.adampro.data.datatypes.AttributeTypes
 import org.scalatest.Matchers._
 import org.vitrivr.adampro.communication.api.{QueryOp, RandomDataOp}
 import org.vitrivr.adampro.config.AttributeNames
-import org.vitrivr.adampro.data.datatypes.vector.{ADAMBit64Vector, ADAMBytesVector}
+import org.vitrivr.adampro.data.datatypes.vector.Vector.Bit64SparkVector
+import org.vitrivr.adampro.data.datatypes.vector.{ADAMBit64Vector, ADAMBytesVector, Bit64VectorWrapper}
 import org.vitrivr.adampro.query.distance.Distance.Distance
 import org.vitrivr.adampro.query.distance.HammingDistance
 import org.vitrivr.adampro.query.query.RankingQuery
@@ -74,7 +75,7 @@ class DataTestSuite extends AdamTestBase {
         val count = entity.get.count
         assert(count == tuplesInsert)
 
-        val datum = entity.get.getFeatureData.get.head.getAs[Long]("feature")
+        val datum = Bit64VectorWrapper.fromRow(entity.get.getFeatureData.get.head.getAs[Bit64SparkVector]("feature")).vector
       }
     }
 

@@ -46,6 +46,7 @@ object Vector {
   type DenseSparkVector = DenseRawVector
   type SparseSparkVector = Row
   type ByteSparkVector = Array[Byte]
+  type Bit64SparkVector = Row
 
   type MathVector = BV[VectorBase]
 
@@ -62,6 +63,8 @@ object Vector {
   def conv_vec2dspark(v: DenseMathVector): DenseSparkVector = v.data
   def conv_vec2sspark(v: SparseMathVector): SparseSparkVector = SparseVectorWrapper(v.index, v.data, v.length).toRow()
 
+  def conv_long2spark(l : Long) : Bit64SparkVector = Bit64VectorWrapper(l).toRow()
+  def conv_spark2long(v : Bit64SparkVector) : Long = Bit64VectorWrapper.fromRow(v).vector
 
   def conv_int2vb(v: Int): VectorBase = v.toFloat
   def conv_float2vb(v: Float): VectorBase = v

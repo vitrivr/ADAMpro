@@ -2,13 +2,14 @@ package org.vitrivr.adampro.communication.rpc
 
 import java.util.concurrent.TimeUnit
 
+import com.google.protobuf.ByteString
 import org.apache.spark.sql.{DataFrame, Row}
 import org.apache.spark.sql.types._
 import org.vitrivr.adampro.data.datatypes.AttributeTypes
-import org.vitrivr.adampro.data.datatypes.AttributeTypes.{AttributeType, BIT64VECTORTYPE, BYTESVECTORTYPE, BOOLEANTYPE, DOUBLETYPE, FLOATTYPE, GEOGRAPHYTYPE, GEOMETRYTYPE, INTTYPE, LONGTYPE, SPARSEVECTORTYPE, STRINGTYPE, TEXTTYPE, VECTORTYPE}
+import org.vitrivr.adampro.data.datatypes.AttributeTypes.{AttributeType, BIT64VECTORTYPE, BOOLEANTYPE, BYTESVECTORTYPE, DOUBLETYPE, FLOATTYPE, GEOGRAPHYTYPE, GEOMETRYTYPE, INTTYPE, LONGTYPE, SPARSEVECTORTYPE, STRINGTYPE, TEXTTYPE, VECTORTYPE}
 import org.vitrivr.adampro.data.datatypes.gis.{GeographyWrapper, GeometryWrapper}
 import org.vitrivr.adampro.data.datatypes.vector.Vector._
-import org.vitrivr.adampro.data.datatypes.vector.{ADAMBit64Vector, ADAMBytesVector, ADAMNumericalVector, ADAMVector, DenseVectorWrapper, SparseVectorWrapper, Vector}
+import org.vitrivr.adampro.data.datatypes.vector.{ADAMBit64Vector, ADAMBytesVector, ADAMNumericalVector, ADAMVector, ByteVectorWrapper, Bit64VectorWrapper, DenseVectorWrapper, SparseVectorWrapper, Vector}
 import org.vitrivr.adampro.data.entity.AttributeDefinition
 import org.vitrivr.adampro.utils.exception.GeneralAdamException
 import org.vitrivr.adampro.grpc._
@@ -582,6 +583,13 @@ private[communication] object MessageParser extends Logging {
                         DataMessage().withGeometryData(GeometryWrapper.fromRow(row.getAs(col.name)).desc)
                       } else if (GeographyWrapper.fitsType(x)) {
                         DataMessage().withGeographyData(GeographyWrapper.fromRow(row.getAs(col.name)).desc)
+                      } else if (ByteVectorWrapper.fitsType(x)) {
+                        val vec = row.getAs[ByteSparkVector](col.name)
+                        val byteString = ByteString.copyFrom(vec)
+                        DataMessage().withVectorData(VectorMessage().withBytesVector(BytesVectorMessage(byteString)))
+                      } else if (Bit64VectorWrapper.fitsType(x)) {
+                        val vec  = Bit64VectorWrapper.fromRow(row.getAs[Bit64SparkVector](col.name))
+                        DataMessage().withVectorData(VectorMessage().withBit64Vector(Bit64VectorMessage(vec.vector)))
                       } else {
                         DataMessage().withStringData("")
                       }

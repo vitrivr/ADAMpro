@@ -7,7 +7,7 @@ import org.apache.spark.sql.types.{StructField, StructType}
 import org.vitrivr.adampro.data.datatypes.AttributeTypes
 import org.vitrivr.adampro.data.datatypes.AttributeTypes.AttributeType
 import org.vitrivr.adampro.data.datatypes.gis.{GeographyWrapper, GeometryWrapper}
-import org.vitrivr.adampro.data.datatypes.vector.Vector
+import org.vitrivr.adampro.data.datatypes.vector.{Bit64VectorWrapper, Vector}
 import org.vitrivr.adampro.data.datatypes.vector.Vector._
 import org.vitrivr.adampro.data.entity.Entity
 import org.vitrivr.adampro.data.entity.Entity.EntityName
@@ -91,7 +91,7 @@ object RandomDataOp extends GenericOp {
       case AttributeTypes.BOOLEANTYPE => () => generateBoolean(params)
       case AttributeTypes.VECTORTYPE => () => Vector.conv_vec2dspark(generateDenseFeatureVector(params).asInstanceOf[DenseMathVector])
       case AttributeTypes.SPARSEVECTORTYPE => () => Vector.conv_vec2sspark(generateSparseFeatureVector(params).asInstanceOf[SparseMathVector])
-      case AttributeTypes.BIT64VECTORTYPE => () => generateLong()
+      case AttributeTypes.BIT64VECTORTYPE => () => generateBit64Vector()
       case AttributeTypes.BYTESVECTORTYPE => () => generateArrayByte(params)
       case AttributeTypes.GEOMETRYTYPE => () => generateGeometry(params).toRow()
       case AttributeTypes.GEOGRAPHYTYPE => () => generateGeography(params).toRow()
@@ -416,6 +416,13 @@ object RandomDataOp extends GenericOp {
     * @return
     */
   private def generateGeography() = new GeographyWrapper("POINT(" + generateFloat(-100, 100).toString + " " + generateFloat(-100, 100).toString + ")")
+
+
+  /**
+    *
+    * @return
+    */
+  private def generateBit64Vector() : Bit64SparkVector = new Bit64VectorWrapper(generateLong()).toRow()
 
 
   /**
