@@ -5,10 +5,10 @@ import java.util.concurrent.TimeUnit
 import org.apache.spark.sql.{DataFrame, Row}
 import org.apache.spark.sql.types._
 import org.vitrivr.adampro.data.datatypes.AttributeTypes
-import org.vitrivr.adampro.data.datatypes.AttributeTypes.{AttributeType, BOOLEANTYPE, DOUBLETYPE, FLOATTYPE, GEOGRAPHYTYPE, GEOMETRYTYPE, INTTYPE, LONGTYPE, SPARSEVECTORTYPE, STRINGTYPE, TEXTTYPE, VECTORTYPE}
+import org.vitrivr.adampro.data.datatypes.AttributeTypes.{AttributeType, BIT64VECTORTYPE, BYTESVECTORTYPE, BOOLEANTYPE, DOUBLETYPE, FLOATTYPE, GEOGRAPHYTYPE, GEOMETRYTYPE, INTTYPE, LONGTYPE, SPARSEVECTORTYPE, STRINGTYPE, TEXTTYPE, VECTORTYPE}
 import org.vitrivr.adampro.data.datatypes.gis.{GeographyWrapper, GeometryWrapper}
 import org.vitrivr.adampro.data.datatypes.vector.Vector._
-import org.vitrivr.adampro.data.datatypes.vector.{DenseVectorWrapper, SparseVectorWrapper, Vector}
+import org.vitrivr.adampro.data.datatypes.vector.{ADAMBit64Vector, ADAMBytesVector, ADAMNumericalVector, ADAMVector, DenseVectorWrapper, SparseVectorWrapper, Vector}
 import org.vitrivr.adampro.data.entity.AttributeDefinition
 import org.vitrivr.adampro.utils.exception.GeneralAdamException
 import org.vitrivr.adampro.grpc._
@@ -298,10 +298,12 @@ private[communication] object MessageParser extends Logging {
     * @param vec
     * @return
     */
-  def prepareVector(vec: VectorMessage): MathVector = vec.vector match {
-    case VectorMessage.Vector.DenseVector(request) => Vector.conv_draw2vec(request.vector.map(conv_float2vb))
-    case VectorMessage.Vector.SparseVector(request) => Vector.conv_sraw2vec(request.index, request.data.map(conv_float2vb), request.length)
-    case VectorMessage.Vector.IntVector(request) => Vector.conv_draw2vec(request.vector.map(conv_int2vb)) //TODO: change to int vector
+  def prepareVector(vec: VectorMessage): ADAMVector[_] = vec.vector match {
+    case VectorMessage.Vector.DenseVector(request) => ADAMNumericalVector(Vector.conv_draw2vec(request.vector.map(conv_float2vb)))
+    case VectorMessage.Vector.SparseVector(request) => ADAMNumericalVector(Vector.conv_sraw2vec(request.index, request.data.map(conv_float2vb), request.length))
+    case VectorMessage.Vector.IntVector(request) => ADAMNumericalVector(Vector.conv_draw2vec(request.vector.map(conv_int2vb))) //TODO: change to int vector
+    case VectorMessage.Vector.Bit64Vector(request) => ADAMBit64Vector(request.vector)
+    case VectorMessage.Vector.BytesVector(request) => new ADAMBytesVector(request.vector.toByteArray)
     case _ => null
   }
 
@@ -459,6 +461,7 @@ private[communication] object MessageParser extends Logging {
     grpc.AttributeType.INT -> AttributeTypes.INTTYPE, grpc.AttributeType.LONG -> AttributeTypes.LONGTYPE, grpc.AttributeType.STRING -> AttributeTypes.STRINGTYPE,
     grpc.AttributeType.TEXT -> AttributeTypes.TEXTTYPE,
     grpc.AttributeType.VECTOR -> AttributeTypes.VECTORTYPE, grpc.AttributeType.SPARSEVECTOR -> AttributeTypes.SPARSEVECTORTYPE,
+    grpc.AttributeType.BIT64VECTOR -> AttributeTypes.BIT64VECTORTYPE, grpc.AttributeType.BYTESVECTOR -> AttributeTypes.BYTESVECTORTYPE,
     grpc.AttributeType.GEOMETRY -> AttributeTypes.GEOMETRYTYPE, grpc.AttributeType.GEOGRAPHY -> AttributeTypes.GEOGRAPHYTYPE,
     grpc.AttributeType.AUTO -> AttributeTypes.AUTOTYPE)
 
@@ -493,6 +496,8 @@ private[communication] object MessageParser extends Logging {
     case BOOLEANTYPE => (x) => x.getBooleanData
     case VECTORTYPE => (x) => Vector.conv_vec2dspark(MessageParser.prepareVector(x.getVectorData).asInstanceOf[DenseMathVector])
     case SPARSEVECTORTYPE => (x) => SparseVectorWrapper(MessageParser.prepareVector(x.getVectorData).asInstanceOf[SparseMathVector]).toRow()
+    case BIT64VECTORTYPE => (x) => x.getVectorData.asInstanceOf[Bit64VectorMessage].vector
+    case BYTESVECTORTYPE => (x) => x.getVectorData.asInstanceOf[BytesVectorMessage].vector.toByteArray
     case GEOGRAPHYTYPE => (x) => GeographyWrapper(x.getGeographyData).toRow()
     case GEOMETRYTYPE => (x) => GeographyWrapper(x.getGeometryData).toRow()
     case _ => throw new GeneralAdamException("field type " + attributetype.name + " not known")

@@ -7,7 +7,7 @@ import org.vitrivr.adampro.AdamTestBase
 import org.vitrivr.adampro.communication.api._
 import org.vitrivr.adampro.config.AttributeNames
 import org.vitrivr.adampro.data.datatypes.TupleID.TupleID
-import org.vitrivr.adampro.data.datatypes.vector.Vector
+import org.vitrivr.adampro.data.datatypes.vector.{ADAMNumericalVector, Vector}
 import org.vitrivr.adampro.query.tracker.QueryTracker
 import org.vitrivr.adampro.data.index.Index._
 import org.vitrivr.adampro.data.index.structures.IndexTypes
@@ -17,7 +17,7 @@ import org.vitrivr.adampro.query.ast.internal.AggregationExpression.{ExpressionE
 import org.vitrivr.adampro.query.ast.internal.{CompoundQueryExpression, IndexScanExpression, StochasticIndexQueryExpression}
 import org.vitrivr.adampro.query.execution.parallel.AllParallelPathChooser
 import org.vitrivr.adampro.query.execution.ProgressiveObservation
-import org.vitrivr.adampro.query.query.{FilteringQuery, RankingQuery, Predicate}
+import org.vitrivr.adampro.query.query.{FilteringQuery, Predicate, RankingQuery}
 
 import scala.concurrent.duration.Duration
 import scala.util.Try
@@ -60,7 +60,7 @@ class QueryTestSuite extends AdamTestBase with ScalaFutures {
       withQueryEvaluationSet { es =>
         When("performing a kNN query")
         val weights = Vector.conv_draw2vec(Seq.fill(es.vector.length)(Vector.zeroValue))
-        val nnq = RankingQuery("vectorfield", es.vector, Some(weights), es.distance, es.k, false, es.options)
+        val nnq = RankingQuery("vectorfield", es.vector, Some(ADAMNumericalVector(weights)), es.distance, es.k, false, es.options)
         val tracker = new QueryTracker()
         val results = QueryOp.sequential(es.entity.entityname, nnq, None)(tracker).get.get
           .map(r => (r.getAs[Distance](AttributeNames.distanceColumnName), r.getAs[Long]("tid"))).collect() //get here TID of metadata

@@ -1,6 +1,5 @@
 package org.vitrivr.adampro.data.entity
 
-import java.util.concurrent.TimeUnit
 
 import org.apache.spark.sql.Row
 import org.apache.spark.sql.types._
@@ -10,13 +9,10 @@ import org.vitrivr.adampro.communication.api.EntityOp
 import org.vitrivr.adampro.config.AttributeNames
 import org.vitrivr.adampro.data.datatypes.AttributeTypes
 import org.vitrivr.adampro.data.datatypes.vector.Vector
-import org.vitrivr.adampro.distribution.partitioning.PartitionMode
-import org.vitrivr.adampro.grpc.grpc.EntityNameMessage
 import org.vitrivr.adampro.query.query.Predicate
 
 import scala.collection.mutable.ListBuffer
-import scala.concurrent.duration.Duration
-import scala.concurrent.{Await, Future}
+import scala.concurrent.{Future}
 import scala.util.Random
 
 /**

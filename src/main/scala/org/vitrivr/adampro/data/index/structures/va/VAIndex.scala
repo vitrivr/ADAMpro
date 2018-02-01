@@ -6,7 +6,7 @@ import org.apache.spark.sql.functions._
 import org.vitrivr.adampro.config.AttributeNames
 import org.vitrivr.adampro.data.datatypes.bitstring.BitString
 import org.vitrivr.adampro.data.datatypes.vector.Vector._
-import org.vitrivr.adampro.data.index.Index
+import org.vitrivr.adampro.data.index.{Index, NumericalIndex}
 import org.vitrivr.adampro.data.index.Index.{IndexName, IndexTypeName}
 import org.vitrivr.adampro.data.index.structures.IndexTypes
 import org.vitrivr.adampro.data.index.structures.va.VAIndex._
@@ -25,7 +25,7 @@ import org.vitrivr.adampro.query.tracker.QueryTracker
   * August 2015
   */
 class VAIndex(override val indexname: IndexName)(@transient override implicit val ac: SharedComponentContext)
-  extends Index(indexname)(ac) {
+  extends NumericalIndex(indexname)(ac) {
 
   val meta = metadata.get.asInstanceOf[VAIndexMetaData]
 

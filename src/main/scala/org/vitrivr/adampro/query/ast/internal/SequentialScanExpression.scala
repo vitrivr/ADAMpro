@@ -2,18 +2,20 @@ package org.vitrivr.adampro.query.ast.internal
 
 import org.apache.spark.sql.DataFrame
 import org.apache.spark.sql.functions._
-import org.apache.spark.sql.types.StructType
+import org.apache.spark.sql.types.{ArrayType, ByteType, LongType, StructType}
 import org.vitrivr.adampro.config.AttributeNames
+import org.vitrivr.adampro.data.datatypes.AttributeTypes.{BIT64VECTORTYPE, BYTESVECTORTYPE, SPARSEVECTORTYPE, VECTORTYPE}
 import org.vitrivr.adampro.data.datatypes.TupleID.TupleID
-import org.vitrivr.adampro.data.entity.Entity
+import org.vitrivr.adampro.data.datatypes.vector.{ADAMBit64Vector, ADAMBytesVector, ADAMNumericalVector}
+import org.vitrivr.adampro.data.entity.{AttributeDefinition, Entity}
 import org.vitrivr.adampro.data.entity.Entity.EntityName
 import org.vitrivr.adampro.process.SharedComponentContext
 import org.vitrivr.adampro.query.ast.generic.{ExpressionDetails, QueryEvaluationOptions, QueryExpression}
-import org.vitrivr.adampro.query.distance.Distance
+import org.vitrivr.adampro.query.distance.{Distance, HammingDistance}
 import org.vitrivr.adampro.query.query.{Predicate, RankingQuery}
 import org.vitrivr.adampro.query.tracker.QueryTracker
 import org.vitrivr.adampro.utils.Logging
-import org.vitrivr.adampro.utils.exception.QueryNotConformException
+import org.vitrivr.adampro.utils.exception.{GeneralAdamException, QueryNotConformException}
 
 /**
   * adamtwo
@@ -133,7 +135,7 @@ case class SequentialScanExpression(private val entity: Entity)(private val nnq:
     }
 
     //distance computation
-    result.map(SequentialScanExpression.scan(_, nnq)(tracker))
+    result.map(SequentialScanExpression.scan(_, nnq, entity.schema())(tracker))
   }
 
   override def equals(other: Any): Boolean =
@@ -160,19 +162,48 @@ object SequentialScanExpression extends Logging {
     * @param nnq nearest neighbour query
     * @return
     */
-  def scan(df: DataFrame, nnq: RankingQuery)(tracker: QueryTracker)(implicit ac: SharedComponentContext): DataFrame = {
-    val qBc = ac.sc.broadcast(nnq.q)
-    tracker.addBroadcast(qBc)
-    val wBc = ac.sc.broadcast(nnq.weights)
-    tracker.addBroadcast(wBc)
+  def scan(df: DataFrame, nnq: RankingQuery, schema : Seq[AttributeDefinition])(tracker: QueryTracker)(implicit ac: SharedComponentContext): DataFrame = {
 
-    val dfDistance = if (df.schema.apply(nnq.attribute).dataType.isInstanceOf[StructType]) {
-      //sparse vectors
-      df.withColumn(AttributeNames.distanceColumnName, Distance.sparseVectorDistUDF(nnq, qBc, wBc)(df(nnq.attribute)))
-    } else {
-      //dense vectors
-      df.withColumn(AttributeNames.distanceColumnName, Distance.denseVectorDistUDF(nnq, qBc, wBc)(df(nnq.attribute)))
+    val dfDistance = schema.filter(_.name == nnq.attribute).head.attributeType match {
+      case SPARSEVECTORTYPE =>  {
+        val qBc = ac.sc.broadcast(nnq.q.asInstanceOf[ADAMNumericalVector].values)
+        tracker.addBroadcast(qBc)
+        val wBc = ac.sc.broadcast(nnq.weights.map(_.asInstanceOf[ADAMNumericalVector].values))
+        tracker.addBroadcast(wBc)
+        df.withColumn(AttributeNames.distanceColumnName, Distance.sparseVectorDistUDF(nnq, qBc, wBc)(df(nnq.attribute)))
+      }
+      case BYTESVECTORTYPE => {
+        if(nnq.distance != HammingDistance){
+          log.error("byte vectors should only use Hamming distance")
+        }
+
+        val qBc = ac.sc.broadcast(nnq.q.asInstanceOf[ADAMBytesVector].values)
+        tracker.addBroadcast(qBc)
+        df.withColumn(AttributeNames.distanceColumnName, Distance.byteVectorDistUDF(nnq, qBc)(df(nnq.attribute)))
+      }
+      case BIT64VECTORTYPE => {
+        if(nnq.distance != HammingDistance){
+          log.error("bit64 vectors should only use Hamming distance")
+        }
+
+        val qBc = ac.sc.broadcast(nnq.q.asInstanceOf[ADAMBit64Vector].values)
+        tracker.addBroadcast(qBc)
+
+        df.withColumn(AttributeNames.distanceColumnName, Distance.bit64VectorDistUDF(nnq, qBc)(df(nnq.attribute)))
+      }
+      case VECTORTYPE =>  {
+        val qBc = ac.sc.broadcast(nnq.q.asInstanceOf[ADAMNumericalVector].values)
+        tracker.addBroadcast(qBc)
+        val wBc = ac.sc.broadcast(nnq.weights.map(_.asInstanceOf[ADAMNumericalVector].values))
+        tracker.addBroadcast(wBc)
+        df.withColumn(AttributeNames.distanceColumnName, Distance.denseVectorDistUDF(nnq, qBc, wBc)(df(nnq.attribute)))
+      }
+
+      case _ => {
+        throw new GeneralAdamException("Vector type unknown")
+      }
     }
+
 
     import org.apache.spark.sql.functions.col
     val res = dfDistance.orderBy(col(AttributeNames.distanceColumnName))

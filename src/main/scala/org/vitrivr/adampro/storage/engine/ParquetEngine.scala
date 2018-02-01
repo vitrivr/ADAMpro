@@ -26,7 +26,7 @@ import scala.util.{Failure, Success, Try}
 class ParquetEngine()(@transient override implicit val ac: SharedComponentContext) extends Engine()(ac) with Logging with Serializable {
   override val name = "parquet"
 
-  override def supports = Seq(AttributeTypes.AUTOTYPE, AttributeTypes.INTTYPE, AttributeTypes.LONGTYPE, AttributeTypes.FLOATTYPE, AttributeTypes.DOUBLETYPE, AttributeTypes.STRINGTYPE, AttributeTypes.TEXTTYPE, AttributeTypes.BOOLEANTYPE, AttributeTypes.GEOGRAPHYTYPE, AttributeTypes.GEOMETRYTYPE, AttributeTypes.VECTORTYPE, AttributeTypes.SPARSEVECTORTYPE)
+  override def supports = Seq(AttributeTypes.AUTOTYPE, AttributeTypes.INTTYPE, AttributeTypes.LONGTYPE, AttributeTypes.FLOATTYPE, AttributeTypes.DOUBLETYPE, AttributeTypes.STRINGTYPE, AttributeTypes.TEXTTYPE, AttributeTypes.BOOLEANTYPE, AttributeTypes.GEOGRAPHYTYPE, AttributeTypes.GEOMETRYTYPE, AttributeTypes.VECTORTYPE, AttributeTypes.SPARSEVECTORTYPE, AttributeTypes.BIT64VECTORTYPE, AttributeTypes.BYTESVECTORTYPE)
 
   override def specializes = Seq(AttributeTypes.VECTORTYPE, AttributeTypes.SPARSEVECTORTYPE)
 

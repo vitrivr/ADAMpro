@@ -42,6 +42,13 @@ class EWAHBitString(private val bs: BitSet) extends BitString[EWAHBitString] wit
     * @return
     */
   override def toString : String = bs.toString
+
+  /**
+    * Length.
+    *
+    * @return
+    */
+  override def length: Int = bs.size()
 }
 
 

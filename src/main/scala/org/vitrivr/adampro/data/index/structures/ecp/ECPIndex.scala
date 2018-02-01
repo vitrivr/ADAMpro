@@ -21,7 +21,7 @@ import org.vitrivr.adampro.query.query.RankingQuery
   * October 2015
   */
 class ECPIndex(override val indexname: IndexName)(@transient override implicit val ac: SharedComponentContext)
-  extends Index(indexname)(ac) {
+  extends NumericalIndex(indexname)(ac) {
 
   override val indextypename: IndexTypeName = IndexTypes.ECPINDEX
   override val lossy: Boolean = true

@@ -3,6 +3,9 @@ package org.vitrivr.adampro.data.datatypes.vector
 import breeze.linalg.{DenseVector => BDV, SparseVector => BSV, Vector => BV}
 import org.apache.spark.sql.Row
 import org.apache.spark.sql.types.DataTypes
+import org.vitrivr.adampro.data.datatypes.bitstring.{BitString, EWAHBitString}
+import org.vitrivr.adampro.data.datatypes.vector.Vector.MathVector
+
 import scala.util.Random
 
 /**
@@ -38,9 +41,11 @@ object Vector {
 
   type DenseRawVector = Seq[VectorBase]
   type SparseRawVector = SparseVectorWrapper
+  type ByteRawVector[A] = BitString[A]
 
   type DenseSparkVector = DenseRawVector
   type SparseSparkVector = Row
+  type ByteSparkVector = Array[Byte]
 
   type MathVector = BV[VectorBase]
 
@@ -64,3 +69,27 @@ object Vector {
   def conv_str2vb(v : String): VectorBase = v.toFloat
 }
 
+trait ADAMVector[A] {
+  def length : Int
+  def values : A
+}
+
+/**
+  *
+  * @param vec
+  */
+case class ADAMNumericalVector(vec : MathVector) extends ADAMVector[MathVector]{
+  override def length: Int = vec.length
+  override def values: MathVector = vec
+}
+
+case class ADAMBit64Vector(vec : Long) extends ADAMVector[Long]{
+  override def length: Int = java.lang.Long.SIZE
+  override def values: Long = vec
+}
+
+
+case class ADAMBytesVector(vec : Array[Byte]) extends ADAMVector[Array[Byte]]{
+  override def length: Int = vec.length
+  override def values: Array[Byte] = vec
+}

@@ -13,6 +13,7 @@ import org.vitrivr.adampro.utils.exception.{IndexNotExistingException, IndexNotP
 import org.vitrivr.adampro.query.tracker.QueryTracker
 import org.vitrivr.adampro.data.index.Index.{IndexName, IndexTypeName}
 import IndexPartitioner.log
+import org.vitrivr.adampro.data.datatypes.vector.ADAMVector
 import org.vitrivr.adampro.distribution.partitioning.Partitioning.PartitionID
 import org.vitrivr.adampro.data.index.structures.IndexTypes
 import org.vitrivr.adampro.distribution.partitioning.partitioner.SparkPartitioner
@@ -216,7 +217,7 @@ abstract class Index(val indexname: IndexName)(@transient implicit val ac: Share
     * @param queryID  optional query id
     * @return a set of candidate tuple ids, possibly together with a tentative score (the number of tuples will be greater than k)
     */
-  def scan(q: MathVector, distance: DistanceFunction, options: Map[String, String] = Map(), k: Int, filter: Option[DataFrame], partitions: Option[Set[PartitionID]], queryID: Option[String] = None)(tracker: QueryTracker)(implicit ac: SharedComponentContext): DataFrame = {
+  def scan(q: ADAMVector[_], distance: DistanceFunction, options: Map[String, String] = Map(), k: Int, filter: Option[DataFrame], partitions: Option[Set[PartitionID]], queryID: Option[String] = None)(tracker: QueryTracker)(implicit ac: SharedComponentContext): DataFrame = {
     log.trace("started scanning index")
 
     import scala.concurrent.ExecutionContext.Implicits.global
@@ -265,7 +266,7 @@ abstract class Index(val indexname: IndexName)(@transient implicit val ac: Share
     * @param k        number of elements to retrieve (of the k nearest neighbor search), possibly more than k elements are returned
     * @return a set of candidate tuple ids, possibly together with a tentative score (the number of tuples will be greater than k)
     */
-  protected def scan(data: DataFrame, q: MathVector, distance: DistanceFunction, options: Map[String, String], k: Int)(tracker: QueryTracker): DataFrame
+  protected def scan(data: DataFrame, q: ADAMVector[_], distance: DistanceFunction, options: Map[String, String], k: Int)(tracker: QueryTracker): DataFrame
 
 
   /**
@@ -328,7 +329,7 @@ abstract class Index(val indexname: IndexName)(@transient implicit val ac: Share
 
       override def isStale = current.isStale
 
-      protected def scan(data: DataFrame, q: MathVector, distance: DistanceFunction, options: Map[String, String], k: Int)(tracker: QueryTracker): DataFrame = current.scan(data, q, distance, options, k)(tracker)
+      protected def scan(data: DataFrame, q: ADAMVector[_], distance: DistanceFunction, options: Map[String, String], k: Int)(tracker: QueryTracker): DataFrame = current.scan(data, q, distance, options, k)(tracker)
     }
 
     index
@@ -411,8 +412,9 @@ object Index extends Logging {
       }
 
       val attributetype = entity.schema().filter(_.name == attribute).map(_.attributeType).head
+      //TODO: check if numerical index or other type of index
       if (attributetype != VECTORTYPE) {
-        return Failure(new IndexNotProperlyDefinedException(attribute + " is of type " + attributetype.name + ", not feature"))
+        return Failure(new IndexNotProperlyDefinedException(attribute + " is of type " + attributetype.name + ", not (dense) vector"))
       }
 
       val count = entity.count

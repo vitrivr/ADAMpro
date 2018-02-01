@@ -1,7 +1,7 @@
 package org.vitrivr.adampro.query.planner
 
 import org.apache.spark.util.random.Sampling
-import org.vitrivr.adampro.data.datatypes.vector.Vector
+import org.vitrivr.adampro.data.datatypes.vector.{ADAMNumericalVector, Vector}
 import org.vitrivr.adampro.data.datatypes.vector.Vector._
 import org.vitrivr.adampro.data.entity.Entity
 import org.vitrivr.adampro.data.entity.Entity.EntityName
@@ -45,7 +45,7 @@ private[planner] case class RandomQueryCollection(entityname: EntityName, attrib
       .sample(withReplacement = false, fraction = fraction)
       .collect()
       .map(r => r.getAs[Seq[VectorBase]](attribute))
-      .map(vec => RankingQuery(attribute, Vector.conv_draw2vec(vec), None, EuclideanDistance, 100, false))
+      .map(vec => RankingQuery(attribute, ADAMNumericalVector(Vector.conv_draw2vec(vec)), None, EuclideanDistance, 100, false))
 
     queries
   }

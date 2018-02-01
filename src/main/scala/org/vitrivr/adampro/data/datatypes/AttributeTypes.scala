@@ -38,6 +38,10 @@ object AttributeTypes {
 
   case object SPARSEVECTORTYPE extends AttributeType("sparsevector", SparseVectorWrapper.datatype, Some(SparseVectorWrapper))
 
+  case object BIT64VECTORTYPE extends AttributeType("bit64vector", types.LongType)
+
+  case object BYTESVECTORTYPE extends AttributeType("bytesvector", types.BinaryType)
+
   case object GEOMETRYTYPE extends AttributeType("geometry", GeometryWrapper.datatype, Some(GeometryWrapper))
 
   case object GEOGRAPHYTYPE extends AttributeType("geography", GeographyWrapper.datatype, Some(GeographyWrapper))
@@ -47,7 +51,7 @@ object AttributeTypes {
   /**
     *
     */
-  val values = Seq(AUTOTYPE, INTTYPE, LONGTYPE, FLOATTYPE, DOUBLETYPE, STRINGTYPE, TEXTTYPE, BOOLEANTYPE, VECTORTYPE, SPARSEVECTORTYPE, GEOMETRYTYPE, GEOGRAPHYTYPE)
+  val values = Seq(AUTOTYPE, INTTYPE, LONGTYPE, FLOATTYPE, DOUBLETYPE, STRINGTYPE, TEXTTYPE, BOOLEANTYPE, VECTORTYPE, SPARSEVECTORTYPE, BIT64VECTORTYPE, BYTESVECTORTYPE, GEOMETRYTYPE, GEOGRAPHYTYPE)
 
   /**
     *

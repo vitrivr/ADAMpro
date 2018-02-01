@@ -73,6 +73,12 @@ trait BitString[A] extends Serializable {
     * @return
     */
   def iterator : IntIterator
+
+  /**
+    * Length.
+    * @return
+    */
+  def length : Int
 }
 
 

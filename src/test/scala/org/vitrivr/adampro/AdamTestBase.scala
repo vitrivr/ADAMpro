@@ -13,7 +13,7 @@ import org.vitrivr.adampro.data.entity.{AttributeDefinition, Entity}
 import org.vitrivr.adampro.query.distance.{ManhattanDistance, MinkowskiDistance}
 import org.vitrivr.adampro.query.query.Predicate
 import org.vitrivr.adampro.utils.Logging
-import org.vitrivr.adampro.data.datatypes.vector.Vector
+import org.vitrivr.adampro.data.datatypes.vector.{ADAMNumericalVector, Vector}
 import org.vitrivr.adampro.process.{SharedComponentContext, SparkStartup}
 
 import scala.util.Random
@@ -137,7 +137,7 @@ class AdamTestBase extends FeatureSpec with GivenWhenThen with Eventually with I
     * @param nnbqResults
     */
   case class EvaluationSet(entity: Entity, fullData: DataFrame,
-                           vector: MathVector, distance: MinkowskiDistance, k: Int,
+                           vector: ADAMNumericalVector, distance: MinkowskiDistance, k: Int,
                            where: Seq[Predicate], options: Map[String, String],
                            nnResults: Seq[(Double, Long)], nnbqResults: Seq[(Double, Long)])
 
@@ -255,7 +255,7 @@ class AdamTestBase extends FeatureSpec with GivenWhenThen with Eventually with I
     val options = Map[String, String]()
 
 
-    EvaluationSet(entity.get, data, Vector.conv_draw2vec(vector), ManhattanDistance, nnres.length, where, options, nnres, nnbqres)
+    EvaluationSet(entity.get, data, ADAMNumericalVector(Vector.conv_draw2vec(vector)), ManhattanDistance, nnres.length, where, options, nnres, nnbqres)
   }
 
 

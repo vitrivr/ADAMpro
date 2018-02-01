@@ -1,5 +1,7 @@
 package org.vitrivr.adampro.communication.api
 
+import java.nio.ByteBuffer
+
 import org.apache.spark.sql.Row
 import org.apache.spark.sql.types.{StructField, StructType}
 import org.vitrivr.adampro.data.datatypes.AttributeTypes
@@ -89,6 +91,8 @@ object RandomDataOp extends GenericOp {
       case AttributeTypes.BOOLEANTYPE => () => generateBoolean(params)
       case AttributeTypes.VECTORTYPE => () => Vector.conv_vec2dspark(generateDenseFeatureVector(params).asInstanceOf[DenseMathVector])
       case AttributeTypes.SPARSEVECTORTYPE => () => Vector.conv_vec2sspark(generateSparseFeatureVector(params).asInstanceOf[SparseMathVector])
+      case AttributeTypes.BIT64VECTORTYPE => () => generateLong()
+      case AttributeTypes.BYTESVECTORTYPE => () => generateArrayByte(params)
       case AttributeTypes.GEOMETRYTYPE => () => generateGeometry(params).toRow()
       case AttributeTypes.GEOGRAPHYTYPE => () => generateGeography(params).toRow()
       case _ => log.error("unknown field type for generating random data"); null
@@ -110,6 +114,14 @@ object RandomDataOp extends GenericOp {
     * @return
     */
   private def generateInt(max: Int) = Random.nextInt(max)
+
+
+  /**
+    *
+    * @return
+    */
+  private def generateInt() = Random.nextInt()
+
 
   /**
     *
@@ -390,6 +402,7 @@ object RandomDataOp extends GenericOp {
     new GeometryWrapper("POINT(" + generateFloat(-100, 100).toString + " " + generateFloat(-100, 100).toString + ")")
 
 
+
   /**
     *
     * @param params
@@ -403,4 +416,36 @@ object RandomDataOp extends GenericOp {
     * @return
     */
   private def generateGeography() = new GeographyWrapper("POINT(" + generateFloat(-100, 100).toString + " " + generateFloat(-100, 100).toString + ")")
+
+
+  /**
+    *
+    * @param params
+    * @return
+    */
+  private def generateArrayByte(params: Map[String, String]) : Array[Byte] = {
+    val dimensions = params.get("fv-dimensions").map(_.toInt)
+
+    if (dimensions.isEmpty) {
+      throw new GeneralAdamException("dimensionality not specified for feature vectors")
+    }
+
+    generateArrayByte(dimensions.get)
+  }
+
+
+  /**
+    *
+    */
+  def generateArrayByte(dimensions : Int) : Array[Byte] = {
+    val nBytes = dimensions - (dimensions % 8) + (if(dimensions % 8 == 0){0}else{8})
+
+    var buf = ByteBuffer.allocate(nBytes)
+
+    (0 until nBytes).foreach{ i =>
+      buf = buf.put(i, Random.nextInt.toByte)
+    }
+
+    buf.array()
+  }
 }

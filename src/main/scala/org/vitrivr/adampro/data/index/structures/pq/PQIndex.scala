@@ -5,7 +5,7 @@ import org.apache.spark.sql.types.DataTypes
 import org.vitrivr.adampro.config.AttributeNames
 import org.vitrivr.adampro.data.datatypes.vector.Vector
 import org.vitrivr.adampro.data.datatypes.vector.Vector._
-import org.vitrivr.adampro.data.index.Index
+import org.vitrivr.adampro.data.index.{Index, NumericalIndex}
 import org.vitrivr.adampro.data.index.Index.{IndexName, IndexTypeName}
 import org.vitrivr.adampro.data.index.structures.IndexTypes
 import org.vitrivr.adampro.query.distance.{Distance, DistanceFunction, MinkowskiDistance}
@@ -21,7 +21,7 @@ import org.vitrivr.adampro.query.tracker.QueryTracker
   * April 2016
   */
 class PQIndex(override val indexname: IndexName)(@transient override implicit val ac : SharedComponentContext)
-  extends Index(indexname)(ac) {
+  extends NumericalIndex(indexname)(ac) {
 
   override val indextypename: IndexTypeName = IndexTypes.PQINDEX
   override val lossy: Boolean = true

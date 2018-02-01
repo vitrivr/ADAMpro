@@ -6,7 +6,7 @@ import org.apache.spark.sql.functions.udf
 import org.vitrivr.adampro.config.AttributeNames
 import org.vitrivr.adampro.data.datatypes.bitstring.BitString
 import org.vitrivr.adampro.data.datatypes.vector.Vector._
-import org.vitrivr.adampro.data.index.Index
+import org.vitrivr.adampro.data.index.{Index, NumericalIndex}
 import org.vitrivr.adampro.data.index.Index._
 import org.vitrivr.adampro.data.index.structures.IndexTypes
 import org.vitrivr.adampro.process.SharedComponentContext
@@ -21,7 +21,7 @@ import org.vitrivr.adampro.query.tracker.QueryTracker
   * June 2016
   */
 @Experimental class MIIndex(override val indexname: IndexName)(@transient override implicit val ac: SharedComponentContext)
-  extends Index(indexname)(ac) {
+  extends NumericalIndex(indexname)(ac) {
 
   override val indextypename: IndexTypeName = IndexTypes.MIINDEX
   override val lossy: Boolean = true

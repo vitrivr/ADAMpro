@@ -1,11 +1,13 @@
 package org.vitrivr.adampro.distribution.partitioning.partitioner
 
 import org.apache.spark.sql.DataFrame
-import org.vitrivr.adampro.data.datatypes.vector.Vector._
+import org.vitrivr.adampro.data.datatypes.vector.{ADAMNumericalVector, ADAMVector}
+import org.vitrivr.adampro.data.datatypes.vector.Vector.MathVector
 import org.vitrivr.adampro.data.entity.Entity.AttributeName
 import org.vitrivr.adampro.data.entity.EntityNameHolder
 import org.vitrivr.adampro.distribution.partitioning.PartitionerChoice
 import org.vitrivr.adampro.process.SharedComponentContext
+import org.vitrivr.adampro.utils.exception.GeneralAdamException
 
 /**
   * ADAMpar.
@@ -37,5 +39,22 @@ abstract class CustomPartitioner {
   def apply(data: DataFrame, attribute: Option[AttributeName] = None, indexName: Option[EntityNameHolder] = None, nPartitions: Int, options: Map[String, String] = Map[String, String]())(implicit ac: SharedComponentContext): DataFrame
 
   /** Returns the partitions to be queried for a given Featurevector */
+  def getPartitions(q: ADAMVector[_], dropPercentage: Double, indexName: EntityNameHolder)(implicit ac: SharedComponentContext): Seq[Int] = {
+    if(q.isInstanceOf[ADAMNumericalVector]){
+      getPartitions(q.asInstanceOf[ADAMNumericalVector].values, dropPercentage, indexName)(ac)
+    } else {
+      throw new GeneralAdamException("only supported for numerical vectors")
+    }
+  }
+
+
+  /**
+    *
+    * @param q
+    * @param dropPercentage
+    * @param indexName
+    * @param ac
+    * @return
+    */
   def getPartitions(q: MathVector, dropPercentage: Double, indexName: EntityNameHolder)(implicit ac: SharedComponentContext): Seq[Int]
 }

@@ -177,7 +177,7 @@ case class Entity(entityname: EntityName)(@transient implicit val ac: SharedComp
     *
     * @return
     */
-  def getFeatureData: Option[DataFrame] = getData(typeFilter = Some(Seq(VECTORTYPE, SPARSEVECTORTYPE)))
+  def getFeatureData: Option[DataFrame] = getData(typeFilter = Some(Seq(VECTORTYPE, SPARSEVECTORTYPE, BIT64VECTORTYPE, BYTESVECTORTYPE)))
 
 
   /**

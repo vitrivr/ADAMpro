@@ -1,5 +1,7 @@
 package org.vitrivr.adampro.query.query
 
+import org.vitrivr.adampro.data.datatypes.AttributeTypes.{BIT64VECTORTYPE, BYTESVECTORTYPE, SPARSEVECTORTYPE, VECTORTYPE}
+import org.vitrivr.adampro.data.datatypes.vector.{ADAMBit64Vector, ADAMBytesVector, ADAMNumericalVector, ADAMVector}
 import org.vitrivr.adampro.shared.catalog.CatalogManager
 import org.vitrivr.adampro.data.datatypes.vector.Vector._
 import org.vitrivr.adampro.data.entity.Entity
@@ -88,8 +90,8 @@ case class Predicate(attribute : String, operator : Option[String], values : Seq
   */
 case class RankingQuery(
                                   attribute: AttributeName,
-                                  q: MathVector,
-                                  weights: Option[MathVector],
+                                  q: ADAMVector[_],
+                                  weights: Option[ADAMVector[_]],
                                   distance: DistanceFunction,
                                   k: Int,
                                   indexOnly: Boolean = false,
@@ -105,8 +107,21 @@ case class RankingQuery(
       //check if attribute exists
       val attributeExists = entity.schema(Some(Seq(attribute))).nonEmpty
 
-      //check if feature data exists and dimensionality is correct
-      val featureData = if (entity.getFeatureData.isDefined) {
+
+      //check if type is correct
+      val attributetype = entity.schema(nameFilter = Some(Seq(attribute)), fullSchema = false).head.attributeType
+      val queryFeatureDataType = if (q.isInstanceOf[ADAMNumericalVector]) {
+        (attributetype == VECTORTYPE || attributetype == SPARSEVECTORTYPE)
+      } else if(q.isInstanceOf[ADAMBit64Vector]) {
+        (attributetype == BIT64VECTORTYPE)
+      } else if(q.isInstanceOf[ADAMBytesVector]) {
+        (attributetype == BYTESVECTORTYPE)
+      } else {
+        false
+      }
+
+        //check if feature data exists and dimensionality is correct
+      val featureData = if (entity.getFeatureData.isDefined &&  (attributetype == VECTORTYPE || attributetype == SPARSEVECTORTYPE) ) {
         var ndims = ac.catalogManager.getAttributeOption(entity.entityname, attribute, Some("ndims")).get.get("ndims")
 
         if(ndims.isEmpty){
@@ -116,10 +131,10 @@ case class RankingQuery(
 
         ndims.get.toInt == q.length
       } else {
-        false
+        true
       }
 
-      attributeExists && featureData
+      attributeExists && queryFeatureDataType && featureData
     }
   }
 

@@ -6,7 +6,7 @@ import org.vitrivr.adampro.data.datatypes.bitstring.BitString
 import org.vitrivr.adampro.data.datatypes.vector.Vector._
 import org.vitrivr.adampro.data.datatypes.vector.MovableFeature
 import org.vitrivr.adampro.query.tracker.QueryTracker
-import org.vitrivr.adampro.data.index.Index
+import org.vitrivr.adampro.data.index.{Index, NumericalIndex}
 import org.vitrivr.adampro.data.index.Index.{IndexName, IndexTypeName}
 import org.vitrivr.adampro.data.index.structures.IndexTypes
 import org.vitrivr.adampro.process.SharedComponentContext
@@ -21,7 +21,7 @@ import org.vitrivr.adampro.query.query.RankingQuery
   * August 2015
   */
 class SHIndex(override val indexname: IndexName)(@transient override implicit val ac: SharedComponentContext)
-  extends Index(indexname)(ac) {
+  extends NumericalIndex(indexname)(ac) {
 
   override val indextypename: IndexTypeName = IndexTypes.SHINDEX
   override val lossy: Boolean = true

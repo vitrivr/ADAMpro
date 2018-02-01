@@ -7,7 +7,7 @@ import org.vitrivr.adampro.data.entity.Entity
 import org.vitrivr.adampro.data.index.Index
 import org.vitrivr.adampro.data.index.structures.IndexTypes
 import org.vitrivr.adampro.query.distance.EuclideanDistance
-import org.vitrivr.adampro.data.datatypes.vector.Vector
+import org.vitrivr.adampro.data.datatypes.vector.{ADAMNumericalVector, Vector}
 import org.vitrivr.adampro.query.query.RankingQuery
 
 import scala.collection.mutable.ListBuffer
@@ -43,7 +43,7 @@ class OptimizerTestSuite extends AdamTestBase with ScalaFutures {
         optimizerOp.train(entity.get, ManualIndexCollection(lb)(ac), RandomQueryCollection(entityname, "feature", 2)(ac), Map())
 
         val vec = Seq.fill(ndims)(Vector.nextRandom())
-        val nnq = RankingQuery("feature", Vector.conv_draw2vec(vec), None, EuclideanDistance, 100, true)
+        val nnq = RankingQuery("feature", ADAMNumericalVector(Vector.conv_draw2vec(vec)), None, EuclideanDistance, 100, true)
 
         val res = lb.map(index => index.indexname -> optimizerOp.getScore(index, nnq)).toMap
 
