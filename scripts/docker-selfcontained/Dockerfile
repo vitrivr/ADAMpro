@@ -46,7 +46,7 @@ ENV SPARK_NOTEBOOK_HOME /usr/lib/spark-notebook/
 
 # postgresql
 ENV PGDATA ${ADAMPRO_DATA}/data/postgres
-RUN echo deb http://apt.postgresql.org/pub/repos/apt/ jessie-pgdg main >> /etc/apt/sources.list.d/pgdg.list && curl https://www.postgresql.org/media/keys/ACCC4CF8.asc | apt-key add - && apt-get update; \
+RUN echo deb http://apt.postgresql.org/pub/repos/apt/ stretch-pgdg main >> /etc/apt/sources.list.d/pgdg.list && curl https://www.postgresql.org/media/keys/ACCC4CF8.asc | apt-key add - && apt-get update; \
     apt-get -y install postgresql-client-10 postgresql-10 libpq-dev postgresql-server-dev-10
 ENV POSTGRES_HOME /usr/lib/postgresql/10/
 
