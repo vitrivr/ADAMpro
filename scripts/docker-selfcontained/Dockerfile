@@ -8,7 +8,7 @@ ENV ADAMPRO_HOME /adampro
 ENV ADAMPRO_CODE ${ADAMPRO_HOME}/code
 ENV ADAMPRO_DATA ${ADAMPRO_HOME}/data
 
-RUN  mkdir -p /usr/lib/java && curl -v -j -k -L -H "Cookie: gpw_e24=http%3A%2F%2Fwww.oracle.com%2F; oraclelicense=accept-securebackup-cookie"   http://download.oracle.com/otn-pub/java/jdk/8u161-b12/2f38c3b165be4555a1fa6e98c45e0808/jdk-8u161-linux-x64.tar.gz | tar -xz -C /usr/lib/java --strip-components=1; \
+RUN  mkdir -p /usr/lib/java && curl -v -j -k -L -H "Cookie: gpw_e24=http%3A%2F%2Fwww.oracle.com%2F; oraclelicense=accept-securebackup-cookie"   http://download.oracle.com/otn-pub/java/jdk/10.0.1+10/fb4372174a714e6b8c52526dc134031e/jdk-10.0.1_linux-x64_bin.tar.gz | tar -xz -C /usr/lib/java --strip-components=1; \
     ln -s /usr/lib/java /usr/lib/jvm/jre 
 
 RUN update-alternatives --install "/usr/bin/java" "java" "/usr/lib/java/bin/java" 1; \
