@@ -7,9 +7,9 @@ resolvers ++= Seq(
 
 libraryDependencies ++= Seq(
   "com.google.protobuf" % "protobuf-java" % "3.2.0",
-  "io.grpc" % "grpc-netty" % "1.2.0",
-  "io.grpc" % "grpc-protobuf" % "1.2.0",
-  "io.grpc" % "grpc-stub" % "1.2.0",
+  "io.grpc" % "grpc-netty" % "1.12.0",
+  "io.grpc" % "grpc-protobuf" % "1.12.0",
+  "io.grpc" % "grpc-stub" % "1.12.0",
   "com.twitter" %% "finatra-http" % "18.1.0",
   "org.apache.logging.log4j" % "log4j-api" % "2.11.0",
   "org.apache.logging.log4j" % "log4j-core" % "2.11.0"
