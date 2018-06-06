@@ -1,6 +1,8 @@
 package org.vitrivr.adampro.utils
 
-import org.slf4j.{Logger, LoggerFactory}
+import org.apache.logging.log4j.Logger
+import org.apache.logging.log4j.LogManager
+
 
 /**
   * ADAMpro
@@ -25,7 +27,7 @@ trait Logging {
     */
   protected def log: Logger = {
     if (log_ == null) {
-      log_ = LoggerFactory.getLogger(logName)
+      log_ = LogManager.getLogger(logName)
     }
     log_
   }

@@ -5,7 +5,8 @@ libraryDependencies ++= Seq(
   "io.grpc" % "grpc-netty" % "1.2.0",
   "io.grpc" % "grpc-protobuf" % "1.2.0",
   "io.grpc" % "grpc-stub" % "1.2.0",
-  "org.slf4j" % "slf4j-simple" % "1.7.21",
+  "org.apache.logging.log4j" % "log4j-api" % "2.11.0",
+  "org.apache.logging.log4j" % "log4j-core" % "2.11.0",
   "com.trueaccord.scalapb" %% "scalapb-json4s" % "0.3.2"
 )
 
