@@ -17,7 +17,7 @@ $SPARK_HOME/bin/spark-submit --master "$ADAMPRO_MASTER" --driver-memory "$ADAMPR
 
 # start web UI
 if [[ ( -z "$ADAMPRO_START_WEBUI" ) || ( "$ADAMPRO_START_WEBUI" == "true")]]; then
-    java -jar $ADAMPRO_HOME/ADAMpro-web-assembly-0.1.0.jar &
+    java -jar -Dlog4j.configuration=file:$ADAMPRO_HOME/log4j.properties $ADAMPRO_HOME/ADAMpro-web-assembly-0.1.0.jar &
 fi
 
 # start notebook
