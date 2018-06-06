@@ -47,8 +47,8 @@ ENV SPARK_NOTEBOOK_HOME /usr/lib/spark-notebook/
 # postgresql
 ENV PGDATA ${ADAMPRO_DATA}/data/postgres
 RUN echo deb http://apt.postgresql.org/pub/repos/apt/ xenial-pgdg main >> /etc/apt/sources.list.d/pgdg.list && curl https://www.postgresql.org/media/keys/ACCC4CF8.asc | apt-key add - && apt-get update; \
-    apt-get -y install postgresql-client-9.4 postgresql-9.4 postgresql-contrib-9.4 libpq-dev postgresql-server-dev-9.4
-ENV POSTGRES_HOME /usr/lib/postgresql/9.4/
+    apt-get -y install postgresql-client-10 postgresql-10 libpq-dev postgresql-server-dev-10
+ENV POSTGRES_HOME /usr/lib/postgresql/10/
 
 # solr
 RUN mkdir -p /usr/lib/solr-6.1.0 && curl http://archive.apache.org/dist/lucene/solr/6.1.0/solr-6.1.0.tgz | tar -xz -C /usr/lib/; \
