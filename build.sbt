@@ -82,7 +82,8 @@ val secondaryLibs = Seq(
   "org.apache.commons" % "commons-math3" % "3.4.1",
   "com.googlecode.javaewah" % "JavaEWAH" % "1.1.6",
   "com.google.guava" % "guava" % "21.0",
-  "org.jgrapht" % "jgrapht-core" % "1.0.1"
+  "org.jgrapht" % "jgrapht-core" % "1.0.1",
+  "io.grpc" % "grpc-netty" % "1.12.0"
 ).map(
   _.excludeAll(
     ExclusionRule("org.scala-lang"),
@@ -117,8 +118,7 @@ val tertiaryLibs = Seq(
 
 //test libs
 val testLibs = Seq(
-  "org.scalatest" %% "scalatest" % "2.2.6",
-  "io.grpc" % "grpc-netty" % "1.12.0"
+  "org.scalatest" %% "scalatest" % "2.2.6"
 ).map(
   _.excludeAll(
     ExclusionRule("org.scala-lang"),
