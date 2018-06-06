@@ -28,9 +28,9 @@ elif [ $LOCAL = $BASE ]; then
     sbt proto
     sbt assembly
     sbt web/assembly
-    rm -f ${ADAMPRO_HOME}/log4j.xml
+    rm -f ${ADAMPRO_HOME}/log4j.properties
     rm -f ${ADAMPRO_HOME}/ADAMpro-assembly-0.1.0.jar ${ADAMPRO_HOME}/ADAMpro-web-assembly-0.1.0.jar
-    cp $ADAMPRO_CODE/conf/log4j.xml ${ADAMPRO_HOME}/log4j.xml
+    cp $ADAMPRO_CODE/conf/log4j.properties ${ADAMPRO_HOME}/log4j.properties
     cp $ADAMPRO_CODE/target/scala-2.11/ADAMpro-assembly-0.1.0.jar ${ADAMPRO_HOME}/ADAMpro-assembly-0.1.0.jar && cp $ADAMPRO_CODE/web/target/scala-2.11/ADAMpro-web-assembly-0.1.0.jar ${ADAMPRO_HOME}/ADAMpro-web-assembly-0.1.0.jar
 
     reboot
