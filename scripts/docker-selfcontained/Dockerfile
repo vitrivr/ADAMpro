@@ -8,20 +8,10 @@ ENV ADAMPRO_HOME /adampro
 ENV ADAMPRO_CODE ${ADAMPRO_HOME}/code
 ENV ADAMPRO_DATA ${ADAMPRO_HOME}/data
 
-RUN  mkdir -p /usr/lib/java && curl -v -j -k -L -H "Cookie: gpw_e24=http%3A%2F%2Fwww.oracle.com%2F; oraclelicense=accept-securebackup-cookie"   http://download.oracle.com/otn-pub/java/jdk/10.0.1+10/fb4372174a714e6b8c52526dc134031e/jdk-10.0.1_linux-x64_bin.tar.gz | tar -xz -C /usr/lib/java --strip-components=1; \
-    ln -s /usr/lib/java /usr/lib/jvm/jre 
-
-RUN update-alternatives --install "/usr/bin/java" "java" "/usr/lib/java/bin/java" 1; \
-    update-alternatives --install "/usr/bin/javac" "javac" "/usr/lib/java/bin/javac" 1; \
-    update-alternatives --install "/usr/bin/javaws" "javaws" "/usr/lib/java/bin/javaws" 1; \
-    chmod a+x /usr/bin/java; \
-    chmod a+x /usr/bin/javac; \
-    chmod a+x /usr/bin/javaws; \
-    chown -R root:root /usr/lib/java
-
-RUN update-alternatives --set java /usr/lib/java/bin/java; \
-    update-alternatives --set javac /usr/lib/java/bin/javac; \
-    update-alternatives --set javaws /usr/lib/java/bin/javaws
+# updating JDK to version 8
+RUN apt-get update; \
+    apt-get -y install openjdk-8-jdk openjdk-8-jre-headless
+ENV JAVA_HOME /usr/lib/java/jre
 
 # updating scala to 2.11
 RUN mkdir -p /usr/lib/scala-2.11.8 && curl 'http://www.scala-lang.org/files/archive/scala-2.11.8.tgz' | tar -xz -C /usr/lib/; \
