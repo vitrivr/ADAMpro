@@ -9,11 +9,8 @@ ENV ADAMPRO_CODE ${ADAMPRO_HOME}/code
 ENV ADAMPRO_DATA ${ADAMPRO_HOME}/data
 
 # updating JDK to version 8
-RUN add-apt-repository -y ppa:webupd8team/java && apt-get update; \
-    echo debconf shared/accepted-oracle-license-v1-1 select true | debconf-set-selections && echo debconf shared/accepted-oracle-license-v1-1 seen true | debconf-set-selections; \
-    apt-get -y install oracle-java8-installer; \
-    cd /usr/lib && ln -s jvm/java-8-oracle java
-ENV JAVA_HOME /usr/lib/java/jre
+RUN apt-get update; \
+    apt-get -y install openjdk-8-jdk openjdk-8-jre-headless
 
 # updating scala to 2.11
 RUN mkdir -p /usr/lib/scala-2.11.8 && curl 'http://www.scala-lang.org/files/archive/scala-2.11.8.tgz' | tar -xz -C /usr/lib/; \

@@ -11,7 +11,6 @@ ENV ADAMPRO_DATA ${ADAMPRO_HOME}/data
 # updating JDK to version 8
 RUN apt-get update; \
     apt-get -y install openjdk-8-jdk openjdk-8-jre-headless
-ENV JAVA_HOME /usr/lib/java/jre
 
 # updating scala to 2.11
 RUN mkdir -p /usr/lib/scala-2.11.8 && curl 'http://www.scala-lang.org/files/archive/scala-2.11.8.tgz' | tar -xz -C /usr/lib/; \
