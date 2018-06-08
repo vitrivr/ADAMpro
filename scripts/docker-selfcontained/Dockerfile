@@ -29,9 +29,9 @@ RUN curl http://d3kbcqa49mib13.cloudfront.net/spark-2.2.0-bin-hadoop2.7.tgz | ta
 ENV SPARK_HOME /usr/lib/spark
 
 # spark notebook
-RUN curl https://s3.eu-central-1.amazonaws.com/spark-notebook/tgz/spark-notebook-0.7.0-scala-2.11.8-spark-2.1.0-hadoop-2.7.3-with-hive.tgz?max-keys=100000 | tar -xz -C /usr/lib/; \
-    cd /usr/lib && ln -s spark-notebook-0.7.0-scala-2.11.8-spark-2.1.0-hadoop-2.7.3-with-hive spark-notebook
-ENV SPARK_NOTEBOOK_HOME /usr/lib/spark-notebook/
+# RUN curl https://s3.eu-central-1.amazonaws.com/spark-notebook/tgz/spark-notebook-0.7.0-scala-2.11.8-spark-2.1.0-hadoop-2.7.3-with-hive.tgz?max-keys=100000 | tar -xz -C /usr/lib/; \
+#   cd /usr/lib && ln -s spark-notebook-0.7.0-scala-2.11.8-spark-2.1.0-hadoop-2.7.3-with-hive spark-notebook
+# ENV SPARK_NOTEBOOK_HOME /usr/lib/spark-notebook/
 
 # postgresql
 ENV PGDATA ${ADAMPRO_DATA}/data/postgres
@@ -91,7 +91,7 @@ EXPOSE 10088
 ENV ADAMPRO_START_POSTGRES true
 ENV ADAMPRO_START_SOLR true
 ENV ADAMPRO_START_WEBUI true
-ENV ADAMPRO_START_NOTEBOOK true
+ENV ADAMPRO_START_NOTEBOOK false
 
 COPY adampro.conf ${ADAMPRO_HOME}/adampro.conf
 RUN chown root.root ${ADAMPRO_HOME}/adampro.conf; chmod 700 ${ADAMPRO_HOME}/adampro.conf
