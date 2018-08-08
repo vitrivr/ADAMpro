@@ -93,6 +93,9 @@ ENV ADAMPRO_START_SOLR true
 ENV ADAMPRO_START_WEBUI true
 ENV ADAMPRO_START_NOTEBOOK false
 
+ENV ADAMPRO_MEMORY 2g
+ENV ADAMPRO_MASTER local[4]
+
 COPY adampro.conf ${ADAMPRO_HOME}/adampro.conf
 RUN chown root.root ${ADAMPRO_HOME}/adampro.conf; chmod 700 ${ADAMPRO_HOME}/adampro.conf
 COPY bootstrap.sh ${ADAMPRO_HOME}/bootstrap.sh
