@@ -173,7 +173,11 @@ class DataQuery extends AdamSearchGrpc.AdamSearch with Logging {
   override def doStreamingQuery(responseObserver: StreamObserver[QueryResultsMessage]): StreamObserver[QueryMessage] = {
     return new StreamObserver[QueryMessage]() {
       override def onError(throwable: Throwable): Unit = {
-        responseObserver.onNext(QueryResultsMessage(Some(AckMessage(code = AckMessage.Code.ERROR, message = throwable.getMessage))))
+        try {
+          responseObserver.onNext(QueryResultsMessage(Some(AckMessage(code = AckMessage.Code.ERROR, message = throwable.getMessage))))
+        } catch {
+          case e : Exception => log.error(QUERY_MARKER, "failed to inform client about error")
+        }
       }
 
       override def onCompleted(): Unit = {}
@@ -195,7 +199,7 @@ class DataQuery extends AdamSearchGrpc.AdamSearch with Logging {
 
           (0 to MessageParser.MAX_RESULTS by MessageParser.STEP_SIZE).iterator.foreach { paginationStart =>
             log.trace(QUERY_MARKER, "collect results from " + paginationStart + " until " + (paginationStart + MessageParser.STEP_SIZE))
-            val subResults = zippedRDD.collect { case (r, i) if i >= paginationStart && i <= paginationStart + MessageParser.STEP_SIZE => r }.collect()
+            val subResults = zippedRDD.collect { case (r, i) if i >= paginationStart && i < (paginationStart + MessageParser.STEP_SIZE) => r }.collect()
 
             val resMessages = MessageParser.prepareResultsMessages(cols, subResults)
             val queryResultInfoMessage = QueryResultInfoMessage(Some(AckMessage(AckMessage.Code.OK)), queryInfo.id.getOrElse(""), queryInfo.confidence.getOrElse(0), queryInfo.time.toMillis, queryInfo.source.getOrElse(""), queryInfo.info, resMessages)
