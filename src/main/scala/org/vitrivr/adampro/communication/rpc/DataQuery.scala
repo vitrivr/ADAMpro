@@ -181,7 +181,11 @@ class DataQuery extends AdamSearchGrpc.AdamSearch with Logging {
       override def onNext(request: QueryMessage): Unit = {
         val res = runQuery(request)
 
+        log.trace(QUERY_MARKER, "run query")
+
         if(res.isSuccess && res.get._2.isDefined){
+          log.trace(QUERY_MARKER, "query is success")
+
           val queryInfo = res.get._1.info
 
           val df = res.get._2.get
@@ -190,6 +194,7 @@ class DataQuery extends AdamSearchGrpc.AdamSearch with Logging {
           val zippedRDD = df.rdd.zipWithIndex()
 
           (0 to MessageParser.MAX_RESULTS by MessageParser.STEP_SIZE).iterator.foreach { paginationStart =>
+            log.trace(QUERY_MARKER, "collect results from " + paginationStart + " until " + (paginationStart + MessageParser.STEP_SIZE))
             val subResults = zippedRDD.collect { case (r, i) if i >= paginationStart && i <= paginationStart + MessageParser.STEP_SIZE => r }.collect()
 
             val resMessages = MessageParser.prepareResultsMessages(cols, subResults)
@@ -200,12 +205,15 @@ class DataQuery extends AdamSearchGrpc.AdamSearch with Logging {
               Seq(queryResultInfoMessage)
             )
 
+            log.trace(QUERY_MARKER, "send results")
             responseObserver.onNext(queryResultMessage)
           }
         } else {
+          log.error(QUERY_MARKER, "error in query execution")
           responseObserver.onNext(QueryResultsMessage(Some(AckMessage(code = AckMessage.Code.ERROR, message = res.failed.get.getMessage))))
         }
 
+        log.trace(QUERY_MARKER, "completed streaming results")
         responseObserver.onCompleted()
       }
     }
