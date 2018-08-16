@@ -185,10 +185,10 @@ class DataQuery extends AdamSearchGrpc.AdamSearch with Logging {
       override def onNext(request: QueryMessage): Unit = {
         val res = runQuery(request)
 
-        log.trace(QUERY_MARKER, "run query")
+        log.trace(QUERY_MARKER, "run streaming query")
 
         if(res.isSuccess && res.get._2.isDefined){
-          log.trace(QUERY_MARKER, "query is success")
+          log.trace(QUERY_MARKER, "streaming query is success")
 
           val queryInfo = res.get._1.info
 
@@ -197,27 +197,37 @@ class DataQuery extends AdamSearchGrpc.AdamSearch with Logging {
 
           val zippedRDD = df.rdd.zipWithIndex()
 
-          (0 to MessageParser.MAX_RESULTS by MessageParser.STEP_SIZE).iterator.foreach { paginationStart =>
-            log.trace(QUERY_MARKER, "collect results from " + paginationStart + " until " + (paginationStart + MessageParser.STEP_SIZE))
-            val subResults = zippedRDD.collect { case (r, i) if i >= paginationStart && i < (paginationStart + MessageParser.STEP_SIZE) => r }.collect()
+          object AllDone extends Exception { }
 
-            val resMessages = MessageParser.prepareResultsMessages(cols, subResults)
-            val queryResultInfoMessage = QueryResultInfoMessage(Some(AckMessage(AckMessage.Code.OK)), queryInfo.id.getOrElse(""), queryInfo.confidence.map(_.toDouble).getOrElse(0.0), queryInfo.time.toMillis, queryInfo.source.getOrElse(""), queryInfo.info, resMessages)
+          try {
+            (0 until MessageParser.MAX_RESULTS by MessageParser.STEP_SIZE).iterator.foreach { paginationStart =>
+              log.trace(QUERY_MARKER, "collect streaming results from " + paginationStart + " until " + (paginationStart + MessageParser.STEP_SIZE))
+              val subResults = zippedRDD.collect { case (r, i) if i >= paginationStart && i < (paginationStart + MessageParser.STEP_SIZE) => r }.collect()
 
-            val queryResultMessage = QueryResultsMessage(
-              Some(AckMessage(AckMessage.Code.OK)),
-              Seq(queryResultInfoMessage)
-            )
+              if(subResults.isEmpty){
+                throw AllDone //get out of loop
+              }
 
-            log.trace(QUERY_MARKER, "send results")
-            responseObserver.onNext(queryResultMessage)
+              val resMessages = MessageParser.prepareResultsMessages(cols, subResults)
+              val queryResultInfoMessage = QueryResultInfoMessage(Some(AckMessage(AckMessage.Code.OK)), queryInfo.id.getOrElse(""), queryInfo.confidence.map(_.toDouble).getOrElse(0.0), queryInfo.time.toMillis, queryInfo.source.getOrElse(""), queryInfo.info, resMessages)
+
+              val queryResultMessage = QueryResultsMessage(
+                Some(AckMessage(AckMessage.Code.OK)),
+                Seq(queryResultInfoMessage)
+              )
+
+              log.trace(QUERY_MARKER, "send streaming results from " + paginationStart + " until " + (paginationStart + MessageParser.STEP_SIZE))
+              responseObserver.onNext(queryResultMessage)
+            }
+          } catch {
+            case AllDone =>
           }
         } else {
-          log.error(QUERY_MARKER, "error in query execution")
+          log.error(QUERY_MARKER, "error in streaming query execution")
           responseObserver.onNext(QueryResultsMessage(Some(AckMessage(code = AckMessage.Code.ERROR, message = res.failed.get.getMessage))))
         }
 
-        log.trace(QUERY_MARKER, "completed streaming results")
+        log.trace(QUERY_MARKER, "completed streaming query")
         responseObserver.onCompleted()
       }
     }
