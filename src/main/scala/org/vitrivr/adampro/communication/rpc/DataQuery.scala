@@ -202,7 +202,7 @@ class DataQuery extends AdamSearchGrpc.AdamSearch with Logging {
             val subResults = zippedRDD.collect { case (r, i) if i >= paginationStart && i < (paginationStart + MessageParser.STEP_SIZE) => r }.collect()
 
             val resMessages = MessageParser.prepareResultsMessages(cols, subResults)
-            val queryResultInfoMessage = QueryResultInfoMessage(Some(AckMessage(AckMessage.Code.OK)), queryInfo.id.getOrElse(""), queryInfo.confidence.getOrElse(0), queryInfo.time.toMillis, queryInfo.source.getOrElse(""), queryInfo.info, resMessages)
+            val queryResultInfoMessage = QueryResultInfoMessage(Some(AckMessage(AckMessage.Code.OK)), queryInfo.id.getOrElse(""), queryInfo.confidence.getOrElse(0.0), queryInfo.time.toMillis, queryInfo.source.getOrElse(""), queryInfo.info, resMessages)
 
             val queryResultMessage = QueryResultsMessage(
               Some(AckMessage(AckMessage.Code.OK)),
