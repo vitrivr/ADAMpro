@@ -500,6 +500,7 @@ private[communication] object MessageParser extends Logging {
 
 
   val MAX_RESULTS = 50000
+  val STEP_SIZE = 500
 
   /**
     *

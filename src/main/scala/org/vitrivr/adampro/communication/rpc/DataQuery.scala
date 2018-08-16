@@ -1,10 +1,12 @@
 package org.vitrivr.adampro.communication.rpc
 
 import io.grpc.stub.StreamObserver
+import org.apache.spark.sql.DataFrame
 import org.vitrivr.adampro.communication.api.{EntityOp, IndexOp, QueryOp}
 import org.vitrivr.adampro.utils.exception.{GeneralAdamException, QueryNotCachedException}
 import org.vitrivr.adampro.grpc.grpc.{AdamSearchGrpc, _}
 import org.vitrivr.adampro.process.{SharedComponentContext, SparkStartup}
+import org.vitrivr.adampro.query.ast.generic.QueryExpression
 import org.vitrivr.adampro.query.execution.ProgressiveObservation
 import org.vitrivr.adampro.query.execution.parallel.{QueryHintsParallelPathChooser, SimpleParallelPathChooser}
 import org.vitrivr.adampro.query.planner.QueryPlannerOp
@@ -13,7 +15,7 @@ import org.vitrivr.adampro.query.tracker.{QueryTracker, ResultTracker}
 import org.vitrivr.adampro.utils.Logging
 
 import scala.concurrent.Future
-import scala.util.{Random, Try}
+import scala.util.{Failure, Random, Try}
 import scala.concurrent.ExecutionContext.Implicits.global
 
 /**
@@ -91,31 +93,13 @@ class DataQuery extends AdamSearchGrpc.AdamSearch with Logging {
     */
   private def executeQuery(request: QueryMessage, tracker : QueryTracker = new QueryTracker()): QueryResultsMessage = {
     time("rpc call for query operation") {
-      val logId = Random.alphanumeric.take(5).mkString
-      log.trace(QUERY_MARKER, "start " + logId)
-      val expression = MessageParser.toExpression(request)
-      log.trace(QUERY_MARKER, "to expression " + logId)
-      val evaluationOptions = MessageParser.prepareEvaluationOptions(request)
-      log.trace(QUERY_MARKER, "evaluation options " + logId)
-      val informationLevel = MessageParser.prepareInformationLevel(request.information)
-      log.trace(QUERY_MARKER, "information level " + logId)
-
-      if (expression.isFailure) {
-        log.error("error when parsing expression: " + expression.failed.get.getMessage)
-        return QueryResultsMessage(Some(AckMessage(code = AckMessage.Code.ERROR, message = expression.failed.get.getMessage)))
-      }
-
-      log.trace("\n ------------------- \n" + expression.get.mkString(0) + "\n ------------------- \n")
-
-      log.trace(QUERY_MARKER, "before query op " + logId)
-
-      val res = QueryOp.expression(expression.get, evaluationOptions)(tracker)
-
-      log.trace(QUERY_MARKER, "after query op " + logId)
+      val res = runQuery(request, tracker)
 
       val message = if (res.isSuccess) {
         val finalExpr = res.get._1
         val finalResult = res.get._2
+
+        val informationLevel = MessageParser.prepareInformationLevel(request.information)
 
         val results = res.get._1.information(informationLevel).map(res =>
           MessageParser.prepareResults(res.id.getOrElse(""), res.confidence.getOrElse(0), res.time.toMillis, res.source.getOrElse(""), Map(), res.results)
@@ -135,6 +119,39 @@ class DataQuery extends AdamSearchGrpc.AdamSearch with Logging {
       message
     }
   }
+
+  /**
+    *
+    * @param request
+    * @param tracker
+    * @return
+    */
+  private def runQuery(request: QueryMessage, tracker : QueryTracker = new QueryTracker()): Try[(QueryExpression, Option[DataFrame])] = {
+    val logId = Random.alphanumeric.take(5).mkString
+    log.trace(QUERY_MARKER, "start " + logId)
+    val expression = MessageParser.toExpression(request)
+    log.trace(QUERY_MARKER, "to expression " + logId)
+    val evaluationOptions = MessageParser.prepareEvaluationOptions(request)
+    log.trace(QUERY_MARKER, "evaluation options " + logId)
+    val informationLevel = MessageParser.prepareInformationLevel(request.information)
+    log.trace(QUERY_MARKER, "information level " + logId)
+
+    if (expression.isFailure) {
+      log.error("error when parsing expression: " + expression.failed.get.getMessage)
+      return Failure(expression.failed.get)
+    }
+
+    log.trace("\n ------------------- \n" + expression.get.mkString(0) + "\n ------------------- \n")
+
+    log.trace(QUERY_MARKER, "before query op " + logId)
+
+    val res = QueryOp.expression(expression.get, evaluationOptions)(tracker)
+
+    log.trace(QUERY_MARKER, "after query op " + logId)
+
+    res
+  }
+
 
 
   /**
@@ -162,7 +179,34 @@ class DataQuery extends AdamSearchGrpc.AdamSearch with Logging {
       override def onCompleted(): Unit = {}
 
       override def onNext(request: QueryMessage): Unit = {
-        responseObserver.onNext(executeQuery(request))
+        val res = runQuery(request)
+
+        if(res.isSuccess && res.get._2.isDefined){
+          val queryInfo = res.get._1.info
+
+          val df = res.get._2.get
+          val cols = df.schema
+
+          val zippedRDD = df.rdd.zipWithIndex()
+
+          (0 to MessageParser.MAX_RESULTS by MessageParser.STEP_SIZE).iterator.foreach { paginationStart =>
+            val subResults = zippedRDD.collect { case (r, i) if i >= paginationStart && i <= paginationStart + MessageParser.STEP_SIZE => r }.collect()
+
+            val resMessages = MessageParser.prepareResultsMessages(cols, subResults)
+            val queryResultInfoMessage = QueryResultInfoMessage(Some(AckMessage(AckMessage.Code.OK)), queryInfo.id.getOrElse(""), queryInfo.confidence.getOrElse(0), queryInfo.time.toMillis, queryInfo.source.getOrElse(""), queryInfo.info, resMessages)
+
+            val queryResultMessage = QueryResultsMessage(
+              Some(AckMessage(AckMessage.Code.OK)),
+              Seq(queryResultInfoMessage)
+            )
+
+            responseObserver.onNext(queryResultMessage)
+          }
+        } else {
+          responseObserver.onNext(QueryResultsMessage(Some(AckMessage(code = AckMessage.Code.ERROR, message = res.failed.get.getMessage))))
+        }
+
+        responseObserver.onCompleted()
       }
     }
   }
