@@ -222,6 +222,9 @@ class DataQuery extends AdamSearchGrpc.AdamSearch with Logging {
           } catch {
             case AllDone =>
           }
+        } else if(!res.get._2.isDefined) {
+          log.error(QUERY_MARKER, "error in streaming query execution, successfull execution, but no results")
+          responseObserver.onNext(QueryResultsMessage(Some(AckMessage(code = AckMessage.Code.ERROR, message = "no data to return"))))
         } else {
           log.error(QUERY_MARKER, "error in streaming query execution")
           responseObserver.onNext(QueryResultsMessage(Some(AckMessage(code = AckMessage.Code.ERROR, message = res.failed.get.getMessage))))
