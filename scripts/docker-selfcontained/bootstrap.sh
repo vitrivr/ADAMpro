@@ -1,5 +1,7 @@
 #!/bin/bash
 
+echo "*** start ADAMpro ***"
+
 # storage engines
 if [[( -z "$ADAMPRO_START_POSTGRES" ) || ( "$ADAMPRO_START_POSTGRES" == "true")]]; then
     service postgresql stop
@@ -36,4 +38,20 @@ if [[ $1 == "-bash" ]]; then
   /bin/bash
 fi
 
-while true; do sleep 60 ; done
+# (graceful) shutdown
+term_handler(){
+   echo "*** stop ADAMpro ***"
+   su --login - postgres --command "$POSTGRES_HOME/bin/pg_ctl -w stop -D $PGDATA"
+   solr stop -p 8983
+   ps ax | grep 'cassandra' | awk -F ' ' '{print $1}' | xargs kill
+   exit 143;
+}
+
+# Setup signal handlers
+trap 'term_handler' SIGTERM
+
+
+while true
+do
+  tail -f /dev/null & wait ${!}
+done
