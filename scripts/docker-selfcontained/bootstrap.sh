@@ -14,7 +14,7 @@ fi
 # start cassandra
 if [[ (-z "$ADAMPRO_START_CASSANDRA" ) || ( "$ADAMPRO_START_CASSANDRA" == "true")]]; then
     /usr/local/bin/docker-entrypoint.sh &
-    wait-for-it.sh
+    $ADAMPRO_HOME/wait-for-it.sh -h localhost -p 9042
 fi
 
 # run ADAMpro
