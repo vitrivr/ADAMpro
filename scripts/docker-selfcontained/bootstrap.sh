@@ -43,8 +43,12 @@ term_handler(){
    echo "*** stop ADAMpro ***"
    su --login - postgres --command "$POSTGRES_HOME/bin/pg_ctl -w stop -D $PGDATA"
    solr stop -p 8983
-   ps ax | grep 'cassandra' | awk -F ' ' '{print $1}' | xargs kill
-   exit 143;
+
+   caspid=$(ps ax | grep 'cassandra' | grep -v grep |  awk -F ' ' '{print $1}');
+   kill $caspid
+   while ps -p $caspid; do sleep 1; done;
+
+   exit 0;
 }
 
 # Setup signal handlers

@@ -96,7 +96,7 @@ term_handler(){
    $HADOOP_PREFIX/sbin/stop-dfs.sh
    $HADOOP_PREFIX/sbin/stop-yarn.sh
    solr stop -p 8983
-   exit 143;
+   exit 0;
 }
 
 
