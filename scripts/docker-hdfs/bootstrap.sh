@@ -87,4 +87,24 @@ if [[ $1 = "-bash" || $2 = "-bash" ]]; then
   /bin/bash
 fi
 
-while true; do sleep 60 ; done
+
+
+# (graceful) shutdown
+term_handler(){
+   echo "*** stop ADAMpro ***"
+   su --login - postgres --command "$POSTGRES_HOME/bin/pg_ctl -w stop -D $PGDATA"
+   $HADOOP_PREFIX/sbin/stop-dfs.sh
+   $HADOOP_PREFIX/sbin/stop-yarn.sh
+   solr stop -p 8983
+   exit 143;
+}
+
+
+# Setup signal handlers
+trap 'term_handler' SIGTERM
+
+
+while true
+do
+  tail -f /dev/null & wait ${!}
+done
