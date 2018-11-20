@@ -173,7 +173,7 @@ class AdamController(rpcClient: RPCClient) extends Controller with Logging {
     val res = rpcClient.entityPreview(entityname.get)
 
     if (res.isSuccess) {
-      response.ok.json(EntityReadResponse(200, entityname.get, res.get.map(_.results).head))
+      response.ok.json(EntityReadResponse(200, entityname.get, res.get.map(_.results).headOption.getOrElse(Seq(Map()))))
     } else {
       response.ok.json(GeneralResponse(500, res.failed.get.getMessage))
     }

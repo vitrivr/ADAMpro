@@ -8,20 +8,9 @@ ENV ADAMPRO_HOME /adampro
 ENV ADAMPRO_CODE ${ADAMPRO_HOME}/code
 ENV ADAMPRO_DATA ${ADAMPRO_HOME}/data
 
-RUN  mkdir -p /usr/lib/java && curl -v -j -k -L -H "Cookie: gpw_e24=http%3A%2F%2Fwww.oracle.com%2F; oraclelicense=accept-securebackup-cookie"   http://download.oracle.com/otn-pub/java/jdk/8u161-b12/2f38c3b165be4555a1fa6e98c45e0808/jdk-8u161-linux-x64.tar.gz | tar -xz -C /usr/lib/java --strip-components=1; \
-    ln -s /usr/lib/java /usr/lib/jvm/jre 
-
-RUN update-alternatives --install "/usr/bin/java" "java" "/usr/lib/java/bin/java" 1; \
-    update-alternatives --install "/usr/bin/javac" "javac" "/usr/lib/java/bin/javac" 1; \
-    update-alternatives --install "/usr/bin/javaws" "javaws" "/usr/lib/java/bin/javaws" 1; \
-    chmod a+x /usr/bin/java; \
-    chmod a+x /usr/bin/javac; \
-    chmod a+x /usr/bin/javaws; \
-    chown -R root:root /usr/lib/java
-
-RUN update-alternatives --set java /usr/lib/java/bin/java; \
-    update-alternatives --set javac /usr/lib/java/bin/javac; \
-    update-alternatives --set javaws /usr/lib/java/bin/javaws
+# updating JDK to version 8
+RUN apt-get update; \
+    apt-get -y install openjdk-8-jdk openjdk-8-jre-headless
 
 # updating scala to 2.11
 RUN mkdir -p /usr/lib/scala-2.11.8 && curl 'http://www.scala-lang.org/files/archive/scala-2.11.8.tgz' | tar -xz -C /usr/lib/; \
@@ -40,15 +29,15 @@ RUN curl http://d3kbcqa49mib13.cloudfront.net/spark-2.2.0-bin-hadoop2.7.tgz | ta
 ENV SPARK_HOME /usr/lib/spark
 
 # spark notebook
-RUN curl https://s3.eu-central-1.amazonaws.com/spark-notebook/tgz/spark-notebook-0.7.0-scala-2.11.8-spark-2.1.0-hadoop-2.7.3-with-hive.tgz?max-keys=100000 | tar -xz -C /usr/lib/; \
-    cd /usr/lib && ln -s spark-notebook-0.7.0-scala-2.11.8-spark-2.1.0-hadoop-2.7.3-with-hive spark-notebook
-ENV SPARK_NOTEBOOK_HOME /usr/lib/spark-notebook/
+# RUN curl https://s3.eu-central-1.amazonaws.com/spark-notebook/tgz/spark-notebook-0.7.0-scala-2.11.8-spark-2.1.0-hadoop-2.7.3-with-hive.tgz?max-keys=100000 | tar -xz -C /usr/lib/; \
+#   cd /usr/lib && ln -s spark-notebook-0.7.0-scala-2.11.8-spark-2.1.0-hadoop-2.7.3-with-hive spark-notebook
+# ENV SPARK_NOTEBOOK_HOME /usr/lib/spark-notebook/
 
 # postgresql
 ENV PGDATA ${ADAMPRO_DATA}/data/postgres
-RUN echo deb http://apt.postgresql.org/pub/repos/apt/ xenial-pgdg main >> /etc/apt/sources.list.d/pgdg.list && curl https://www.postgresql.org/media/keys/ACCC4CF8.asc | apt-key add - && apt-get update; \
-    apt-get -y install postgresql-client-9.4 postgresql-9.4 postgresql-contrib-9.4 libpq-dev postgresql-server-dev-9.4
-ENV POSTGRES_HOME /usr/lib/postgresql/9.4/
+RUN echo deb http://apt.postgresql.org/pub/repos/apt/ stretch-pgdg main >> /etc/apt/sources.list.d/pgdg.list && curl https://www.postgresql.org/media/keys/ACCC4CF8.asc | apt-key add - && apt-get update; \
+    apt-get -y install postgresql-client-10 postgresql-10 libpq-dev postgresql-server-dev-10
+ENV POSTGRES_HOME /usr/lib/postgresql/10/
 
 # solr
 RUN mkdir -p /usr/lib/solr-6.1.0 && curl http://archive.apache.org/dist/lucene/solr/6.1.0/solr-6.1.0.tgz | tar -xz -C /usr/lib/; \
@@ -72,6 +61,7 @@ RUN git clone -b $ADAMPRO_BRANCH $ADAMPRO_GIT --recursive $ADAMPRO_CODE
 
 RUN cd $ADAMPRO_CODE && sbt proto && sbt assembly && sbt web/assembly; \
     cp $ADAMPRO_CODE/conf/log4j.xml ${ADAMPRO_HOME}/log4j.xml; \
+    cp $ADAMPRO_CODE/conf/log4j.properties ${ADAMPRO_HOME}/log4j.properties; \
     cp $ADAMPRO_CODE/target/scala-2.11/ADAMpro-assembly-0.1.0.jar ${ADAMPRO_HOME}/ADAMpro-assembly-0.1.0.jar && cp $ADAMPRO_CODE/web/target/scala-2.11/ADAMpro-web-assembly-0.1.0.jar ${ADAMPRO_HOME}/ADAMpro-web-assembly-0.1.0.jar
 COPY update.sh ${ADAMPRO_HOME}/update.sh
 RUN chmod 700 ${ADAMPRO_HOME}/update.sh
@@ -99,12 +89,18 @@ EXPOSE 10088
 
 # bootstrap
 ENV ADAMPRO_START_POSTGRES true
+ENV ADAMPRO_START_CASSANDRA true
 ENV ADAMPRO_START_SOLR true
 ENV ADAMPRO_START_WEBUI true
-ENV ADAMPRO_START_NOTEBOOK true
+ENV ADAMPRO_START_NOTEBOOK false
+
+ENV ADAMPRO_MEMORY 2g
+ENV ADAMPRO_MASTER local[4]
 
 COPY adampro.conf ${ADAMPRO_HOME}/adampro.conf
 RUN chown root.root ${ADAMPRO_HOME}/adampro.conf; chmod 700 ${ADAMPRO_HOME}/adampro.conf
+COPY wait-for-it.sh ${ADAMPRO_HOME}/wait-for-it.sh
+RUN chown root.root ${ADAMPRO_HOME}/wait-for-it.sh; chmod 700 ${ADAMPRO_HOME}/wait-for-it.sh
 COPY bootstrap.sh ${ADAMPRO_HOME}/bootstrap.sh
 RUN chown root.root ${ADAMPRO_HOME}/bootstrap.sh; chmod 700 ${ADAMPRO_HOME}/bootstrap.sh
 

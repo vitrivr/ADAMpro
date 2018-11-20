@@ -1,9 +1,10 @@
 package org.vitrivr.adampro.communication.api
 
-import org.apache.spark.sql.DataFrame
+import org.apache.spark.sql.types.{StructField, StructType}
+import org.apache.spark.sql.{DataFrame, Row}
 import org.vitrivr.adampro.data.entity.Entity._
 import org.vitrivr.adampro.data.entity.{AttributeDefinition, Entity, EntityPartitioner, SparsifyHelper}
-import org.vitrivr.adampro.distribution.partitioning.{PartitioningManager, PartitionMode}
+import org.vitrivr.adampro.distribution.partitioning.{PartitionMode, PartitioningManager}
 import org.vitrivr.adampro.process.SharedComponentContext
 import org.vitrivr.adampro.query.query.Predicate
 
@@ -179,7 +180,15 @@ object EntityOp extends GenericOp {
       val entity = Entity.load(entityname)
 
       if (entity.isSuccess) {
-        Success(entity.get.show(k).get)
+        val previewDf = entity.get.show(k)
+
+        if(previewDf.isDefined){
+          Success(previewDf.get)
+        } else {
+          val schema = StructType(entity.get.schema(fullSchema = false).map(field => StructField(field.name, field.attributeType.datatype, nullable = true)))
+          val emptyDf = ac.sqlContext.createDataFrame(ac.spark.sparkContext.emptyRDD[Row], schema)
+          Success(emptyDf)
+        }
       } else {
         Failure(entity.failed.get)
       }

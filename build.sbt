@@ -82,7 +82,8 @@ val secondaryLibs = Seq(
   "org.apache.commons" % "commons-math3" % "3.6.1",
   "com.googlecode.javaewah" % "JavaEWAH" % "1.1.6",
   "com.google.guava" % "guava" % "21.0",
-  "org.jgrapht" % "jgrapht-core" % "1.0.1"
+  "org.jgrapht" % "jgrapht-core" % "1.0.1",
+  "io.grpc" % "grpc-netty" % "1.16.1"
 ).map(
   _.excludeAll(
     ExclusionRule("org.scala-lang"),
@@ -97,9 +98,9 @@ val secondaryLibs = Seq(
 val tertiaryLibs = Seq(
   "com.lucidworks.spark" % "spark-solr" % "3.3.0",
   "org.postgresql" % "postgresql" % "9.4.1208",
-  "com.datastax.spark" %% "spark-cassandra-connector" % "2.0.5",
+  "com.datastax.spark" %% "spark-cassandra-connector" % "2.3.2",
   "net.postgis" % "postgis-jdbc" % "2.2.1",
-  "com.databricks" %% "spark-avro" % "3.1.0",
+  "com.databricks" %% "spark-avro" % "4.0.0",
   "org.iq80.leveldb" % "leveldb" % "0.9",
   "com.linkedin.paldb" % "paldb" % "1.2.0",
   "org.alluxio" % "alluxio-core-client-fs" % "1.5.0",
@@ -117,8 +118,7 @@ val tertiaryLibs = Seq(
 
 //test libs
 val testLibs = Seq(
-  "org.scalatest" %% "scalatest" % "2.2.6",
-  "io.grpc" % "grpc-netty" % "1.16.1"
+  "org.scalatest" %% "scalatest" % "2.2.6"
 ).map(
   _.excludeAll(
     ExclusionRule("org.scala-lang"),

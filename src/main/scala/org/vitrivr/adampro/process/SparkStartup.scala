@@ -29,7 +29,6 @@ object SparkStartup extends Logging {
         .set("spark.network.timeout", "240s")
         .set("spark.sql.autoBroadcastJoinThreshold", (50 * 1024 * 1024).toString)
         .set("spark.sql.files.openCostInBytes", (256 * 1024 * 1024).toString) // see [SPARK-19629]
-        .set("spark.executor.extraJavaOptions", "-Dlog4j.configuration=log4j.xml")
 
 
       if (config.master.isDefined) {

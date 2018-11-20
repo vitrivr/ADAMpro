@@ -49,11 +49,11 @@ if [[ $1 = "--masternode" || $2 = "--masternode" ]]; then
 
   # run ADAMpro
   $SPARK_HOME/sbin/start-master.sh
-  $SPARK_HOME/bin/spark-submit --master "$ADAMPRO_MASTER" --driver-memory $ADAMPRO_DRIVER_MEMORY --executor-memory $ADAMPRO_EXECUTOR_MEMORY --conf spark.driver.port=38000 --conf spark.blockManager.port=39000 --deploy-mode client --driver-java-options "-Dlog4j.configuration=file:$ADAMPRO_HOME/log4j.xml" --conf "spark.executor.extraJavaOptions=-Dlog4j.configuration=file:$ADAMPRO_HOME/log4j.xml" --driver-java-options "-XX:+UnlockCommercialFeatures -XX:+FlightRecorder" --conf "spark.executor.extraJavaOptions=-XX:+UnlockCommercialFeatures -XX:+FlightRecorder" --class org.vitrivr.adampro.main.Startup $ADAMPRO_HOME/ADAMpro-assembly-0.1.0.jar &
+  $SPARK_HOME/bin/spark-submit --master "$ADAMPRO_MASTER" --driver-memory $ADAMPRO_DRIVER_MEMORY --executor-memory $ADAMPRO_EXECUTOR_MEMORY --conf spark.driver.port=38000 --conf spark.blockManager.port=39000 --deploy-mode client --driver-java-options "-Dlog4j.configuration=file:$ADAMPRO_HOME/log4j.properties" --conf "spark.executor.extraJavaOptions=-Dlog4j.configuration=file:$ADAMPRO_HOME/log4j.properties" --class org.vitrivr.adampro.main.Startup $ADAMPRO_HOME/ADAMpro-assembly-0.1.0.jar &
 :q:
   # start web UI
   if [[ ( -z "$ADAMPRO_START_WEBUI" ) || ( "$ADAMPRO_START_WEBUI" == "true")]]; then
-      java -jar $ADAMPRO_HOME/ADAMpro-web-assembly-0.1.0.jar &
+      java -jar -Dlog4j.configuration=file:$ADAMPRO_HOME/log4j.properties $ADAMPRO_HOME/ADAMpro-web-assembly-0.1.0.jar &
   fi
 
   # start notebook
@@ -87,4 +87,24 @@ if [[ $1 = "-bash" || $2 = "-bash" ]]; then
   /bin/bash
 fi
 
-while true; do sleep 60 ; done
+
+
+# (graceful) shutdown
+term_handler(){
+   echo "*** stop ADAMpro ***"
+   su --login - postgres --command "$POSTGRES_HOME/bin/pg_ctl -w stop -D $PGDATA"
+   $HADOOP_PREFIX/sbin/stop-dfs.sh
+   $HADOOP_PREFIX/sbin/stop-yarn.sh
+   solr stop -p 8983
+   exit 0;
+}
+
+
+# Setup signal handlers
+trap 'term_handler' SIGTERM
+
+
+while true
+do
+  tail -f /dev/null & wait ${!}
+done

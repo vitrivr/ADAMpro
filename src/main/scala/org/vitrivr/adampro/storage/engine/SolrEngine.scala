@@ -35,7 +35,7 @@ class SolrEngine(private val url: String)(@transient override implicit val ac: S
   private val SOLR_OPTION_ENTITYNAME = "storing-solr-corename"
   private val SOLR_OPTION_FIELDNAME = "storing-solr-fieldname"
 
-  private val SOLR_MAX_RESULTS = 5000
+  private val SOLR_MAX_RESULTS = 50000
 
 
   /**

@@ -9,11 +9,8 @@ ENV ADAMPRO_CODE ${ADAMPRO_HOME}/code
 ENV ADAMPRO_DATA ${ADAMPRO_HOME}/data
 
 # updating JDK to version 8
-RUN add-apt-repository -y ppa:webupd8team/java && apt-get update; \
-    echo debconf shared/accepted-oracle-license-v1-1 select true | debconf-set-selections && echo debconf shared/accepted-oracle-license-v1-1 seen true | debconf-set-selections; \
-    apt-get -y install oracle-java8-installer; \
-    cd /usr/lib && ln -s jvm/java-8-oracle java
-ENV JAVA_HOME /usr/lib/java/jre
+RUN apt-get update; \
+    apt-get -y install openjdk-8-jdk openjdk-8-jre-headless
 
 # updating scala to 2.11
 RUN mkdir -p /usr/lib/scala-2.11.8 && curl 'http://www.scala-lang.org/files/archive/scala-2.11.8.tgz' | tar -xz -C /usr/lib/; \
@@ -43,6 +40,7 @@ RUN git clone -b $ADAMPRO_BRANCH $ADAMPRO_GIT --recursive $ADAMPRO_CODE
 
 RUN cd $ADAMPRO_CODE && sbt proto && sbt assembly && sbt web/assembly; \
     cp $ADAMPRO_CODE/conf/log4j.xml ${ADAMPRO_HOME}/log4j.xml; \
+    cp $ADAMPRO_CODE/conf/log4j.properties ${ADAMPRO_HOME}/log4j.properties; \
     cp $ADAMPRO_CODE/target/scala-2.11/ADAMpro-assembly-0.1.0.jar ${ADAMPRO_HOME}/ADAMpro-assembly-0.1.0.jar && cp $ADAMPRO_CODE/web/target/scala-2.11/ADAMpro-web-assembly-0.1.0.jar ${ADAMPRO_HOME}/ADAMpro-web-assembly-0.1.0.jar
 COPY update.sh ${ADAMPRO_HOME}/update.sh
 RUN chmod 700 ${ADAMPRO_HOME}/update.sh
