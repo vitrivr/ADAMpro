@@ -47,7 +47,7 @@ resolvers ++= Seq(
   "Hortonworks Repositories" at "http://repo.hortonworks.com/content/repositories/releases/"
 )
 resolvers += Resolver.sonatypeRepo("snapshots")
-
+resolvers += DefaultMavenRepository
 //base libs
 val baseLibs = Seq(
   "org.scala-lang" % "scala-compiler" % "2.11.8",
@@ -56,11 +56,11 @@ val baseLibs = Seq(
 
 //adampro core libs
 val coreLibs = Seq(
-  "org.apache.spark" %% "spark-core" % "2.3.2" % "provided" excludeAll ExclusionRule("org.apache.hadoop"), //make sure that you use the same spark version as in your deployment!
-  "org.apache.spark" %% "spark-sql" % "2.3.2" % "provided",
-  "org.apache.spark" %% "spark-hive" % "2.3.2" % "provided",
-  "org.apache.spark" %% "spark-mllib" % "2.3.2" % "provided",
-  "org.apache.hadoop" % "hadoop-client" % "2.7.3" % "provided" excludeAll ExclusionRule("javax.servlet")  //make sure that you use the same hadoop version as in your deployment!
+  "org.apache.spark" %% "spark-core" % "2.4.0" % "provided" excludeAll ExclusionRule("org.apache.hadoop"), //make sure that you use the same spark version as in your deployment!
+  "org.apache.spark" %% "spark-sql" % "2.4.0"  % "provided",
+  "org.apache.spark" %% "spark-hive" % "2.4.0" % "provided",
+  "org.apache.spark" %% "spark-mllib" % "2.4.0" % "provided",
+  "org.apache.hadoop" % "hadoop-client" % "2.7.3" excludeAll ExclusionRule("javax.servlet") //make sure that you use the same hadoop version as in your deployment!
 ).map(
   _.excludeAll(
     ExclusionRule("org.scala-lang"),
@@ -77,13 +77,13 @@ val secondaryLibs = Seq(
   "com.mchange" % "c3p0" % "0.9.5.2",
   "com.h2database" % "h2" % "1.4.196",
   "it.unimi.dsi" % "fastutil" % "7.0.12",
-  "commons-io" % "commons-io" % "2.5",
-  "org.apache.commons" % "commons-lang3" % "3.4",
-  "org.apache.commons" % "commons-math3" % "3.4.1",
+  "commons-io" % "commons-io" % "2.6",
+  "org.apache.commons" % "commons-lang3" % "3.8.1",
+  "org.apache.commons" % "commons-math3" % "3.6.1",
   "com.googlecode.javaewah" % "JavaEWAH" % "1.1.6",
   "com.google.guava" % "guava" % "21.0",
   "org.jgrapht" % "jgrapht-core" % "1.0.1",
-  "io.grpc" % "grpc-netty" % "1.12.0"
+  "io.grpc" % "grpc-netty" % "1.16.1"
 ).map(
   _.excludeAll(
     ExclusionRule("org.scala-lang"),

@@ -9,8 +9,8 @@ fi
 cd $ADAMPRO_CODE
 
 # update the code
-git checkout $ADAMPRO_BRANCH
 git fetch
+git checkout $ADAMPRO_BRANCH
 
 UPSTREAM=${1:-'@{u}'}
 LOCAL=$(git rev-parse @)
