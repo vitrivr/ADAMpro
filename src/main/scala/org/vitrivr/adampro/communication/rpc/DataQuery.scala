@@ -416,4 +416,10 @@ class DataQuery extends AdamSearchGrpc.AdamSearch with Logging {
       Future.successful(AckMessage(code = AckMessage.Code.OK))
     }
   }
+
+  override def ping(request: EmptyMessage): Future[AckMessage] = {
+    time("ping"){
+      Future.successful(AckMessage(code = AckMessage.Code.OK))
+    }
+  }
 }
