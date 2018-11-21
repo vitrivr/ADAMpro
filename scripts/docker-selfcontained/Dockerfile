@@ -8,6 +8,10 @@ ENV ADAMPRO_HOME /adampro
 ENV ADAMPRO_CODE ${ADAMPRO_HOME}/code
 ENV ADAMPRO_DATA ${ADAMPRO_HOME}/data
 
+# adjusting logging of Cassandra
+RUN sed -i '/<appender-ref ref=\"STDOUT\"/d' $CASSANDRA_CONFIG/logback.xml
+
+
 # updating JDK to version 8
 RUN apt-get update; \
     apt-get -y install openjdk-8-jdk openjdk-8-jre-headless
