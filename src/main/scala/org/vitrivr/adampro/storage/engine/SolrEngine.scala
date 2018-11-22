@@ -15,7 +15,6 @@ import org.vitrivr.adampro.process.SharedComponentContext
 import org.vitrivr.adampro.query.query.Predicate
 import org.vitrivr.adampro.utils.Logging
 
-import scala.util.matching.Regex
 import scala.util.{Failure, Success, Try}
 
 /**
@@ -306,6 +305,7 @@ class SolrEngine(private val url: String)(@transient override implicit val ac: S
 
     try {
       val unloadReq = new CoreAdminRequest.Unload(true)
+      unloadReq.setCoreName(storename)
       unloadReq.setDeleteDataDir(true)
       unloadReq.setDeleteIndex(true)
       unloadReq.setDeleteInstanceDir(true)
