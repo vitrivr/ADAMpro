@@ -96,7 +96,7 @@ val secondaryLibs = Seq(
 
 //tertiary libs
 val tertiaryLibs = Seq(
-  "com.lucidworks.spark" % "spark-solr" % "3.3.0",
+  "com.lucidworks.spark" % "spark-solr" % "3.6.0",
   "org.postgresql" % "postgresql" % "9.4.1208",
   "com.datastax.spark" %% "spark-cassandra-connector" % "2.3.2",
   "net.postgis" % "postgis-jdbc" % "2.2.1",

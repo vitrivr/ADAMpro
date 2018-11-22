@@ -306,13 +306,15 @@ class SolrEngine(private val url: String)(@transient override implicit val ac: S
     * @return
     */
   override def drop(storename: String)(implicit ac: SharedComponentContext): Try[Void] = {
-    val client = getClient(url, Some(storename))
+    val client = getClient(url)
 
     try {
-      client.deleteByQuery("*:*")
+      client.deleteByQuery(storename, "*:*")
       client.commit(storename)
     } catch {
-      case e: Exception => log.error("error while deleting content from solr: " + e.getMessage)
+      case e: Exception => {
+        log.error("error while deleting content from solr: " + e.getMessage)
+      }
     }
 
     try {
@@ -326,7 +328,7 @@ class SolrEngine(private val url: String)(@transient override implicit val ac: S
     } catch {
       case e: Exception => {
         log.error("error while dropping solr container: " + e.getMessage)
-         Failure(e)
+        Failure(e)
       }
     }
   }
