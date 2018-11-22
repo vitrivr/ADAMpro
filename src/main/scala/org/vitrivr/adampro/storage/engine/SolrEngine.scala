@@ -230,6 +230,12 @@ class SolrEngine(private val url: String)(@transient override implicit val ac: S
 
   /**
     * Adjusts the query, by replacing the names in front of the : with the dynamic name suffix
+    * This is necessary, as the schema is created dynamically (required, as otherwise we would have
+    * to interfere on the level of the filesystem with solr). For the dynamic creation of the schema,
+    * the attributes are marked by their datatype using a suffix; by that, solr knows which methods to
+    * use for which field (e.g., stemming, etc.). However, as the user should not be involved with this,
+    * she will still use the attribute name given in the beginning and the suffixes are only added internally.
+    * Hence, the query string must be adjusted to match the name of the attribute used internally.
     *
     * @param originalQuery
     * @param nameDic
