@@ -4,8 +4,9 @@ import org.apache.solr.client.solrj.SolrQuery
 import org.apache.solr.client.solrj.impl.HttpSolrClient
 import org.apache.solr.client.solrj.request.CoreAdminRequest
 import org.apache.solr.common.SolrInputDocument
+import org.apache.spark.sql.hive.client
 import org.apache.spark.sql.types.{FloatType, StructField, StructType}
-import org.apache.spark.sql.{DataFrame, Row, SaveMode}
+import org.apache.spark.sql.{DataFrame, Row, SaveMode, hive}
 import org.vitrivr.adampro.config.AttributeNames
 import org.vitrivr.adampro.data.datatypes.AttributeTypes
 import org.vitrivr.adampro.data.datatypes.AttributeTypes.AttributeType
@@ -300,8 +301,13 @@ class SolrEngine(private val url: String)(@transient override implicit val ac: S
     */
   override def drop(storename: String)(implicit ac: SharedComponentContext): Try[Void] = {
     val client = getClient(url, Some(storename))
-    client.deleteByQuery(storename.toString, "*:*")
-    client.commit(storename)
+
+    try {
+      client.deleteByQuery("*:*")
+      client.commit(storename)
+    } catch {
+      case e: Exception => log.error("error while deleting content from solr: " + e.getMessage)
+    }
 
     try {
       val unloadReq = new CoreAdminRequest.Unload(true)
@@ -312,7 +318,10 @@ class SolrEngine(private val url: String)(@transient override implicit val ac: S
       unloadReq.process(client)
       Success(null)
     } catch {
-      case e: Exception => Failure(e)
+      case e: Exception => {
+        log.error("error while dropping solr container: " + e.getMessage)
+         Failure(e)
+      }
     }
   }
 }
