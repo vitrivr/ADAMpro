@@ -15,6 +15,7 @@ import org.vitrivr.adampro.process.SharedComponentContext
 import org.vitrivr.adampro.query.query.Predicate
 import org.vitrivr.adampro.utils.Logging
 
+import scala.util.matching.Regex
 import scala.util.{Failure, Success, Try}
 
 /**
@@ -236,23 +237,23 @@ class SolrEngine(private val url: String)(@transient override implicit val ac: S
     */
   private def adjustAttributeName(originalQuery: String, nameDic: Map[AttributeName, String]): String = {
 
-    val pattern = "([^:\"']+)|(\"[^\"]*\")|('[^']*')".r
-    pattern.findAllIn(originalQuery).zipWithIndex.map {
-      case (fieldname, idx) =>
-        if (idx % 2 == 0) {
-          val solrname = nameDic.get(fieldname)
+    //this pattern tries to identify all names of attributes, by taking the string
+    // (composed of A-Z, a-z, 0-9, _, -) in front of the colon, possibly
+    // set in quotation marks (" or ').
+    val pattern = "[\"']{0,1}([A-Za-z0-9_\\-]*?)[\"']{0,1}:".r
 
-          if (solrname.isDefined) {
-            solrname.get + ":"
-          } else {
-            log.error("field " + fieldname + " not stored in solr")
-          }
 
-        } else {
-          fieldname
-        }
-    }.mkString
-  }
+    pattern.replaceAllIn(originalQuery, (fieldname) => {
+      val solrname = nameDic.get(fieldname.group(1))
+
+      if (solrname.isDefined) {
+        solrname.get + ":"
+      } else {
+        log.error("field " + fieldname + " not stored in solr")
+        fieldname + ":"
+      }
+    })
+    }
 
 
   /**
