@@ -779,9 +779,14 @@ class RPCClient(channel: ManagedChannel,
     }
   }
 
+  /**
+    *
+    * @param json
+    * @return
+    */
   def doQuery(json: String): Try[Seq[RPCQueryResults]] = {
     execute("json query operation") {
-      val query = com.trueaccord.scalapb.json.JsonFormat.fromJsonString[QueryMessage](json)
+      val query = JsonFormat.fromJsonString[QueryMessage](json)
       val res = searcherBlocking.doQuery(query)
       if (res.ack.get.code.isOk) {
         return Success(res.responses.map(new RPCQueryResults(_)))
