@@ -2,7 +2,7 @@ package org.vitrivr.adampro.communication
 
 import java.util.concurrent.TimeUnit
 
-import com.trueaccord.scalapb.json.JsonFormat
+import scalapb.json4s.JsonFormat
 import io.grpc.internal.DnsNameResolverProvider
 import io.grpc.netty.NettyChannelBuilder
 import io.grpc.stub.StreamObserver

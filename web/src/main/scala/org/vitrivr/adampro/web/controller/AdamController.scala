@@ -349,6 +349,7 @@ class AdamController(rpcClient: RPCClient) extends Controller with Logging {
     if (res.isSuccess) {
       response.ok.json(new SearchCompoundResponse(200, new SearchResponse(res.get)))
     } else {
+      log.error(res.failed.get.getMessage)
       response.ok.json(GeneralResponse(500, res.failed.get.getMessage))
     }
   }

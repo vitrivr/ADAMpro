@@ -7,7 +7,7 @@ libraryDependencies ++= Seq(
   "io.grpc" % "grpc-stub" % "1.12.0",
   "org.apache.logging.log4j" % "log4j-api" % "2.11.0",
   "org.apache.logging.log4j" % "log4j-core" % "2.11.0",
-  "com.trueaccord.scalapb" %% "scalapb-json4s" % "0.3.2"
+  "com.thesamet.scalapb" %% "scalapb-json4s" % "0.7.0"
 )
 
 unmanagedBase <<= baseDirectory { base => base / ".." / "lib" }
