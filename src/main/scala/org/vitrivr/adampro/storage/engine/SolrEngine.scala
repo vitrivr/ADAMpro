@@ -75,7 +75,7 @@ class SolrEngine(private val url: String)(@transient override implicit val ac: S
       val createReq = new CoreAdminRequest.Create()
       createReq.setCoreName(storename)
       createReq.setInstanceDir(storename)
-      createReq.setConfigSet("_default")
+      createReq.setConfigSet("basic_configs")
       createReq.process(client)
 
       Success(Map())
