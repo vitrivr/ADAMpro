@@ -34,7 +34,7 @@ if [[ ( -z "$ADAMPRO_START_NOTEBOOK" ) || ( "$ADAMPRO_START_NOTEBOOK" == "true")
 fi
 
 # start netdata
-if [[ ( -z "ADAMPRO_START_NETDATA" ) || ( "ADAMPRO_START_NETDATA" == "true")]]; then
+if [[ ( -z "$ADAMPRO_START_NETDATA" ) || ( "$ADAMPRO_START_NETDATA" == "true")]]; then
    /usr/sbin/netdata
 fi
 
