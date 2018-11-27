@@ -16,8 +16,15 @@ if [[ $1 = "--workernode" || $2 = "--workernode" ]]; then
    $SPARK_HOME/sbin/start-slave.sh $ADAMPRO_MASTER
 fi
 
+# netstat
+/usr/sbin/netdata
+
+# startup
 if [[ $1 = "-bash" || $2 = "-bash" ]]; then
   /bin/bash
 fi
 
-while true; do sleep 60 ; done
+while true
+do
+  tail -f /dev/null & wait ${!}
+done

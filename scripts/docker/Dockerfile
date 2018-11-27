@@ -1,7 +1,7 @@
 FROM ubuntu:16.04
 
 # utilities
-RUN apt-get -y update; apt-get -y install apt-transport-https bc curl vim apt-utils software-properties-common git
+RUN apt-get -y update; apt-get -y install apt-transport-https bc curl vim apt-utils software-properties-common git zlib1g-dev uuid-dev libmnl-dev gcc make git autoconf autoconf-archive autogen automake pkg-config curl
 
 # env variables
 ENV ADAMPRO_HOME /adampro
@@ -29,6 +29,10 @@ RUN curl http://d3kbcqa49mib13.cloudfront.net/spark-2.2.0-bin-hadoop2.7.tgz | ta
     cd /usr/lib && ln -s spark-2.2.0-bin-hadoop2.7 spark
 ENV SPARK_HOME /usr/lib/spark
 
+# netdata
+ARG NETDATA_HOME=/usr/lib/netdata/
+RUN git clone https://github.com/netdata/netdata.git --depth=1 $NETDATA_HOME && cd $NETDATA_HOME && ./netdata-installer.sh --dont-start-it --dont-wait
+
 # ADAMpro
 RUN mkdir -p ${ADAMPRO_HOME}; chmod 777 ${ADAMPRO_HOME}
 
@@ -51,6 +55,8 @@ EXPOSE 4040
 EXPOSE 5890
 # port for ADAMpro web UI
 EXPOSE 9099
+# port for netdata
+EXPOSE 19999
 
 # bootstrap
 ENV ADAMPRO_EXECUTOR_MEMORY 2g

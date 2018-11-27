@@ -1,7 +1,7 @@
 FROM cassandra:3.11
 
 # utilities
-RUN apt-get -y update; apt-get -y install apt-transport-https bc curl vim apt-utils software-properties-common git
+RUN apt-get -y update; apt-get -y install apt-transport-https bc curl vim apt-utils software-properties-common git zlib1g-dev uuid-dev libmnl-dev gcc make git autoconf autoconf-archive autogen automake pkg-config curl
 
 # env variables
 ENV ADAMPRO_HOME /adampro
@@ -54,6 +54,10 @@ ENV PATH "$PATH:/usr/lib/solr/bin"
 ENV CASSANDRADATA ${ADAMPRO_DATA}/data/cassandra
 RUN sed -i.bak 's/var\/lib/usr\/lib/' /etc/cassandra/cassandra.yaml && chmod 700 /etc/cassandra/cassandra.yaml
 
+# netdata
+ARG NETDATA_HOME=/usr/lib/netdata/
+RUN git clone https://github.com/netdata/netdata.git --depth=1 $NETDATA_HOME && cd $NETDATA_HOME && ./netdata-installer.sh --dont-start-it --dont-wait
+
 # ADAMpro
 RUN mkdir -p ${ADAMPRO_HOME}; chmod 777 ${ADAMPRO_HOME}
 
@@ -90,6 +94,8 @@ EXPOSE 5890
 EXPOSE 9099
 # port for spark notebook
 EXPOSE 10088
+# port for netdata
+EXPOSE 19999
 
 # bootstrap
 ENV ADAMPRO_START_POSTGRES true
@@ -97,6 +103,7 @@ ENV ADAMPRO_START_CASSANDRA true
 ENV ADAMPRO_START_SOLR true
 ENV ADAMPRO_START_WEBUI true
 ENV ADAMPRO_START_NOTEBOOK false
+ENV ADAMPRO_START_NETDATA true
 
 ENV ADAMPRO_MEMORY 2g
 ENV ADAMPRO_MASTER local[4]

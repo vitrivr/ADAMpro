@@ -33,6 +33,11 @@ if [[ ( -z "$ADAMPRO_START_NOTEBOOK" ) || ( "$ADAMPRO_START_NOTEBOOK" == "true")
     $SPARK_NOTEBOOK_HOME/bin/spark-notebook -Dhttp.port=10088 &
 fi
 
+# start netdata
+if [[ ( -z "ADAMPRO_START_NETDATA" ) || ( "ADAMPRO_START_NETDATA" == "true")]]; then
+   /usr/sbin/netdata
+fi
+
 # startup
 if [[ $1 == "-bash" ]]; then
   /bin/bash
