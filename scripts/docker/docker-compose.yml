@@ -81,7 +81,7 @@ services:
         - vitrivrnw
 
   solr:
-      image: solr:7.1
+      image: solr:7.5
       hostname: solr
       ports:
         - 8983:8983

@@ -10,7 +10,7 @@ fi
 
 # start solr
 if [[ (-z "$ADAMPRO_START_SOLR" ) || ( "$ADAMPRO_START_SOLR" == "true")]]; then
-    solr start -noprompt &
+    solr start -force -noprompt &
 fi
 
 # start cassandra

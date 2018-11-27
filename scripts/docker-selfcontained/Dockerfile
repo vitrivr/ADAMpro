@@ -44,9 +44,9 @@ RUN echo deb http://apt.postgresql.org/pub/repos/apt/ stretch-pgdg main >> /etc/
 ENV POSTGRES_HOME /usr/lib/postgresql/10/
 
 # solr
-RUN mkdir -p /usr/lib/solr-6.1.0 && curl http://archive.apache.org/dist/lucene/solr/6.1.0/solr-6.1.0.tgz | tar -xz -C /usr/lib/; \
+RUN mkdir -p /usr/lib/solr-7.5.0 && curl http://archive.apache.org/dist/lucene/solr/7.5.0/solr-7.5.0.tgz | tar -xz -C /usr/lib/; \
     apt-get -y install lsof; \
-    ln -s /usr/lib/solr-6.1.0 /usr/lib/solr
+    ln -s /usr/lib/solr-7.5.0 /usr/lib/solr
 ARG SOLR_HOME=/usr/lib/solr
 ENV PATH "$PATH:/usr/lib/solr/bin"
 
