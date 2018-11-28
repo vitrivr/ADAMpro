@@ -41,6 +41,8 @@ class SolrEngine(private val url: String)(@transient override implicit val ac: S
 
   private val clients = mutable.Map[String, HttpSolrClient]()
 
+  private var opCount = 0;
+
 
   /**
     *
@@ -50,16 +52,18 @@ class SolrEngine(private val url: String)(@transient override implicit val ac: S
     this(props.get("url").get)(ac)
   }
 
-
   /**
-    * Cached access to clients
+    * This autocloses the associated resources with the client. We might also move this so we only use one static client, but this is a safer option for multithreading.
+    * Do not create clients manually, if you forget to close them there will be memory leaks.
     */
-  private def executeForClientCached[B](baseUrl: String, storeName: Option[String] = None)(fun: HttpSolrClient => B): Try[B] = {
-    val url = baseUrl + storeName.map("/" + _).getOrElse("")
-    if(clients.size>100){
-      log.warn("more than 100 concurrently cached clients. this is probably a mistake.")
+  private def executeForClient[B](baseUrl: String, storeName: Option[String] = None) (fun: HttpSolrClient => B): Try[B] = {
+    opCount+=1
+    if(opCount%1000==0){
+      System.gc()
     }
-    Try{fun(clients.getOrElseUpdate(url, new HttpSolrClient.Builder().withBaseSolrUrl(url).build()))}
+    val url = baseUrl + storeName.map("/" + _).getOrElse("")
+    val client = new HttpSolrClient.Builder().withBaseSolrUrl(url).build()
+    autoClose(client)(fun)
   }
 
 
@@ -73,7 +77,7 @@ class SolrEngine(private val url: String)(@transient override implicit val ac: S
     */
   override def create(storename: String, attributes: Seq[AttributeDefinition], params: Map[String, String])(implicit ac: SharedComponentContext): Try[Map[String, String]] = {
     log.trace("solr creating store {}", storename)
-    executeForClientCached(url) { client =>
+    executeForClient(url) { client =>
         val createReq = new CoreAdminRequest.Create()
         createReq.setCoreName(storename)
         createReq.setInstanceDir(storename)
@@ -89,7 +93,7 @@ class SolrEngine(private val url: String)(@transient override implicit val ac: S
     */
   override def exists(storename: String)(implicit ac: SharedComponentContext): Try[Boolean] = {
     log.trace("solr exists operation on store {}", storename)
-    executeForClientCached(url){
+    executeForClient(url){
       client => CoreAdminRequest.getStatus(storename, client).getCoreStatus(storename).get("instanceDir") != null
     }
   }
@@ -134,7 +138,7 @@ class SolrEngine(private val url: String)(@transient override implicit val ac: S
     */
   override def read(storename: String, attributes: Seq[AttributeDefinition], predicates: Seq[Predicate], params: Map[String, String])(implicit ac: SharedComponentContext): Try[DataFrame] = {
     log.trace("solr read entity {}", storename)
-    executeForClientCached(url, Some(storename)) {
+    executeForClient(url, Some(storename)) {
       client =>
         val nameDicAttributenameToSolrname = attributes.map(attribute => attribute.name -> (attribute.name + getSuffix(attribute.attributeType))).toMap
         val nameDicSolrnameToAttributename = nameDicAttributenameToSolrname.map(_.swap)
@@ -257,7 +261,7 @@ class SolrEngine(private val url: String)(@transient override implicit val ac: S
 
     df.foreachPartition {
       it =>
-        executeForClientCached(url, Some(storename)) {
+        executeForClient(url, Some(storename)) {
           partClient =>
 
             it.foreach {
@@ -287,7 +291,7 @@ class SolrEngine(private val url: String)(@transient override implicit val ac: S
     * @return
     */
   override def drop(storename: String)(implicit ac: SharedComponentContext): Try[Void] = {
-    executeForClientCached(url) { client =>
+    executeForClient(url) { client =>
       Try{
         client.deleteByQuery(storename, "*:*")
         client.commit(storename)
