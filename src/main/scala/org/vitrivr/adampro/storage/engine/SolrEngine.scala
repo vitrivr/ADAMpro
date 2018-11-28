@@ -14,7 +14,7 @@ import org.vitrivr.adampro.data.entity.AttributeDefinition
 import org.vitrivr.adampro.data.entity.Entity.AttributeName
 import org.vitrivr.adampro.process.SharedComponentContext
 import org.vitrivr.adampro.query.query.Predicate
-import org.vitrivr.adampro.utils.Logging
+import org.vitrivr.adampro.utils.{IOUtils, Logging}
 
 import scala.util.{Failure, Success, Try}
 
@@ -24,7 +24,7 @@ import scala.util.{Failure, Success, Try}
   * Ivan Giangreco
   * September 2016
   */
-class SolrEngine(private val url: String)(@transient override implicit val ac: SharedComponentContext) extends Engine()(ac) with Logging with Serializable {
+class SolrEngine(private val url: String)(@transient override implicit val ac: SharedComponentContext) extends Engine()(ac) with Logging with Serializable with IOUtils {
   override val name: String = "solr"
 
   override def supports = Seq(AttributeTypes.AUTOTYPE, AttributeTypes.INTTYPE, AttributeTypes.LONGTYPE, AttributeTypes.FLOATTYPE, AttributeTypes.DOUBLETYPE, AttributeTypes.STRINGTYPE, AttributeTypes.TEXTTYPE, AttributeTypes.BOOLEANTYPE)
@@ -49,14 +49,13 @@ class SolrEngine(private val url: String)(@transient override implicit val ac: S
 
 
   /**
-    *
-    * @param baseUrl
-    * @param storename
+    * This autocloses the associated resources with the client. We might also move this so we only use one static client, but this is a safer option for multithreading.
+    * Do not create clients manually, if you forget to close them there will be memory leaks.
     */
-  private def getClient(baseUrl: String, storename: Option[String] = None): HttpSolrClient = {
-    val url = baseUrl + storename.map("/" + _).getOrElse("")
-
-    new HttpSolrClient.Builder().withBaseSolrUrl(url).build()
+  private def executeForClient[B](baseUrl: String, storeName: Option[String] = None) (fun: HttpSolrClient => B): Try[B] = {
+    val url = baseUrl + storeName.map("/" + _).getOrElse("")
+    val client = new HttpSolrClient.Builder().withBaseSolrUrl(url).build()
+    autoClose(client)(fun)
   }
 
 
@@ -69,44 +68,30 @@ class SolrEngine(private val url: String)(@transient override implicit val ac: S
     * @return
     */
   override def create(storename: String, attributes: Seq[AttributeDefinition], params: Map[String, String])(implicit ac: SharedComponentContext): Try[Map[String, String]] = {
-    val client = getClient(url)
-
-    try {
-      val createReq = new CoreAdminRequest.Create()
-      createReq.setCoreName(storename)
-      createReq.setInstanceDir(storename)
-      createReq.setConfigSet("basic_configs")
-      createReq.process(client)
-
-      Success(Map())
-    } catch {
-      case e: Exception =>
-        Failure(e)
-    }
+    log.trace("solr creating store {}", storename)
+    executeForClient(url) { client =>
+        val createReq = new CoreAdminRequest.Create()
+        createReq.setCoreName(storename)
+        createReq.setInstanceDir(storename)
+        createReq.setConfigSet("basic_configs")
+        createReq.process(client)
+      }.map(_ => Map())
   }
 
   /**
     * Check if entity exists.
     *
     * @param storename adapted entityname to store feature to
-    * @return
     */
   override def exists(storename: String)(implicit ac: SharedComponentContext): Try[Boolean] = {
-    log.trace("solr exists operation")
-
-    try {
-      Success(CoreAdminRequest.getStatus(storename, getClient(url)).getCoreStatus(storename).get("instanceDir") != null)
-    } catch {
-      case e: Exception =>
-        Failure(e)
+    log.trace("solr exists operation on store {}", storename)
+    executeForClient(url){
+      client => CoreAdminRequest.getStatus(storename, client).getCoreStatus(storename).get("instanceDir") != null
     }
   }
 
   /**
     * Returns the dynamic suffix for storing the attribute type in solr.
-    *
-    * @param attributetype
-    * @return
     */
   private def getSuffix(attributetype: AttributeType) = attributetype match {
     case AttributeTypes.INTTYPE => "_i"
@@ -123,9 +108,6 @@ class SolrEngine(private val url: String)(@transient override implicit val ac: S
 
   /**
     * Returns the attribute type given a solr suffix.
-    *
-    * @param suffix
-    * @return
     */
   private def getAttributeType(suffix: String) = suffix match {
     case "_i" => AttributeTypes.INTTYPE
@@ -145,86 +127,80 @@ class SolrEngine(private val url: String)(@transient override implicit val ac: S
     * @param attributes the attributes to read
     * @param predicates filtering predicates (only applied if possible)
     * @param params     reading parameters
-    * @return
     */
   override def read(storename: String, attributes: Seq[AttributeDefinition], predicates: Seq[Predicate], params: Map[String, String])(implicit ac: SharedComponentContext): Try[DataFrame] = {
-    try {
-      val client = getClient(url, Some(storename))
-      val nameDicAttributenameToSolrname = attributes.map(attribute => attribute.name -> (attribute.name + getSuffix(attribute.attributeType))).toMap
-      val nameDicSolrnameToAttributename = nameDicAttributenameToSolrname.map(_.swap)
+    log.trace("solr read entity {}", storename)
+    executeForClient(url, Some(storename)) {
+      client =>
+        val nameDicAttributenameToSolrname = attributes.map(attribute => attribute.name -> (attribute.name + getSuffix(attribute.attributeType))).toMap
+        val nameDicSolrnameToAttributename = nameDicAttributenameToSolrname.map(_.swap)
 
-      //set query for retrieving data
-      val solrQuery = new SolrQuery()
-      val query = params.get("query").map(adjustAttributeName(_, nameDicAttributenameToSolrname)).getOrElse("*:*")
-      solrQuery.setQuery(query)
-      if (params.contains("filter")) {
-        solrQuery.setFilterQueries(params.get("filter").get.split(",").toSeq: _*)
-      }
-      solrQuery.setFields("*", "score")
-      solrQuery.setRows(SOLR_MAX_RESULTS)
-      solrQuery.setSort("score", SolrQuery.ORDER.desc)
-      solrQuery.set("defType", "edismax")
+        //set query for retrieving data
+        val solrQuery = new SolrQuery()
+        val query = params.get("query").map(adjustAttributeName(_, nameDicAttributenameToSolrname)).getOrElse("*:*")
+        solrQuery.setQuery(query)
+        if (params.contains("filter")) {
+          solrQuery.setFilterQueries(params.get("filter").get.split(",").toSeq: _*)
+        }
+        solrQuery.setFields("*", "score")
+        solrQuery.setRows(SOLR_MAX_RESULTS)
+        solrQuery.setSort("score", SolrQuery.ORDER.desc)
+        solrQuery.set("defType", "edismax")
 
-      //set all other params
-      (params - ("query", "fields")).foreach { case (param, value) =>
-        solrQuery.set(param, value)
-      }
+        //set all other params
+        (params - ("query", "fields")).foreach { case (param, value) =>
+          solrQuery.set(param, value)
+        }
 
-      val results = client.query(solrQuery).getResults
-      val nresults = results.size()
+        val results = client.query(solrQuery).getResults
+        val nresults = results.size()
 
-      log.trace("solr returns " + nresults + " results")
+        log.trace("solr returns " + nresults + " results")
 
-      if (results.size > 0) {
-        log.trace("solr returns fields " + results.get(0).getFieldNames.toArray.mkString(","))
-      } else {
-        log.trace("solr returns 0 results")
-      }
+        if (results.size > 0) {
+          log.trace("solr returns fields " + results.get(0).getFieldNames.toArray.mkString(","))
+        } else {
+          log.trace("solr returns 0 results")
+        }
 
-      import collection.JavaConverters._
-      val rdd = ac.sqlContext.sparkContext.parallelize(results.subList(0, nresults).asScala.map(doc => {
-        val data = (nameDicSolrnameToAttributename.keys.toSeq ++ Seq("score")).map(solrname => {
-          val fieldData = doc.get(solrname)
+        import collection.JavaConverters._
+        val rdd = ac.sqlContext.sparkContext.parallelize(results.subList(0, nresults).asScala.map(doc => {
+          val data = (nameDicSolrnameToAttributename.keys.toSeq ++ Seq("score")).map(solrname => {
+            val fieldData = doc.get(solrname)
 
-          if (fieldData != null) {
-            fieldData match {
-              case list: java.util.ArrayList[_] => if (list.size() > 0) {
-                list.get(0)
+            if (fieldData != null) {
+              fieldData match {
+                case list: java.util.ArrayList[_] => if (list.size() > 0) {
+                  list.get(0)
+                }
+                case any => any
               }
-              case any => any
+            } else {
+              null
             }
-          } else {
-            null
-          }
-        }).filter(_ != null).toSeq
-        Row(data: _*)
-      }))
+          }).filter(_ != null).toSeq
+          Row(data: _*)
+        }))
 
-      val df = if (!results.isEmpty) {
-        val tmpDoc = results.get(0)
-        val schema = (nameDicSolrnameToAttributename.keys.toSeq ++ Seq("score")).map(solrname => {
-          if (solrname == "score") {
-            StructField(AttributeNames.scoreColumnName, FloatType)
-          } else if (tmpDoc.get(solrname) != null) {
-            val name = nameDicSolrnameToAttributename(solrname)
-            val attributetype = getAttributeType(solrname.substring(solrname.lastIndexOf("_")))
-            StructField(name, attributetype.datatype)
-          } else {
-            null
-          }
-        }).filter(_ != null)
-        ac.sqlContext.createDataFrame(rdd, StructType(schema))
-      } else {
-        ac.sqlContext.emptyDataFrame
-      }
+        val df = if (!results.isEmpty) {
+          val tmpDoc = results.get(0)
+          val schema = (nameDicSolrnameToAttributename.keys.toSeq ++ Seq("score")).map(solrname => {
+            if (solrname == "score") {
+              StructField(AttributeNames.scoreColumnName, FloatType)
+            } else if (tmpDoc.get(solrname) != null) {
+              val name = nameDicSolrnameToAttributename(solrname)
+              val attributetype = getAttributeType(solrname.substring(solrname.lastIndexOf("_")))
+              StructField(name, attributetype.datatype)
+            } else {
+              null
+            }
+          }).filter(_ != null)
+          ac.sqlContext.createDataFrame(rdd, StructType(schema))
+        } else {
+          ac.sqlContext.emptyDataFrame
+        }
 
-      Success(df)
-    }
-
-    catch {
-      case e: Exception =>
-        log.error("fatal error when reading from solr", e)
-        Failure(e)
+       df
     }
   }
 
@@ -277,25 +253,26 @@ class SolrEngine(private val url: String)(@transient override implicit val ac: S
 
     df.foreachPartition {
       it =>
-        val partClient = getClient(url, Some(storename))
+        executeForClient(url, Some(storename)) {
+          partClient =>
 
-        it.foreach {
-          row =>
-            val doc = new SolrInputDocument()
-            doc.addField("id", row.getAs[Any](pk.name))
+            it.foreach {
+              row =>
+                val doc = new SolrInputDocument()
+                doc.addField("id", row.getAs[Any](pk.name))
 
-            attributes.foreach {
-              attribute =>
-                val solrname = attribute.name + getSuffix(attribute.attributeType)
-                doc.addField(solrname, row.getAs[Any](attribute.name).toString)
+                attributes.foreach {
+                  attribute =>
+                    val solrname = attribute.name + getSuffix(attribute.attributeType)
+                    doc.addField(solrname, row.getAs[Any](attribute.name).toString)
+                }
+
+                partClient.add(doc)
             }
 
-            partClient.add(doc)
+            partClient.commit()
         }
-
-        partClient.commit()
     }
-
     Success(Map())
   }
 
@@ -306,30 +283,18 @@ class SolrEngine(private val url: String)(@transient override implicit val ac: S
     * @return
     */
   override def drop(storename: String)(implicit ac: SharedComponentContext): Try[Void] = {
-    val client = getClient(url)
-
-    try {
-      client.deleteByQuery(storename, "*:*")
-      client.commit(storename)
-    } catch {
-      case e: Exception => {
-        log.error("error while deleting content from solr: " + e.getMessage)
-      }
-    }
-
-    try {
+    executeForClient(url) { client =>
+      Try{
+        client.deleteByQuery(storename, "*:*")
+        client.commit(storename)
+      }.failed.map(t => log.error("Error while dropping data in solr {}", t.getMessage))
       val unloadReq = new CoreAdminRequest.Unload(true)
       unloadReq.setCoreName(storename)
       unloadReq.setDeleteDataDir(true)
       unloadReq.setDeleteIndex(true)
       unloadReq.setDeleteInstanceDir(true)
       unloadReq.process(client)
-      Success(null)
-    } catch {
-      case e: Exception => {
-        log.error("error while dropping solr container: " + e.getMessage)
-        Failure(e)
-      }
+      null
     }
   }
 }
