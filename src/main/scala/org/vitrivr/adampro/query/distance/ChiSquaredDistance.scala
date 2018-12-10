@@ -13,6 +13,6 @@ import org.vitrivr.adampro.query.distance.Distance._
   */
 object ChiSquaredDistance extends ElementwiseSummedDistanceFunction with Serializable {
   override def element(v1: VectorBase, v2: VectorBase, w: VectorBase): Distance = {
-    if(v1 + v2 > 0) { w * math.pow(v1 - v2, 2.0) / (v1 + v2) }.toFloat else { 0 }
+    if(v1 + v2 > 0) { w * (v1 - v2) * (v1 - v2) / (v1 + v2) } else { 0 }
   }
 }
