@@ -183,23 +183,24 @@ class DataQuery extends AdamSearchGrpc.AdamSearch with Logging {
       override def onCompleted(): Unit = {}
 
       override def onNext(request: QueryMessage): Unit = {
+        object AllDone extends Exception { }
+
         val res = runQuery(request)
 
         log.trace(QUERY_MARKER, "run streaming query")
 
         if(res.isSuccess && res.get._2.isDefined){
+
           log.trace(QUERY_MARKER, "streaming query is success")
 
-          val queryInfo = res.get._1.info
-
-          val df = res.get._2.get
-          val cols = df.schema
-
-          val zippedRDD = df.rdd.zipWithIndex()
-
-          object AllDone extends Exception { }
-
           try {
+            val queryInfo = res.get._1.info
+
+            val df = res.get._2.get
+            val cols = df.schema
+
+            val zippedRDD = df.rdd.zipWithIndex()
+
             (0 until MessageParser.MAX_RESULTS by MessageParser.STEP_SIZE).iterator.foreach { paginationStart =>
               log.trace(QUERY_MARKER, "collect streaming results from " + paginationStart + " until " + (paginationStart + MessageParser.STEP_SIZE))
               val subResults = zippedRDD.collect { case (r, i) if i >= paginationStart && i < (paginationStart + MessageParser.STEP_SIZE) => r }.collect()
@@ -220,14 +221,19 @@ class DataQuery extends AdamSearchGrpc.AdamSearch with Logging {
               responseObserver.onNext(queryResultMessage)
             }
           } catch {
-            case AllDone =>
+            case AllDone => {
+              responseObserver.onNext(QueryResultsMessage(Some(AckMessage(code = AckMessage.Code.ERROR, message = "error in execution"))))
+              responseObserver.onCompleted()
+            }
           }
         } else if(!res.get._2.isDefined) {
           log.error(QUERY_MARKER, "error in streaming query execution, successfull execution, but no results")
           responseObserver.onNext(QueryResultsMessage(Some(AckMessage(code = AckMessage.Code.ERROR, message = "no data to return"))))
+          responseObserver.onCompleted()
         } else {
           log.error(QUERY_MARKER, "error in streaming query execution")
           responseObserver.onNext(QueryResultsMessage(Some(AckMessage(code = AckMessage.Code.ERROR, message = res.failed.get.getMessage))))
+          responseObserver.onCompleted()
         }
 
         log.trace(QUERY_MARKER, "completed streaming query")
@@ -307,6 +313,7 @@ class DataQuery extends AdamSearchGrpc.AdamSearch with Logging {
           e.printStackTrace()
           log.error(e.getMessage)
           responseObserver.onNext(QueryResultsMessage(ack = Some(AckMessage(code = AckMessage.Code.ERROR, message = e.getMessage))))
+          responseObserver.onCompleted()
         }
       }
     }
@@ -346,6 +353,7 @@ class DataQuery extends AdamSearchGrpc.AdamSearch with Logging {
           e.printStackTrace()
           log.error(e.getMessage)
           responseObserver.onNext(QueryResultsMessage(ack = Some(AckMessage(code = AckMessage.Code.ERROR, message = e.getMessage))))
+          responseObserver.onCompleted()
         }
       }
     }
