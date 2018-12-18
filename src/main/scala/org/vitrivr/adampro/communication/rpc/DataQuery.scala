@@ -224,6 +224,9 @@ class DataQuery extends AdamSearchGrpc.AdamSearch with Logging {
             }
           } catch {
             case AllDone => {
+              responseObserver.onNext(QueryResultsMessage(Some(AckMessage(code = AckMessage.Code.OK, message = "no more results"))))
+            }
+            case Exception => {
               responseObserver.onNext(QueryResultsMessage(Some(AckMessage(code = AckMessage.Code.ERROR, message = "error in execution"))))
             }
           }
