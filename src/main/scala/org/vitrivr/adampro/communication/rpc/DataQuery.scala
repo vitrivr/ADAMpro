@@ -180,7 +180,9 @@ class DataQuery extends AdamSearchGrpc.AdamSearch with Logging {
         }
       }
 
-      override def onCompleted(): Unit = {}
+      override def onCompleted(): Unit = {
+        responseObserver.onCompleted()
+      }
 
       override def onNext(request: QueryMessage): Unit = {
         object AllDone extends Exception { }
@@ -223,21 +225,17 @@ class DataQuery extends AdamSearchGrpc.AdamSearch with Logging {
           } catch {
             case AllDone => {
               responseObserver.onNext(QueryResultsMessage(Some(AckMessage(code = AckMessage.Code.ERROR, message = "error in execution"))))
-              responseObserver.onCompleted()
             }
           }
         } else if(!res.get._2.isDefined) {
           log.error(QUERY_MARKER, "error in streaming query execution, successfull execution, but no results")
           responseObserver.onNext(QueryResultsMessage(Some(AckMessage(code = AckMessage.Code.ERROR, message = "no data to return"))))
-          responseObserver.onCompleted()
         } else {
           log.error(QUERY_MARKER, "error in streaming query execution")
           responseObserver.onNext(QueryResultsMessage(Some(AckMessage(code = AckMessage.Code.ERROR, message = res.failed.get.getMessage))))
-          responseObserver.onCompleted()
         }
 
         log.trace(QUERY_MARKER, "completed streaming query")
-        responseObserver.onCompleted()
       }
     }
   }
@@ -312,7 +310,6 @@ class DataQuery extends AdamSearchGrpc.AdamSearch with Logging {
         case e: Exception => {
           log.error(e.getMessage)
           responseObserver.onNext(QueryResultsMessage(ack = Some(AckMessage(code = AckMessage.Code.ERROR, message = e.getMessage))))
-          responseObserver.onCompleted()
         }
       }
     }
@@ -351,7 +348,6 @@ class DataQuery extends AdamSearchGrpc.AdamSearch with Logging {
         case e: Exception => {
           log.error(e.getMessage)
           responseObserver.onNext(QueryResultsMessage(ack = Some(AckMessage(code = AckMessage.Code.ERROR, message = e.getMessage))))
-          responseObserver.onCompleted()
         }
       }
     }
