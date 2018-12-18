@@ -310,7 +310,6 @@ class DataQuery extends AdamSearchGrpc.AdamSearch with Logging {
         }
       } catch {
         case e: Exception => {
-          e.printStackTrace()
           log.error(e.getMessage)
           responseObserver.onNext(QueryResultsMessage(ack = Some(AckMessage(code = AckMessage.Code.ERROR, message = e.getMessage))))
           responseObserver.onCompleted()
@@ -350,7 +349,6 @@ class DataQuery extends AdamSearchGrpc.AdamSearch with Logging {
         tracker.cleanAll()
       } catch {
         case e: Exception => {
-          e.printStackTrace()
           log.error(e.getMessage)
           responseObserver.onNext(QueryResultsMessage(ack = Some(AckMessage(code = AckMessage.Code.ERROR, message = e.getMessage))))
           responseObserver.onCompleted()
