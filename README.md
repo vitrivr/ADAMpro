@@ -2,9 +2,9 @@
 
 This directory contains the source code distribution of ADAMpro. 
 
-ADAMpro is the next version of ADAM based on Apache Spark.
+ADAM*pro* is the next version of ADAM based on Apache Spark.
 
-Find more information on ADAMpro in the following publications:
+Find more information on ADAM*pro* in the following publications:
 
 - Ivan Giangreco and Heiko Schuldt (2016): ADAMpro: Database Support for Big Multimedia Retrieval. Datenbank-Spektrum.
 http://link.springer.com/article/10.1007/s13222-015-0209-y
@@ -13,4 +13,4 @@ http://link.springer.com/article/10.1007/s13222-015-0209-y
 Find code-related documentation in the [wiki](https://github.com/vitrivr/ADAMpro/wiki).
 
 
-ADAMpro is being developed in the course of the vitrivr (http://vitrivr.org) and the iMotion project at the Databases and Information Systems Research Group (http://dbis.dmi.unibas.ch) at the University of Basel, Switzerland.
+ADAM*pro* is being developed in the course of the vitrivr (http://vitrivr.org) and the iMotion project at the Databases and Information Systems Research Group (http://dbis.dmi.unibas.ch) at the University of Basel, Switzerland.
