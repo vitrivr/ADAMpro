@@ -1,4 +1,4 @@
-# ADAMpro
+# ADAM*pro*
 
 This directory contains the source code distribution of ADAMpro. 
 
