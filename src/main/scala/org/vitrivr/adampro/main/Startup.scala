@@ -5,7 +5,7 @@ import org.apache.spark
 import org.vitrivr.adampro.process.SparkStartup
 
 /**
- * adamtwo
+ * ADAMpro
  *
  * Ivan Giangreco
  * August 2015
